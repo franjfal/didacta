@@ -143,7 +143,13 @@ class _DocumentTile extends StatelessWidget {
                         fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 3),
-                  Row(
+                  // A Wrap, not a Row: four pieces of metadata after a
+                  // document id do not fit on a phone, and a second line is
+                  // better than a hidden one.
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
                         document.id,
@@ -153,20 +159,17 @@ class _DocumentTile extends StatelessWidget {
                           color: didactaMuted,
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Text(
                         kindName(document.kind),
                         style: TextStyle(
                             fontSize: 11, color: kindColour(document.kind)),
                       ),
-                      const SizedBox(width: 8),
                       Text(
                         '${document.unitRefs.length} unidades',
                         style: const TextStyle(
                             fontSize: 11, color: didactaMuted),
                       ),
-                      if (broken > 0) ...[
-                        const SizedBox(width: 8),
+                      if (broken > 0)
                         Row(
                           children: [
                             const Icon(Icons.link_off,
@@ -179,7 +182,6 @@ class _DocumentTile extends StatelessWidget {
                             ),
                           ],
                         ),
-                      ],
                     ],
                   ),
                 ],

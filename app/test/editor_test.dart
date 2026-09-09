@@ -15,120 +15,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
-import 'package:didacta_app/data/auth.dart';
-import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/content_gateway.dart';
-import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
 
-const String unitPath = 'content/analysis/normed/definition';
-
-Map<String, dynamic> unitJson() => {
-      'id': 'analysis.normed.definition',
-      'path': unitPath,
-      'area': 'content',
-      'kind': 'theory',
-      'category': 'analysis',
-      'topic': 'normed',
-      'tags': const ['norma'],
-      'title': const {'es': 'Espacios normados'},
-      'reference': 'es',
-      'languages': const {
-        'es': {'status': 'source', 'exists': true},
-        'va': {'status': 'missing', 'exists': false},
-        'en': {'status': 'missing', 'exists': false},
-      },
-      'prerequisites': const <String>[],
-      'objectives': const <String>[],
-      'usedBy': const [
-        {'course': 'am-iii', 'year': '2025-2026', 'document': 'tema-1'},
-      ],
-      'warnings': const <String>[],
-    };
-
-Catalogue catalogueWith(List<Map<String, dynamic>> units) =>
-    Catalogue.fromIndex(
-      manifest: {
-        'schemaVersion': supportedSchemaVersion,
-        'name': 'Prueba',
-        'languages': const ['es', 'va', 'en'],
-        'defaultLanguage': 'es',
-        'contentHash': 'abc',
-        'profiles': const [],
-        'errors': const <String>[],
-      },
-      units: {'schemaVersion': supportedSchemaVersion, 'units': units},
-      courses: {'schemaVersion': supportedSchemaVersion, 'courses': const []},
-    );
-
-/// A gateway that records what it was asked to do.
-class FakeGateway extends ContentGateway {
-  FakeGateway({
-    this.writable = true,
-    this.failWith,
-    Map<String, String>? files,
-  }) : files = files ??
-            {'$unitPath/es.tex': 'El contenido original en castellano.'};
-
-  final bool writable;
-  final ContentException? failWith;
-  final Map<String, String> files;
-
-  final List<({String path, String text, String message, String sha})> commits =
-      [];
-
-  @override
-  GatewayKind get kind => GatewayKind.direct;
-
-  @override
-  bool get canWrite => writable;
-
-  @override
-  String describe() => 'gateway de prueba';
-
-  @override
-  Future<ContentFile> read(String path) async {
-    final text = files[path];
-    if (text == null) {
-      throw ContentException('no existe $path', kind: ContentFailure.missing);
-    }
-    return ContentFile(path: path, text: text, sha: 'sha-$path');
-  }
-
-  @override
-  Future<String> commit({
-    required String path,
-    required String text,
-    required String sha,
-    required String message,
-  }) async {
-    if (failWith != null) throw failWith!;
-    commits.add((path: path, text: text, message: message, sha: sha));
-    files[path] = text;
-    return 'nuevo-sha';
-  }
-}
-
-/// A session wired to a fake gateway, with no Firebase anywhere.
-class FakeSession extends Session {
-  FakeSession({required this.gatewayOverride, required Catalogue catalogue})
-      : super(
-          catalogueSource: StaticCatalogueSource(catalogue),
-          auth: _StubAuth(),
-          tokenStore: _StubStore(),
-          apiBase: '',
-          contentOwner: 'franjfal',
-          contentRepo: 'didacta_db',
-          contentBranch: 'main',
-        );
-
-  final ContentGateway gatewayOverride;
-
-  @override
-  ContentGateway get gateway => gatewayOverride;
-}
+import 'fixture.dart';
 
 Future<void> pumpEditor(
   WidgetTester tester, {
@@ -329,56 +221,4 @@ void main() {
 
     expect(find.text('Unidad no encontrada'), findsOneWidget);
   });
-}
-
-/// Nothing in these tests reaches Firebase or a keychain.
-///
-/// Possible because `Session` takes an [AuthSession] and a [SecretStore]
-/// rather than the concrete Firebase and keychain classes -- which is the
-/// point of those interfaces existing.
-class _StubAuth implements AuthSession {
-  @override
-  Stream<void> get changes => const Stream.empty();
-
-  @override
-  SignedInUser? get user =>
-      const SignedInUser(email: 'javier@uv.es', emailVerified: true);
-
-  @override
-  bool get signedIn => true;
-
-  @override
-  Future<String?> idToken({bool forceRefresh = false}) async => 'token';
-
-  @override
-  Future<void> signOut() async {}
-
-  @override
-  Future<void> signInWithPassword(String email, String password) async {}
-
-  @override
-  Future<void> signInWithGoogle() async {}
-
-  @override
-  Future<void> createAccount(String email, String password) async {}
-
-  @override
-  Future<void> sendPasswordReset(String email) async {}
-
-  @override
-  Future<void> resendVerification() async {}
-}
-
-class _StubStore implements SecretStore {
-  @override
-  bool get canStoreSafely => true;
-
-  @override
-  Future<String?> read() async => null;
-
-  @override
-  Future<void> write(String value) async {}
-
-  @override
-  Future<void> clear() async {}
 }
