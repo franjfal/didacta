@@ -1,0 +1,19 @@
+% A problem sheet. Same shape as a chapter; only the profiles differ.
+%
+%   didacta build hoja-1 --profile problems              statements only
+%   didacta build hoja-1 --profile problems-answers      + short answers
+%   didacta build hoja-1 --profile problems-solutions    + worked solutions
+%   didacta build hoja-1 --profile problems-teacher      + marking notes
+
+\input{didacta-bootstrap}
+\usepackage{didacta}
+
+%% Fallback only; Didacta injects these from the structure files in the
+%% language being built. See tema-1.tex.
+\DidactaCourse{title = {Anàlisi Matemàtica III}}
+\DidactaDocument{Full 1: espais normats}
+
+\begin{document}
+\DidactaSheetHeader
+\DidactaProblem{analysis/normed-spaces/norm-axioms}
+\end{document}

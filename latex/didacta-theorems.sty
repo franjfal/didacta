@@ -1,0 +1,239 @@
+%%
+%% didacta-theorems.sty -- theorem-like environments.
+%%
+%% One set of environment names, two visual treatments chosen by medium:
+%%
+%%   slides    a filled box with a coloured title bar. Has to read from the
+%%             back of a lecture theatre, so it is high contrast and compact.
+%%   document  a tinted rule down the left margin and a rule under the title.
+%%             Has to read for an hour on paper, so it is quiet and it breaks
+%%             across pages.
+%%
+%% The author's material distinguishes these with two separate template files
+%% and two separate environment name sets (`ndefn` boxed vs `defn` plain),
+%% which means content has to know which output it is heading for. Didacta uses
+%% one name set and switches the rendering, so content does not.
+%%
+%% All names come from the loaded language file, so a definition is a
+%% "Definición", a "Definició" or a "Definition" without the content changing.
+%%
+%% Built on tcolorbox alone. The legacy system needed the non-CTAN
+%% boiboites.sty for \newboxedtheorem; nothing here is outside CTAN.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-theorems}[2026/09/09 v1.0 Didacta theorem environments]
+
+\RequirePackage{etoolbox}
+\RequirePackage{amsmath}
+\RequirePackage{amsthm}
+\RequirePackage[many]{tcolorbox}
+\tcbuselibrary{skins,breakable}
+
+\makeatletter
+
+%% ---------------------------------------------------------------------------
+%% Numbering
+%%
+%% One shared counter, so Theorem 2.3 is not followed by Definition 2.1 --
+%% which is what independent counters produce and what confuses a reader
+%% following a cross-reference.
+%% ---------------------------------------------------------------------------
+
+\newcounter{didactathm}
+\@addtoreset{didactathm}{section}
+\renewcommand{\thedidactathm}{%
+  \ifnum\c@section>0 \thesection.\fi\arabic{didactathm}}
+
+%% ---------------------------------------------------------------------------
+%% \DidactaNewTheorem{env}{name macro}{accent colour}[numbered]
+%%
+%% Declares one environment in both visual styles at once.
+%%   env           the environment name authors type
+%%   name macro    e.g. \didactaTheoremName, from the language file
+%%   accent        the colour of the rule or title bar
+%% ---------------------------------------------------------------------------
+
+\newcommand{\DidactaNewTheorem}[3]{%
+  \newenvironment{#1}[1][]{%
+    \iftoggle{didacta@slides}%
+      {\didacta@thm@slide{#2}{#3}{##1}}%
+      {\didacta@thm@doc{#2}{#3}{##1}}%
+  }{%
+    \iftoggle{didacta@slides}%
+      {\didacta@thm@slide@end}%
+      {\didacta@thm@doc@end}%
+  }%
+  %% Starred form: same look, no number. For a restatement or an aside.
+  \newenvironment{#1*}[1][]{%
+    \iftoggle{didacta@slides}%
+      {\didacta@thm@slide@plain{#2}{#3}{##1}}%
+      {\didacta@thm@doc@plain{#2}{#3}{##1}}%
+  }{%
+    \iftoggle{didacta@slides}%
+      {\didacta@thm@slide@end}%
+      {\didacta@thm@doc@end}%
+  }%
+}
+
+%% ---------------------------------------------------------------------------
+%% Slide rendering: filled box, coloured title bar.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didacta@thm@slide}[3]{%
+  \refstepcounter{didactathm}%
+  \begin{tcolorbox}[
+    enhanced, breakable,
+    colback=#2!8, colframe=#2!55!black, colbacktitle=#2!30,
+    coltitle=black, fonttitle=\bfseries,
+    boxrule=0.6pt, arc=2.5pt,
+    left=1.2ex, right=1.2ex, top=0.9ex, bottom=0.9ex,
+    before skip=1.4ex, after skip=1.4ex,
+    title={#1~\thedidactathm\ifblank{#3}{}{\ \textnormal{(#3)}}},
+  ]%
+}
+\newcommand{\didacta@thm@slide@plain}[3]{%
+  \begin{tcolorbox}[
+    enhanced, breakable,
+    colback=#2!8, colframe=#2!55!black, colbacktitle=#2!30,
+    coltitle=black, fonttitle=\bfseries,
+    boxrule=0.6pt, arc=2.5pt,
+    left=1.2ex, right=1.2ex, top=0.9ex, bottom=0.9ex,
+    before skip=1.4ex, after skip=1.4ex,
+    title={#1\ifblank{#3}{}{\ \textnormal{(#3)}}},
+  ]%
+}
+\newcommand{\didacta@thm@slide@end}{\end{tcolorbox}}
+
+%% ---------------------------------------------------------------------------
+%% Document rendering: left rule, no fill, breaks across pages.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didacta@thm@doc}[3]{%
+  \refstepcounter{didactathm}%
+  \begin{tcolorbox}[
+    enhanced jigsaw, breakable,
+    boxrule=0pt, colframe=white, interior hidden,
+    borderline west={1.8pt}{0pt}{#2!70!black},
+    left=1.4em, right=0pt, top=0.3ex, bottom=0.3ex,
+    before skip=2.2ex, after skip=2.2ex,
+    coltitle=black, fonttitle=\bfseries,
+    title={#1~\thedidactathm\ifblank{#3}{}{\ \textnormal{(#3)}}},
+  ]%
+}
+\newcommand{\didacta@thm@doc@plain}[3]{%
+  \begin{tcolorbox}[
+    enhanced jigsaw, breakable,
+    boxrule=0pt, colframe=white, interior hidden,
+    borderline west={1.8pt}{0pt}{#2!70!black},
+    left=1.4em, right=0pt, top=0.3ex, bottom=0.3ex,
+    before skip=2.2ex, after skip=2.2ex,
+    coltitle=black, fonttitle=\bfseries,
+    title={#1\ifblank{#3}{}{\ \textnormal{(#3)}}},
+  ]%
+}
+\newcommand{\didacta@thm@doc@end}{\end{tcolorbox}}
+
+%% ---------------------------------------------------------------------------
+%% The environment set
+%%
+%% Colour carries meaning and stays constant across every output, so a reader
+%% learns "blue means a theorem" once. Names are deferred to the language file.
+%% ---------------------------------------------------------------------------
+
+\AtBeginDocument{}
+
+\newcommand{\DidactaDeclareTheorems}{%
+  \DidactaNewTheorem{theorem}{\didactaTheoremName}{didactaThm}%
+  \DidactaNewTheorem{definition}{\didactaDefinitionName}{didactaDefn}%
+  \DidactaNewTheorem{proposition}{\didactaPropositionName}{didactaProp}%
+  \DidactaNewTheorem{lemma}{\didactaLemmaName}{didactaLem}%
+  \DidactaNewTheorem{corollary}{\didactaCorollaryName}{didactaCor}%
+  \DidactaNewTheorem{property}{\didactaPropertyName}{didactaProp}%
+  \DidactaNewTheorem{example}{\didactaExampleName}{didactaEx}%
+  \DidactaNewTheorem{question}{\didactaQuestionName}{didactaQues}%
+  \DidactaNewTheorem{remark}{\didactaRemarkName}{didactaRem}%
+  \DidactaNewTheorem{axiom}{\didactaAxiomName}{didactaAxiom}%
+  \DidactaNewTheorem{algorithm}{\didactaAlgorithmName}{didactaAlgo}%
+  \DidactaNewTheorem{notation}{\didactaNotationName}{didactaRem}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Legacy aliases
+%%
+%% The migrated material uses `ndefn`/`nthrm`/... for boxed and
+%% `defn`/`thrm`/... for plain. Both map onto the same Didacta environment,
+%% because Didacta decides the look from the medium rather than the name.
+%% Migration is then a rename, not a re-author.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\DidactaDeclareLegacyAliases}{%
+  \didacta@alias{ndefn}{definition}%
+  \didacta@alias{nthrm}{theorem}%
+  \didacta@alias{nthm}{theorem}%
+  \didacta@alias{nprop}{proposition}%
+  \didacta@alias{npro}{property}%
+  \didacta@alias{nlem}{lemma}%
+  \didacta@alias{ncor}{corollary}%
+  \didacta@alias{nex}{example}%
+  \didacta@alias{nques}{question}%
+  \didacta@alias{nrem}{remark}%
+  \didacta@alias{naxioma}{axiom}%
+  \didacta@alias{recipe}{algorithm}%
+  \didacta@alias{defn}{definition}%
+  \didacta@alias{thrm}{theorem}%
+  \didacta@alias{prop}{proposition}%
+  \didacta@alias{pro}{property}%
+  \didacta@alias{lem}{lemma}%
+  \didacta@alias{cor}{corollary}%
+  \didacta@alias{ex}{example}%
+  \didacta@alias{ques}{question}%
+  \didacta@alias{rem}{remark}%
+  \didacta@alias{axioma}{axiom}%
+}
+
+\newcommand{\didacta@alias}[2]{%
+  \newenvironment{#1}[1][]{\begin{#2}[##1]}{\end{#2}}%
+  \newenvironment{#1*}[1][]{\begin{#2*}[##1]}{\end{#2*}}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Proof
+%%
+%% amsthm's proof, with the name from the language file and a tinted rule so
+%% it is skimmable in the notes. Proofs are the single largest thing that
+%% belongs in the document and not on a slide, so a proof inside \onlynotes is
+%% the common case; this makes it read well there.
+%% ---------------------------------------------------------------------------
+
+%% amsthm normally provides `proof`; with some class/option combinations it
+%% does not, so declare or redeclare as needed rather than assuming.
+\@ifundefined{proof}{\newenvironment{proof}}{\renewenvironment{proof}}[1][\didactaProofName]{%
+  \par\addvspace{1.2ex}%
+  \noindent{\itshape #1.}\ \ignorespaces
+}{%
+  \hfill$\square$\par\addvspace{1.2ex}%
+}
+
+%% ---------------------------------------------------------------------------
+%% A highlighted formula
+%%
+%% For the one equation on the slide that matters.
+%% ---------------------------------------------------------------------------
+
+\newtcolorbox{didacta@formulabox}{
+  enhanced, sharp corners=downhill,
+  colback=didactaAccent!7, colframe=didactaAccent!60!black,
+  boxrule=0.5pt, arc=2pt,
+  left=1ex, right=1ex, top=0.6ex, bottom=0.6ex,
+  before skip=1.4ex, after skip=1.4ex,
+}
+\newenvironment{keyformula}{%
+  \begin{didacta@formulabox}\begin{equation*}
+}{%
+  \end{equation*}\end{didacta@formulabox}
+}
+%% Legacy name.
+\newenvironment{nformula}{\begin{keyformula}}{\end{keyformula}}
+
+\makeatother
+\endinput

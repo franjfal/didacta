@@ -1,0 +1,10 @@
+node_modules/
+.wrangler/
+dist/
+
+# Never commit a secret. The GitHub token is set with
+# `wrangler secret put GITHUB_TOKEN`, which sends it straight to Cloudflare
+# and never writes it to disk. A .dev.vars file holds one in plain text for
+# local development, which is exactly the thing that must not be pushed.
+.dev.vars
+.env

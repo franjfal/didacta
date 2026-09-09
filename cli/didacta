@@ -1,0 +1,1353 @@
+#!/usr/bin/env python3
+"""didacta -- teaching-content platform.
+
+    didacta status                       what is in this repository
+    didacta profiles                     the output profiles available
+    didacta units [--lang va]            the content library
+    didacta build <document>             every default output
+    didacta build <document> -p slides   one output
+    didacta build --all                  the whole repository
+    didacta translations                 what needs translating
+    didacta check                        validate the repository
+    didacta new unit <path>              scaffold a unit
+    didacta new year <course> <year>     duplicate the previous year
+    didacta index                        generate the derived catalogues
+    didacta migrate <legacy> <target>    import from the legacy system
+
+Run from anywhere inside a content repository; the root is found by walking up
+for didacta.yaml.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "engine"))
+
+from didacta import build as build_mod  # noqa: E402
+from didacta import index as index_mod  # noqa: E402
+from didacta import migrate as migrate_mod  # noqa: E402
+from didacta import profiles as profiles_mod  # noqa: E402
+from didacta import repo as repo_mod  # noqa: E402
+from didacta import yamlio  # noqa: E402
+
+#: Didacta's own LaTeX tree, alongside the engine.
+LATEX_DIR = os.path.abspath(os.path.join(HERE, "..", "latex"))
+
+
+# --------------------------------------------------------------------------
+# Presentation helpers
+# --------------------------------------------------------------------------
+
+def supports_colour():
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+class Style:
+    def __init__(self, enabled):
+        self.enabled = enabled
+
+    def _wrap(self, code, text):
+        return "\033[%sm%s\033[0m" % (code, text) if self.enabled else text
+
+    def bold(self, text):
+        return self._wrap("1", text)
+
+    def dim(self, text):
+        return self._wrap("2", text)
+
+    def ok(self, text):
+        return self._wrap("32", text)
+
+    def warn(self, text):
+        return self._wrap("33", text)
+
+    def bad(self, text):
+        return self._wrap("31", text)
+
+    def accent(self, text):
+        return self._wrap("36", text)
+
+
+S = Style(supports_colour())
+
+STATUS_MARK = {
+    "reviewed": "OK",
+    "source": "src",
+    "translated": "tr",
+    "draft": "draft",
+    "outdated": "STALE",
+    "missing": "--",
+}
+
+
+def pad(text, width):
+    """Left-pad to a visible width, ignoring ANSI escapes.
+
+    `%-13s` counts the escape bytes, so a coloured column silently loses its
+    alignment. This measures what the terminal actually shows.
+    """
+    import re as _re
+    visible = len(_re.sub(r"\033\[[0-9;]*m", "", text))
+    return text + " " * max(width - visible, 0)
+
+
+def status_text(status):
+    mark = STATUS_MARK.get(status, status)
+    if status in ("reviewed", "source"):
+        return S.ok(mark)
+    if status in ("translated",):
+        return mark
+    if status in ("draft",):
+        return S.warn(mark)
+    if status == "outdated":
+        return S.bad(mark)
+    return S.dim(mark)
+
+
+def load_repo(args):
+    root = repo_mod.find_root(getattr(args, "root", None))
+    settings = repo_mod.Settings.load(root)
+    return root, settings
+
+
+# --------------------------------------------------------------------------
+# status
+# --------------------------------------------------------------------------
+
+def cmd_status(args):
+    root, settings = load_repo(args)
+    units, unit_errors = repo_mod.scan_units(root, settings)
+    courses, course_errors = repo_mod.scan_courses(root, settings)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+
+    print(S.bold(settings.name))
+    print(S.dim(root))
+    print()
+    theory = [u for u in units.values() if not u.is_problem]
+    problems = [u for u in units.values() if u.is_problem]
+    documents = sum(len(y.documents) for c in courses.values() for y in c.years.values())
+
+    print("  %-14s %d" % ("units", len(units)))
+    print("  %-14s %d theory, %d problems" % ("", len(theory), len(problems)))
+    print("  %-14s %d" % ("courses", len(courses)))
+    print("  %-14s %d" % ("documents", documents))
+    print("  %-14s %d" % ("profiles", len(all_profiles)))
+    print("  %-14s %s" % ("languages", ", ".join(settings.languages)))
+
+    # Translation coverage: the number that tells you where the work is.
+    counts = {}
+    for unit in units.values():
+        for status in unit.statuses().values():
+            counts[status] = counts.get(status, 0) + 1
+    if counts:
+        print()
+        print(S.bold("  translation state"))
+        for status in ("source", "reviewed", "translated", "draft", "outdated", "missing"):
+            if status in counts:
+                print("    %-10s %d" % (status, counts[status]))
+
+    if courses:
+        print()
+        print(S.bold("  courses"))
+        for course in courses.values():
+            years = ", ".join(sorted(course.years)) or "-"
+            print("    %-16s %-34s %s" % (course.id, course.title()[:34], years))
+
+    problems_found = unit_errors + course_errors
+    if problems_found:
+        print()
+        print(S.bad("  %d problem(s):" % len(problems_found)))
+        for message in problems_found[:10]:
+            print("    " + message)
+    return 0
+
+
+# --------------------------------------------------------------------------
+# profiles
+# --------------------------------------------------------------------------
+
+def cmd_profiles(args):
+    all_profiles = profiles_mod.load(LATEX_DIR)
+    if args.json:
+        print(json.dumps([p.as_dict() for p in all_profiles.values()],
+                         indent=1, ensure_ascii=False))
+        return 0
+
+    print(S.bold("%d output profiles" % len(all_profiles)))
+    print()
+    print(S.dim("  %-20s %-9s %-8s %-9s %-9s %-6s %s"
+                % ("id", "family", "class", "solutions", "audience", "pause", "label")))
+    for profile in all_profiles.values():
+        print("  %s%-9s %-8s %-9s %-9s %-6s %s" % (
+            pad(S.accent(profile.id) if S.enabled else profile.id, 21),
+            profile.family,
+            profile.document_class,
+            profile.solutions,
+            profile.audience,
+            "yes" if profile.pauses else "no",
+            profile.label,
+        ))
+    print()
+    print(S.dim("  Declared in latex/didacta-profiles.tex. Adding an output is"))
+    print(S.dim("  one \\DidactaDeclareProfile line; nothing else needs to change."))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# units
+# --------------------------------------------------------------------------
+
+def cmd_units(args):
+    root, settings = load_repo(args)
+    units, errors = repo_mod.scan_units(root, settings)
+
+    selected = list(units.values())
+    if args.category:
+        selected = [u for u in selected if u.category == args.category]
+    if args.topic:
+        selected = [u for u in selected if u.topic == args.topic]
+    if args.tag:
+        selected = [u for u in selected if args.tag in u.tags]
+    if args.kind:
+        selected = [u for u in selected if u.kind == args.kind]
+    if args.search:
+        needle = args.search.lower()
+        selected = [
+            u for u in selected
+            if needle in u.id.lower()
+            or any(needle in t.lower() for t in u.titles.values())
+            or any(needle in t.lower() for t in u.tags)
+        ]
+    if args.missing:
+        selected = [u for u in selected if args.missing in u.missing_languages]
+
+    selected.sort(key=lambda u: u.relpath)
+
+    if args.json:
+        print(json.dumps([u.as_dict() for u in selected], indent=1, ensure_ascii=False))
+        return 0
+
+    if not selected:
+        print(S.dim("no units match"))
+        return 0
+
+    print(S.dim("  %-8s %-6s %-6s %-6s %s" % ("kind", "es", "va", "en", "unit")))
+    for unit in selected:
+        statuses = unit.statuses()
+        print("  %-8s %s%s%s%s" % (
+            unit.kind,
+            pad(status_text(statuses.get("es", "missing")), 7),
+            pad(status_text(statuses.get("va", "missing")), 7),
+            pad(status_text(statuses.get("en", "missing")), 7),
+            unit.relpath,
+        ))
+        if args.verbose:
+            print("         %s" % S.dim(unit.title(args.lang)))
+            if unit.tags:
+                print("         %s" % S.dim("tags: " + ", ".join(unit.tags)))
+    print()
+    print(S.dim("  %d unit(s)" % len(selected)))
+    if errors:
+        print(S.bad("  %d problem(s); run `didacta check`" % len(errors)))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# translations
+# --------------------------------------------------------------------------
+
+def cmd_translations(args):
+    """What needs translating, in the order worth doing it.
+
+    Ordered by how much the unit is used, because translating something that
+    appears in four courses is worth more than something used once.
+    """
+    root, settings = load_repo(args)
+    units, _ = repo_mod.scan_units(root, settings)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    # How many documents reference each unit.
+    usage = {}
+    for course in courses.values():
+        for year in course.years.values():
+            for document in year.documents:
+                for ref in document.unit_refs:
+                    unit = repo_mod.resolve_unit_ref(ref, units, root)
+                    if unit:
+                        usage[unit.id] = usage.get(unit.id, 0) + 1
+
+    rows = []
+    for unit in units.values():
+        statuses = unit.statuses()
+        for code in settings.languages:
+            status = statuses.get(code, "missing")
+            if status in ("missing", "outdated", "draft"):
+                rows.append((usage.get(unit.id, 0), unit, code, status))
+    rows.sort(key=lambda r: (-r[0], r[1].relpath, r[2]))
+
+    if args.json:
+        print(json.dumps([
+            {"unit": u.relpath, "id": u.id, "language": c,
+             "status": s, "usedBy": n, "reference": u.reference}
+            for n, u, c, s in rows
+        ], indent=1, ensure_ascii=False))
+        return 0
+
+    if not rows:
+        print(S.ok("every unit is translated into every language"))
+        return 0
+
+    print(S.bold("%d translation task(s)" % len(rows)))
+    print(S.dim("ordered by how many documents use the unit"))
+    print()
+    print(S.dim("  %-5s %-5s %-8s %s" % ("used", "lang", "state", "unit")))
+    for count, unit, code, status in rows[: args.limit]:
+        print("  %s%-5s %s%s" % (
+            pad(str(count) if count else S.dim("0"), 6),
+            code,
+            pad(status_text(status), 9),
+            unit.relpath))
+    if len(rows) > args.limit:
+        print(S.dim("  ... and %d more" % (len(rows) - args.limit)))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# build
+# --------------------------------------------------------------------------
+
+def collect_jobs(root, settings, args, all_profiles):
+    """Work out what to build."""
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    documents = []
+    for course in courses.values():
+        for year in course.years.values():
+            for document in year.documents:
+                documents.append((course, year, document))
+
+    if args.document:
+        wanted = set(args.document)
+        matched = [
+            (c, y, d) for c, y, d in documents
+            if d.id in wanted or "%s/%s" % (y.id, d.id) in wanted
+        ]
+        if not matched:
+            print(S.bad("no document matches %s" % ", ".join(sorted(wanted))))
+            print(S.dim("available: %s" % ", ".join(sorted(d.id for _, _, d in documents))))
+            return None
+        documents = matched
+    elif not args.all:
+        print(S.bad("name a document, or pass --all"))
+        print(S.dim("available: %s" % ", ".join(sorted(d.id for _, _, d in documents))))
+        return None
+
+    if args.year:
+        documents = [(c, y, d) for c, y, d in documents if y.year == args.year]
+    if args.course:
+        documents = [(c, y, d) for c, y, d in documents if c.id == args.course]
+
+    jobs = []
+    for course, year, document in documents:
+        if not document.source:
+            print(S.warn("  skipping %s: no %s.tex" % (document.id, document.id)))
+            continue
+
+        if args.profile:
+            chosen = []
+            for name in args.profile:
+                if name not in all_profiles:
+                    print(S.bad("unknown profile %r" % name))
+                    print(S.dim("known: %s" % ", ".join(sorted(all_profiles))))
+                    return None
+                chosen.append(all_profiles[name])
+        elif document.profiles:
+            chosen = [all_profiles[p] for p in document.profiles if p in all_profiles]
+        else:
+            chosen = profiles_mod.default_profiles(all_profiles, document.kind)
+
+        languages = args.language or [document.language or settings.default_language]
+
+        content_root = repo_mod.content_root_for(document.source, root)
+        for profile in chosen:
+            for language in languages:
+                jobs.append((
+                    document.source,
+                    profile,
+                    language,
+                    {
+                        "document_id": "%s/%s" % (year.id, document.id),
+                        "document_title": document.title(language),
+                        "content_root": content_root,
+                        # From course.yaml and year.yaml, in the language being
+                        # built, so the .tex does not repeat it three times.
+                        "course_keys": course.latex_course_keys(language, year.year),
+                    },
+                ))
+    return jobs
+
+
+def cmd_build(args):
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+        engine="pdflatex" if args.fast else "latexmk",
+        verbose=args.verbose,
+    )
+
+    ready, why = engine.available()
+    if not ready:
+        print(S.bad("cannot build: %s" % why))
+        print(S.dim("Didacta needs a TeX distribution with latexmk and pdflatex."))
+        return 2
+
+    jobs = collect_jobs(root, settings, args, all_profiles)
+    if jobs is None:
+        return 1
+    if not jobs:
+        print("nothing to build")
+        return 0
+
+    if args.list:
+        print(S.bold("%d output(s) would be built" % len(jobs)))
+        for source, profile, language, extra in jobs:
+            print("  %-26s %-20s %s" % (extra["document_id"], profile.id, language))
+        return 0
+
+    print(S.bold("building %d output(s)" % len(jobs)))
+    if args.fast:
+        print(S.warn("  --fast: single pdflatex pass, so cross-references and the"))
+        print(S.warn("  slide total may be wrong until a full build"))
+    print()
+
+    def report(result):
+        mark = S.ok("ok  ") if result.ok else S.bad("FAIL")
+        pages = "%3s pp" % result.pages if result.pages else "      "
+        print("  %s%-30s %-20s %-3s %s %5.1fs" % (
+            pad(mark, 6), result.document, result.profile,
+            result.language, pages, result.seconds))
+        if not result.ok:
+            for diagnostic in result.errors[:4]:
+                print("       %s" % S.bad(str(diagnostic)))
+        elif args.verbose:
+            for diagnostic in result.warnings[:3]:
+                print("       %s" % S.warn(str(diagnostic)))
+
+    results = engine.build_many(jobs, on_result=report)
+
+    succeeded = [r for r in results if r.ok]
+    failed = [r for r in results if not r.ok]
+
+    print()
+    print("%d succeeded, %d failed" % (len(succeeded), len(failed)))
+    if succeeded:
+        print(S.dim("  output: %s" % engine.build_dir))
+
+    if args.json:
+        summary = os.path.join(engine.build_dir, "summary.json")
+        os.makedirs(engine.build_dir, exist_ok=True)
+        with open(summary, "w", encoding="utf-8") as handle:
+            json.dump([r.as_dict() for r in results], handle,
+                      indent=1, ensure_ascii=False)
+        print(S.dim("  summary: %s" % summary))
+
+    return 1 if failed else 0
+
+
+# --------------------------------------------------------------------------
+# check
+# --------------------------------------------------------------------------
+
+def cmd_check(args):
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+    units, unit_errors = repo_mod.scan_units(root, settings)
+    courses, course_errors = repo_mod.scan_courses(root, settings)
+
+    errors = list(unit_errors) + list(course_errors)
+    warnings = []
+    for unit in units.values():
+        for message in unit.warnings:
+            warnings.append("%s: %s" % (unit.relpath, message))
+
+    # Every composition reference must resolve. An unresolved reference is a
+    # hole in a lecture that only shows up when you project it.
+    for course in courses.values():
+        for year in course.years.values():
+            for document in year.documents:
+                if not document.source:
+                    errors.append(
+                        "%s/%s: declared in year.yaml but %s.tex does not exist"
+                        % (year.id, document.id, document.id)
+                    )
+                for ref in document.unit_refs:
+                    if repo_mod.resolve_unit_ref(ref, units, root) is None:
+                        errors.append(
+                            "%s/%s: references `%s`, which does not exist"
+                            % (year.id, document.id, ref)
+                        )
+                for name in document.profiles:
+                    if name not in all_profiles:
+                        errors.append(
+                            "%s/%s: unknown profile `%s`" % (year.id, document.id, name)
+                        )
+
+    # A document that builds in a language none of its units have is a hole too.
+    for course in courses.values():
+        for year in course.years.values():
+            for document in year.documents:
+                language = document.language or settings.default_language
+                for ref in document.unit_refs:
+                    unit = repo_mod.resolve_unit_ref(ref, units, root)
+                    if unit and language not in unit.available_languages:
+                        warnings.append(
+                            "%s/%s builds in `%s` but `%s` has no %s.tex"
+                            % (year.id, document.id, language, unit.relpath, language)
+                        )
+
+    # Prerequisites must name real units.
+    for unit in units.values():
+        for prerequisite in unit.prerequisites:
+            if prerequisite not in units and repo_mod.resolve_unit_ref(
+                    prerequisite, units, root) is None:
+                warnings.append(
+                    "%s: prerequisite `%s` does not exist" % (unit.relpath, prerequisite)
+                )
+
+    for message in errors:
+        print(S.bad("error  ") + " " + message)
+    for message in warnings:
+        print(S.warn("warning") + " " + message)
+
+    print()
+    if errors:
+        print(S.bad("%d error(s), %d warning(s)" % (len(errors), len(warnings))))
+        return 1
+    if warnings:
+        print(S.warn("%d warning(s)" % len(warnings)))
+        return 0
+    print(S.ok("repository is consistent"))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# new
+# --------------------------------------------------------------------------
+
+UNIT_TEMPLATE = """%% {title}
+%%
+%% No preamble: Didacta supplies it. This file is the content and nothing else,
+%% which is what lets it appear in slides, notes, a handout and a teacher copy
+%% without knowing which one it is heading for.
+
+\\begin{{frame}}
+\\didactatitle{{{title}}}
+
+Write the content here. Anything left unwrapped appears in every output.
+
+\\onlynotes{{%
+  Prose that belongs in the written notes but not on a slide: the motivation,
+  the aside, the worked detail.
+}}
+
+\\begin{{definition}}[Name]
+State it here.
+\\end{{definition}}
+
+\\dpause
+
+\\begin{{example}}
+An example.
+\\end{{example}}
+
+\\begin{{teaching}}[Timing]
+Notes for whoever teaches this: how long it takes, what to emphasise, what to
+skip when short of time. Teacher copies only.
+\\end{{teaching}}
+\\end{{frame}}
+"""
+
+UNIT_META_TEMPLATE = """# {title}
+
+id: {identifier}
+kind: {kind}
+
+title:
+  {language}: {title}
+
+category: {category}
+topic: {topic}
+tags: []
+
+# The language the others are translated from.
+reference: {language}
+
+# Only languages that exist are listed; absence is what `missing` means.
+languages:
+  {language}: {{status: draft}}
+
+# What this unit assumes, and what a student can do after it. Filling these in
+# is what makes the unit safe to reuse in another course.
+prerequisites: []
+objectives: []
+
+duration_minutes: null
+difficulty: null
+"""
+
+PROBLEM_TEMPLATE = """%% {title}
+%%
+%% Statement, answer, solution and marking notes in one file. Each level
+%% appears only in the profile that should show it, so this single file
+%% produces the student sheet, the sheet with answers, the sheet with worked
+%% solutions and the teacher's copy.
+
+\\begin{{exercise}}[{title}]
+State the problem here.
+
+\\begin{{parts}}
+  \\item First part.
+  \\item Second part.
+\\end{{parts}}
+
+\\dmarks{{4}}
+
+\\begin{{hint}}
+A nudge, not an answer. Hidden in exam profiles.
+\\end{{hint}}
+
+\\begin{{answer}}
+The result, in one line.
+\\end{{answer}}
+
+\\begin{{solution}}
+The working.
+\\end{{solution}}
+
+\\begin{{marking}}
+What to look for and what partial credit to give.
+\\end{{marking}}
+\\end{{exercise}}
+"""
+
+DOCUMENT_TEMPLATE = """%% {title}
+%%
+%% A composition: a list of units, in order. Compile it directly for the notes,
+%% or pass a profile for any other output.
+
+\\input{{didacta-bootstrap}}
+\\usepackage{{didacta}}
+
+\\DidactaCourse{{
+  {course_keys}
+}}
+\\DidactaDocument{{{title}}}
+
+\\begin{{document}}
+\\DidactaTitlePage
+\\DidactaContents
+
+\\section{{First section}}
+%% \\DidactaUnit{{category/topic/unit}}
+
+\\end{{document}}
+"""
+
+
+def cmd_new_unit(args):
+    root, settings = load_repo(args)
+    area = repo_mod.PROBLEMS if args.kind == "problem" else repo_mod.CONTENT
+    relpath = "%s/%s" % (area, args.path.strip("/"))
+    directory = os.path.join(root, relpath)
+
+    if os.path.isdir(directory) and os.listdir(directory):
+        print(S.bad("%s already exists and is not empty" % relpath))
+        return 1
+
+    parts = args.path.strip("/").split("/")
+    language = args.lang or settings.default_language
+    title = args.title or parts[-1].replace("-", " ").capitalize()
+
+    os.makedirs(directory, exist_ok=True)
+    template = PROBLEM_TEMPLATE if args.kind == "problem" else UNIT_TEMPLATE
+    with open(os.path.join(directory, "%s.tex" % language), "w", encoding="utf-8") as handle:
+        handle.write(template.format(title=title))
+    with open(os.path.join(directory, "unit.yaml"), "w", encoding="utf-8") as handle:
+        handle.write(UNIT_META_TEMPLATE.format(
+            title=title,
+            identifier=".".join(parts) if area == repo_mod.CONTENT
+                       else "problems." + ".".join(parts),
+            kind=args.kind,
+            language=language,
+            category=parts[0] if len(parts) > 1 else "",
+            topic=parts[1] if len(parts) > 2 else "",
+        ))
+
+    print(S.ok("created ") + relpath)
+    print("  %s.tex" % language)
+    print("  unit.yaml")
+    return 0
+
+
+def cmd_new_year(args):
+    """Duplicate a course year.
+
+    Copies structure, never content: the new year references the same units.
+    That is the whole reason the split exists.
+    """
+    root, settings = load_repo(args)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    course = courses.get(args.course)
+    if course is None:
+        print(S.bad("no course %r" % args.course))
+        print(S.dim("known: %s" % ", ".join(sorted(courses))))
+        return 1
+
+    target = os.path.join(course.directory, args.year)
+    if os.path.isdir(target):
+        print(S.bad("%s/%s already exists" % (args.course, args.year)))
+        return 1
+
+    source_year = args.From or (sorted(course.years)[-1] if course.years else None)
+    if source_year is None:
+        print(S.bad("%s has no existing year to copy" % args.course))
+        return 1
+    if source_year not in course.years:
+        print(S.bad("no year %r in %s" % (source_year, args.course)))
+        return 1
+
+    previous = course.years[source_year]
+    os.makedirs(target)
+
+    # The structure file, with the year updated.
+    with open(os.path.join(previous.directory, "year.yaml"), encoding="utf-8") as handle:
+        text = handle.read()
+    text = text.replace("year: %s" % source_year, "year: %s" % args.year)
+    with open(os.path.join(target, "year.yaml"), "w", encoding="utf-8") as handle:
+        handle.write(text)
+
+    # The compositions, with the year in any visible date updated.
+    copied = []
+    for document in previous.documents:
+        if not document.source:
+            continue
+        with open(document.source, encoding="utf-8") as handle:
+            body = handle.read()
+        body = body.replace(source_year, args.year)
+        body = body.replace(source_year.replace("-", "--"), args.year.replace("-", "--"))
+        destination = os.path.join(target, "%s.tex" % document.id)
+        with open(destination, "w", encoding="utf-8") as handle:
+            handle.write(body)
+        copied.append(document.id)
+
+    print(S.ok("created ") + "%s/%s from %s" % (args.course, args.year, source_year))
+    print("  year.yaml")
+    for name in copied:
+        print("  %s.tex" % name)
+    print()
+    print(S.dim("  Structure only: every unit is still referenced, not copied."))
+    print(S.dim("  Edit year.yaml to change the selection or the order."))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# index
+# --------------------------------------------------------------------------
+
+def cmd_index(args):
+    """Generate the derived catalogues an interface reads.
+
+    Derived data: `--check` verifies what is on disk matches the content
+    without writing, which is what CI runs so a stale index is a failed build
+    rather than something noticed months later.
+    """
+    root, settings = load_repo(args)
+    data = index_mod.build(root, settings, latex_dir=LATEX_DIR)
+    manifest = data[index_mod.MANIFEST]
+
+    if args.json:
+        print(index_mod.dumps(manifest), end="")
+        return 0
+
+    counts = manifest["counts"]
+    print(S.bold(manifest["name"]))
+    print()
+    print("  %-16s %d" % ("units", counts["units"]))
+    print("  %-16s %d" % ("courses", counts["courses"]))
+    print("  %-16s %d" % ("documents", counts["documents"]))
+    print("  %-16s %s" % ("content hash", manifest["contentHash"]))
+
+    if manifest["errors"]:
+        print()
+        print(S.warn("  %d problem(s) while reading the repository:"
+                     % len(manifest["errors"])))
+        for message in manifest["errors"][:5]:
+            print("    " + message)
+
+    fresh = index_mod.unchanged(root, data)
+
+    if args.check:
+        print()
+        if fresh:
+            print(S.ok("index is up to date"))
+            return 0
+        print(S.bad("index is stale"))
+        print(S.dim("  run `didacta index` to regenerate it"))
+        return 1
+
+    if fresh:
+        print()
+        print(S.dim("already up to date; nothing written"))
+        return 0
+
+    written = index_mod.write(root, data, dry_run=args.dry_run)
+    print()
+    if args.dry_run:
+        print(S.warn("dry run: nothing written"))
+    for name in written:
+        print("  " + name)
+    return 0
+
+
+# --------------------------------------------------------------------------
+# migrate
+# --------------------------------------------------------------------------
+
+def cmd_migrate(args):
+    """Import material from the legacy LaTeX system.
+
+    Reads the old repository and writes a new content repository. The source is
+    never modified, and nothing is written without --apply.
+    """
+    source = os.path.abspath(args.source)
+    target = os.path.abspath(args.target)
+
+    if not os.path.isdir(os.path.join(source, "00classnotes")):
+        print(S.bad("%s does not look like the legacy repository" % source))
+        print(S.dim("  expected a 00classnotes/ directory in it"))
+        return 1
+    if os.path.abspath(target) == os.path.abspath(source):
+        print(S.bad("the target must be a different directory from the source"))
+        return 1
+
+    print(S.bold("reading %s" % source))
+    plan = migrate_mod.plan_units(
+        source, target, category=args.category, limit=args.limit)
+
+    if plan.errors:
+        for message in plan.errors:
+            print(S.bad("error  ") + " " + message)
+        return 2
+
+    # The compositions: which units each legacy master selected, in order.
+    # Planned even for a dry run, because the interesting question -- how much
+    # of the old structure survives -- is answered here rather than by the
+    # unit count.
+    courses = None
+    if not args.no_courses:
+        courses = migrate_mod.plan_courses(
+            source, target, plan.units, year=args.year)
+        for message in courses.errors:
+            print(S.bad("error  ") + " " + message)
+
+    summary = plan.summary()
+    print()
+    print("  %-16s %d" % ("units", summary["units"]))
+    print("  %-16s %d" % ("source files", summary["files"]))
+    print("  %-16s %d" % ("skipped", summary["skipped"]))
+    print()
+    print(S.bold("  by kind"))
+    for kind, count in sorted(summary["byKind"].items(), key=lambda kv: -kv[1]):
+        print("    %-12s %d" % (kind, count))
+    print()
+    print(S.bold("  by languages present"))
+    for combination, count in sorted(summary["byLanguages"].items(),
+                                     key=lambda kv: -kv[1]):
+        share = 100.0 * count / max(summary["units"], 1)
+        print("    %-12s %5d  %5.1f%%" % (combination or "(none)", count, share))
+
+    if courses is not None:
+        totals = courses.summary()
+        print()
+        print(S.bold("  compositions"))
+        print("    %-12s %d" % ("courses", totals["courses"]))
+        print("    %-12s %d" % ("years", totals["years"]))
+        print("    %-12s %d" % ("documents", totals["documents"]))
+        print("    %-12s %d" % ("references", totals["references"]))
+        if totals["unresolved"]:
+            print(S.warn("    %-12s %d" % ("unresolved", totals["unresolved"])))
+
+    if args.list:
+        print()
+        print(S.bold("  target layout"))
+        for unit in plan.units[: args.show]:
+            print("    %-58s %s" % (unit.relpath, "+".join(unit.languages)))
+        if len(plan.units) > args.show:
+            print(S.dim("    ... and %d more" % (len(plan.units) - args.show)))
+
+    if not args.apply:
+        print()
+        print(S.warn("dry run: nothing written"))
+        print(S.dim("  add --apply to create %s" % target))
+        print(S.dim("  add --list to see the target layout"))
+        return 0
+
+    print()
+    print(S.bold("writing %s" % target))
+    written = []
+
+    def report(unit, files):
+        written.extend(files)
+        if args.verbose:
+            print("  %-58s %s" % (unit.relpath, "+".join(unit.languages)))
+
+    created, problems = migrate_mod.apply_plan(plan, dry_run=False, on_unit=report)
+
+    if courses is not None:
+        course_files, course_problems = migrate_mod.apply_courses(
+            courses, dry_run=False)
+        created.extend(course_files)
+        problems.extend(course_problems)
+
+    print()
+    print("%d file(s) written" % len(created))
+    if problems:
+        print(S.bad("%d problem(s):" % len(problems)))
+        for message in problems[:10]:
+            print("  " + message)
+
+    failures = []
+    if args.verify:
+        failures = _verify(target, verbose=args.verbose)
+
+    # The report is the deliverable of a migration, not the files: it says what
+    # the legacy material could not tell us and therefore what still needs a
+    # human.
+    report_path = os.path.join(target, "MIGRATION-REPORT.md")
+    with open(report_path, "w", encoding="utf-8") as handle:
+        handle.write(_migration_report(plan, courses, source, target,
+                                       failures))
+    print()
+    print(S.bold("report: ") + report_path)
+    print(S.dim("  %d unit(s) need a decision" % len(plan.decisions)))
+    if courses is not None and courses.decisions:
+        print(S.dim("  %d document(s) need a decision" % len(courses.decisions)))
+    print()
+    print(S.dim("  next: cd %s && didacta check" % os.path.relpath(target)))
+    return 0
+
+
+#: A diagnostic looks like `error <file>:<line> <message>  <- <context>`.
+_WHERE = re.compile(r"^error\s+(\S+?)(?::(\d+))?\s+(.*)$", re.S)
+
+
+def _failure_section(failures):
+    """The verify failures, grouped by the file at fault.
+
+    Grouped because the same unit breaks several documents: measured on
+    2025-2026, 19 documents fail from 11 distinct units, and one of them --
+    the bibliography unit that uses biblatex `\cites` -- accounts for six.
+    Listing documents asks the author to read one error six times; listing
+    units says how much work there is, and which fix buys the most.
+    """
+    groups = {}
+    for name, profile, message in failures:
+        match = _WHERE.match(message.strip())
+        if match:
+            where = match.group(1)
+            if match.group(2):
+                where += ":" + match.group(2)
+            detail = match.group(3)
+        else:
+            where, detail = "(sin localizar)", message
+        entry = groups.setdefault(where, {"detail": detail, "documents": []})
+        entry["documents"].append((name, profile))
+
+    ordered = sorted(groups.items(),
+                     key=lambda item: (-len(item[1]["documents"]), item[0]))
+
+    lines = [
+        "## Lo que no compila (%d unidad(es), %d documento(s))"
+        % (len(groups), len(failures)),
+        "",
+        "Compilado un perfil de cada documento con `--verify`, y agrupado por el",
+        "fichero que falla: la misma unidad rompe varios documentos, así que la",
+        "cuenta que importa es la de unidades y el orden es por cuántos",
+        "documentos arregla cada una.",
+        "",
+        "Casi nada de esto lo ha causado la migración. Son errores que ya",
+        "estaban en el material — un `%` que se come un argumento obligatorio,",
+        "un `tikzpicture` que desborda una dimensión, un paquete que cargaba el",
+        "preámbulo antiguo — pero son justo los que no se encuentran leyendo los",
+        "ficheros.",
+        "",
+    ]
+    for where, entry in ordered:
+        count = len(entry["documents"])
+        lines.append("### `%s`" % where)
+        lines.append("")
+        lines.append("%s" % entry["detail"].strip()[:400])
+        lines.append("")
+        lines.append("Rompe %d documento(s):" % count)
+        for name, profile in sorted(entry["documents"]):
+            lines.append("- `%s` (`%s`)" % (name, profile))
+        lines.append("")
+    return lines
+
+
+def _verify(target, verbose=False):
+    """Compile one profile of every migrated document.
+
+    One profile, not all fourteen: a document that fails does so in the first
+    one, and the point is to name it rather than to measure it. The profile is
+    the document's own default, so a problem sheet is built as a problem sheet.
+
+    Returns ``[(document, profile, first error)]``.
+    """
+    settings = repo_mod.Settings.load(target)
+    courses, errors = repo_mod.scan_courses(target, settings)
+    if errors:
+        for message in errors[:5]:
+            print(S.bad("error  ") + " " + message)
+        return []
+
+    documents = [
+        (course.id, year, document)
+        for course in sorted(courses.values(), key=lambda item: item.id)
+        for year, entry in sorted(course.years.items())
+        for document in entry.documents
+    ]
+    if not documents:
+        return []
+
+    engine = build_mod.Engine(
+        LATEX_DIR,
+        os.path.join(target, settings.build_dir, ".verify"),
+    )
+
+    print()
+    print(S.bold("verifying %d document(s)" % len(documents)))
+    failures = []
+    for index, (course_id, year, document) in enumerate(documents, 1):
+        wanted = document.profiles or [
+            profile.id for profile in
+            profiles_mod.default_profiles(engine.profiles, document.kind)
+        ]
+        profile = wanted[0] if wanted else "notes"
+        result = engine.build(
+            document.source, profile, document.language,
+            document_id=document.id,
+            document_title=document.title(document.language),
+            content_root=repo_mod.content_root_for(document.source, target),
+        )
+        if result.ok:
+            if verbose:
+                print("  ok    %s/%s/%s" % (course_id, year, document.id))
+        else:
+            first = str(result.errors[0]) if result.errors else "sin diagnóstico"
+            failures.append(("%s/%s/%s" % (course_id, year, document.id),
+                             profile, first))
+            print(S.bad("  fail  ") + "%s/%s %s" % (course_id, document.id, profile))
+        if not verbose and index % 25 == 0:
+            print(S.dim("  ... %d/%d" % (index, len(documents))))
+
+    print()
+    print("%d of %d document(s) compile"
+          % (len(documents) - len(failures), len(documents)))
+    return failures
+
+
+def _migration_report(plan, courses, source, target, failures=()):
+    summary = plan.summary()
+    lines = [
+        "# Informe de migración",
+        "",
+        "Generado por `didacta migrate`. El repositorio de origen **no se ha",
+        "modificado**: sigue compilando con sus propios Makefiles.",
+        "",
+        "| | |",
+        "|---|---|",
+        "| origen | `%s` |" % source,
+        "| destino | `%s` |" % target,
+        "| unidades | %d |" % summary["units"],
+        "| ficheros de origen | %d |" % summary["files"],
+        "| omitidos | %d |" % summary["skipped"],
+        "",
+        "## Idiomas presentes",
+        "",
+        "| idiomas | unidades | % |",
+        "|---|---|---|",
+    ]
+    for combination, count in sorted(summary["byLanguages"].items(),
+                                     key=lambda kv: -kv[1]):
+        lines.append("| %s | %d | %.1f%% |" % (
+            combination or "(ninguno)", count,
+            100.0 * count / max(summary["units"], 1)))
+
+    lines += [
+        "",
+        "## Qué se ha transformado automáticamente",
+        "",
+        "- se ha borrado el preámbulo de cada fichero (Didacta lo suministra);",
+        "- los ficheros se han agrupado por unidad lógica y renombrados",
+        "  `es.tex` / `va.tex` / `en.tex`;",
+        "- `ndefn`, `defn`, `nthrm`, `ej`, … renombrados a los entornos de",
+        "  Didacta;",
+        "- `shownto{solution}` → `solution`, `shownto{profesor}` → `marking`;",
+        "- `\\onlybook` → `\\onlynotes`, `\\pause` → `\\dpause`,",
+        "  `\\frametitle` → `\\didactatitle`;",
+        "- las figuras se han copiado junto a su unidad.",
+        "",
+        "## Qué necesita una decisión humana",
+        "",
+        "El material anterior no guardaba esta información en ninguna parte, así",
+        "que la migración **no la ha inventado**. Cada `unit.yaml` lleva los",
+        "campos correspondientes marcados con `TODO`.",
+        "",
+        "- **título por idioma** — se ha extraído del `\\frametitle` cuando",
+        "  existía;",
+        "- **etiquetas** — solo se ha derivado la carpeta del tema;",
+        "- **prerrequisitos y objetivos** — vacíos;",
+        "- **duración y dificultad** — vacíos.",
+        "",
+        "Todas las unidades llegan con estado `draft`: se han movido, no",
+        "revisadas en el sistema nuevo.",
+        "",
+    ]
+
+    flagged = plan.decisions
+    if flagged:
+        lines += [
+            "## Unidades marcadas (%d)" % len(flagged),
+            "",
+        ]
+        for unit in flagged[:200]:
+            lines.append("### `%s`" % unit.relpath)
+            lines.append("")
+            for path in sorted(unit.sources.values()):
+                lines.append("- origen: `%s`" % path)
+            for decision in unit.needs_decision:
+                lines.append("- **decidir:** %s" % decision)
+            for note in unit.notes:
+                lines.append("- nota: %s" % note)
+            lines.append("")
+        if len(flagged) > 200:
+            lines.append("_… y %d unidades más._" % (len(flagged) - 200))
+            lines.append("")
+
+    if courses is not None:
+        totals = courses.summary()
+        lines += [
+            "## Composiciones",
+            "",
+            "Cada documento del sistema anterior era un `.tex` con un preámbulo",
+            "y una lista ordenada de `\\import{../../../../00classnotes/…}`. Lo",
+            "que valía la pena de ese fichero era la lista, y ahora vive en",
+            "`year.yaml`; el `.tex` que queda son dos líneas de arranque.",
+            "",
+            "| | |",
+            "|---|---|",
+            "| asignaturas | %d |" % totals["courses"],
+            "| cursos académicos | %d |" % totals["years"],
+            "| documentos | %d |" % totals["documents"],
+            "| referencias a unidades | %d |" % totals["references"],
+            "| referencias sin resolver | %d |" % totals["unresolved"],
+            "",
+            "Se han conservado como comentarios las referencias y los apartados",
+            "que estaban comentados en el original: cada uno registra algo que",
+            "se decidió dejar fuera ese curso.",
+            "",
+            "Lo que la migración **no** deduce y hay que decidir:",
+            "",
+            "- **el título en los demás idiomas** — el original solo tenía uno;",
+            "- **los encabezados de apartado en los demás idiomas** — igual;",
+            "- **qué perfiles compila cada documento** — por ahora se toman los",
+            "  que corresponden a su tipo (`theory`, `problems`, `handout`,",
+            "  `seminar`, `practical`, `exam`).",
+            "",
+        ]
+
+        flagged_docs = courses.decisions
+        if flagged_docs:
+            lines += ["### Documentos marcados (%d)" % len(flagged_docs), ""]
+            for document in flagged_docs[:120]:
+                lines.append("#### `%s/%s/%s`" % (
+                    document.course, document.year, document.id))
+                lines.append("")
+                lines.append("- origen: `%s`" % document.source)
+                for decision in document.needs_decision:
+                    lines.append("- **decidir:** %s" % decision)
+                for note in document.notes:
+                    lines.append("- nota: %s" % note)
+                lines.append("")
+            if len(flagged_docs) > 120:
+                lines.append("_… y %d documentos más._" % (len(flagged_docs) - 120))
+                lines.append("")
+
+        if courses.skipped:
+            lines += ["### Masters no colocados (%d)" % len(courses.skipped), ""]
+            for path, why in courses.skipped[:40]:
+                lines.append("- `%s` — %s" % (path, why))
+            if len(courses.skipped) > 40:
+                lines.append("- _… y %d más._" % (len(courses.skipped) - 40))
+            lines.append("")
+
+    if failures:
+        lines += _failure_section(failures)
+
+    if plan.skipped:
+        lines += ["## Omitidos (%d)" % len(plan.skipped), ""]
+        for path, why in plan.skipped[:60]:
+            lines.append("- `%s` — %s" % (path, why))
+        if len(plan.skipped) > 60:
+            lines.append("- _… y %d más._" % (len(plan.skipped) - 60))
+        lines.append("")
+
+    lines += [
+        "## Siguiente paso",
+        "",
+        "```bash",
+        "cd %s" % target,
+        "didacta check          # referencias, idiomas, prerrequisitos",
+        "didacta units          # la biblioteca con su estado",
+        "didacta translations   # qué falta traducir",
+        "didacta build --all   # todo a PDF",
+        "```",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------
+# main
+# --------------------------------------------------------------------------
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="didacta",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("--root", help="content repository root (default: auto-detect)")
+    sub = parser.add_subparsers(dest="command")
+
+    p = sub.add_parser("status", help="what is in this repository")
+    p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("profiles", help="the output profiles available")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_profiles)
+
+    p = sub.add_parser("units", help="the content library")
+    p.add_argument("--category")
+    p.add_argument("--topic")
+    p.add_argument("--tag")
+    p.add_argument("--kind", choices=repo_mod.UNIT_KINDS)
+    p.add_argument("--search", metavar="TEXT")
+    p.add_argument("--missing", metavar="LANG", choices=profiles_mod.LANGUAGES,
+                   help="only units with no version in this language")
+    p.add_argument("--lang", default="es", choices=profiles_mod.LANGUAGES)
+    p.add_argument("--json", action="store_true")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_units)
+
+    p = sub.add_parser("translations", help="what needs translating")
+    p.add_argument("--limit", type=int, default=40)
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_translations)
+
+    p = sub.add_parser("build", help="compile documents to PDF")
+    p.add_argument("document", nargs="*", help="document id, or omit with --all")
+    p.add_argument("-p", "--profile", action="append",
+                   help="output profile (repeatable; default: the document's own)")
+    p.add_argument("-l", "--language", action="append", choices=profiles_mod.LANGUAGES,
+                   help="language (repeatable; default: the document's own)")
+    p.add_argument("--all", action="store_true", help="every document")
+    p.add_argument("--course")
+    p.add_argument("--year")
+    p.add_argument("--list", action="store_true", help="show what would be built")
+    p.add_argument("--fast", action="store_true",
+                   help="one pdflatex pass; quick, but references may be wrong")
+    p.add_argument("--json", action="store_true", help="write summary.json")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("check", help="validate the repository")
+    p.set_defaults(func=cmd_check)
+
+    p = sub.add_parser("index", help="generate the derived catalogues")
+    p.add_argument("--check", action="store_true",
+                   help="fail if the index on disk is stale; writes nothing")
+    p.add_argument("--dry-run", action="store_true",
+                   help="say what would be written")
+    p.add_argument("--json", action="store_true", help="print the manifest")
+    p.set_defaults(func=cmd_index)
+
+    p = sub.add_parser("migrate", help="import from the legacy LaTeX system")
+    p.add_argument("source", help="the legacy repository (contains 00classnotes/)")
+    p.add_argument("target", help="the content repository to create")
+    p.add_argument("--apply", action="store_true",
+                   help="actually write; without it this is a dry run")
+    p.add_argument("--category", help="migrate only this legacy category")
+    p.add_argument("--year", metavar="YYYY-YYYY",
+                   help="migrate compositions only for this academic year")
+    p.add_argument("--no-courses", action="store_true",
+                   help="migrate the content library but not the compositions")
+    p.add_argument("--verify", action="store_true",
+                   help="compile every migrated document and report what fails")
+    p.add_argument("--limit", type=int, help="stop after N units")
+    p.add_argument("--list", action="store_true", help="show the target layout")
+    p.add_argument("--show", type=int, default=40, help="how many to list")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_migrate)
+
+    p = sub.add_parser("new", help="scaffold content")
+    new_sub = p.add_subparsers(dest="what")
+
+    q = new_sub.add_parser("unit", help="a new unit")
+    q.add_argument("path", help="category/topic/unit")
+    q.add_argument("--kind", default="theory", choices=repo_mod.UNIT_KINDS)
+    q.add_argument("--lang", choices=profiles_mod.LANGUAGES)
+    q.add_argument("--title")
+    q.set_defaults(func=cmd_new_unit)
+
+    q = new_sub.add_parser("year", help="duplicate a course year")
+    q.add_argument("course")
+    q.add_argument("year")
+    q.add_argument("--from", dest="From", metavar="YEAR",
+                   help="year to copy (default: the most recent)")
+    q.set_defaults(func=cmd_new_year)
+
+    args = parser.parse_args(argv)
+    if not getattr(args, "func", None):
+        parser.print_help()
+        return 0
+
+    try:
+        return args.func(args)
+    except (repo_mod.RepoError, profiles_mod.ProfileError,
+            yamlio.YamlError, build_mod.BuildError) as exc:
+        print(S.bad("error: ") + str(exc))
+        return 2
+
+
+if __name__ == "__main__":
+    # Line-buffered even when redirected. `migrate --verify` and `build --all`
+    # run for many minutes, and with the default block buffering `> log` shows
+    # nothing at all until the process ends -- which looks exactly like a hang.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+        sys.stderr.reconfigure(line_buffering=True)
+    except AttributeError:  # pragma: no cover - Python < 3.7
+        pass
+    sys.exit(main())

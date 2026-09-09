@@ -1,0 +1,24 @@
+# Build output from the example content repository and from the test suite.
+# PDFs are generated from the sources next to them; committing them would mean
+# storing the same information twice and letting the two disagree.
+examples/*/.didacta-build/
+tests/.build-outputs/
+
+# Python caches.
+**/__pycache__/
+**/*.pyc
+
+# Generated indices in the example repository. They are derived: regenerating
+# gives the same bytes, so committing them would mean reviewing a diff that
+# carries no decision. A real content repository may well commit its own, so
+# that a GitHub Pages deployment has something to serve without a build step.
+examples/*/generated/
+
+# The app's build output and its Dart/Flutter caches.
+app/build/
+app/.dart_tool/
+app/.flutter-plugins*
+
+# The Worker's dependencies.
+api/node_modules/
+api/.wrangler/

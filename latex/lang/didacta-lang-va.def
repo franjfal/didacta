@@ -1,0 +1,51 @@
+%%
+%% didacta-lang-va.def -- Valencià.
+%%
+%% Uses babel's `catalan`, which is what the existing Valencian material does
+%% and what produces correct hyphenation. The visible strings use Valencian
+%% forms (Questió, Correcció) rather than the Central Catalan ones.
+%%
+\ProvidesFile{didacta-lang-va.def}[2026/09/09 Didacta Valencian]
+
+\def\didactaBabelName{catalan}
+
+\def\didactaTheoremName{Teorema}
+\def\didactaDefinitionName{Definici\'o}
+\def\didactaPropositionName{Proposici\'o}
+\def\didactaLemmaName{Lema}
+\def\didactaCorollaryName{Corol\textperiodcentered lari}
+\def\didactaPropertyName{Propietat}
+\def\didactaExampleName{Exemple}
+\def\didactaQuestionName{Questi\'o}
+\def\didactaRemarkName{Nota}
+\def\didactaAxiomName{Axioma}
+\def\didactaAlgorithmName{Algoritme}
+\def\didactaNotationName{Notaci\'o}
+\def\didactaProofName{Demostraci\'o}
+
+\def\didactaExerciseName{Exercici}
+\def\didactaAnswerName{Resposta}
+\def\didactaSolutionName{Soluci\'o}
+\def\didactaHintName{Indicaci\'o}
+\def\didactaMarkingName{Correcci\'o}
+\def\didactaMarksName{punts}
+
+\def\didactaContentsName{Continguts}
+\def\didactaChapterName{Tema}
+\def\didactaCourseName{Assignatura}
+\def\didactaTeacherName{Professor}
+\def\didactaAcademicYearName{Curs}
+\def\didactaBibliographyName{Bibliografia}
+\def\didactaObjectivesName{Objectius}
+\def\didactaPrerequisitesName{Prerequisits}
+\def\didactaSummaryName{Resum}
+\def\didactaFurtherReadingName{Per a saber-ne m\'es}
+
+\def\didactaTeachingNoteName{Nota did\`actica}
+\def\didactaTimingName{Duraci\'o estimada}
+\def\didactaCommonMistakeName{Error freq\"uent}
+
+\def\didactaExamName{Examen}
+\def\didactaDurationName{Duraci\'o}
+\def\didactaTotalMarksName{Puntuaci\'o total}
+\endinput

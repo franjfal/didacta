@@ -1,0 +1,156 @@
+%%
+%% didacta-formats.sty -- conditional content.
+%%
+%% The mechanism that lets one source produce every output. Content wrapped in
+%% one of these macros appears only where it belongs; content left unwrapped
+%% appears everywhere.
+%%
+%% This is the part of the legacy system worth keeping verbatim in spirit:
+%% \onlyslides and \onlybook, used in 772 files, are exactly the right two
+%% primitives. Didacta keeps them as aliases and adds the axes the legacy
+%% system lacked -- notably a teacher channel that is genuinely distinct from
+%% the notes channel, which in the legacy templates it was not.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-formats}[2026/09/09 v1.0 Didacta conditional content]
+
+\RequirePackage{etoolbox}
+\RequirePackage{environ}
+
+\makeatletter
+
+%% ---------------------------------------------------------------------------
+%% Axis state
+%%
+%% Set by didacta.sty from the profile. Every switch below reads these, so
+%% behaviour lives in one place and a new profile needs no new code.
+%% ---------------------------------------------------------------------------
+
+\newtoggle{didacta@slides}      % medium = slides
+\newtoggle{didacta@full}        % detail = full
+\newtoggle{didacta@teacher}     % audience = teacher
+\newtoggle{didacta@answers}     % solutions = answers or full
+\newtoggle{didacta@solutions}   % solutions = full
+\newtoggle{didacta@pauses}      % pauses = on
+
+%% ---------------------------------------------------------------------------
+%% The two primitives
+%% ---------------------------------------------------------------------------
+
+%% Only on projected or printed slides.
+%%
+%% For spacing tweaks, a one-line reminder that fits a slide, a \vspace that
+%% would be wrong in prose.
+\newcommand{\onlyslides}[1]{\iftoggle{didacta@slides}{#1}{}}
+
+%% Only in the written document.
+%%
+%% For the prose, the proof, the worked example -- everything that does not
+%% fit on a slide but belongs in the notes.
+\newcommand{\onlynotes}[1]{\iftoggle{didacta@slides}{}{#1}}
+
+%% Only in a teacher copy.
+%%
+%% For timing, common mistakes, what to ask, what to skip if short of time.
+%% Unlike the legacy \onlyteacher -- which was defined identically to
+%% \onlybook and therefore did nothing distinct -- this is a real channel:
+%% it appears in the teacher profiles and in no student output.
+\newcommand{\onlyteacher}[1]{\iftoggle{didacta@teacher}{#1}{}}
+
+%% Everywhere except a teacher copy. For a note addressed to the student.
+\newcommand{\onlystudent}[1]{\iftoggle{didacta@teacher}{}{#1}}
+
+%% ---------------------------------------------------------------------------
+%% Legacy aliases
+%%
+%% The migrated material uses these names in 772 files. Keeping them is what
+%% makes the migration a move rather than a rewrite.
+%% ---------------------------------------------------------------------------
+
+%% \onlybook was the legacy name for \onlynotes.
+\newcommand{\onlybook}[1]{\onlynotes{#1}}
+
+%% ---------------------------------------------------------------------------
+%% Combinations
+%%
+%% Named because the three-way combinations are otherwise unreadable at the
+%% point of use.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\slidesandteacher}[1]{%
+  \ifboolexpr{togl {didacta@slides} or togl {didacta@teacher}}{#1}{}}
+\newcommand{\notesandteacher}[1]{%
+  \ifboolexpr{(not togl {didacta@slides}) or togl {didacta@teacher}}{#1}{}}
+\newcommand{\everywhere}[1]{#1}
+
+%% Different wording per medium, which is more often what you want than
+%% hiding one version entirely.
+%%
+%%   \bymedium{short slide phrasing}{the full sentence for the notes}
+\newcommand{\bymedium}[2]{\iftoggle{didacta@slides}{#1}{#2}}
+
+%% A frame title that differs between media. On a slide it is the frametitle;
+%% in prose it becomes a subsection heading, which is what a reader needs.
+\newcommand{\didactatitle}[1]{%
+  \iftoggle{didacta@slides}{\frametitle{#1}}{\subsection{#1}}}
+
+%% ---------------------------------------------------------------------------
+%% Block forms
+%%
+%% \onlynotes{...} breaks on a body containing \par, verbatim or an
+%% environment with a catcode change. These take the body as an environment
+%% body instead, which handles all of it.
+%% ---------------------------------------------------------------------------
+
+\NewEnviron{notesonly}{\iftoggle{didacta@slides}{}{\BODY}}
+\NewEnviron{slidesonly}{\iftoggle{didacta@slides}{\BODY}{}}
+\NewEnviron{teacheronly}{\iftoggle{didacta@teacher}{\BODY}{}}
+\NewEnviron{studentonly}{\iftoggle{didacta@teacher}{}{\BODY}}
+
+%% ---------------------------------------------------------------------------
+%% Pauses
+%%
+%% On slides with pauses, \dpause reveals. Everywhere else it vanishes -- and
+%% has to vanish *silently*, because `article` has no \pause at all and a
+%% stray one is a hard error.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\dpause}{%
+  \ifboolexpr{togl {didacta@slides} and togl {didacta@pauses}}%
+    {\pause}{}}
+
+%% In prose, `beamerarticle` makes \pause a no-op, so migrated sources that
+%% call \pause directly keep working. The document profiles load it for
+%% exactly this reason.
+
+%% ---------------------------------------------------------------------------
+%% Detail level
+%%
+%% Independent of medium. `brief` is for an exam paper, which is a document
+%% but must not carry the explanatory prose.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\onlyfull}[1]{\iftoggle{didacta@full}{#1}{}}
+\newcommand{\onlybrief}[1]{\iftoggle{didacta@full}{}{#1}}
+\NewEnviron{fullonly}{\iftoggle{didacta@full}{\BODY}{}}
+
+%% ---------------------------------------------------------------------------
+%% Diagnostics
+%%
+%% \didactaprofilebanner prints the active axes. Invaluable when a build has
+%% produced something unexpected and you need to know which profile ran.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didactaprofilebanner}{%
+  \begingroup
+    \small\ttfamily
+    profile=\DidactaProfile\quad lang=\DidactaLanguage\quad
+    medium=\iftoggle{didacta@slides}{slides}{document}\quad
+    detail=\iftoggle{didacta@full}{full}{brief}\quad
+    audience=\iftoggle{didacta@teacher}{teacher}{student}\quad
+    solutions=\iftoggle{didacta@solutions}{full}%
+              {\iftoggle{didacta@answers}{answers}{hidden}}%
+  \endgroup}
+
+\makeatother
+\endinput

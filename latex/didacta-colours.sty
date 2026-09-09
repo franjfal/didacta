@@ -1,0 +1,72 @@
+%%
+%% didacta-colours.sty -- the palette.
+%%
+%% Colour carries meaning here, so it is defined once and used identically in
+%% slides and in prose. A reader who learns "blue is a theorem" on a slide
+%% should not have to relearn it in the notes.
+%%
+%% The accent inherits the green the author's existing beamer theme uses
+%% (chameleongreen, RGB 85/170/85), so Didacta output sits next to the legacy
+%% output without a visible seam during the migration.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-colours}[2026/09/09 v1.0 Didacta palette]
+
+%% `table` here too: whichever of the two loads first wins, and an
+%% option clash is a hard error.
+\RequirePackage[table]{xcolor}
+
+%% Brand.
+\definecolor{didactaAccent}{RGB}{85,170,85}
+\definecolor{didactaAccentDark}{RGB}{52,110,52}
+\definecolor{didactaInk}{RGB}{28,31,38}
+\definecolor{didactaMuted}{RGB}{110,118,130}
+\definecolor{didactaRule}{RGB}{205,210,218}
+
+%% Theorem-like environments. Hue groups them by role:
+%%   blue    things you prove or assume
+%%   grey    things you define
+%%   green   things that follow
+%%   amber   things you work through
+%%   purple  things worth pausing on
+\definecolor{didactaThm}{RGB}{45,95,160}      % theorem
+\definecolor{didactaAxiom}{RGB}{120,95,175}   % axiom
+\definecolor{didactaDefn}{RGB}{92,100,112}    % definition
+\definecolor{didactaProp}{RGB}{60,135,110}    % proposition, property
+\definecolor{didactaLem}{RGB}{70,120,150}     % lemma
+\definecolor{didactaCor}{RGB}{140,90,150}     % corollary
+\definecolor{didactaEx}{RGB}{190,130,55}      % example
+\definecolor{didactaQues}{RGB}{30,140,150}    % question
+\definecolor{didactaRem}{RGB}{120,125,135}    % remark, notation
+\definecolor{didactaAlgo}{RGB}{100,110,175}   % algorithm
+
+%% Answer levels. These must be distinguishable at a glance on a problem
+%% sheet, because the reader is deciding whether to look.
+\definecolor{didactaAnswerRule}{RGB}{60,135,110}
+\definecolor{didactaSolutionRule}{RGB}{45,95,160}
+\definecolor{didactaHintRule}{RGB}{190,130,55}
+\definecolor{didactaMarkingRule}{RGB}{170,75,75}
+
+%% The teacher channel. Warm and unmistakable: if you can see this colour, you
+%% are holding the teacher's copy.
+\definecolor{didactaTeacher}{RGB}{170,75,75}
+
+%% ---------------------------------------------------------------------------
+%% Legacy colour names
+%%
+%% The old system's `chameleon` beamer theme is gone (it was not on CTAN), but
+%% 284 places in the material name its colours, and `labelcolor` comes from a
+%% practical-session template that is gone too. Defining the names keeps that
+%% content compiling and looking as it did, which is the same call made for
+%% \onlybook, ndefn and \profesor: migrating is a move, not a rewrite.
+%%
+%% Values taken from the theme itself, not chosen here.
+%% ---------------------------------------------------------------------------
+
+\definecolor{chameleongreen1}{RGB}{98,189,25}
+\definecolor{chameleongreen2}{RGB}{188,225,141}
+\definecolor{chameleongreen3}{RGB}{51,149,48}
+\definecolor{chameleongreen4}{RGB}{0,98,90}
+\definecolor{labelcolor}{RGB}{100,0,0}
+
+\endinput

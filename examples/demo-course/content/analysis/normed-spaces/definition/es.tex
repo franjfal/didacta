@@ -1,0 +1,83 @@
+% Unidad: definición de espacio normado (castellano).
+%
+% Sin preámbulo. La unidad no sabe a qué salida va: los interruptores deciden.
+% Compárese con la versión heredada, que arrastraba su propio \documentclass,
+% su propio babel (equivocado) y cuatro \import con rutas relativas.
+
+\begin{frame}
+\didactatitle{Definición y propiedades de los espacios normados}
+
+La métrica usual en $\mathbb{R}$ es la distancia euclídea entre dos puntos
+$x, y \in \mathbb{R}$, dada por
+\[
+  d(x,y) = |x-y|.
+\]
+Este concepto se generaliza a espacios vectoriales mediante la noción de norma.
+
+\onlynotes{%
+  La idea detrás del concepto de norma es generalizar las propiedades más
+  útiles de la distancia euclídea en $\mathbb{R}$: que mide algo no negativo,
+  que escala con el factor de escala, y que respeta la desigualdad triangular.
+}
+
+\begin{definition}[Espacio normado]
+Un \keyterm{espacio normado} es un par $(E, \|\cdot\|)$, donde $E$ es un
+espacio vectorial sobre el cuerpo $\mathbb{K}$ ($\mathbb{R}$ o $\mathbb{C}$) y
+$\|\cdot\|$ es una función llamada \keyterm{norma} que satisface:
+\begin{itemize}
+  \item \textbf{Positividad:} $\|x\| \geq 0$, y $\|x\| = 0 \iff x = 0$.
+  \item \textbf{Homogeneidad:} $\|\lambda x\| = |\lambda|\,\|x\|$ para todo
+        $\lambda \in \mathbb{K}$ y $x \in E$.
+  \item \textbf{Desigualdad triangular:} $\|x+y\| \leq \|x\| + \|y\|$ para
+        todo $x, y \in E$.
+\end{itemize}
+Cuando no haya ambigüedad denotaremos el espacio normado simplemente por $E$.
+\end{definition}
+
+\begin{teaching}[Ritmo]
+Quince minutos. Merece la pena detenerse en la homogeneidad: casi nadie ve por
+qué hace falta el valor absoluto en $|\lambda|$ hasta que se les pide
+$\lambda = -1$.
+\end{teaching}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Ejemplos de espacios normados}
+
+Un espacio normado permite medir la \keyterm{longitud} de los vectores y
+definir conceptos como \keyterm{distancia} y \keyterm{convergencia}.
+
+\dpause
+
+\begin{example}
+En $\mathbb{R}^n$ podemos definir distintas normas. Las más comunes son
+\[
+  \|x\|_1 = \sum_{i=1}^n |x_i|,
+  \qquad
+  \|x\|_2 = \Bigl(\sum_{i=1}^n |x_i|^2\Bigr)^{1/2},
+  \qquad
+  \|x\|_\infty = \max_{1 \leq i \leq n} |x_i|.
+\]
+
+\onlynotes{%
+  \begin{itemize}
+    \item $\|x\|_2$ es la \keyterm{norma euclídea}, y su métrica asociada es la
+          distancia euclídea.
+    \item $\|x\|_1$ se usa en optimización, por su simplicidad computacional.
+    \item $\|x\|_\infty$ es útil en análisis numérico, cuando interesa
+          controlar el \keyterm{valor máximo} de las componentes.
+  \end{itemize}
+}
+
+También podemos definir normas en espacios más sofisticados, como el de las
+funciones continuas en $[a,b]$ con
+\begin{keyformula}
+  \|f\| = \max_{x \in [a,b]} |f(x)|.
+\end{keyformula}
+\end{example}
+
+\begin{commonmistake}
+Escriben $\|\lambda x\| = \lambda \|x\|$ y pierden el valor absoluto. Sale
+sistemáticamente en el primer parcial.
+\end{commonmistake}
+\end{frame}

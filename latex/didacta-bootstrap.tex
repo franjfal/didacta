@@ -1,0 +1,83 @@
+%%
+%% didacta-bootstrap.tex -- choose the document class from the output profile.
+%%
+%% A Didacta document begins with
+%%
+%%     \input{didacta-bootstrap}
+%%     \usepackage{didacta}
+%%
+%% and nothing else before \begin{document}. The class is not written in the
+%% source: it comes from the profile, so one file produces every output.
+%%
+%% Why a bootstrap file rather than a document class of its own: slides need
+%% `beamer` and prose needs `article` or `book`, and no single class can be
+%% both. Selecting the class before \documentclass runs is the only way to keep
+%% one source. The legacy system reached the same conclusion; Didacta makes the
+%% choice explicit and named instead of inferring it from which class happens
+%% to be loaded.
+%%
+%% Two knobs, both settable from the command line:
+%%
+%%     \def\DidactaProfile{slides}     which output (see didacta-profiles.tex)
+%%     \def\DidactaLanguage{va}        es | va | en
+%%
+%% Both have defaults, so opening the file in an editor and pressing compile
+%% produces the written notes in Castilian without any setup. That matters:
+%% direct compilation with working SyncTeX is a hard requirement, and it must
+%% not depend on remembering to pass flags.
+%%
+\makeatletter
+
+\@ifundefined{DidactaProfile}{\def\DidactaProfile{notes}}{}
+\@ifundefined{DidactaLanguage}{\def\DidactaLanguage{es}}{}
+
+%% Extra class options a document may add, e.g. a paper size.
+\@ifundefined{DidactaClassOptions}{\def\DidactaClassOptions{}}{}
+
+%% Let a document override the class outright. Rarely wanted, but an exam in
+%% the `exam` class or a thesis in `memoir` should not need a fork of Didacta.
+\@ifundefined{DidactaClass}{\def\DidactaClass{}}{}
+
+\input{didacta-profiles}
+
+%% Fail loudly on an unknown profile. A silent fallback would hand back a PDF
+%% that looks plausible and is the wrong output.
+\@ifundefined{didacta@profile@\DidactaProfile @class}{%
+  \begingroup
+    \newlinechar=`\^^J
+    \errmessage{^^J%
+      ! Didacta: unknown output profile `\DidactaProfile'.^^J%
+      ! Known profiles:\didacta@profile@list ^^J%
+      ! Declare new ones with \string\DidactaDeclareProfile\space in
+      didacta-profiles.tex.^^J}%
+  \endgroup
+}{}
+
+\edef\didacta@class{\@nameuse{didacta@profile@\DidactaProfile @class}}
+\edef\didacta@classoptions{\@nameuse{didacta@profile@\DidactaProfile @options}}
+
+%% A document-level class override wins.
+\ifx\DidactaClass\@empty\else
+  \edef\didacta@class{\DidactaClass}%
+\fi
+
+%% Append the document's own options after the profile's, so the document wins
+%% on any conflict.
+\ifx\DidactaClassOptions\@empty\else
+  \edef\didacta@classoptions{\didacta@classoptions,\DidactaClassOptions}%
+\fi
+
+%% `notes=show` has to reach beamer as a *class* option, not a later setting,
+%% so it is the one axis the bootstrap has to look at. `\in@` is the kernel's
+%% substring test, which keeps this dependency-free.
+\edef\didacta@axes{\@nameuse{didacta@profile@\DidactaProfile @axes}}
+\expandafter\in@\expandafter{\expandafter n\expandafter o\expandafter t%
+  \expandafter e\expandafter s\expandafter =\expandafter s\expandafter h%
+  \expandafter o\expandafter w\expandafter}\expandafter{\didacta@axes}
+\ifin@
+  \edef\didacta@classoptions{\didacta@classoptions,notes=show}%
+\fi
+
+\expandafter\documentclass\expandafter[\didacta@classoptions]{\didacta@class}
+
+\makeatother

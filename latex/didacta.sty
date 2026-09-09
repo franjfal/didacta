@@ -1,0 +1,482 @@
+%%
+%% didacta.sty -- the Didacta teaching-content package.
+%%
+%%     \input{didacta-bootstrap}
+%%     \usepackage{didacta}
+%%
+%% Reads the output profile chosen by the bootstrap, sets the behaviour axes,
+%% loads the language, and provides everything a piece of teaching content
+%% needs. A source file that uses only Didacta commands compiles to any of the
+%% profiles in didacta-profiles.tex without change.
+%%
+%% Dependencies are CTAN only. The legacy system needed six non-CTAN .sty
+%% files and a bundled font; nothing here is outside a standard TeX Live.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta}[2026/09/09 v1.0 Didacta teaching content]
+
+\makeatletter
+
+%% ---------------------------------------------------------------------------
+%% Guard: the bootstrap must have run
+%% ---------------------------------------------------------------------------
+
+\@ifundefined{DidactaProfile}{%
+  \PackageError{didacta}{%
+    Missing \string\input{didacta-bootstrap}%
+  }{%
+    A Didacta document starts with \string\input{didacta-bootstrap}, which
+    chooses the document class from the output profile. Add it as the first
+    line, before \string\usepackage{didacta}.%
+  }%
+}{}
+
+%% ---------------------------------------------------------------------------
+%% Axes
+%%
+%% Parsed from the profile declaration into the toggles that didacta-formats
+%% reads. Defaults are the conservative choice: prose, full detail, student,
+%% no solutions.
+%% ---------------------------------------------------------------------------
+
+\RequirePackage{etoolbox}
+\RequirePackage{keyval}
+\RequirePackage[table]{xcolor}
+
+\RequirePackage{didacta-formats}
+
+\newtoggle{didacta@compact}
+\newtoggle{didacta@exam}
+
+\define@key{didacta@axis}{medium}{%
+  \ifstrequal{#1}{slides}{\toggletrue{didacta@slides}}{\togglefalse{didacta@slides}}}
+\define@key{didacta@axis}{detail}{%
+  \ifstrequal{#1}{full}{\toggletrue{didacta@full}}{\togglefalse{didacta@full}}}
+\define@key{didacta@axis}{audience}{%
+  \ifstrequal{#1}{teacher}{\toggletrue{didacta@teacher}}{\togglefalse{didacta@teacher}}}
+\define@key{didacta@axis}{solutions}{%
+  \ifstrequal{#1}{full}{\toggletrue{didacta@answers}\toggletrue{didacta@solutions}}{%
+    \ifstrequal{#1}{answers}{\toggletrue{didacta@answers}\togglefalse{didacta@solutions}}{%
+      \togglefalse{didacta@answers}\togglefalse{didacta@solutions}}}}
+\define@key{didacta@axis}{pauses}{%
+  \ifstrequal{#1}{on}{\toggletrue{didacta@pauses}}{\togglefalse{didacta@pauses}}}
+\define@key{didacta@axis}{layout}{%
+  \ifstrequal{#1}{compact}{\toggletrue{didacta@compact}}{}%
+  \ifstrequal{#1}{exam}{\toggletrue{didacta@exam}}{}}
+%% Consumed by the bootstrap; accepted and ignored here.
+\define@key{didacta@axis}{notes}{}
+
+%% Defaults, then the profile's declaration on top.
+\togglefalse{didacta@slides}
+\toggletrue{didacta@full}
+\togglefalse{didacta@teacher}
+\togglefalse{didacta@answers}
+\togglefalse{didacta@solutions}
+\togglefalse{didacta@pauses}
+
+\input{didacta-profiles}
+
+%% Build the \setkeys call by expansion and then run it. A chain of
+%% \expandafter around a literal family name and a macro value is easy to get
+%% subtly wrong -- it was, and the symptom was an empty key rather than
+%% anything that pointed at the cause.
+\edef\didacta@axes@now{\@nameuse{didacta@profile@\DidactaProfile @axes}}
+\edef\didacta@applyaxes{\noexpand\setkeys{didacta@axis}{\didacta@axes@now}}
+\didacta@applyaxes
+
+%% ---------------------------------------------------------------------------
+%% Language
+%% ---------------------------------------------------------------------------
+
+\@ifundefined{DidactaLanguage}{\def\DidactaLanguage{es}}{}
+
+\IfFileExists{didacta-lang-\DidactaLanguage.def}{}{%
+  \PackageError{didacta}{Unknown language `\DidactaLanguage'}{%
+    Didacta ships es, va and en. Add lang/didacta-lang-XX.def for another.}%
+}
+\input{didacta-lang-\DidactaLanguage.def}
+
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[T1]{fontenc}
+\expandafter\RequirePackage\expandafter[\didactaBabelName]{babel}
+
+%% ---------------------------------------------------------------------------
+%% Medium setup
+%%
+%% `beamerarticle` is what lets one source be both: in a document profile it
+%% makes \begin{frame}, \frametitle and \pause no-ops instead of errors. It is
+%% the single most important line in this file.
+%% ---------------------------------------------------------------------------
+
+\iftoggle{didacta@slides}{%
+  %% Slides: beamer is already the class.
+  \RequirePackage{didacta-theme}
+}{%
+  %% `notheorems` matters: beamer and beamerarticle otherwise define their own
+  %% theorem, definition, lemma, corollary, example and solution environments,
+  %% which collide with Didacta's. Suppressing them leaves one set of names
+  %% with one meaning.
+  \RequirePackage[notheorems]{beamerarticle}
+  \RequirePackage{didacta-page}
+}
+
+%% ---------------------------------------------------------------------------
+%% Shared content packages
+%%
+%% Everything the material actually uses, in one place, so a content file has
+%% no preamble at all.
+%% ---------------------------------------------------------------------------
+
+\RequirePackage{amsmath,amssymb,amsfonts,mathtools}
+%% empheq: boxed and multi-line highlighted equations. Used by the
+%% migrated material, and mathtools alone does not provide it.
+\RequirePackage{empheq}
+\RequirePackage{mathrsfs}
+\RequirePackage{graphicx}
+%% Layout packages the migrated material declares in its own
+%% preambles. Only layout: nothing here touches fonts or how the PDF
+%% is written (D31).
+\RequirePackage{wrapfig}   % \begin{wrapfigure}
+\RequirePackage{amscd}     % \begin{CD}, commutative diagrams
+\RequirePackage{caption,subcaption}
+\RequirePackage{booktabs,array,multirow,makecell}
+\RequirePackage{multicol}
+%% enumitem redefines itemize and, under beamer, silently discards the item
+%% templates -- lists inside a frame come out with no bullets at all. It is
+%% worth having in prose, so it is loaded only for the document profiles.
+\iftoggle{didacta@slides}{}{\RequirePackage{enumitem}}
+\RequirePackage{csquotes}
+\RequirePackage{tikz}
+\RequirePackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{calc,patterns,intersections,shapes.callouts,decorations.pathmorphing,arrows.meta,positioning}
+%% What the migrated drawings use: a `regular polygon` node, marked
+%% angles with quoted labels, and the fractal and L-system figures.
+\usetikzlibrary{shapes,shapes.geometric,angles,quotes,arrows,
+  decorations.fractals,lindenmayersystems}
+\usepgfplotslibrary{fillbetween}
+\RequirePackage[many]{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\RequirePackage{hyperref}
+\RequirePackage{didacta-colours}
+\RequirePackage{didacta-theorems}
+\RequirePackage{didacta-problems}
+%% Last, so anything above wins: this only fills in what the old
+%% templates defined and the migrated material still expects.
+\RequirePackage{didacta-legacy}
+
+\DidactaDeclareTheorems
+\DidactaDeclareLegacyAliases
+
+%% These two toggles live in didacta-problems, so they can only be set once it
+%% has been loaded.
+\iftoggle{didacta@exam}{\toggletrue{didacta@examlayout}}{}
+%% Hints follow the exam layout: wanted on a practice sheet, wrong on a paper.
+\iftoggle{didacta@exam}{\togglefalse{didacta@hints}}{\toggletrue{didacta@hints}}
+
+%% ---------------------------------------------------------------------------
+%% Course metadata
+%%
+%% Declared once per course and read by the title page, the running heads and
+%% the index. The legacy system spread this over \def\class, \def\classlong,
+%% \def\classextralong, \def\sec, \def\dateshort and \def\code in a LaTeX file
+%% that had to be \import-ed with a relative path; here it is one command with
+%% named keys, and the engine can also inject it from course.yaml.
+%% ---------------------------------------------------------------------------
+
+\define@key{didacta@course}{title}{\def\didactaCourseTitle{#1}}
+\define@key{didacta@course}{subtitle}{\def\didactaCourseSubtitle{#1}}
+\define@key{didacta@course}{code}{\def\didactaCourseCode{#1}}
+\define@key{didacta@course}{degree}{\def\didactaCourseDegree{#1}}
+\define@key{didacta@course}{group}{\def\didactaCourseGroup{#1}}
+\define@key{didacta@course}{teacher}{\def\didactaCourseTeacher{#1}}
+\define@key{didacta@course}{year}{\def\didactaCourseYear{#1}}
+\define@key{didacta@course}{institution}{\def\didactaCourseInstitution{#1}}
+\define@key{didacta@course}{department}{\def\didactaCourseDepartment{#1}}
+\define@key{didacta@course}{logo}{\def\didactaCourseLogo{#1}}
+
+\def\didactaCourseTitle{}
+\def\didactaCourseSubtitle{}
+\def\didactaCourseCode{}
+\def\didactaCourseDegree{}
+\def\didactaCourseGroup{}
+\def\didactaCourseTeacher{}
+\def\didactaCourseYear{}
+\def\didactaCourseInstitution{}
+\def\didactaCourseDepartment{}
+\def\didactaCourseLogo{}
+
+\newcommand{\DidactaCourse}[1]{\setkeys{didacta@course}{#1}}
+
+%% The unit or chapter this document is. Also names the output PDF, which is
+%% what replaces the legacy chapterName.txt.
+\def\didactaDocumentTitle{}
+\newcommand{\DidactaDocument}[1]{\def\didactaDocumentTitle{#1}}
+
+%% ---------------------------------------------------------------------------
+%% Legacy metadata names
+%%
+%% Migrated content builds its own page headers out of the macros the old
+%% preamble defined -- `\raisebox{-0.10cm}{Instructor: \profesor}` and friends
+%% appear in handouts across the library. Didacta holds every one of those
+%% values already, in the language being built, so the old names are defined
+%% here rather than edited out of the content. Same reasoning as \onlybook and
+%% ndefn: migrating is a move, not a rewrite.
+%%
+%% \providecommand, so a document that defines its own keeps it.
+%%
+%% Deliberately not defined, because Didacta has nothing to fill them with:
+%% \texpath, \nohyphens, \documentclassname, \documentclassoptions. Those were
+%% about how the legacy build found and configured its files, and the migration
+%% reports them instead.
+%% ---------------------------------------------------------------------------
+
+\providecommand{\profesor}{\didactaCourseTeacher}
+\providecommand{\professor}{\didactaCourseTeacher}
+%% `\class` was the short course title and `\classlong` the full one; Didacta
+%% keeps one title, so both point at it.
+\providecommand{\class}{\didactaCourseTitle}
+\providecommand{\classlong}{\didactaCourseTitle}
+\providecommand{\classshort}{\didactaCourseTitle}
+\providecommand{\classextralong}{%
+  \didactaCourseTitle
+  \ifdefempty{\didactaCourseDegree}{}{\newline(\didactaCourseDegree)}}
+%% Not `\sec`: that is LaTeX's secant, and the old templates redefined
+%% it as the group. The material uses it both ways -- 98 times as the
+%% secant, 58 as the group -- so the maths wins and the migration
+%% reports the header uses instead. \didactaCourseGroup is the group.
+\providecommand{\dateshort}{\didactaCourseYear}
+\providecommand{\code}{\didactaCourseCode}
+\providecommand{\institute}{\didactaCourseInstitution}
+\providecommand{\department}{\didactaCourseDepartment}
+%% The legacy `chapterName.txt` / `\chapterTitle` pair is the document title.
+\providecommand{\chapterTitle}{\didactaDocumentTitle}
+\providecommand{\chapterName}{\didactaDocumentTitle}
+
+%% ---------------------------------------------------------------------------
+%% Injected metadata
+%%
+%% When the engine drives the build it knows the course and the document title
+%% in the language being built, from course.yaml and year.yaml. It writes them
+%% to a file in the build directory and points \DidactaInjectFile at it.
+%%
+%% Applied \AtBeginDocument, so it lands after the document's own
+%% \DidactaCourse in the preamble and therefore wins. That ordering is the
+%% point: the values in the .tex are a fallback that keeps a direct
+%% `pdflatex master.tex` working in an editor, and the structure files are the
+%% authority when Didacta builds. Without it the metadata has to be written
+%% twice and the two drift -- which is how a Valencian header ends up on a
+%% Castilian sheet.
+%%
+%% Never written into the content repository: the file lives in the build
+%% output, which is disposable.
+%% ---------------------------------------------------------------------------
+
+\AtBeginDocument{%
+  \@ifundefined{DidactaInjectFile}{}{%
+    \IfFileExists{\DidactaInjectFile}{\input{\DidactaInjectFile}}{%
+      \PackageWarning{didacta}{Injected metadata file not found:
+        \DidactaInjectFile}}%
+  }%
+}
+
+%% ---------------------------------------------------------------------------
+%% Including content
+%%
+%%   \DidactaUnit{analysis/normed-spaces/definition}     from content/
+%%   \DidactaProblem{analysis/normed-spaces/norm-axioms} from problems/
+%%
+%% A reference is a path inside the content repository's own tree, resolved
+%% against \DidactaContentRoot -- the repository root, which the engine passes
+%% in. So a composition never contains `../../../../`. Getting rid of those
+%% chains is a concrete win over the legacy layout, where the same import had
+%% to be written with four, five or six levels of `../` depending on where the
+%% master happened to sit, and where moving a folder broke every one of them.
+%%
+%% The optional argument overrides the language for one unit, which is what
+%% makes a bilingual handout possible without duplicating the composition:
+%%
+%%   \DidactaUnit[en]{analysis/normed-spaces/definition}
+%%
+%% `import` shifts the graphics path too, so a unit refers to its own figures
+%% as `figures/x.pdf` and works wherever it is included from.
+%% ---------------------------------------------------------------------------
+
+\RequirePackage{import}
+
+\@ifundefined{DidactaContentRoot}{\def\DidactaContentRoot{./}}{}
+
+%% Where each kind of reference resolves. Named so a repository could rename
+%% its trees in didacta.yaml without touching any composition.
+\@ifundefined{DidactaContentDir}{\def\DidactaContentDir{content/}}{}
+\@ifundefined{DidactaProblemDir}{\def\DidactaProblemDir{problems/}}{}
+
+\newcommand{\DidactaUnit}[2][]{%
+  \didacta@include@unit{\DidactaContentDir}{#2}{#1}}
+
+\newcommand{\DidactaProblem}[2][]{%
+  \didacta@include@unit{\DidactaProblemDir}{#2}{#1}}
+
+\newcommand{\didacta@include@unit}[3]{%
+  \begingroup
+    \edef\didacta@unit@lang{\ifblank{#3}{\DidactaLanguage}{#3}}%
+    \edef\didacta@unit@path{\DidactaContentRoot#1#2/}%
+    \IfFileExists{\didacta@unit@path\didacta@unit@lang.tex}{%
+      \subimport{\didacta@unit@path}{\didacta@unit@lang}%
+    }{%
+      %% Fall back to the reference language rather than showing a hole: a
+      %% deck with one untranslated slide is far more useful than a deck with
+      %% a gap, and the placeholder still says which language is missing.
+      \didacta@unit@fallback{#1}{#2}{\didacta@unit@lang}%
+    }%
+  \endgroup
+}
+
+%% Try each language in turn, then give up visibly.
+\newcommand{\didacta@unit@fallback}[3]{%
+  \def\didacta@found{0}%
+  \@for\didacta@try:={es,va,en}\do{%
+    \if\didacta@found0
+      \IfFileExists{\DidactaContentRoot#1#2/\didacta@try.tex}{%
+        \PackageWarning{didacta}{%
+          No `#3' version of `#2'; using `\didacta@try' instead}%
+        \subimport{\DidactaContentRoot#1#2/}{\didacta@try}%
+        \def\didacta@found{1}%
+      }{}%
+    \fi
+  }%
+  \if\didacta@found0
+    \didacta@missingunit{#2}{#3}%
+  \fi
+}
+
+%% A unit with no file in any language is reported in the PDF rather than
+%% silently skipped. Silently skipping is how you end up standing in front of a
+%% class with a hole in the deck.
+\newcommand{\didacta@missingunit}[2]{%
+  \PackageWarning{didacta}{No `#2' version of unit `#1'}%
+  \iftoggle{didacta@slides}{%
+    \begin{frame}[plain]
+      \begin{center}\small\ttfamily
+        [ missing: #1 (#2) ]
+      \end{center}
+    \end{frame}
+  }{%
+    \par\medskip\noindent
+    \fbox{\parbox{0.9\linewidth}{\small\ttfamily [ missing: #1 (#2) ]}}%
+    \par\medskip
+  }%
+}
+
+%% Include a raw file rather than a unit directory. For material that has not
+%% been split per language yet -- during a migration, that is most of it.
+\newcommand{\DidactaInclude}[1]{%
+  \IfFileExists{\DidactaContentRoot#1.tex}{%
+    \didacta@splitpath{\DidactaContentRoot#1}%
+  }{%
+    \PackageWarning{didacta}{Missing file `#1'}%
+  }%
+}
+
+%% Split `a/b/c` into `a/b/` and `c` for \subimport, so graphics paths follow.
+\def\didacta@splitpath#1{\didacta@splitpath@i#1/\@nil{}}
+\def\didacta@splitpath@i#1/#2\@nil#3{%
+  \def\didacta@tmp{#2}%
+  \ifx\didacta@tmp\@empty
+    \subimport{#3}{#1}%
+  \else
+    \didacta@splitpath@i#2\@nil{#3#1/}%
+  \fi
+}
+
+%% ---------------------------------------------------------------------------
+%% Teaching notes
+%%
+%% The teacher channel, with a visible treatment so it is obvious which copy
+%% you are holding.
+%% ---------------------------------------------------------------------------
+
+\newtcolorbox{didacta@teacherbox}[1][]{
+  enhanced jigsaw, breakable,
+  boxrule=0pt, colframe=white, interior hidden,
+  borderline west={1.8pt}{0pt}{didactaTeacher},
+  left=1.4em, right=0pt, top=0.3ex, bottom=0.3ex,
+  before skip=1.8ex, after skip=1.8ex,
+  coltitle=didactaTeacher!60!black, fonttitle=\bfseries\small,
+  title={\didactaTeachingNoteName\ifblank{#1}{}{: #1}},
+}
+
+\NewEnviron{teaching}[1][]{%
+  \iftoggle{didacta@teacher}{%
+    \begin{didacta@teacherbox}[#1]\small\BODY\end{didacta@teacherbox}%
+  }{}%
+}
+
+%% How long a unit takes. Teacher copies only.
+\newcommand{\timing}[1]{%
+  \onlyteacher{\par\noindent{\small\itshape\didactaTimingName: #1}\par}}
+
+%% A mistake students reliably make here.
+\NewEnviron{commonmistake}{%
+  \iftoggle{didacta@teacher}{%
+    \begin{didacta@teacherbox}[\didactaCommonMistakeName]\small\BODY\end{didacta@teacherbox}%
+  }{}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Learning design
+%%
+%% Objectives and prerequisites are content, not decoration: they are what
+%% makes a unit reusable, because they say what it assumes and what it gives.
+%% ---------------------------------------------------------------------------
+
+\NewEnviron{objectives}{%
+  \didacta@listblock{\didactaObjectivesName}{\BODY}}
+\NewEnviron{prerequisites}{%
+  \didacta@listblock{\didactaPrerequisitesName}{\BODY}}
+\NewEnviron{summary}{%
+  \didacta@listblock{\didactaSummaryName}{\BODY}}
+
+\newcommand{\didacta@listblock}[2]{%
+  \begin{tcolorbox}[
+    enhanced, breakable,
+    colback=didactaAccent!5, colframe=didactaAccent!40,
+    boxrule=0.4pt, arc=2pt,
+    left=1ex, right=1ex, top=0.6ex, bottom=0.6ex,
+    before skip=1.6ex, after skip=1.6ex,
+    coltitle=black, fonttitle=\bfseries\small, title={#1},
+  ]\small #2\end{tcolorbox}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Highlighting
+%% ---------------------------------------------------------------------------
+
+%% A highlight. Uses \colorbox rather than soul's \hl so it survives inside
+%% maths and across a line break, which is where soul gives up.
+\newcommand{\hl}[1]{\colorbox{didactaAccent!25}{#1}}
+
+%% A term being defined. Bold rather than italic: italic disappears at
+%% projector size.
+\newcommand{\keyterm}[1]{\textbf{#1}}
+
+%% ---------------------------------------------------------------------------
+%% Front matter
+%% ---------------------------------------------------------------------------
+
+\newcommand{\DidactaTitlePage}{%
+  \iftoggle{didacta@slides}{\didacta@titlepage@slides}{\didacta@titlepage@doc}}
+
+\newcommand{\DidactaContents}{%
+  \iftoggle{didacta@slides}{%
+    \begin{frame}\frametitle{\didactaContentsName}
+      \setcounter{tocdepth}{2}\tableofcontents
+    \end{frame}%
+  }{%
+    \renewcommand{\contentsname}{\didactaContentsName}%
+    \tableofcontents\clearpage
+  }%
+}
+
+\makeatother
+\endinput

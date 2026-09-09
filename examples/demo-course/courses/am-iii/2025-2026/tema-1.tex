@@ -1,0 +1,36 @@
+% A Didacta document.
+%
+% Two lines of setup, then the composition. Compare the legacy master: 60 lines
+% of preamble, four \import calls with `../../../../` paths, a documentclass
+% incantation, and the theorem template chosen by hand per language.
+%
+% Compile it directly and you get the notes in the course language. Pass a
+% profile and you get any other output:
+%
+%   pdflatex "\def\DidactaProfile{slides}\input{tema-1}"
+%   didacta build tema-1 --profile slides --language va
+
+\input{didacta-bootstrap}
+\usepackage{didacta}
+
+%% Course metadata and the document title come from course.yaml and
+%% year.yaml, in whichever language is being built. Didacta injects them.
+%%
+%% The declarations below are only a fallback, so that opening this file in an
+%% editor and pressing compile still produces a titled document. Anything
+%% Didacta injects overrides them.
+\DidactaCourse{
+  title   = {Anàlisi Matemàtica III},
+  teacher = {Javier Falcó},
+}
+\DidactaDocument{Preliminars: espais normats}
+
+\begin{document}
+\DidactaTitlePage
+\DidactaContents
+
+\section{Espais normats}
+\DidactaUnit{analysis/normed-spaces/definition}
+\DidactaUnit{analysis/normed-spaces/induced-metric}
+
+\end{document}

@@ -1,0 +1,154 @@
+%%
+%% didacta-profiles.tex -- the output profile registry.
+%%
+%% This file is the single source of truth for what an output *is*. It is read
+%% by didacta-bootstrap.tex (which needs the document class) and again by
+%% didacta.sty (which needs the behaviour axes), so a profile is described in
+%% exactly one place.
+%%
+%% A profile is a named preset over five independent axes:
+%%
+%%   medium     slides | document
+%%              slides -> beamer;  document -> article/book + beamerarticle,
+%%              so that \begin{frame} and \frametitle keep working in prose.
+%%
+%%   detail     brief | full
+%%              brief keeps only what fits on a slide; full adds the prose,
+%%              the proofs and the worked examples.
+%%
+%%   audience   student | teacher
+%%              teacher adds presenter notes and teaching guidance.
+%%
+%%   solutions  hidden | answers | full
+%%              answers is the short result; full is the worked solution.
+%%
+%%   pauses     on | off
+%%              off collapses \pause so every slide prints once -- what you
+%%              want for a handout or a projector-free reading copy.
+%%
+%% Adding an output means adding one \DidactaDeclareProfile line. Nothing else
+%% in the system needs to know about it.
+%%
+%% Usage from the command line (this is how the engine drives it):
+%%
+%%   pdflatex "\def\DidactaProfile{slides}\def\DidactaLanguage{va}\input{master}"
+%%
+%% This file is \input from two places with different ambient catcodes: the
+%% bootstrap (before \documentclass, where @ is `other') and didacta.sty
+%% (where @ is already a letter). So it saves and restores the catcode of @
+%% instead of ending with a blanket \makeatother, which would silently break
+%% whichever caller had it as a letter.
+\expandafter\edef\csname didacta@profiles@restorecat\endcsname{%
+  \catcode`\noexpand\@=\the\catcode`\@\relax}
+\makeatletter
+
+%% Read twice on purpose, so guard the declarations. Re-reading must be a
+%% no-op rather than an error.
+\@ifundefined{didacta@profiles@loaded}{}{%
+  \didacta@profiles@restorecat
+  \endinput}
+\def\didacta@profiles@loaded{1}
+
+%% \DidactaDeclareProfile{id}{class}{class options}{axes}
+%%
+%% `axes` is a comma list of `key=value` from the five axes above. Anything
+%% unset falls back to the defaults declared further down.
+\newcommand{\DidactaDeclareProfile}[4]{%
+  \@namedef{didacta@profile@#1@class}{#2}%
+  \@namedef{didacta@profile@#1@options}{#3}%
+  \@namedef{didacta@profile@#1@axes}{#4}%
+  \expandafter\g@addto@macro\expandafter\didacta@profile@list\expandafter{,#1}%
+}
+
+\def\didacta@profile@list{}
+
+%% ---------------------------------------------------------------------------
+%% Slide outputs
+%% ---------------------------------------------------------------------------
+
+%% What you project in class. Pauses reveal content step by step.
+\DidactaDeclareProfile{slides}{beamer}{10pt,notheorems}{%
+  medium=slides,detail=brief,audience=student,solutions=hidden,pauses=on}
+
+%% The same slides with every overlay collapsed: one page per slide. This is
+%% the copy you hand out or read on a train.
+\DidactaDeclareProfile{slides-flat}{beamer}{10pt,handout,notheorems}{%
+  medium=slides,detail=brief,audience=student,solutions=hidden,pauses=off}
+
+%% Slides plus the presenter notes and the answers. `notes=show` puts beamer's
+%% \note content on facing pages.
+\DidactaDeclareProfile{slides-teacher}{beamer}{10pt,handout,notheorems}{%
+  medium=slides,detail=brief,audience=teacher,solutions=full,pauses=off,notes=show}
+
+%% ---------------------------------------------------------------------------
+%% Document outputs
+%% ---------------------------------------------------------------------------
+
+%% The full written notes: everything on the slides, plus the prose and proofs
+%% that do not fit on one. This is the student's book.
+\DidactaDeclareProfile{notes}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=hidden,pauses=off}
+
+%% The same notes with worked solutions included.
+\DidactaDeclareProfile{notes-solutions}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=full,pauses=off}
+
+%% The teacher's copy: full detail, teaching guidance, every solution.
+\DidactaDeclareProfile{notes-teacher}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=teacher,solutions=full,pauses=off}
+
+%% A bound volume for a whole course: chapters, two-sided, real front matter.
+\DidactaDeclareProfile{book}{book}{11pt,twoside,openright}{%
+  medium=document,detail=full,audience=student,solutions=hidden,pauses=off}
+
+%% ---------------------------------------------------------------------------
+%% Single-sheet outputs
+%% ---------------------------------------------------------------------------
+
+%% A one- or two-page reference sheet. Tight margins, no section numbering.
+\DidactaDeclareProfile{handout}{article}{11pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=hidden,pauses=off,
+  layout=compact}
+
+%% ---------------------------------------------------------------------------
+%% Problem-sheet outputs
+%%
+%% The same source produces all four. This is the axis the legacy system drove
+%% with \def\CurrentAudience and multiaudience; here it is just `solutions`.
+%% ---------------------------------------------------------------------------
+
+%% What the students receive: statements only.
+\DidactaDeclareProfile{problems}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=hidden,pauses=off,
+  layout=compact}
+
+%% Statements with the short result, so they can check their own work.
+\DidactaDeclareProfile{problems-answers}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=answers,pauses=off,
+  layout=compact}
+
+%% Statements with the full worked solution.
+\DidactaDeclareProfile{problems-solutions}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=full,pauses=off,
+  layout=compact}
+
+%% The teacher's copy: solutions plus the marking notes and common mistakes.
+\DidactaDeclareProfile{problems-teacher}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=teacher,solutions=full,pauses=off,
+  layout=compact}
+
+%% ---------------------------------------------------------------------------
+%% Assessment output
+%% ---------------------------------------------------------------------------
+
+%% An exam paper. Same content, but numbered space for answers and no hints.
+\DidactaDeclareProfile{exam}{article}{12pt,oneside}{%
+  medium=document,detail=brief,audience=student,solutions=hidden,pauses=off,
+  layout=exam}
+
+%% The marking scheme for that exam.
+\DidactaDeclareProfile{exam-marking}{article}{12pt,oneside}{%
+  medium=document,detail=full,audience=teacher,solutions=full,pauses=off,
+  layout=exam}
+
+\didacta@profiles@restorecat

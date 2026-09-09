@@ -1,0 +1,36 @@
+% Unidad: métrica inducida por una norma (castellano).
+
+\begin{frame}
+\didactatitle{La métrica inducida}
+
+Toda norma induce una métrica.
+
+\begin{proposition}[Métrica inducida]
+Si $(E, \|\cdot\|)$ es un espacio normado, entonces
+\[
+  d(x,y) = \|x - y\|
+\]
+define una métrica en $E$.
+\end{proposition}
+
+\onlynotes{%
+\begin{proof}
+Las tres propiedades de métrica se siguen directamente de los axiomas de norma.
+La positividad y la anulación vienen de la positividad de la norma. La simetría
+sale de la homogeneidad con $\lambda = -1$:
+\[
+  d(y,x) = \|y-x\| = \|-(x-y)\| = |-1|\,\|x-y\| = d(x,y).
+\]
+Y la desigualdad triangular de la métrica es la de la norma aplicada a
+$x - z = (x-y) + (y-z)$.
+\end{proof}
+}
+
+\begin{remark}
+El recíproco es falso: no toda métrica sobre un espacio vectorial proviene de
+una norma.
+\onlynotes{%
+  Basta observar que una métrica inducida cumple $d(\lambda x, \lambda y) =
+  |\lambda|\, d(x,y)$, y que la métrica discreta no.}
+\end{remark}
+\end{frame}
