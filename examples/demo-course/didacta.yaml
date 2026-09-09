@@ -1,0 +1,17 @@
+# A Didacta content repository.
+#
+# Everything here has a working default, so an empty file still builds. It
+# exists mainly to mark the repository root -- the engine walks up looking for
+# it, the way git looks for .git.
+
+name: Demo course
+
+# Languages this repository maintains. Didacta ships es, va and en.
+languages: [es, va, en]
+
+# The language assumed when nothing else says otherwise.
+default_language: es
+
+# Where PDFs go. Relative to the repository root, and gitignored: compiled
+# output does not belong in version control.
+build_dir: .didacta-build

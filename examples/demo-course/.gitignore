@@ -1,0 +1,4 @@
+# Compiled output. PDFs are generated from the sources next to them, so
+# committing them would mean storing the same information twice and letting the
+# two disagree.
+.didacta-build/

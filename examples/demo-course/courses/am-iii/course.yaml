@@ -1,0 +1,29 @@
+# A subject, across every academic year it has run.
+#
+# Metadata that does not change from year to year lives here; the selection and
+# order of content lives in the per-year files next to it. That split is the
+# point: a new academic year copies a small structure file, never content.
+
+id: am-iii
+title:
+  es: Análisis Matemático III
+  va: Anàlisi Matemàtica III
+  en: Mathematical Analysis III
+
+code: "34157"
+degree:
+  es: Grado en Matemáticas
+  va: Grau en Matemàtiques
+  en: BSc Mathematics
+
+institution: Universitat de València
+department:
+  es: Departamento de Análisis Matemático
+  va: Departament d'Anàlisi Matemàtica
+  en: Department of Mathematical Analysis
+
+teacher: Javier Falcó
+
+# The language this subject is taught in. Sets the default for every document
+# in it; an individual document may override.
+language: va

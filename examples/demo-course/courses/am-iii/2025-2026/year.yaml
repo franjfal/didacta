@@ -1,0 +1,41 @@
+# One academic year of a subject.
+#
+# Stores selection, order and structure. No content: every entry is a
+# reference into content/ or problems/. Duplicating a year means copying this
+# file and editing the list.
+
+course: am-iii
+year: 2025-2026
+# Localisable, like any other visible string.
+group:
+  es: Grupo A
+  va: Grup A
+  en: Group A
+language: va
+
+documents:
+  - id: tema-1
+    title:
+      es: "Preliminares: espacios normados"
+      va: "Preliminars: espais normats"
+    # Which outputs to build for this document. Omit to build every profile
+    # applicable to its kind.
+    profiles: [slides, slides-flat, notes, slides-teacher, notes-teacher]
+    structure:
+      - section:
+          va: Espais normats
+          es: Espacios normados
+      - unit: analysis/normed-spaces/definition
+      - unit: analysis/normed-spaces/induced-metric
+
+  - id: hoja-1
+    kind: problems
+    # This sheet only exists in Castilian so far, so it builds in Castilian.
+    # A document may override the course language.
+    language: es
+    title:
+      es: "Hoja 1: espacios normados"
+      va: "Full 1: espais normats"
+    profiles: [problems, problems-answers, problems-solutions, problems-teacher]
+    structure:
+      - problem: analysis/normed-spaces/norm-axioms

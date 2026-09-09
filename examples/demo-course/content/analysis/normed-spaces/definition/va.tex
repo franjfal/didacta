@@ -1,0 +1,75 @@
+% Unitat: definició d'espai normat (valencià).
+
+\begin{frame}
+\didactatitle{Definició i propietats dels espais normats}
+
+La mètrica usual en $\mathbb{R}$ és la distància euclídea entre dos punts
+$x, y \in \mathbb{R}$, donada per
+\[
+  d(x,y) = |x-y|.
+\]
+Aquest concepte es generalitza a espais vectorials utilitzant la noció de norma.
+
+\onlynotes{%
+  La idea darrere del concepte de norma és generalitzar les propietats més
+  útils de la distància euclídea en $\mathbb{R}$: que mesura una cosa no
+  negativa, que escala amb el factor d'escala, i que respecta la desigualtat
+  triangular.
+}
+
+\begin{definition}[Espai normat]
+Un \keyterm{espai normat} és un parell $(E, \|\cdot\|)$, on $E$ és un espai
+vectorial sobre el cos $\mathbb{K}$ ($\mathbb{R}$ o $\mathbb{C}$) i
+$\|\cdot\|$ és una funció anomenada \keyterm{norma} que satisfà:
+\begin{itemize}
+  \item \textbf{Positivitat:} $\|x\| \geq 0$, i $\|x\| = 0 \iff x = 0$.
+  \item \textbf{Homogeneïtat:} $\|\lambda x\| = |\lambda|\,\|x\|$ per a tot
+        $\lambda \in \mathbb{K}$ i $x \in E$.
+  \item \textbf{Desigualtat triangular:} $\|x+y\| \leq \|x\| + \|y\|$ per a
+        tot $x, y \in E$.
+\end{itemize}
+Quan no hi haja ambigüitat denotarem l'espai normat simplement com $E$.
+\end{definition}
+
+\begin{teaching}[Ritme]
+Quinze minuts. Val la pena aturar-se en l'homogeneïtat: quasi ningú veu per què
+cal el valor absolut en $|\lambda|$ fins que se'ls demana $\lambda = -1$.
+\end{teaching}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Exemples d'espais normats}
+
+Un espai normat permet mesurar la \keyterm{longitud} dels vectors i definir
+conceptes com \keyterm{distància} i \keyterm{convergència}.
+
+\dpause
+
+\begin{example}
+En $\mathbb{R}^n$ podem definir diferents normes. Les més comunes són
+\[
+  \|x\|_1 = \sum_{i=1}^n |x_i|,
+  \qquad
+  \|x\|_2 = \Bigl(\sum_{i=1}^n |x_i|^2\Bigr)^{1/2},
+  \qquad
+  \|x\|_\infty = \max_{1 \leq i \leq n} |x_i|.
+\]
+
+\onlynotes{%
+  \begin{itemize}
+    \item $\|x\|_2$ és la \keyterm{norma euclídea}, i la seua mètrica associada
+          correspon a la distància euclídea.
+    \item $\|x\|_1$ s'utilitza en optimització, per la seua simplicitat
+          computacional.
+    \item $\|x\|_\infty$ és útil en anàlisi numèrica, quan interessa controlar
+          el \keyterm{valor màxim} de les components.
+  \end{itemize}
+}
+
+També podem definir normes en espais més sofisticats, com el de les funcions
+contínues en $[a,b]$ amb
+\begin{keyformula}
+  \|f\| = \max_{x \in [a,b]} |f(x)|.
+\end{keyformula}
+\end{example}
+\end{frame}

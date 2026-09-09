@@ -1,0 +1,47 @@
+%%
+%% didacta-lang-en.def -- English.
+%%
+\ProvidesFile{didacta-lang-en.def}[2026/09/09 Didacta English]
+
+\def\didactaBabelName{english}
+
+\def\didactaTheoremName{Theorem}
+\def\didactaDefinitionName{Definition}
+\def\didactaPropositionName{Proposition}
+\def\didactaLemmaName{Lemma}
+\def\didactaCorollaryName{Corollary}
+\def\didactaPropertyName{Property}
+\def\didactaExampleName{Example}
+\def\didactaQuestionName{Question}
+\def\didactaRemarkName{Remark}
+\def\didactaAxiomName{Axiom}
+\def\didactaAlgorithmName{Algorithm}
+\def\didactaNotationName{Notation}
+\def\didactaProofName{Proof}
+
+\def\didactaExerciseName{Exercise}
+\def\didactaAnswerName{Answer}
+\def\didactaSolutionName{Solution}
+\def\didactaHintName{Hint}
+\def\didactaMarkingName{Marking}
+\def\didactaMarksName{marks}
+
+\def\didactaContentsName{Contents}
+\def\didactaChapterName{Chapter}
+\def\didactaCourseName{Course}
+\def\didactaTeacherName{Lecturer}
+\def\didactaAcademicYearName{Academic year}
+\def\didactaBibliographyName{Bibliography}
+\def\didactaObjectivesName{Objectives}
+\def\didactaPrerequisitesName{Prerequisites}
+\def\didactaSummaryName{Summary}
+\def\didactaFurtherReadingName{Further reading}
+
+\def\didactaTeachingNoteName{Teaching note}
+\def\didactaTimingName{Estimated time}
+\def\didactaCommonMistakeName{Common mistake}
+
+\def\didactaExamName{Examination}
+\def\didactaDurationName{Duration}
+\def\didactaTotalMarksName{Total marks}
+\endinput

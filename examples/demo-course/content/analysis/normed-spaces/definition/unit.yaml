@@ -1,0 +1,42 @@
+# One unit of reusable content.
+#
+# Everything the platform needs to list, filter, translate and compile this
+# unit. Sits next to the content, so moving the directory moves the metadata
+# with it -- and so a unit is one self-contained thing.
+
+id: analysis.normed-spaces.definition
+kind: theory
+title:
+  es: Definición y propiedades de los espacios normados
+  va: Definició i propietats dels espais normats
+  en: Definition and properties of normed spaces
+
+category: analysis
+topic: normed-spaces
+tags: [normed-space, norm, metric, definition]
+
+# Reference language: the one the others are translated from. Not a default
+# guess -- declared, because it decides which file staleness is measured against.
+reference: es
+
+languages:
+  es:
+    status: reviewed
+  va:
+    status: translated
+    # Hash of es.tex when va.tex was written. When es.tex changes, the platform
+    # can say "the Valencian is now behind" without diffing anything.
+    source_hash: null
+  # `en` is simply absent: a language with no file needs no entry, because
+  # absence is what `missing` means and the platform computes it.
+
+# What this unit assumes and what it delivers. This is what makes reuse
+# safe: a composition can check the prerequisites are already covered.
+prerequisites: [algebra.vector-spaces, analysis.real-line]
+objectives:
+  - Reconocer los tres axiomas de norma
+  - Distinguir norma de métrica
+  - Calcular las normas 1, 2 e infinito en R^n
+
+duration_minutes: 25
+difficulty: introductory

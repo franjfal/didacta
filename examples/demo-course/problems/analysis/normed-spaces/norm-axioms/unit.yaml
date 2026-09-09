@@ -1,0 +1,28 @@
+id: problems.analysis.normed-spaces.norm-axioms
+kind: problem
+title:
+  es: Axiomas de norma
+  va: Axiomes de norma
+  en: Norm axioms
+
+category: analysis
+topic: normed-spaces
+tags: [normed-space, norm, axioms, equivalence]
+
+reference: es
+# Only languages that exist are listed. Absence is the metadata.
+languages:
+  es: {status: reviewed}
+
+# Which answer levels this problem actually contains. Declared, so the platform
+# can say "this sheet has no worked solutions yet" before you compile it.
+parts:
+  statement: true
+  hint: true
+  answer: true
+  solution: true
+  marking: true
+
+difficulty: introductory
+duration_minutes: 20
+marks: 7

@@ -1,0 +1,233 @@
+%%
+%% didacta-problems.sty -- exercises with statement, answer and solution.
+%%
+%% One source, four outputs: statements only, statements with the short
+%% answer, statements with the worked solution, and the teacher's copy with
+%% marking notes. The legacy system did this with the `multiaudience` package
+%% and \def\CurrentAudience; Didacta implements it directly, which removes a
+%% dependency and lets the three levels be genuinely distinct.
+%%
+%% The distinction that the legacy content never got to express:
+%%
+%%   \begin{answer}   the result. "f'(x) = 2x". One line.
+%%   \begin{solution} how you get there. The working.
+%%   \begin{marking}  what to look for, what partial credit to give.
+%%
+%% All three live in the same file as the statement, so a problem is one file
+%% and one thing.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-problems}[2026/09/09 v1.0 Didacta exercises]
+
+\RequirePackage{etoolbox}
+\RequirePackage{environ}
+\RequirePackage{amsmath}
+\RequirePackage[many]{tcolorbox}
+
+\makeatletter
+
+%% ---------------------------------------------------------------------------
+%% Numbering
+%%
+%% A problem sheet numbers from 1; a chapter of notes numbers within the
+%% section. `\didactaproblemnumbering` picks, and the engine sets it from the
+%% profile's layout axis.
+%% ---------------------------------------------------------------------------
+
+\newcounter{didactaproblem}
+\newcommand{\didactaresetproblems}{\setcounter{didactaproblem}{0}}
+
+%% A stable label for cross-referencing a problem across outputs.
+\newcommand{\didacta@problemlabel}{}
+
+%% ---------------------------------------------------------------------------
+%% The exercise environment
+%%
+%%   \begin{exercise}                 numbered
+%%   \begin{exercise}[Chain rule]     numbered, with a title
+%%   \begin{exercise*}                unnumbered
+%%
+%% `ej` is kept as an alias: the migrated material uses it throughout.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didacta@exercise@head}[1]{%
+  \refstepcounter{didactaproblem}%
+  \par\medskip\noindent
+  {\bfseries \didactaExerciseName~\thedidactaproblem}%
+  \ifblank{#1}{}{\ \textnormal{(#1)}}%
+  \par\nobreak\smallskip
+}
+
+\newenvironment{exercise}[1][]{%
+  \didacta@exercise@head{#1}%
+  \begingroup
+}{%
+  \endgroup
+  \par\medskip
+}
+
+\newenvironment{exercise*}[1][]{%
+  \par\medskip\noindent
+  {\bfseries \didactaExerciseName}%
+  \ifblank{#1}{}{\ \textnormal{(#1)}}%
+  \par\nobreak\smallskip
+  \begingroup
+}{%
+  \endgroup\par\medskip
+}
+
+%% Legacy alias. 150 blocks of migrated content open with \begin{ej}.
+\newenvironment{ej}[1][]{\begin{exercise}[#1]}{\end{exercise}}
+
+%% ---------------------------------------------------------------------------
+%% A part of a multi-part exercise
+%%
+%%   \begin{parts} \item ... \item ... \end{parts}
+%%
+%% Rendered as (i), (ii), ... which is the convention the material already
+%% uses via \item[(i)].
+%% ---------------------------------------------------------------------------
+
+\newcounter{didactapart}[didactaproblem]
+\renewcommand{\thedidactapart}{(\roman{didactapart})}
+
+\newenvironment{parts}{%
+  \setcounter{didactapart}{0}%
+  \begin{list}{\thedidactapart}{%
+    \usecounter{didactapart}%
+    \setlength{\leftmargin}{2em}%
+    \setlength{\itemsep}{0.4ex}%
+    \setlength{\parsep}{0pt}%
+  }%
+}{\end{list}}
+
+%% ---------------------------------------------------------------------------
+%% The three answer levels
+%%
+%% Each is an environment rather than a command so the body can contain
+%% displayed maths, lists and verbatim without breaking.
+%% ---------------------------------------------------------------------------
+
+%% Visual treatment: a tinted rule down the left. Quiet enough to sit inside a
+%% problem sheet, distinct enough to skim past.
+\tcbset{
+  didacta@reveal/.style={
+    enhanced jigsaw,
+    breakable,
+    boxrule=0pt,
+    colframe=white,
+    interior hidden,
+    borderline west={1.6pt}{0pt}{#1},
+    left=1.2em, right=0pt, top=0.4ex, bottom=0.4ex,
+    before skip=1.2ex, after skip=1.2ex,
+  }
+}
+
+\newcommand{\didacta@reveal@open}[2]{%
+  \begin{tcolorbox}[didacta@reveal=#1]%
+  {\bfseries\itshape #2}\ %
+  \ignorespaces
+}
+\newcommand{\didacta@reveal@close}{\end{tcolorbox}}
+
+%% The short result. Shown when solutions = answers or full.
+\NewEnviron{answer}{%
+  \iftoggle{didacta@answers}{%
+    \didacta@reveal@open{didactaAnswerRule}{\didactaAnswerName:}%
+    \BODY
+    \didacta@reveal@close
+  }{}%
+}
+
+%% The working. Shown only when solutions = full.
+\NewEnviron{solution}{%
+  \iftoggle{didacta@solutions}{%
+    \didacta@reveal@open{didactaSolutionRule}{\didactaSolutionName:}%
+    \BODY
+    \didacta@reveal@close
+  }{}%
+}
+
+%% Marking guidance. Teacher copies only, and only when solutions are shown --
+%% a marking scheme without the solution is not useful to anyone.
+\NewEnviron{marking}{%
+  \ifboolexpr{togl {didacta@teacher} and togl {didacta@solutions}}{%
+    \didacta@reveal@open{didactaMarkingRule}{\didactaMarkingName:}%
+    \BODY
+    \didacta@reveal@close
+  }{}%
+}
+
+%% A nudge, not an answer. Shown to students unless the profile hides it --
+%% useful on a practice sheet, wrong on an exam.
+\newtoggle{didacta@hints}
+\NewEnviron{hint}{%
+  \iftoggle{didacta@hints}{%
+    \didacta@reveal@open{didactaHintRule}{\didactaHintName:}%
+    \BODY
+    \didacta@reveal@close
+  }{}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Legacy alias for the audience mechanism
+%%
+%% The migrated content is full of \begin{shownto}{solution}. Mapping it here
+%% means those 150 blocks migrate untouched; new content should use the named
+%% environments above, which say what they contain.
+%% ---------------------------------------------------------------------------
+
+\NewEnviron{shownto}[1]{%
+  \def\didacta@aud{#1}%
+  \ifstrequal{#1}{solution}{%
+    \iftoggle{didacta@solutions}{%
+      \didacta@reveal@open{didactaSolutionRule}{\didactaSolutionName:}%
+      \BODY
+      \didacta@reveal@close}{}%
+  }{%
+    \ifboolexpr{test {\ifstrequal{#1}{profesor}} or test {\ifstrequal{#1}{professor}}}{%
+      \iftoggle{didacta@teacher}{%
+        \didacta@reveal@open{didactaMarkingRule}{\didactaMarkingName:}%
+        \BODY
+        \didacta@reveal@close}{}%
+    }{%
+      % An audience Didacta does not know: show it in teacher copies rather
+      % than dropping content silently.
+      \iftoggle{didacta@teacher}{\BODY}{}%
+    }%
+  }%
+}
+
+%% ---------------------------------------------------------------------------
+%% Exam layout
+%%
+%% Answer space, so the same statements become a printable paper.
+%% ---------------------------------------------------------------------------
+
+%% \answerspace{4cm} leaves ruled space. Collapses to nothing outside an exam
+%% profile, so a practice sheet does not grow blank pages.
+\newtoggle{didacta@examlayout}
+\newcommand{\answerspace}[1]{%
+  \iftoggle{didacta@examlayout}{\par\vspace{#1}}{}}
+
+%% Marks for a question, printed right-aligned as `[3 marks]`.
+%%
+%% Named \dmarks because \marks is a TeX primitive (the mark-register
+%% command). Overwriting it breaks output routines in ways that surface much
+%% later and are very hard to trace back.
+\newcommand{\dmarks}[1]{%
+  \iftoggle{didacta@examlayout}{%
+    \hfill\textnormal{\small[#1~\didactaMarksName]}%
+  }{}}
+
+%% ---------------------------------------------------------------------------
+%% Problem metadata
+%%
+%% Declared in the source, read by the index. Invisible in every output: it
+%% exists so the platform can filter and the author can see it in the editor.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didactaproblemmeta}[1]{}
+
+\makeatother
+\endinput

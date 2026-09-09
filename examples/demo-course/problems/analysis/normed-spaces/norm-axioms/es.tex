@@ -1,0 +1,76 @@
+% Problema: comprobar axiomas de norma (castellano).
+%
+% Enunciado, respuesta, solución y corrección en UN fichero. Cada nivel
+% aparece solo en el perfil que corresponde: el mismo fichero produce la hoja
+% del alumno, la hoja con respuestas, la hoja con soluciones y la del profesor.
+
+\begin{exercise}[Axiomas de norma]
+Decide cuáles de las siguientes funciones $\mathbb{R}^2 \to \mathbb{R}$ son
+normas. Para las que no lo sean, indica qué axioma falla.
+
+\begin{parts}
+  \item $f(x_1, x_2) = |x_1| + 2|x_2|$
+  \item $f(x_1, x_2) = |x_1| - |x_2|$
+  \item $f(x_1, x_2) = \sqrt{x_1^2 + x_2^2}$
+  \item $f(x_1, x_2) = \max\{|x_1|, |x_2|\}^2$
+\end{parts}
+
+\dmarks{4}
+
+\begin{hint}
+Para descartar una candidata basta encontrar un contraejemplo de un solo
+axioma. Prueba con vectores sencillos y con $\lambda = 2$.
+\end{hint}
+
+\begin{answer}
+(i) sí; (ii) no, falla la positividad; (iii) sí; (iv) no, falla la homogeneidad.
+\end{answer}
+
+\begin{solution}
+\begin{parts}
+  \item Es una norma. Es la norma 1 con pesos: los tres axiomas se comprueban
+        término a término, y la desigualdad triangular se sigue de la de
+        $|\cdot|$ en cada coordenada.
+  \item No es una norma. Falla la positividad: $f(1,1) = 0$ con $(1,1) \neq 0$.
+        También falla la desigualdad triangular.
+  \item Es la norma euclídea.
+  \item No es una norma. Falla la homogeneidad:
+        \[
+          f(2x) = \max\{2|x_1|, 2|x_2|\}^2 = 4\max\{|x_1|,|x_2|\}^2 = 4 f(x),
+        \]
+        mientras que la homogeneidad exigiría $f(2x) = 2 f(x)$.
+\end{parts}
+\end{solution}
+
+\begin{marking}
+Un punto por apartado. En (ii) y (iv) se exige nombrar el axioma que falla; dar
+solo "no es norma" vale medio punto. El error habitual en (iv) es comprobar la
+desigualdad triangular y no la homogeneidad.
+\end{marking}
+\end{exercise}
+
+\begin{exercise}[Normas equivalentes]
+Demuestra que en $\mathbb{R}^n$ se cumple
+\[
+  \|x\|_\infty \leq \|x\|_2 \leq \sqrt{n}\,\|x\|_\infty .
+\]
+\dmarks{3}
+
+\begin{answer}
+Ambas desigualdades salen de acotar cada $|x_i|$ por el máximo.
+\end{answer}
+
+\begin{solution}
+Sea $m = \|x\|_\infty = \max_i |x_i|$ y sea $k$ un índice donde se alcanza.
+Para la primera desigualdad,
+\[
+  \|x\|_2^2 = \sum_{i=1}^n |x_i|^2 \geq |x_k|^2 = m^2 ,
+\]
+y tomando raíces, $\|x\|_2 \geq m$. Para la segunda, $|x_i| \leq m$ para todo
+$i$, luego
+\[
+  \|x\|_2^2 = \sum_{i=1}^n |x_i|^2 \leq n m^2 ,
+\]
+y por tanto $\|x\|_2 \leq \sqrt{n}\, m$.
+\end{solution}
+\end{exercise}

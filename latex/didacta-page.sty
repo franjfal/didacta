@@ -1,0 +1,151 @@
+%%
+%% didacta-page.sty -- page layout for the document profiles.
+%%
+%% Applies to notes, book, handout, problems and exam. Slides are laid out by
+%% didacta-theme.sty instead.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-page}[2026/09/09 v1.0 Didacta page layout]
+
+\RequirePackage{etoolbox}
+\RequirePackage{geometry}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+
+\makeatletter
+
+%% Compact profiles -- handout, problem sheets, exam -- want the space for
+%% content. Notes and books want a measure you can read for an hour, which
+%% means a narrower text block and room for the eye to rest.
+\iftoggle{didacta@compact}{%
+  \geometry{a4paper, top=2cm, bottom=2cm, left=2.2cm, right=2.2cm,
+            headsep=0.7cm, footskip=1cm}
+}{%
+  \geometry{a4paper, top=2.6cm, bottom=2.6cm, left=3cm, right=2.6cm,
+            headsep=0.8cm, footskip=1.2cm}
+}
+
+%% ---------------------------------------------------------------------------
+%% Running heads
+%%
+%% Course on the left, chapter on the right, page number centred at the foot.
+%% Enough to know where you are in a stack of printouts, which is the only job
+%% a running head has.
+%% ---------------------------------------------------------------------------
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhead[L]{\small\color{didactaMuted}\didactaCourseTitle}
+\fancyhead[R]{\small\color{didactaMuted}\didactaDocumentTitle}
+\fancyfoot[C]{\small\color{didactaMuted}\thepage}
+
+%% The teacher copy says so on every page. You do not want to discover you
+%% printed the wrong one after handing it out.
+\iftoggle{didacta@teacher}{%
+  \fancyfoot[R]{\small\color{didactaTeacher}\bfseries\didactaTeacherName}%
+}{}
+
+%% ---------------------------------------------------------------------------
+%% Headings
+%%
+%% Sans-serif, accented rule under the section. Deliberately restrained: the
+%% theorem boxes already carry colour, and competing with them makes a page
+%% that is tiring to read.
+%% ---------------------------------------------------------------------------
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\sffamily\color{didactaInk}}
+  {\thesection}{0.7em}{}
+  [{\color{didactaAccent}\titlerule[1pt]}]
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\sffamily\color{didactaInk}}
+  {\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries\sffamily\color{didactaInk}}
+  {\thesubsubsection}{0.6em}{}
+
+\titlespacing*{\section}{0pt}{2.4ex plus 1ex minus .2ex}{1.4ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{2ex plus 1ex minus .2ex}{1ex plus .2ex}
+
+%% A handout is one sheet: numbering its sections is noise.
+\iftoggle{didacta@compact}{\setcounter{secnumdepth}{1}}{}
+
+%% ---------------------------------------------------------------------------
+%% Document title page
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didacta@titlepage@doc}{%
+  \begin{titlepage}
+    \centering
+    \vspace*{2.5cm}
+    \ifdefempty{\didactaCourseLogo}{}{%
+      \includegraphics[height=2cm]{\didactaCourseLogo}\par\vspace{1.4cm}}
+    {\sffamily\Huge\bfseries\color{didactaInk}\didactaCourseTitle\par}
+    \ifdefempty{\didactaCourseSubtitle}{}{%
+      \vspace{0.5cm}{\sffamily\Large\color{didactaMuted}\didactaCourseSubtitle\par}}
+    \vspace{1cm}
+    {\color{didactaAccent}\rule{0.4\linewidth}{1.5pt}\par}
+    \vspace{1cm}
+    \ifdefempty{\didactaDocumentTitle}{}{%
+      {\sffamily\LARGE\color{didactaInk}\didactaDocumentTitle\par}}
+    \vfill
+    \iftoggle{didacta@teacher}{%
+      {\sffamily\large\color{didactaTeacher}\bfseries\didactaTeacherName\par}
+      \vspace{0.8cm}}{}
+    \begin{tabular}{@{}r@{\hspace{1em}}l@{}}
+      \ifdefempty{\didactaCourseTeacher}{}{%
+        {\small\color{didactaMuted}\didactaTeacherName} &
+        {\small\didactaCourseTeacher} \\[0.3ex]}
+      \ifdefempty{\didactaCourseDegree}{}{%
+        & {\small\didactaCourseDegree} \\[0.3ex]}
+      \ifdefempty{\didactaCourseCode}{}{%
+        {\small\color{didactaMuted}\didactaCourseName} &
+        {\small\didactaCourseCode
+          \ifdefempty{\didactaCourseGroup}{}{\ --\ \didactaCourseGroup}} \\[0.3ex]}
+      \ifdefempty{\didactaCourseYear}{}{%
+        {\small\color{didactaMuted}\didactaAcademicYearName} &
+        {\small\didactaCourseYear} \\[0.3ex]}
+    \end{tabular}
+    \vspace{0.8cm}
+    \ifdefempty{\didactaCourseInstitution}{}{%
+      {\small\color{didactaMuted}\didactaCourseInstitution\par}}
+    \ifdefempty{\didactaCourseDepartment}{}{%
+      {\footnotesize\color{didactaMuted}\didactaCourseDepartment\par}}
+  \end{titlepage}
+}
+
+%% ---------------------------------------------------------------------------
+%% Compact header
+%%
+%% A problem sheet or handout does not want a title *page*; it wants a header
+%% band at the top of page one. This reproduces the shape the legacy handouts
+%% used, which is a genuinely good compact header.
+%% ---------------------------------------------------------------------------
+
+\newcommand{\DidactaSheetHeader}{%
+  %% The band below repeats what the running head says, so page one drops the
+  %% running head. Two identical lines at the top of a sheet look like a bug.
+  \thispagestyle{empty}%
+  \begin{center}
+    \vspace{-0.6cm}
+    {\color{didactaRule}\hrule height 0.6pt}
+    \vspace{0.35ex}
+    {\small\sffamily
+      \didactaCourseYear \hfill
+      \didactaCourseTitle
+      \ifdefempty{\didactaCourseGroup}{}{\ (\didactaCourseGroup)} \hfill
+      \didactaTeacherName: \didactaCourseTeacher}
+    \vspace{0.35ex}
+    {\color{didactaRule}\hrule height 0.6pt}
+    \vspace{0.9cm}
+    {\Large\sffamily\bfseries\didactaDocumentTitle}
+    \iftoggle{didacta@teacher}{%
+      \\[0.4ex]{\small\color{didactaTeacher}\bfseries\didactaTeacherName}}{}
+    \vspace{0.5cm}
+  \end{center}
+}
+
+\makeatother
+\endinput

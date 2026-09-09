@@ -1,0 +1,145 @@
+%%
+%% didacta-legacy.sty -- what the old templates defined.
+%%
+%% Migrating deletes the preamble of every content file, and with it whatever
+%% the old shared templates supplied. Most of that is replaced by Didacta's own
+%% machinery, but some of it is just a definition the material uses and expects
+%% to be there. Those live here.
+%%
+%% The rule for what belongs in this file: the old system defined it, the
+%% material uses it, and Didacta has no better name for the same thing. Where
+%% Didacta *does* have a better name -- `\onlynotes` for `\onlybook`,
+%% `definition` for `ndefn` -- the alias lives with the feature and the
+%% migration rewrites the content. Where the old name is the only name, it
+%% lives here and the content is left alone.
+%%
+%% Nothing here loads a new package. Two attempts were made and both were
+%% wrong: `fancybox` and `todonotes` pull in font and colour machinery that
+%% changed the type in every document, including the ones with no legacy
+%% content in them at all. A compatibility layer that alters correct output is
+%% worse than the incompatibility. So these are built on `tcolorbox`, which
+%% Didacta already loads.
+%%
+%% Everything is `\providecommand`, so a document that defines its own keeps
+%% it.
+%%
+%% Kept separate from didacta.sty on purpose: this is the compatibility
+%% surface, and it should be possible to see how large it is and to watch it
+%% shrink as material is cleaned up.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-legacy}[2026/09/09 v1.0 Didacta legacy compatibility]
+
+\RequirePackage{etoolbox}
+
+%% ---------------------------------------------------------------------------
+%% Framed boxes, from `fancybox`.
+%%
+%% \ovalbox is used 126 times, almost always around a formula that the author
+%% wanted set apart. tcolorbox gives the same reading with the rounding the
+%% name promises.
+%% ---------------------------------------------------------------------------
+
+\providecommand{\ovalbox}[1]{%
+  \tcbox[
+    enhanced, nobeforeafter, tcbox raise base,
+    colback=white, colframe=didactaInk!55,
+    boxrule=0.5pt, arc=4pt,
+    left=4pt, right=4pt, top=2pt, bottom=2pt,
+  ]{#1}%
+}
+\providecommand{\Ovalbox}[1]{%
+  \tcbox[
+    enhanced, nobeforeafter, tcbox raise base,
+    colback=white, colframe=didactaInk!70,
+    boxrule=1.2pt, arc=4pt,
+    left=4pt, right=4pt, top=2pt, bottom=2pt,
+  ]{#1}%
+}
+\providecommand{\shadowbox}[1]{%
+  \tcbox[
+    enhanced, nobeforeafter, tcbox raise base,
+    colback=white, colframe=didactaInk!60,
+    boxrule=0.5pt, arc=0pt, drop shadow=didactaInk!30,
+    left=4pt, right=4pt, top=2pt, bottom=2pt,
+  ]{#1}%
+}
+\providecommand{\doublebox}[1]{%
+  \tcbox[
+    enhanced, nobeforeafter, tcbox raise base,
+    colback=white, colframe=didactaInk!60,
+    boxrule=0.5pt, arc=0pt,
+    borderline={0.5pt}{2pt}{didactaInk!60},
+    left=4pt, right=4pt, top=2pt, bottom=2pt,
+  ]{#1}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Author notes, from `todonotes`.
+%%
+%% Six uses, all of them a note from the author to the author. Didacta already
+%% has a channel for exactly that -- the teacher one -- so \todo becomes a
+%% teacher note rather than a margin sticker. It therefore appears in the
+%% teacher profiles and not on a student handout, which is what the author
+%% meant by writing it in the first place.
+%% ---------------------------------------------------------------------------
+
+\providecommand{\todo}[2][]{%
+  \onlyteacher{%
+    \par\smallskip
+    \noindent
+    \begin{tcolorbox}[
+      enhanced, breakable,
+      colback=didactaTeacher!6, colframe=didactaTeacher!55,
+      boxrule=0.5pt, arc=2pt,
+      left=1.2ex, right=1.2ex, top=0.8ex, bottom=0.8ex,
+    ]%
+    #2%
+    \end{tcolorbox}%
+    \par\smallskip
+  }%
+}
+
+%% ---------------------------------------------------------------------------
+%% Two-column line, from Problems-template and Extra-examples-template.
+%%
+%% 44 uses. Kept at the original proportions, because the sheets were laid out
+%% against them.
+%% ---------------------------------------------------------------------------
+
+\providecommand{\textline}[2]{%
+  \parbox{.4\textwidth}{#1}%
+  \parbox{.6\textwidth}{#2}%
+}
+
+%% ---------------------------------------------------------------------------
+%% The euro sign, from `eurosym`.
+%%
+%% Six uses in one file. LaTeX has `\texteuro`, so this needs no package --
+%% which matters, because eurosym brings a font with it.
+%% ---------------------------------------------------------------------------
+
+\providecommand{\euro}{\texteuro}
+
+%% ---------------------------------------------------------------------------
+%% Not provided, deliberately
+%%
+%% `\question{...}` from FAQ-template cannot live here: Didacta has a `question`
+%% environment, and in LaTeX `\begin{question}` *is* `\question`, so the two
+%% names are the same name. The migration rewrites those 13 uses into the
+%% environment and reports that the "list of questions" index goes with them.
+%%
+%% `\sec` cannot either -- it is the secant, and the old templates redefined it
+%% as the course group. The maths wins; the migration reports the rest.
+%%
+%% `\texpath`, `\nohyphens`, `\documentclassname`: these were about how the old
+%% build found and configured its files. There is nothing to point them at.
+%%
+%% `\cites` is biblatex's multi-citation, used 35 times in 5 bibliography
+%% units. Didacta has no bibliography support -- no resource, no style, no
+%% `.bib` in the content model -- and faking the macro would render citations
+%% wrongly while looking as though it worked. Reported instead, and on the
+%% list of what to build next.
+%% ---------------------------------------------------------------------------
+
+\endinput

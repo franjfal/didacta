@@ -1,0 +1,57 @@
+%%
+%% didacta-lang-es.def -- Castellano.
+%%
+%% Every fixed string Didacta prints. Nothing here is decorative: a document
+%% that says "Theorem 2.1" in a Spanish course is wrong, and the content must
+%% not have to carry the translation itself.
+%%
+\ProvidesFile{didacta-lang-es.def}[2026/09/09 Didacta Castilian]
+
+%% The babel option, so the bootstrap does not need a second table.
+\def\didactaBabelName{spanish}
+
+%% Theorem-like environments.
+\def\didactaTheoremName{Teorema}
+\def\didactaDefinitionName{Definici\'on}
+\def\didactaPropositionName{Proposici\'on}
+\def\didactaLemmaName{Lema}
+\def\didactaCorollaryName{Corolario}
+\def\didactaPropertyName{Propiedad}
+\def\didactaExampleName{Ejemplo}
+\def\didactaQuestionName{Cuesti\'on}
+\def\didactaRemarkName{Nota}
+\def\didactaAxiomName{Axioma}
+\def\didactaAlgorithmName{Algoritmo}
+\def\didactaNotationName{Notaci\'on}
+\def\didactaProofName{Demostraci\'on}
+
+%% Exercises.
+\def\didactaExerciseName{Ejercicio}
+\def\didactaAnswerName{Respuesta}
+\def\didactaSolutionName{Soluci\'on}
+\def\didactaHintName{Indicaci\'on}
+\def\didactaMarkingName{Correcci\'on}
+\def\didactaMarksName{puntos}
+
+%% Structure and front matter.
+\def\didactaContentsName{Contenidos}
+\def\didactaChapterName{Tema}
+\def\didactaCourseName{Asignatura}
+\def\didactaTeacherName{Profesor}
+\def\didactaAcademicYearName{Curso}
+\def\didactaBibliographyName{Bibliograf\'ia}
+\def\didactaObjectivesName{Objetivos}
+\def\didactaPrerequisitesName{Prerrequisitos}
+\def\didactaSummaryName{Resumen}
+\def\didactaFurtherReadingName{Para saber m\'as}
+
+%% Teacher channel.
+\def\didactaTeachingNoteName{Nota did\'actica}
+\def\didactaTimingName{Duraci\'on estimada}
+\def\didactaCommonMistakeName{Error frecuente}
+
+%% Assessment.
+\def\didactaExamName{Examen}
+\def\didactaDurationName{Duraci\'on}
+\def\didactaTotalMarksName{Puntuaci\'on total}
+\endinput

@@ -1,0 +1,202 @@
+%%
+%% didacta-theme.sty -- the beamer theme for slide profiles.
+%%
+%% Built on plain beamer plus tcolorbox. The legacy deck used Torino with the
+%% chameleon colour theme and the decolines outer theme -- four non-CTAN .sty
+%% files plus a bundled display font. Didacta reproduces the parts that earn
+%% their keep (green accent, a progress indicator, a clean section page) with
+%% nothing outside a standard TeX Live, because a platform that cannot be
+%% compiled on a fresh machine is not a platform.
+%%
+%% Design constraints that come from the room, not from taste:
+%%   · a 4:3 projector in a lecture theatre, so 10pt body and high contrast;
+%%   · the bottom 15% is often blocked by heads, so nothing important goes there;
+%%   · the frame title has to survive being read from twenty metres.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-theme}[2026/09/09 v1.0 Didacta beamer theme]
+
+\RequirePackage{etoolbox}
+\RequirePackage{didacta-colours}
+
+\makeatletter
+
+\usetheme{default}
+\useinnertheme{rectangles}
+\setbeamertemplate{navigation symbols}{}
+
+%% ---------------------------------------------------------------------------
+%% Colours
+%% ---------------------------------------------------------------------------
+
+\setbeamercolor{normal text}{fg=didactaInk, bg=white}
+\setbeamercolor{structure}{fg=didactaAccentDark}
+\setbeamercolor{alerted text}{fg=didactaMarkingRule}
+\setbeamercolor{frametitle}{fg=white, bg=didactaAccentDark}
+\setbeamercolor{title}{fg=didactaInk}
+\setbeamercolor{subtitle}{fg=didactaMuted}
+\setbeamercolor{author}{fg=didactaMuted}
+\setbeamercolor{institute}{fg=didactaMuted}
+\setbeamercolor{date}{fg=didactaMuted}
+\setbeamercolor{section in toc}{fg=didactaInk}
+\setbeamercolor{subsection in toc}{fg=didactaMuted}
+\setbeamercolor{itemize item}{fg=didactaAccentDark}
+\setbeamercolor{itemize subitem}{fg=didactaAccent}
+\setbeamercolor{enumerate item}{fg=didactaAccentDark}
+
+%% Set the markers explicitly. `rectangles` leaves them to the theme, and
+%% inside a tcolorbox -- which is where most of the lists in this material
+%% live -- nothing painted them at all.
+\setbeamertemplate{itemize item}{\small\raise0.3ex\hbox{$\bullet$}}
+\setbeamertemplate{itemize subitem}{\scriptsize\raise0.3ex\hbox{$\circ$}}
+\setbeamertemplate{itemize subsubitem}{\scriptsize\raise0.3ex\hbox{$-$}}
+\setbeamertemplate{enumerate item}{\insertenumlabel.}
+\setbeamercolor{block title}{fg=white, bg=didactaAccentDark}
+\setbeamercolor{block body}{bg=didactaAccent!8}
+
+%% ---------------------------------------------------------------------------
+%% Fonts
+%%
+%% Sans throughout, including maths: a serif formula next to a sans label
+%% reads as two different documents at projector size.
+%% ---------------------------------------------------------------------------
+
+\usefonttheme{professionalfonts}
+\RequirePackage{sansmath}
+\renewcommand{\familydefault}{\sfdefault}
+\AtBeginDocument{\sansmath}
+
+\setbeamerfont{frametitle}{size=\large, series=\bfseries}
+\setbeamerfont{title}{size=\LARGE, series=\bfseries}
+\setbeamerfont{subtitle}{size=\large}
+
+%% ---------------------------------------------------------------------------
+%% Frame title
+%%
+%% A full-width accent band. Reliable to read at distance, and it gives the
+%% slide a firm top edge.
+%% ---------------------------------------------------------------------------
+
+\setbeamertemplate{frametitle}{%
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\paperwidth, ht=3.2ex, dp=1.4ex, leftskip=0.8em,
+                         rightskip=0.8em]{frametitle}%
+    \usebeamerfont{frametitle}\insertframetitle%
+    \hfill
+    \ifx\insertframesubtitle\@empty\else
+      {\usebeamerfont*{framesubtitle}\small\insertframesubtitle}%
+    \fi
+  \end{beamercolorbox}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Foot line
+%%
+%% Course, chapter, and a slide-count progress bar. The bar is the useful part:
+%% it tells the room how much is left, which changes how they listen.
+%% ---------------------------------------------------------------------------
+
+\setbeamertemplate{footline}{%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth, ht=2.2ex, dp=1ex, leftskip=0.8em,
+                           rightskip=0.8em]{}%
+      {\tiny\color{didactaMuted}%
+        \didactaCourseTitle
+        \ifdefempty{\didactaDocumentTitle}{}{\ \textbullet\ \didactaDocumentTitle}%
+        \hfill
+        \insertframenumber\,/\,\inserttotalframenumber}%
+    \end{beamercolorbox}%
+  }%
+  \nointerlineskip
+  \didacta@progressbar
+}
+
+%% A one-pixel bar whose filled fraction is the position in the deck.
+\newcommand{\didacta@progressbar}{%
+  \begingroup
+    \dimen0=\paperwidth
+    \ifnum\inserttotalframenumber>0
+      \dimen0=\dimexpr\paperwidth*\insertframenumber/\inserttotalframenumber\relax
+    \fi
+    \hbox to \paperwidth{%
+      \color{didactaAccent}\rule{\dimen0}{1.6pt}%
+      \color{didactaRule}\rule{\dimexpr\paperwidth-\dimen0\relax}{1.6pt}%
+    }%
+  \endgroup
+}
+
+%% ---------------------------------------------------------------------------
+%% Section page
+%%
+%% A full-bleed band. Gives the room a beat to reset between topics, which is
+%% the whole point of a section divider.
+%% ---------------------------------------------------------------------------
+
+\AtBeginSection[]{%
+  \begingroup
+  \setbeamertemplate{footline}{}%
+  \begin{frame}[plain, noframenumbering]
+    \vfill
+    \begin{beamercolorbox}[wd=\paperwidth, ht=6ex, dp=4ex, center]{frametitle}%
+      \usebeamerfont{title}\insertsection%
+    \end{beamercolorbox}%
+    \vfill
+  \end{frame}
+  \endgroup
+}
+
+%% ---------------------------------------------------------------------------
+%% Presenter notes
+%%
+%% In the slides-teacher profile, notes print on the page after their slide.
+%% Set plain so a note page is not chrome-heavy.
+%% ---------------------------------------------------------------------------
+
+\setbeamertemplate{note page}{%
+  \vspace{1em}
+  {\small\color{didactaTeacher}\bfseries\didactaTeacherName}\par
+  \vspace{0.6em}
+  {\small\insertnote}%
+}
+
+%% ---------------------------------------------------------------------------
+%% Title page
+%% ---------------------------------------------------------------------------
+
+\newcommand{\didacta@titlepage@slides}{%
+  \begingroup
+  \setbeamertemplate{footline}{}%
+  \begin{frame}[plain, noframenumbering]
+    \vspace{0.6cm}
+    \ifdefempty{\didactaCourseLogo}{}{%
+      \begin{center}\includegraphics[height=1.3cm]{\didactaCourseLogo}\end{center}
+      \vspace{0.3cm}}
+    \begin{center}
+      {\usebeamerfont{title}\color{didactaInk}\didactaCourseTitle\par}
+      \ifdefempty{\didactaCourseSubtitle}{}{%
+        \vspace{0.25cm}
+        {\usebeamerfont{subtitle}\color{didactaMuted}\didactaCourseSubtitle\par}}
+      \vspace{0.5cm}
+      {\color{didactaAccent}\rule{0.45\linewidth}{1.4pt}\par}
+      \vspace{0.5cm}
+      \ifdefempty{\didactaDocumentTitle}{}{%
+        {\large\color{didactaInk}\didactaDocumentTitle\par}}
+      \iftoggle{didacta@teacher}{%
+        \vspace{0.4cm}
+        {\small\color{didactaTeacher}\bfseries\didactaTeacherName\par}}{}
+      \vfill
+      {\footnotesize\color{didactaMuted}
+        \didactaCourseTeacher
+        \ifdefempty{\didactaCourseInstitution}{}{\ \textbullet\ \didactaCourseInstitution}%
+        \ifdefempty{\didactaCourseYear}{}{\ \textbullet\ \didactaCourseYear}\par}
+    \end{center}
+    \vspace{0.3cm}
+  \end{frame}
+  \endgroup
+}
+
+%% Compact profiles have no meaning for slides; accept the toggle silently.
+\providecommand{\DidactaSheetHeader}{}
+
+\makeatother
+\endinput

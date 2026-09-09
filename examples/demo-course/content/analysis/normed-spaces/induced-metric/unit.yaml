@@ -1,0 +1,23 @@
+id: analysis.normed-spaces.induced-metric
+kind: theory
+title:
+  es: La métrica inducida
+  va: La mètrica induïda
+  en: The induced metric
+
+category: analysis
+topic: normed-spaces
+tags: [normed-space, metric, proof]
+
+reference: es
+# Only languages that exist are listed. Absence is the metadata.
+languages:
+  es: {status: reviewed}
+
+prerequisites: [analysis.normed-spaces.definition]
+objectives:
+  - Demostrar que toda norma induce una métrica
+  - Reconocer que el recíproco es falso
+
+duration_minutes: 15
+difficulty: introductory
