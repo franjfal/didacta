@@ -76,10 +76,10 @@ class UnitUsage {
   });
 
   factory UnitUsage.fromJson(Map<String, dynamic> json) => UnitUsage(
-        course: json['course'] as String? ?? '',
-        year: json['year'] as String? ?? '',
-        document: json['document'] as String? ?? '',
-      );
+    course: json['course'] as String? ?? '',
+    year: json['year'] as String? ?? '',
+    document: json['document'] as String? ?? '',
+  );
 
   final String course;
   final String year;
@@ -125,7 +125,8 @@ class Unit {
       statuses: {
         for (final entry in languages.entries)
           entry.key as String: TranslationStatus.parse(
-              (entry.value as Map?)?['status'] as String?),
+            (entry.value as Map?)?['status'] as String?,
+          ),
       },
       prerequisites: _stringList(json['prerequisites']),
       objectives: _stringList(json['objectives']),
@@ -202,14 +203,14 @@ class Unit {
 
   /// Text a search box should match against: everything a person might type.
   String get searchable => [
-        path,
-        id,
-        ...titles.values,
-        ...tags,
-        kind,
-        category,
-        topic,
-      ].join(' ').toLowerCase();
+    path,
+    id,
+    ...titles.values,
+    ...tags,
+    kind,
+    category,
+    topic,
+  ].join(' ').toLowerCase();
 }
 
 /// One compilable document inside a course year.
@@ -224,13 +225,13 @@ class Document {
   });
 
   factory Document.fromJson(Map<String, dynamic> json) => Document(
-        id: json['id'] as String? ?? '',
-        kind: json['kind'] as String? ?? 'theory',
-        language: json['language'] as String? ?? 'es',
-        titles: _stringMap(json['title']),
-        profiles: _stringList(json['profiles']),
-        unitRefs: _stringList(json['unitRefs']),
-      );
+    id: json['id'] as String? ?? '',
+    kind: json['kind'] as String? ?? 'theory',
+    language: json['language'] as String? ?? 'es',
+    titles: _stringMap(json['title']),
+    profiles: _stringList(json['profiles']),
+    unitRefs: _stringList(json['unitRefs']),
+  );
 
   final String id;
   final String kind;
@@ -263,14 +264,14 @@ class CourseYear {
   });
 
   factory CourseYear.fromJson(Map<String, dynamic> json) => CourseYear(
-        year: json['year'] as String? ?? '',
-        language: json['language'] as String? ?? 'es',
-        group: json['group'] is String ? json['group'] as String : null,
-        documents: [
-          for (final item in (json['documents'] as List?) ?? const [])
-            Document.fromJson((item as Map).cast<String, dynamic>()),
-        ],
-      );
+    year: json['year'] as String? ?? '',
+    language: json['language'] as String? ?? 'es',
+    group: json['group'] is String ? json['group'] as String : null,
+    documents: [
+      for (final item in (json['documents'] as List?) ?? const [])
+        Document.fromJson((item as Map).cast<String, dynamic>()),
+    ],
+  );
 
   final String year;
   final String language;
@@ -303,8 +304,9 @@ class Course {
       institution: json['institution'] as String?,
       years: {
         for (final entry in years.entries)
-          entry.key as String:
-              CourseYear.fromJson((entry.value as Map).cast<String, dynamic>()),
+          entry.key as String: CourseYear.fromJson(
+            (entry.value as Map).cast<String, dynamic>(),
+          ),
       },
     );
   }
@@ -341,10 +343,10 @@ class OutputProfile {
   });
 
   factory OutputProfile.fromJson(Map<String, dynamic> json) => OutputProfile(
-        id: json['id'] as String? ?? '',
-        family: json['family'] as String? ?? '',
-        documentClass: json['documentClass'] as String? ?? '',
-      );
+    id: json['id'] as String? ?? '',
+    family: json['family'] as String? ?? '',
+    documentClass: json['documentClass'] as String? ?? '',
+  );
 
   final String id;
   final String family;
@@ -375,18 +377,23 @@ class Catalogue {
     required Map<String, dynamic> units,
     required Map<String, dynamic> courses,
   }) {
-    for (final entry in {'manifest': manifest, 'units': units, 'courses': courses}
-        .entries) {
+    for (final entry in {
+      'manifest': manifest,
+      'units': units,
+      'courses': courses,
+    }.entries) {
       final version = (entry.value['schemaVersion'] as num?)?.toInt();
       if (version == null) {
         throw CatalogueFormatException(
-            '${entry.key}.json has no schemaVersion');
+          '${entry.key}.json has no schemaVersion',
+        );
       }
       if (version != supportedSchemaVersion) {
         throw CatalogueFormatException(
-            '${entry.key}.json is schema $version; this app reads '
-            '$supportedSchemaVersion. Regenerate with `didacta index`, or '
-            'update the app.');
+          '${entry.key}.json is schema $version; this app reads '
+          '$supportedSchemaVersion. Regenerate with `didacta index`, or '
+          'update the app.',
+        );
       }
     }
 
@@ -462,10 +469,10 @@ class Catalogue {
 }
 
 List<String> _stringList(Object? value) => [
-      for (final item in (value as List?) ?? const []) item.toString(),
-    ];
+  for (final item in (value as List?) ?? const []) item.toString(),
+];
 
 Map<String, String> _stringMap(Object? value) => {
-      for (final entry in ((value as Map?) ?? const {}).entries)
-        entry.key.toString(): entry.value?.toString() ?? '',
-    };
+  for (final entry in ((value as Map?) ?? const {}).entries)
+    entry.key.toString(): entry.value?.toString() ?? '',
+};

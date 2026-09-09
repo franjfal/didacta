@@ -35,7 +35,8 @@ const Map<String, Size> sizes = {
 const Map<String, String> routes = {
   'la biblioteca': '/',
   'una unidad': '/unit/content/analysis/normed/definition',
-  'una unidad con traducciones a medias': '/unit/content/analysis/normed/banach',
+  'una unidad con traducciones a medias':
+      '/unit/content/analysis/normed/banach',
   'una unidad que no existe': '/unit/content/no/such/unit',
   'las asignaturas': '/courses',
   'un curso': '/courses/am-iii/2025-2026',
@@ -73,7 +74,9 @@ void main() {
           // Reached by navigating rather than by mounting the screen alone,
           // so the shell, the banners and the route's own chrome are all in
           // the layout being measured.
-          GoRouter.of(tester.element(find.byType(DidactaShell))).go(route.value);
+          GoRouter.of(
+            tester.element(find.byType(DidactaShell)),
+          ).go(route.value);
           await settle(tester);
 
           // An overflow arrives as a layout assertion, so "no exception" is

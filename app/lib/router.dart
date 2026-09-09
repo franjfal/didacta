@@ -145,7 +145,10 @@ class _NotFound extends StatelessWidget {
                 // or a stale bookmark, and seeing it is how you tell which.
                 SelectableText(
                   location,
-                  style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace'),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontFamily: 'monospace',
+                  ),
                 ),
                 const SizedBox(height: 20),
                 FilledButton(

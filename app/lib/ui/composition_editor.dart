@@ -179,8 +179,9 @@ class _CompositionEditorState extends State<CompositionEditor> {
                     onToggle: () => _apply([
                       for (var i = 0; i < _entries.length; i += 1)
                         i == index
-                            ? _entries[i]
-                                .copyWith(enabled: !_entries[i].enabled)
+                            ? _entries[i].copyWith(
+                                enabled: !_entries[i].enabled,
+                              )
                             : _entries[i],
                     ]),
                     onRemove: () => _remove(index),
@@ -214,8 +215,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
   }
 
   List<StructureEntry> _reload() =>
-      CompositionFile(_loaded).blockFor(widget.documentId)?.entries ??
-      const [];
+      CompositionFile(_loaded).blockFor(widget.documentId)?.entries ?? const [];
 
   /// `onReorderItem` hands back an index already adjusted for the removal,
   /// which is the whole reason it replaced `onReorder`.
@@ -267,10 +267,8 @@ class _CompositionEditorState extends State<CompositionEditor> {
     };
     final chosen = await showDialog<Unit>(
       context: context,
-      builder: (context) => _UnitPicker(
-        session: widget.session,
-        already: already,
-      ),
+      builder: (context) =>
+          _UnitPicker(session: widget.session, already: already),
     );
     if (chosen == null) return;
     _apply([
@@ -358,16 +356,18 @@ class _CompositionEditorState extends State<CompositionEditor> {
     // refers to, *not* whether it is switched on. Including the enabled flag
     // made every toggle report itself as a reorder as well.
     List<String> keys(List<StructureEntry> entries) => [
-          for (final entry in entries)
-            '${entryKeyword(entry.kind)}:${entry.value}${entry.label('es')}',
-        ];
+      for (final entry in entries)
+        '${entryKeyword(entry.kind)}:${entry.value}${entry.label('es')}',
+    ];
     final wasValues = keys(before);
     final nowValues = keys(now);
 
     final added = now.length - before.length;
-    final switchedOn = now.where((e) => e.enabled).length -
+    final switchedOn =
+        now.where((e) => e.enabled).length -
         before.where((e) => e.enabled).length;
-    final reordered = wasValues.length == nowValues.length &&
+    final reordered =
+        wasValues.length == nowValues.length &&
         !_sameOrder(wasValues, nowValues);
 
     final parts = <String>[];
@@ -431,57 +431,59 @@ class _Bar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: LayoutBuilder(builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 560;
-        return Row(
-          children: [
-            Expanded(
-              child: Text(
-                narrow
-                    ? '$active de $total'
-                    : '$path · $active de $total activas',
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: didactaMuted,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 560;
+          return Row(
+            children: [
+              Expanded(
+                child: Text(
+                  narrow
+                      ? '$active de $total'
+                      : '$path · $active de $total activas',
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                    color: didactaMuted,
+                  ),
                 ),
               ),
-            ),
-            if (added + removed > 0) ...[
-              const SizedBox(width: 8),
-              Text(
-                '+$added −$removed',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: didactaEx,
+              if (added + removed > 0) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '+$added −$removed',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: didactaEx,
+                  ),
                 ),
+              ],
+              const SizedBox(width: 8),
+              if (!narrow && onDiscard != null)
+                TextButton(
+                  onPressed: saving ? null : onDiscard,
+                  child: const Text('Descartar'),
+                ),
+              const SizedBox(width: 4),
+              FilledButton.icon(
+                key: const Key('composition-save'),
+                icon: saving
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check, size: 16),
+                label: Text(saving ? 'Guardando…' : 'Guardar'),
+                onPressed: canSave ? onSave : null,
               ),
             ],
-            const SizedBox(width: 8),
-            if (!narrow && onDiscard != null)
-              TextButton(
-                onPressed: saving ? null : onDiscard,
-                child: const Text('Descartar'),
-              ),
-            const SizedBox(width: 4),
-            FilledButton.icon(
-              key: const Key('composition-save'),
-              icon: saving
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check, size: 16),
-              label: Text(saving ? 'Guardando…' : 'Guardar'),
-              onPressed: canSave ? onSave : null,
-            ),
-          ],
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 }
@@ -530,8 +532,11 @@ class _EntryRow extends StatelessWidget {
                 index: index,
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-                  child: Icon(Icons.drag_indicator,
-                      size: 17, color: didactaMuted),
+                  child: Icon(
+                    Icons.drag_indicator,
+                    size: 17,
+                    color: didactaMuted,
+                  ),
                 ),
               )
             else
@@ -629,7 +634,11 @@ class _Reference extends StatelessWidget {
                 ] else
                   const Padding(
                     padding: EdgeInsets.only(right: 6),
-                    child: Icon(Icons.link_off, size: 13, color: didactaTeacher),
+                    child: Icon(
+                      Icons.link_off,
+                      size: 13,
+                      color: didactaTeacher,
+                    ),
                   ),
                 Expanded(
                   child: Text(
@@ -685,8 +694,9 @@ class _Heading extends StatefulWidget {
 }
 
 class _HeadingState extends State<_Heading> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.entry.label(widget.language));
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.entry.label(widget.language),
+  );
 
   @override
   void didUpdateWidget(_Heading old) {
@@ -706,7 +716,8 @@ class _HeadingState extends State<_Heading> {
   @override
   Widget build(BuildContext context) {
     final isSection = widget.entry.kind == EntryKind.section;
-    final missing = widget.entry.isLocalised &&
+    final missing =
+        widget.entry.isLocalised &&
         !widget.entry.titles.containsKey(widget.language);
 
     return Padding(
@@ -858,8 +869,10 @@ class _UnitPickerState extends State<_UnitPicker> {
             Expanded(
               child: matches.isEmpty
                   ? const Center(
-                      child: Text('Nada coincide.',
-                          style: TextStyle(fontSize: 13, color: didactaMuted)),
+                      child: Text(
+                        'Nada coincide.',
+                        style: TextStyle(fontSize: 13, color: didactaMuted),
+                      ),
                     )
                   : ListView.builder(
                       itemCount: matches.length,
@@ -868,7 +881,9 @@ class _UnitPickerState extends State<_UnitPicker> {
                         // Shown rather than hidden: knowing a unit is already
                         // in the document is the answer to "why can I not
                         // find it".
-                        final present = widget.already.contains(unit.reference_);
+                        final present = widget.already.contains(
+                          unit.reference_,
+                        );
                         return ListTile(
                           dense: true,
                           enabled: !present,
@@ -926,37 +941,37 @@ class _Empty extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Este documento no compone nada todavía.',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Después de una migración esto suele significar que el '
-                  'documento original no importó ninguna unidad que se '
-                  'pudiera resolver.',
-                  style: TextStyle(fontSize: 12.5, color: didactaMuted),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 18),
-                if (enabled)
-                  FilledButton.icon(
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Añadir la primera unidad'),
-                    onPressed: onAdd,
-                  ),
-              ],
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Este documento no compone nada todavía.',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
-          ),
+            const SizedBox(height: 8),
+            const Text(
+              'Después de una migración esto suele significar que el '
+              'documento original no importó ninguna unidad que se '
+              'pudiera resolver.',
+              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 18),
+            if (enabled)
+              FilledButton.icon(
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Añadir la primera unidad'),
+                onPressed: onAdd,
+              ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _CompositionCommitDialog extends StatefulWidget {
@@ -976,8 +991,9 @@ class _CompositionCommitDialog extends StatefulWidget {
 }
 
 class _CompositionCommitDialogState extends State<_CompositionCommitDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.suggested);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.suggested,
+  );
 
   @override
   void dispose() {
@@ -1033,9 +1049,9 @@ class _CompositionCommitDialogState extends State<_CompositionCommitDialog> {
               maxLines: 3,
               minLines: 1,
               decoration: const InputDecoration(labelText: 'Mensaje'),
-              onSubmitted: (value) => Navigator.of(context).pop(
-                value.trim().isEmpty ? widget.suggested : value.trim(),
-              ),
+              onSubmitted: (value) => Navigator.of(
+                context,
+              ).pop(value.trim().isEmpty ? widget.suggested : value.trim()),
             ),
           ],
         ),
@@ -1095,7 +1111,9 @@ class _CompositionFailure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = error is ContentException ? error as ContentException : null;
+    final content = error is ContentException
+        ? error as ContentException
+        : null;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 470),
@@ -1113,11 +1131,16 @@ class _CompositionFailure extends StatelessWidget {
               SelectableText(
                 path,
                 style: const TextStyle(
-                    fontSize: 12, fontFamily: 'monospace', color: didactaMuted),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: didactaMuted,
+                ),
               ),
               const SizedBox(height: 10),
-              Text(content?.message ?? error.toString(),
-                  style: const TextStyle(fontSize: 13)),
+              Text(
+                content?.message ?? error.toString(),
+                style: const TextStyle(fontSize: 13),
+              ),
               const SizedBox(height: 18),
               Row(
                 children: [

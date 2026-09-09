@@ -63,10 +63,11 @@ documents:
 void main() {
   group('reading', () {
     test('lists the documents in the order the file has them', () {
-      expect(
-        CompositionFile(yearYaml).documentIds(),
-        ['faq', 'tema-1', 'notacion'],
-      );
+      expect(CompositionFile(yearYaml).documentIds(), [
+        'faq',
+        'tema-1',
+        'notacion',
+      ]);
     });
 
     test('reads an enabled and a disabled entry side by side', () {
@@ -117,7 +118,9 @@ documents:
       - unit: x/y/z
       - unit: x/y/w
 ''').blockFor('a')!;
-      expect(block.entries.first.notes, ['# nota: esta va primero por el calendario']);
+      expect(block.entries.first.notes, [
+        '# nota: esta va primero por el calendario',
+      ]);
       expect(block.entries.last.notes, isEmpty);
     });
 
@@ -129,8 +132,10 @@ documents:
       - unit: x/y/z  # ojo, se da en la primera semana
 ''').blockFor('a')!;
       expect(block.entries.single.value, 'x/y/z');
-      expect(block.entries.single.trailingComment,
-          '# ojo, se da en la primera semana');
+      expect(
+        block.entries.single.trailingComment,
+        '# ojo, se da en la primera semana',
+      );
     });
 
     test('refuses an inline composition rather than rewriting it', () {
@@ -188,13 +193,16 @@ documents:
       final file = CompositionFile(localised);
       final entries = file.blockFor('logica')!.entries;
       file.setStructure('logica', [entries[1], entries[0], ...entries.skip(2)]);
-      expect(file.text, contains('''
+      expect(
+        file.text,
+        contains('''
       - section:
           es: "?`Qué es la matemática?"
           # TODO: va
           # TODO: en
       - unit: history/intro/origen
-'''));
+'''),
+      );
     });
 
     test('translating one language leaves the other markers alone', () {
@@ -206,12 +214,15 @@ documents:
               ? entry.withTitle('va', 'Què és la matemàtica?')
               : entry,
       ]);
-      expect(file.text, contains('''
+      expect(
+        file.text,
+        contains('''
       - section:
           es: "?`Qué es la matemática?"
           va: Què és la matemàtica?
           # TODO: en
-'''));
+'''),
+      );
     });
 
     test('changing a language it already has rewrites that line only', () {
@@ -223,12 +234,15 @@ documents:
               ? entry.withTitle('va', 'Els postulats')
               : entry,
       ]);
-      expect(file.text, contains('''
+      expect(
+        file.text,
+        contains('''
       - subsection:
           es: Los axiomas
           va: Els postulats
           # TODO: en
-'''));
+'''),
+      );
     });
 
     test('a disabled heading with a title block comments every line', () {
@@ -242,12 +256,15 @@ documents:
       ]);
       // Every line of it, or the inner lines become siblings of the next
       // entry and the file stops parsing.
-      expect(file.text, contains('''
+      expect(
+        file.text,
+        contains('''
       # - section:
           # es: "?`Qué es la matemática?"
           # # TODO: va
           # # TODO: en
-'''));
+'''),
+      );
       // And it comes back as one disabled entry.
       final reread = CompositionFile(file.text).blockFor('logica')!;
       expect(reread.entries[1].enabled, isFalse);
@@ -277,14 +294,20 @@ documents:
       final entries = file.blockFor('faq')!.entries;
       file.setStructure('faq', entries.reversed.toList());
 
-      expect(file.text, contains('''
+      expect(
+        file.text,
+        contains('''
     structure:
       - unit: faq/general/cal01-ver-calificaciones
       # - unit: faq/general/cal00-1tutorias-virtuales
       - unit: faq/general/cal00-1tutorias
-'''));
+'''),
+      );
       // The other documents, the header and the fields are untouched.
-      expect(file.text, contains('# Migrated from  2021-2022/AN I - FM/00Info'));
+      expect(
+        file.text,
+        contains('# Migrated from  2021-2022/AN I - FM/00Info'),
+      );
       expect(file.text, contains('      # TODO: va'));
       expect(file.text, contains('  - id: tema-1'));
       expect(file.text, contains('      - subsection: Supremo e ínfimo'));
@@ -318,11 +341,14 @@ documents:
               : entry,
       ];
       file.setStructure('tema-1', entries);
-      expect(file.text, contains('''
+      expect(
+        file.text,
+        contains('''
       - subsection: Supremo e ínfimo
       # - unit: analysis/reals/supremum
       # - unit: analysis/reals/dedekind
-'''));
+'''),
+      );
     });
 
     test('a note travels with the entry it belongs to', () {
@@ -391,8 +417,10 @@ documents:
       final before = CompositionFile(yearYaml).blockFor('notacion')!;
       file.setStructure('tema-1', []);
       final after = file.blockFor('notacion')!;
-      expect(after.entries.map((e) => e.value),
-          before.entries.map((e) => e.value));
+      expect(
+        after.entries.map((e) => e.value),
+        before.entries.map((e) => e.value),
+      );
       expect(after.entries.single.enabled, isFalse);
     });
   });

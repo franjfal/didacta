@@ -41,8 +41,10 @@ Future<LocalClone> cloneInto({
       // Already a clone of the right repository: keep it and catch it up
       // rather than refusing, because "the folder is not empty" is not
       // something an author can act on when the folder is the right one.
-      onProgress?.call('La carpeta ya es un clon de $owner/$repo; '
-          'actualizándolo.');
+      onProgress?.call(
+        'La carpeta ya es un clon de $owner/$repo; '
+        'actualizándolo.',
+      );
       await existing.pull(token: token);
       return existing;
     }
@@ -63,8 +65,7 @@ Future<LocalClone> cloneInto({
   return _GitClone(directory: directory);
 }
 
-String _url(String owner, String repo) =>
-    'https://github.com/$owner/$repo.git';
+String _url(String owner, String repo) => 'https://github.com/$owner/$repo.git';
 
 class _GitClone implements LocalClone {
   _GitClone({required this.directory});
@@ -95,9 +96,12 @@ class _GitClone implements LocalClone {
     try {
       // Against the remote-tracking ref, which is what the last fetch saw --
       // this must not reach the network, because Ajustes shows it on load.
-      final counts = await _text(
-        ['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'],
-      );
+      final counts = await _text([
+        'rev-list',
+        '--left-right',
+        '--count',
+        'HEAD...@{upstream}',
+      ]);
       final parts = counts.split(RegExp(r'\s+'));
       if (parts.length >= 2) {
         ahead = int.tryParse(parts[0]) ?? 0;
@@ -137,14 +141,19 @@ class _GitClone implements LocalClone {
   }
 
   @override
-  Future<void> setAuthor({
-    required String name,
-    required String email,
-  }) async {
-    await _run(['config', '--local', 'user.name', name],
-        what: 'guardar el nombre del autor');
-    await _run(['config', '--local', 'user.email', email],
-        what: 'guardar el correo del autor');
+  Future<void> setAuthor({required String name, required String email}) async {
+    await _run([
+      'config',
+      '--local',
+      'user.name',
+      name,
+    ], what: 'guardar el nombre del autor');
+    await _run([
+      'config',
+      '--local',
+      'user.email',
+      email,
+    ], what: 'guardar el correo del autor');
   }
 
   /// A git command whose failure means "not set" rather than "broken".
@@ -244,13 +253,13 @@ class _GitClone implements LocalClone {
 
   @override
   Future<void> pull({required String token}) => _run(
-        // `--ff-only`: a merge commit made behind someone's back is not a
-        // thing an editor should produce. Diverged history is a conversation,
-        // not an automatic resolution.
-        ['pull', '--ff-only'],
-        token: token,
-        what: 'traer los cambios del repositorio',
-      );
+    // `--ff-only`: a merge commit made behind someone's back is not a
+    // thing an editor should produce. Diverged history is a conversation,
+    // not an automatic resolution.
+    ['pull', '--ff-only'],
+    token: token,
+    what: 'traer los cambios del repositorio',
+  );
 
   @override
   Future<void> push({required String token}) =>
@@ -282,14 +291,13 @@ class _GitClone implements LocalClone {
     required String what,
     String? token,
     Map<String, String>? environment,
-  }) =>
-      _runIn(
-        arguments,
-        directory: directory,
-        what: what,
-        token: token,
-        environment: environment,
-      );
+  }) => _runIn(
+    arguments,
+    directory: directory,
+    what: what,
+    token: token,
+    environment: environment,
+  );
 }
 
 Future<String> _run(
@@ -299,15 +307,14 @@ Future<String> _run(
   String? token,
   void Function(String line)? onProgress,
   Map<String, String>? environment,
-}) =>
-    _runIn(
-      arguments,
-      directory: directory,
-      what: what,
-      token: token,
-      onProgress: onProgress,
-      environment: environment,
-    );
+}) => _runIn(
+  arguments,
+  directory: directory,
+  what: what,
+  token: token,
+  onProgress: onProgress,
+  environment: environment,
+);
 
 /// Runs git, with the token in the environment and never anywhere else.
 Future<String> _runIn(
@@ -360,17 +367,17 @@ Future<String> _runIn(
       .transform(utf8.decoder)
       .transform(const LineSplitter())
       .forEach((line) {
-    out.writeln(line);
-    onProgress?.call(line);
-  });
+        out.writeln(line);
+        onProgress?.call(line);
+      });
   final errDone = process.stderr
       .transform(utf8.decoder)
       .transform(const LineSplitter())
       .forEach((line) {
-    err.writeln(line);
-    // git reports progress on stderr, so this is not necessarily a problem.
-    onProgress?.call(line);
-  });
+        err.writeln(line);
+        // git reports progress on stderr, so this is not necessarily a problem.
+        onProgress?.call(line);
+      });
 
   final code = await process.exitCode;
   await outDone;

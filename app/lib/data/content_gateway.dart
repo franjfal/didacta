@@ -390,7 +390,8 @@ class CloneGateway extends ContentGateway {
         thrown.stderr.isEmpty
             ? thrown.message
             : '${thrown.message}\n${thrown.stderr}',
-        kind: thrown.message.contains('ha cambiado') ||
+        kind:
+            thrown.message.contains('ha cambiado') ||
                 thrown.message.contains('ya existe') ||
                 thrown.message.contains('desaparecido')
             ? ContentFailure.conflict

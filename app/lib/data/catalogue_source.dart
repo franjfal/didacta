@@ -17,7 +17,8 @@ import 'package:http/http.dart' as http;
 
 import '../model/catalogue.dart';
 import 'catalogue_source_stub.dart'
-    if (dart.library.io) 'catalogue_source_io.dart' as platform;
+    if (dart.library.io) 'catalogue_source_io.dart'
+    as platform;
 
 abstract class CatalogueSource {
   const CatalogueSource();
@@ -47,10 +48,7 @@ abstract class CatalogueSource {
 
 /// Reads the three generated files over HTTP.
 class HttpCatalogueSource extends CatalogueSource {
-  const HttpCatalogueSource({
-    this.base = 'generated',
-    this.client,
-  });
+  const HttpCatalogueSource({this.base = 'generated', this.client});
 
   /// Where the generated directory is served from, relative to the app or
   /// absolute. Relative by default so a build dropped next to a content
@@ -90,8 +88,9 @@ class HttpCatalogueSource extends CatalogueSource {
     final response = await client.get(uri);
     if (response.statusCode != 200) {
       throw CatalogueFormatException(
-          'no se pudo leer $uri (HTTP ${response.statusCode}). '
-          '¿Se ha generado el índice con `didacta index`?');
+        'no se pudo leer $uri (HTTP ${response.statusCode}). '
+        '¿Se ha generado el índice con `didacta index`?',
+      );
     }
     // `bodyBytes` decoded explicitly as UTF-8: these titles are Valencian and
     // Castilian, and `response.body` guesses latin-1 when the server sends no

@@ -28,19 +28,19 @@ library;
 enum EntryKind { unit, problem, section, subsection }
 
 String entryKeyword(EntryKind kind) => switch (kind) {
-      EntryKind.unit => 'unit',
-      EntryKind.problem => 'problem',
-      EntryKind.section => 'section',
-      EntryKind.subsection => 'subsection',
-    };
+  EntryKind.unit => 'unit',
+  EntryKind.problem => 'problem',
+  EntryKind.section => 'section',
+  EntryKind.subsection => 'subsection',
+};
 
 EntryKind? entryKindOf(String keyword) => switch (keyword) {
-      'unit' => EntryKind.unit,
-      'problem' => EntryKind.problem,
-      'section' => EntryKind.section,
-      'subsection' => EntryKind.subsection,
-      _ => null,
-    };
+  'unit' => EntryKind.unit,
+  'problem' => EntryKind.problem,
+  'section' => EntryKind.section,
+  'subsection' => EntryKind.subsection,
+  _ => null,
+};
 
 /// One entry of a composition.
 ///
@@ -86,8 +86,7 @@ class StructureEntry {
   /// A comment on the entry's own line, `- unit: x  # ojo`.
   final String trailingComment;
 
-  bool get isReference =>
-      kind == EntryKind.unit || kind == EntryKind.problem;
+  bool get isReference => kind == EntryKind.unit || kind == EntryKind.problem;
 
   /// Whether the title is written per language rather than as one string.
   bool get isLocalised => titleLines.isNotEmpty;
@@ -157,23 +156,21 @@ class StructureEntry {
     List<String>? notes,
     String? trailingComment,
     List<String>? titleLines,
-  }) =>
-      StructureEntry(
-        kind: kind ?? this.kind,
-        value: value ?? this.value,
-        enabled: enabled ?? this.enabled,
-        notes: notes ?? this.notes,
-        trailingComment: trailingComment ?? this.trailingComment,
-        titleLines: titleLines ?? this.titleLines,
-      );
+  }) => StructureEntry(
+    kind: kind ?? this.kind,
+    value: value ?? this.value,
+    enabled: enabled ?? this.enabled,
+    notes: notes ?? this.notes,
+    trailingComment: trailingComment ?? this.trailingComment,
+    titleLines: titleLines ?? this.titleLines,
+  );
 
   @override
   String toString() => isLocalised
       ? '${enabled ? '' : '# '}- ${entryKeyword(kind)}: ${label('es')}'
       : '${enabled ? '' : '# '}- ${entryKeyword(kind)}: $value';
 
-  static final RegExp _titleLine =
-      RegExp(r'^([a-z]{2}):(.*)$');
+  static final RegExp _titleLine = RegExp(r'^([a-z]{2}):(.*)$');
 }
 
 /// Why a composition could not be read or rewritten.
@@ -224,8 +221,9 @@ class CompositionFile {
   String get text => _lines.join('\n');
 
   /// The document ids, in the order the file lists them.
-  List<String> documentIds() =>
-      [for (final document in _documents()) document.id];
+  List<String> documentIds() => [
+    for (final document in _documents()) document.id,
+  ];
 
   /// The composition of one document, or null when there is no such document.
   ///
@@ -271,7 +269,8 @@ class CompositionFile {
       final lineIndent = _indentOf(line);
       final trimmed = line.trimLeft();
 
-      if (!trimmed.startsWith('#') && lineIndent <= _indentOf(_lines[structure])) {
+      if (!trimmed.startsWith('#') &&
+          lineIndent <= _indentOf(_lines[structure])) {
         break;
       }
 
@@ -319,14 +318,16 @@ class CompositionFile {
           }
         }
 
-        entries.add(StructureEntry(
-          kind: kind,
-          value: _unquote(value.trim()),
-          enabled: active != null,
-          notes: notes,
-          trailingComment: comment,
-          titleLines: titleLines,
-        ));
+        entries.add(
+          StructureEntry(
+            kind: kind,
+            value: _unquote(value.trim()),
+            enabled: active != null,
+            notes: notes,
+            trailingComment: comment,
+            titleLines: titleLines,
+          ),
+        );
         notes = <String>[];
         last = titleLines.isEmpty ? i : i;
         continue;
@@ -346,8 +347,7 @@ class CompositionFile {
       );
     }
 
-    final entryIndent =
-        indent == 0 ? _indentOf(_lines[structure]) + 2 : indent;
+    final entryIndent = indent == 0 ? _indentOf(_lines[structure]) + 2 : indent;
     return StructureBlock(
       documentId: documentId,
       entries: entries,
@@ -376,8 +376,9 @@ class CompositionFile {
       for (final note in entry.notes) {
         written.add('$pad$note');
       }
-      final comment =
-          entry.trailingComment.isEmpty ? '' : '  ${entry.trailingComment}';
+      final comment = entry.trailingComment.isEmpty
+          ? ''
+          : '  ${entry.trailingComment}';
       final marker = entry.enabled ? '' : '# ';
       if (entry.isLocalised) {
         written.add('$pad$marker- ${entryKeyword(entry.kind)}:$comment');
@@ -402,11 +403,10 @@ class CompositionFile {
       _lines.replaceRange(block.firstLine, block.lastLine + 1, ['$head []']);
       return;
     }
-    _lines.replaceRange(
-      block.firstLine,
-      block.lastLine + 1,
-      [head, ...written],
-    );
+    _lines.replaceRange(block.firstLine, block.lastLine + 1, [
+      head,
+      ...written,
+    ]);
   }
 
   // -- finding things ------------------------------------------------------
@@ -432,11 +432,13 @@ class CompositionFile {
       final match = _itemId.firstMatch(trimmed);
       if (match == null) continue;
       final (value, _) = _splitComment(match.group(1)!);
-      documents.add(_Document(
-        id: _unquote(value.trim()),
-        firstLine: i,
-        fieldIndent: indent + 2,
-      ));
+      documents.add(
+        _Document(
+          id: _unquote(value.trim()),
+          firstLine: i,
+          fieldIndent: indent + 2,
+        ),
+      );
     }
 
     // Each document runs until the next one starts, or the end of the block.
@@ -467,10 +469,12 @@ class CompositionFile {
     return null;
   }
 
-  static final RegExp _activeEntry =
-      RegExp(r'^-\s+([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$');
-  static final RegExp _disabledEntry =
-      RegExp(r'^#\s*-\s+([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$');
+  static final RegExp _activeEntry = RegExp(
+    r'^-\s+([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$',
+  );
+  static final RegExp _disabledEntry = RegExp(
+    r'^#\s*-\s+([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$',
+  );
   static final RegExp _itemId = RegExp(r'^-\s+id:\s*(.*)$');
   static final RegExp _key = RegExp(r'^(\s*)([A-Za-z_][A-Za-z0-9_.-]*):(.*)$');
 
@@ -509,7 +513,8 @@ class CompositionFile {
         quote = char;
         continue;
       }
-      if (char == '#' && (i == 0 || rest[i - 1] == ' ' || rest[i - 1] == '\t')) {
+      if (char == '#' &&
+          (i == 0 || rest[i - 1] == ' ' || rest[i - 1] == '\t')) {
         return (rest.substring(0, i), rest.substring(i).trim());
       }
     }
@@ -532,7 +537,8 @@ class CompositionFile {
   /// heading with a colon in it does.
   static String _quote(String value) {
     if (value.isEmpty) return "''";
-    final needs = value != value.trim() ||
+    final needs =
+        value != value.trim() ||
         value.contains(': ') ||
         value.endsWith(':') ||
         value.contains(' #') ||

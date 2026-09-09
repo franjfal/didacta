@@ -37,24 +37,23 @@ class Authorisation {
   });
 
   const Authorisation.anonymous()
-      : signedIn = false,
-        email = null,
-        role = null,
-        admin = false,
-        emailVerified = false,
-        availableRoles = const [];
+    : signedIn = false,
+      email = null,
+      role = null,
+      admin = false,
+      emailVerified = false,
+      availableRoles = const [];
 
   factory Authorisation.fromJson(Map<String, dynamic> json) => Authorisation(
-        signedIn: json['signedIn'] == true,
-        email: json['email'] as String?,
-        role: json['role'] as String?,
-        admin: json['admin'] == true,
-        emailVerified: json['emailVerified'] == true,
-        availableRoles: [
-          for (final item in (json['roles'] as List?) ?? const [])
-            item.toString(),
-        ],
-      );
+    signedIn: json['signedIn'] == true,
+    email: json['email'] as String?,
+    role: json['role'] as String?,
+    admin: json['admin'] == true,
+    emailVerified: json['emailVerified'] == true,
+    availableRoles: [
+      for (final item in (json['roles'] as List?) ?? const []) item.toString(),
+    ],
+  );
 
   final bool signedIn;
   final String? email;
@@ -74,7 +73,8 @@ class Authorisation {
   /// asking the API: the policy is per-path, and this only decides whether to
   /// show an editing affordance at all.
   bool get mayWriteSomething =>
-      authorised && (role == 'owner' || role == 'editor' || role == 'translator');
+      authorised &&
+      (role == 'owner' || role == 'editor' || role == 'translator');
 }
 
 class AuthException implements Exception {
@@ -101,7 +101,11 @@ abstract class TokenSource {
 /// make every layer above this one need Firebase to exist -- including in a
 /// test that only wants to check a screen.
 class SignedInUser {
-  const SignedInUser({this.email, this.displayName, this.emailVerified = false});
+  const SignedInUser({
+    this.email,
+    this.displayName,
+    this.emailVerified = false,
+  });
 
   final String? email;
   final String? displayName;
@@ -298,7 +302,8 @@ class DidactaAuth implements AuthSession {
       case 'network-request-failed':
         return 'No se ha podido contactar con Firebase.';
       default:
-        return error.message ?? 'No se ha podido iniciar sesión (${error.code}).';
+        return error.message ??
+            'No se ha podido iniciar sesión (${error.code}).';
     }
   }
 }
@@ -308,11 +313,8 @@ class DidactaAuth implements AuthSession {
 /// Reads and writes go through the Worker, which holds the GitHub token. The
 /// app never sees it, and there is no code path here that could.
 class DidactaApi {
-  DidactaApi({
-    required this.base,
-    required this.auth,
-    http.Client? client,
-  }) : _client = client ?? http.Client();
+  DidactaApi({required this.base, required this.auth, http.Client? client})
+    : _client = client ?? http.Client();
 
   /// The Worker's origin, e.g. `https://didacta-api.<subdomain>.workers.dev`.
   final String base;
@@ -359,8 +361,9 @@ class DidactaApi {
   }
 
   Future<RepositoryFile> readFile(String path) async {
-    final uri = Uri.parse('$base/v1/file')
-        .replace(queryParameters: {'path': path});
+    final uri = Uri.parse(
+      '$base/v1/file',
+    ).replace(queryParameters: {'path': path});
     final response = await _client.get(uri, headers: await _headers());
     if (response.statusCode != 200) {
       throw ApiException(response.statusCode, _message(response));
@@ -425,10 +428,10 @@ class RepositoryFile {
   });
 
   factory RepositoryFile.fromJson(Map<String, dynamic> json) => RepositoryFile(
-        path: json['path'] as String? ?? '',
-        text: json['text'] as String? ?? '',
-        sha: json['sha'] as String? ?? '',
-      );
+    path: json['path'] as String? ?? '',
+    text: json['text'] as String? ?? '',
+    sha: json['sha'] as String? ?? '',
+  );
 
   final String path;
   final String text;

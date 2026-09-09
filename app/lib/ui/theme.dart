@@ -40,61 +40,61 @@ const Color didactaTeacher = Color(0xFFAA4B4B);
 
 /// One colour per translation state, used everywhere that state is shown.
 Color statusColour(TranslationStatus status) => switch (status) {
-      TranslationStatus.source => didactaAccentDark,
-      TranslationStatus.reviewed => const Color(0xFF3C876E),
-      TranslationStatus.translated => didactaThm,
-      TranslationStatus.draft => didactaEx,
-      TranslationStatus.outdated => didactaTeacher,
-      TranslationStatus.missing => const Color(0xFF9AA1AB),
-    };
+  TranslationStatus.source => didactaAccentDark,
+  TranslationStatus.reviewed => const Color(0xFF3C876E),
+  TranslationStatus.translated => didactaThm,
+  TranslationStatus.draft => didactaEx,
+  TranslationStatus.outdated => didactaTeacher,
+  TranslationStatus.missing => const Color(0xFF9AA1AB),
+};
 
 /// Two letters: a full word per language per row does not fit, and an icon
 /// alone is not learnable.
 String statusMark(TranslationStatus status) => switch (status) {
-      TranslationStatus.source => 'OR',
-      TranslationStatus.reviewed => 'RV',
-      TranslationStatus.translated => 'TR',
-      TranslationStatus.draft => 'BO',
-      TranslationStatus.outdated => 'DE',
-      TranslationStatus.missing => '··',
-    };
+  TranslationStatus.source => 'OR',
+  TranslationStatus.reviewed => 'RV',
+  TranslationStatus.translated => 'TR',
+  TranslationStatus.draft => 'BO',
+  TranslationStatus.outdated => 'DE',
+  TranslationStatus.missing => '··',
+};
 
 String statusName(TranslationStatus status) => switch (status) {
-      TranslationStatus.source => 'original',
-      TranslationStatus.reviewed => 'revisada',
-      TranslationStatus.translated => 'traducida',
-      TranslationStatus.draft => 'borrador',
-      TranslationStatus.outdated => 'desactualizada',
-      TranslationStatus.missing => 'no existe',
-    };
+  TranslationStatus.source => 'original',
+  TranslationStatus.reviewed => 'revisada',
+  TranslationStatus.translated => 'traducida',
+  TranslationStatus.draft => 'borrador',
+  TranslationStatus.outdated => 'desactualizada',
+  TranslationStatus.missing => 'no existe',
+};
 
 /// Colour per unit kind, so a listing mixing theory and problems is readable
 /// without reading the column.
 Color kindColour(String kind) => switch (kind) {
-      'problem' => didactaEx,
-      'handout' => didactaQues,
-      'seminar' || 'practical' => didactaThm,
-      'activity' || 'experiment' => const Color(0xFF7A5FAF),
-      'history' => didactaMuted,
-      'example' => const Color(0xFF9A7B4F),
-      _ => didactaDefn,
-    };
+  'problem' => didactaEx,
+  'handout' => didactaQues,
+  'seminar' || 'practical' => didactaThm,
+  'activity' || 'experiment' => const Color(0xFF7A5FAF),
+  'history' => didactaMuted,
+  'example' => const Color(0xFF9A7B4F),
+  _ => didactaDefn,
+};
 
 /// Spanish names for the kinds, since the interface is in Spanish and the
 /// data is in English.
 String kindName(String kind) => switch (kind) {
-      'theory' => 'teoría',
-      'problem' => 'problemas',
-      'handout' => 'guía',
-      'seminar' => 'seminario',
-      'practical' => 'práctica',
-      'activity' => 'actividad',
-      'example' => 'ejemplo',
-      'experiment' => 'experimento',
-      'history' => 'historia',
-      'notation' => 'notación',
-      _ => kind,
-    };
+  'theory' => 'teoría',
+  'problem' => 'problemas',
+  'handout' => 'guía',
+  'seminar' => 'seminario',
+  'practical' => 'práctica',
+  'activity' => 'actividad',
+  'example' => 'ejemplo',
+  'experiment' => 'experimento',
+  'history' => 'historia',
+  'notation' => 'notación',
+  _ => kind,
+};
 
 ThemeData didactaTheme() {
   final scheme = ColorScheme.fromSeed(
@@ -263,24 +263,24 @@ class SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                text.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.7,
-                  color: didactaMuted,
-                ),
-              ),
+    padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            text.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.7,
+              color: didactaMuted,
             ),
-            ?trailing,
-          ],
+          ),
         ),
-      );
+        ?trailing,
+      ],
+    ),
+  );
 }
 
 /// A small square carrying one language's state.
@@ -327,7 +327,11 @@ class StatusBadge extends StatelessWidget {
       message: '$language: ${statusName(status)}',
       child: onTap == null
           ? badge
-          : InkWell(borderRadius: BorderRadius.circular(3), onTap: onTap, child: badge),
+          : InkWell(
+              borderRadius: BorderRadius.circular(3),
+              onTap: onTap,
+              child: badge,
+            ),
     );
   }
 }

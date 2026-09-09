@@ -50,8 +50,10 @@ Map<String, dynamic> unitJson({
   };
 }
 
-Catalogue catalogueOf(List<Map<String, dynamic>> units,
-    {List<Map<String, dynamic>> courses = const []}) {
+Catalogue catalogueOf(
+  List<Map<String, dynamic>> units, {
+  List<Map<String, dynamic>> courses = const [],
+}) {
   return Catalogue.fromIndex(
     manifest: {
       'schemaVersion': supportedSchemaVersion,
@@ -81,8 +83,13 @@ void main() {
           units: {'schemaVersion': 99, 'units': const []},
           courses: {'schemaVersion': 99, 'courses': const []},
         ),
-        throwsA(isA<CatalogueFormatException>().having(
-            (e) => e.message, 'message', contains('didacta index'))),
+        throwsA(
+          isA<CatalogueFormatException>().having(
+            (e) => e.message,
+            'message',
+            contains('didacta index'),
+          ),
+        ),
       );
     });
 
@@ -107,7 +114,8 @@ void main() {
       expect(unit.isProblem, isFalse);
 
       final problem = Unit.fromJson(
-          unitJson(path: 'problems/analysis/normed-spaces/norm-axioms'));
+        unitJson(path: 'problems/analysis/normed-spaces/norm-axioms'),
+      );
       expect(problem.reference_, 'analysis/normed-spaces/norm-axioms');
       expect(problem.isProblem, isTrue);
     });
@@ -145,34 +153,42 @@ void main() {
 
   group('filter', () {
     final units = [
-      Unit.fromJson(unitJson(
-        path: 'content/analysis/normed-spaces/definition',
-        tags: const ['norm', 'definition'],
-        title: const {'es': 'Espacios normados', 'va': 'Espais normats'},
-        usedBy: const [
-          {'course': 'am-iii', 'year': '2025-2026', 'document': 'tema-1'},
-          {'course': 'am-iii', 'year': '2024-2025', 'document': 'tema-1'},
-        ],
-      )),
-      Unit.fromJson(unitJson(
-        path: 'content/analysis/normed-spaces/induced-metric',
-        title: const {'es': 'Métrica inducida'},
-        statuses: const {'es': 'source', 'va': 'missing', 'en': 'missing'},
-      )),
-      Unit.fromJson(unitJson(
-        path: 'problems/analysis/normed-spaces/norm-axioms',
-        kind: 'problem',
-        title: const {'es': 'Axiomas de norma'},
-        statuses: const {'es': 'draft', 'va': 'missing', 'en': 'missing'},
-        usedBy: const [
-          {'course': 'am-iii', 'year': '2025-2026', 'document': 'hoja-1'},
-        ],
-      )),
-      Unit.fromJson(unitJson(
-        path: 'content/functional/hilbert/projection',
-        tags: const ['hilbert'],
-        title: const {'es': 'Proyección ortogonal'},
-      )),
+      Unit.fromJson(
+        unitJson(
+          path: 'content/analysis/normed-spaces/definition',
+          tags: const ['norm', 'definition'],
+          title: const {'es': 'Espacios normados', 'va': 'Espais normats'},
+          usedBy: const [
+            {'course': 'am-iii', 'year': '2025-2026', 'document': 'tema-1'},
+            {'course': 'am-iii', 'year': '2024-2025', 'document': 'tema-1'},
+          ],
+        ),
+      ),
+      Unit.fromJson(
+        unitJson(
+          path: 'content/analysis/normed-spaces/induced-metric',
+          title: const {'es': 'Métrica inducida'},
+          statuses: const {'es': 'source', 'va': 'missing', 'en': 'missing'},
+        ),
+      ),
+      Unit.fromJson(
+        unitJson(
+          path: 'problems/analysis/normed-spaces/norm-axioms',
+          kind: 'problem',
+          title: const {'es': 'Axiomas de norma'},
+          statuses: const {'es': 'draft', 'va': 'missing', 'en': 'missing'},
+          usedBy: const [
+            {'course': 'am-iii', 'year': '2025-2026', 'document': 'hoja-1'},
+          ],
+        ),
+      ),
+      Unit.fromJson(
+        unitJson(
+          path: 'content/functional/hilbert/projection',
+          tags: const ['hilbert'],
+          title: const {'es': 'Proyección ortogonal'},
+        ),
+      ),
     ];
 
     test('an empty filter shows everything', () {
@@ -187,7 +203,10 @@ void main() {
     });
 
     test('by category and kind', () {
-      expect(const LibraryFilter(category: 'functional').apply(units).length, 1);
+      expect(
+        const LibraryFilter(category: 'functional').apply(units).length,
+        1,
+      );
       expect(const LibraryFilter(kind: 'theory').apply(units).length, 3);
     });
 
@@ -200,15 +219,20 @@ void main() {
       // that does not appear finds none.
       expect(const LibraryFilter(query: 'normados').apply(units).length, 1);
       expect(
-          const LibraryFilter(query: 'espacios normados').apply(units).length,
-          1);
+        const LibraryFilter(query: 'espacios normados').apply(units).length,
+        1,
+      );
       expect(
-          const LibraryFilter(query: 'normados hilbert').apply(units).length,
-          0);
+        const LibraryFilter(query: 'normados hilbert').apply(units).length,
+        0,
+      );
     });
 
     test('a query matches the path and the tags, not only the title', () {
-      expect(const LibraryFilter(query: 'induced-metric').apply(units).length, 1);
+      expect(
+        const LibraryFilter(query: 'induced-metric').apply(units).length,
+        1,
+      );
       expect(const LibraryFilter(query: 'definition').apply(units).length, 1);
     });
 
@@ -282,8 +306,10 @@ void main() {
       // the Valencian `Espais normats` sorts under E, not under the Castilian
       // `Espacios normados` it replaces.
       expect(sorted.first.title('va'), 'Axiomas de norma');
-      expect(sorted.map((unit) => unit.title('va')),
-          containsAllInOrder(['Axiomas de norma', 'Espais normats']));
+      expect(
+        sorted.map((unit) => unit.title('va')),
+        containsAllInOrder(['Axiomas de norma', 'Espais normats']),
+      );
     });
 
     test('copyWith can clear a facet as well as set one', () {
@@ -314,15 +340,16 @@ void main() {
       Unit.fromJson(unitJson(path: 'content/a/t/one')),
       Unit.fromJson(unitJson(path: 'content/a/t/two')),
       Unit.fromJson(unitJson(path: 'content/b/t/three')),
-      Unit.fromJson(
-          unitJson(path: 'problems/a/t/four', kind: 'problem')),
+      Unit.fromJson(unitJson(path: 'problems/a/t/four', kind: 'problem')),
     ];
 
     test('a facet is counted without its own filter applied', () {
       // Otherwise choosing a category shows 1 and every other category shows
       // 0, which says nothing about where the material is.
       final facets = LibraryFacets.of(
-          units, const LibraryFilter(category: 'a'));
+        units,
+        const LibraryFilter(category: 'a'),
+      );
       expect(facets.byCategory['a'], 3);
       expect(facets.byCategory['b'], 1);
       expect(facets.shown, 3);
@@ -331,7 +358,9 @@ void main() {
 
     test('other facets still constrain the count', () {
       final facets = LibraryFacets.of(
-          units, const LibraryFilter(area: 'content', category: 'a'));
+        units,
+        const LibraryFilter(area: 'content', category: 'a'),
+      );
       // Category `a` has three units but only two are in content/.
       expect(facets.byCategory['a'], 2);
     });
@@ -343,7 +372,9 @@ void main() {
 
     test('the status breakdown is for the chosen language', () {
       final facets = LibraryFacets.of(
-          units, const LibraryFilter(language: 'en'));
+        units,
+        const LibraryFilter(language: 'en'),
+      );
       expect(facets.byStatus[TranslationStatus.missing], 4);
     });
   });
@@ -355,29 +386,31 @@ void main() {
         unitJson(path: 'problems/analysis/normed-spaces/norm-axioms'),
       ]);
       expect(
-          catalogue
-              .unitByReference('analysis/normed-spaces/definition')
-              ?.area,
-          'content');
+        catalogue.unitByReference('analysis/normed-spaces/definition')?.area,
+        'content',
+      );
       expect(
-          catalogue
-              .unitByReference('analysis/normed-spaces/norm-axioms')
-              ?.area,
-          'problems');
+        catalogue.unitByReference('analysis/normed-spaces/norm-axioms')?.area,
+        'problems',
+      );
       expect(catalogue.unitByReference('nope/at/all'), isNull);
     });
 
     test('a reference with stray slashes still resolves', () {
-      final catalogue =
-          catalogueOf([unitJson(path: 'content/a/b/c')]);
+      final catalogue = catalogueOf([unitJson(path: 'content/a/b/c')]);
       expect(catalogue.unitByReference('/a/b/c/'), isNotNull);
     });
 
     test('the profile list comes from the index, not from the app', () {
       final catalogue = catalogueOf([unitJson()]);
-      expect(catalogue.profiles.map((p) => p.id), containsAll(['slides', 'notes']));
-      expect(catalogue.profiles.firstWhere((p) => p.id == 'slides').isSlides,
-          isTrue);
+      expect(
+        catalogue.profiles.map((p) => p.id),
+        containsAll(['slides', 'notes']),
+      );
+      expect(
+        catalogue.profiles.firstWhere((p) => p.id == 'slides').isSlides,
+        isTrue,
+      );
     });
 
     test('repository errors are carried through, not swallowed', () {
@@ -398,44 +431,65 @@ void main() {
     });
 
     test('course years come back newest first', () {
-      final catalogue = catalogueOf([], courses: [
-        {
-          'id': 'am-iii',
-          'title': {'va': 'Anàlisi III'},
-          'language': 'va',
-          'years': {
-            '2024-2025': {'year': '2024-2025', 'language': 'va', 'documents': []},
-            '2025-2026': {'year': '2025-2026', 'language': 'va', 'documents': []},
-          },
-        }
-      ]);
-      expect(catalogue.courses.single.sortedYears,
-          ['2025-2026', '2024-2025']);
-    });
-
-    test('a document with no explicit profiles leaves the choice to the engine',
-        () {
-      final catalogue = catalogueOf([], courses: [
-        {
-          'id': 'am-iii',
-          'title': {'va': 'Anàlisi III'},
-          'language': 'va',
-          'years': {
-            '2025-2026': {
-              'year': '2025-2026',
-              'language': 'va',
-              'documents': [
-                {'id': 'tema-1', 'kind': 'theory', 'language': 'va',
-                 'title': {'va': 'Tema 1'}, 'profiles': [], 'unitRefs': []},
-              ],
+      final catalogue = catalogueOf(
+        [],
+        courses: [
+          {
+            'id': 'am-iii',
+            'title': {'va': 'Anàlisi III'},
+            'language': 'va',
+            'years': {
+              '2024-2025': {
+                'year': '2024-2025',
+                'language': 'va',
+                'documents': [],
+              },
+              '2025-2026': {
+                'year': '2025-2026',
+                'language': 'va',
+                'documents': [],
+              },
             },
           },
-        }
-      ]);
-      final document =
-          catalogue.courses.single.years['2025-2026']!.documents.single;
-      expect(document.profiles, isEmpty);
-      expect(document.title(), 'Tema 1');
+        ],
+      );
+      expect(catalogue.courses.single.sortedYears, ['2025-2026', '2024-2025']);
     });
+
+    test(
+      'a document with no explicit profiles leaves the choice to the engine',
+      () {
+        final catalogue = catalogueOf(
+          [],
+          courses: [
+            {
+              'id': 'am-iii',
+              'title': {'va': 'Anàlisi III'},
+              'language': 'va',
+              'years': {
+                '2025-2026': {
+                  'year': '2025-2026',
+                  'language': 'va',
+                  'documents': [
+                    {
+                      'id': 'tema-1',
+                      'kind': 'theory',
+                      'language': 'va',
+                      'title': {'va': 'Tema 1'},
+                      'profiles': [],
+                      'unitRefs': [],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        );
+        final document =
+            catalogue.courses.single.years['2025-2026']!.documents.single;
+        expect(document.profiles, isEmpty);
+        expect(document.title(), 'Tema 1');
+      },
+    );
   });
 }

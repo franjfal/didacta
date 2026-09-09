@@ -59,11 +59,7 @@ const List<String> declarableStatuses = [
 const List<String> difficulties = ['easy', 'medium', 'hard'];
 
 class MetadataEditor extends StatefulWidget {
-  const MetadataEditor({
-    super.key,
-    required this.unit,
-    required this.session,
-  });
+  const MetadataEditor({super.key, required this.unit, required this.session});
 
   final Unit unit;
   final Session session;
@@ -355,66 +351,68 @@ class _Bar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: LayoutBuilder(builder: (context, constraints) {
-        final narrow = constraints.maxWidth < 560;
-        return Row(
-          children: [
-            Expanded(
-              child: Text(
-                path,
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: didactaMuted,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 560;
+          return Row(
+            children: [
+              Expanded(
+                child: Text(
+                  path,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                    color: didactaMuted,
+                  ),
                 ),
               ),
-            ),
-            if (added + removed > 0) ...[
-              const SizedBox(width: 8),
-              // The size of the change, next to the button that makes it.
-              Text(
-                '+$added −$removed',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontFamily: 'monospace',
-                  color: didactaEx,
+              if (added + removed > 0) ...[
+                const SizedBox(width: 8),
+                // The size of the change, next to the button that makes it.
+                Text(
+                  '+$added −$removed',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                    color: didactaEx,
+                  ),
                 ),
+              ],
+              const SizedBox(width: 8),
+              IconButton(
+                tooltip: showRaw ? 'Ver el formulario' : 'Ver el fichero',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(
+                  showRaw ? Icons.list_alt_outlined : Icons.code,
+                  size: 18,
+                ),
+                onPressed: onToggleRaw,
+              ),
+              if (!narrow && onDiscard != null)
+                TextButton(
+                  onPressed: saving ? null : onDiscard,
+                  child: const Text('Descartar'),
+                ),
+              const SizedBox(width: 4),
+              FilledButton.icon(
+                key: const Key('metadata-save'),
+                icon: saving
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check, size: 16),
+                label: Text(saving ? 'Guardando…' : 'Guardar'),
+                onPressed: canSave ? onSave : null,
               ),
             ],
-            const SizedBox(width: 8),
-            IconButton(
-              tooltip: showRaw ? 'Ver el formulario' : 'Ver el fichero',
-              visualDensity: VisualDensity.compact,
-              icon: Icon(
-                showRaw ? Icons.list_alt_outlined : Icons.code,
-                size: 18,
-              ),
-              onPressed: onToggleRaw,
-            ),
-            if (!narrow && onDiscard != null)
-              TextButton(
-                onPressed: saving ? null : onDiscard,
-                child: const Text('Descartar'),
-              ),
-            const SizedBox(width: 4),
-            FilledButton.icon(
-              key: const Key('metadata-save'),
-              icon: saving
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check, size: 16),
-              label: Text(saving ? 'Guardando…' : 'Guardar'),
-              onPressed: canSave ? onSave : null,
-            ),
-          ],
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 }
@@ -465,7 +463,9 @@ class _Form extends StatelessWidget {
             key: ValueKey('title-$code'),
             label: code,
             value: patch.scalar(['title', code]) ?? '',
-            hint: code == unit.reference ? 'el título original' : 'sin traducir',
+            hint: code == unit.reference
+                ? 'el título original'
+                : 'sin traducir',
             enabled: enabled,
             monospace: true,
             onChanged: (value) => onEdit((p) {
@@ -545,7 +545,8 @@ class _Form extends StatelessWidget {
           _ChoiceRow(
             key: ValueKey('status-$code'),
             label: code,
-            value: patch.scalar(['languages', code, 'status']) ??
+            value:
+                patch.scalar(['languages', code, 'status']) ??
                 patch.scalar(['languages', code]),
             options: declarableStatuses,
             names: (value) => const {
@@ -590,24 +591,26 @@ class _Readonly extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 92,
-              child: Text(label,
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted)),
-            ),
-            Expanded(
-              child: SelectableText(
-                value,
-                style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+          ),
         ),
-      );
+        Expanded(
+          child: SelectableText(
+            value,
+            style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// A labelled field that commits on every keystroke.
@@ -638,8 +641,9 @@ class _TextRow extends StatefulWidget {
 }
 
 class _TextRowState extends State<_TextRow> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.value);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.value,
+  );
 
   @override
   void didUpdateWidget(_TextRow old) {
@@ -659,34 +663,36 @@ class _TextRowState extends State<_TextRow> {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 92,
-              child: Text(widget.label,
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted)),
-            ),
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                enabled: widget.enabled,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontFamily: widget.monospace ? 'monospace' : null,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: widget.hint,
-                  border: const OutlineInputBorder(),
-                ),
-                onChanged: widget.onChanged,
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 92,
+          child: Text(
+            widget.label,
+            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+          ),
         ),
-      );
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            enabled: widget.enabled,
+            style: TextStyle(
+              fontSize: 13,
+              fontFamily: widget.monospace ? 'monospace' : null,
+            ),
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: widget.hint,
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: widget.onChanged,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _NumberRow extends StatelessWidget {
@@ -706,13 +712,13 @@ class _NumberRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => _TextRow(
-        label: label,
-        value: value ?? '',
-        hint: suffix,
-        enabled: enabled,
-        // An empty field means "not recorded", which is `null` -- not zero.
-        onChanged: (text) => onChanged(int.tryParse(text.trim())),
-      );
+    label: label,
+    value: value ?? '',
+    hint: suffix,
+    enabled: enabled,
+    // An empty field means "not recorded", which is `null` -- not zero.
+    onChanged: (text) => onChanged(int.tryParse(text.trim())),
+  );
 }
 
 class _ChoiceRow extends StatelessWidget {
@@ -748,8 +754,10 @@ class _ChoiceRow extends StatelessWidget {
             width: 92,
             child: Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text(label,
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted)),
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              ),
             ),
           ),
           Expanded(
@@ -812,8 +820,10 @@ class _TagsRow extends StatelessWidget {
             width: 92,
             child: Padding(
               padding: EdgeInsets.only(top: 6),
-              child: Text('etiquetas',
-                  style: TextStyle(fontSize: 11.5, color: didactaMuted)),
+              child: Text(
+                'etiquetas',
+                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              ),
             ),
           ),
           Expanded(
@@ -830,10 +840,12 @@ class _TagsRow extends StatelessWidget {
                         : null,
                   ),
                 if (enabled)
-                  _AddTag(onAdd: (tag) {
-                    if (tag.isEmpty || tags.contains(tag)) return;
-                    onChanged([...tags, tag]);
-                  }),
+                  _AddTag(
+                    onAdd: (tag) {
+                      if (tag.isEmpty || tags.contains(tag)) return;
+                      onChanged([...tags, tag]);
+                    },
+                  ),
               ],
             ),
           ),
@@ -868,18 +880,18 @@ class _AddTagState extends State<_AddTag> {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 150,
-        child: TextField(
-          controller: _controller,
-          style: const TextStyle(fontSize: 12.5),
-          decoration: const InputDecoration(
-            isDense: true,
-            hintText: '+ etiqueta',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (_) => _submit(),
-        ),
-      );
+    width: 150,
+    child: TextField(
+      controller: _controller,
+      style: const TextStyle(fontSize: 12.5),
+      decoration: const InputDecoration(
+        isDense: true,
+        hintText: '+ etiqueta',
+        border: OutlineInputBorder(),
+      ),
+      onSubmitted: (_) => _submit(),
+    ),
+  );
 }
 
 /// A block list: one line each, add and remove.
@@ -922,8 +934,9 @@ class _ListRow extends StatelessWidget {
                   tooltip: 'Quitar',
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.remove_circle_outline, size: 17),
-                  onPressed:
-                      enabled ? () => onChanged([...items]..removeAt(i)) : null,
+                  onPressed: enabled
+                      ? () => onChanged([...items]..removeAt(i))
+                      : null,
                 ),
               ],
             ),
@@ -958,25 +971,25 @@ class _RawView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: Colors.white,
-        child: TextField(
-          controller: controller,
-          readOnly: readOnly,
-          maxLines: null,
-          expands: true,
-          style: monoStyle,
-          keyboardType: TextInputType.multiline,
-          textCapitalization: TextCapitalization.none,
-          autocorrect: false,
-          enableSuggestions: false,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            filled: false,
-            contentPadding: EdgeInsets.all(14),
-          ),
-          onChanged: onChanged,
-        ),
-      );
+    color: Colors.white,
+    child: TextField(
+      controller: controller,
+      readOnly: readOnly,
+      maxLines: null,
+      expands: true,
+      style: monoStyle,
+      keyboardType: TextInputType.multiline,
+      textCapitalization: TextCapitalization.none,
+      autocorrect: false,
+      enableSuggestions: false,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        filled: false,
+        contentPadding: EdgeInsets.all(14),
+      ),
+      onChanged: onChanged,
+    ),
+  );
 }
 
 /// The commit dialog, with the diff in it.
@@ -996,8 +1009,9 @@ class _MetadataCommitDialog extends StatefulWidget {
 }
 
 class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.suggested);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.suggested,
+  );
 
   @override
   void dispose() {
@@ -1053,9 +1067,9 @@ class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
               maxLines: 3,
               minLines: 1,
               decoration: const InputDecoration(labelText: 'Mensaje'),
-              onSubmitted: (value) => Navigator.of(context).pop(
-                value.trim().isEmpty ? widget.suggested : value.trim(),
-              ),
+              onSubmitted: (value) => Navigator.of(
+                context,
+              ).pop(value.trim().isEmpty ? widget.suggested : value.trim()),
             ),
           ],
         ),
@@ -1115,7 +1129,9 @@ class _MetadataFailure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = error is ContentException ? error as ContentException : null;
+    final content = error is ContentException
+        ? error as ContentException
+        : null;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460),
@@ -1133,11 +1149,16 @@ class _MetadataFailure extends StatelessWidget {
               SelectableText(
                 path,
                 style: const TextStyle(
-                    fontSize: 12, fontFamily: 'monospace', color: didactaMuted),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: didactaMuted,
+                ),
               ),
               const SizedBox(height: 10),
-              Text(content?.message ?? error.toString(),
-                  style: const TextStyle(fontSize: 13)),
+              Text(
+                content?.message ?? error.toString(),
+                style: const TextStyle(fontSize: 13),
+              ),
               const SizedBox(height: 18),
               FilledButton.icon(
                 icon: const Icon(Icons.refresh, size: 16),

@@ -75,8 +75,10 @@ objectives:
   - Reconocer una norma
   - 'Distinguir: norma de métrica'
 ''');
-      expect(patch.list(['objectives']),
-          ['Reconocer una norma', 'Distinguir: norma de métrica']);
+      expect(patch.list(['objectives']), [
+        'Reconocer una norma',
+        'Distinguir: norma de métrica',
+      ]);
     });
 
     test('lists the keys of a mapping without descending into it', () {
@@ -96,7 +98,10 @@ languages:
   group('a scalar edit', () {
     test('changes its line and leaves the file alone', () {
       final patch = YamlPatch(migrated)..setScalar(['kind'], 'theory');
-      expect(patch.result, migrated.replaceFirst('kind: handout', 'kind: theory'));
+      expect(
+        patch.result,
+        migrated.replaceFirst('kind: handout', 'kind: theory'),
+      );
     });
 
     test('keeps the TODO comment sitting inside the title block', () {
@@ -159,8 +164,10 @@ e: 'Tema: introducción'
       final patch = YamlPatch('title:\n  es: x\n')
         ..setScalar(['title', 'es'], r'Espacios $\ell^p$ y $L^p$');
       expect(patch.result, 'title:\n  es: Espacios \$\\ell^p\$ y \$L^p\$\n');
-      expect(YamlPatch(patch.result).scalar(['title', 'es']),
-          r'Espacios $\ell^p$ y $L^p$');
+      expect(
+        YamlPatch(patch.result).scalar(['title', 'es']),
+        r'Espacios $\ell^p$ y $L^p$',
+      );
     });
 
     test('leaves an apostrophe inside a value unquoted, as YAML allows', () {
@@ -217,21 +224,24 @@ e: 'Tema: introducción'
     test('replaces a flow list in place', () {
       final patch = YamlPatch(migrated)
         ..setFlowList(['tags'], ['cifra', 'histórica', 'adfgvx']);
-      expect(patch.result,
-          contains('tags: [cifra, histórica, adfgvx]'));
+      expect(patch.result, contains('tags: [cifra, histórica, adfgvx]'));
       expect(patch.result, contains('# Migrated from:'));
     });
 
     test('turns an empty block list into items', () {
-      final patch = YamlPatch(migrated)..setBlockList(
-        ['objectives'],
-        ['Cifrar un mensaje con ADFGVX', 'Explicar por qué se rompió'],
-      );
-      expect(patch.result, contains('''
+      final patch = YamlPatch(migrated)
+        ..setBlockList(
+          ['objectives'],
+          ['Cifrar un mensaje con ADFGVX', 'Explicar por qué se rompió'],
+        );
+      expect(
+        patch.result,
+        contains('''
 objectives:
   - Cifrar un mensaje con ADFGVX
   - Explicar por qué se rompió
-'''));
+'''),
+      );
       // And the TODO above it, which now applies to prerequisites only, stays.
       expect(patch.result, contains('# TODO: what this unit assumes'));
     });
@@ -243,8 +253,7 @@ objectives:
   - dos
 
 difficulty: null
-''')
-        ..setBlockList(['objectives'], []);
+''')..setBlockList(['objectives'], []);
       expect(patch.result, '''
 objectives: []
 
@@ -258,8 +267,7 @@ prerequisites:
   - analysis/normed/definition
   - analysis/normed/banach
 objectives: []
-''')
-        ..setBlockList(['prerequisites'], ['analysis/metric/definition']);
+''')..setBlockList(['prerequisites'], ['analysis/metric/definition']);
       expect(patch.result, '''
 prerequisites:
   - analysis/metric/definition
@@ -273,8 +281,7 @@ tags:
   - uno
   - dos
 reference: es
-''')
-        ..setFlowList(['tags'], ['tres']);
+''')..setFlowList(['tags'], ['tres']);
       expect(patch.result, '''
 tags: [tres]
 reference: es
@@ -288,8 +295,7 @@ reference: es
 languages:
   es: {status: source}
   va: {status: draft}
-''')
-        ..setInFlowMap(['languages', 'va'], 'status', 'reviewed');
+''')..setInFlowMap(['languages', 'va'], 'status', 'reviewed');
       expect(patch.result, '''
 languages:
   es: {status: source}
@@ -300,7 +306,10 @@ languages:
     test('adds a language to the mapping', () {
       final patch = YamlPatch(migrated)
         ..setInFlowMap(['languages', 'va'], 'status', 'draft');
-      expect(patch.result, contains('  es: {status: draft}\n  va: {status: draft}'));
+      expect(
+        patch.result,
+        contains('  es: {status: draft}\n  va: {status: draft}'),
+      );
       expect(patch.result, contains('# Only languages that exist are listed'));
     });
 
@@ -311,8 +320,7 @@ languages:
 languages:
   es:
     status: source
-''')
-        ..setInFlowMap(['languages', 'es'], 'status', 'reviewed');
+''')..setInFlowMap(['languages', 'es'], 'status', 'reviewed');
       expect(patch.result, '''
 languages:
   es:
@@ -337,8 +345,7 @@ prerequisites:
   - uno
   - dos
 objectives: []
-''')
-        ..remove(['prerequisites']);
+''')..remove(['prerequisites']);
       expect(patch.result, '''
 id: a
 objectives: []

@@ -67,7 +67,8 @@ class _DocumentPageState extends State<DocumentPage> {
       children: [
         PageHeader(
           title: document.title(language),
-          subtitle: '${document.id} · ${kindName(document.kind)} · '
+          subtitle:
+              '${document.id} · ${kindName(document.kind)} · '
               'idioma $language',
           breadcrumbs: [
             ('Asignaturas', Routes.courses()),
@@ -94,9 +95,9 @@ class _DocumentPageState extends State<DocumentPage> {
               onPressed: () {
                 final command = 'didacta build $documentId';
                 Clipboard.setData(ClipboardData(text: command));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Copiado: $command')),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Copiado: $command')));
               },
             ),
           ],
@@ -259,8 +260,10 @@ class _CompositionRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Text('no está en el catálogo',
-                style: TextStyle(fontSize: 11, color: didactaTeacher)),
+            const Text(
+              'no está en el catálogo',
+              style: TextStyle(fontSize: 11, color: didactaTeacher),
+            ),
           ],
         ),
       );
@@ -321,15 +324,21 @@ class _CompositionRow extends StatelessWidget {
             const SizedBox(width: 8),
             if (!status.exists)
               Tooltip(
-                message: 'Sin versión en $language: se compilará con la de '
+                message:
+                    'Sin versión en $language: se compilará con la de '
                     '${unit!.reference} y un aviso.',
                 child: const Row(
                   children: [
-                    Icon(Icons.subdirectory_arrow_right,
-                        size: 13, color: didactaEx),
+                    Icon(
+                      Icons.subdirectory_arrow_right,
+                      size: 13,
+                      color: didactaEx,
+                    ),
                     SizedBox(width: 2),
-                    Text('respaldo',
-                        style: TextStyle(fontSize: 10.5, color: didactaEx)),
+                    Text(
+                      'respaldo',
+                      style: TextStyle(fontSize: 10.5, color: didactaEx),
+                    ),
                     SizedBox(width: 8),
                   ],
                 ),
@@ -349,16 +358,16 @@ class _Position extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        width: 26,
-        child: Text(
-          '$value',
-          style: const TextStyle(
-            fontSize: 11,
-            color: didactaMuted,
-            fontFeatures: [FontFeature.tabularFigures()],
-          ),
-        ),
-      );
+    width: 26,
+    child: Text(
+      '$value',
+      style: const TextStyle(
+        fontSize: 11,
+        color: didactaMuted,
+        fontFeatures: [FontFeature.tabularFigures()],
+      ),
+    ),
+  );
 }
 
 /// The composition and the outputs as two tabs, for a narrow screen.
@@ -434,27 +443,27 @@ class _PanelTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: selected ? didactaAccentDark : Colors.transparent,
-                width: 2,
-              ),
-            ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected ? didactaInk : didactaMuted,
-            ),
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: selected ? didactaAccentDark : Colors.transparent,
+            width: 2,
           ),
         ),
-      );
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          color: selected ? didactaInk : didactaMuted,
+        ),
+      ),
+    ),
+  );
 }
 
 /// What this document produces.
@@ -482,7 +491,9 @@ class _OutputsPanel extends StatelessWidget {
         for (final profile in profiles)
           ListTile(
             leading: Icon(
-              profile.isSlides ? Icons.slideshow_outlined : Icons.article_outlined,
+              profile.isSlides
+                  ? Icons.slideshow_outlined
+                  : Icons.article_outlined,
               size: 16,
               color: profile.isSlides ? didactaThm : didactaDefn,
             ),
@@ -518,39 +529,38 @@ class _Command extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(
-          color: didactaInk,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: SelectableText(
-                text,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: Colors.white,
-                ),
-              ),
+    width: double.infinity,
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(
+      color: didactaInk,
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: SelectableText(
+            text,
+            style: const TextStyle(
+              fontSize: 11.5,
+              fontFamily: 'monospace',
+              color: Colors.white,
             ),
-            IconButton(
-              tooltip: 'Copiar',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.content_copy, size: 14,
-                  color: Colors.white70),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: text));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copiado.')),
-                );
-              },
-            ),
-          ],
+          ),
         ),
-      );
+        IconButton(
+          tooltip: 'Copiar',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.content_copy, size: 14, color: Colors.white70),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: text));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Copiado.')));
+          },
+        ),
+      ],
+    ),
+  );
 }
 
 class _Missing extends StatelessWidget {
@@ -582,7 +592,9 @@ class _Missing extends StatelessWidget {
                   SelectableText(
                     '$courseId / $year / $documentId',
                     style: const TextStyle(
-                        fontSize: 12.5, fontFamily: 'monospace'),
+                      fontSize: 12.5,
+                      fontFamily: 'monospace',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   FilledButton(

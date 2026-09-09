@@ -43,14 +43,17 @@ class TranslationsPage extends StatelessWidget {
       children: [
         PageHeader(
           title: 'Traducción',
-          subtitle: '${pending.length} de ${catalogue.units.length} unidades '
+          subtitle:
+              '${pending.length} de ${catalogue.units.length} unidades '
               'necesitan trabajo en $language',
           bottom: Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: Row(
               children: [
-                const Text('Idioma:',
-                    style: TextStyle(fontSize: 12, color: didactaMuted)),
+                const Text(
+                  'Idioma:',
+                  style: TextStyle(fontSize: 12, color: didactaMuted),
+                ),
                 const SizedBox(width: 8),
                 SegmentedButton<String>(
                   showSelectedIcon: false,
@@ -67,14 +70,24 @@ class TranslationsPage extends StatelessWidget {
                       sessionOf(context).language = values.first,
                 ),
                 const SizedBox(width: 16),
-                if (outdated > 0) _Count(outdated, 'desactualizadas',
-                    statusColour(TranslationStatus.outdated)),
+                if (outdated > 0)
+                  _Count(
+                    outdated,
+                    'desactualizadas',
+                    statusColour(TranslationStatus.outdated),
+                  ),
                 if (missing > 0)
-                  _Count(missing, 'sin traducir',
-                      statusColour(TranslationStatus.missing)),
+                  _Count(
+                    missing,
+                    'sin traducir',
+                    statusColour(TranslationStatus.missing),
+                  ),
                 if (drafts > 0)
-                  _Count(drafts, 'en borrador',
-                      statusColour(TranslationStatus.draft)),
+                  _Count(
+                    drafts,
+                    'en borrador',
+                    statusColour(TranslationStatus.draft),
+                  ),
               ],
             ),
           ),
@@ -97,9 +110,11 @@ class TranslationsPage extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_outline,
-                            size: 32, color: statusColour(
-                                TranslationStatus.reviewed)),
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 32,
+                          color: statusColour(TranslationStatus.reviewed),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Nada pendiente en $language.',
@@ -117,7 +132,8 @@ class TranslationsPage extends StatelessWidget {
                     language: language,
                     // The rank is worth showing: it makes the ordering
                     // legible instead of looking arbitrary.
-                    showDivider: index == 0 ||
+                    showDivider:
+                        index == 0 ||
                         pending[index].usedBy.length !=
                             pending[index - 1].usedBy.length,
                   ),
@@ -137,23 +153,22 @@ class _Count extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(right: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration:
-                  BoxDecoration(color: colour, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              '$value $label',
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
-            ),
-          ],
+    padding: const EdgeInsets.only(right: 12),
+    child: Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: colour, shape: BoxShape.circle),
         ),
-      );
+        const SizedBox(width: 5),
+        Text(
+          '$value $label',
+          style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+        ),
+      ],
+    ),
+  );
 }
 
 class _PendingRow extends StatelessWidget {
@@ -183,8 +198,10 @@ class _PendingRow extends StatelessWidget {
             SizedBox(
               width: 40,
               child: uses == 0
-                  ? const Text('—',
-                      style: TextStyle(fontSize: 12, color: didactaMuted))
+                  ? const Text(
+                      '—',
+                      style: TextStyle(fontSize: 12, color: didactaMuted),
+                    )
                   : Row(
                       children: [
                         const Icon(Icons.link, size: 12, color: didactaMuted),

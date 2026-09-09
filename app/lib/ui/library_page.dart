@@ -71,7 +71,7 @@ class _LibraryPageState extends State<LibraryPage> {
               subtitle: facets.shown == facets.total
                   ? '${facets.total} unidades'
                   : '${facets.shown} de ${facets.total} unidades · '
-                      '${filter.describe()}',
+                        '${filter.describe()}',
               bottom: Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
@@ -89,13 +89,16 @@ class _LibraryPageState extends State<LibraryPage> {
                                   tooltip: 'Limpiar',
                                   onPressed: () {
                                     _search.clear();
-                                    setState(() =>
-                                        _filter = filter.copyWith(query: ''));
+                                    setState(
+                                      () =>
+                                          _filter = filter.copyWith(query: ''),
+                                    );
                                   },
                                 ),
                         ),
                         onChanged: (value) => setState(
-                            () => _filter = filter.copyWith(query: value)),
+                          () => _filter = filter.copyWith(query: value),
+                        ),
                       ),
                     ),
                     if (!compact) ...[
@@ -118,7 +121,8 @@ class _LibraryPageState extends State<LibraryPage> {
                       _SortMenu(
                         sort: filter.sort,
                         onChanged: (sort) => setState(
-                            () => _filter = filter.copyWith(sort: sort)),
+                          () => _filter = filter.copyWith(sort: sort),
+                        ),
                       ),
                     ],
                     if (!wide) ...[
@@ -127,8 +131,10 @@ class _LibraryPageState extends State<LibraryPage> {
                         tooltip: 'Filtros',
                         icon: Badge(
                           isLabelVisible: filter.isNarrowed,
-                          child: const Icon(Icons.filter_alt_outlined,
-                              size: 20),
+                          child: const Icon(
+                            Icons.filter_alt_outlined,
+                            size: 20,
+                          ),
                         ),
                         onPressed: () => _showFilters(
                           context,
@@ -217,21 +223,23 @@ class _SortMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DropdownButtonHideUnderline(
-        child: DropdownButton<LibrarySort>(
-          value: sort,
-          isDense: true,
-          borderRadius: BorderRadius.circular(4),
-          items: [
-            for (final entry in _names.entries)
-              DropdownMenuItem(
-                value: entry.key,
-                child: Text('orden: ${entry.value}',
-                    style: const TextStyle(fontSize: 12.5)),
-              ),
-          ],
-          onChanged: (value) => value == null ? null : onChanged(value),
-        ),
-      );
+    child: DropdownButton<LibrarySort>(
+      value: sort,
+      isDense: true,
+      borderRadius: BorderRadius.circular(4),
+      items: [
+        for (final entry in _names.entries)
+          DropdownMenuItem(
+            value: entry.key,
+            child: Text(
+              'orden: ${entry.value}',
+              style: const TextStyle(fontSize: 12.5),
+            ),
+          ),
+      ],
+      onChanged: (value) => value == null ? null : onChanged(value),
+    ),
+  );
 }
 
 class _FilterPanel extends StatelessWidget {
@@ -266,8 +274,9 @@ class _FilterPanel extends StatelessWidget {
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.filter_alt_off_outlined, size: 15),
                 label: const Text('Quitar filtros'),
-                onPressed: () => onChanged(LibraryFilter(
-                    language: filter.language, sort: filter.sort)),
+                onPressed: () => onChanged(
+                  LibraryFilter(language: filter.language, sort: filter.sort),
+                ),
               ),
             ),
           if (withLanguageAndSort) ...[
@@ -301,9 +310,11 @@ class _FilterPanel extends StatelessWidget {
               label: area == 'content' ? 'teoría y apuntes' : 'problemas',
               count: facets.byArea[area] ?? 0,
               selected: filter.area == area,
-              onTap: () => onChanged(filter.area == area
-                  ? filter.copyWith(clearArea: true)
-                  : filter.copyWith(area: area)),
+              onTap: () => onChanged(
+                filter.area == area
+                    ? filter.copyWith(clearArea: true)
+                    : filter.copyWith(area: area),
+              ),
             ),
 
           SectionLabel('Traducción · ${filter.language}'),
@@ -316,10 +327,11 @@ class _FilterPanel extends StatelessWidget {
               label: label,
               count: _statusCount(status),
               selected: filter.status == status,
-              onTap: () => onChanged(filter.copyWith(
-                  status: filter.status == status
-                      ? StatusFilter.any
-                      : status)),
+              onTap: () => onChanged(
+                filter.copyWith(
+                  status: filter.status == status ? StatusFilter.any : status,
+                ),
+              ),
             ),
           _Facet(
             label: 'sin usar en ninguna asignatura',
@@ -336,9 +348,11 @@ class _FilterPanel extends StatelessWidget {
               count: facets.byKind[kind],
               colour: kindColour(kind),
               selected: filter.kind == kind,
-              onTap: () => onChanged(filter.kind == kind
-                  ? filter.copyWith(clearKind: true)
-                  : filter.copyWith(kind: kind)),
+              onTap: () => onChanged(
+                filter.kind == kind
+                    ? filter.copyWith(clearKind: true)
+                    : filter.copyWith(kind: kind),
+              ),
             ),
 
           const SectionLabel('Categoría'),
@@ -347,9 +361,11 @@ class _FilterPanel extends StatelessWidget {
               label: category,
               count: facets.byCategory[category],
               selected: filter.category == category,
-              onTap: () => onChanged(filter.category == category
-                  ? filter.copyWith(clearCategory: true)
-                  : filter.copyWith(category: category)),
+              onTap: () => onChanged(
+                filter.category == category
+                    ? filter.copyWith(clearCategory: true)
+                    : filter.copyWith(category: category),
+              ),
             ),
         ],
       ),
@@ -406,7 +422,9 @@ class _Facet extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                    color: colour, borderRadius: BorderRadius.circular(2)),
+                  color: colour,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               const SizedBox(width: 7),
             ],
@@ -520,8 +538,9 @@ class _UnitRow extends StatelessWidget {
                             // Marked when the title is not in the language
                             // asked for, so a Castilian title in a Valencian
                             // listing does not read as translated.
-                            fontStyle:
-                                fallback ? FontStyle.italic : FontStyle.normal,
+                            fontStyle: fallback
+                                ? FontStyle.italic
+                                : FontStyle.normal,
                             color: fallback ? didactaMuted : null,
                           ),
                         ),
@@ -530,8 +549,11 @@ class _UnitRow extends StatelessWidget {
                         const SizedBox(width: 6),
                         Tooltip(
                           message: unit.warnings.join('\n'),
-                          child: const Icon(Icons.warning_amber_rounded,
-                              size: 14, color: didactaEx),
+                          child: const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 14,
+                            color: didactaEx,
+                          ),
                         ),
                       ],
                     ],
@@ -562,9 +584,13 @@ class _UnitRow extends StatelessWidget {
                     children: [
                       const Icon(Icons.link, size: 12, color: didactaMuted),
                       const SizedBox(width: 2),
-                      Text('${unit.usedBy.length}',
-                          style: const TextStyle(
-                              fontSize: 11.5, color: didactaMuted)),
+                      Text(
+                        '${unit.usedBy.length}',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: didactaMuted,
+                        ),
+                      ),
                     ],
                   ),
                 ),

@@ -37,12 +37,13 @@ import 'auth.dart';
 /// Where a token is kept, and the checks it passes before it is.
 class TokenStore implements SecretStore {
   TokenStore({FlutterSecureStorage? storage})
-      : _storage = storage ??
-            const FlutterSecureStorage(
-              // Not synchronised to iCloud: a repository credential should
-              // stay on the machine it was authorised for.
-              iOptions: IOSOptions(synchronizable: false),
-            );
+    : _storage =
+          storage ??
+          const FlutterSecureStorage(
+            // Not synchronised to iCloud: a repository credential should
+            // stay on the machine it was authorised for.
+            iOptions: IOSOptions(synchronizable: false),
+          );
 
   static const String _key = 'didacta.github.token';
 
@@ -125,6 +126,7 @@ class GitHubDirect {
   final String repo;
   final String branch;
   final String token;
+
   /// Injected in tests. Absent means one per call, which is fine for the
   /// handful of requests an editor makes.
   final http.Client? client;
@@ -132,10 +134,10 @@ class GitHubDirect {
   http.Client get _http => client ?? http.Client();
 
   Map<String, String> get _headers => {
-        'authorization': 'Bearer $token',
-        'accept': 'application/vnd.github+json',
-        'x-github-api-version': '2022-11-28',
-      };
+    'authorization': 'Bearer $token',
+    'accept': 'application/vnd.github+json',
+    'x-github-api-version': '2022-11-28',
+  };
 
   /// Verifies a token and reports what it can actually do.
   ///
@@ -162,7 +164,8 @@ class GitHubDirect {
         return const TokenCheck(
           valid: false,
           canWrite: false,
-          problem: 'GitHub no reconoce ese token. Comprueba que lo has copiado '
+          problem:
+              'GitHub no reconoce ese token. Comprueba que lo has copiado '
               'entero y que no ha caducado.',
         );
       }
@@ -173,7 +176,8 @@ class GitHubDirect {
         return TokenCheck(
           valid: false,
           canWrite: false,
-          problem: 'El token no alcanza $owner/$repo. Si es un token de '
+          problem:
+              'El token no alcanza $owner/$repo. Si es un token de '
               'permisos limitados, añade ese repositorio a su lista.',
         );
       }
@@ -195,7 +199,8 @@ class GitHubDirect {
       String? warning;
       final scopes = response.headers['x-oauth-scopes'];
       if (scopes != null && scopes.contains('repo')) {
-        warning = 'Este token es de los clásicos y alcanza todos tus '
+        warning =
+            'Este token es de los clásicos y alcanza todos tus '
             'repositorios. Uno de permisos limitados a $owner/$repo con '
             '«Contents: Read and write» haría lo mismo con mucho menos '
             'alcance.';
@@ -209,7 +214,7 @@ class GitHubDirect {
         problem: canPush
             ? null
             : 'El token puede leer $owner/$repo pero no escribir. Necesita '
-                '«Contents: Read and write».',
+                  '«Contents: Read and write».',
       );
     } catch (error) {
       return TokenCheck(
