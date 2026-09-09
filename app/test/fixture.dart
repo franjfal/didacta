@@ -15,6 +15,43 @@ import 'package:didacta_app/state/session.dart';
 
 const String unitPath = 'content/analysis/normed/definition';
 
+/// A `unit.yaml` in the shape the migrator writes them, comments and all.
+///
+/// The comments are load-bearing in these tests: the metadata editor's whole
+/// claim is that they survive an edit.
+const String unitYaml = '''
+# Espacios normados
+#
+# Migrated from:
+#   00classnotes/901Analysis/01Handouts/01-normed/00CAST-definicion.tex
+#
+# The fields marked TODO are the ones the legacy material did not record.
+
+id: analysis.normed.definition
+kind: theory
+
+title:
+  # TODO: check the title against the handout
+  es: Espacios normados
+
+category: analysis
+topic: normed
+tags: [norma, banach]
+
+reference: es
+
+# Only languages that exist are listed; absence is what `missing` means.
+languages:
+  es: {status: source}
+
+# TODO: what this unit assumes, and what a student can do after it.
+prerequisites: []
+objectives: []
+
+duration_minutes: null
+difficulty: null
+''';
+
 Map<String, dynamic> unitJson({
   String path = unitPath,
   String area = 'content',
@@ -150,7 +187,10 @@ class FakeGateway extends ContentGateway {
     this.failWith,
     Map<String, String>? files,
   }) : files = files ??
-            {'$unitPath/es.tex': 'El contenido original en castellano.'};
+            {
+              '$unitPath/es.tex': 'El contenido original en castellano.',
+              '$unitPath/unit.yaml': unitYaml,
+            };
 
   final bool writable;
   final ContentException? failWith;
