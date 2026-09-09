@@ -327,6 +327,15 @@ que funcionar en un runner de CI sin un paso de `pip`.
 | D36 | El índice no lleva marca de tiempo | la llevó, y rompió lo único que lo hace fiable: con un `generatedAt` dos ejecuciones sobre el mismo contenido dan bytes distintos, así que `--check` daba el índice por obsoleto justo después de escribirlo y cada regeneración era un diff. Cuándo se generó lo dicen el mtime y el commit; lo que hace falta saber es si coincide con el contenido, y para eso está `contentHash` |
 | D37 | El índice calcula en qué documentos se usa cada unidad | es la respuesta a «¿puedo cambiar esto?», y exige recorrer todas las composiciones: precisamente lo que una interfaz no puede hacer |
 | D38 | La lógica de la app va en Dart puro, sin Flutter | «web primero, escritorio después sin reescribir la lógica» solo se cumple si la parte que merece la pena reutilizar no toca un widget. Es además la parte comprobable: 33 tests sin superficie de render, y un filtro que se come filas en silencio es invisible en una interfaz |
+| D39 | Cada pantalla tiene una URL | es una aplicación web: «mándame el enlace de esa unidad» tiene que funcionar, atrás tiene que significar algo y recargar tiene que dejarte donde estabas. Una ruta por pantalla es también lo que permite probar las doce direcciones a tres anchos |
+| D40 | Un campo de un YAML se edita reescribiendo su línea, no reserializando el fichero | un `unit.yaml` migrado lleva el fichero del que salió y un `TODO` en cada campo que el material heredado no registraba: la lista de trabajo de dos mil unidades. Un round trip por un parser la borra entera, en silencio, en la primera edición. Y cuando `YamlPatch` no reconoce una forma, rechaza en lugar de adivinar: corromper la fuente de la verdad es peor que no editarla |
+| D41 | Una entrada comentada de una composición es un estado, no basura | 905 entradas de los `year.yaml` están comentadas: material que existe y que este año no se da. Volver a activar algunas es la edición más común después de una migración, así que se ven tachadas en su sitio en el orden y se activan en un toque. Un editor que hubiera parseado el bloque las habría borrado todas en el primer arrastre |
+| D42 | Antes de un commit se ve el diff | que solo se toquen las líneas pedidas es una promesa sobre el fichero de otra persona. Se enseña en lugar de afirmarse, y si el diff tiene mala pinta se cancela |
+| D43 | En escritorio la aplicación lleva el clon ella misma | «sin necesidad de instalar y configurar GitHub»: clonar, traer, commit y enviar con el token que se pegó una vez, sin `gh auth login`, sin credential helper, sin clave SSH. Se hace con el binario `git`, no con una reimplementación en Dart, porque un fallo ahí corrompe el repositorio del que sale todo |
+| D44 | Un commit local no necesita token; solo el envío | escribir en un clon que está en tu propio disco no necesita credencial, y exigirla habría roto el camino sin conexión, que es la razón de que el clon exista. El autor sale de la sesión o de la identidad de git del equipo: pedir que alguien inicie sesión en un servicio web para escribir un fichero de su propio disco sería absurdo |
+| D45 | El token va en el entorno del proceso hijo, nunca en `argv` ni en `.git/config` | lo lee de ahí un credential helper de una línea. El atajo habitual —meterlo en la URL del remoto— lo deja escrito en un fichero dentro del clon, y `ps` enseña la línea de órdenes de cualquiera |
+| D46 | El sandbox de macOS queda desactivado, y el entitlement explica por qué | una app en sandbox no puede ejecutar un binario fuera de su bundle ni volver a abrir una carpeta elegida en otra sesión, así que no puede llevar un clon. El coste es no poder ir a la Mac App Store, que para una herramienta que su autor instala en su propio equipo no es un coste |
+| D47 | Con un clon, el catálogo se lee del clon | si la biblioteca leyera una copia servida por HTTP y el editor escribiera los ficheros del disco, las dos podrían discrepar. La fuente de la verdad en este equipo es el clon |
 
 ---
 
@@ -438,8 +447,10 @@ Dentro de la aplicación el corte es el mismo por el mismo motivo:
 
 ```
 app/lib/
-├── model/   Dart puro. Parseo, filtros, cuentas. 33 tests, cero widgets.
-├── data/    De dónde viene el índice: HTTP hoy, disco en escritorio.
+├── model/   Dart puro. Parseo, filtros, cuentas, edición de YAML. Cero widgets.
+├── data/    De dónde vienen los datos y por dónde salen los cambios.
+├── state/   Session: lo único que sabe el estado del mundo.
+├── router.dart  Las rutas: una URL por pantalla.
 └── ui/      Widgets.
 ```
 
@@ -453,17 +464,22 @@ verdad las 14 salidas, y migrando el material real: 194 unidades tomadas al
 azar de 51 categorías compilan sin un solo fallo, y el Tema 1 de 2025-2026
 sale de la composición migrada en sus 7 perfiles.
 
-El migrador (§8) y los índices (§8.bis) también están hechos, y la biblioteca
-de `app/` funciona sobre el material real. Lo siguiente, en orden:
+El migrador (§8), los índices (§8.bis) y la aplicación están hechos sobre el
+material real: las siete rutas, el editor multilingüe, la edición de
+`unit.yaml` y el constructor de composiciones, con un clon local en escritorio
+y el Worker en web. Lo siguiente, en orden:
 
-1. **Bibliografía** — 13 unidades citan y 5 usan `\cites` de biblatex, que hoy
+1. **Compilar desde la interfaz** — en escritorio, con un clon en disco y
+   LaTeX instalado, ya es posible: falta lanzar `didacta build` y mostrar el
+   log y el PDF. En web no lo es, y la pantalla del documento no lo finge.
+2. **Bibliografía** — 13 unidades citan y 5 usan `\cites` de biblatex, que hoy
    no compila. Hay que decidir dónde vive el `.bib` y con qué motor.
-2. **`api/`** — identidad (Firebase), política de acceso versionada en el
-   repositorio, proxy autenticado a GitHub. Es lo que bloquea editar, componer
-   y compilar desde la interfaz.
-3. **`app/`, el resto** — editor multilingüe, constructor de composiciones,
-   compilación por perfil.
-4. **CI** — compilar en cada push, `didacta index --check`, publicar los PDF
+3. **Desplegar el Worker y Firebase** — el código está escrito y probado, pero
+   `wrangler deploy`, el secreto del token y los proveedores de acceso piden
+   credenciales que solo tiene el autor.
+4. **Crear unidades desde la interfaz** — hoy se editan, traducen, reclasifican
+   y recomponen las que hay; una nueva pide crear el directorio a mano.
+5. **CI** — compilar en cada push, `didacta index --check`, publicar los PDF
    como artefactos.
 
 Nada de eso cambia lo de aquí: el sistema LaTeX y el modelo de contenido son la
