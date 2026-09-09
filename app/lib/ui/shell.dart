@@ -184,6 +184,7 @@ class _GatewayStrip extends StatelessWidget {
       GatewayKind.api => gateway.canWrite
           ? (Icons.cloud_done_outlined, didactaThm)
           : (Icons.cloud_outlined, didactaMuted),
+      GatewayKind.clone => (Icons.folder_open_outlined, didactaAccentDark),
       GatewayKind.none => (Icons.lock_outline, didactaMuted),
     };
 

@@ -12,6 +12,10 @@
 ///       --dart-define=DIDACTA_OWNER=franjfal \
 ///       --dart-define=DIDACTA_REPO=didacta_db
 ///
+/// On desktop there is one more, for a clone that is already on disk:
+///
+///     flutter run -d macos --dart-define=DIDACTA_CLONE=~/didacta_db
+///
 /// The defaults point at a `generated/` directory next to the app and at no
 /// API, which is exactly what a static publication of a content repository
 /// looks like: the library browses, and nothing can be written until an API or
@@ -19,12 +23,14 @@
 library;
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data/auth.dart';
 import 'data/catalogue_source.dart';
 import 'data/firebase_options.dart';
+import 'data/preferences.dart';
 import 'data/repository_access.dart';
 import 'router.dart';
 import 'state/session.dart';
@@ -45,15 +51,26 @@ const String contentRepo =
 const String contentBranch =
     String.fromEnvironment('DIDACTA_BRANCH', defaultValue: 'main');
 
+/// A clone already on disk, for a desktop build handed to someone who has
+/// the repository. Ignored on the web, and overridden by whatever is chosen
+/// in Ajustes.
+const String clonePath = String.fromEnvironment('DIDACTA_CLONE');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Firebase is only for identity, and the app has to work without it: a
   // static publication of public material needs no sign-in, and a
   // misconfigured project must not take the whole app down with it.
+  //
+  // On desktop it is often not configured at all, and that is fine rather
+  // than broken: a clone on your own disk gets its commit author from git,
+  // so the whole editor works with no sign-in anywhere.
   var firebaseReady = false;
   try {
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+    await Firebase.initializeApp(
+      options: kIsWeb ? DefaultFirebaseOptions.web : null,
+    );
     firebaseReady = true;
   } catch (error) {
     debugPrint('Firebase no disponible: $error');
@@ -67,6 +84,7 @@ Future<void> main() async {
     contentOwner: contentOwner,
     contentRepo: contentRepo,
     contentBranch: contentBranch,
+    preferences: const StoredPreferences(defaultClonePath: clonePath),
   );
 
   runApp(DidactaApp(session: session, firebaseReady: firebaseReady));
@@ -131,7 +149,7 @@ class _BootstrapState extends State<_Bootstrap> {
           theme: didactaTheme(),
           home: _LoadFailure(
             error: session.error!,
-            where: session.catalogueSource.describe,
+            where: session.catalogueOrigin,
             onRetry: session.start,
           ),
         ),

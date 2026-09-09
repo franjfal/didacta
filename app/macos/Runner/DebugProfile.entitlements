@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  The App Sandbox is off, deliberately, and it is worth being explicit
+	  about why rather than leaving it looking like an oversight.
+
+	  This app's desktop path is a local clone of the content repository,
+	  driven by the `git` binary already on the machine. A sandboxed app
+	  cannot do either half of that: it may not execute a binary outside its
+	  own bundle, and it may not read or write a directory the user chose in
+	  an earlier session without security-scoped bookmarks. The alternative
+	  would be reimplementing git in Dart, and a bug in that would corrupt
+	  the repository that is the source of truth for two thousand teaching
+	  units.
+
+	  The cost is that this build cannot go to the Mac App Store. That is not
+	  a cost here: it is a tool its author runs on their own machine against
+	  their own repository, installed directly.
+
+	  The network entitlements below are what a sandboxed build would need,
+	  and are kept so that turning the sandbox back on is one line rather
+	  than an investigation.
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<false/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+</dict>
+</plist>
