@@ -40,15 +40,25 @@ _ITEM = re.compile(r"^(?P<indent>\s*)-\s*(?P<value>.*?)\s*$")
 
 
 def _parse_scalar(text):
-    """Convert a YAML scalar to a Python value."""
+    """Convert a YAML scalar to a Python value.
+
+    Quoting is checked *before* anything else, because that is what quoting is
+    for: ``'2025'`` is the string and ``2025`` is the number, and a tag or an
+    academic year that silently becomes an integer breaks a comparison
+    somewhere far away from the file it came from.
+    """
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+        inner = text[1:-1]
+        if text[0] == "'":
+            # In single quotes the only escape YAML has is a doubled quote.
+            return inner.replace("''", "'")
+        return inner.replace('\\"', '"').replace("\\\\", "\\")
     if text == "" or text == "~" or text == "null":
         return None
     if text in ("true", "True", "yes"):
         return True
     if text in ("false", "False", "no"):
         return False
-    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
-        return text[1:-1]
     if re.match(r"^-?\d+$", text):
         return int(text)
     if re.match(r"^-?\d+\.\d+$", text):
@@ -57,7 +67,12 @@ def _parse_scalar(text):
 
 
 def _parse_inline_list(text):
-    """Parse ``[a, b, "c d"]`` into a list of scalars."""
+    """Parse ``[a, b, "c d"]`` into a list of scalars.
+
+    The quotes are kept while splitting and removed by ``_parse_scalar``,
+    which is the only place that knows what they mean. Stripping them here --
+    as this did -- turned ``['2025']`` into the integer 2025.
+    """
     inner = text[1:-1].strip()
     if not inner:
         return []
@@ -66,12 +81,12 @@ def _parse_inline_list(text):
     quote = None
     for ch in inner:
         if quote:
+            current += ch
             if ch == quote:
                 quote = None
-            else:
-                current += ch
         elif ch in "\"'":
             quote = ch
+            current += ch
         elif ch == ",":
             parts.append(current.strip())
             current = ""

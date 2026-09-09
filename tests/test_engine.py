@@ -427,6 +427,52 @@ class YamlTests(unittest.TestCase):
         self.assertEqual(len(data["documents"]), 1)
         self.assertEqual(data["documents"][0]["structure"][1]["unit"], "a/b/d")
 
+    def test_a_quoted_number_stays_a_string(self):
+        """Quoting is the only way to say "this is text", so it has to win.
+
+        Found by round-tripping the app's editor through this loader: a tag
+        written ``'2025'`` came back as the integer 2025, because the inline
+        list parser threw the quotes away before anything looked at them.
+        A year or a tag that turns into a number breaks a comparison
+        somewhere a long way from the file it came from.
+        """
+        data = yamlio.loads(
+            "\n".join([
+                "year: '2025'",
+                "tags: [algebra, '2025', '12']",
+                "flag: 'true'",
+                "empty: 'null'",
+                "number: 2025",
+                "boolean: true",
+                "mixed: [2025, algebra]",
+            ])
+        )
+        self.assertEqual(data["year"], "2025")
+        self.assertEqual(data["tags"], ["algebra", "2025", "12"])
+        self.assertEqual(data["flag"], "true")
+        self.assertEqual(data["empty"], "null")
+        # And unquoted still means what it always did.
+        self.assertEqual(data["number"], 2025)
+        self.assertIs(data["boolean"], True)
+        self.assertEqual(data["mixed"], [2025, "algebra"])
+
+    def test_the_escapes_each_quoting_style_has(self):
+        data = yamlio.loads(
+            "\n".join([
+                "single: 'L''Hopital'",
+                'double: "con \\"comillas\\""',
+                "latex: 'Espacios $\\ell^p$'",
+                "inside: [\"a''b\", 'c, d']",
+            ])
+        )
+        self.assertEqual(data["single"], "L'Hopital")
+        self.assertEqual(data["double"], 'con "comillas"')
+        # A backslash in single quotes is a backslash, which is why the app
+        # writes LaTeX in single quotes and not double.
+        self.assertEqual(data["latex"], "Espacios $\\ell^p$")
+        # A comma inside quotes does not split the list.
+        self.assertEqual(data["inside"], ["a''b", "c, d"])
+
     def test_localised_accepts_a_plain_string(self):
         result = yamlio.localised("One title", ("es", "va", "en"))
         self.assertEqual(result, {"es": "One title", "va": "One title", "en": "One title"})
