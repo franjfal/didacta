@@ -32,8 +32,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
+import 'auth.dart';
+
 /// Where a token is kept, and the checks it passes before it is.
-class TokenStore {
+class TokenStore implements SecretStore {
   TokenStore({FlutterSecureStorage? storage})
       : _storage = storage ??
             const FlutterSecureStorage(
@@ -51,13 +53,16 @@ class TokenStore {
   /// False on the web, where "secure storage" is browser storage and browser
   /// storage is readable by any script on the origin. The app must not offer
   /// to keep a token it cannot actually protect.
+  @override
   bool get canStoreSafely => !kIsWeb;
 
+  @override
   Future<String?> read() async {
     if (!canStoreSafely) return null;
     return _storage.read(key: _key);
   }
 
+  @override
   Future<void> write(String token) async {
     if (!canStoreSafely) {
       throw const RepositoryAccessException(
@@ -68,6 +73,7 @@ class TokenStore {
     await _storage.write(key: _key, value: token.trim());
   }
 
+  @override
   Future<void> clear() => _storage.delete(key: _key);
 }
 

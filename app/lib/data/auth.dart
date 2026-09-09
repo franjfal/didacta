@@ -86,16 +86,98 @@ class AuthException implements Exception {
   String toString() => message;
 }
 
+/// What the API needs from a session: a token, and nothing else.
+///
+/// Narrowed to this on purpose. `DidactaApi` has no business being able to
+/// sign a user in or out, and a dependency on the whole auth object made it
+/// impossible to exercise the API without Firebase running.
+abstract class TokenSource {
+  Future<String?> idToken({bool forceRefresh = false});
+}
+
+/// The little the rest of the app needs to know about who is signed in.
+///
+/// A Firebase `User` carries far more than that, and depending on it would
+/// make every layer above this one need Firebase to exist -- including in a
+/// test that only wants to check a screen.
+class SignedInUser {
+  const SignedInUser({this.email, this.displayName, this.emailVerified = false});
+
+  final String? email;
+  final String? displayName;
+  final bool emailVerified;
+
+  /// Who to attribute a commit to. Falls back to the address when there is no
+  /// display name, and a commit with no author at all is better than one
+  /// attributed to nobody in particular.
+  ({String name, String email})? get commitAuthor =>
+      email == null ? null : (name: displayName ?? email!, email: email!);
+}
+
+/// A session, as the app needs it: who is in it, when that changes, and a way
+/// out. Implemented by [DidactaAuth] over Firebase.
+abstract class AuthSession implements TokenSource {
+  /// Fires whenever the signed-in user changes.
+  Stream<void> get changes;
+
+  SignedInUser? get user;
+
+  bool get signedIn;
+
+  Future<void> signOut();
+
+  // Getting in. Part of the interface rather than of the Firebase class
+  // alone, because the settings screen needs all of it and should not have to
+  // know what implements it.
+
+  Future<void> signInWithPassword(String email, String password);
+
+  Future<void> signInWithGoogle();
+
+  Future<void> createAccount(String email, String password);
+
+  Future<void> sendPasswordReset(String email);
+
+  Future<void> resendVerification();
+}
+
+/// Somewhere to keep a secret. Implemented by [TokenStore] over the OS
+/// keychain; a test supplies its own.
+abstract class SecretStore {
+  /// Whether keeping a secret here is actually safe. False in a browser.
+  bool get canStoreSafely;
+
+  Future<String?> read();
+
+  Future<void> write(String value);
+
+  Future<void> clear();
+}
+
 /// Sign-in, and the token the API needs.
-class DidactaAuth {
+class DidactaAuth implements AuthSession {
   DidactaAuth({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _auth;
 
-  Stream<User?> get changes => _auth.authStateChanges();
+  @override
+  Stream<void> get changes => _auth.authStateChanges();
 
+  /// The Firebase user, for the few places that need more than [user].
   User? get current => _auth.currentUser;
 
+  @override
+  SignedInUser? get user {
+    final signedInUser = _auth.currentUser;
+    if (signedInUser == null) return null;
+    return SignedInUser(
+      email: signedInUser.email,
+      displayName: signedInUser.displayName,
+      emailVerified: signedInUser.emailVerified,
+    );
+  }
+
+  @override
   bool get signedIn => _auth.currentUser != null;
 
   /// A fresh ID token, or null when nobody is signed in.
@@ -103,6 +185,7 @@ class DidactaAuth {
   /// Not cached here: `getIdToken` returns the current one and refreshes it
   /// when it is close to expiring, which is exactly the behaviour wanted and
   /// exactly what a cache of our own would break.
+  @override
   Future<String?> idToken({bool forceRefresh = false}) async {
     final user = _auth.currentUser;
     if (user == null) return null;
@@ -113,6 +196,7 @@ class DidactaAuth {
     }
   }
 
+  @override
   Future<void> signInWithPassword(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -124,6 +208,7 @@ class DidactaAuth {
     }
   }
 
+  @override
   Future<void> signInWithGoogle() async {
     try {
       final provider = GoogleAuthProvider()
@@ -142,6 +227,7 @@ class DidactaAuth {
   /// The API refuses writes from an unverified address, because an unverified
   /// address is one anybody can claim -- including one that appears in
   /// `access.json`.
+  @override
   Future<void> createAccount(String email, String password) async {
     try {
       await _auth.createUserWithEmailAndPassword(
@@ -154,6 +240,7 @@ class DidactaAuth {
     }
   }
 
+  @override
   Future<void> sendPasswordReset(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -162,6 +249,7 @@ class DidactaAuth {
     }
   }
 
+  @override
   Future<void> resendVerification() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -172,6 +260,7 @@ class DidactaAuth {
     }
   }
 
+  @override
   Future<void> signOut() => _auth.signOut();
 
   /// Firebase's codes turned into something a person can act on.
@@ -228,9 +317,9 @@ class DidactaApi {
   /// The Worker's origin, e.g. `https://didacta-api.<subdomain>.workers.dev`.
   final String base;
 
-  /// Where the ID token comes from. Public because a caller that holds an API
-  /// also holds the session it belongs to.
-  final DidactaAuth auth;
+  /// Where the ID token comes from. Only a [TokenSource]: this class must not
+  /// be able to change the session it reads from.
+  final TokenSource auth;
 
   final http.Client _client;
 
