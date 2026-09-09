@@ -58,6 +58,11 @@ class _LibraryPageState extends State<LibraryPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 820;
+        // A second breakpoint, below the one that hides the filter panel: on
+        // a phone the search field plus a language selector plus an order
+        // menu do not fit, and squeezing the search box to nothing to keep
+        // two controls that belong in the sheet is the wrong trade.
+        final compact = constraints.maxWidth < 560;
 
         return Column(
           children: [
@@ -93,27 +98,29 @@ class _LibraryPageState extends State<LibraryPage> {
                             () => _filter = filter.copyWith(query: value)),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    SegmentedButton<String>(
-                      showSelectedIcon: false,
-                      style: const ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    if (!compact) ...[
+                      const SizedBox(width: 10),
+                      SegmentedButton<String>(
+                        showSelectedIcon: false,
+                        style: const ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        segments: [
+                          for (final code in session.catalogue.languages)
+                            ButtonSegment(value: code, label: Text(code)),
+                        ],
+                        selected: {filter.language},
+                        onSelectionChanged: (values) =>
+                            sessionOf(context).language = values.first,
                       ),
-                      segments: [
-                        for (final code in session.catalogue.languages)
-                          ButtonSegment(value: code, label: Text(code)),
-                      ],
-                      selected: {filter.language},
-                      onSelectionChanged: (values) =>
-                          sessionOf(context).language = values.first,
-                    ),
-                    const SizedBox(width: 10),
-                    _SortMenu(
-                      sort: filter.sort,
-                      onChanged: (sort) =>
-                          setState(() => _filter = filter.copyWith(sort: sort)),
-                    ),
+                      const SizedBox(width: 10),
+                      _SortMenu(
+                        sort: filter.sort,
+                        onChanged: (sort) => setState(
+                            () => _filter = filter.copyWith(sort: sort)),
+                      ),
+                    ],
                     if (!wide) ...[
                       const SizedBox(width: 6),
                       IconButton(
@@ -123,7 +130,13 @@ class _LibraryPageState extends State<LibraryPage> {
                           child: const Icon(Icons.filter_alt_outlined,
                               size: 20),
                         ),
-                        onPressed: () => _showFilters(context, facets, filter),
+                        onPressed: () => _showFilters(
+                          context,
+                          facets,
+                          filter,
+                          withLanguageAndSort: compact,
+                          languages: session.catalogue.languages,
+                        ),
                       ),
                     ],
                   ],
@@ -159,8 +172,10 @@ class _LibraryPageState extends State<LibraryPage> {
   void _showFilters(
     BuildContext context,
     LibraryFacets facets,
-    LibraryFilter filter,
-  ) {
+    LibraryFilter filter, {
+    bool withLanguageAndSort = false,
+    List<String> languages = const <String>[],
+  }) {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -169,6 +184,14 @@ class _LibraryPageState extends State<LibraryPage> {
         child: _FilterPanel(
           facets: facets,
           filter: filter,
+          // The two controls the header dropped on a narrow screen have to
+          // land somewhere, and this is the somewhere.
+          withLanguageAndSort: withLanguageAndSort,
+          languages: languages,
+          onLanguage: (code) {
+            sessionOf(context).language = code;
+            Navigator.of(sheetContext).pop();
+          },
           onChanged: (next) {
             setState(() => _filter = next);
             Navigator.of(sheetContext).pop();
@@ -216,11 +239,19 @@ class _FilterPanel extends StatelessWidget {
     required this.facets,
     required this.filter,
     required this.onChanged,
+    this.withLanguageAndSort = false,
+    this.languages = const <String>[],
+    this.onLanguage,
   });
 
   final LibraryFacets facets;
   final LibraryFilter filter;
   final ValueChanged<LibraryFilter> onChanged;
+
+  /// Set when the header had no room for these two, which is the phone.
+  final bool withLanguageAndSort;
+  final List<String> languages;
+  final ValueChanged<String>? onLanguage;
 
   @override
   Widget build(BuildContext context) {
@@ -239,6 +270,31 @@ class _FilterPanel extends StatelessWidget {
                     language: filter.language, sort: filter.sort)),
               ),
             ),
+          if (withLanguageAndSort) ...[
+            const SectionLabel('Idioma'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: Wrap(
+                spacing: 6,
+                children: [
+                  for (final code in languages)
+                    ChoiceChip(
+                      label: Text(code),
+                      selected: code == filter.language,
+                      onSelected: (_) => onLanguage?.call(code),
+                    ),
+                ],
+              ),
+            ),
+            const SectionLabel('Orden'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              child: _SortMenu(
+                sort: filter.sort,
+                onChanged: (sort) => onChanged(filter.copyWith(sort: sort)),
+              ),
+            ),
+          ],
           const SectionLabel('Árbol'),
           for (final area in const ['content', 'problems'])
             _Facet(

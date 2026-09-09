@@ -95,16 +95,16 @@ class DocumentPage extends StatelessWidget {
                   ],
                 );
               }
-              return ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  SizedBox(
-                    height: 420,
-                    child: composition,
-                  ),
-                  const Divider(height: 1),
-                  _OutputsPanel(document: document, profiles: profiles),
-                ],
+              // Narrow: two panels, one at a time. The previous version
+              // stacked them in a scroll view, which nested one list inside
+              // another -- unbounded height, so the whole screen rendered
+              // nothing on a phone. Tabs give each panel the full height and
+              // no nesting.
+              return _NarrowPanels(
+                composition: composition,
+                outputs: _OutputsPanel(document: document, profiles: profiles),
+                outputCount: profiles.length,
+                unitCount: document.unitRefs.length,
               );
             },
           ),
@@ -319,6 +319,102 @@ class _Position extends StatelessWidget {
             fontSize: 11,
             color: didactaMuted,
             fontFeatures: [FontFeature.tabularFigures()],
+          ),
+        ),
+      );
+}
+
+/// The composition and the outputs as two tabs, for a narrow screen.
+class _NarrowPanels extends StatefulWidget {
+  const _NarrowPanels({
+    required this.composition,
+    required this.outputs,
+    required this.outputCount,
+    required this.unitCount,
+  });
+
+  final Widget composition;
+  final Widget outputs;
+  final int outputCount;
+  final int unitCount;
+
+  @override
+  State<_NarrowPanels> createState() => _NarrowPanelsState();
+}
+
+class _NarrowPanelsState extends State<_NarrowPanels> {
+  bool _showOutputs = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            color: didactaPanel,
+            border: Border(bottom: BorderSide(color: didactaRule)),
+          ),
+          child: Row(
+            children: [
+              _PanelTab(
+                label: 'Composición (${widget.unitCount})',
+                selected: !_showOutputs,
+                onTap: () => setState(() => _showOutputs = false),
+              ),
+              _PanelTab(
+                label: 'Salidas (${widget.outputCount})',
+                selected: _showOutputs,
+                onTap: () => setState(() => _showOutputs = true),
+              ),
+            ],
+          ),
+        ),
+        // Both kept alive: switching back to the composition should not lose
+        // where you had scrolled to.
+        Expanded(
+          child: Stack(
+            children: [
+              Offstage(offstage: _showOutputs, child: widget.composition),
+              Offstage(offstage: !_showOutputs, child: widget.outputs),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PanelTab extends StatelessWidget {
+  const _PanelTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? didactaAccentDark : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              color: selected ? didactaInk : didactaMuted,
+            ),
           ),
         ),
       );

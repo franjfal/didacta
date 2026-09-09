@@ -869,10 +869,12 @@ class _LoadFailure extends StatelessWidget {
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'No se ha podido abrir el fichero',
-                    style:
-                        TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  const Expanded(
+                    child: Text(
+                      'No se ha podido abrir el fichero',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
               ),

@@ -97,10 +97,12 @@ class _GatewayCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-                const Spacer(),
+                Expanded(
+                  child: Text(title,
+                      style: const TextStyle(
+                          fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -216,7 +218,9 @@ class _SessionSectionState extends State<_SessionSection> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     _Pill(
                       authorisation.role == null
@@ -226,7 +230,6 @@ class _SessionSectionState extends State<_SessionSection> {
                           ? didactaEx
                           : didactaAccentDark,
                     ),
-                    const SizedBox(width: 6),
                     _Pill(
                       authorisation.emailVerified
                           ? 'correo verificado'
