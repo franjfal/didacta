@@ -1,8 +1,10 @@
 # Siguiente fase
 
 Esta carpeta contiene el sistema LaTeX, el modelo de contenido, el motor de
-compilación, la herramienta, el migrador, los índices derivados y la biblioteca
-de la aplicación. Las 14 salidas funcionan; 253 tests de Python y 33 de Dart.
+compilación, la herramienta, el migrador, los índices derivados y la aplicación
+completa: las siete rutas, el editor multilingüe, la edición de `unit.yaml` y el
+constructor de composiciones, con un clon local en escritorio y el Worker en
+web. Las 14 salidas funcionan; 255 tests de Python y 213 de Dart.
 
 Lo hecho está al principio con lo que se aprendió haciéndolo, y lo que queda
 después, en orden de dependencia.
@@ -82,7 +84,62 @@ Lo que resuelve y el repositorio no: **en qué documentos se usa cada unidad**.
 Es la respuesta a «¿puedo cambiar esto?», y contestarla exige recorrer todas las
 composiciones — algo que un navegador no puede hacer.
 
-## 1. Bibliografía
+## Hecho: la aplicación
+
+`app/`. Flutter, siete rutas con URL propia, y tres formas de llegar al
+repositorio detrás de una interfaz que no sabe cuál está en uso: un clon local
+en escritorio, un token directo a GitHub, o el Worker en web.
+
+Lo que se puede hacer desde ella:
+
+- **navegar** las 2147 unidades con filtros por árbol, categoría, tipo,
+  etiqueta y estado de traducción, búsqueda y cuatro órdenes, en una lista
+  virtualizada;
+- **editar y traducir** los `.tex`, con una pestaña por idioma; un idioma que
+  no existe arranca con el original debajo, para no traducir contra una página
+  en blanco;
+- **editar `unit.yaml`** con formulario o como texto, sin borrar los
+  comentarios ni los `TODO` del fichero;
+- **recomponer un documento** arrastrando, activando y desactivando entradas,
+  escribiendo el `structure:` del `year.yaml`;
+- **ver el diff** de cualquiera de las dos cosas antes de hacer el commit.
+
+Tres reglas que impone en los tres caminos: todo cambio es un commit con autor
+y mensaje; una escritura es compare-and-set contra el `sha` con el que se leyó;
+y un conflicto se cuenta y se ofrece recargar, nunca reintentar.
+
+Lo que se aprendió construyéndola, y que está en las decisiones D39–D47:
+
+- **editar un YAML reserializándolo borra el fichero.** Los `TODO` de la
+  migración son la lista de trabajo de dos mil unidades, y las 905 entradas
+  comentadas de los `year.yaml` son material que existe y que este año no se
+  da. Las dos cosas sobreviven porque se reescribe *la línea*, no el fichero;
+- **un commit local no necesita token.** Solo el envío. Exigirlo habría roto el
+  camino sin conexión, que es la razón de que el clon exista;
+- **el sandbox de macOS y un clon de git son incompatibles.** Una app en
+  sandbox no puede ejecutar `git` ni volver a abrir una carpeta elegida en otra
+  sesión.
+
+Lo que falta:
+
+- **compilar desde la interfaz.** En escritorio, con el clon en disco y LaTeX
+  instalado, ya es posible: falta lanzar `didacta build`, mostrar el log con
+  los errores localizados en el fichero y la línea correctos, y abrir el PDF.
+  En web no lo es, y la pantalla del documento no lo finge: dice qué se
+  compilaría y da el comando;
+- **crear una unidad desde cero.** Hoy se editan las que hay;
+- **regenerar el índice** desde la aplicación, en lugar de `didacta index`;
+- **indicador de qué PDF están desactualizados**, calculado por hashes sin
+  compilar.
+
+## 1. Compilar desde la interfaz
+
+En escritorio ya es posible y es lo que más cambia el día a día: el clon
+está en disco y `didacta build` existe, así que falta lanzarlo, mostrar el
+log con los errores en el fichero y la línea correctos, y abrir el PDF. Las
+19 unidades que hoy no compilan de 2025-2026 se arreglarían leyéndolo.
+
+## 2. Bibliografía
 
 13 unidades del material citan con `\cite` y 5 de ellas con `\cites` de
 biblatex. Didacta no tiene nada de eso: ni `\addbibresource`, ni estilo, ni un
@@ -93,47 +150,34 @@ Lo que hay que decidir: dónde vive la bibliografía (una por asignatura, una
 compartida, o las dos), y si se usa biblatex — que es lo que el material ya
 supone — o algo más simple.
 
-## 2. La API
+## 3. Desplegar la API y Firebase
 
-`api/`. Un Worker que:
-
-- verifica la identidad (Firebase Auth: alta, inicio de sesión, recuperar
-  contraseña, verificación de correo);
-- aplica una política de acceso **versionada en el repositorio**, no en la
-  consola del proveedor, para que cada cambio de permisos sea un diff
-  revisable;
-- guarda el token de GitHub, que un navegador no puede guardar;
-- cachea los catálogos en el borde.
+`api/` está **escrito y con tests**: un Worker que verifica la identidad
+(Firebase Auth: alta, inicio de sesión, recuperar contraseña, verificación de
+correo), aplica una política de acceso **versionada en el repositorio** —no en
+la consola del proveedor, para que cada cambio de permisos sea un diff
+revisable—, guarda el token de GitHub que un navegador no puede guardar, y
+cachea los catálogos en el borde.
 
 Roles y ámbito por carpeta, categoría, curso e idioma. La combinación que
 importa es *traductor sin permiso de escritura*: puede crear y editar el
 `va`/`en` de una unidad y no puede tocar el original.
 
-## 3. La aplicación
+Lo que queda no es código, son credenciales que solo tiene el autor:
 
-`app/`. Flutter Web, y **la biblioteca ya funciona**: carga el índice y muestra
-las 2147 unidades con filtros por árbol, categoría, tipo, etiqueta y estado de
-traducción, búsqueda por palabras y cuatro órdenes. La lista está virtualizada,
-así que 2147 filas cuestan lo que 20.
+```bash
+cd api
+wrangler login
+wrangler secret put GITHUB_TOKEN     # un token fine-grained sobre didacta_db
+wrangler deploy
+```
 
-El corte entre `lib/model/` (Dart puro, 33 tests, sin un solo widget) y
-`lib/ui/` es lo que hace que «escritorio después sin reescribir la lógica» sea
-cierto: la parte con reglas — parseo, filtros, cuentas — no toca la superficie
-de render. `lib/data/` es una interfaz por lo mismo: en web el índice se pide
-por HTTP, en escritorio se leerá del disco.
+Y en la consola de Firebase: activar correo/contraseña y Google, y añadir el
+dominio de GitHub Pages a los dominios autorizados. Después, editar
+`access.json` en `didacta_db` con quién puede qué.
 
-Lo que falta:
-
-- editor multilingüe con pestañas y vista dividida;
-- constructor de composiciones por arrastre, que escribe el `structure:` del
-  `year.yaml`;
-- compilación por perfil e idioma, con los errores de LaTeX localizados en el
-  fichero y la línea correctos;
-- indicador de qué PDF están desactualizados, calculado por hashes sin
-  compilar.
-
-Los tres últimos necesitan `api/`: escribir en el repositorio y compilar exigen
-identidad y un token que un navegador no puede guardar.
+Hasta entonces la web funciona en modo lectura, y en escritorio no hace falta:
+el clon local no pasa por el Worker.
 
 ## 4. CI
 
