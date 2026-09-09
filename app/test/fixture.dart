@@ -119,6 +119,46 @@ List<Map<String, dynamic>> defaultUnits() => [
       ),
     ];
 
+/// A `year.yaml` matching [courseJson], in the shape the migrator writes.
+///
+/// It has the two things that make composition editing interesting: a
+/// commented-out entry, and a heading whose title is per language with a TODO
+/// for the ones still missing.
+const String yearYaml = '''
+# Análisis Matemático III -- 2025-2026
+#
+# Selection, order and structure. No content: every entry below is a
+# reference into content/ or problems/.
+
+course: am-iii
+year: 2025-2026
+group: A
+language: es
+
+documents:
+  - id: tema-1
+    kind: theory
+    title:
+      es: Tema 1. Espacios normados
+    profiles: [handout, slides]
+    structure:
+      - section:
+          es: Normas
+          # TODO: va
+          # TODO: en
+      - unit: analysis/normed/definition
+      - unit: analysis/normed/banach
+      # - unit: analysis/normed/dedekind
+      - unit: analysis/normed/no-existe
+
+  - id: hoja-1
+    kind: problems
+    title:
+      es: Hoja 1
+    structure:
+      - problem: analysis/normed/exercises
+''';
+
 Map<String, dynamic> courseJson() => {
       'id': 'am-iii',
       'title': const {'es': 'Análisis Matemático III'},
@@ -190,6 +230,7 @@ class FakeGateway extends ContentGateway {
             {
               '$unitPath/es.tex': 'El contenido original en castellano.',
               '$unitPath/unit.yaml': unitYaml,
+              'courses/am-iii/2025-2026/year.yaml': yearYaml,
             };
 
   final bool writable;

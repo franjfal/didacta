@@ -19,10 +19,11 @@ import 'package:go_router/go_router.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'composition_editor.dart';
 import 'shell.dart';
 import 'theme.dart';
 
-class DocumentPage extends StatelessWidget {
+class DocumentPage extends StatefulWidget {
   const DocumentPage({
     super.key,
     required this.courseId,
@@ -33,6 +34,21 @@ class DocumentPage extends StatelessWidget {
   final String courseId;
   final String year;
   final String documentId;
+
+  @override
+  State<DocumentPage> createState() => _DocumentPageState();
+}
+
+class _DocumentPageState extends State<DocumentPage> {
+  /// Reading a composition needs neither write access nor a fetch -- the
+  /// catalogue already has it -- so the editor is opened deliberately rather
+  /// than being the default. It also loads `year.yaml`, which the read-only
+  /// view does not need at all.
+  bool _editing = false;
+
+  String get courseId => widget.courseId;
+  String get year => widget.year;
+  String get documentId => widget.documentId;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +75,19 @@ class DocumentPage extends StatelessWidget {
             (year, Routes.year(courseId, year)),
           ],
           actions: [
+            // A toggle rather than a separate route: it is the same document,
+            // and the URL of a document should not depend on whether someone
+            // happens to be rearranging it.
+            IconButton(
+              key: const Key('toggle-composition-editor'),
+              tooltip: _editing
+                  ? 'Dejar de editar la composición'
+                  : 'Editar la composición',
+              isSelected: _editing,
+              icon: const Icon(Icons.reorder, size: 18),
+              selectedIcon: const Icon(Icons.reorder, size: 18),
+              onPressed: () => setState(() => _editing = !_editing),
+            ),
             IconButton(
               tooltip: 'Copiar el comando para compilarlo',
               icon: const Icon(Icons.terminal_outlined, size: 18),
@@ -75,11 +104,19 @@ class DocumentPage extends StatelessWidget {
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final composition = _Composition(
-                document: document,
-                session: session,
-                language: language,
-              );
+              final Widget composition = _editing
+                  ? CompositionEditor(
+                      key: ValueKey('edit-$courseId-$year-$documentId'),
+                      courseId: courseId,
+                      year: year,
+                      documentId: documentId,
+                      session: session,
+                    )
+                  : _Composition(
+                      document: document,
+                      session: session,
+                      language: language,
+                    );
               if (constraints.maxWidth >= 1000) {
                 return Row(
                   children: [
