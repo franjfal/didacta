@@ -34,13 +34,16 @@ class YearPage extends StatelessWidget {
     if (course == null || entry == null) {
       return _NotHere(
         what: '$courseId · $year',
-        hint: 'No está en el catálogo. Puede que el año no exista todavía, o '
+        hint:
+            'No está en el catálogo. Puede que el año no exista todavía, o '
             'que el catálogo esté desactualizado (`didacta index`).',
       );
     }
 
-    final references = entry.documents
-        .fold<int>(0, (sum, document) => sum + document.unitRefs.length);
+    final references = entry.documents.fold<int>(
+      0,
+      (sum, document) => sum + document.unitRefs.length,
+    );
     final broken = _brokenCount(entry, session);
 
     return Column(
@@ -53,9 +56,7 @@ class YearPage extends StatelessWidget {
             if (entry.group != null) entry.group!,
             'idioma ${entry.language}',
           ].join(' · '),
-          breadcrumbs: [
-            ('Asignaturas', Routes.courses()),
-          ],
+          breadcrumbs: [('Asignaturas', Routes.courses())],
         ),
         if (broken > 0)
           Padding(
@@ -117,8 +118,7 @@ class _DocumentTile extends StatelessWidget {
     final broken = resolved.where((pair) => pair.$2 == null).length;
 
     return InkWell(
-      onTap: () =>
-          context.go(Routes.document(course.id, year, document.id)),
+      onTap: () => context.go(Routes.document(course.id, year, document.id)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
         child: Row(
@@ -140,7 +140,9 @@ class _DocumentTile extends StatelessWidget {
                   Text(
                     document.title(session.language),
                     style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   // A Wrap, not a Row: four pieces of metadata after a
@@ -162,23 +164,32 @@ class _DocumentTile extends StatelessWidget {
                       Text(
                         kindName(document.kind),
                         style: TextStyle(
-                            fontSize: 11, color: kindColour(document.kind)),
+                          fontSize: 11,
+                          color: kindColour(document.kind),
+                        ),
                       ),
                       Text(
                         '${document.unitRefs.length} unidades',
                         style: const TextStyle(
-                            fontSize: 11, color: didactaMuted),
+                          fontSize: 11,
+                          color: didactaMuted,
+                        ),
                       ),
                       if (broken > 0)
                         Row(
                           children: [
-                            const Icon(Icons.link_off,
-                                size: 12, color: didactaTeacher),
+                            const Icon(
+                              Icons.link_off,
+                              size: 12,
+                              color: didactaTeacher,
+                            ),
                             const SizedBox(width: 2),
                             Text(
                               '$broken',
                               style: const TextStyle(
-                                  fontSize: 11, color: didactaTeacher),
+                                fontSize: 11,
+                                color: didactaTeacher,
+                              ),
                             ),
                           ],
                         ),
@@ -192,7 +203,10 @@ class _DocumentTile extends StatelessWidget {
             // from the units it uses -- so a document can be seen to be
             // buildable in Valencian before opening it.
             _LanguageSummary(
-              units: [for (final pair in resolved) if (pair.$2 != null) pair.$2!],
+              units: [
+                for (final pair in resolved)
+                  if (pair.$2 != null) pair.$2!,
+              ],
               languages: session.catalogue.languages,
             ),
             const Icon(Icons.chevron_right, size: 18, color: didactaMuted),
@@ -221,24 +235,28 @@ class _LanguageSummary extends StatelessWidget {
         for (final code in languages)
           Builder(
             builder: (context) {
-              final present =
-                  units.where((unit) => unit.statusIn(code).exists).length;
+              final present = units
+                  .where((unit) => unit.statusIn(code).exists)
+                  .length;
               final complete = present == units.length;
               final colour = present == 0
                   ? didactaMuted
                   : complete
-                      ? didactaAccentDark
-                      : didactaEx;
+                  ? didactaAccentDark
+                  : didactaEx;
               return Tooltip(
                 message: '$code: $present de ${units.length} unidades',
                 child: Container(
                   margin: const EdgeInsets.only(right: 4),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: present == 0 ? null : colour.withValues(alpha: 0.10),
                     border: Border.all(
-                        color: present == 0 ? didactaRule : colour),
+                      color: present == 0 ? didactaRule : colour,
+                    ),
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: Text(
@@ -283,9 +301,13 @@ class _NotHere extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SelectableText(what,
-                        style: const TextStyle(
-                            fontSize: 12.5, fontFamily: 'monospace')),
+                    SelectableText(
+                      what,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Text(hint, style: const TextStyle(fontSize: 13)),
                     const SizedBox(height: 18),

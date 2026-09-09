@@ -1,0 +1,72 @@
+# Tests on every push. Nothing is published from here.
+#
+# Deliberately two separate jobs rather than one: the engine is Python with no
+# dependencies and the app is Flutter, and a failure should say which half
+# broke without reading a log.
+#
+# What this does *not* do yet is compile LaTeX. That is the check that matters
+# most for this project -- 19 of 2025-2026's documents do not compile, and
+# knowing that on every push is the point -- but it needs a TeX Live image and
+# the content repository, so it belongs in `didacta_db`'s own workflow.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  engine:
+    name: el motor (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # 3.9 on purpose: it is what macOS ships, and the engine is written
+          # to run with no installation step and no dependencies at all.
+          python-version: '3.9'
+
+      - name: los tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: la herramienta arranca
+        # Cheap, and catches the failure that no unit test would: a syntax
+        # error or a bad import in the entry point itself.
+        run: |
+          ./cli/didacta --help
+          ./cli/didacta profiles
+
+  app:
+    name: la aplicación (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: el analizador, sin excepciones
+        # `--fatal-infos`: an info-level lint that nobody fixes becomes noise
+        # that hides the next real one.
+        run: flutter analyze --fatal-infos
+
+      - name: el formato
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: los tests
+        run: flutter test
+
+      - name: compila para web
+        # The build is part of the test: a screen that compiles for the VM and
+        # not for web is a screen that does not exist.
+        run: flutter build web --release --dart-define=DIDACTA_INDEX=generated

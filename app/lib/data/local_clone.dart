@@ -32,7 +32,8 @@
 library;
 
 import 'local_clone_stub.dart'
-    if (dart.library.io) 'local_clone_io.dart' as platform;
+    if (dart.library.io) 'local_clone_io.dart'
+    as platform;
 
 /// Where the clone is, and how it stands against the remote.
 class CloneStatus {
@@ -101,15 +102,14 @@ abstract class LocalClone {
     required String branch,
     required String token,
     void Function(String line)? onProgress,
-  }) =>
-      platform.cloneInto(
-        directory: directory,
-        owner: owner,
-        repo: repo,
-        branch: branch,
-        token: token,
-        onProgress: onProgress,
-      );
+  }) => platform.cloneInto(
+    directory: directory,
+    owner: owner,
+    repo: repo,
+    branch: branch,
+    token: token,
+    onProgress: onProgress,
+  );
 
   String get directory;
 

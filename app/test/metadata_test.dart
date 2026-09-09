@@ -78,8 +78,9 @@ void main() {
     expect(find.widgetWithText(InputChip, 'banach'), findsOneWidget);
   });
 
-  testWidgets('the save button is dead until something changes',
-      (tester) async {
+  testWidgets('the save button is dead until something changes', (
+    tester,
+  ) async {
     await pumpMetadata(tester);
     expect(tester.widget<FilledButton>(save).onPressed, isNull);
   });
@@ -125,7 +126,10 @@ void main() {
     expect(written.text, contains('# TODO: check the title against the'));
     expect(written.text, contains('# Only languages that exist are listed'));
     // And nothing else moved.
-    expect(written.text, unitYaml.replaceFirst('kind: theory', 'kind: handout'));
+    expect(
+      written.text,
+      unitYaml.replaceFirst('kind: theory', 'kind: handout'),
+    );
   });
 
   testWidgets('a title in a language that had none is added', (tester) async {
@@ -148,8 +152,9 @@ void main() {
     expect(written, contains('# TODO: check the title against the handout'));
   });
 
-  testWidgets('a duration is written as a number, not a string',
-      (tester) async {
+  testWidgets('a duration is written as a number, not a string', (
+    tester,
+  ) async {
     final gateway = await pumpMetadata(tester);
 
     await tester.enterText(find.widgetWithText(TextField, 'minutos'), '50');
@@ -168,7 +173,10 @@ void main() {
 
     await tester.tap(find.textContaining('Añadir: Qué sabe hacer'));
     await settle(tester);
-    await tester.enterText(find.byKey(const ValueKey('item-0-')), 'Reconocer una norma');
+    await tester.enterText(
+      find.byKey(const ValueKey('item-0-')),
+      'Reconocer una norma',
+    );
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
@@ -187,10 +195,12 @@ void main() {
     // The delete affordance of an InputChip, whichever icon the theme gives
     // it: the chip renders one and only one, next to its label.
     await tester.tap(
-      find.descendant(
-        of: find.widgetWithText(InputChip, 'norma'),
-        matching: find.byType(Icon),
-      ).last,
+      find
+          .descendant(
+            of: find.widgetWithText(InputChip, 'norma'),
+            matching: find.byType(Icon),
+          )
+          .last,
     );
     await settle(tester);
     await tester.tap(save);
@@ -249,8 +259,7 @@ void main() {
     expect(chip.selected, isTrue);
   });
 
-  testWidgets('a missing unit.yaml says so and offers a retry',
-      (tester) async {
+  testWidgets('a missing unit.yaml says so and offers a retry', (tester) async {
     await pumpMetadata(tester, gateway: FakeGateway(files: {}));
 
     expect(find.text('No se ha podido abrir unit.yaml'), findsOneWidget);

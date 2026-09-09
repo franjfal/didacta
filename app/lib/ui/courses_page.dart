@@ -24,20 +24,23 @@ class CoursesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = watchSession(context);
     final courses = [...session.catalogue.courses]
-      ..sort((a, b) => a.title().toLowerCase().compareTo(b.title().toLowerCase()));
+      ..sort(
+        (a, b) => a.title().toLowerCase().compareTo(b.title().toLowerCase()),
+      );
 
     final years = courses.fold<int>(0, (sum, c) => sum + c.years.length);
     final documents = courses.fold<int>(
       0,
-      (sum, c) => sum +
-          c.years.values.fold<int>(0, (n, y) => n + y.documents.length),
+      (sum, c) =>
+          sum + c.years.values.fold<int>(0, (n, y) => n + y.documents.length),
     );
 
     return Column(
       children: [
         PageHeader(
           title: 'Asignaturas',
-          subtitle: '${courses.length} asignaturas · $years cursos '
+          subtitle:
+              '${courses.length} asignaturas · $years cursos '
               'académicos · $documents documentos',
         ),
         Expanded(
@@ -77,7 +80,9 @@ class _CourseTile extends StatelessWidget {
                     Text(
                       course.title(),
                       style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -87,7 +92,9 @@ class _CourseTile extends StatelessWidget {
                         if (course.teacher != null) course.teacher!,
                       ].join(' · '),
                       style: const TextStyle(
-                          fontSize: 11.5, color: didactaMuted),
+                        fontSize: 11.5,
+                        color: didactaMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -131,8 +138,10 @@ class _YearChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final references = entry.documents
-        .fold<int>(0, (sum, document) => sum + document.unitRefs.length);
+    final references = entry.documents.fold<int>(
+      0,
+      (sum, document) => sum + document.unitRefs.length,
+    );
 
     return InkWell(
       onTap: () => context.go(Routes.year(course.id, year)),
@@ -141,9 +150,7 @@ class _YearChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: current ? didactaAccent.withValues(alpha: 0.10) : Colors.white,
-          border: Border.all(
-            color: current ? didactaAccentDark : didactaRule,
-          ),
+          border: Border.all(color: current ? didactaAccentDark : didactaRule),
           borderRadius: BorderRadius.circular(4),
         ),
         child: Column(
@@ -161,9 +168,10 @@ class _YearChip extends StatelessWidget {
                 ),
                 if (entry.group != null) ...[
                   const SizedBox(width: 6),
-                  Text(entry.group!,
-                      style: const TextStyle(
-                          fontSize: 11, color: didactaMuted)),
+                  Text(
+                    entry.group!,
+                    style: const TextStyle(fontSize: 11, color: didactaMuted),
+                  ),
                 ],
               ],
             ),

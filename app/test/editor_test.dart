@@ -28,10 +28,7 @@ Future<void> pumpEditor(
   List<Map<String, dynamic>>? units,
 }) async {
   final catalogue = catalogueWith(units ?? [unitJson()]);
-  final session = FakeSession(
-    gatewayOverride: gateway,
-    catalogue: catalogue,
-  );
+  final session = FakeSession(gatewayOverride: gateway, catalogue: catalogue);
   // The catalogue is handed over rather than fetched, so `start()` is not
   // needed and Firebase is never touched.
   await session.primeForTest(catalogue);
@@ -74,14 +71,12 @@ void main() {
     await pumpEditor(tester, gateway: gateway);
 
     expect(find.text('Espacios normados'), findsOneWidget);
-    expect(
-      find.text('El contenido original en castellano.'),
-      findsOneWidget,
-    );
+    expect(find.text('El contenido original en castellano.'), findsOneWidget);
   });
 
-  testWidgets('the save button is dead until something changes',
-      (tester) async {
+  testWidgets('the save button is dead until something changes', (
+    tester,
+  ) async {
     await pumpEditor(tester, gateway: FakeGateway());
 
     final button = tester.widget<FilledButton>(barSave);
@@ -89,8 +84,9 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
-  testWidgets('editing then saving asks for a message and commits',
-      (tester) async {
+  testWidgets('editing then saving asks for a message and commits', (
+    tester,
+  ) async {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 
@@ -107,10 +103,7 @@ void main() {
     // The message is asked for, and pre-filled with something meaningful --
     // a log full of "edit file" is a log nobody reads.
     expect(find.text('Guardar como commit'), findsOneWidget);
-    expect(
-      find.textContaining('Editar la versión es'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Editar la versión es'), findsOneWidget);
 
     await tester.tap(dialogSave);
     await settle(tester);
@@ -159,8 +152,9 @@ void main() {
     expect(find.text('Mi versión'), findsOneWidget);
   });
 
-  testWidgets('a language that does not exist opens from the original',
-      (tester) async {
+  testWidgets('a language that does not exist opens from the original', (
+    tester,
+  ) async {
     // A translator should have the source text in front of them, not a blank
     // page.
     final gateway = FakeGateway();
@@ -176,8 +170,9 @@ void main() {
     );
   });
 
-  testWidgets('saving a new language suggests adding, not editing',
-      (tester) async {
+  testWidgets('saving a new language suggests adding, not editing', (
+    tester,
+  ) async {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 

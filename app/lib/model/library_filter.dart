@@ -177,10 +177,12 @@ class LibraryFilter {
       case LibrarySort.path:
         result.sort((a, b) => a.path.compareTo(b.path));
       case LibrarySort.title:
-        result.sort((a, b) => a
-            .title(language)
-            .toLowerCase()
-            .compareTo(b.title(language).toLowerCase()));
+        result.sort(
+          (a, b) => a
+              .title(language)
+              .toLowerCase()
+              .compareTo(b.title(language).toLowerCase()),
+        );
       case LibrarySort.usage:
         result.sort((a, b) {
           final byUsage = b.usedBy.length.compareTo(a.usedBy.length);

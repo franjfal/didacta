@@ -25,13 +25,30 @@ class DidactaShell extends StatelessWidget {
   final Widget child;
 
   static const List<_Destination> _destinations = [
-    _Destination('/', Icons.library_books_outlined, Icons.library_books,
-        'Biblioteca'),
-    _Destination('/courses', Icons.school_outlined, Icons.school, 'Asignaturas'),
-    _Destination('/translations', Icons.translate_outlined, Icons.translate,
-        'Traducción'),
-    _Destination('/settings', Icons.settings_outlined, Icons.settings,
-        'Ajustes'),
+    _Destination(
+      '/',
+      Icons.library_books_outlined,
+      Icons.library_books,
+      'Biblioteca',
+    ),
+    _Destination(
+      '/courses',
+      Icons.school_outlined,
+      Icons.school,
+      'Asignaturas',
+    ),
+    _Destination(
+      '/translations',
+      Icons.translate_outlined,
+      Icons.translate,
+      'Traducción',
+    ),
+    _Destination(
+      '/settings',
+      Icons.settings_outlined,
+      Icons.settings,
+      'Ajustes',
+    ),
   ];
 
   /// Which destination the current URL belongs to.
@@ -146,25 +163,25 @@ class _Mark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-        message: 'Didacta',
-        child: Container(
-          width: 30,
-          height: 30,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: didactaAccentDark,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Text(
-            'D',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+    message: 'Didacta',
+    child: Container(
+      width: 30,
+      height: 30,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: didactaAccentDark,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: const Text(
+        'D',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// One line saying where a change would go, and as whom.
@@ -181,9 +198,10 @@ class _GatewayStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icon, colour) = switch (gateway.kind) {
       GatewayKind.direct => (Icons.vpn_key_outlined, didactaAccentDark),
-      GatewayKind.api => gateway.canWrite
-          ? (Icons.cloud_done_outlined, didactaThm)
-          : (Icons.cloud_outlined, didactaMuted),
+      GatewayKind.api =>
+        gateway.canWrite
+            ? (Icons.cloud_done_outlined, didactaThm)
+            : (Icons.cloud_outlined, didactaMuted),
       GatewayKind.clone => (Icons.folder_open_outlined, didactaAccentDark),
       GatewayKind.none => (Icons.lock_outline, didactaMuted),
     };
@@ -208,8 +226,10 @@ class _GatewayStrip extends StatelessWidget {
               ),
               if (!gateway.canWrite)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 5,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: didactaRule),
                     borderRadius: BorderRadius.circular(3),
@@ -281,9 +301,10 @@ class PageHeader extends StatelessWidget {
                     if (index < breadcrumbs.length - 1)
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 5),
-                        child: Text('/',
-                            style:
-                                TextStyle(fontSize: 12, color: didactaMuted)),
+                        child: Text(
+                          '/',
+                          style: TextStyle(fontSize: 12, color: didactaMuted),
+                        ),
                       ),
                   ],
                 ],

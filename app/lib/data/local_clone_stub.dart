@@ -11,11 +11,10 @@ bool get supported => false;
 
 Future<bool> gitAvailable() async => false;
 
-LocalClone makeClone({required String directory}) =>
-    throw const CloneException(
-      'Un navegador no puede tener un clon del repositorio: no hay sistema '
-      'de ficheros ni forma de ejecutar git. En web el acceso va por la API.',
-    );
+LocalClone makeClone({required String directory}) => throw const CloneException(
+  'Un navegador no puede tener un clon del repositorio: no hay sistema '
+  'de ficheros ni forma de ejecutar git. En web el acceso va por la API.',
+);
 
 Future<LocalClone> cloneInto({
   required String directory,
@@ -24,5 +23,4 @@ Future<LocalClone> cloneInto({
   required String branch,
   required String token,
   void Function(String line)? onProgress,
-}) async =>
-    makeClone(directory: directory);
+}) async => makeClone(directory: directory);

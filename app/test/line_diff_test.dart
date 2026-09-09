@@ -6,11 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:didacta_app/model/line_diff.dart';
 
 String rendered(List<DiffLine> lines) => lines
-    .map((line) => switch (line.kind) {
-          ChangeKind.kept => '  ${line.text}',
-          ChangeKind.added => '+ ${line.text}',
-          ChangeKind.removed => '- ${line.text}',
-        })
+    .map(
+      (line) => switch (line.kind) {
+        ChangeKind.kept => '  ${line.text}',
+        ChangeKind.added => '+ ${line.text}',
+        ChangeKind.removed => '- ${line.text}',
+      },
+    )
     .join('\n');
 
 void main() {

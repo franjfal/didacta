@@ -39,12 +39,15 @@ class Fixture {
     await _git(['init', '--bare', '--initial-branch=main', remote], root.path);
 
     // Seed the remote with something that looks like the content repository.
-    await Directory('$work/content/analysis/normed/definition')
-        .create(recursive: true);
-    File('$work/content/analysis/normed/definition/es.tex')
-        .writeAsStringSync('El contenido original.\n');
-    File('$work/content/analysis/normed/definition/unit.yaml')
-        .writeAsStringSync('id: analysis.normed.definition\nkind: theory\n');
+    await Directory(
+      '$work/content/analysis/normed/definition',
+    ).create(recursive: true);
+    File(
+      '$work/content/analysis/normed/definition/es.tex',
+    ).writeAsStringSync('El contenido original.\n');
+    File(
+      '$work/content/analysis/normed/definition/unit.yaml',
+    ).writeAsStringSync('id: analysis.normed.definition\nkind: theory\n');
     await _git(['init', '--initial-branch=main', work], root.path);
     await _git(['add', '.'], work);
     await _git(_asSomeone(['commit', '-m', 'Contenido inicial']), work);
@@ -93,10 +96,12 @@ Future<void> _git(List<String> arguments, String directory) async {
 }
 
 List<String> _asSomeone(List<String> arguments) => [
-      '-c', 'user.name=Semilla',
-      '-c', 'user.email=semilla@example.com',
-      ...arguments,
-    ];
+  '-c',
+  'user.name=Semilla',
+  '-c',
+  'user.email=semilla@example.com',
+  ...arguments,
+];
 
 const String unitFile = 'content/analysis/normed/definition/es.tex';
 
@@ -116,8 +121,9 @@ void main() {
     final seed = '${root.path}/seed';
 
     await _git(['init', '--bare', '--initial-branch=main', remote], root.path);
-    await Directory('$seed/content/analysis/normed/definition')
-        .create(recursive: true);
+    await Directory(
+      '$seed/content/analysis/normed/definition',
+    ).create(recursive: true);
     File('$seed/$unitFile').writeAsStringSync('El contenido original.\n');
     await _git(['init', '--initial-branch=main', seed], root.path);
     await _git(['add', '.'], seed);
@@ -138,11 +144,10 @@ void main() {
       expect(found.text, 'El contenido original.\n');
       // The same hash git itself computes, which is what makes it usable as
       // a compare-and-set token.
-      final result = await Process.run(
-        'git',
-        ['hash-object', unitFile],
-        workingDirectory: clone.directory,
-      );
+      final result = await Process.run('git', [
+        'hash-object',
+        unitFile,
+      ], workingDirectory: clone.directory);
       expect(found.sha, (result.stdout as String).trim());
     });
 
@@ -186,11 +191,11 @@ void main() {
       expect(sha, isNot(before.sha));
 
       // The commit is real, and says who made it and why.
-      final log = await Process.run(
-        'git',
-        ['log', '-1', '--pretty=%an|%ae|%s'],
-        workingDirectory: clone.directory,
-      );
+      final log = await Process.run('git', [
+        'log',
+        '-1',
+        '--pretty=%an|%ae|%s',
+      ], workingDirectory: clone.directory);
       expect(
         (log.stdout as String).trim(),
         'Javier Falcó|javier@uv.es|Editar la versión es de «Espacios normados»',
@@ -198,13 +203,16 @@ void main() {
 
       // And it reached the remote, which is what makes it traceable by
       // anyone other than the person who made it.
-      final remoteLog = await Process.run(
-        'git',
-        ['log', '-1', '--pretty=%s', 'main'],
-        workingDirectory: remote,
+      final remoteLog = await Process.run('git', [
+        'log',
+        '-1',
+        '--pretty=%s',
+        'main',
+      ], workingDirectory: remote);
+      expect(
+        (remoteLog.stdout as String).trim(),
+        'Editar la versión es de «Espacios normados»',
       );
-      expect((remoteLog.stdout as String).trim(),
-          'Editar la versión es de «Espacios normados»');
     });
 
     test('a new file needs an empty sha, and gets committed', () async {
@@ -224,33 +232,36 @@ void main() {
       expect(status.isClean, isTrue);
     });
 
-    test('a file that changed underneath is a conflict, and nothing is written',
-        () async {
-      final before = await clone.readFile(unitFile);
+    test(
+      'a file that changed underneath is a conflict, and nothing is written',
+      () async {
+        final before = await clone.readFile(unitFile);
 
-      // Somebody else -- a pull, another editor, a text editor -- moves it on.
-      File('${clone.directory}/$unitFile')
-          .writeAsStringSync('Lo que escribió otra persona.\n');
+        // Somebody else -- a pull, another editor, a text editor -- moves it on.
+        File(
+          '${clone.directory}/$unitFile',
+        ).writeAsStringSync('Lo que escribió otra persona.\n');
 
-      await expectLater(
-        clone.commitFile(
-          path: unitFile,
-          text: 'Lo mío.\n',
-          expectedSha: before.sha,
-          message: 'Editar',
-          authorName: 'Javier Falcó',
-          authorEmail: 'javier@uv.es',
-          token: '',
-        ),
-        throwsA(isA<CloneException>()),
-      );
+        await expectLater(
+          clone.commitFile(
+            path: unitFile,
+            text: 'Lo mío.\n',
+            expectedSha: before.sha,
+            message: 'Editar',
+            authorName: 'Javier Falcó',
+            authorEmail: 'javier@uv.es',
+            token: '',
+          ),
+          throwsA(isA<CloneException>()),
+        );
 
-      // The other person's work is still there: the point of failing.
-      expect(
-        File('${clone.directory}/$unitFile').readAsStringSync(),
-        'Lo que escribió otra persona.\n',
-      );
-    });
+        // The other person's work is still there: the point of failing.
+        expect(
+          File('${clone.directory}/$unitFile').readAsStringSync(),
+          'Lo que escribió otra persona.\n',
+        );
+      },
+    );
 
     test('claiming a file is new when it exists is a conflict', () async {
       await expectLater(
@@ -269,8 +280,10 @@ void main() {
 
     test('saving identical text makes no commit', () async {
       final before = await clone.readFile(unitFile);
-      final head = await Process.run('git', ['rev-parse', 'HEAD'],
-          workingDirectory: clone.directory);
+      final head = await Process.run('git', [
+        'rev-parse',
+        'HEAD',
+      ], workingDirectory: clone.directory);
 
       await clone.commitFile(
         path: unitFile,
@@ -282,8 +295,10 @@ void main() {
         token: '',
       );
 
-      final after = await Process.run('git', ['rev-parse', 'HEAD'],
-          workingDirectory: clone.directory);
+      final after = await Process.run('git', [
+        'rev-parse',
+        'HEAD',
+      ], workingDirectory: clone.directory);
       // A log full of no-op commits is worse than no commit.
       expect(after.stdout, head.stdout);
     });
@@ -308,8 +323,11 @@ void main() {
       );
 
       // Committed, so nothing is lost, and the status says it is ahead.
-      final log = await Process.run('git', ['log', '-1', '--pretty=%s'],
-          workingDirectory: clone.directory);
+      final log = await Process.run('git', [
+        'log',
+        '-1',
+        '--pretty=%s',
+      ], workingDirectory: clone.directory);
       expect((log.stdout as String).trim(), 'Editar sin conexión');
     });
   });
@@ -318,16 +336,18 @@ void main() {
     test('comes from git when nobody is signed in', () async {
       // The desktop case: a clone on your own disk must not need a web
       // sign-in to commit, and anyone with a clone already has an identity.
-      await Process.run(
-        'git',
-        ['config', '--local', 'user.name', 'Javier Falcó'],
-        workingDirectory: clone.directory,
-      );
-      await Process.run(
-        'git',
-        ['config', '--local', 'user.email', 'javier@uv.es'],
-        workingDirectory: clone.directory,
-      );
+      await Process.run('git', [
+        'config',
+        '--local',
+        'user.name',
+        'Javier Falcó',
+      ], workingDirectory: clone.directory);
+      await Process.run('git', [
+        'config',
+        '--local',
+        'user.email',
+        'javier@uv.es',
+      ], workingDirectory: clone.directory);
       final author = await clone.configuredAuthor();
       expect(author?.name, 'Javier Falcó');
       expect(author?.email, 'javier@uv.es');
@@ -335,11 +355,12 @@ void main() {
 
     test('is set locally, not globally', () async {
       await clone.setAuthor(name: 'Otra', email: 'otra@uv.es');
-      final local = await Process.run(
-        'git',
-        ['config', '--local', '--get', 'user.email'],
-        workingDirectory: clone.directory,
-      );
+      final local = await Process.run('git', [
+        'config',
+        '--local',
+        '--get',
+        'user.email',
+      ], workingDirectory: clone.directory);
       expect((local.stdout as String).trim(), 'otra@uv.es');
       // Written to this clone's config file and nowhere else, which is what
       // "not globally" means concretely.
@@ -387,8 +408,11 @@ void main() {
         sha: file.sha,
         message: 'Editar sin token',
       );
-      final log = await Process.run('git', ['log', '-1', '--pretty=%s'],
-          workingDirectory: clone.directory);
+      final log = await Process.run('git', [
+        'log',
+        '-1',
+        '--pretty=%s',
+      ], workingDirectory: clone.directory);
       expect((log.stdout as String).trim(), 'Editar sin token');
     });
 
@@ -397,39 +421,53 @@ void main() {
       expect(gateway.canWrite, isFalse);
       await expectLater(
         gateway.commit(path: unitFile, text: 'x', sha: 'y', message: 'm'),
-        throwsA(isA<ContentException>().having(
-          (e) => e.kind,
-          'kind',
-          ContentFailure.unauthenticated,
-        )),
-      );
-    });
-
-    test('a conflict arrives as a conflict, not as a generic failure',
-        () async {
-      // The correct response is "reload"; a generic failure invites a retry,
-      // which overwrites whoever got there first.
-      final gateway = gatewayFor(push: false);
-      final file = await gateway.read(unitFile);
-      File('${clone.directory}/$unitFile').writeAsStringSync('otra cosa\n');
-
-      await expectLater(
-        gateway.commit(
-          path: unitFile,
-          text: 'lo mío',
-          sha: file.sha,
-          message: 'm',
+        throwsA(
+          isA<ContentException>().having(
+            (e) => e.kind,
+            'kind',
+            ContentFailure.unauthenticated,
+          ),
         ),
-        throwsA(isA<ContentException>()
-            .having((e) => e.kind, 'kind', ContentFailure.conflict)),
       );
     });
+
+    test(
+      'a conflict arrives as a conflict, not as a generic failure',
+      () async {
+        // The correct response is "reload"; a generic failure invites a retry,
+        // which overwrites whoever got there first.
+        final gateway = gatewayFor(push: false);
+        final file = await gateway.read(unitFile);
+        File('${clone.directory}/$unitFile').writeAsStringSync('otra cosa\n');
+
+        await expectLater(
+          gateway.commit(
+            path: unitFile,
+            text: 'lo mío',
+            sha: file.sha,
+            message: 'm',
+          ),
+          throwsA(
+            isA<ContentException>().having(
+              (e) => e.kind,
+              'kind',
+              ContentFailure.conflict,
+            ),
+          ),
+        );
+      },
+    );
 
     test('a missing file arrives as missing', () async {
       await expectLater(
         gatewayFor().read('content/no/such.tex'),
-        throwsA(isA<ContentException>()
-            .having((e) => e.kind, 'kind', ContentFailure.missing)),
+        throwsA(
+          isA<ContentException>().having(
+            (e) => e.kind,
+            'kind',
+            ContentFailure.missing,
+          ),
+        ),
       );
     });
 

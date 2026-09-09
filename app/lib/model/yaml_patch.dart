@@ -145,7 +145,9 @@ class YamlPatch {
   void setInFlowMap(List<String> path, String field, String? value) {
     final found = _find(path);
     if (found == null) {
-      final written = value == null ? '{}' : '{$field: ${_quoteIfNeeded(value)}}';
+      final written = value == null
+          ? '{}'
+          : '{$field: ${_quoteIfNeeded(value)}}';
       _insert(path, written);
       return;
     }
@@ -374,8 +376,9 @@ class YamlPatch {
     return '';
   }
 
-  static final RegExp _keyLine =
-      RegExp(r'^(\s*)([A-Za-z_][A-Za-z0-9_.-]*):(.*)$');
+  static final RegExp _keyLine = RegExp(
+    r'^(\s*)([A-Za-z_][A-Za-z0-9_.-]*):(.*)$',
+  );
 
   static bool _isSpace(String char) => char == ' ' || char == '\t';
 
@@ -450,7 +453,10 @@ class YamlPatch {
       }
     }
     parts.add(inner.substring(start));
-    return [for (final part in parts) if (part.trim().isNotEmpty) part];
+    return [
+      for (final part in parts)
+        if (part.trim().isNotEmpty) part,
+    ];
   }
 
   static String _unquote(String value) {
@@ -477,7 +483,8 @@ class YamlPatch {
 String _quoteIfNeeded(String value) {
   if (value.isEmpty) return "''";
 
-  final needsQuoting = value != value.trim() ||
+  final needsQuoting =
+      value != value.trim() ||
       value.contains(': ') ||
       value.endsWith(':') ||
       value.contains(' #') ||
@@ -490,8 +497,25 @@ String _quoteIfNeeded(String value) {
 
 /// Characters YAML gives a meaning to at the start of a scalar.
 const Set<String> _leadingIndicators = {
-  '-', '?', ':', ',', '[', ']', '{', '}', '#', '&', '*', '!', '|', '>',
-  '%', '@', '`', '"', "'",
+  '-',
+  '?',
+  ':',
+  ',',
+  '[',
+  ']',
+  '{',
+  '}',
+  '#',
+  '&',
+  '*',
+  '!',
+  '|',
+  '>',
+  '%',
+  '@',
+  '`',
+  '"',
+  "'",
 };
 
 /// Values a parser would hand back as a number, a boolean or a null.

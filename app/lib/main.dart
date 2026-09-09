@@ -37,19 +37,27 @@ import 'state/session.dart';
 import 'ui/theme.dart';
 
 /// Where the generated catalogue is served from.
-const String indexBase =
-    String.fromEnvironment('DIDACTA_INDEX', defaultValue: 'generated');
+const String indexBase = String.fromEnvironment(
+  'DIDACTA_INDEX',
+  defaultValue: 'generated',
+);
 
 /// The Worker's origin. Empty is legitimate: a desktop build with a token
 /// needs no API at all.
 const String apiBase = String.fromEnvironment('DIDACTA_API');
 
-const String contentOwner =
-    String.fromEnvironment('DIDACTA_OWNER', defaultValue: 'franjfal');
-const String contentRepo =
-    String.fromEnvironment('DIDACTA_REPO', defaultValue: 'didacta_db');
-const String contentBranch =
-    String.fromEnvironment('DIDACTA_BRANCH', defaultValue: 'main');
+const String contentOwner = String.fromEnvironment(
+  'DIDACTA_OWNER',
+  defaultValue: 'franjfal',
+);
+const String contentRepo = String.fromEnvironment(
+  'DIDACTA_REPO',
+  defaultValue: 'didacta_db',
+);
+const String contentBranch = String.fromEnvironment(
+  'DIDACTA_BRANCH',
+  defaultValue: 'main',
+);
 
 /// A clone already on disk, for a desktop build handed to someone who has
 /// the repository. Ignored on the web, and overridden by whatever is chosen
@@ -145,14 +153,14 @@ class _BootstrapState extends State<_Bootstrap> {
     return switch (session.state) {
       LoadState.loading => const _Splash(),
       LoadState.failed => MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: didactaTheme(),
-          home: _LoadFailure(
-            error: session.error!,
-            where: session.catalogueOrigin,
-            onRetry: session.start,
-          ),
+        debugShowCheckedModeBanner: false,
+        theme: didactaTheme(),
+        home: _LoadFailure(
+          error: session.error!,
+          where: session.catalogueOrigin,
+          onRetry: session.start,
         ),
+      ),
       LoadState.ready => _buildApp(session),
     };
   }
@@ -186,12 +194,10 @@ class _Splash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: didactaTheme(),
-        home: const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-      );
+    debugShowCheckedModeBanner: false,
+    theme: didactaTheme(),
+    home: const Scaffold(body: Center(child: CircularProgressIndicator())),
+  );
 }
 
 class _FirebaseBanner extends StatelessWidget {
@@ -199,24 +205,24 @@ class _FirebaseBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: didactaEx.withValues(alpha: 0.12),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, size: 15, color: didactaEx),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Firebase no ha arrancado: se puede leer el catálogo, pero '
-                  'no iniciar sesión.',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
+    color: didactaEx.withValues(alpha: 0.12),
+    child: const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 15, color: didactaEx),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Firebase no ha arrancado: se puede leer el catálogo, pero '
+              'no iniciar sesión.',
+              style: TextStyle(fontSize: 12),
+            ),
           ),
-        ),
-      );
+        ],
+      ),
+    ),
+  );
 }
 
 /// What the engine complained about while reading the repository.
@@ -236,15 +242,18 @@ class _ErrorBanner extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded,
-                size: 15, color: didactaTeacher),
+            const Icon(
+              Icons.warning_amber_rounded,
+              size: 15,
+              color: didactaTeacher,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 errors.length == 1
                     ? errors.first
                     : '${errors.length} problemas al leer el repositorio: '
-                        '${errors.first}',
+                          '${errors.first}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12),
@@ -264,8 +273,10 @@ class _ErrorBanner extends StatelessWidget {
                         for (final message in errors)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8),
-                            child: SelectableText(message,
-                                style: const TextStyle(fontSize: 12.5)),
+                            child: SelectableText(
+                              message,
+                              style: const TextStyle(fontSize: 12.5),
+                            ),
                           ),
                       ],
                     ),
@@ -313,22 +324,31 @@ class _LoadFailure extends StatelessWidget {
                   children: [
                     Icon(Icons.error_outline, color: didactaTeacher),
                     SizedBox(width: 8),
-                    Text('No se pudo cargar el catálogo',
-                        style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text(
+                      'No se pudo cargar el catálogo',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 // Where it read from: "could not load" without a location is
                 // not something anyone can act on.
-                SelectableText('Origen: $where',
-                    style: const TextStyle(
-                        fontSize: 12.5,
-                        fontFamily: 'monospace',
-                        color: didactaMuted)),
+                SelectableText(
+                  'Origen: $where',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontFamily: 'monospace',
+                    color: didactaMuted,
+                  ),
+                ),
                 const SizedBox(height: 12),
-                SelectableText(error.toString(),
-                    style: const TextStyle(fontSize: 13)),
+                SelectableText(
+                  error.toString(),
+                  style: const TextStyle(fontSize: 13),
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   'El catálogo lo genera el motor. Desde el repositorio de '
@@ -343,9 +363,10 @@ class _LoadFailure extends StatelessWidget {
                   child: const SelectableText(
                     'didacta index',
                     style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        color: Colors.white),
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),

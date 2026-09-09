@@ -214,10 +214,7 @@ class Session extends ChangeNotifier {
     if (path != null && LocalClone.supported) {
       try {
         final clone = LocalClone(directory: path);
-        if (!await clone.looksRight(
-          owner: contentOwner,
-          repo: contentRepo,
-        )) {
+        if (!await clone.looksRight(owner: contentOwner, repo: contentRepo)) {
           throw CloneException(
             '$path no es un clon de $contentOwner/$contentRepo. '
             'Elige otra carpeta o vuelve a clonar.',

@@ -79,28 +79,28 @@ class _GatewayCard extends StatelessWidget {
     final gateway = session.gateway;
     final (title, explanation) = switch (gateway.kind) {
       GatewayKind.direct => (
-          'Directo a GitHub',
-          'Con un token guardado en el llavero de este equipo. Los commits '
-              'van al repositorio sin pasar por la API.',
-        ),
+        'Directo a GitHub',
+        'Con un token guardado en el llavero de este equipo. Los commits '
+            'van al repositorio sin pasar por la API.',
+      ),
       GatewayKind.api => (
-          'A través de la API',
-          'La identidad la da Firebase y los permisos los decide access.json, '
-              'que vive en el repositorio de contenido. El token de GitHub lo '
-              'tiene el Worker: esta aplicación nunca lo ve.',
-        ),
+        'A través de la API',
+        'La identidad la da Firebase y los permisos los decide access.json, '
+            'que vive en el repositorio de contenido. El token de GitHub lo '
+            'tiene el Worker: esta aplicación nunca lo ve.',
+      ),
       GatewayKind.clone => (
-          'Un clon en este equipo',
-          'El repositorio está en disco, así que leer y editar funciona sin '
-              'conexión. Cada guardado es un commit, y se envía a GitHub con '
-              'el token; si no hay conexión el commit queda y se envía '
-              'después.',
-        ),
+        'Un clon en este equipo',
+        'El repositorio está en disco, así que leer y editar funciona sin '
+            'conexión. Cada guardado es un commit, y se envía a GitHub con '
+            'el token; si no hay conexión el commit queda y se envía '
+            'después.',
+      ),
       GatewayKind.none => (
-          'Sin acceso de escritura',
-          'Solo se puede leer el catálogo. Añade un token más abajo, o '
-              'compila la aplicación con --dart-define=DIDACTA_API.',
-        ),
+        'Sin acceso de escritura',
+        'Solo se puede leer el catálogo. Añade un token más abajo, o '
+            'compila la aplicación con --dart-define=DIDACTA_API.',
+      ),
     };
 
     return Card(
@@ -112,22 +112,27 @@ class _GatewayCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(title,
-                      style: const TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600)),
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: gateway.canWrite
                         ? didactaAccentDark.withValues(alpha: 0.12)
                         : didactaPanel,
                     border: Border.all(
-                        color: gateway.canWrite
-                            ? didactaAccentDark
-                            : didactaRule),
+                      color: gateway.canWrite ? didactaAccentDark : didactaRule,
+                    ),
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: Text(
@@ -135,20 +140,28 @@ class _GatewayCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10.5,
                       fontWeight: FontWeight.w600,
-                      color:
-                          gateway.canWrite ? didactaAccentDark : didactaMuted,
+                      color: gateway.canWrite
+                          ? didactaAccentDark
+                          : didactaMuted,
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
-            Text(explanation,
-                style: const TextStyle(fontSize: 12.5, height: 1.4)),
+            Text(
+              explanation,
+              style: const TextStyle(fontSize: 12.5, height: 1.4),
+            ),
             const SizedBox(height: 8),
-            Text(gateway.describe(),
-                style: const TextStyle(
-                    fontSize: 11.5, color: didactaMuted, height: 1.3)),
+            Text(
+              gateway.describe(),
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: didactaMuted,
+                height: 1.3,
+              ),
+            ),
           ],
         ),
       ),
@@ -220,13 +233,13 @@ class _SessionSectionState extends State<_SessionSection> {
                       child: Text(
                         authorisation.email ?? 'sesión iniciada',
                         style: const TextStyle(
-                            fontSize: 13.5, fontWeight: FontWeight.w500),
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     OutlinedButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _run(session.signOut),
+                      onPressed: _busy ? null : () => _run(session.signOut),
                       child: const Text('Salir'),
                     ),
                   ],
@@ -269,15 +282,17 @@ class _SessionSectionState extends State<_SessionSection> {
                     label: const Text('Reenviar la verificación'),
                     onPressed: _busy
                         ? null
-                        : () => _run(session.auth.resendVerification,
-                            notice: 'Correo de verificación enviado.'),
+                        : () => _run(
+                            session.auth.resendVerification,
+                            notice: 'Correo de verificación enviado.',
+                          ),
                   ),
                 ],
                 if (authorisation.role == null) ...[
                   const SizedBox(height: 10),
                   Note(
                     'Firebase te reconoce, pero ${authorisation.email ?? "esta "
-                        "dirección"} no está en access.json, así que solo '
+                            "dirección"} no está en access.json, así que solo '
                     'puedes leer lo público. Quien tenga el rol de owner '
                     'puede añadirte con un commit a ese fichero.',
                   ),
@@ -314,8 +329,9 @@ class _SessionSectionState extends State<_SessionSection> {
               OutlinedButton.icon(
                 icon: const Icon(Icons.login, size: 16),
                 label: const Text('Entrar con Google'),
-                onPressed:
-                    _busy ? null : () => _run(session.auth.signInWithGoogle),
+                onPressed: _busy
+                    ? null
+                    : () => _run(session.auth.signInWithGoogle),
               ),
               const SizedBox(height: 12),
               const Divider(),
@@ -346,12 +362,12 @@ class _SessionSectionState extends State<_SessionSection> {
                     onPressed: _busy
                         ? null
                         : () => _run(
-                              () => session.auth
-                                  .sendPasswordReset(_email.text),
-                              notice: 'Si esa dirección tiene cuenta, le '
-                                  'llegará un correo para cambiar la '
-                                  'contraseña.',
-                            ),
+                            () => session.auth.sendPasswordReset(_email.text),
+                            notice:
+                                'Si esa dirección tiene cuenta, le '
+                                'llegará un correo para cambiar la '
+                                'contraseña.',
+                          ),
                     child: const Text('He olvidado la contraseña'),
                   ),
                   const Spacer(),
@@ -359,11 +375,14 @@ class _SessionSectionState extends State<_SessionSection> {
                     onPressed: _busy
                         ? null
                         : () => _run(
-                              () => session.auth.createAccount(
-                                  _email.text, _password.text),
-                              notice: 'Cuenta creada. Verifica el correo '
-                                  'antes de intentar editar.',
+                            () => session.auth.createAccount(
+                              _email.text,
+                              _password.text,
                             ),
+                            notice:
+                                'Cuenta creada. Verifica el correo '
+                                'antes de intentar editar.',
+                          ),
                     child: const Text('Crear cuenta'),
                   ),
                 ],
@@ -383,8 +402,8 @@ class _SessionSectionState extends State<_SessionSection> {
     );
   }
 
-  void _signIn() => _run(
-      () => session.auth.signInWithPassword(_email.text, _password.text));
+  void _signIn() =>
+      _run(() => session.auth.signInWithPassword(_email.text, _password.text));
 }
 
 class _TokenSection extends StatefulWidget {
@@ -435,8 +454,11 @@ class _TokenSectionState extends State<_TokenSection> {
               if (session.hasStoredToken) ...[
                 Row(
                   children: [
-                    const Icon(Icons.vpn_key, size: 16,
-                        color: didactaAccentDark),
+                    const Icon(
+                      Icons.vpn_key,
+                      size: 16,
+                      color: didactaAccentDark,
+                    ),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
@@ -496,7 +518,9 @@ class _TokenSectionState extends State<_TokenSection> {
                   children: [
                     FilledButton(
                       onPressed: _busy ? null : _verify,
-                      child: Text(_busy ? 'Comprobando…' : 'Comprobar y guardar'),
+                      child: Text(
+                        _busy ? 'Comprobando…' : 'Comprobar y guardar',
+                      ),
                     ),
                   ],
                 ),
@@ -564,8 +588,10 @@ class _TokenHelp extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Dónde se crea',
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700)),
+          const Text(
+            'Dónde se crea',
+            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -581,9 +607,9 @@ class _TokenHelp extends StatelessWidget {
                 icon: const Icon(Icons.content_copy, size: 14),
                 onPressed: () {
                   Clipboard.setData(const ClipboardData(text: url));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Copiado.')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Copiado.')));
                 },
               ),
             ],
@@ -593,8 +619,11 @@ class _TokenHelp extends StatelessWidget {
             'Repository access: solo $owner/$repo · Permissions → '
             'Contents: Read and write. Nada más: un token clásico con «repo» '
             'alcanza todos tus repositorios y aquí no hace falta ninguno más.',
-            style: const TextStyle(fontSize: 11, height: 1.35,
-                color: didactaMuted),
+            style: const TextStyle(
+              fontSize: 11,
+              height: 1.35,
+              color: didactaMuted,
+            ),
           ),
         ],
       ),
@@ -661,25 +690,23 @@ class _Fact extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 5),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 132,
-              child: Text(label,
-                  style:
-                      const TextStyle(fontSize: 11.5, color: didactaMuted)),
-            ),
-            Expanded(
-              child: SelectableText(
-                value,
-                style: const TextStyle(fontSize: 12.5),
-              ),
-            ),
-          ],
+    padding: const EdgeInsets.only(bottom: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 132,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+          ),
         ),
-      );
+        Expanded(
+          child: SelectableText(value, style: const TextStyle(fontSize: 12.5)),
+        ),
+      ],
+    ),
+  );
 }
 
 class _Pill extends StatelessWidget {
@@ -690,16 +717,21 @@ class _Pill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: colour.withValues(alpha: 0.10),
-          border: Border.all(color: colour),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 10.5, color: colour, fontWeight: FontWeight.w600)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: colour.withValues(alpha: 0.10),
+      border: Border.all(color: colour),
+      borderRadius: BorderRadius.circular(3),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 10.5,
+        color: colour,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
 }
 
 /// The local clone: where it is, how it stands, and what to do about it.
@@ -764,35 +796,33 @@ class _CloneSectionState extends State<_CloneSection> {
     final current = widget.session.cloneAuthor;
     final result = await showDialog<({String name, String email})>(
       context: context,
-      builder: (context) => _AuthorDialog(
-        name: current?.name ?? '',
-        email: current?.email ?? '',
-      ),
+      builder: (context) =>
+          _AuthorDialog(name: current?.name ?? '', email: current?.email ?? ''),
     );
     if (result == null) return;
-    await _run(() => widget.session.setCloneAuthor(
-          name: result.name,
-          email: result.email,
-        ));
+    await _run(
+      () =>
+          widget.session.setCloneAuthor(name: result.name, email: result.email),
+    );
   }
 
   Future<void> _clone() async {
-    final chosen = await getDirectoryPath(
-      confirmButtonText: 'Clonar aquí',
-    );
+    final chosen = await getDirectoryPath(confirmButtonText: 'Clonar aquí');
     if (chosen == null) return;
-    await _run(() => widget.session.cloneInto(
-          chosen,
-          onProgress: (line) {
-            if (!mounted) return;
-            setState(() {
-              _progress.add(line);
-              // Only the tail is useful, and an unbounded list of git's
-              // progress lines is a memory leak with a scrollbar.
-              if (_progress.length > 40) _progress.removeAt(0);
-            });
-          },
-        ));
+    await _run(
+      () => widget.session.cloneInto(
+        chosen,
+        onProgress: (line) {
+          if (!mounted) return;
+          setState(() {
+            _progress.add(line);
+            // Only the tail is useful, and an unbounded list of git's
+            // progress lines is a memory leak with a scrollbar.
+            if (_progress.length > 40) _progress.removeAt(0);
+          });
+        },
+      ),
+    );
   }
 
   @override
@@ -831,8 +861,7 @@ class _CloneSectionState extends State<_CloneSection> {
               else ...[
                 SelectableText(
                   path,
-                  style: const TextStyle(
-                      fontSize: 12, fontFamily: 'monospace'),
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
                 ),
                 const SizedBox(height: 8),
                 if (status != null)
@@ -857,7 +886,7 @@ class _CloneSectionState extends State<_CloneSection> {
                       if (!status.isClean)
                         _Pill(
                           '${status.dirtyPaths.length} fichero(s) '
-                              'cambiado(s) fuera de la aplicación',
+                          'cambiado(s) fuera de la aplicación',
                           colour: didactaTeacher,
                         ),
                     ],
@@ -881,8 +910,11 @@ class _CloneSectionState extends State<_CloneSection> {
                 if (session.cloneAuthor case final author?)
                   Row(
                     children: [
-                      const Icon(Icons.person_outline,
-                          size: 15, color: didactaMuted),
+                      const Icon(
+                        Icons.person_outline,
+                        size: 15,
+                        color: didactaMuted,
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -966,8 +998,7 @@ class _CloneSectionState extends State<_CloneSection> {
                     FilledButton.icon(
                       icon: const Icon(Icons.download_outlined, size: 16),
                       label: const Text('Traer cambios'),
-                      onPressed:
-                          _busy ? null : () => _run(session.pullClone),
+                      onPressed: _busy ? null : () => _run(session.pullClone),
                     ),
                     OutlinedButton.icon(
                       icon: const Icon(Icons.upload_outlined, size: 16),
@@ -976,12 +1007,12 @@ class _CloneSectionState extends State<_CloneSection> {
                             ? 'Enviar ${status.ahead} commit(s)'
                             : 'Enviar commits',
                       ),
-                      onPressed:
-                          _busy ? null : () => _run(session.pushClone),
+                      onPressed: _busy ? null : () => _run(session.pushClone),
                     ),
                     OutlinedButton(
-                      onPressed:
-                          _busy ? null : () => _run(() => session.useClone(null)),
+                      onPressed: _busy
+                          ? null
+                          : () => _run(() => session.useClone(null)),
                       child: const Text('Dejar de usar este clon'),
                     ),
                   ],
@@ -1036,10 +1067,12 @@ class _AuthorDialog extends StatefulWidget {
 }
 
 class _AuthorDialogState extends State<_AuthorDialog> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.name);
-  late final TextEditingController _email =
-      TextEditingController(text: widget.email);
+  late final TextEditingController _name = TextEditingController(
+    text: widget.name,
+  );
+  late final TextEditingController _email = TextEditingController(
+    text: widget.email,
+  );
 
   @override
   void dispose() {
@@ -1094,10 +1127,9 @@ class _AuthorDialogState extends State<_AuthorDialog> {
         ),
         FilledButton(
           onPressed: _valid
-              ? () => Navigator.of(context).pop((
-                  name: _name.text.trim(),
-                  email: _email.text.trim(),
-                ))
+              ? () => Navigator.of(
+                  context,
+                ).pop((name: _name.text.trim(), email: _email.text.trim()))
               : null,
           child: const Text('Guardar'),
         ),

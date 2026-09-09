@@ -42,8 +42,8 @@ List<DiffLine> diffLines(String before, String after) {
       lengths[i][j] = a[i] == b[j]
           ? lengths[i + 1][j + 1] + 1
           : (lengths[i + 1][j] >= lengths[i][j + 1]
-              ? lengths[i + 1][j]
-              : lengths[i][j + 1]);
+                ? lengths[i + 1][j]
+                : lengths[i][j + 1]);
     }
   }
 
@@ -52,7 +52,9 @@ List<DiffLine> diffLines(String before, String after) {
   var j = 0;
   while (i < a.length && j < b.length) {
     if (a[i] == b[j]) {
-      result.add(DiffLine(ChangeKind.kept, a[i], oldLine: i + 1, newLine: j + 1));
+      result.add(
+        DiffLine(ChangeKind.kept, a[i], oldLine: i + 1, newLine: j + 1),
+      );
       i += 1;
       j += 1;
     } else if (lengths[i + 1][j] >= lengths[i][j + 1]) {

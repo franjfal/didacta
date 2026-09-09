@@ -70,12 +70,12 @@ Future<FakeGateway> pumpComposition(
 }
 
 /// The composition as the file now has it, after whatever was committed.
-List<String> committedEntries(FakeGateway gateway, [String id = 'tema-1']) =>
-    [
-      for (final entry
-          in CompositionFile(gateway.commits.last.text).blockFor(id)!.entries)
-        entry.toString(),
-    ];
+List<String> committedEntries(FakeGateway gateway, [String id = 'tema-1']) => [
+  for (final entry in CompositionFile(
+    gateway.commits.last.text,
+  ).blockFor(id)!.entries)
+    entry.toString(),
+];
 
 void main() {
   testWidgets('shows every entry, disabled ones included', (tester) async {
@@ -107,8 +107,9 @@ void main() {
     expect(find.textContaining('4 de 5 activas'), findsOneWidget);
   });
 
-  testWidgets('the save button is dead until something changes',
-      (tester) async {
+  testWidgets('the save button is dead until something changes', (
+    tester,
+  ) async {
     await pumpComposition(tester);
     expect(tester.widget<FilledButton>(save).onPressed, isNull);
   });
@@ -173,8 +174,9 @@ void main() {
     expect(gateway.commits.single.text, contains('          # es: Normas'));
   });
 
-  testWidgets('dragging a row writes the new order and nothing else',
-      (tester) async {
+  testWidgets('dragging a row writes the new order and nothing else', (
+    tester,
+  ) async {
     final gateway = await pumpComposition(tester);
 
     // The second row's handle, dragged up past the first. Done as an
@@ -219,20 +221,27 @@ void main() {
       '- unit: analysis/normed/no-existe',
     ]);
     // The heading kept its whole title block on the way past.
-    expect(gateway.commits.single.text, contains('''
+    expect(
+      gateway.commits.single.text,
+      contains('''
       - unit: analysis/normed/definition
       - section:
           es: Normas
           # TODO: va
           # TODO: en
-'''));
+'''),
+    );
     // And the rest of the file did not move.
-    expect(gateway.commits.single.text, contains('    profiles: [handout, slides]'));
+    expect(
+      gateway.commits.single.text,
+      contains('    profiles: [handout, slides]'),
+    );
     expect(gateway.commits.single.text, contains('  - id: hoja-1'));
   });
 
-  testWidgets('renaming a heading writes the language being browsed',
-      (tester) async {
+  testWidgets('renaming a heading writes the language being browsed', (
+    tester,
+  ) async {
     final gateway = await pumpComposition(tester);
 
     await tester.enterText(
@@ -308,16 +317,19 @@ void main() {
     expect(gateway.commits.single.text, contains('          # TODO: va'));
   });
 
-  testWidgets('removing asks first, and says the unit is not deleted',
-      (tester) async {
+  testWidgets('removing asks first, and says the unit is not deleted', (
+    tester,
+  ) async {
     final gateway = await pumpComposition(tester);
 
     await tester.tap(find.byIcon(Icons.close).first);
     await settle(tester);
     expect(find.text('¿Quitar de la composición?'), findsOneWidget);
     // And points at the softer option, which is usually the right one.
-    expect(find.textContaining('desactívala en lugar de quitarla'),
-        findsOneWidget);
+    expect(
+      find.textContaining('desactívala en lugar de quitarla'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.widgetWithText(FilledButton, 'Quitar'));
     await settle(tester);
@@ -327,8 +339,10 @@ void main() {
     await settle(tester);
 
     expect(committedEntries(gateway), hasLength(4));
-    expect(committedEntries(gateway).first,
-        '- unit: analysis/normed/definition');
+    expect(
+      committedEntries(gateway).first,
+      '- unit: analysis/normed/definition',
+    );
   });
 
   testWidgets('cancelling the removal changes nothing', (tester) async {
@@ -342,17 +356,23 @@ void main() {
     expect(tester.widget<FilledButton>(save).onPressed, isNull);
   });
 
-  testWidgets('a read-only gateway gives no toggles and no save',
-      (tester) async {
+  testWidgets('a read-only gateway gives no toggles and no save', (
+    tester,
+  ) async {
     await pumpComposition(tester, gateway: FakeGateway(writable: false));
 
     expect(tester.widget<FilledButton>(save).onPressed, isNull);
-    expect(tester.widget<IconButton>(
-      find.ancestor(
-        of: find.byIcon(Icons.toggle_on).first,
-        matching: find.byType(IconButton),
-      ),
-    ).onPressed, isNull);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byIcon(Icons.toggle_on).first,
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
     // And no way to add, so nothing can be built that cannot be kept.
     expect(addUnit, findsNothing);
     expect(find.byIcon(Icons.drag_indicator), findsNothing);
@@ -370,8 +390,7 @@ void main() {
     expect(find.textContaining('didacta index'), findsOneWidget);
   });
 
-  testWidgets('a missing year.yaml offers a retry and Ajustes',
-      (tester) async {
+  testWidgets('a missing year.yaml offers a retry and Ajustes', (tester) async {
     await pumpComposition(tester, gateway: FakeGateway(files: {}));
     expect(find.text('No se ha podido abrir la composición'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Reintentar'), findsOneWidget);

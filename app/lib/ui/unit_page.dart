@@ -231,8 +231,8 @@ class _LanguageEditor {
         controller.text = reference == null
             ? ''
             : '%% Traducción pendiente. El original en '
-                '${unit.reference} está debajo; sustitúyelo.\n'
-                '${reference.text}';
+                  '${unit.reference} está debajo; sustitúyelo.\n'
+                  '${reference.text}';
       } else {
         final loaded = await session.gateway.read(unit.fileFor(language));
         file = loaded;
@@ -376,70 +376,72 @@ class _EditorBar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: LayoutBuilder(builder: (context, constraints) {
-        // The path is the one thing here with no bound on its length --
-        // `content/analysis/normed/definition/es.tex` is a real one -- so it
-        // is the part that gives, and the counter is the part that goes. A bar
-        // that overflows hides its own save button, which on a tablet is the
-        // whole screen being useless.
-        final narrow = constraints.maxWidth < 520;
-        return Row(
-          children: [
-            Expanded(
-              child: Text(
-                editor.file?.path ?? '',
-                overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                // Tail first: the filename matters more than `content/`.
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: didactaMuted,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // The path is the one thing here with no bound on its length --
+          // `content/analysis/normed/definition/es.tex` is a real one -- so it
+          // is the part that gives, and the counter is the part that goes. A bar
+          // that overflows hides its own save button, which on a tablet is the
+          // whole screen being useless.
+          final narrow = constraints.maxWidth < 520;
+          return Row(
+            children: [
+              Expanded(
+                child: Text(
+                  editor.file?.path ?? '',
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  // Tail first: the filename matters more than `content/`.
+                  textDirection: TextDirection.rtl,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                    color: didactaMuted,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 10),
-            if (!editor.exists)
-              const _Tag('nuevo', colour: didactaAccentDark)
-            else if (dirty)
-              const _Tag('sin guardar', colour: didactaEx),
-            if (!narrow) ...[
               const SizedBox(width: 10),
-              Text(
-                '${editor.controller.text.length} car.',
-                style: const TextStyle(fontSize: 11, color: didactaMuted),
+              if (!editor.exists)
+                const _Tag('nuevo', colour: didactaAccentDark)
+              else if (dirty)
+                const _Tag('sin guardar', colour: didactaEx),
+              if (!narrow) ...[
+                const SizedBox(width: 10),
+                Text(
+                  '${editor.controller.text.length} car.',
+                  style: const TextStyle(fontSize: 11, color: didactaMuted),
+                ),
+              ],
+              const SizedBox(width: 10),
+              if (dirty)
+                TextButton(
+                  onPressed: editor.saving ? null : () => _discard(context),
+                  child: const Text('Descartar'),
+                ),
+              const SizedBox(width: 4),
+              FilledButton.icon(
+                // Keyed because the commit dialog's confirm button carries the
+                // same label -- rightly, "Guardar" is what both do -- and a test
+                // that cannot tell them apart taps whichever comes first.
+                key: const Key('editor-save'),
+                icon: editor.saving
+                    ? const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check, size: 16),
+                label: Text(editor.saving ? 'Guardando…' : 'Guardar'),
+                // Disabled rather than hidden when there is nothing to save, so
+                // the button does not move around as you type.
+                onPressed: !canWrite || !dirty || editor.saving
+                    ? null
+                    : () => _save(context),
               ),
             ],
-            const SizedBox(width: 10),
-            if (dirty)
-              TextButton(
-                onPressed: editor.saving ? null : () => _discard(context),
-                child: const Text('Descartar'),
-              ),
-            const SizedBox(width: 4),
-            FilledButton.icon(
-              // Keyed because the commit dialog's confirm button carries the
-              // same label -- rightly, "Guardar" is what both do -- and a test
-              // that cannot tell them apart taps whichever comes first.
-              key: const Key('editor-save'),
-              icon: editor.saving
-                  ? const SizedBox(
-                      width: 12,
-                      height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check, size: 16),
-              label: Text(editor.saving ? 'Guardando…' : 'Guardar'),
-              // Disabled rather than hidden when there is nothing to save, so
-              // the button does not move around as you type.
-              onPressed: !canWrite || !dirty || editor.saving
-                  ? null
-                  : () => _save(context),
-            ),
-          ],
-        );
-      }),
+          );
+        },
+      ),
     );
   }
 
@@ -477,9 +479,9 @@ class _EditorBar extends StatelessWidget {
     if (!context.mounted) return;
 
     if (problem == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Guardado como un commit.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Guardado como un commit.')));
       // The catalogue's translation status just changed, so the library and
       // the counts in the rail have to catch up.
       await sessionOf(context).reloadCatalogue();
@@ -510,8 +512,9 @@ class _CommitDialog extends StatefulWidget {
 }
 
 class _CommitDialogState extends State<_CommitDialog> {
-  late final TextEditingController _controller =
-      TextEditingController(text: widget.suggested);
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.suggested,
+  );
 
   @override
   void dispose() {
@@ -541,9 +544,9 @@ class _CommitDialogState extends State<_CommitDialog> {
               maxLines: 3,
               minLines: 1,
               decoration: const InputDecoration(labelText: 'Mensaje'),
-              onSubmitted: (value) => Navigator.of(context).pop(
-                value.trim().isEmpty ? widget.suggested : value.trim(),
-              ),
+              onSubmitted: (value) => Navigator.of(
+                context,
+              ).pop(value.trim().isEmpty ? widget.suggested : value.trim()),
             ),
           ],
         ),
@@ -617,9 +620,9 @@ class _Separator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-        child: SizedBox(width: 1, child: ColoredBox(color: didactaRule)),
-      );
+    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+    child: SizedBox(width: 1, child: ColoredBox(color: didactaRule)),
+  );
 }
 
 class _Tab extends StatelessWidget {
@@ -670,7 +673,9 @@ class _Tab extends StatelessWidget {
                 width: 7,
                 height: 7,
                 decoration: BoxDecoration(
-                  color: state.exists ? statusColour(state) : Colors.transparent,
+                  color: state.exists
+                      ? statusColour(state)
+                      : Colors.transparent,
                   border: Border.all(
                     color: state.exists ? statusColour(state) : didactaRule,
                   ),
@@ -766,8 +771,10 @@ class _UnitPanel extends StatelessWidget {
                 children: [
                   const Text('· ', style: TextStyle(color: didactaMuted)),
                   Expanded(
-                    child: Text(objective,
-                        style: const TextStyle(fontSize: 12.5)),
+                    child: Text(
+                      objective,
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
                   ),
                 ],
               ),
@@ -832,30 +839,31 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 76,
-              child: Text(label,
-                  style:
-                      const TextStyle(fontSize: 11.5, color: didactaMuted)),
-            ),
-            if (colour != null) ...[
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                    color: colour, borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(width: 6),
-            ],
-            Expanded(
-              child: Text(value, style: const TextStyle(fontSize: 12.5)),
-            ),
-          ],
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+    child: Row(
+      children: [
+        SizedBox(
+          width: 76,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+          ),
         ),
-      );
+        if (colour != null) ...[
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: colour,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 6),
+        ],
+        Expanded(child: Text(value, style: const TextStyle(fontSize: 12.5))),
+      ],
+    ),
+  );
 }
 
 class _Tag extends StatelessWidget {
@@ -866,16 +874,21 @@ class _Tag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-        decoration: BoxDecoration(
-          color: colour.withValues(alpha: 0.12),
-          border: Border.all(color: colour),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 10.5, color: colour, fontWeight: FontWeight.w600)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(
+      color: colour.withValues(alpha: 0.12),
+      border: Border.all(color: colour),
+      borderRadius: BorderRadius.circular(3),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 10.5,
+        color: colour,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
 }
 
 class _LoadFailure extends StatelessWidget {
@@ -891,9 +904,12 @@ class _LoadFailure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = error is ContentException ? error as ContentException : null;
+    final content = error is ContentException
+        ? error as ContentException
+        : null;
     final unconfigured = content?.kind == ContentFailure.unconfigured;
-    final forbidden = content?.kind == ContentFailure.forbidden ||
+    final forbidden =
+        content?.kind == ContentFailure.forbidden ||
         content?.kind == ContentFailure.unauthenticated;
 
     return Center(
@@ -916,8 +932,10 @@ class _LoadFailure extends StatelessWidget {
                   const Expanded(
                     child: Text(
                       'No se ha podido abrir el fichero',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -926,11 +944,16 @@ class _LoadFailure extends StatelessWidget {
               SelectableText(
                 path,
                 style: const TextStyle(
-                    fontSize: 12, fontFamily: 'monospace', color: didactaMuted),
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: didactaMuted,
+                ),
               ),
               const SizedBox(height: 10),
-              Text(content?.message ?? error.toString(),
-                  style: const TextStyle(fontSize: 13)),
+              Text(
+                content?.message ?? error.toString(),
+                style: const TextStyle(fontSize: 13),
+              ),
               const SizedBox(height: 18),
               Row(
                 children: [
@@ -982,7 +1005,9 @@ class _Missing extends StatelessWidget {
                     SelectableText(
                       path,
                       style: const TextStyle(
-                          fontSize: 12.5, fontFamily: 'monospace'),
+                        fontSize: 12.5,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     const Text(
@@ -1020,6 +1045,6 @@ class _WithEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, constraints) => builder(context, constraints, editor),
-      );
+    builder: (context, constraints) => builder(context, constraints, editor),
+  );
 }

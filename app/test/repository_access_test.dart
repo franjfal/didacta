@@ -140,8 +140,9 @@ void main() {
     test('decodes GitHub base64, newlines and accents included', () async {
       // GitHub wraps base64 at 60 characters, and these titles are Valencian.
       const text = 'La mètrica induïda en un espai normat';
-      final wrapped = base64Encode(utf8.encode(text))
-          .replaceAllMapped(RegExp('.{1,20}'), (m) => '${m[0]}\n');
+      final wrapped = base64Encode(
+        utf8.encode(text),
+      ).replaceAllMapped(RegExp('.{1,20}'), (m) => '${m[0]}\n');
       final github = GitHubDirect(
         owner: 'franjfal',
         repo: 'didacta_db',
@@ -164,8 +165,13 @@ void main() {
       );
       await expectLater(
         github.read('content/a/es.tex'),
-        throwsA(isA<RepositoryAccessException>().having(
-            (e) => e.message, 'message', contains('content/a/es.tex'))),
+        throwsA(
+          isA<RepositoryAccessException>().having(
+            (e) => e.message,
+            'message',
+            contains('content/a/es.tex'),
+          ),
+        ),
       );
     });
   });
@@ -180,11 +186,10 @@ void main() {
         repo: 'didacta_db',
         branch: 'main',
         token: 'x',
-        client: clientReturning(
-          200,
-          {'commit': {'sha': 'newcommit'}, 'content': {'sha': 'newblob'}},
-          onRequest: (request) => sent = request,
-        ),
+        client: clientReturning(200, {
+          'commit': {'sha': 'newcommit'},
+          'content': {'sha': 'newblob'},
+        }, onRequest: (request) => sent = request),
       );
 
       final sha = await github.commit(
@@ -202,42 +207,54 @@ void main() {
       // The sha of what was read: this is what makes it a compare-and-set.
       expect(body['sha'], 'oldblob');
       expect((body['author'] as Map)['email'], 'francisco.j.falco@uv.es');
-      expect(utf8.decode(base64Decode(body['content'] as String)),
-          'nou contingut');
+      expect(
+        utf8.decode(base64Decode(body['content'] as String)),
+        'nou contingut',
+      );
     });
 
-    test('a conflict tells the author to reload rather than retrying', () async {
-      // Retrying would overwrite whatever the other person wrote.
-      for (final status in [409, 422]) {
-        final github = GitHubDirect(
-          owner: 'franjfal',
-          repo: 'didacta_db',
-          branch: 'main',
-          token: 'x',
-          client: clientReturning(status, {'message': 'conflict'}),
-        );
-        await expectLater(
-          github.commit(
-            path: 'content/a/va.tex',
-            text: 'x',
-            sha: 'stale',
-            message: 'm',
-          ),
-          throwsA(isA<RepositoryAccessException>().having(
-              (e) => e.message, 'message', contains('ha cambiado'))),
-        );
-      }
-    });
+    test(
+      'a conflict tells the author to reload rather than retrying',
+      () async {
+        // Retrying would overwrite whatever the other person wrote.
+        for (final status in [409, 422]) {
+          final github = GitHubDirect(
+            owner: 'franjfal',
+            repo: 'didacta_db',
+            branch: 'main',
+            token: 'x',
+            client: clientReturning(status, {'message': 'conflict'}),
+          );
+          await expectLater(
+            github.commit(
+              path: 'content/a/va.tex',
+              text: 'x',
+              sha: 'stale',
+              message: 'm',
+            ),
+            throwsA(
+              isA<RepositoryAccessException>().having(
+                (e) => e.message,
+                'message',
+                contains('ha cambiado'),
+              ),
+            ),
+          );
+        }
+      },
+    );
   });
 
   group('token storage', () {
-    test('the web cannot store a token, and says so instead of pretending',
-        () async {
-      // `flutter test` runs as non-web, so this asserts the contract rather
-      // than the platform: `canStoreSafely` is what the UI must consult before
-      // offering to keep a token.
-      final store = TokenStore();
-      expect(store.canStoreSafely, isTrue);
-    });
+    test(
+      'the web cannot store a token, and says so instead of pretending',
+      () async {
+        // `flutter test` runs as non-web, so this asserts the contract rather
+        // than the platform: `canStoreSafely` is what the UI must consult before
+        // offering to keep a token.
+        final store = TokenStore();
+        expect(store.canStoreSafely, isTrue);
+      },
+    );
   });
 }
