@@ -22,6 +22,8 @@ import 'package:flutter/foundation.dart';
 import '../data/auth.dart';
 import '../data/catalogue_source.dart';
 import '../data/content_gateway.dart';
+import '../data/local_clone.dart';
+import '../data/preferences.dart';
 import '../data/repository_access.dart';
 import '../model/catalogue.dart';
 
@@ -37,7 +39,8 @@ class Session extends ChangeNotifier {
     required this.contentOwner,
     required this.contentRepo,
     required this.contentBranch,
-  });
+    Preferences? preferences,
+  }) : preferences = preferences ?? MemoryPreferences();
 
   final CatalogueSource catalogueSource;
 
@@ -47,6 +50,10 @@ class Session extends ChangeNotifier {
   final AuthSession auth;
 
   final SecretStore tokenStore;
+
+  /// Where the clone is, and whether a commit is pushed. Not secrets, so not
+  /// in the keychain.
+  final Preferences preferences;
 
   /// The Worker's origin. Empty when the app was built without one, which is
   /// a legitimate configuration: a desktop build with a token needs no API.
@@ -84,6 +91,32 @@ class Session extends ChangeNotifier {
   /// Whether storing one is even possible here. False on the web.
   bool get canStoreToken => tokenStore.canStoreSafely;
 
+  String? _clonePath;
+
+  /// The clone this machine is using, if any.
+  String? get clonePath => _clonePath;
+
+  /// Whether a clone is possible at all here. False on the web.
+  bool get canUseClone => LocalClone.supported;
+
+  CloneStatus? _cloneStatus;
+
+  /// How the clone stands against the remote, as of the last check. Null
+  /// when there is no clone, or when reading it failed.
+  CloneStatus? get cloneStatus => _cloneStatus;
+
+  Object? _cloneProblem;
+
+  /// Why the clone is not being used, when there is a path but no gateway.
+  /// Shown rather than swallowed: "I set a folder and nothing happened" is
+  /// the worst possible outcome.
+  Object? get cloneProblem => _cloneProblem;
+
+  ({String name, String email})? _cloneAuthor;
+
+  /// Who the clone's commits will be attributed to.
+  ({String name, String email})? get cloneAuthor => _cloneAuthor;
+
   /// The language the interface is working in. Not a locale -- the app's own
   /// text is Spanish -- but which language of the *content* is being looked
   /// at, which is the choice that actually matters here.
@@ -105,8 +138,14 @@ class Session extends ChangeNotifier {
     _state = LoadState.loading;
     notifyListeners();
 
+    // The clone is looked up first because it changes where the catalogue is
+    // read from: inside a clone, the index on disk is the one that matches
+    // the files the editor writes, and fetching a different copy over HTTP
+    // would let the library disagree with the editor.
+    _clonePath = await preferences.clonePath();
+
     try {
-      _catalogue = await catalogueSource.load();
+      _catalogue = await _source.load();
       _language = _catalogue!.defaultLanguage;
       _state = LoadState.ready;
     } catch (error) {
@@ -159,11 +198,50 @@ class Session extends ChangeNotifier {
     );
   }
 
-  /// Picks the gateway. A stored token wins over the API, because someone who
-  /// has gone to the trouble of authorising this machine wants the direct,
-  /// offline-capable path.
+  /// Picks the gateway, in order of how much the author has committed to.
+  ///
+  /// A clone wins over a token straight to GitHub, which wins over the API.
+  /// The ordering is not arbitrary: each step down is a step further from the
+  /// machine, and someone who has cloned the repository onto this machine has
+  /// said what they want -- the local, offline, whole-repository path.
   Future<ContentGateway> _deriveGateway() async {
     final token = await tokenStore.read();
+
+    _clonePath = await preferences.clonePath();
+    _cloneStatus = null;
+    _cloneProblem = null;
+    final path = _clonePath;
+    if (path != null && LocalClone.supported) {
+      try {
+        final clone = LocalClone(directory: path);
+        if (!await clone.looksRight(
+          owner: contentOwner,
+          repo: contentRepo,
+        )) {
+          throw CloneException(
+            '$path no es un clon de $contentOwner/$contentRepo. '
+            'Elige otra carpeta o vuelve a clonar.',
+          );
+        }
+        _cloneStatus = await clone.status();
+        // The signed-in user first, then git's own identity on this machine.
+        // A clone on someone's own disk must not need a web sign-in to
+        // commit -- and someone who has a clone already has a git identity.
+        _cloneAuthor =
+            auth.user?.commitAuthor ?? await clone.configuredAuthor();
+        return CloneGateway(
+          clone: clone,
+          token: token ?? '',
+          author: _cloneAuthor,
+          pushOnCommit: await preferences.pushOnCommit(),
+        );
+      } catch (thrown) {
+        // Falls through to the other paths rather than leaving the app
+        // unusable, but the reason is kept and shown in Ajustes.
+        _cloneProblem = thrown;
+      }
+    }
+
     if (token != null && token.isNotEmpty) {
       return DirectGateway(
         github: GitHubDirect(
@@ -199,6 +277,67 @@ class Session extends ChangeNotifier {
     await refreshAccess();
   }
 
+  /// Uses an existing clone at [path], or stops using one when null.
+  Future<void> useClone(String? path) async {
+    await preferences.setClonePath(path);
+    await refreshAccess();
+  }
+
+  Future<void> setPushOnCommit(bool value) async {
+    await preferences.setPushOnCommit(value);
+    await refreshAccess();
+  }
+
+  /// Sets who the clone's commits are attributed to, for this clone only.
+  Future<void> setCloneAuthor({
+    required String name,
+    required String email,
+  }) async {
+    final path = _clonePath;
+    if (path == null) return;
+    await LocalClone(directory: path).setAuthor(name: name, email: email);
+    await refreshAccess();
+  }
+
+  /// Clones the content repository into [directory] and starts using it.
+  ///
+  /// The token is needed for a private repository and harmless for a public
+  /// one, so it is passed either way rather than asked about.
+  Future<void> cloneInto(
+    String directory, {
+    void Function(String line)? onProgress,
+  }) async {
+    final token = await tokenStore.read() ?? '';
+    await LocalClone.create(
+      directory: directory,
+      owner: contentOwner,
+      repo: contentRepo,
+      branch: contentBranch,
+      token: token,
+      onProgress: onProgress,
+    );
+    await useClone(directory);
+  }
+
+  /// Brings the clone up to date, and the catalogue with it.
+  Future<void> pullClone() async {
+    final path = _clonePath;
+    if (path == null) return;
+    final token = await tokenStore.read() ?? '';
+    await LocalClone(directory: path).pull(token: token);
+    await refreshAccess();
+    await reloadCatalogue();
+  }
+
+  /// Sends the commits that are only on this machine.
+  Future<void> pushClone() async {
+    final path = _clonePath;
+    if (path == null) return;
+    final token = await tokenStore.read() ?? '';
+    await LocalClone(directory: path).push(token: token);
+    await refreshAccess();
+  }
+
   Future<void> signOut() async {
     await auth.signOut();
     await refreshAccess();
@@ -216,10 +355,21 @@ class Session extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Where the catalogue is actually read from: the clone if there is one,
+  /// otherwise whatever the app was built with.
+  CatalogueSource get _source {
+    final path = _clonePath;
+    if (path == null) return catalogueSource;
+    return CatalogueSource.inClone(path) ?? catalogueSource;
+  }
+
+  /// For the interface, which has to be able to say where it read from.
+  String get catalogueOrigin => _source.describe;
+
   /// Reloads the catalogue, for after a commit that changed structure.
   Future<void> reloadCatalogue() async {
     try {
-      _catalogue = await catalogueSource.load();
+      _catalogue = await _source.load();
       notifyListeners();
     } catch (error) {
       // Deliberately not fatal: the old catalogue is stale, not wrong, and

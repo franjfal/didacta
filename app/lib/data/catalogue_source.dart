@@ -16,6 +16,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../model/catalogue.dart';
+import 'catalogue_source_stub.dart'
+    if (dart.library.io) 'catalogue_source_io.dart' as platform;
 
 abstract class CatalogueSource {
   const CatalogueSource();
@@ -31,6 +33,16 @@ abstract class CatalogueSource {
   /// message when it fails. "No se pudo cargar" without saying from where is
   /// not something anyone can act on.
   String get describe;
+
+  /// The catalogue inside a local clone, or null where there is no
+  /// filesystem to read it from.
+  ///
+  /// Preferred over HTTP when a clone exists: the clone is the source of
+  /// truth on this machine, so reading the index from it means the library
+  /// cannot disagree with the files the editor is writing, and it needs no
+  /// network.
+  static CatalogueSource? inClone(String directory) =>
+      platform.fileSource(directory);
 }
 
 /// Reads the three generated files over HTTP.

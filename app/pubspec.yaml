@@ -1,5 +1,5 @@
 name: didacta_app
-description: "A new Flutter project."
+description: "Didacta: gestión, edición y compilación de material docente multilingüe en LaTeX."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -40,6 +40,8 @@ dependencies:
   flutter_secure_storage: ^11.0.0
   go_router: ^18.0.1
   provider: ^6.1.5+1
+  shared_preferences: ^2.5.5
+  file_selector: ^1.1.0
 
 dev_dependencies:
   flutter_test:

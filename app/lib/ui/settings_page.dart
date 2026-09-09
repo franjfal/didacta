@@ -12,10 +12,12 @@
 /// token can actually do before storing it.
 library;
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/auth.dart';
+import '../data/local_clone.dart';
 import '../data/content_gateway.dart';
 import '../data/repository_access.dart';
 import '../router.dart';
@@ -52,6 +54,11 @@ class SettingsPage extends StatelessWidget {
               const SectionLabel('Token del repositorio'),
               _TokenSection(session: session),
 
+              if (session.canUseClone) ...[
+                const SectionLabel('Clon en este equipo'),
+                _CloneSection(session: session),
+              ],
+
               const SectionLabel('Catálogo'),
               _CatalogueSection(session: session),
             ],
@@ -81,6 +88,13 @@ class _GatewayCard extends StatelessWidget {
           'La identidad la da Firebase y los permisos los decide access.json, '
               'que vive en el repositorio de contenido. El token de GitHub lo '
               'tiene el Worker: esta aplicación nunca lo ve.',
+        ),
+      GatewayKind.clone => (
+          'Un clon en este equipo',
+          'El repositorio está en disco, así que leer y editar funciona sin '
+              'conexión. Cada guardado es un commit, y se envía a GitHub con '
+              'el token; si no hay conexión el commit queda y se envía '
+              'después.',
         ),
       GatewayKind.none => (
           'Sin acceso de escritura',
@@ -686,4 +700,408 @@ class _Pill extends StatelessWidget {
             style: TextStyle(
                 fontSize: 10.5, color: colour, fontWeight: FontWeight.w600)),
       );
+}
+
+/// The local clone: where it is, how it stands, and what to do about it.
+///
+/// This is the path the requirement asked for -- *clones del repositorio
+/// realizadas de forma local*, done *sin necesidad de instalar y configurar
+/// GitHub*. So the buttons here are clone, pull and push, and none of them
+/// assume anything has been set up by hand: no `gh auth login`, no credential
+/// helper, no SSH key. The token stored above is what authenticates them.
+class _CloneSection extends StatefulWidget {
+  const _CloneSection({required this.session});
+
+  final Session session;
+
+  @override
+  State<_CloneSection> createState() => _CloneSectionState();
+}
+
+class _CloneSectionState extends State<_CloneSection> {
+  bool _busy = false;
+  String? _problem;
+
+  /// git's own output while a clone runs. Shown rather than a spinner: a
+  /// clone of two thousand units takes long enough that "is it stuck?" is a
+  /// real question, and git already answers it line by line.
+  final List<String> _progress = [];
+
+  bool? _gitAvailable;
+
+  @override
+  void initState() {
+    super.initState();
+    LocalClone.gitAvailable().then((value) {
+      if (mounted) setState(() => _gitAvailable = value);
+    });
+  }
+
+  Future<void> _run(Future<void> Function() action) async {
+    setState(() {
+      _busy = true;
+      _problem = null;
+      _progress.clear();
+    });
+    try {
+      await action();
+    } catch (thrown) {
+      if (mounted) setState(() => _problem = thrown.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _choose() async {
+    final chosen = await getDirectoryPath(
+      confirmButtonText: 'Usar esta carpeta',
+    );
+    if (chosen == null) return;
+    await _run(() => widget.session.useClone(chosen));
+  }
+
+  Future<void> _editAuthor() async {
+    final current = widget.session.cloneAuthor;
+    final result = await showDialog<({String name, String email})>(
+      context: context,
+      builder: (context) => _AuthorDialog(
+        name: current?.name ?? '',
+        email: current?.email ?? '',
+      ),
+    );
+    if (result == null) return;
+    await _run(() => widget.session.setCloneAuthor(
+          name: result.name,
+          email: result.email,
+        ));
+  }
+
+  Future<void> _clone() async {
+    final chosen = await getDirectoryPath(
+      confirmButtonText: 'Clonar aquí',
+    );
+    if (chosen == null) return;
+    await _run(() => widget.session.cloneInto(
+          chosen,
+          onProgress: (line) {
+            if (!mounted) return;
+            setState(() {
+              _progress.add(line);
+              // Only the tail is useful, and an unbounded list of git's
+              // progress lines is a memory leak with a scrollbar.
+              if (_progress.length > 40) _progress.removeAt(0);
+            });
+          },
+        ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    final path = session.clonePath;
+    final status = session.cloneStatus;
+
+    if (_gitAvailable == false) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: Note(
+          'git no está instalado en este equipo, así que la aplicación no '
+          'puede llevar un clon. En macOS se instala con `xcode-select '
+          '--install`; en Linux, con el gestor de paquetes.',
+          tone: didactaTeacher,
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (path == null)
+                const Text(
+                  'Sin clon. Con uno, el repositorio entero está en disco: '
+                  'la biblioteca y el editor funcionan sin conexión y cada '
+                  'guardado es un commit que se envía cuando hay red.',
+                  style: TextStyle(fontSize: 12.5),
+                )
+              else ...[
+                SelectableText(
+                  path,
+                  style: const TextStyle(
+                      fontSize: 12, fontFamily: 'monospace'),
+                ),
+                const SizedBox(height: 8),
+                if (status != null)
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _Pill('rama ${status.branch}', colour: didactaMuted),
+                      _Pill(status.head, colour: didactaMuted),
+                      if (status.ahead > 0)
+                        _Pill(
+                          '${status.ahead} commit(s) sin enviar',
+                          colour: didactaEx,
+                        ),
+                      if (status.behind > 0)
+                        _Pill(
+                          '${status.behind} commit(s) por traer',
+                          colour: didactaEx,
+                        ),
+                      if (status.isSynced && status.isClean)
+                        const _Pill('al día', colour: didactaAccentDark),
+                      if (!status.isClean)
+                        _Pill(
+                          '${status.dirtyPaths.length} fichero(s) '
+                              'cambiado(s) fuera de la aplicación',
+                          colour: didactaTeacher,
+                        ),
+                    ],
+                  ),
+                if (status != null && !status.isClean) ...[
+                  const SizedBox(height: 8),
+                  // Named rather than counted: knowing *which* file someone
+                  // has been editing in a text editor is the useful part.
+                  Note(
+                    'Cambiados fuera de la aplicación: '
+                    '${status.dirtyPaths.take(6).join(', ')}'
+                    '${status.dirtyPaths.length > 6 ? '…' : ''}. '
+                    'No es un problema, pero un guardado desde aquí fallará '
+                    'sobre un fichero que haya cambiado.',
+                  ),
+                ],
+              ],
+
+              if (path != null) ...[
+                const SizedBox(height: 10),
+                if (session.cloneAuthor case final author?)
+                  Row(
+                    children: [
+                      const Icon(Icons.person_outline,
+                          size: 15, color: didactaMuted),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'Los commits irán como ${author.name} '
+                          '<${author.email}>',
+                          style: const TextStyle(fontSize: 12.5),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _busy ? null : _editAuthor,
+                        child: const Text('Cambiar'),
+                      ),
+                    ],
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Note(
+                        'Un commit necesita un autor y aquí no hay ninguno: '
+                        'ni sesión iniciada, ni identidad de git configurada '
+                        'en este equipo. Sin eso no se puede guardar.',
+                        tone: didactaTeacher,
+                      ),
+                      const SizedBox(height: 6),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.person_add_alt, size: 15),
+                        label: const Text('Poner nombre y correo'),
+                        onPressed: _busy ? null : _editAuthor,
+                      ),
+                    ],
+                  ),
+              ],
+
+              if (session.cloneProblem != null) ...[
+                const SizedBox(height: 8),
+                Note(session.cloneProblem.toString(), tone: didactaTeacher),
+              ],
+              if (_problem != null) ...[
+                const SizedBox(height: 8),
+                Note(_problem!, tone: didactaTeacher),
+              ],
+              if (_progress.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  padding: const EdgeInsets.all(8),
+                  color: didactaInk,
+                  child: SingleChildScrollView(
+                    reverse: true,
+                    child: Text(
+                      _progress.join('\n'),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  if (path == null) ...[
+                    FilledButton.icon(
+                      icon: const Icon(Icons.cloud_download_outlined, size: 16),
+                      label: const Text('Clonar el repositorio'),
+                      onPressed: _busy ? null : _clone,
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.folder_open_outlined, size: 16),
+                      label: const Text('Usar un clon que ya tengo'),
+                      onPressed: _busy ? null : _choose,
+                    ),
+                  ] else ...[
+                    FilledButton.icon(
+                      icon: const Icon(Icons.download_outlined, size: 16),
+                      label: const Text('Traer cambios'),
+                      onPressed:
+                          _busy ? null : () => _run(session.pullClone),
+                    ),
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.upload_outlined, size: 16),
+                      label: Text(
+                        status != null && status.ahead > 0
+                            ? 'Enviar ${status.ahead} commit(s)'
+                            : 'Enviar commits',
+                      ),
+                      onPressed:
+                          _busy ? null : () => _run(session.pushClone),
+                    ),
+                    OutlinedButton(
+                      onPressed:
+                          _busy ? null : () => _run(() => session.useClone(null)),
+                      child: const Text('Dejar de usar este clon'),
+                    ),
+                  ],
+                ],
+              ),
+
+              if (path != null) ...[
+                const Divider(height: 20),
+                // Off is a legitimate choice on a bad connection, and the
+                // wording says what it costs rather than just naming it.
+                SwitchListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Enviar cada commit al guardar',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    'Un commit que no se envía no lo puede ver ni revertir '
+                    'nadie más. Desactívalo solo si la conexión es mala, y '
+                    'acuérdate de enviarlos.',
+                    style: TextStyle(fontSize: 11.5),
+                  ),
+                  value: session.gateway is CloneGateway
+                      ? (session.gateway as CloneGateway).pushOnCommit
+                      : true,
+                  onChanged: _busy
+                      ? null
+                      : (value) => _run(() => session.setPushOnCommit(value)),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Who the clone's commits are attributed to.
+///
+/// Written to this clone's own git config rather than the global one: the app
+/// has no business changing how git behaves everywhere else on the machine.
+class _AuthorDialog extends StatefulWidget {
+  const _AuthorDialog({required this.name, required this.email});
+
+  final String name;
+  final String email;
+
+  @override
+  State<_AuthorDialog> createState() => _AuthorDialogState();
+}
+
+class _AuthorDialogState extends State<_AuthorDialog> {
+  late final TextEditingController _name =
+      TextEditingController(text: widget.name);
+  late final TextEditingController _email =
+      TextEditingController(text: widget.email);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    super.dispose();
+  }
+
+  bool get _valid =>
+      _name.text.trim().isNotEmpty &&
+      // Not a full address grammar: enough to catch a typo, and git will
+      // accept anything anyway. A stricter check would reject real addresses.
+      _email.text.trim().contains('@');
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Autor de los commits'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Va en cada commit de este clon, y es lo que hace que un '
+              'cambio se pueda atribuir. Se guarda solo para este clon, no '
+              'en la configuración global de git.',
+              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _name,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Nombre'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _email,
+              decoration: const InputDecoration(labelText: 'Correo'),
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _valid
+              ? () => Navigator.of(context).pop((
+                  name: _name.text.trim(),
+                  email: _email.text.trim(),
+                ))
+              : null,
+          child: const Text('Guardar'),
+        ),
+      ],
+    );
+  }
 }

@@ -23,6 +23,7 @@ library;
 
 import '../model/catalogue.dart';
 import 'auth.dart';
+import 'local_clone.dart';
 import 'repository_access.dart';
 
 /// A file as it exists in the repository right now.
@@ -80,6 +81,9 @@ enum GatewayKind {
 
   /// Straight to GitHub with a token from the keychain.
   direct,
+
+  /// A clone on this machine, driven by git. Works with no network.
+  clone,
 
   /// Nothing configured. Reads of public material may still work.
   none,
@@ -278,4 +282,120 @@ extension UnitPaths on Unit {
   String fileFor(String language) => '$path/$language.tex';
 
   String get metadataPath => '$path/unit.yaml';
+}
+
+/// A clone on this machine, read and written through git.
+///
+/// The offline path, and the one the requirement asked for: everything is on
+/// disk, so reading is instant and works on a train, and a save is a commit
+/// followed by a push. Nothing about git has to be set up by hand -- the
+/// token the author pasted is what authenticates the push.
+///
+/// Note what this does *not* do: consult `access.json`. A token that can
+/// write the repository can write all of it, and a gateway that pretended
+/// otherwise in the interface would be theatre. The policy is the Worker's
+/// job, for the case where the app cannot be trusted with a token at all.
+class CloneGateway extends ContentGateway {
+  const CloneGateway({
+    required this.clone,
+    required this.token,
+    required this.author,
+    this.pushOnCommit = true,
+  });
+
+  final LocalClone clone;
+
+  /// Only used to authenticate a push. Never written to disk by this class,
+  /// and empty is a working configuration -- see [canWrite].
+  final String token;
+
+  final ({String name, String email})? author;
+
+  /// A commit that is not pushed is not traceable by anyone else, so this
+  /// defaults to true. It exists as a setting because pushing on every
+  /// keystroke-sized commit is the wrong shape for a long editing session on
+  /// a bad connection, and the interface can offer "push now" instead.
+  final bool pushOnCommit;
+
+  @override
+  GatewayKind get kind => GatewayKind.clone;
+
+  /// An author is all it takes.
+  ///
+  /// Deliberately **not** a token: committing to a clone on your own disk
+  /// needs no credential at all, and only the push does. Requiring one here
+  /// would mean the offline path -- the whole reason this gateway exists --
+  /// stopped working the moment nobody had pasted a token.
+  @override
+  bool get canWrite => author != null;
+
+  /// Whether a commit will actually reach GitHub.
+  bool get willPush => pushOnCommit && token.isNotEmpty;
+
+  @override
+  String describe() {
+    final who = author == null
+        ? 'sin autor: pon un nombre y un correo para poder hacer commits'
+        : 'como ${author!.name} <${author!.email}>';
+    final push = token.isEmpty
+        ? ', sin enviar a GitHub: falta el token'
+        : (pushOnCommit ? ', enviando cada commit' : ', sin enviar al guardar');
+    return 'Clon local en ${clone.directory}, $who$push';
+  }
+
+  @override
+  Future<ContentFile> read(String path) async {
+    try {
+      final found = await clone.readFile(path);
+      return ContentFile(path: path, text: found.text, sha: found.sha);
+    } on CloneException catch (thrown) {
+      throw ContentException(
+        thrown.message,
+        kind: thrown.message.contains('no existe')
+            ? ContentFailure.missing
+            : ContentFailure.other,
+      );
+    }
+  }
+
+  @override
+  Future<String> commit({
+    required String path,
+    required String text,
+    required String sha,
+    required String message,
+  }) async {
+    if (author == null) {
+      throw const ContentException(
+        'Un commit necesita un autor. Inicia sesión antes de guardar.',
+        kind: ContentFailure.unauthenticated,
+      );
+    }
+    try {
+      return await clone.commitFile(
+        path: path,
+        text: text,
+        expectedSha: sha,
+        message: message,
+        authorName: author!.name,
+        authorEmail: author!.email,
+        token: token,
+        // Not attempted without a token: it would fail, and a failed push
+        // reported as a failed save would make an author think their work
+        // was lost when it is committed and safe.
+        push: willPush,
+      );
+    } on CloneException catch (thrown) {
+      throw ContentException(
+        thrown.stderr.isEmpty
+            ? thrown.message
+            : '${thrown.message}\n${thrown.stderr}',
+        kind: thrown.message.contains('ha cambiado') ||
+                thrown.message.contains('ya existe') ||
+                thrown.message.contains('desaparecido')
+            ? ContentFailure.conflict
+            : ContentFailure.other,
+      );
+    }
+  }
 }
