@@ -27,6 +27,7 @@ import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'metadata_editor.dart';
 import 'shell.dart';
 import 'theme.dart';
 
@@ -38,6 +39,14 @@ class UnitPage extends StatefulWidget {
   @override
   State<UnitPage> createState() => _UnitPageState();
 }
+
+/// Which tab of a unit is open: one of its languages, or its `unit.yaml`.
+///
+/// The metadata sits alongside the languages rather than on its own screen
+/// because it is the same object being edited -- and because the fields most
+/// often wrong after a migration are the title and the kind, which is a
+/// thing you notice while reading the text.
+const String metadataTab = '\u0000metadata';
 
 class _UnitPageState extends State<UnitPage> {
   /// One editor per language, created when its tab is first opened.
@@ -98,7 +107,15 @@ class _UnitPageState extends State<UnitPage> {
           // needed in both branches, and creating state during layout is a
           // worse place to do it than during build.
           child: _WithEditor(
-            editor: _editorFor(unit, _active!, session),
+            editor: _active == metadataTab
+                // Keyed by path so moving to another unit rebuilds it rather
+                // than showing the previous unit's file while it loads.
+                ? MetadataEditor(
+                    key: ValueKey('metadata-${unit.path}'),
+                    unit: unit,
+                    session: session,
+                  )
+                : _editorFor(unit, _active!, session),
             builder: (context, constraints, editor) {
               // Side by side when there is room; the metadata panel is
               // reference material you consult while writing, so hiding it
@@ -568,7 +585,11 @@ class _LanguageTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 38,
-      child: Row(
+      // Scrolls rather than wraps: three languages plus the metadata fit on a
+      // desktop and not on a phone, and a tab strip that reflows to two rows
+      // moves the content down as you switch.
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
           for (final code in languages)
             _Tab(
@@ -578,30 +599,49 @@ class _LanguageTabs extends StatelessWidget {
               dirty: dirty.contains(code),
               onTap: () => onSelect(code),
             ),
+          const _Separator(),
+          _Tab(
+            label: 'unit.yaml',
+            selected: active == metadataTab,
+            dirty: false,
+            onTap: () => onSelect(metadataTab),
+          ),
         ],
       ),
     );
   }
 }
 
+class _Separator extends StatelessWidget {
+  const _Separator();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 9),
+        child: SizedBox(width: 1, child: ColoredBox(color: didactaRule)),
+      );
+}
+
 class _Tab extends StatelessWidget {
   const _Tab({
     required this.label,
-    required this.status,
     required this.selected,
     required this.dirty,
     required this.onTap,
+    this.status,
   });
 
   final String label;
-  final TranslationStatus status;
+
+  /// Null for the metadata tab, which has no translation state.
+  final TranslationStatus? status;
   final bool selected;
   final bool dirty;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colour = statusColour(status);
+    final state = status;
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -624,16 +664,20 @@ class _Tab extends StatelessWidget {
                 color: selected ? didactaInk : didactaMuted,
               ),
             ),
-            const SizedBox(width: 6),
-            Container(
-              width: 7,
-              height: 7,
-              decoration: BoxDecoration(
-                color: status.exists ? colour : Colors.transparent,
-                border: Border.all(color: status.exists ? colour : didactaRule),
-                shape: BoxShape.circle,
+            if (state != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: state.exists ? statusColour(state) : Colors.transparent,
+                  border: Border.all(
+                    color: state.exists ? statusColour(state) : didactaRule,
+                  ),
+                  shape: BoxShape.circle,
+                ),
               ),
-            ),
+            ],
             if (dirty) ...[
               const SizedBox(width: 4),
               // A dot rather than a word: it has to survive in a 38-pixel tab
