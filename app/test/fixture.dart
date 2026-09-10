@@ -297,7 +297,7 @@ class FakeCompiler implements Compiler {
 
   /// What it was asked for, so a test can check it was asked for what was
   /// chosen and not something else.
-  final List<({List<String> profiles, String language})> calls = [];
+  final List<({List<String> profiles, List<String> languages})> calls = [];
 
   final List<String> opened = [];
   final List<String> revealed = [];
@@ -313,22 +313,23 @@ class FakeCompiler implements Compiler {
   Future<List<CompileOutput>> compile({
     required String unitPath,
     required List<String> profiles,
-    required String language,
+    required List<String> languages,
     bool fast = false,
   }) async {
-    calls.add((profiles: profiles, language: language));
+    calls.add((profiles: profiles, languages: languages));
     if (failWith != null) throw failWith!;
     return outputs ??
         [
           for (final id in profiles)
-            CompileOutput(
-              profile: id,
-              language: language,
-              ok: true,
-              pdf: '/salida/$id-$language.pdf',
-              pages: id == 'slides' ? 5 : 1,
-              seconds: 3.4,
-            ),
+            for (final language in languages)
+              CompileOutput(
+                profile: id,
+                language: language,
+                ok: true,
+                pdf: '/salida/$id-$language.pdf',
+                pages: id == 'slides' ? 5 : 1,
+                seconds: 3.4,
+              ),
         ];
   }
 

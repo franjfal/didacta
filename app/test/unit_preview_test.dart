@@ -14,7 +14,6 @@ import 'package:provider/provider.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
-import 'package:didacta_app/ui/pdf_tab.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
 import 'package:didacta_app/ui/unit_preview.dart';
@@ -29,8 +28,9 @@ Future<void> settle(WidgetTester tester) async {
 
 final Finder compile = find.byKey(const Key('compile'));
 
-/// Los PDF que la pantalla pidió abrir en una pestaña.
-final List<OpenPdf> opened = [];
+/// Lo que la pantalla dijo que había compilado, que es lo que la página
+/// abre en pestañas.
+final List<CompileOutput> compiled = [];
 
 /// Las rutas que pidió abrir fuera, con si era el Finder.
 final List<({String path, bool reveal})> external = [];
@@ -64,8 +64,8 @@ class _HostState extends State<_Host> {
       onChanged: () {
         if (mounted) setState(() {});
       },
+      onCompiled: compiled.addAll,
     ),
-    onOpen: opened.add,
     onExternal: (path, {required bool reveal}) =>
         widget.external.add((path: path, reveal: reveal)),
   );
@@ -80,7 +80,7 @@ Future<FakeCompiler?> pumpPreview(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  opened.clear();
+  compiled.clear();
   external.clear();
   final used = none ? null : (compiler ?? FakeCompiler());
   final catalogue = catalogueWith([unitJson()]);
@@ -109,6 +109,14 @@ Future<FakeCompiler?> pumpPreview(
   await settle(tester);
   return used;
 }
+
+/// La etiqueta con la que el motor nombra un perfil.
+String _labelOf(String id) => switch (id) {
+  'slides' => 'Diapositivas',
+  'book' => 'Libro',
+  'notes' => 'Apuntes',
+  _ => id,
+};
 
 void main() {
   testWidgets('ofrece las versiones, con presentación y libro marcadas', (
@@ -151,7 +159,7 @@ void main() {
 
     expect(compiler.calls, hasLength(1));
     expect(compiler.calls.single.profiles, ['slides', 'book']);
-    expect(compiler.calls.single.language, 'es');
+    expect(compiler.calls.single.languages, ['es']);
   });
 
   testWidgets('el idioma de la salida no es el que se está editando', (
@@ -161,12 +169,15 @@ void main() {
     // figuras, sin dejar de estar en la unidad.
     final compiler = (await pumpPreview(tester))!;
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'va'));
+    // Se quita el castellano y se pone el valenciano.
+    await tester.tap(find.byKey(const Key('language-va')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('language-es')));
     await settle(tester);
     await tester.tap(compile);
     await settle(tester);
 
-    expect(compiler.calls.single.language, 'va');
+    expect(compiler.calls.single.languages, ['va']);
   });
 
   testWidgets('el resultado dice páginas y abre el PDF', (tester) async {
@@ -178,12 +189,9 @@ void main() {
     expect(find.textContaining('5 páginas'), findsOneWidget);
     expect(find.textContaining('1 página'), findsWidgets);
 
-    // «Ver aquí» abre una pestaña dentro de la aplicación, que es lo que
-    // permite tener diapositivas y libro a la vez.
-    await tester.tap(find.byKey(const Key('view-slides')));
-    await settle(tester);
-    expect(opened.map((p) => p.path), ['/salida/slides-es.pdf']);
-    expect(opened.single.label, 'slides · es');
+    // Se abren solas: acabas de pedir estas versiones, y quererlas ver es la
+    // única razón por la que las pediste.
+    expect(compiled.map((r) => r.pdf), contains('/salida/slides-es.pdf'));
 
     // Y el visor del sistema sigue estando: pantalla completa para pasar
     // diapositivas de verdad.
@@ -305,8 +313,14 @@ void main() {
   });
 
   group('las pestañas de PDF', () {
-    Future<FakeCompiler> pumpUnit(WidgetTester tester) async {
-      tester.view.physicalSize = const Size(1200, 1000);
+    /// La unidad entera, con la pestaña de compilar abierta y los idiomas
+    /// que se pidan marcados.
+    Future<FakeCompiler> pumpUnit(
+      WidgetTester tester, {
+      List<String> profiles = const ['slides'],
+      List<String> languages = const ['es'],
+    }) async {
+      tester.view.physicalSize = const Size(1400, 1000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
@@ -331,78 +345,151 @@ void main() {
       await settle(tester);
       await tester.tap(find.text('compilar'));
       await settle(tester);
+
+      // Los perfiles: se dejan solo los pedidos.
+      for (final id in const ['slides', 'book', 'notes']) {
+        final wanted = profiles.contains(id);
+        final chip = tester.widget<FilterChip>(
+          find.widgetWithText(FilterChip, _labelOf(id)),
+        );
+        if (chip.selected != wanted) {
+          await tester.tap(find.widgetWithText(FilterChip, _labelOf(id)));
+          await settle(tester);
+        }
+      }
+      // Los idiomas: igual.
+      for (final code in const ['es', 'va', 'en']) {
+        final wanted = languages.contains(code);
+        final chip = tester.widget<FilterChip>(
+          find.byKey(Key('language-$code')),
+        );
+        if (chip.selected != wanted) {
+          await tester.tap(find.byKey(Key('language-$code')));
+          await settle(tester);
+        }
+      }
+
       await tester.tap(compile);
       await settle(tester);
       return compiler;
     }
 
-    testWidgets('se abren varias a la vez, que es la razón de que existan', (
+    testWidgets('compilar abre las pestañas, sin pulsar nada más', (
       tester,
     ) async {
-      // Comparar «cómo queda en diapositivas» con «cómo queda en libro» es
-      // mirar dos cosas: una sola pestaña obligaría a recompilar para volver.
-      await pumpUnit(tester);
+      // Acabas de pedir estas versiones: quererlas ver es la única razón por
+      // la que las pediste.
+      await pumpUnit(tester, profiles: const ['slides', 'book']);
 
-      await tester.tap(find.byKey(const Key('view-slides')));
-      await settle(tester);
-      expect(find.byIcon(Icons.close), findsOneWidget);
-
-      await tester.tap(find.text('compilar'));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('view-book')));
-      await settle(tester);
-
-      // Las dos pestañas, cada una con su equis.
-      expect(find.byIcon(Icons.close), findsNWidgets(2));
       expect(find.text('slides · es'), findsWidgets);
       expect(find.text('book · es'), findsWidgets);
+      // Y se queda en la primera, mirándola.
+      expect(find.byIcon(Icons.first_page), findsOneWidget);
     });
 
-    testWidgets('la misma salida no se abre dos veces', (tester) async {
-      // Tras recompilar el fichero es nuevo y la pestaña es la misma.
-      await pumpUnit(tester);
+    testWidgets('dos idiomas de un perfil van en la misma pestaña', (
+      tester,
+    ) async {
+      // La comparación que importa: si la traducción valenciana sigue
+      // cabiendo en la diapositiva no se sabe sin las dos delante.
+      await pumpUnit(tester, languages: const ['es', 'va']);
 
-      await tester.tap(find.byKey(const Key('view-slides')));
+      // Una sola pestaña, rotulada con los dos idiomas.
+      expect(find.text('slides · es va'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+      // Y dos paneles, cada uno con su idioma escrito encima.
+      expect(find.textContaining('2 versiones a la vez'), findsOneWidget);
+    });
+
+    testWidgets('dos perfiles son dos pestañas, no una', (tester) async {
+      // Se agrupa por perfil y no por todo: comparar diapositivas con libro
+      // lado a lado no dice nada, son formatos distintos del mismo texto.
+      await pumpUnit(
+        tester,
+        profiles: const ['slides', 'book'],
+        languages: const ['es', 'va'],
+      );
+      expect(find.text('slides · es va'), findsOneWidget);
+      expect(find.text('book · es va'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsNWidgets(2));
+    });
+
+    testWidgets('con una sola versión no hay botón de separar', (tester) async {
+      // Separar de una sola cosa no es nada.
+      await pumpUnit(tester);
+      expect(find.byKey(const Key('pdf-detach')), findsNothing);
+    });
+
+    testWidgets('con dos, separar no pregunta cuál', (tester) async {
+      // Es la única cosa que se puede querer, y un menú de una opción es un
+      // clic de más.
+      await pumpUnit(tester, languages: const ['es', 'va']);
+      expect(find.text('slides · es va'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('pdf-detach')));
       await settle(tester);
+
+      // Dos pestañas, una por idioma.
+      expect(find.text('slides · es'), findsWidgets);
+      expect(find.text('slides · va'), findsWidgets);
+      expect(find.text('slides · es va'), findsNothing);
+      expect(find.byIcon(Icons.close), findsNWidgets(2));
+    });
+
+    testWidgets('con tres, separar pregunta cuál', (tester) async {
+      // Con tres, «separar» no dice cuál, así que lo pregunta.
+      await pumpUnit(tester, languages: const ['es', 'va', 'en']);
+      expect(find.text('slides · es va en'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('pdf-detach')));
+      await settle(tester);
+      expect(find.text('Separar va'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('detach-va')));
+      await settle(tester);
+
+      expect(find.text('slides · es en'), findsOneWidget);
+      expect(find.text('slides · va'), findsWidgets);
+    });
+
+    testWidgets('recompilar vuelve a juntar lo que se había separado', (
+      tester,
+    ) async {
+      // Si no, la pestaña separada apuntaría a un PDF viejo.
+      await pumpUnit(tester, languages: const ['es', 'va']);
+      await tester.tap(find.byKey(const Key('pdf-detach')));
+      await settle(tester);
+      expect(find.byIcon(Icons.close), findsNWidgets(2));
+
       await tester.tap(find.text('compilar'));
       await settle(tester);
-      await tester.tap(find.byKey(const Key('view-slides')));
+      await tester.tap(compile);
       await settle(tester);
 
+      expect(find.text('slides · es va'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
     testWidgets('se cierran, y al cerrar se vuelve a compilar', (tester) async {
       await pumpUnit(tester);
-      await tester.tap(find.byKey(const Key('view-slides')));
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close));
       await settle(tester);
 
-      // La equis de la pestaña. Los idiomas y `unit.yaml` no la tienen: son
-      // la unidad, no algo que se haya abierto.
-      final close = find.descendant(
-        of: find
-            .ancestor(
-              of: find.text('slides · es'),
-              matching: find.byType(InkWell),
-            )
-            .last,
-        matching: find.byIcon(Icons.close),
-      );
-      await tester.tap(close);
-      await settle(tester);
-
-      // No queda ninguna pestaña cerrable: la equis es lo que las distingue.
-      // «slides · es» sigue apareciendo, pero en la tarjeta del resultado,
-      // que es otra cosa.
       expect(find.byIcon(Icons.close), findsNothing);
-      // Se vuelve a «compilar», que es de donde se venía.
       expect(find.text('Compilar esta unidad'), findsOneWidget);
     });
 
-    testWidgets('los idiomas no se pueden cerrar', (tester) async {
-      await pumpUnit(tester);
-      // Ninguna equis mientras no haya un PDF abierto.
-      expect(find.byIcon(Icons.close), findsNothing);
+    testWidgets('el visor del sistema pregunta cuál cuando hay dos', (
+      tester,
+    ) async {
+      await pumpUnit(tester, languages: const ['es', 'va']);
+
+      await tester.tap(find.byKey(const Key('pdf-more')));
+      await settle(tester);
+      expect(find.text('Abrir es en el visor del sistema'), findsOneWidget);
+      expect(find.text('Ver va en el Finder'), findsOneWidget);
     });
   });
 
