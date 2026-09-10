@@ -12,6 +12,7 @@
     didacta new unit <path>              scaffold a unit
     didacta new year <course> <year>     duplicate the previous year
     didacta index                        generate the derived catalogues
+    didacta tidy                         strip the migration header from the sources
     didacta migrate <legacy> <target>    import from the legacy system
 
 Run from anywhere inside a content repository; the root is found by walking up
@@ -34,6 +35,7 @@ from didacta import index as index_mod  # noqa: E402
 from didacta import migrate as migrate_mod  # noqa: E402
 from didacta import profiles as profiles_mod  # noqa: E402
 from didacta import repo as repo_mod  # noqa: E402
+from didacta import tidy as tidy_mod  # noqa: E402
 from didacta import yamlio  # noqa: E402
 
 #: Didacta's own LaTeX tree, alongside the engine.
@@ -764,6 +766,52 @@ def cmd_new_year(args):
 # index
 # --------------------------------------------------------------------------
 
+def cmd_tidy(args):
+    """Remove the migration header from every unit source.
+
+    A bulk edit of every tracked `.tex`, so it is a dry run by default. What
+    it removes is the three comment lines the migrator used to write at the
+    top of each file -- the provenance, which `unit.yaml` also records, and a
+    line telling every file that Didacta supplies the preamble.
+
+    It touches only a header it recognises at the very top of a file, and
+    never a comment somebody wrote themselves.
+    """
+    root = repo_mod.find_root(args.root)
+    result = tidy_mod.tidy(root, apply=args.apply)
+
+    if args.json:
+        json.dump(result.as_dict(), sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        return 0
+
+    if not result.changed:
+        print("nothing to tidy: %d files already have no header"
+              % result.unchanged)
+        return 0
+
+    print("%s %d of %d unit sources (%s)"
+          % ("tidied" if args.apply else "would tidy",
+             result.changed,
+             result.changed + result.unchanged,
+             _human_bytes(result.bytes_removed)))
+    for path in result.paths[:8]:
+        print("  " + path)
+    if len(result.paths) > 8:
+        print("  ... and %d more" % (len(result.paths) - 8))
+    if not args.apply:
+        print("\nnothing written. Add --apply.")
+    return 0
+
+
+def _human_bytes(count):
+    if count < 1024:
+        return "%d B" % count
+    if count < 1024 * 1024:
+        return "%.1f kB" % (count / 1024)
+    return "%.1f MB" % (count / (1024 * 1024))
+
+
 def cmd_index(args):
     """Generate the derived catalogues an interface reads.
 
@@ -1292,6 +1340,14 @@ def main(argv=None):
                    help="say what would be written")
     p.add_argument("--json", action="store_true", help="print the manifest")
     p.set_defaults(func=cmd_index)
+
+    p = sub.add_parser(
+        "tidy", help="remove the migration header from the unit sources"
+    )
+    p.add_argument("--apply", action="store_true",
+                   help="actually write; without it this is a dry run")
+    p.add_argument("--json", action="store_true", help="print the summary")
+    p.set_defaults(func=cmd_tidy)
 
     p = sub.add_parser("migrate", help="import from the legacy LaTeX system")
     p.add_argument("source", help="the legacy repository (contains 00classnotes/)")

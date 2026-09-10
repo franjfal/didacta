@@ -531,14 +531,13 @@ def transform_content(text, *, rename_environments=True, source_path="",
         notes.append("usa \\input o \\include; si apunta a contenido reutilizable, "
                      "reescribirlo como \\DidactaUnit")
 
-    header = (
-        "%% Migrated from %s\n"
-        "%%\n"
-        "%% No preamble: Didacta supplies it.\n" % source_path
-        if source_path else ""
-    )
+    # No header. The provenance used to be written at the top of every `.tex`
+    # as three comment lines, and it was the first thing anyone saw when they
+    # opened a unit to edit it -- above the content, in an editor, for 2438
+    # files. It is not lost: `unit.yaml` records the same source path, and git
+    # records the migration commit. A `.tex` holds content.
     return Transform(
-        text=header + body.strip("\n") + "\n",
+        text=body.strip("\n") + "\n",
         notes=notes,
         preamble_lines=preamble_lines,
         renamed=renamed,
