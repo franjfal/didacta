@@ -369,13 +369,12 @@ class FakeCompiler implements Compiler {
   }) async {
     commands.add(arguments);
     if (failWith != null) throw failWith!;
-    // Solo lo que aplica toca el disco, como el motor: una
-    // previsualización que borrara ficheros sería el fallo que estos tests
-    // tienen que poder coger.
-    if (onRun != null &&
-        (arguments.contains('--apply') || arguments.contains('new'))) {
-      await onRun!(arguments);
-    }
+    // Todo menos una previsualización, como el motor: `remove` sin
+    // `--apply` cuenta lo que se llevaría y no toca nada, y que un test
+    // pueda coger lo contrario es la razón de esta condición.
+    final preview =
+        arguments.first == 'remove' && !arguments.contains('--apply');
+    if (onRun != null && !preview) await onRun!(arguments);
     // Se busca por la primera coincidencia de las claves puestas: los tests
     // dicen «lo que conteste a `remove course`» y no la línea entera.
     for (final entry in answers.entries) {

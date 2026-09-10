@@ -37,6 +37,10 @@ Future<bool> runAdmin(
 }) async {
   final admin = session.admin();
   final messenger = ScaffoldMessenger.of(context);
+  // Los dos, antes del primer `await`: después, el `context` de la pantalla
+  // puede haber dejado de valer, y son lo que hace falta para decir cómo ha
+  // ido y para tapar la pantalla mientras dura.
+  final navigator = Navigator.of(context, rootNavigator: true);
   if (admin == null) {
     messenger.showSnackBar(
       const SnackBar(
@@ -50,18 +54,32 @@ Future<bool> runAdmin(
     return false;
   }
 
-  final status = await admin.status();
-  if (!status.ready) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(status.problem ?? 'No se puede.'),
-        duration: const Duration(seconds: 6),
-      ),
-    );
-    return false;
-  }
+  // Con la pantalla bloqueada mientras dura. No es un adorno: la operación
+  // regenera el índice de dos mil unidades y tarda unos segundos, y una
+  // interfaz que no responde y no dice nada se lee como que se ha colgado.
+  // Además evita el segundo clic, que sobre un repositorio a medio escribir
+  // no es inofensivo.
+  //
+  // Antes de comprobar si se puede, y no después, para no usar un `context`
+  // al otro lado de un `await`. La comprobación es un fichero en el disco:
+  // el parpadeo no se ve.
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const _Working(),
+  );
 
   try {
+    final status = await admin.status();
+    if (!status.ready) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(status.problem ?? 'No se puede.'),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+      return false;
+    }
     await action(admin);
     messenger.showSnackBar(SnackBar(content: Text(done)));
     return true;
@@ -70,11 +88,48 @@ Future<bool> runAdmin(
       SnackBar(
         content: Text(error.toString()),
         backgroundColor: didactaTeacher,
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 10),
       ),
     );
     return false;
+  } finally {
+    // Por el navigator guardado y no por el `context` de la pantalla: la
+    // pantalla puede haberse ido mientras esto duraba, y entonces su
+    // contexto ya no sirve para cerrar nada.
+    navigator.pop();
   }
+}
+
+class _Working extends StatelessWidget {
+  const _Working();
+
+  @override
+  Widget build(BuildContext context) => const AlertDialog(
+    key: Key('admin-working'),
+    content: SizedBox(
+      width: 320,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Guardando…',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          SizedBox(height: 10),
+          LinearProgressIndicator(minHeight: 3),
+          SizedBox(height: 12),
+          // Decir por qué tarda. «Cargando» sin más, cuatro segundos, se
+          // lee como que algo va mal.
+          Text(
+            'Se regenera el índice del catálogo, que es lo que hace que el '
+            'cambio se vea. Tarda unos segundos.',
+            style: TextStyle(fontSize: 12, color: didactaMuted),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Pregunta antes de borrar, con el recuento delante.
@@ -245,6 +300,22 @@ class _DuplicateYearDialogState extends State<DuplicateYearDialog> {
       RegExp(r'^\d{4}-\d{4}$').hasMatch(_year.text.trim()) &&
       !widget.course.years.containsKey(_year.text.trim());
 
+  /// Si los dos años no son consecutivos.
+  ///
+  /// Un aviso y no un bloqueo: `2024-2026` cumple el formato y es
+  /// casi seguro un dedazo --pasó, y salieron dos cursos que nadie quería--
+  /// pero quien lo escriba a propósito sabrá por qué, y no soy yo quien
+  /// decide qué es un curso académico en su universidad.
+  String? get _oddSpan {
+    final match = RegExp(r'^(\d{4})-(\d{4})$').firstMatch(_year.text.trim());
+    if (match == null) return null;
+    final from = int.parse(match.group(1)!);
+    final to = int.parse(match.group(2)!);
+    if (to == from + 1) return null;
+    return 'Un curso académico suele ser $from-${from + 1}. '
+        'Se puede crear así, pero comprueba que es lo que quieres.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final exists = widget.course.years.containsKey(_year.text.trim());
@@ -279,6 +350,10 @@ class _DuplicateYearDialogState extends State<DuplicateYearDialog> {
               ),
               onChanged: (_) => setState(() {}),
             ),
+            if (_oddSpan != null) ...[
+              const SizedBox(height: 10),
+              Note(_oddSpan!, tone: didactaTeacher),
+            ],
             const SizedBox(height: 12),
             const Text(
               'Copiado de',

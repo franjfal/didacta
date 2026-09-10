@@ -203,9 +203,15 @@ void main() {
   group('borrar', () {
     test('una asignatura entera cabe en un commit', () async {
       final engine = FakeCompiler(
-        onRun: (_) async => Directory(
-          '${fixture.path}/courses/algebra',
-        ).delete(recursive: true),
+        onRun: (arguments) async {
+          // Solo lo que borra borra. Regenerar el índice no toca el
+          // contenido, y un fake que lo hiciera todo con cualquier orden no
+          // probaría el orden.
+          if (arguments.first == 'index') return;
+          await Directory(
+            '${fixture.path}/courses/algebra',
+          ).delete(recursive: true);
+        },
       );
 
       await fixture.admin(engine).removeCourse('algebra', title: 'Álgebra');
@@ -219,20 +225,22 @@ void main() {
       expect(await fixture.commitCount(), 2);
       expect(await fixture.clean, isTrue);
 
-      expect(engine.commands.single, [
-        'remove',
-        'course',
-        '--apply',
-        '--',
-        'algebra',
+      expect(engine.commands, [
+        ['remove', 'course', '--apply', '--', 'algebra'],
+        // El índice, en la misma operación: sin él la biblioteca sigue
+        // enseñando la asignatura que se acaba de quitar.
+        ['index'],
       ]);
     });
 
     test('un año se lleva el año y deja el otro', () async {
       final engine = FakeCompiler(
-        onRun: (_) async => Directory(
-          '${fixture.path}/courses/algebra/2024-2025',
-        ).delete(recursive: true),
+        onRun: (arguments) async {
+          if (arguments.first == 'index') return;
+          await Directory(
+            '${fixture.path}/courses/algebra/2024-2025',
+          ).delete(recursive: true);
+        },
       );
 
       await fixture.admin(engine).removeYear('algebra', '2024-2025');
@@ -270,17 +278,20 @@ void main() {
           .admin(engine)
           .createCourse(id: 'topologia', title: 'Topología', language: 'ca');
 
-      expect(engine.commands.single, [
-        'new',
-        'course',
-        '--title',
-        'Topología',
-        '--lang',
-        'ca',
-        // El id, detrás de `--`: viene de un formulario y `argparse` tomaría
-        // un `-algo` por una opción. Esto es lo que lo fija.
-        '--',
-        'topologia',
+      expect(engine.commands, [
+        [
+          'new',
+          'course',
+          '--title',
+          'Topología',
+          '--lang',
+          'ca',
+          // El id, detrás de `--`: viene de un formulario y `argparse`
+          // tomaría un `-algo` por una opción. Esto es lo que lo fija.
+          '--',
+          'topologia',
+        ],
+        ['index'],
       ]);
       final head = await fixture.head();
       expect(head.message, 'Añadir la asignatura «Topología» (topologia)');
@@ -302,7 +313,7 @@ void main() {
           .admin(engine)
           .createCourse(id: 'algebra-ii', title: 'Álgebra II', from: 'algebra');
 
-      expect(engine.commands.single, contains('--from'));
+      expect(engine.commands.first, contains('--from'));
       expect(
         (await fixture.head()).message,
         'Añadir la asignatura «Álgebra II» (algebra), copiada de algebra'
@@ -329,19 +340,99 @@ void main() {
             from: '2025-2026',
           );
 
-      expect(engine.commands.single, [
-        'new',
-        'year',
-        '--from',
-        '2025-2026',
-        '--',
-        'algebra',
-        '2026-2027',
+      expect(engine.commands, [
+        ['new', 'year', '--from', '2025-2026', '--', 'algebra', '2026-2027'],
+        ['index'],
       ]);
       expect(
         (await fixture.head()).message,
         'Añadir el curso 2026-2027 de algebra, copiado de 2025-2026',
       );
+    });
+  });
+
+  group('el índice', () {
+    // El fallo que esto coge ya ocurrió, y desde fuera se veía así: «dice
+    // que el curso está creado y en la lista no aparece». La biblioteca y la
+    // lista de asignaturas leen `generated/`, que lo genera el motor, así que
+    // una operación que no lo regenera no existe para nadie.
+
+    test('se regenera después de la operación, no antes', () async {
+      final engine = FakeCompiler(
+        onRun: (_) async {
+          final directory = Directory(
+            '${fixture.path}/courses/algebra/2026-2027',
+          );
+          await directory.create(recursive: true);
+          File('${directory.path}/year.yaml').writeAsStringSync('y: 1\n');
+        },
+      );
+
+      await fixture
+          .admin(engine)
+          .duplicateYear(
+            course: 'algebra',
+            year: '2026-2027',
+            from: '2025-2026',
+          );
+
+      // El orden importa: al revés se indexaría el repositorio de antes.
+      expect(engine.commands, [
+        ['new', 'year', '--from', '2025-2026', '--', 'algebra', '2026-2027'],
+        ['index'],
+      ]);
+    });
+
+    test('entra en el mismo commit que el contenido', () async {
+      // En el mismo y no en otro: un commit que añade un curso y deja el
+      // índice como estaba describe un repositorio que se contradice, y
+      // quien lo revierta tendría que acordarse de revertir los dos.
+      final engine = FakeCompiler(
+        onRun: (arguments) async {
+          if (arguments.first == 'index') {
+            Directory('${fixture.path}/generated').createSync();
+            File(
+              '${fixture.path}/generated/units.json',
+            ).writeAsStringSync('{"units": []}\n');
+            return;
+          }
+          final directory = Directory('${fixture.path}/courses/topologia');
+          await directory.create(recursive: true);
+          File('${directory.path}/course.yaml').writeAsStringSync('x: 1\n');
+        },
+      );
+
+      await fixture
+          .admin(engine)
+          .createCourse(id: 'topologia', title: 'Topología');
+
+      final head = await fixture.head();
+      expect(head.files, [
+        'courses/topologia/course.yaml',
+        'generated/units.json',
+      ]);
+      expect(await fixture.commitCount(), 2);
+    });
+
+    test('si el índice falla, el cambio se guarda igual y se dice', () async {
+      // Los ficheros ya están escritos: dejarlos sin commit sería perder el
+      // cambio de vista, que es peor que tener el índice viejo. Pero hay que
+      // decirlo, porque hasta que se regenere la pantalla no lo verá.
+      final engine = _FailingIndex(fixture.path);
+
+      await expectLater(
+        fixture.admin(engine).createCourse(id: 'topologia', title: 'Topología'),
+        throwsA(
+          isA<AdminException>()
+              .having((e) => e.message, 'message', contains('está hecho'))
+              .having((e) => e.message, 'message', contains('didacta index'))
+              .having((e) => e.detail, 'detail', contains('se atragantó')),
+        ),
+      );
+      // Guardado, que es lo que importa.
+      expect(await fixture.commitCount(), 2);
+      expect((await fixture.head()).files, ['courses/topologia/course.yaml']);
+      expect(await fixture.clean, isTrue);
     });
   });
 
@@ -396,4 +487,29 @@ void main() {
       expect(await fixture.clean, isTrue);
     });
   });
+}
+
+/// Un motor que hace la operación y luego se atraganta con el índice.
+class _FailingIndex extends FakeCompiler {
+  _FailingIndex(this.root);
+
+  final String root;
+
+  @override
+  Future<String> run(
+    List<String> arguments, {
+    bool allowFailure = false,
+  }) async {
+    commands.add(arguments);
+    if (arguments.first == 'index') {
+      throw const CompileException(
+        'El motor falló (código 1).',
+        detail: 'index: se atragantó con una unidad',
+      );
+    }
+    final directory = Directory('$root/courses/topologia');
+    await directory.create(recursive: true);
+    File('${directory.path}/course.yaml').writeAsStringSync('x: 1\n');
+    return '';
+  }
 }
