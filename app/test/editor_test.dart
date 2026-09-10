@@ -193,6 +193,218 @@ void main() {
     expect(gateway.commits.single.sha, '');
   });
 
+  group('los idiomas lado a lado', () {
+    /// La unidad con sitio de sobra: el modo lado a lado necesita 300 px por
+    /// columna, y por debajo de eso se apaga a propósito.
+    Future<FakeSession> pumpWide(
+      WidgetTester tester, {
+      bool split = false,
+      bool panel = true,
+    }) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Con el valenciano existiendo de verdad en el catálogo: si dijera
+      // que falta, el editor lo abriría desde el original --que es lo
+      // correcto-- y no se estaría probando lo de al lado.
+      final catalogue = catalogueWith([
+        unitJson(
+          languages: const {
+            'es': {'status': 'source', 'exists': true},
+            'va': {'status': 'translated', 'exists': true},
+            'en': {'status': 'missing', 'exists': false},
+          },
+        ),
+      ]);
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(
+          files: {
+            '$unitPath/es.tex': 'El original en castellano.',
+            '$unitPath/va.tex': 'El original en valencià.',
+          },
+        ),
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+      await session.setSplitEditors(split);
+      await session.setUnitPanelVisible(panel);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(body: UnitPage(unitPath: unitPath)),
+          ),
+        ),
+      );
+      await settle(tester);
+      return session;
+    }
+
+    testWidgets('apagado, se ve un idioma', (tester) async {
+      await pumpWide(tester);
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('El original en castellano.'), findsOneWidget);
+      expect(find.text('El original en valencià.'), findsNothing);
+    });
+
+    testWidgets('encendido, se ven a la vez y cada uno es su fichero', (
+      tester,
+    ) async {
+      await pumpWide(tester, split: true);
+
+      // Tres ficheros y no tres vistas de uno: cada panel trae su contenido.
+      expect(find.text('El original en castellano.'), findsOneWidget);
+      expect(find.text('El original en valencià.'), findsOneWidget);
+      // Y cada uno con su propio botón de guardar, porque son tres commits.
+      expect(find.byKey(const Key('editor-save')), findsNWidgets(3));
+    });
+
+    testWidgets('la casilla lo enciende y lo apaga', (tester) async {
+      final session = await pumpWide(tester);
+
+      await tester.tap(find.byKey(const Key('split-editors')));
+      await settle(tester);
+      expect(session.splitEditors, isTrue);
+      expect(find.text('El original en valencià.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('split-editors')));
+      await settle(tester);
+      expect(session.splitEditors, isFalse);
+      expect(find.text('El original en valencià.'), findsNothing);
+    });
+
+    testWidgets('el panel activo va marcado', (tester) async {
+      // Con tres columnas de LaTeX idénticas en forma, saber cuál responde a
+      // la pestaña de arriba deja de ser evidente.
+      await pumpWide(tester, split: true);
+      expect(find.text('activo'), findsOneWidget);
+    });
+
+    testWidgets('editar en un panel no toca el otro', (tester) async {
+      await pumpWide(tester, split: true);
+
+      int liveSaves() => tester
+          .widgetList<FilledButton>(find.byKey(const Key('editor-save')))
+          .where((button) => button.onPressed != null)
+          .length;
+
+      // De entrada hay uno vivo, y no es un fallo: el panel del inglés no
+      // existe, así que se abre precargado desde el original y tiene algo
+      // que guardar desde el primer momento.
+      expect(liveSaves(), 1);
+
+      await tester.enterText(
+        find.byType(TextField).first,
+        'Cambiado el castellano.',
+      );
+      await settle(tester);
+
+      // Uno más, y solo uno: el valenciano sigue como estaba.
+      expect(liveSaves(), 2);
+      expect(find.text('Cambiado el castellano.'), findsOneWidget);
+      expect(find.text('El original en valencià.'), findsOneWidget);
+    });
+
+    testWidgets('sin ancho para dos columnas lo dice, y no finge', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(420, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final catalogue = catalogueWith([unitJson()]);
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+      await session.setSplitEditors(true);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(body: UnitPage(unitPath: unitPath)),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      expect(
+        find.textContaining('No hay ancho para dos columnas'),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsOneWidget);
+    });
+  });
+
+  group('el panel de la derecha', () {
+    Future<FakeSession> pumpWide(
+      WidgetTester tester, {
+      bool panel = true,
+    }) async {
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final catalogue = catalogueWith([unitJson()]);
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+      await session.setUnitPanelVisible(panel);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(body: UnitPage(unitPath: unitPath)),
+          ),
+        ),
+      );
+      await settle(tester);
+      return session;
+    }
+
+    testWidgets('desplegado por defecto, porque dice dónde se usa', (
+      tester,
+    ) async {
+      // Es la respuesta a «¿puedo cambiar esto?», y esconderlo de entrada
+      // dejaría a alguien editando sin saberlo.
+      await pumpWide(tester);
+      expect(find.text('QUÉ ES'), findsOneWidget);
+      expect(find.textContaining('SE USA EN 1 DOCUMENTO'), findsOneWidget);
+    });
+
+    testWidgets('se colapsa, y el texto se queda con el ancho', (tester) async {
+      final session = await pumpWide(tester);
+      final wide = tester.getSize(find.byType(TextField)).width;
+
+      await tester.tap(find.byIcon(Icons.info));
+      await settle(tester);
+
+      expect(session.unitPanelVisible, isFalse);
+      expect(find.text('QUÉ ES'), findsNothing);
+      // Y el editor se ha quedado el sitio, que era el objetivo.
+      expect(tester.getSize(find.byType(TextField)).width, greaterThan(wide));
+    });
+
+    testWidgets('vuelve a salir', (tester) async {
+      await pumpWide(tester, panel: false);
+      expect(find.text('QUÉ ES'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.info_outline));
+      await settle(tester);
+      expect(find.text('QUÉ ES'), findsOneWidget);
+    });
+  });
+
   testWidgets('an unknown unit says so rather than crashing', (tester) async {
     final catalogue = catalogueWith([unitJson()]);
     final session = FakeSession(

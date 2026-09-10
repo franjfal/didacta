@@ -118,6 +118,30 @@ class Session extends ChangeNotifier {
   /// Who the clone's commits will be attributed to.
   ({String name, String email})? get cloneAuthor => _cloneAuthor;
 
+  bool _unitPanel = true;
+
+  /// Si el panel de la derecha de una unidad está desplegado.
+  bool get unitPanelVisible => _unitPanel;
+
+  bool _split = false;
+
+  /// Si los idiomas de una unidad se editan lado a lado.
+  bool get splitEditors => _split;
+
+  Future<void> setUnitPanelVisible(bool value) async {
+    if (_unitPanel == value) return;
+    _unitPanel = value;
+    notifyListeners();
+    await preferences.setUnitPanelVisible(value);
+  }
+
+  Future<void> setSplitEditors(bool value) async {
+    if (_split == value) return;
+    _split = value;
+    notifyListeners();
+    await preferences.setSplitEditors(value);
+  }
+
   String? _enginePath;
 
   /// Where the engine repository is, for compiling.
@@ -191,6 +215,8 @@ class Session extends ChangeNotifier {
     // would let the library disagree with the editor.
     try {
       _clonePath = await preferences.clonePath();
+      _unitPanel = await preferences.unitPanelVisible();
+      _split = await preferences.splitEditors();
     } catch (error) {
       // A setting that cannot be read is a setting that is not set.
       _clonePath = null;
