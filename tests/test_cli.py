@@ -166,3 +166,216 @@ class ArgumentTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class CourseAdminTests(unittest.TestCase):
+    """Crear y borrar asignaturas y años.
+
+    Lo que se comprueba es lo que distingue estas órdenes de un `rm -rf`: que
+    borrar es un simulacro por defecto y dice qué se va, que crear una
+    asignatura copiada no arrastra la procedencia de la original --que deja de
+    ser verdad al copiar-- y que duplicar un año copia la estructura y no el
+    contenido, que es la razón de que el reparto exista.
+    """
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        self.cli = load_cli()
+        self.root = tempfile.mkdtemp(prefix="didacta-courses-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+        os.makedirs(os.path.join(self.root, "content", "a", "b", "c"))
+        with open(
+            os.path.join(self.root, "content", "a", "b", "c", "es.tex"),
+            "w", encoding="utf-8",
+        ) as handle:
+            handle.write("El contenido.\n")
+        with open(
+            os.path.join(self.root, "content", "a", "b", "c", "unit.yaml"),
+            "w", encoding="utf-8",
+        ) as handle:
+            handle.write("id: a.b.c\nkind: theory\ntitle:\n  es: Uno\n"
+                         "category: a\ntopic: b\nreference: es\n"
+                         "languages:\n  es: {status: draft}\n")
+        with open(os.path.join(self.root, "didacta.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write("name: Prueba\nlanguages: [es, va, en]\n"
+                         "default_language: es\nbuild_dir: .build\n")
+
+        self.course_dir = os.path.join(self.root, "courses", "mates")
+        os.makedirs(os.path.join(self.course_dir, "2024-2025"))
+        with open(os.path.join(self.course_dir, "course.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(
+                "# Matemáticas\n#\n"
+                "# Migrated from  2024-2025/Mates/classinfo.tex\n#\n"
+                "# Lo que no cambia de un año a otro.\n\n"
+                "id: mates\ntitle:\n  es: Matemáticas\n\n"
+                "# TODO: el código\ncode: null\n\nlanguage: es\n"
+            )
+        with open(os.path.join(self.course_dir, "2024-2025", "year.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(
+                "course: mates\nyear: 2024-2025\nlanguage: es\n\n"
+                "documents:\n  - id: tema-1\n    kind: theory\n"
+                "    title:\n      es: Tema 1\n"
+                "    structure:\n      - unit: a/b/c\n"
+            )
+        with open(os.path.join(self.course_dir, "2024-2025", "tema-1.tex"),
+                  "w", encoding="utf-8") as handle:
+            handle.write("% Tema 1 -- 2024-2025\n\\input{didacta-bootstrap}\n")
+
+    def run_cli(self, *args):
+        return self.cli.main(["--root", self.root, *args])
+
+    # -- borrar ----------------------------------------------------------
+
+    def test_removing_a_course_is_a_dry_run_by_default(self):
+        # Borrar una asignatura quita el único registro de qué se dio y en
+        # qué orden. Sin `--apply` no se toca nada.
+        self.assertEqual(self.run_cli("remove", "course", "mates"), 0)
+        self.assertTrue(os.path.isdir(self.course_dir))
+
+    def test_removing_a_course_with_apply_deletes_it(self):
+        self.assertEqual(
+            self.run_cli("remove", "course", "mates", "--apply"), 0
+        )
+        self.assertFalse(os.path.exists(self.course_dir))
+
+    def test_removing_a_course_leaves_the_units_alone(self):
+        """Lo que se pierde es la selección, no el material.
+
+        Es la frase que la orden imprime, y tiene que ser verdad: las
+        unidades son de `content/`, no de la asignatura.
+        """
+        self.run_cli("remove", "course", "mates", "--apply")
+        self.assertTrue(
+            os.path.isfile(
+                os.path.join(self.root, "content", "a", "b", "c", "es.tex")
+            )
+        )
+
+    def test_removing_a_course_that_does_not_exist_fails(self):
+        self.assertEqual(self.run_cli("remove", "course", "nada"), 1)
+
+    def test_removing_a_year_leaves_the_course(self):
+        self.assertEqual(
+            self.run_cli("remove", "year", "mates", "2024-2025", "--apply"), 0
+        )
+        self.assertFalse(
+            os.path.exists(os.path.join(self.course_dir, "2024-2025"))
+        )
+        self.assertTrue(
+            os.path.isfile(os.path.join(self.course_dir, "course.yaml"))
+        )
+
+    def test_removing_a_year_that_does_not_exist_fails(self):
+        self.assertEqual(
+            self.run_cli("remove", "year", "mates", "1999-2000"), 1
+        )
+
+    # -- crear -----------------------------------------------------------
+
+    def test_a_new_course_is_created_without_years(self):
+        # Una asignatura con un año vacío es un año que alguien tiene que
+        # acordarse de rellenar; `new year` ya existe para hacer uno.
+        self.assertEqual(self.run_cli("new", "course", "fisica"), 0)
+        directory = os.path.join(self.root, "courses", "fisica")
+        self.assertTrue(os.path.isfile(os.path.join(directory, "course.yaml")))
+        self.assertEqual(os.listdir(directory), ["course.yaml"])
+
+    def test_a_new_course_refuses_an_id_that_is_not_a_directory_name(self):
+        # El id es el nombre del directorio y lo que referencia una
+        # composición: tiene que sobrevivir a escribirse, ordenarse y a una URL.
+        for bad in ("Física", "con espacio", "MATES", "con/barra"):
+            self.assertEqual(self.run_cli("new", "course", bad), 1, bad)
+
+    def test_an_id_that_looks_like_a_flag_goes_after_a_double_dash(self):
+        """Y hay que pasarlo así, no es un detalle del test.
+
+        `argparse` toma `-empieza-mal` por una opción y sale antes de que la
+        validación lo vea. Quien llame a esto con un id que viene de un
+        formulario tiene que ponerlo detrás de `--`, y la interfaz lo hace.
+        """
+        self.assertEqual(
+            self.run_cli("new", "course", "--", "-empieza-mal"), 1
+        )
+
+    def test_a_new_course_refuses_to_overwrite(self):
+        self.assertEqual(self.run_cli("new", "course", "mates"), 1)
+
+    def test_copying_a_course_keeps_the_field_comments(self):
+        # Los TODO de los campos son la lista de trabajo, y son la razón de
+        # copiar en lugar de empezar de cero.
+        self.assertEqual(
+            self.run_cli("new", "course", "mates-b", "--from", "mates"), 0
+        )
+        with open(
+            os.path.join(self.root, "courses", "mates-b", "course.yaml"),
+            encoding="utf-8",
+        ) as handle:
+            text = handle.read()
+        self.assertIn("# TODO: el código", text)
+        self.assertIn("id: mates-b", text)
+        self.assertNotIn("id: mates\n", text)
+
+    def test_copying_a_course_drops_a_provenance_that_stopped_being_true(self):
+        """La cabecera de la copia decía de qué fichero salió la original.
+
+        Y eso deja de ser verdad en cuanto se copia: `mates-b` no salió de
+        `classinfo.tex`, salió de `mates`.
+        """
+        self.run_cli("new", "course", "mates-b", "--from", "mates")
+        with open(
+            os.path.join(self.root, "courses", "mates-b", "course.yaml"),
+            encoding="utf-8",
+        ) as handle:
+            text = handle.read()
+        self.assertNotIn("Migrated from", text)
+        self.assertIn("Copiada de mates", text)
+
+    def test_copying_a_course_can_retitle_it(self):
+        self.run_cli("new", "course", "mates-b", "--from", "mates",
+                     "--title", "Matemáticas (grupo B)")
+        with open(
+            os.path.join(self.root, "courses", "mates-b", "course.yaml"),
+            encoding="utf-8",
+        ) as handle:
+            text = handle.read()
+        self.assertIn("es: Matemáticas (grupo B)", text)
+
+    def test_copying_a_course_that_does_not_exist_leaves_nothing_behind(self):
+        # Ni el directorio a medias: un `courses/x/` vacío rompe el escaneo.
+        self.assertEqual(
+            self.run_cli("new", "course", "nueva", "--from", "nada"), 1
+        )
+        self.assertFalse(os.path.exists(os.path.join(self.root, "courses",
+                                                     "nueva")))
+
+    # -- duplicar un año -------------------------------------------------
+
+    def test_duplicating_a_year_copies_structure_and_not_content(self):
+        self.assertEqual(
+            self.run_cli("new", "year", "mates", "2025-2026"), 0
+        )
+        target = os.path.join(self.course_dir, "2025-2026")
+        with open(os.path.join(target, "year.yaml"), encoding="utf-8") as h:
+            year = h.read()
+        self.assertIn("year: 2025-2026", year)
+        self.assertNotIn("year: 2024-2025", year)
+        # La unidad se referencia, no se copia: es la razón del reparto.
+        self.assertIn("- unit: a/b/c", year)
+        self.assertTrue(os.path.isfile(os.path.join(target, "tema-1.tex")))
+
+    def test_duplicating_a_year_updates_the_year_in_the_documents(self):
+        self.run_cli("new", "year", "mates", "2025-2026")
+        with open(
+            os.path.join(self.course_dir, "2025-2026", "tema-1.tex"),
+            encoding="utf-8",
+        ) as handle:
+            self.assertIn("2025-2026", handle.read())
+
+    def test_duplicating_refuses_when_the_year_exists(self):
+        self.assertEqual(self.run_cli("new", "year", "mates", "2024-2025"), 1)
