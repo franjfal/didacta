@@ -94,6 +94,27 @@ abstract class LocalClone {
   /// failure to report is "git is not installed", not a stack trace.
   static Future<bool> gitAvailable() => platform.gitAvailable();
 
+  /// Busca un clon del repositorio de contenido en los sitios donde suele
+  /// estar, o null.
+  ///
+  /// Existe porque sin esto una compilación de escritorio hecha sin
+  /// `--dart-define=DIDACTA_CLONE` no encuentra nada: el catálogo se busca
+  /// por HTTP en una ruta relativa, que en una aplicación de escritorio no
+  /// resuelve, y la pantalla dice «no se pudo cargar el catálogo» sin que
+  /// falte ningún catálogo. La ruta iba dentro del binario y era invisible,
+  /// así que la siguiente compilación la perdía sin avisar.
+  ///
+  /// Lo configurado manda siempre; esto es solo para la primera vez.
+  static Future<String?> discover({
+    String? configured,
+    String? repo,
+    String? enginePath,
+  }) => platform.discoverClone(
+    configured: configured,
+    repo: repo,
+    enginePath: enginePath,
+  );
+
   /// Clones [owner]/[repo] into [directory], authenticating with [token].
   static Future<LocalClone> create({
     required String directory,

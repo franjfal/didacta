@@ -108,10 +108,11 @@ flutter run -d chrome \
   --dart-define=DIDACTA_API=https://didacta-api.<sub>.workers.dev
 ```
 
-En escritorio, con un clon que ya esté en disco:
+En escritorio no hace falta decir nada: la aplicación busca el clon en el
+disco al arrancar.
 
 ```bash
-flutter run -d macos --dart-define=DIDACTA_CLONE=$HOME/didacta_db
+flutter run -d macos
 ```
 
 Sin nada de eso la aplicación arranca igual y la biblioteca funciona: queda en
@@ -148,6 +149,25 @@ Cosas que salieron de mirar los datos reales, no de suponer:
   que quien traduce tenga el texto delante en vez de una página en blanco.
 
 ## Compilar en escritorio
+
+```bash
+app/tool/install-macos.sh
+```
+
+Compila, sustituye `~/Applications/Didacta.app` y la abre. Un script y no una
+orden a mano por un fallo que ya ocurrió: la ruta del clon iba dentro del
+binario por `--dart-define`, una compilación se hizo sin acordarse, y la
+aplicación abrió diciendo «no se pudo cargar el catálogo» con el catálogo
+generado y en su sitio. Una configuración invisible que se pierde en silencio
+no es una configuración.
+
+Ahora no hace falta ninguna: al arrancar, **la aplicación busca el clon** --una
+carpeta con `didacta.yaml` y `.git`-- al lado del motor, hacia arriba desde
+donde se ejecuta y en los sitios de siempre del `$HOME`. Lo que se elija en
+Ajustes manda sobre eso, y si no encuentra nada la pantalla de fallo tiene un
+botón para elegir la carpeta.
+
+Los `--dart-define` siguen valiendo para forzarlo:
 
 ```bash
 flutter build macos --release \
