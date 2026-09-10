@@ -28,6 +28,7 @@ import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'metadata_editor.dart';
+import 'pdf_tab.dart';
 import 'unit_preview.dart';
 import 'shell.dart';
 import 'theme.dart';
@@ -52,10 +53,53 @@ const String metadataTab = '\u0000metadata';
 /// La pestaña de compilar: «¿cómo queda esto?».
 const String previewTab = '\u0000preview';
 
+/// La pestaña de un PDF abierto. El prefijo la distingue de un idioma sin
+/// necesitar un tipo aparte para el valor de la pestaña activa.
+const String pdfTabPrefix = '\u0000pdf:';
+
+String _pdfTab(String key) => '$pdfTabPrefix$key';
+
 class _UnitPageState extends State<UnitPage> {
   /// One editor per language, created when its tab is first opened.
   final Map<String, _LanguageEditor> _editors = {};
   String? _active;
+
+  /// Los PDF abiertos, en el orden en que se abrieron.
+  ///
+  /// Varios a la vez a propósito: comparar «cómo queda en diapositivas» con
+  /// «cómo queda en libro» es mirar dos cosas, y una sola pestaña de PDF
+  /// obliga a recompilar para volver a la otra.
+  final List<OpenPdf> _open = [];
+
+  /// El estado de compilar, creado al abrir la pestaña por primera vez.
+  ///
+  /// Vive aquí y no en el widget por lo mismo que los editores: al volver de
+  /// mirar el PDF, lo compilado tiene que seguir estando.
+  PreviewState? _preview;
+
+  void _openPdf(OpenPdf pdf) {
+    setState(() {
+      // La misma salida no se abre dos veces: se reemplaza, porque tras
+      // recompilar el fichero es nuevo y la pestaña es la misma.
+      final at = _open.indexWhere((other) => other.key == pdf.key);
+      if (at >= 0) {
+        _open[at] = pdf;
+      } else {
+        _open.add(pdf);
+      }
+      _active = _pdfTab(pdf.key);
+    });
+  }
+
+  void _closePdf(String key) {
+    setState(() {
+      _open.removeWhere((pdf) => pdf.key == key);
+      if (_active == _pdfTab(key)) {
+        // Se vuelve a compilar y no al primer idioma: es de donde se venía.
+        _active = previewTab;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -99,11 +143,13 @@ class _UnitPageState extends State<UnitPage> {
             unit: unit,
             languages: languages,
             active: _active!,
+            open: _open,
             dirty: {
               for (final entry in _editors.entries)
                 if (entry.value.isDirty) entry.key,
             },
             onSelect: (code) => setState(() => _active = code),
+            onClose: _closePdf,
           ),
         ),
         Expanded(
@@ -111,21 +157,7 @@ class _UnitPageState extends State<UnitPage> {
           // needed in both branches, and creating state during layout is a
           // worse place to do it than during build.
           child: _WithEditor(
-            editor: switch (_active!) {
-              // Keyed by path so moving to another unit rebuilds it rather
-              // than showing the previous unit's file while it loads.
-              metadataTab => MetadataEditor(
-                key: ValueKey('metadata-${unit.path}'),
-                unit: unit,
-                session: session,
-              ),
-              previewTab => UnitPreview(
-                key: ValueKey('preview-${unit.path}'),
-                unit: unit,
-                session: session,
-              ),
-              final language => _editorFor(unit, language, session),
-            },
+            editor: _panelFor(unit, session),
             builder: (context, constraints, editor) {
               // Side by side when there is room; the metadata panel is
               // reference material you consult while writing, so hiding it
@@ -148,6 +180,68 @@ class _UnitPageState extends State<UnitPage> {
         ),
       ],
     );
+  }
+
+  /// Lo que se muestra para la pestaña activa.
+  Widget _panelFor(Unit unit, Session session) {
+    final active = _active!;
+    if (active.startsWith(pdfTabPrefix)) {
+      final key = active.substring(pdfTabPrefix.length);
+      final pdf = _open.where((other) => other.key == key).firstOrNull;
+      // Puede no estar si se cerró justo antes de este build.
+      if (pdf != null) {
+        return PdfTabView(
+          key: ValueKey('pdf-$key'),
+          pdf: pdf,
+          onOpenExternally: () => _external(session, pdf.path, reveal: false),
+          onReveal: () => _external(session, pdf.path, reveal: true),
+          onRecompile: () => setState(() => _active = previewTab),
+        );
+      }
+    }
+    return switch (active) {
+      // Keyed by path so moving to another unit rebuilds it rather than
+      // showing the previous unit's file while it loads.
+      metadataTab => MetadataEditor(
+        key: ValueKey('metadata-${unit.path}'),
+        unit: unit,
+        session: session,
+      ),
+      previewTab => UnitPreview(
+        state: _preview ??= PreviewState(
+          unit: unit,
+          session: session,
+          onChanged: () {
+            if (mounted) setState(() {});
+          },
+        ),
+        onOpen: _openPdf,
+        onExternal: (path, {required bool reveal}) =>
+            _external(session, path, reveal: reveal),
+      ),
+      final language => _editorFor(unit, language, session),
+    };
+  }
+
+  Future<void> _external(
+    Session session,
+    String path, {
+    required bool reveal,
+  }) async {
+    try {
+      final compiler = session.compiler();
+      if (compiler == null) return;
+      if (reveal) {
+        await compiler.reveal(path);
+      } else {
+        await compiler.open(path);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 
   /// Which language to open first: the one being browsed if it exists, else
@@ -586,6 +680,8 @@ class _LanguageTabs extends StatelessWidget {
     required this.active,
     required this.dirty,
     required this.onSelect,
+    required this.open,
+    required this.onClose,
   });
 
   final Unit unit;
@@ -593,6 +689,10 @@ class _LanguageTabs extends StatelessWidget {
   final String active;
   final Set<String> dirty;
   final ValueChanged<String> onSelect;
+
+  /// Los PDF abiertos, cada uno con su pestaña cerrable.
+  final List<OpenPdf> open;
+  final ValueChanged<String> onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -626,6 +726,16 @@ class _LanguageTabs extends StatelessWidget {
             dirty: false,
             onTap: () => onSelect(previewTab),
           ),
+          if (open.isNotEmpty) const _Separator(),
+          for (final pdf in open)
+            _Tab(
+              label: pdf.label,
+              icon: Icons.picture_as_pdf_outlined,
+              selected: active == _pdfTab(pdf.key),
+              dirty: false,
+              onTap: () => onSelect(_pdfTab(pdf.key)),
+              onClose: () => onClose(pdf.key),
+            ),
         ],
       ),
     );
@@ -650,6 +760,7 @@ class _Tab extends StatelessWidget {
     required this.onTap,
     this.status,
     this.icon,
+    this.onClose,
   });
 
   final String label;
@@ -657,6 +768,10 @@ class _Tab extends StatelessWidget {
   /// Para una pestaña que no es un idioma: dice que hace algo, en lugar de
   /// que muestra algo.
   final IconData? icon;
+
+  /// Puesto en una pestaña que se puede cerrar, que son las de PDF. Los
+  /// idiomas y `unit.yaml` no se cierran: son la unidad.
+  final VoidCallback? onClose;
 
   /// Null for the metadata tab, which has no translation state.
   final TranslationStatus? status;
@@ -718,6 +833,17 @@ class _Tab extends StatelessWidget {
               // A dot rather than a word: it has to survive in a 38-pixel tab
               // and "sin guardar" is already spelled out in the editor bar.
               const Icon(Icons.circle, size: 6, color: didactaEx),
+            ],
+            if (onClose != null) ...[
+              const SizedBox(width: 4),
+              InkWell(
+                onTap: onClose,
+                borderRadius: BorderRadius.circular(9),
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.close, size: 12, color: didactaMuted),
+                ),
+              ),
             ],
           ],
         ),

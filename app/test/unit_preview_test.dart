@@ -12,7 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/compiler.dart';
+import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/pdf_tab.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
 import 'package:didacta_app/ui/unit_preview.dart';
@@ -27,6 +29,48 @@ Future<void> settle(WidgetTester tester) async {
 
 final Finder compile = find.byKey(const Key('compile'));
 
+/// Los PDF que la pantalla pidió abrir en una pestaña.
+final List<OpenPdf> opened = [];
+
+/// Las rutas que pidió abrir fuera, con si era el Finder.
+final List<({String path, bool reveal})> external = [];
+
+/// Un anfitrión mínimo que hace lo que hace la página: conservar el estado
+/// entre reconstrucciones, que es la razón de que el estado no viva en el
+/// widget.
+class _Host extends StatefulWidget {
+  const _Host({
+    required this.unit,
+    required this.session,
+    required this.external,
+  });
+
+  final Unit unit;
+  final Session session;
+  final List<({String path, bool reveal})> external;
+
+  @override
+  State<_Host> createState() => _HostState();
+}
+
+class _HostState extends State<_Host> {
+  PreviewState? _state;
+
+  @override
+  Widget build(BuildContext context) => UnitPreview(
+    state: _state ??= PreviewState(
+      unit: widget.unit,
+      session: widget.session,
+      onChanged: () {
+        if (mounted) setState(() {});
+      },
+    ),
+    onOpen: opened.add,
+    onExternal: (path, {required bool reveal}) =>
+        widget.external.add((path: path, reveal: reveal)),
+  );
+}
+
 Future<FakeCompiler?> pumpPreview(
   WidgetTester tester, {
   FakeCompiler? compiler,
@@ -36,6 +80,8 @@ Future<FakeCompiler?> pumpPreview(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
+  opened.clear();
+  external.clear();
   final used = none ? null : (compiler ?? FakeCompiler());
   final catalogue = catalogueWith([unitJson()]);
   final session = FakeSession(
@@ -51,9 +97,10 @@ Future<FakeCompiler?> pumpPreview(
       child: MaterialApp(
         theme: didactaTheme(),
         home: Scaffold(
-          body: UnitPreview(
+          body: _Host(
             unit: catalogue.unitByPath(unitPath)!,
             session: session,
+            external: external,
           ),
         ),
       ),
@@ -123,7 +170,7 @@ void main() {
   });
 
   testWidgets('el resultado dice páginas y abre el PDF', (tester) async {
-    final compiler = (await pumpPreview(tester))!;
+    await pumpPreview(tester);
 
     await tester.tap(compile);
     await settle(tester);
@@ -131,9 +178,21 @@ void main() {
     expect(find.textContaining('5 páginas'), findsOneWidget);
     expect(find.textContaining('1 página'), findsWidgets);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Abrir el PDF').first);
+    // «Ver aquí» abre una pestaña dentro de la aplicación, que es lo que
+    // permite tener diapositivas y libro a la vez.
+    await tester.tap(find.byKey(const Key('view-slides')));
     await settle(tester);
-    expect(compiler.opened, ['/salida/slides-es.pdf']);
+    expect(opened.map((p) => p.path), ['/salida/slides-es.pdf']);
+    expect(opened.single.label, 'slides · es');
+
+    // Y el visor del sistema sigue estando: pantalla completa para pasar
+    // diapositivas de verdad.
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Visor del sistema').first,
+    );
+    await settle(tester);
+    expect(external.single.path, '/salida/slides-es.pdf');
+    expect(external.single.reveal, isFalse);
   });
 
   testWidgets('avisa de que la numeración será la del documento', (
@@ -243,6 +302,108 @@ void main() {
 
     expect(find.textContaining('Falta latexmk'), findsOneWidget);
     expect(compile, findsNothing);
+  });
+
+  group('las pestañas de PDF', () {
+    Future<FakeCompiler> pumpUnit(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1200, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final compiler = FakeCompiler();
+      final catalogue = catalogueWith([unitJson()]);
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogue,
+        compilerOverride: compiler,
+      );
+      await session.primeForTest(catalogue);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(body: UnitPage(unitPath: unitPath)),
+          ),
+        ),
+      );
+      await settle(tester);
+      await tester.tap(find.text('compilar'));
+      await settle(tester);
+      await tester.tap(compile);
+      await settle(tester);
+      return compiler;
+    }
+
+    testWidgets('se abren varias a la vez, que es la razón de que existan', (
+      tester,
+    ) async {
+      // Comparar «cómo queda en diapositivas» con «cómo queda en libro» es
+      // mirar dos cosas: una sola pestaña obligaría a recompilar para volver.
+      await pumpUnit(tester);
+
+      await tester.tap(find.byKey(const Key('view-slides')));
+      await settle(tester);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      await tester.tap(find.text('compilar'));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('view-book')));
+      await settle(tester);
+
+      // Las dos pestañas, cada una con su equis.
+      expect(find.byIcon(Icons.close), findsNWidgets(2));
+      expect(find.text('slides · es'), findsWidgets);
+      expect(find.text('book · es'), findsWidgets);
+    });
+
+    testWidgets('la misma salida no se abre dos veces', (tester) async {
+      // Tras recompilar el fichero es nuevo y la pestaña es la misma.
+      await pumpUnit(tester);
+
+      await tester.tap(find.byKey(const Key('view-slides')));
+      await settle(tester);
+      await tester.tap(find.text('compilar'));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('view-slides')));
+      await settle(tester);
+
+      expect(find.byIcon(Icons.close), findsOneWidget);
+    });
+
+    testWidgets('se cierran, y al cerrar se vuelve a compilar', (tester) async {
+      await pumpUnit(tester);
+      await tester.tap(find.byKey(const Key('view-slides')));
+      await settle(tester);
+
+      // La equis de la pestaña. Los idiomas y `unit.yaml` no la tienen: son
+      // la unidad, no algo que se haya abierto.
+      final close = find.descendant(
+        of: find
+            .ancestor(
+              of: find.text('slides · es'),
+              matching: find.byType(InkWell),
+            )
+            .last,
+        matching: find.byIcon(Icons.close),
+      );
+      await tester.tap(close);
+      await settle(tester);
+
+      // No queda ninguna pestaña cerrable: la equis es lo que las distingue.
+      // «slides · es» sigue apareciendo, pero en la tarjeta del resultado,
+      // que es otra cosa.
+      expect(find.byIcon(Icons.close), findsNothing);
+      // Se vuelve a «compilar», que es de donde se venía.
+      expect(find.text('Compilar esta unidad'), findsOneWidget);
+    });
+
+    testWidgets('los idiomas no se pueden cerrar', (tester) async {
+      await pumpUnit(tester);
+      // Ninguna equis mientras no haya un PDF abierto.
+      expect(find.byIcon(Icons.close), findsNothing);
+    });
   });
 
   testWidgets('se llega desde la pestaña de la unidad', (tester) async {
