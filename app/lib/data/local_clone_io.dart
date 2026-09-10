@@ -26,6 +26,76 @@ Future<bool> gitAvailable() async {
 LocalClone makeClone({required String directory}) =>
     _GitClone(directory: directory);
 
+/// El fichero que identifica el repositorio de contenido.
+///
+/// Se comprueba junto con `.git`: una carpeta que se llame `didacta_db` y no
+/// sea un clon no sirve --no se podría hacer un commit-- y elegirla a la
+/// callada sería peor que no encontrar nada.
+const String _marker = 'didacta.yaml';
+
+Future<bool> _isClone(String directory) async =>
+    await File('$directory/$_marker').exists() &&
+    await Directory('$directory/.git').exists();
+
+Future<String?> discoverClone({
+  String? configured,
+  String? repo,
+  String? enginePath,
+}) async {
+  // Lo configurado manda, incluso si no existe: decirlo es mejor que
+  // sustituirlo por otra cosa a la callada. Es la misma regla que el motor.
+  if (configured != null && configured.isNotEmpty) return configured;
+
+  final names = <String>{
+    if (repo != null && repo.isNotEmpty) repo,
+    'didacta_db',
+  };
+  final home = Platform.environment['HOME'] ?? '';
+  final candidates = <String>[];
+
+  // Una variable de entorno, para quien lo tenga en un sitio raro y no
+  // quiera tocar Ajustes.
+  for (final key in ['DIDACTA_DB', 'DIDACTA_CLONE']) {
+    final value = Platform.environment[key];
+    if (value != null && value.isNotEmpty) candidates.add(value);
+  }
+
+  // Al lado del motor. Es la disposición que dice el README --los dos
+  // repositorios hermanos-- y la que tiene quien esté editando el motor.
+  if (enginePath != null && enginePath.isNotEmpty) {
+    final parent = Directory(enginePath).parent.path;
+    candidates.addAll([for (final name in names) '$parent/$name']);
+  }
+
+  // Hacia arriba desde donde se ejecuta. Sirve para `flutter run` desde
+  // `app/`, donde el clon está dos niveles por encima; en una aplicación
+  // empaquetada el directorio actual es `/` y esto no da nada.
+  var here = Directory.current;
+  for (var i = 0; i < 4; i += 1) {
+    candidates.addAll([for (final name in names) '${here.path}/$name']);
+    final up = here.parent;
+    if (up.path == here.path) break;
+    here = up;
+  }
+
+  if (home.isNotEmpty) {
+    for (final folder in [
+      '',
+      '/Documents',
+      '/Developer',
+      '/Projects',
+      '/src',
+    ]) {
+      candidates.addAll([for (final name in names) '$home$folder/$name']);
+    }
+  }
+
+  for (final candidate in candidates) {
+    if (await _isClone(candidate)) return candidate;
+  }
+  return null;
+}
+
 Future<LocalClone> cloneInto({
   required String directory,
   required String owner,

@@ -26,12 +26,14 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data/auth.dart';
 import 'data/catalogue_source.dart';
 import 'data/firebase_options.dart';
+import 'data/local_clone.dart';
 import 'data/preferences.dart';
 import 'data/repository_access.dart';
 import 'router.dart';
@@ -65,6 +67,12 @@ const String contentBranch = String.fromEnvironment(
 /// A clone already on disk, for a desktop build handed to someone who has
 /// the repository. Ignored on the web, and overridden by whatever is chosen
 /// in Ajustes.
+///
+/// Vacío es lo normal: si no se pasa, se busca en el disco. Pasarlo por
+/// `--dart-define` mete la ruta dentro del binario, donde no se ve, y la
+/// siguiente compilación que se haga sin acordarse produce una aplicación
+/// que no encuentra el catálogo y dice «no se pudo cargar» sin que falte
+/// ningún catálogo. Pasó, y de ahí viene la búsqueda.
 const String clonePath = String.fromEnvironment('DIDACTA_CLONE');
 
 /// El repositorio del motor, el que tiene `cli/didacta`. Hace falta para
@@ -110,6 +118,15 @@ Future<void> main() async {
     }
   }
 
+  // Dónde está el repositorio de contenido. Lo que se haya elegido en
+  // Ajustes manda sobre esto; esto es solo el valor por defecto, y buscarlo
+  // es mejor que no tenerlo: en escritorio, sin clon no hay catálogo --el
+  // índice se pediría por HTTP a una ruta relativa que no resuelve-- y la
+  // pantalla diría «no se pudo cargar el catálogo» sin que falte ninguno.
+  final defaultClone = clonePath.isNotEmpty
+      ? clonePath
+      : await LocalClone.discover(repo: contentRepo) ?? '';
+
   final session = Session(
     catalogueSource: const HttpCatalogueSource(base: indexBase),
     // Only when Firebase actually came up. `DidactaAuth` reads
@@ -128,8 +145,8 @@ Future<void> main() async {
     contentOwner: contentOwner,
     contentRepo: contentRepo,
     contentBranch: contentBranch,
-    preferences: const StoredPreferences(
-      defaultClonePath: clonePath,
+    preferences: StoredPreferences(
+      defaultClonePath: defaultClone,
       defaultEnginePath: enginePath,
     ),
   );
@@ -194,11 +211,7 @@ class _BootstrapState extends State<_Bootstrap> {
       LoadState.failed => MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: didactaTheme(),
-        home: _LoadFailure(
-          error: session.error!,
-          where: session.catalogueOrigin,
-          onRetry: session.start,
-        ),
+        home: _LoadFailure(session: session),
       ),
       LoadState.ready => _buildApp(session),
     };
@@ -340,19 +353,54 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
-class _LoadFailure extends StatelessWidget {
-  const _LoadFailure({
-    required this.error,
-    required this.where,
-    required this.onRetry,
-  });
+/// La pantalla de cuando no hay catálogo.
+///
+/// Con una salida y no solo un motivo. Ajustes vive dentro del router, y el
+/// router solo existe cuando hay catálogo, así que desde aquí no se podía
+/// llegar a la única pantalla que arregla el problema: la elección de la
+/// carpeta del repositorio está repetida aquí a propósito.
+class _LoadFailure extends StatefulWidget {
+  const _LoadFailure({required this.session});
 
-  final Object error;
-  final String where;
-  final VoidCallback onRetry;
+  final Session session;
+
+  @override
+  State<_LoadFailure> createState() => _LoadFailureState();
+}
+
+class _LoadFailureState extends State<_LoadFailure> {
+  Object? _problem;
+
+  Object get error => _problem ?? widget.session.error!;
+  String get where => widget.session.catalogueOrigin;
+
+  void onRetry() => widget.session.start();
+
+  /// Elegir la carpeta del clon y volver a arrancar.
+  Future<void> _choose() async {
+    try {
+      final chosen = await getDirectoryPath(
+        confirmButtonText: 'Usar este repositorio',
+      );
+      if (chosen == null) return;
+      await widget.session.useClone(chosen);
+      await widget.session.start();
+    } catch (problem) {
+      if (mounted) setState(() => _problem = problem);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Que no haya clon es un problema distinto de que el índice no esté, y
+    // el consejo es otro: aquí no falta ningún catálogo, falta decir dónde
+    // está el repositorio.
+    final noClone =
+        widget.session.canUseClone && widget.session.clonePath == null;
+    return _body(context, noClone);
+  }
+
+  Widget _body(BuildContext context, bool noClone) {
     return Scaffold(
       body: Center(
         child: ConstrainedBox(
@@ -398,32 +446,65 @@ class _LoadFailure extends StatelessWidget {
                   style: const TextStyle(fontSize: 13),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'El catálogo lo genera el motor. Desde el repositorio de '
-                  'contenido:',
-                  style: TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  color: didactaInk,
-                  child: const SelectableText(
-                    'didacta index',
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 13,
-                      color: Colors.white,
+                if (noClone) ...[
+                  const Text(
+                    'No hay ninguna carpeta del repositorio de contenido '
+                    'elegida, así que no hay de dónde leer el catálogo. '
+                    'Elige el clon que tengas en el disco.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Es la carpeta que tiene dentro didacta.yaml, content/ y '
+                    'courses/.',
+                    style: TextStyle(fontSize: 12, color: didactaMuted),
+                  ),
+                ] else ...[
+                  const Text(
+                    'El catálogo lo genera el motor. Desde el repositorio de '
+                    'contenido:',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    color: didactaInk,
+                    child: const SelectableText(
+                      'didacta index',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 20),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    icon: const Icon(Icons.refresh, size: 18),
-                    label: const Text('Reintentar'),
-                    onPressed: onRetry,
+                // Con el ancho entero para que `end` signifique algo: en una
+                // columna alineada a la izquierda, un Wrap se encoge y los
+                // botones acaban donde no se los espera. Y Wrap y no Row
+                // porque los dos botones no caben en un móvil.
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (widget.session.canUseClone)
+                        OutlinedButton.icon(
+                          key: const Key('choose-clone'),
+                          icon: const Icon(Icons.folder_open, size: 18),
+                          label: const Text('Elegir la carpeta…'),
+                          onPressed: _choose,
+                        ),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.refresh, size: 18),
+                        label: const Text('Reintentar'),
+                        onPressed: onRetry,
+                      ),
+                    ],
                   ),
                 ),
               ],

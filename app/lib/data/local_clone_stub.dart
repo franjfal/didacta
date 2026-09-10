@@ -24,3 +24,10 @@ Future<LocalClone> cloneInto({
   required String token,
   void Function(String line)? onProgress,
 }) async => makeClone(directory: directory);
+
+/// En web no hay nada que buscar: no hay sistema de ficheros.
+Future<String?> discoverClone({
+  String? configured,
+  String? repo,
+  String? enginePath,
+}) async => null;
