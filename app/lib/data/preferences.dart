@@ -15,10 +15,20 @@ abstract class Preferences {
 
   Future<bool> pushOnCommit();
   Future<void> setPushOnCommit(bool value);
+
+  /// Dónde está el repositorio del motor: el que tiene `cli/didacta`.
+  ///
+  /// Hace falta para compilar, y no se puede deducir del clon de contenido:
+  /// son dos repositorios, y el de la aplicación no viaja dentro del `.app`.
+  Future<String?> enginePath();
+  Future<void> setEnginePath(String? path);
 }
 
 class StoredPreferences implements Preferences {
-  const StoredPreferences({this.defaultClonePath = ''});
+  const StoredPreferences({
+    this.defaultClonePath = '',
+    this.defaultEnginePath = '',
+  });
 
   /// Where the clone is when nothing has been chosen yet.
   ///
@@ -27,8 +37,12 @@ class StoredPreferences implements Preferences {
   /// instead of starting on the Ajustes screen.
   final String defaultClonePath;
 
+  /// Igual, para el motor.
+  final String defaultEnginePath;
+
   static const String _clone = 'didacta.clone.path';
   static const String _push = 'didacta.clone.push';
+  static const String _engine = 'didacta.engine.path';
 
   /// The stored value, then the build-time default. A stored empty string is
   /// a real answer -- "I turned the clone off" -- and must win over the
@@ -64,14 +78,37 @@ class StoredPreferences implements Preferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_push, value);
   }
+
+  @override
+  Future<String?> enginePath() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(_engine)) {
+      final value = prefs.getString(_engine);
+      return (value == null || value.isEmpty) ? null : value;
+    }
+    return defaultEnginePath.isEmpty ? null : defaultEnginePath;
+  }
+
+  @override
+  Future<void> setEnginePath(String? path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_engine, path ?? '');
+  }
 }
 
 /// For tests, and for a platform where nothing is remembered.
 class MemoryPreferences implements Preferences {
-  MemoryPreferences({this.path, this.push = true});
+  MemoryPreferences({this.path, this.engine, this.push = true});
 
   String? path;
+  String? engine;
   bool push;
+
+  @override
+  Future<String?> enginePath() async => engine;
+
+  @override
+  Future<void> setEnginePath(String? value) async => engine = value;
 
   @override
   Future<String?> clonePath() async => path;

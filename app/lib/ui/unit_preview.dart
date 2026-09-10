@@ -1,0 +1,584 @@
+/// «¿Cómo queda esto?»
+///
+/// Una unidad compilada, en las versiones que le pegan: diapositivas, libro,
+/// apuntes. Es la pregunta que se hace editando y hasta ahora no se podía
+/// responder sin salir a un terminal y construir el tema entero alrededor.
+///
+/// Tres decisiones que conviene dejar dichas:
+///
+/// **Compila el motor, no la aplicación.** `didacta preview` ya sabe montar
+/// el preámbulo, elegir la clase según el perfil y leer el log de LaTeX, y
+/// está probado compilando de verdad. Una segunda implementación en Dart
+/// sería una segunda cosa que se desincroniza del `.sty`.
+///
+/// **El preámbulo no se ve.** La envoltura que hace que una unidad compile se
+/// genera en el directorio de compilación, que no se versiona. El `.tex` de
+/// la unidad sigue siendo contenido.
+///
+/// **El PDF se abre en el visor del sistema.** En lugar de incrustar uno: el
+/// del sistema tiene zoom, navegación y pantalla completa, que para repasar
+/// unas diapositivas es exactamente lo que hace falta, y no mete una
+/// dependencia de renderizado de PDF en una aplicación que edita LaTeX.
+library;
+
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../data/compiler.dart';
+import '../model/catalogue.dart';
+import '../router.dart';
+import '../state/session.dart';
+import 'theme.dart';
+
+class UnitPreview extends StatefulWidget {
+  const UnitPreview({super.key, required this.unit, required this.session});
+
+  final Unit unit;
+  final Session session;
+
+  @override
+  State<UnitPreview> createState() => _UnitPreviewState();
+}
+
+class _UnitPreviewState extends State<UnitPreview> {
+  CompilerStatus? _status;
+  List<BuildableProfile> _profiles = const [];
+  final Set<String> _chosen = {};
+  String? _language;
+
+  bool _loading = true;
+  bool _building = false;
+  Object? _problem;
+  List<CompileOutput> _results = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _language = widget.unit.reference;
+    scheduleMicrotask(_load);
+  }
+
+  Future<void> _load() async {
+    final compiler = widget.session.compiler();
+    if (compiler == null) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _status = CompilerStatus(
+          ready: false,
+          enginePath: widget.session.enginePath,
+          problem: widget.session.canCompile
+              ? 'Compilar necesita el motor y un clon del repositorio en '
+                    'disco. Los dos se eligen en Ajustes.'
+              : 'Compilar necesita LaTeX, y un navegador no lo tiene. Usa la '
+                    'aplicación de escritorio.',
+        );
+      });
+      return;
+    }
+
+    try {
+      final status = await compiler.status();
+      final profiles = status.ready
+          ? await compiler.profilesFor(widget.unit.path)
+          : const <BuildableProfile>[];
+      if (!mounted) return;
+      setState(() {
+        _status = status;
+        _profiles = profiles;
+        // Las dos que se piden por defecto: la de presentación y la de
+        // libro. Preseleccionadas porque son la respuesta al 90% de las
+        // veces que alguien abre esto.
+        _chosen
+          ..clear()
+          ..addAll(profiles.where((p) => p.isPrimary).map((p) => p.id));
+        if (_chosen.isEmpty && profiles.isNotEmpty) {
+          _chosen.add(profiles.first.id);
+        }
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _problem = error;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _compile() async {
+    final compiler = widget.session.compiler();
+    if (compiler == null || _chosen.isEmpty) return;
+    setState(() {
+      _building = true;
+      _problem = null;
+      _results = const [];
+    });
+    try {
+      final results = await compiler.compile(
+        unitPath: widget.unit.path,
+        profiles: _profiles
+            .where((p) => _chosen.contains(p.id))
+            .map((p) => p.id)
+            .toList(),
+        language: _language ?? widget.unit.reference,
+      );
+      if (!mounted) return;
+      setState(() {
+        _results = results;
+        _building = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _problem = error;
+        _building = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final status = _status;
+    if (status != null && !status.ready) {
+      return _NotReady(problem: status.problem ?? 'No se puede compilar.');
+    }
+
+    return Column(
+      children: [
+        _Controls(
+          unit: widget.unit,
+          profiles: _profiles,
+          chosen: _chosen,
+          language: _language ?? widget.unit.reference,
+          languages: widget.session.catalogue.languages,
+          building: _building,
+          onToggle: (id) => setState(() {
+            if (!_chosen.remove(id)) _chosen.add(id);
+          }),
+          onLanguage: (code) => setState(() => _language = code),
+          onCompile: _chosen.isEmpty || _building ? null : _compile,
+        ),
+        Expanded(
+          child: _problem != null
+              ? _Failure(problem: _problem!)
+              : _Results(
+                  results: _results,
+                  building: _building,
+                  unit: widget.unit,
+                  onOpen: _open,
+                  onReveal: _reveal,
+                ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _open(String pdf) => _act(() async {
+    await widget.session.compiler()?.open(pdf);
+  });
+
+  Future<void> _reveal(String pdf) => _act(() async {
+    await widget.session.compiler()?.reveal(pdf);
+  });
+
+  Future<void> _act(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+}
+
+class _Controls extends StatelessWidget {
+  const _Controls({
+    required this.unit,
+    required this.profiles,
+    required this.chosen,
+    required this.language,
+    required this.languages,
+    required this.building,
+    required this.onToggle,
+    required this.onLanguage,
+    required this.onCompile,
+  });
+
+  final Unit unit;
+  final List<BuildableProfile> profiles;
+  final Set<String> chosen;
+  final String language;
+  final List<String> languages;
+  final bool building;
+  final ValueChanged<String> onToggle;
+  final ValueChanged<String> onLanguage;
+  final VoidCallback? onCompile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: didactaPanel,
+        border: Border(bottom: BorderSide(color: didactaRule)),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Compilar esta unidad',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+              ),
+              // El idioma de la salida, que no tiene que ser el que se está
+              // editando: se compila en valenciano para ver si la traducción
+              // cuadra con las figuras.
+              for (final code in languages)
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: ChoiceChip(
+                    label: Text(code),
+                    selected: code == language,
+                    visualDensity: VisualDensity.compact,
+                    onSelected: building ? null : (_) => onLanguage(code),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Wrap(
+            spacing: 5,
+            runSpacing: 5,
+            children: [
+              for (final profile in profiles)
+                FilterChip(
+                  label: Text(profile.label),
+                  selected: chosen.contains(profile.id),
+                  visualDensity: VisualDensity.compact,
+                  avatar: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _familyColour(profile.family),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  onSelected: building ? null : (_) => onToggle(profile.id),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              FilledButton.icon(
+                key: const Key('compile'),
+                icon: building
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.play_arrow, size: 17),
+                label: Text(
+                  building
+                      ? 'Compilando…'
+                      : chosen.length <= 1
+                      ? 'Compilar'
+                      : 'Compilar ${chosen.length} versiones',
+                ),
+                onPressed: onCompile,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'El preámbulo lo pone Didacta al compilar; no está en el '
+                  'fichero.',
+                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Color _familyColour(String family) => switch (family) {
+    'slides' => didactaThm,
+    'problems' => didactaEx,
+    'handout' => didactaQues,
+    'exam' => didactaTeacher,
+    _ => didactaDefn,
+  };
+}
+
+class _Results extends StatelessWidget {
+  const _Results({
+    required this.results,
+    required this.building,
+    required this.unit,
+    required this.onOpen,
+    required this.onReveal,
+  });
+
+  final List<CompileOutput> results;
+  final bool building;
+  final Unit unit;
+  final ValueChanged<String> onOpen;
+  final ValueChanged<String> onReveal;
+
+  @override
+  Widget build(BuildContext context) {
+    if (results.isEmpty) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  building
+                      ? Icons.hourglass_top
+                      : Icons.picture_as_pdf_outlined,
+                  size: 30,
+                  color: didactaMuted,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  building
+                      ? 'Compilando. La primera vez tarda más: LaTeX está '
+                            'construyendo los formatos.'
+                      : 'Elige las versiones y pulsa compilar.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13, color: didactaMuted),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+      children: [
+        for (final result in results)
+          _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
+        const SizedBox(height: 8),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 2),
+          child: Note(
+            'Es una unidad sola, así que la numeración de apartados y las '
+            'referencias cruzadas serán las del documento donde se use, no '
+            'estas. Para verlas bien, compila el documento.',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ResultCard extends StatelessWidget {
+  const _ResultCard({
+    required this.result,
+    required this.onOpen,
+    required this.onReveal,
+  });
+
+  final CompileOutput result;
+  final ValueChanged<String> onOpen;
+  final ValueChanged<String> onReveal;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = result.ok ? didactaAccentDark : didactaTeacher;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: didactaRule),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  result.ok ? Icons.check_circle_outline : Icons.error_outline,
+                  size: 17,
+                  color: tone,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    '${result.profile} · ${result.language}',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (result.ok)
+                  Text(
+                    '${result.pages} '
+                    '${result.pages == 1 ? 'página' : 'páginas'} · '
+                    '${result.seconds.toStringAsFixed(1)} s',
+                    style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  ),
+              ],
+            ),
+            if (result.ok && result.pdf != null) ...[
+              const SizedBox(height: 9),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  FilledButton.icon(
+                    icon: const Icon(Icons.open_in_new, size: 15),
+                    label: const Text('Abrir el PDF'),
+                    onPressed: () => onOpen(result.pdf!),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.folder_open_outlined, size: 15),
+                    label: const Text('Ver en el Finder'),
+                    onPressed: () => onReveal(result.pdf!),
+                  ),
+                ],
+              ),
+            ],
+            if (result.errors.isNotEmpty) ...[
+              const SizedBox(height: 9),
+              for (final error in result.errors.take(6))
+                _Line(text: error, tone: didactaTeacher),
+              if (result.errors.length > 6)
+                _Line(
+                  text: '… y ${result.errors.length - 6} más',
+                  tone: didactaMuted,
+                ),
+            ],
+            if (result.warnings.isNotEmpty) ...[
+              const SizedBox(height: 7),
+              // Los avisos de Didacta son los accionables: «esta unidad no
+              // tiene valenciano, he usado el castellano».
+              for (final warning in result.warnings.take(4))
+                _Line(text: warning, tone: didactaEx),
+              if (result.warnings.length > 4)
+                _Line(
+                  text: '… y ${result.warnings.length - 4} avisos más',
+                  tone: didactaMuted,
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Line extends StatelessWidget {
+  const _Line({required this.text, required this.tone});
+
+  final String text;
+  final Color tone;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 3),
+    child: SelectableText(
+      text,
+      style: TextStyle(fontSize: 11.5, fontFamily: 'monospace', color: tone),
+    ),
+  );
+}
+
+class _NotReady extends StatelessWidget {
+  const _NotReady({required this.problem});
+
+  final String problem;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 470),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.build_outlined, size: 19, color: didactaMuted),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Todavía no se puede compilar aquí',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(problem, style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              icon: const Icon(Icons.settings, size: 16),
+              label: const Text('Ir a Ajustes'),
+              onPressed: () => context.go(Routes.settings()),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _Failure extends StatelessWidget {
+  const _Failure({required this.problem});
+
+  final Object problem;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'La compilación no se pudo lanzar',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 10),
+            // Lo que dijo el proceso, tal cual: su mensaje suele ser lo más
+            // útil que se le puede enseñar a alguien.
+            SelectableText(
+              '$problem',
+              style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
