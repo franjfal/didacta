@@ -185,6 +185,9 @@ class _CompositionEditorState extends State<CompositionEditor> {
                             : _entries[i],
                     ]),
                     onRemove: () => _remove(index),
+                    onInsertHeading: (kind) =>
+                        _insertAt(index, _newHeading(kind)),
+                    onInsertUnit: () => _insertUnit(context, index),
                     onRename: (text) => _apply([
                       for (var i = 0; i < _entries.length; i += 1)
                         i == index
@@ -260,6 +263,53 @@ class _CompositionEditorState extends State<CompositionEditor> {
     _apply([..._entries]..removeAt(index));
   }
 
+  /// Inserta una entrada en una posición.
+  ///
+  /// Hace falta porque «añadir un apartado» casi nunca significa «al final»:
+  /// se reestructura un tema partiéndolo, y el apartado va justo delante de
+  /// la unidad por la que empieza la parte nueva.
+  void _insertAt(int index, StructureEntry entry) {
+    final next = [..._entries];
+    next.insert(index.clamp(0, next.length), entry);
+    _apply(next);
+  }
+
+  StructureEntry _newHeading(EntryKind kind) => StructureEntry(
+    kind: kind,
+    value: '',
+    // Con título por idiomas desde el principio, que es la forma que usa el
+    // repositorio y lo que permite rellenar los demás después.
+    titleLines: [
+      '${widget.session.language}: Título nuevo',
+      for (final code in widget.session.catalogue.languages)
+        if (code != widget.session.language) '# TODO: $code',
+    ],
+  );
+
+  Future<void> _insertUnit(BuildContext context, int index) async {
+    final chosen = await _pickUnit(context);
+    if (chosen == null) return;
+    _insertAt(
+      index,
+      StructureEntry(
+        kind: chosen.isProblem ? EntryKind.problem : EntryKind.unit,
+        value: chosen.reference_,
+      ),
+    );
+  }
+
+  Future<Unit?> _pickUnit(BuildContext context) {
+    final already = {
+      for (final entry in _entries)
+        if (entry.isReference) entry.value,
+    };
+    return showDialog<Unit>(
+      context: context,
+      builder: (context) =>
+          _UnitPicker(session: widget.session, already: already),
+    );
+  }
+
   Future<void> _addUnit(BuildContext context) async {
     final already = {
       for (final entry in _entries)
@@ -280,22 +330,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
     ]);
   }
 
-  void _addHeading(EntryKind kind) {
-    _apply([
-      ..._entries,
-      StructureEntry(
-        kind: kind,
-        value: '',
-        // Localised from the start, which is the shape the repository uses
-        // and what lets the other languages be filled in later.
-        titleLines: [
-          '${widget.session.language}: Título nuevo',
-          for (final code in widget.session.catalogue.languages)
-            if (code != widget.session.language) '# TODO: $code',
-        ],
-      ),
-    ]);
-  }
+  void _addHeading(EntryKind kind) => _apply([..._entries, _newHeading(kind)]);
 
   Future<void> _save() async {
     final message = await showDialog<String>(
@@ -499,6 +534,8 @@ class _EntryRow extends StatelessWidget {
     required this.onToggle,
     required this.onRemove,
     required this.onRename,
+    required this.onInsertHeading,
+    required this.onInsertUnit,
   });
 
   final int index;
@@ -509,6 +546,12 @@ class _EntryRow extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onRemove;
   final ValueChanged<String> onRename;
+
+  /// Insertar **encima de esta fila**. Es lo que convierte «añadir un
+  /// apartado» en algo útil al reestructurar: el apartado va delante de la
+  /// unidad por la que empieza la parte nueva, no al final del documento.
+  final ValueChanged<EntryKind> onInsertHeading;
+  final VoidCallback onInsertUnit;
 
   @override
   Widget build(BuildContext context) {
@@ -570,8 +613,43 @@ class _EntryRow extends StatelessWidget {
                       onRename: onRename,
                     ),
             ),
+            if (enabled)
+              MenuAnchor(
+                builder: (context, controller, child) => IconButton(
+                  key: Key('insert-$index'),
+                  tooltip: 'Insertar encima',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.add, size: 16),
+                  onPressed: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                ),
+                menuChildren: [
+                  MenuItemButton(
+                    key: Key('insert-section-$index'),
+                    leadingIcon: const Icon(Icons.title, size: 15),
+                    onPressed: () => onInsertHeading(EntryKind.section),
+                    child: const Text('Apartado, encima'),
+                  ),
+                  MenuItemButton(
+                    key: Key('insert-subsection-$index'),
+                    leadingIcon: const Icon(Icons.subtitles_outlined, size: 15),
+                    onPressed: () => onInsertHeading(EntryKind.subsection),
+                    child: const Text('Subapartado, encima'),
+                  ),
+                  const Divider(height: 1),
+                  MenuItemButton(
+                    key: Key('insert-unit-$index'),
+                    leadingIcon: const Icon(Icons.add, size: 15),
+                    onPressed: onInsertUnit,
+                    child: const Text('Unidad, encima…'),
+                  ),
+                ],
+              ),
             IconButton(
-              tooltip: off ? 'Activar' : 'Desactivar este año',
+              // No se quita: se comenta. Que el texto lo diga es lo que
+              // separa este botón del de al lado.
+              tooltip: off ? 'Activar' : 'Desactivar, se queda comentada',
               visualDensity: VisualDensity.compact,
               icon: Icon(
                 off ? Icons.toggle_off_outlined : Icons.toggle_on,

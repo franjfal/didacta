@@ -277,6 +277,10 @@ class _ProcessCompiler implements Compiler {
     return '$where: $message';
   }
 
+  @override
+  Future<String> run(List<String> arguments, {bool allowFailure = false}) =>
+      _run(arguments, allowFailure: allowFailure);
+
   Future<String> _run(
     List<String> arguments, {
     bool allowFailure = false,

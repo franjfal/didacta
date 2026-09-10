@@ -202,6 +202,14 @@ abstract class Compiler {
     bool fast = false,
   });
 
+  /// Lanza el motor con los argumentos que se le den, y devuelve su salida.
+  ///
+  /// Está aquí porque esto ya es «lo que sabe lanzar el motor»: encontrar
+  /// `cli/didacta`, comprobar que está, ejecutarlo desde el clon y limpiar
+  /// el token de lo que se enseñe. Tener un segundo objeto para lanzar otras
+  /// órdenes sería tener dos sitios donde arreglar el mismo problema.
+  Future<String> run(List<String> arguments, {bool allowFailure = false});
+
   /// Abre el PDF en el visor del sistema.
   ///
   /// En lugar de incrustar un visor: el del sistema tiene zoom, navegación y

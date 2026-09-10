@@ -252,6 +252,79 @@ class _GitClone implements LocalClone {
   }
 
   @override
+  Future<bool> commitPaths({
+    required List<String> paths,
+    required String message,
+    required String authorName,
+    required String authorEmail,
+    required String token,
+    bool push = true,
+  }) async {
+    if (paths.isEmpty) return false;
+
+    // Las rutas de las que git puede decir algo.
+    //
+    // Hace falta porque `git add -- <ruta>` **falla** si la ruta no existe
+    // ni está en el índice, y ese es un caso normal, no un error: borrar
+    // algo que ya no estaba deja el árbol intacto y la operación no cambió
+    // nada. Sin este filtro eso salía como «los ficheros se han cambiado,
+    // pero el commit falló», que dice justo lo contrario de lo que pasó.
+    //
+    // Una ruta borrada del disco pero seguida por git sí cuenta: es
+    // exactamente el caso de quitar una asignatura, y hay que prepararla
+    // para que el borrado entre en el commit.
+    final known = <String>[];
+    for (final path in paths) {
+      final full = '$directory/$path';
+      if (File(full).existsSync() || Directory(full).existsSync()) {
+        known.add(path);
+        continue;
+      }
+      final tracked = await _text(['ls-files', '--', path]);
+      if (tracked.trim().isNotEmpty) known.add(path);
+    }
+    if (known.isEmpty) return false;
+
+    // `add -A -- <rutas>` recoge lo nuevo, lo cambiado y lo borrado dentro
+    // de esas rutas, que es lo que hace falta: una asignatura que se va son
+    // borrados, y una que se crea son ficheros nuevos.
+    await _run(['add', '-A', '--', ...known], what: 'preparar los cambios');
+
+    final staged = await _text([
+      'diff',
+      '--cached',
+      '--name-only',
+      '--',
+      ...known,
+    ]);
+    if (staged.trim().isEmpty) return false;
+
+    await _run(
+      [
+        '-c',
+        'user.name=$authorName',
+        '-c',
+        'user.email=$authorEmail',
+        'commit',
+        '--message',
+        message,
+        '--',
+        ...known,
+      ],
+      what: 'hacer el commit',
+      environment: {
+        'GIT_AUTHOR_NAME': authorName,
+        'GIT_AUTHOR_EMAIL': authorEmail,
+        'GIT_COMMITTER_NAME': authorName,
+        'GIT_COMMITTER_EMAIL': authorEmail,
+      },
+    );
+
+    if (push) await this.push(token: token);
+    return true;
+  }
+
+  @override
   Future<void> pull({required String token}) => _run(
     // `--ff-only`: a merge commit made behind someone's back is not a
     // thing an editor should produce. Diverged history is a conversation,
