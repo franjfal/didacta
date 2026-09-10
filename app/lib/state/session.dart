@@ -131,9 +131,13 @@ class Session extends ChangeNotifier {
 
   /// Brings up the catalogue and works out how content can be reached.
   ///
-  /// The catalogue is loaded first and on its own: it is the only thing the
-  /// app cannot show anything without. Auth failing is a degraded state, not
-  /// a broken one -- the public catalogue still lists.
+  /// **The catalogue is the only thing that can stop this.** Everything else
+  /// here -- a stored preference, a keychain, Firebase, a clone, the Worker --
+  /// is allowed to fail, and each failure is recorded and shown rather than
+  /// thrown. That is not defensiveness: this is called from `initState`
+  /// without an `await`, so anything that escapes becomes an unhandled async
+  /// error, and an unhandled error before the first frame is a black window
+  /// with the reason in a log nobody reads. It has happened twice.
   Future<void> start() async {
     _state = LoadState.loading;
     notifyListeners();
@@ -142,7 +146,13 @@ class Session extends ChangeNotifier {
     // read from: inside a clone, the index on disk is the one that matches
     // the files the editor writes, and fetching a different copy over HTTP
     // would let the library disagree with the editor.
-    _clonePath = await preferences.clonePath();
+    try {
+      _clonePath = await preferences.clonePath();
+    } catch (error) {
+      // A setting that cannot be read is a setting that is not set.
+      _clonePath = null;
+      _settingsProblem = error;
+    }
 
     try {
       _catalogue = await _source.load();
@@ -155,17 +165,67 @@ class Session extends ChangeNotifier {
       return;
     }
 
-    // Auth is watched rather than read once, so signing in or out updates
-    // every screen without any of them subscribing to Firebase themselves.
-    auth.changes.listen((_) => refreshAccess());
+    // Painted before access is resolved. The library needs none of what
+    // follows, and making the reader wait for a keychain -- or lose the
+    // screen to it -- is the wrong trade.
+    notifyListeners();
+
+    try {
+      // Auth is watched rather than read once, so signing in or out updates
+      // every screen without any of them subscribing to Firebase themselves.
+      //
+      // With an `onError`, which is not optional: a stream error with no
+      // handler goes to the zone, and from a Firebase JS callback it lands in
+      // the browser console as an uncaught object with no stack. Firebase
+      // failing to watch is a degraded state -- reading needs no session --
+      // so it is recorded and shown.
+      auth.changes.listen(
+        (_) => refreshAccess(),
+        onError: (Object error) {
+          _accessProblem = error;
+          notifyListeners();
+        },
+      );
+    } catch (error) {
+      _accessProblem = error;
+    }
     await refreshAccess();
   }
+
+  Object? _settingsProblem;
+
+  /// Why the stored settings could not be read, if they could not be.
+  Object? get settingsProblem => _settingsProblem;
+
+  Object? _accessProblem;
+
+  /// Why working out how to reach the content failed, if it did.
+  ///
+  /// Kept and shown in Ajustes. The app is usable without it -- reading the
+  /// public catalogue needs no access at all -- so this is a degraded state
+  /// and not a broken one.
+  Object? get accessProblem => _accessProblem;
 
   /// Recomputes the authorisation and the gateway from scratch.
   ///
   /// Called on every auth change and after a token is stored or cleared.
   /// Deriving rather than mutating is what guarantees the two cannot drift.
   Future<void> refreshAccess() async {
+    try {
+      await _refreshAccess();
+      _accessProblem = null;
+    } catch (error) {
+      // Recorded, not thrown: see the note on [start]. Whatever failed, the
+      // catalogue is already loaded and reading public material still works.
+      _accessProblem = error;
+      _gateway = UnconfiguredGateway(
+        'No se ha podido determinar el acceso: $error',
+      );
+      notifyListeners();
+    }
+  }
+
+  Future<void> _refreshAccess() async {
     _hasToken = (await tokenStore.read())?.isNotEmpty ?? false;
 
     // The API is the authority on permissions, so ask it -- but only if there
@@ -207,7 +267,13 @@ class Session extends ChangeNotifier {
   Future<ContentGateway> _deriveGateway() async {
     final token = await tokenStore.read();
 
-    _clonePath = await preferences.clonePath();
+    try {
+      _clonePath = await preferences.clonePath();
+      _settingsProblem = null;
+    } catch (error) {
+      _clonePath = null;
+      _settingsProblem = error;
+    }
     _cloneStatus = null;
     _cloneProblem = null;
     final path = _clonePath;

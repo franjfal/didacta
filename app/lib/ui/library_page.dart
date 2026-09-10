@@ -1,28 +1,69 @@
-/// The library: every unit, filtered.
+/// La biblioteca: 2147 unidades, navegables.
 ///
-/// The screen the platform is judged on first, because it is the one that has
-/// to make 2147 units navigable. Three things drive it:
+/// Esta pantalla estaba mal, y merece la pena decir en qué. Enseñaba las 2147
+/// unidades en una lista plana, con un panel de facetas al lado. La lista
+/// funcionaba —virtualizada, ordenable, filtrable— y aun así era lo peor que
+/// se podía hacer con estos datos, porque **tiraba a la basura la
+/// organización que el autor ya había hecho**.
 ///
-/// **The list is virtualised.** A builder over the filtered result, so
-/// scrolling 2147 rows costs what scrolling 20 does.
+/// El material está en un árbol, y está en el árbol en el disco:
+/// `content/analysis/normed/definition`. Dos áreas, 51 categorías, 444 temas,
+/// mediana de 3 unidades por tema. Eso son tres clics hasta cualquier unidad.
+/// La lista plana llegaba a la misma unidad pasando por delante de otras dos
+/// mil.
 ///
-/// **Filtering is one value, replaced whole.** Every control writes a new
-/// [LibraryFilter]; nothing holds a piece of it. There is no way to end up
-/// with the sidebar showing one thing and the list another.
+/// Así que hay dos vistas, y cada una responde a una pregunta distinta:
 ///
-/// **The counts say where the material is.** 51 categories in alphabetical
-/// order buries the ones being taught, so they are ordered by how much is in
-/// them and each says what clicking it would give.
+/// **Explorar** (al entrar) — el árbol, en columnas. «¿Qué hay de análisis?»
+/// se responde mirando, no buscando. Cada nivel dice cuánto contiene y cuánto
+/// está traducido al idioma que se está mirando.
+///
+/// **Buscar** (al escribir) — la lista plana, que para una búsqueda es la
+/// forma correcta: «hilbert» no es un sitio del árbol, es todo lo que
+/// coincide. Vive en `library_search.dart`.
+///
+/// Y menús de verdad, porque «Árbol», «Traducción», «Tipo» y «Orden» son
+/// menús y no cuatro controles sueltos peleándose por el ancho de la cabecera
+/// —que es exactamente lo que hacían, hasta comerse unos a otros por debajo
+/// de 1000 px.
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../model/catalogue.dart';
 import '../model/library_filter.dart';
+import '../model/library_tree.dart';
 import '../router.dart';
-import 'shell.dart';
+import '../state/session.dart';
+import 'library_search.dart';
 import 'theme.dart';
+
+/// Dónde está puesto el navegador. Un valor, no dos campos sueltos, para que
+/// no se pueda estar en un tema de una categoría que no está abierta.
+///
+/// Sin área: el área es un filtro sobre las unidades con las que se construye
+/// el árbol, no un nivel. Ponerla de nivel partía `analysis` en dos
+/// categorías con el mismo nombre, y separaba la teoría de sus ejercicios,
+/// que es justo lo que nadie quiere al preguntar «¿qué tengo de esto?».
+class BrowsePath {
+  const BrowsePath({this.category, this.topic});
+
+  final String? category;
+  final String? topic;
+
+  bool get isRoot => category == null;
+
+  BrowsePath toTopic(String topic) =>
+      BrowsePath(category: category, topic: topic);
+
+  /// Un nivel hacia arriba.
+  BrowsePath up() {
+    if (topic != null) return BrowsePath(category: category);
+    return const BrowsePath();
+  }
+}
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -32,120 +73,1619 @@ class LibraryPage extends StatefulWidget {
 }
 
 class _LibraryPageState extends State<LibraryPage> {
-  LibraryFilter? _filter;
   final TextEditingController _search = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+
+  BrowsePath _path = const BrowsePath();
+  LibraryFilter? _filter;
+
+  /// El árbol se construye una vez por catálogo, no por frame: recorrer 2147
+  /// unidades para contar una insignia es justo lo que hace que un scroll dé
+  /// tirones sin que nadie sepa por qué.
+  LibraryTree? _tree;
+  Catalogue? _treeFor;
+  String? _treeArea;
 
   @override
   void dispose() {
     _search.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
+
+  /// El árbol, sobre las unidades del área elegida.
+  ///
+  /// Se reconstruye al cambiar de catálogo o de área, no por frame: es una
+  /// pasada sobre 2147 unidades y ocurre cuando alguien pulsa un filtro.
+  LibraryTree _treeOf(Catalogue catalogue, String? area) {
+    if (_treeFor != catalogue || _treeArea != area) {
+      _tree = LibraryTree.of(
+        area == null
+            ? catalogue.units
+            : catalogue.units.where((unit) => unit.area == area),
+      );
+      _treeFor = catalogue;
+      _treeArea = area;
+    }
+    return _tree!;
+  }
+
+  bool get _searching => _search.text.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
-    // The language lives in the session so the rail's translation count and
-    // this list cannot disagree about which language they mean.
+    final catalogue = session.catalogue;
+
+    // El idioma vive en la sesión para que el recuento del carril y esta
+    // pantalla no puedan discrepar sobre a qué idioma se refieren.
     _filter ??= LibraryFilter(language: session.language);
     if (_filter!.language != session.language) {
       _filter = _filter!.copyWith(language: session.language);
     }
+    final filter = _filter!.copyWith(query: _search.text.trim());
+    // El mismo filtro de área gobierna el árbol y la búsqueda, para que las
+    // dos vistas no puedan estar mirando material distinto.
+    final tree = _treeOf(catalogue, filter.area);
 
-    final filter = _filter!;
-    final units = filter.apply(session.catalogue.units);
-    final facets = LibraryFacets.of(session.catalogue.units, filter);
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyF, meta: true):
+            _searchFocus.requestFocus,
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+            _searchFocus.requestFocus,
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (_searching) {
+            setState(_search.clear);
+          } else if (!_path.isRoot) {
+            setState(() => _path = _path.up());
+          }
+        },
+      },
+      child: Column(
+        children: [
+          _Header(
+            tree: tree,
+            session: session,
+            filter: filter,
+            search: _search,
+            searchFocus: _searchFocus,
+            searching: _searching,
+            path: _path,
+            onFilter: (next) => setState(() => _filter = next),
+            onSearchChanged: () => setState(() {}),
+            onPath: (next) => setState(() => _path = next),
+          ),
+          Expanded(
+            child: _searching
+                ? _SearchResults(
+                    filter: filter,
+                    units: catalogue.units,
+                    onFilter: (next) => setState(() => _filter = next),
+                  )
+                : _Browser(
+                    tree: tree,
+                    path: _path,
+                    language: session.language,
+                    filter: filter,
+                    onPath: (next) => setState(() => _path = next),
+                    onFilter: (next) => setState(() {
+                      _filter = next;
+                      // Cambiar de área cambia qué categorías hay, así que
+                      // una selección anterior puede haber desaparecido.
+                      _path = const BrowsePath();
+                    }),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
+// ---------------------------------------------------------------------------
+// La cabecera y los menús
+// ---------------------------------------------------------------------------
+
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.tree,
+    required this.session,
+    required this.filter,
+    required this.search,
+    required this.searchFocus,
+    required this.searching,
+    required this.path,
+    required this.onFilter,
+    required this.onSearchChanged,
+    required this.onPath,
+  });
+
+  final LibraryTree tree;
+  final Session session;
+  final LibraryFilter filter;
+  final TextEditingController search;
+  final FocusNode searchFocus;
+  final bool searching;
+  final BrowsePath path;
+  final ValueChanged<LibraryFilter> onFilter;
+  final VoidCallback onSearchChanged;
+  final ValueChanged<BrowsePath> onPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: didactaSurface,
+        border: Border(bottom: BorderSide(color: didactaRule)),
+      ),
+      padding: const EdgeInsets.fromLTRB(18, 14, 14, 10),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final narrow = constraints.maxWidth < 700;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Biblioteca',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          searching
+                              ? 'Buscando «${filter.query}»'
+                              : '${tree.unitCount} unidades · '
+                                    '${tree.categoryCount} categorías · '
+                                    '${tree.topicCount} temas',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: didactaMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  _LanguagePicker(session: session),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (!narrow) ...[
+                    _LibraryMenus(filter: filter, onFilter: onFilter),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: _SearchField(
+                      controller: search,
+                      focus: searchFocus,
+                      onChanged: onSearchChanged,
+                    ),
+                  ),
+                  if (narrow) ...[
+                    const SizedBox(width: 4),
+                    _LibraryMenus(
+                      filter: filter,
+                      onFilter: onFilter,
+                      compact: true,
+                    ),
+                  ],
+                ],
+              ),
+              if (!searching && !path.isRoot) ...[
+                const SizedBox(height: 10),
+                _Breadcrumbs(tree: tree, path: path, onPath: onPath),
+              ],
+              if (filter.hasFacets) ...[
+                const SizedBox(height: 9),
+                _ActiveFilters(filter: filter, onFilter: onFilter),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// «Árbol», «Traducción», «Tipo» y «Orden», como menús.
+class _LibraryMenus extends StatelessWidget {
+  const _LibraryMenus({
+    required this.filter,
+    required this.onFilter,
+    this.compact = false,
+  });
+
+  final LibraryFilter filter;
+  final ValueChanged<LibraryFilter> onFilter;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return MenuAnchor(
+        builder: (context, controller, child) => IconButton(
+          tooltip: 'Ver y filtrar',
+          icon: Badge(
+            isLabelVisible: filter.isNarrowed,
+            child: const Icon(Icons.tune, size: 20),
+          ),
+          onPressed: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+        ),
+        menuChildren: [
+          ..._areaItems(),
+          const Divider(height: 1),
+          ..._statusItems(),
+          const Divider(height: 1),
+          ..._kindItems(),
+          const Divider(height: 1),
+          ..._sortItems(),
+          const Divider(height: 1),
+          ..._extraItems(),
+        ],
+      );
+    }
+
+    return MenuBar(
+      style: const MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+        elevation: WidgetStatePropertyAll(0),
+        padding: WidgetStatePropertyAll(EdgeInsets.zero),
+      ),
+      children: [
+        // Sin «Árbol»: el filtro de área está siempre a la vista, arriba de
+        // la primera columna. Un menú que repite un control visible solo
+        // añade un sitio donde mirar. En estrecho sí va en el menú, porque
+        // ahí la columna desaparece al bajar de nivel.
+        SubmenuButton(
+          menuChildren: [
+            ..._statusItems(),
+            const Divider(height: 1),
+            ..._extraItems(),
+          ],
+          child: const Text('Traducción'),
+        ),
+        SubmenuButton(menuChildren: _kindItems(), child: const Text('Tipo')),
+        SubmenuButton(menuChildren: _sortItems(), child: const Text('Orden')),
+      ],
+    );
+  }
+
+  List<Widget> _areaItems() => [
+    _check(
+      'Todo',
+      filter.area == null,
+      () => onFilter(filter.copyWith(clearArea: true)),
+    ),
+    _check(
+      'Teoría y apuntes',
+      filter.area == 'content',
+      () => onFilter(filter.copyWith(area: 'content')),
+    ),
+    _check(
+      'Problemas',
+      filter.area == 'problems',
+      () => onFilter(filter.copyWith(area: 'problems')),
+    ),
+  ];
+
+  List<Widget> _statusItems() => [
+    for (final (status, label) in const [
+      (StatusFilter.any, 'Cualquier estado'),
+      (StatusFilter.present, 'Existe en este idioma'),
+      (StatusFilter.missing, 'Falta en este idioma'),
+      (StatusFilter.needsWork, 'Por revisar o desactualizada'),
+    ])
+      _check(
+        label,
+        filter.status == status,
+        () => onFilter(filter.copyWith(status: status)),
+      ),
+  ];
+
+  List<Widget> _kindItems() => [
+    _check(
+      'Cualquier tipo',
+      filter.kind == null,
+      () => onFilter(filter.copyWith(clearKind: true)),
+    ),
+    const Divider(height: 1),
+    for (final kind in const [
+      'theory',
+      'problem',
+      'handout',
+      'practical',
+      'seminar',
+      'example',
+      'activity',
+      'experiment',
+      'history',
+    ])
+      MenuItemButton(
+        leadingIcon: Dot(colour: kindColour(kind)),
+        trailingIcon: filter.kind == kind
+            ? const Icon(Icons.check, size: 15)
+            : null,
+        onPressed: () => onFilter(
+          filter.kind == kind
+              ? filter.copyWith(clearKind: true)
+              : filter.copyWith(kind: kind),
+        ),
+        child: Text(kindName(kind)),
+      ),
+  ];
+
+  List<Widget> _sortItems() => [
+    for (final (sort, label) in const [
+      (LibrarySort.path, 'Por ruta'),
+      (LibrarySort.title, 'Por título'),
+      (LibrarySort.usage, 'Más usadas primero'),
+      (LibrarySort.needsWork, 'Por traducir primero'),
+    ])
+      _check(
+        label,
+        filter.sort == sort,
+        () => onFilter(filter.copyWith(sort: sort)),
+      ),
+  ];
+
+  List<Widget> _extraItems() => [
+    _check(
+      'Solo las que no usa ninguna asignatura',
+      filter.unusedOnly,
+      () => onFilter(filter.copyWith(unusedOnly: !filter.unusedOnly)),
+    ),
+    if (filter.isNarrowed)
+      MenuItemButton(
+        leadingIcon: const Icon(Icons.filter_alt_off_outlined, size: 15),
+        onPressed: () => onFilter(
+          LibraryFilter(language: filter.language, sort: filter.sort),
+        ),
+        child: const Text('Quitar los filtros'),
+      ),
+  ];
+
+  Widget _check(String label, bool on, VoidCallback onPressed) =>
+      MenuItemButton(
+        leadingIcon: Icon(
+          on ? Icons.check : null,
+          size: 15,
+          color: didactaAccentDark,
+        ),
+        onPressed: onPressed,
+        child: Text(label),
+      );
+}
+
+/// Un cuadrado de color: el tipo de una unidad, del mismo color que en el PDF.
+class Dot extends StatelessWidget {
+  const Dot({super.key, required this.colour, this.size = 9});
+
+  final Color colour;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size,
+    height: size,
+    margin: const EdgeInsets.only(left: 3),
+    decoration: BoxDecoration(
+      color: colour,
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({
+    required this.controller,
+    required this.focus,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focus;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(7),
+      borderSide: const BorderSide(color: didactaRule),
+    );
+    return TextField(
+      controller: controller,
+      focusNode: focus,
+      style: const TextStyle(fontSize: 13.5),
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: Colors.white,
+        hintText: 'Buscar por título, ruta o etiqueta…',
+        prefixIcon: const Icon(Icons.search, size: 18),
+        suffixIcon: controller.text.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close, size: 16),
+                tooltip: 'Limpiar',
+                onPressed: () {
+                  controller.clear();
+                  onChanged();
+                },
+              ),
+        border: border,
+        enabledBorder: border,
+      ),
+      onChanged: (_) => onChanged(),
+    );
+  }
+}
+
+class _LanguagePicker extends StatelessWidget {
+  const _LanguagePicker({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final languages = session.catalogue.languages;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: didactaRule),
+        borderRadius: BorderRadius.circular(7),
+        color: Colors.white,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final code in languages)
+            _LanguageTab(
+              code: code,
+              selected: code == session.language,
+              first: code == languages.first,
+              last: code == languages.last,
+              onTap: () => sessionOf(context).language = code,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageTab extends StatelessWidget {
+  const _LanguageTab({
+    required this.code,
+    required this.selected,
+    required this.first,
+    required this.last,
+    required this.onTap,
+  });
+
+  final String code;
+  final bool selected;
+  final bool first;
+  final bool last;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.horizontal(
+      left: Radius.circular(first ? 6 : 0),
+      right: Radius.circular(last ? 6 : 0),
+    );
+    return InkWell(
+      onTap: onTap,
+      borderRadius: radius,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? didactaAccentDark : Colors.transparent,
+          borderRadius: radius,
+        ),
+        child: Text(
+          code,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : didactaMuted,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Breadcrumbs extends StatelessWidget {
+  const _Breadcrumbs({
+    required this.tree,
+    required this.path,
+    required this.onPath,
+  });
+
+  final LibraryTree tree;
+  final BrowsePath path;
+  final ValueChanged<BrowsePath> onPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final category = path.category == null
+        ? null
+        : tree.category(path.category!);
+    final topic = category == null || path.topic == null
+        ? null
+        : category.topic(path.topic!);
+
+    return Wrap(
+      spacing: 2,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        _Crumb(
+          label: 'Biblioteca',
+          onTap: () => onPath(const BrowsePath()),
+          last: category == null,
+        ),
+        if (category != null)
+          _Crumb(
+            label: category.label,
+            onTap: () => onPath(BrowsePath(category: category.category)),
+            last: topic == null,
+          ),
+        if (topic != null) _Crumb(label: topic.label, onTap: null, last: true),
+      ],
+    );
+  }
+}
+
+class _Crumb extends StatelessWidget {
+  const _Crumb({required this.label, required this.onTap, required this.last});
+
+  final String label;
+  final VoidCallback? onTap;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: last ? FontWeight.w700 : FontWeight.w400,
+              color: last ? didactaInk : didactaAccentDark,
+            ),
+          ),
+        ),
+      ),
+      if (!last) const Icon(Icons.chevron_right, size: 15, color: didactaMuted),
+    ],
+  );
+}
+
+/// Los filtros puestos, como fichas que se quitan de un toque.
+///
+/// Un filtro activo que no se ve es la forma más rápida de que alguien crea
+/// que le falta material.
+class _ActiveFilters extends StatelessWidget {
+  const _ActiveFilters({required this.filter, required this.onFilter});
+
+  final LibraryFilter filter;
+  final ValueChanged<LibraryFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[
+      if (filter.area != null)
+        _Chip(
+          label: filter.area == 'problems' ? 'problemas' : 'teoría y apuntes',
+          onRemove: () => onFilter(filter.copyWith(clearArea: true)),
+        ),
+      if (filter.kind != null)
+        _Chip(
+          label: kindName(filter.kind!),
+          colour: kindColour(filter.kind!),
+          onRemove: () => onFilter(filter.copyWith(clearKind: true)),
+        ),
+      if (filter.category != null)
+        _Chip(
+          label: humaniseSlug(filter.category!),
+          onRemove: () => onFilter(filter.copyWith(clearCategory: true)),
+        ),
+      if (filter.tag != null)
+        _Chip(
+          label: '#${filter.tag}',
+          onRemove: () => onFilter(filter.copyWith(clearTag: true)),
+        ),
+      if (filter.status != StatusFilter.any)
+        _Chip(
+          label: switch (filter.status) {
+            StatusFilter.present => 'existe en ${filter.language}',
+            StatusFilter.missing => 'falta en ${filter.language}',
+            StatusFilter.needsWork => 'por revisar',
+            StatusFilter.any => '',
+          },
+          onRemove: () => onFilter(filter.copyWith(status: StatusFilter.any)),
+        ),
+      if (filter.unusedOnly)
+        _Chip(
+          label: 'sin usar en ninguna asignatura',
+          onRemove: () => onFilter(filter.copyWith(unusedOnly: false)),
+        ),
+    ];
+    if (chips.isEmpty) return const SizedBox.shrink();
+    return Wrap(spacing: 5, runSpacing: 5, children: chips);
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.onRemove, this.colour});
+
+  final String label;
+  final VoidCallback onRemove;
+  final Color? colour;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = colour ?? didactaAccentDark;
+    return InkWell(
+      onTap: onRemove,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(9, 3, 6, 3),
+        decoration: BoxDecoration(
+          color: tone.withValues(alpha: 0.10),
+          border: Border.all(color: tone.withValues(alpha: 0.45)),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11.5,
+                color: tone,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Icon(Icons.close, size: 13, color: tone),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Explorar: el árbol
+// ---------------------------------------------------------------------------
+
+class _Browser extends StatelessWidget {
+  const _Browser({
+    required this.tree,
+    required this.path,
+    required this.language,
+    required this.filter,
+    required this.onPath,
+    required this.onFilter,
+  });
+
+  final LibraryTree tree;
+  final BrowsePath path;
+  final String language;
+  final LibraryFilter filter;
+  final ValueChanged<BrowsePath> onPath;
+  final ValueChanged<LibraryFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 820;
-        // A second breakpoint, below the one that hides the filter panel: on
-        // a phone the search field plus a language selector plus an order
-        // menu do not fit, and squeezing the search box to nothing to keep
-        // two controls that belong in the sheet is the wrong trade.
-        final compact = constraints.maxWidth < 560;
+        final category = path.category == null
+            ? null
+            : tree.category(path.category!);
 
-        return Column(
+        // En estrecho se baja un nivel a la vez, con el migas de pan de la
+        // cabecera para volver. Tres columnas de 130 px no son tres columnas.
+        if (constraints.maxWidth < 760) {
+          if (category == null) {
+            return _CategoryColumn(
+              tree: tree,
+              path: path,
+              language: language,
+              filter: filter,
+              onPath: onPath,
+              onFilter: onFilter,
+            );
+          }
+          if (path.topic == null) {
+            return _TopicColumn(
+              category: category,
+              path: path,
+              language: language,
+              onPath: onPath,
+            );
+          }
+          return _UnitColumn(
+            category: category,
+            path: path,
+            language: language,
+          );
+        }
+
+        return Row(
           children: [
-            PageHeader(
-              title: 'Biblioteca',
-              subtitle: facets.shown == facets.total
-                  ? '${facets.total} unidades'
-                  : '${facets.shown} de ${facets.total} unidades · '
-                        '${filter.describe()}',
-              bottom: Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _search,
-                        decoration: InputDecoration(
-                          hintText: 'Buscar por título, ruta o etiqueta…',
-                          prefixIcon: const Icon(Icons.search, size: 18),
-                          suffixIcon: filter.query.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(Icons.clear, size: 16),
-                                  tooltip: 'Limpiar',
-                                  onPressed: () {
-                                    _search.clear();
-                                    setState(
-                                      () =>
-                                          _filter = filter.copyWith(query: ''),
-                                    );
-                                  },
-                                ),
-                        ),
-                        onChanged: (value) => setState(
-                          () => _filter = filter.copyWith(query: value),
-                        ),
-                      ),
+            SizedBox(
+              width: 252,
+              child: _CategoryColumn(
+                tree: tree,
+                path: path,
+                language: language,
+                filter: filter,
+                onPath: onPath,
+                onFilter: onFilter,
+              ),
+            ),
+            const VerticalDivider(width: 1),
+            if (category == null)
+              Expanded(
+                child: _Overview(
+                  tree: tree,
+                  language: language,
+                  onPath: onPath,
+                ),
+              )
+            else ...[
+              SizedBox(
+                width: 232,
+                child: _TopicColumn(
+                  category: category,
+                  path: path,
+                  language: language,
+                  onPath: onPath,
+                ),
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: _UnitColumn(
+                  category: category,
+                  path: path,
+                  language: language,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// La primera columna: el filtro de área y las categorías.
+class _CategoryColumn extends StatelessWidget {
+  const _CategoryColumn({
+    required this.tree,
+    required this.path,
+    required this.language,
+    required this.filter,
+    required this.onPath,
+    required this.onFilter,
+  });
+
+  final LibraryTree tree;
+  final BrowsePath path;
+  final String language;
+  final LibraryFilter filter;
+  final ValueChanged<BrowsePath> onPath;
+  final ValueChanged<LibraryFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: didactaPanel,
+      child: Column(
+        children: [
+          _AreaFilter(filter: filter, onFilter: onFilter),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                _ColumnHeader(
+                  label: '${tree.categoryCount} categorías',
+                  count: tree.unitCount,
+                  selected: path.isRoot,
+                  onTap: () => onPath(const BrowsePath()),
+                ),
+                for (final category in tree.categories)
+                  _CategoryRow(
+                    category: category,
+                    language: language,
+                    selected: path.category == category.category,
+                    onTap: () =>
+                        onPath(BrowsePath(category: category.category)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Teoría, problemas o las dos.
+///
+/// Un filtro y no un nivel del árbol: la teoría de espacios normados y sus
+/// ejercicios son la misma asignatura, y separarlos obliga a mirar en dos
+/// sitios lo que se prepara junto. Pero seguir queriendo ver solo las hojas
+/// de problemas es razonable, y para eso está aquí.
+class _AreaFilter extends StatelessWidget {
+  const _AreaFilter({required this.filter, required this.onFilter});
+
+  final LibraryFilter filter;
+  final ValueChanged<LibraryFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: didactaRule)),
+      ),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+      child: Row(
+        children: [
+          _AreaTab(
+            label: 'Todo',
+            selected: filter.area == null,
+            onTap: () => onFilter(filter.copyWith(clearArea: true)),
+          ),
+          const SizedBox(width: 5),
+          _AreaTab(
+            label: 'Teoría',
+            selected: filter.area == 'content',
+            onTap: () => onFilter(filter.copyWith(area: 'content')),
+          ),
+          const SizedBox(width: 5),
+          _AreaTab(
+            label: 'Problemas',
+            selected: filter.area == 'problems',
+            onTap: () => onFilter(filter.copyWith(area: 'problems')),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AreaTab extends StatelessWidget {
+  const _AreaTab({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          border: Border.all(color: selected ? didactaAccentDark : didactaRule),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            color: selected ? didactaAccentDark : didactaMuted,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _ColumnHeader extends StatelessWidget {
+  const _ColumnHeader({
+    required this.label,
+    required this.count,
+    this.onTap,
+    this.selected = false,
+  });
+
+  final String label;
+  final int count;
+  final VoidCallback? onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap,
+    child: Container(
+      color: selected ? didactaAccentDark.withValues(alpha: 0.10) : null,
+      padding: const EdgeInsets.fromLTRB(14, 15, 12, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.7,
+                color: didactaMuted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$count',
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              color: didactaMuted,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    required this.category,
+    required this.language,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final CategoryNode category;
+  final String language;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = category.progressIn(language);
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : null,
+          border: Border(
+            left: BorderSide(
+              width: 3,
+              color: selected ? didactaAccentDark : Colors.transparent,
+            ),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(11, 7, 12, 7),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    category.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      height: 1.2,
                     ),
-                    if (!compact) ...[
-                      const SizedBox(width: 10),
-                      SegmentedButton<String>(
-                        showSelectedIcon: false,
-                        style: const ButtonStyle(
-                          visualDensity: VisualDensity.compact,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        segments: [
-                          for (final code in session.catalogue.languages)
-                            ButtonSegment(value: code, label: Text(code)),
-                        ],
-                        selected: {filter.language},
-                        onSelectionChanged: (values) =>
-                            sessionOf(context).language = values.first,
-                      ),
-                      const SizedBox(width: 10),
-                      _SortMenu(
-                        sort: filter.sort,
-                        onChanged: (sort) => setState(
-                          () => _filter = filter.copyWith(sort: sort),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${category.count}',
+                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            ProgressBar(progress: progress, height: 5),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// La segunda columna: los temas de una categoría.
+class _TopicColumn extends StatelessWidget {
+  const _TopicColumn({
+    required this.category,
+    required this.path,
+    required this.language,
+    required this.onPath,
+  });
+
+  final CategoryNode category;
+  final BrowsePath path;
+  final String language;
+  final ValueChanged<BrowsePath> onPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: didactaSurface,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          _ColumnHeader(
+            label: '${category.topics.length} temas',
+            count: category.count,
+            selected: path.topic == null,
+            onTap: () => onPath(BrowsePath(category: category.category)),
+          ),
+          for (final topic in category.topics)
+            _TopicRow(
+              topic: topic,
+              language: language,
+              selected: path.topic == topic.topic,
+              onTap: () => onPath(path.toTopic(topic.topic)),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopicRow extends StatelessWidget {
+  const _TopicRow({
+    required this.topic,
+    required this.language,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TopicNode topic;
+  final String language;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: selected ? didactaAccentDark.withValues(alpha: 0.08) : null,
+          border: const Border(bottom: BorderSide(color: didactaRule)),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 9, 8, 9),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    topic.label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.2,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      for (final kind in topic.kinds.take(4))
+                        Dot(colour: kindColour(kind), size: 7),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${topic.count}',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: didactaMuted,
                         ),
                       ),
                     ],
-                    if (!wide) ...[
-                      const SizedBox(width: 6),
-                      IconButton(
-                        tooltip: 'Filtros',
-                        icon: Badge(
-                          isLabelVisible: filter.isNarrowed,
-                          child: const Icon(
-                            Icons.filter_alt_outlined,
-                            size: 20,
-                          ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: selected ? didactaAccentDark : didactaRule,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// La tercera columna: las unidades, como tarjetas.
+///
+/// Tarjetas y no filas: aquí hay una docena de cosas, no dos mil, así que el
+/// sitio que sobra se gasta en que se lean. La densidad era la respuesta
+/// correcta a una lista de 2147 y la equivocada a una de doce.
+class _UnitColumn extends StatelessWidget {
+  const _UnitColumn({
+    required this.category,
+    required this.path,
+    required this.language,
+  });
+
+  final CategoryNode category;
+  final BrowsePath path;
+  final String language;
+
+  @override
+  Widget build(BuildContext context) {
+    final topic = path.topic == null ? null : category.topic(path.topic!);
+    final groups = topic == null ? category.topics : [topic];
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      children: [
+        for (final group in groups) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, top: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    group.label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${group.count} '
+                  '${group.count == 1 ? 'unidad' : 'unidades'}',
+                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+              ],
+            ),
+          ),
+          for (final unit in group.units)
+            UnitCard(unit: unit, language: language),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+}
+
+/// Una unidad como tarjeta.
+class UnitCard extends StatelessWidget {
+  const UnitCard({super.key, required this.unit, required this.language});
+
+  final Unit unit;
+  final String language;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = unit.titleIsFallback(language);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(7),
+        child: InkWell(
+          onTap: () => context.go(Routes.unit(unit.path)),
+          borderRadius: BorderRadius.circular(7),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: didactaRule),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Dot(colour: kindColour(unit.kind)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        unit.title(language),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          height: 1.25,
+                          // Marcado cuando el título no está en el idioma
+                          // pedido, para que un título castellano en un
+                          // listado valenciano no se lea como traducido.
+                          fontStyle: fallback
+                              ? FontStyle.italic
+                              : FontStyle.normal,
+                          color: fallback ? didactaMuted : null,
                         ),
-                        onPressed: () => _showFilters(
-                          context,
-                          facets,
-                          filter,
-                          withLanguageAndSort: compact,
-                          languages: session.catalogue.languages,
+                      ),
+                    ),
+                    if (unit.warnings.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Tooltip(
+                        message: unit.warnings.join('\n'),
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 15,
+                          color: didactaEx,
                         ),
                       ),
                     ],
                   ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 9,
+                  runSpacing: 5,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      kindName(unit.kind),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: kindColour(unit.kind),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    for (final code in unit.statuses.keys)
+                      StatusBadge(language: code, status: unit.statusIn(code)),
+                    if (unit.usedBy.isEmpty)
+                      const Text(
+                        'sin usar',
+                        style: TextStyle(fontSize: 11, color: didactaEx),
+                      )
+                    else
+                      Tooltip(
+                        message: unit.usedBy
+                            .map((use) => use.toString())
+                            .join('\n'),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.link,
+                              size: 12,
+                              color: didactaMuted,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${unit.usedBy.length}',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                color: didactaMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Al entrar, sin nada elegido: dónde está el material.
+///
+/// Antes esto era la lista de 2147 unidades, que no responde a ninguna
+/// pregunta. Esto responde a la primera que tiene alguien que abre la
+/// aplicación: qué hay, cuánto, y cuánto está traducido.
+class _Overview extends StatelessWidget {
+  const _Overview({
+    required this.tree,
+    required this.language,
+    required this.onPath,
+  });
+
+  final LibraryTree tree;
+  final String language;
+  final ValueChanged<BrowsePath> onPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final all = tree.categories;
+    final whole = TranslationProgress.of(tree.byPath.values, language);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Tarjetas de unos 280 px: dos columnas en un portátil, cuatro en un
+        // monitor, una en una ventana estrecha.
+        final columns = (constraints.maxWidth / 280).floor().clamp(1, 4);
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+          children: [
+            const Text(
+              'Dónde está el material',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              'Las categorías de mayor a menor. La barra de cada una es el '
+              'estado del ${languageName(language)}.',
+              style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+            ),
+            const SizedBox(height: 9),
+            ProgressLegend(progress: whole),
+            const SizedBox(height: 14),
+            GridView.count(
+              crossAxisCount: columns,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 9,
+              crossAxisSpacing: 9,
+              childAspectRatio: 2.9,
+              children: [
+                for (final category in all)
+                  _CategoryCard(
+                    category: category,
+                    language: language,
+                    onTap: () =>
+                        onPath(BrowsePath(category: category.category)),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CategoryCard extends StatelessWidget {
+  const _CategoryCard({
+    required this.category,
+    required this.language,
+    required this.onTap,
+  });
+
+  final CategoryNode category;
+  final String language;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = category.progressIn(language);
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: didactaRule),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                category.label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '${category.count}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  // Expanded: «· 49 temas · 39 probl.» no cabe en una tarjeta
+                  // estrecha, y sin esto desborda en lugar de recortarse.
+                  Expanded(
+                    child: Text(
+                      '· ${category.topics.length} temas'
+                      '${category.problems > 0 ? ' · ${category.problems} probl.' : ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, color: didactaMuted),
+                    ),
+                  ),
+                ],
+              ),
+              ProgressBar(progress: progress),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// La barra de traducción: al día, por revisar y sin escribir.
+///
+/// Tres tramos y no un porcentaje, porque un porcentaje junta los dos casos
+/// que necesitan trabajo distinto: nada escrito, y escrito pero desfasado.
+class ProgressBar extends StatelessWidget {
+  const ProgressBar({super.key, required this.progress, this.height = 6});
+
+  final TranslationProgress progress;
+  final double height;
+
+  /// El gris de lo que no está escrito. Es la vía de la barra además del
+  /// tramo, para que una barra sin nada hecho siga siendo una barra y no un
+  /// hueco: «no hay nada» y «no se dibujó» tienen que distinguirse.
+  static const Color track = Color(0xFFDCE0E4);
+
+  @override
+  Widget build(BuildContext context) {
+    if (progress.total == 0) return SizedBox(height: height);
+    return Tooltip(
+      message:
+          '${progress.done} al día · ${progress.needsWork} por revisar · '
+          '${progress.missing} sin escribir',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(height),
+        child: Container(
+          height: height,
+          color: track,
+          child: Row(
+            children: [
+              if (progress.done > 0)
+                Expanded(
+                  flex: progress.done,
+                  child: const ColoredBox(color: didactaAccentDark),
+                ),
+              if (progress.needsWork > 0)
+                Expanded(
+                  flex: progress.needsWork,
+                  child: const ColoredBox(color: didactaEx),
+                ),
+              if (progress.missing > 0)
+                Expanded(flex: progress.missing, child: const SizedBox()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Qué significan los colores de la barra.
+///
+/// Sin esto la barra es decoración: tres colores que nadie sabe leer. Y aquí
+/// hace falta de verdad, porque el migrador dejó 2057 unidades en `draft`, y
+/// una pared ámbar sin explicación parece un error en lugar de lo que es
+/// —material migrado que nadie ha revisado todavía—.
+class ProgressLegend extends StatelessWidget {
+  const ProgressLegend({super.key, required this.progress});
+
+  final TranslationProgress progress;
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 14,
+    runSpacing: 5,
+    children: [
+      _key(didactaAccentDark, '${progress.done} al día'),
+      _key(didactaEx, '${progress.needsWork} por revisar'),
+      _key(ProgressBar.track, '${progress.missing} sin escribir'),
+    ],
+  );
+
+  Widget _key(Color colour, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(
+          color: colour,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(fontSize: 11.5, color: didactaMuted)),
+    ],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Buscar
+// ---------------------------------------------------------------------------
+
+class _SearchResults extends StatelessWidget {
+  const _SearchResults({
+    required this.filter,
+    required this.units,
+    required this.onFilter,
+  });
+
+  final LibraryFilter filter;
+  final List<Unit> units;
+  final ValueChanged<LibraryFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context) {
+    final found = filter.apply(units);
+    final facets = LibraryFacets.of(units, filter);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 900;
+        return Column(
+          children: [
+            Container(
+              width: double.infinity,
+              color: didactaPanel,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              child: Text(
+                found.isEmpty
+                    ? 'Nada coincide'
+                    : '${found.length} '
+                          '${found.length == 1 ? 'unidad' : 'unidades'} '
+                          'de ${facets.total}',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: didactaMuted,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -155,16 +1695,16 @@ class _LibraryPageState extends State<LibraryPage> {
                   if (wide) ...[
                     SizedBox(
                       width: 236,
-                      child: _FilterPanel(
+                      child: FilterPanel(
                         facets: facets,
                         filter: filter,
-                        onChanged: (next) => setState(() => _filter = next),
+                        onChanged: onFilter,
                       ),
                     ),
                     const VerticalDivider(width: 1),
                   ],
                   Expanded(
-                    child: _UnitList(units: units, filter: filter),
+                    child: UnitList(units: found, filter: filter),
                   ),
                 ],
               ),
@@ -172,434 +1712,6 @@ class _LibraryPageState extends State<LibraryPage> {
           ],
         );
       },
-    );
-  }
-
-  void _showFilters(
-    BuildContext context,
-    LibraryFacets facets,
-    LibraryFilter filter, {
-    bool withLanguageAndSort = false,
-    List<String> languages = const <String>[],
-  }) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => FractionallySizedBox(
-        heightFactor: 0.85,
-        child: _FilterPanel(
-          facets: facets,
-          filter: filter,
-          // The two controls the header dropped on a narrow screen have to
-          // land somewhere, and this is the somewhere.
-          withLanguageAndSort: withLanguageAndSort,
-          languages: languages,
-          onLanguage: (code) {
-            sessionOf(context).language = code;
-            Navigator.of(sheetContext).pop();
-          },
-          onChanged: (next) {
-            setState(() => _filter = next);
-            Navigator.of(sheetContext).pop();
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _SortMenu extends StatelessWidget {
-  const _SortMenu({required this.sort, required this.onChanged});
-
-  final LibrarySort sort;
-  final ValueChanged<LibrarySort> onChanged;
-
-  static const Map<LibrarySort, String> _names = {
-    LibrarySort.path: 'ruta',
-    LibrarySort.title: 'título',
-    LibrarySort.usage: 'más usadas',
-    LibrarySort.needsWork: 'por traducir',
-  };
-
-  @override
-  Widget build(BuildContext context) => DropdownButtonHideUnderline(
-    child: DropdownButton<LibrarySort>(
-      value: sort,
-      isDense: true,
-      borderRadius: BorderRadius.circular(4),
-      items: [
-        for (final entry in _names.entries)
-          DropdownMenuItem(
-            value: entry.key,
-            child: Text(
-              'orden: ${entry.value}',
-              style: const TextStyle(fontSize: 12.5),
-            ),
-          ),
-      ],
-      onChanged: (value) => value == null ? null : onChanged(value),
-    ),
-  );
-}
-
-class _FilterPanel extends StatelessWidget {
-  const _FilterPanel({
-    required this.facets,
-    required this.filter,
-    required this.onChanged,
-    this.withLanguageAndSort = false,
-    this.languages = const <String>[],
-    this.onLanguage,
-  });
-
-  final LibraryFacets facets;
-  final LibraryFilter filter;
-  final ValueChanged<LibraryFilter> onChanged;
-
-  /// Set when the header had no room for these two, which is the phone.
-  final bool withLanguageAndSort;
-  final List<String> languages;
-  final ValueChanged<String>? onLanguage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: didactaPanel,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 20),
-        children: [
-          if (filter.isNarrowed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.filter_alt_off_outlined, size: 15),
-                label: const Text('Quitar filtros'),
-                onPressed: () => onChanged(
-                  LibraryFilter(language: filter.language, sort: filter.sort),
-                ),
-              ),
-            ),
-          if (withLanguageAndSort) ...[
-            const SectionLabel('Idioma'),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: Wrap(
-                spacing: 6,
-                children: [
-                  for (final code in languages)
-                    ChoiceChip(
-                      label: Text(code),
-                      selected: code == filter.language,
-                      onSelected: (_) => onLanguage?.call(code),
-                    ),
-                ],
-              ),
-            ),
-            const SectionLabel('Orden'),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: _SortMenu(
-                sort: filter.sort,
-                onChanged: (sort) => onChanged(filter.copyWith(sort: sort)),
-              ),
-            ),
-          ],
-          const SectionLabel('Árbol'),
-          for (final area in const ['content', 'problems'])
-            _Facet(
-              label: area == 'content' ? 'teoría y apuntes' : 'problemas',
-              count: facets.byArea[area] ?? 0,
-              selected: filter.area == area,
-              onTap: () => onChanged(
-                filter.area == area
-                    ? filter.copyWith(clearArea: true)
-                    : filter.copyWith(area: area),
-              ),
-            ),
-
-          SectionLabel('Traducción · ${filter.language}'),
-          for (final (status, label) in const [
-            (StatusFilter.present, 'existe'),
-            (StatusFilter.missing, 'falta'),
-            (StatusFilter.needsWork, 'por revisar'),
-          ])
-            _Facet(
-              label: label,
-              count: _statusCount(status),
-              selected: filter.status == status,
-              onTap: () => onChanged(
-                filter.copyWith(
-                  status: filter.status == status ? StatusFilter.any : status,
-                ),
-              ),
-            ),
-          _Facet(
-            label: 'sin usar en ninguna asignatura',
-            count: null,
-            selected: filter.unusedOnly,
-            onTap: () =>
-                onChanged(filter.copyWith(unusedOnly: !filter.unusedOnly)),
-          ),
-
-          const SectionLabel('Tipo'),
-          for (final kind in facets.byKind.keys.toList()..sort())
-            _Facet(
-              label: kindName(kind),
-              count: facets.byKind[kind],
-              colour: kindColour(kind),
-              selected: filter.kind == kind,
-              onTap: () => onChanged(
-                filter.kind == kind
-                    ? filter.copyWith(clearKind: true)
-                    : filter.copyWith(kind: kind),
-              ),
-            ),
-
-          const SectionLabel('Categoría'),
-          for (final category in facets.categoriesByCount)
-            _Facet(
-              label: category,
-              count: facets.byCategory[category],
-              selected: filter.category == category,
-              onTap: () => onChanged(
-                filter.category == category
-                    ? filter.copyWith(clearCategory: true)
-                    : filter.copyWith(category: category),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  int _statusCount(StatusFilter which) {
-    var total = 0;
-    facets.byStatus.forEach((status, count) {
-      switch (which) {
-        case StatusFilter.present:
-          if (status.exists) total += count;
-        case StatusFilter.missing:
-          if (!status.exists) total += count;
-        case StatusFilter.needsWork:
-          if (status.needsWork) total += count;
-        case StatusFilter.any:
-          total += count;
-      }
-    });
-    return total;
-  }
-}
-
-class _Facet extends StatelessWidget {
-  const _Facet({
-    required this.label,
-    required this.count,
-    required this.selected,
-    required this.onTap,
-    this.colour,
-  });
-
-  final String label;
-  final int? count;
-  final bool selected;
-  final VoidCallback onTap;
-  final Color? colour;
-
-  @override
-  Widget build(BuildContext context) {
-    // Disabled rather than hidden when it would show nothing: a sidebar whose
-    // entries appear and vanish as you filter is impossible to aim at.
-    final empty = count == 0;
-    return InkWell(
-      onTap: empty && !selected ? null : onTap,
-      child: Container(
-        color: selected ? didactaAccent.withValues(alpha: 0.14) : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        child: Row(
-          children: [
-            if (colour != null) ...[
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: colour,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 7),
-            ],
-            Expanded(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: empty && !selected ? didactaMuted : null,
-                ),
-              ),
-            ),
-            if (count != null)
-              Text(
-                '$count',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: didactaMuted,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UnitList extends StatelessWidget {
-  const _UnitList({required this.units, required this.filter});
-
-  final List<Unit> units;
-  final LibraryFilter filter;
-
-  @override
-  Widget build(BuildContext context) {
-    if (units.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.search_off, size: 30, color: didactaMuted),
-              const SizedBox(height: 12),
-              // Names the filters responsible, so "nothing here" is
-              // actionable rather than a dead end.
-              Text(
-                filter.isNarrowed
-                    ? 'Nada con ${filter.describe()}'
-                    : 'La biblioteca está vacía',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: didactaMuted),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      itemCount: units.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) =>
-          _UnitRow(unit: units[index], language: filter.language),
-    );
-  }
-}
-
-class _UnitRow extends StatelessWidget {
-  const _UnitRow({required this.unit, required this.language});
-
-  final Unit unit;
-  final String language;
-
-  @override
-  Widget build(BuildContext context) {
-    final fallback = unit.titleIsFallback(language);
-
-    return InkWell(
-      onTap: () => context.go(Routes.unit(unit.path)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 7, 12, 7),
-        child: Row(
-          children: [
-            Container(
-              width: 3,
-              height: 30,
-              decoration: BoxDecoration(
-                color: kindColour(unit.kind),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          unit.title(language),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w500,
-                            // Marked when the title is not in the language
-                            // asked for, so a Castilian title in a Valencian
-                            // listing does not read as translated.
-                            fontStyle: fallback
-                                ? FontStyle.italic
-                                : FontStyle.normal,
-                            color: fallback ? didactaMuted : null,
-                          ),
-                        ),
-                      ),
-                      if (unit.warnings.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Tooltip(
-                          message: unit.warnings.join('\n'),
-                          child: const Icon(
-                            Icons.warning_amber_rounded,
-                            size: 14,
-                            color: didactaEx,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    unit.path,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: didactaMuted,
-                      fontFamily: 'monospace',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            // How many documents use it: the answer to "is this safe to
-            // change", which is why the index computes it.
-            if (unit.usedBy.isNotEmpty)
-              Tooltip(
-                message: unit.usedBy.map((use) => use.toString()).join('\n'),
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.link, size: 12, color: didactaMuted),
-                      const SizedBox(width: 2),
-                      Text(
-                        '${unit.usedBy.length}',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: didactaMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            for (final code in unit.statuses.keys)
-              StatusBadge(language: code, status: unit.statusIn(code)),
-          ],
-        ),
-      ),
     );
   }
 }

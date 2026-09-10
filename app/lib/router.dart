@@ -170,3 +170,10 @@ Session sessionOf(BuildContext context) => context.read<Session>();
 
 /// Reads and listens. For build methods.
 Session watchSession(BuildContext context) => context.watch<Session>();
+
+/// Navigates from anywhere below the router.
+///
+/// Exists so the platform menu bar does not import `go_router` itself: it is
+/// the only caller outside a screen, and a menu that knows how routing is
+/// implemented is a menu that breaks when the router changes.
+void goTo(BuildContext context, String route) => GoRouter.of(context).go(route);
