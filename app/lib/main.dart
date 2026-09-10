@@ -71,22 +71,33 @@ Future<void> main() async {
   // static publication of public material needs no sign-in, and a
   // misconfigured project must not take the whole app down with it.
   //
-  // On desktop it is often not configured at all, and that is fine rather
-  // than broken: a clone on your own disk gets its commit author from git,
-  // so the whole editor works with no sign-in anywhere.
+  // Only attempted where there are options for the platform, which today
+  // means the web. On desktop there is no `GoogleService-Info.plist` and
+  // there does not need to be: a clone on your own disk takes its commit
+  // author from git, so the whole editor works with no sign-in anywhere.
   var firebaseReady = false;
-  try {
-    await Firebase.initializeApp(
-      options: kIsWeb ? DefaultFirebaseOptions.web : null,
-    );
-    firebaseReady = true;
-  } catch (error) {
-    debugPrint('Firebase no disponible: $error');
+  if (kIsWeb) {
+    try {
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+      firebaseReady = true;
+    } catch (error) {
+      debugPrint('Firebase no disponible: $error');
+    }
   }
 
   final session = Session(
     catalogueSource: const HttpCatalogueSource(base: indexBase),
-    auth: DidactaAuth(),
+    // Only when Firebase actually came up. `DidactaAuth` reads
+    // `FirebaseAuth.instance` in its constructor, so building it without
+    // Firebase throws here -- before `runApp` -- and the window stays black
+    // with the reason only in a log. That is exactly what happened.
+    auth: firebaseReady
+        ? DidactaAuth()
+        : const UnavailableAuth(
+            'Firebase no está configurado en esta versión, así que no hay '
+            'inicio de sesión. En escritorio no hace falta: el clon local '
+            'toma el autor de los commits de la identidad de git.',
+          ),
     tokenStore: TokenStore(),
     apiBase: apiBase,
     contentOwner: contentOwner,
@@ -324,11 +335,16 @@ class _LoadFailure extends StatelessWidget {
                   children: [
                     Icon(Icons.error_outline, color: didactaTeacher),
                     SizedBox(width: 8),
-                    Text(
-                      'No se pudo cargar el catálogo',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
+                    // Expanded: es la pantalla que se ve en un móvil cuando
+                    // no hay catálogo, y una cabecera que desborda tapa el
+                    // motivo, que es lo único que hay aquí.
+                    Expanded(
+                      child: Text(
+                        'No se pudo cargar el catálogo',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ],

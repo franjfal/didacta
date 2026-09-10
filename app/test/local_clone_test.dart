@@ -19,8 +19,14 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:didacta_app/data/auth.dart';
+import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/local_clone.dart';
+import 'package:didacta_app/data/preferences.dart';
+import 'package:didacta_app/state/session.dart';
+
+import 'fixture.dart';
 
 /// A bare repository standing in for GitHub, plus a clone of it.
 class Fixture {
@@ -367,6 +373,72 @@ void main() {
       expect(
         File('${clone.directory}/.git/config').readAsStringSync(),
         contains('otra@uv.es'),
+      );
+    });
+  });
+
+  group('sin Firebase', () {
+    // The desktop build has no `GoogleService-Info.plist`, so Firebase does
+    // not come up. That must be a working configuration, not a broken one:
+    // the whole point of the clone is that editing your own disk needs no
+    // web service. The bug this pins was worse than a missing feature --
+    // building `DidactaAuth` without Firebase threw from `main` before
+    // `runApp`, so the window opened and stayed black.
+    test('un clon sigue siendo escribible', () async {
+      await clone.setAuthor(name: 'Javier Falcó', email: 'javier@uv.es');
+
+      final session = Session(
+        catalogueSource: StaticCatalogueSource(catalogueWith(defaultUnits())),
+        auth: const UnavailableAuth(),
+        tokenStore: StubStore(),
+        apiBase: '',
+        contentOwner: 'x',
+        contentRepo: 'y',
+        contentBranch: 'main',
+        preferences: MemoryPreferences(path: clone.directory),
+      );
+      // The fixture's remote is a path, so `looksRight` is what would refuse
+      // it; the gateway is what is under test, so it is built the same way
+      // the session builds one.
+      final gateway = CloneGateway(
+        clone: clone,
+        token: '',
+        author: await clone.configuredAuthor(),
+      );
+
+      expect(session.canUseClone, isTrue);
+      expect(
+        gateway.canWrite,
+        isTrue,
+        reason: 'sin Firebase no se puede escribir',
+      );
+      expect(gateway.willPush, isFalse);
+
+      final file = await gateway.read(unitFile);
+      await gateway.commit(
+        path: unitFile,
+        text: 'Editado sin Firebase.\n',
+        sha: file.sha,
+        message: 'Editar sin Firebase',
+      );
+      final log = await Process.run('git', [
+        'log',
+        '-1',
+        '--pretty=%an|%s',
+      ], workingDirectory: clone.directory);
+      expect((log.stdout as String).trim(), 'Javier Falcó|Editar sin Firebase');
+    });
+
+    test('y el inicio de sesión dice por qué no puede', () async {
+      const auth = UnavailableAuth('No hay Firebase aquí.');
+      expect(auth.signedIn, isFalse);
+      expect(await auth.idToken(), isNull);
+      // Signing out of nothing is a no-op: the interface may call it while
+      // tidying up and should not have to check first.
+      await auth.signOut();
+      await expectLater(
+        auth.signInWithPassword('a@uv.es', 'x'),
+        throwsA(isA<AuthException>()),
       );
     });
   });

@@ -158,6 +158,61 @@ abstract class SecretStore {
   Future<void> clear();
 }
 
+/// An [AuthSession] for when Firebase is not there.
+///
+/// Not a defensive nicety: it is the normal state of the desktop build. There
+/// is no `GoogleService-Info.plist` in it, Firebase does not come up, and it
+/// does not need to -- a clone on your own disk takes its commit author from
+/// git and never talks to the Worker.
+///
+/// It exists because the alternative bit hard. `DidactaAuth` reads
+/// `FirebaseAuth.instance` in its constructor, so constructing it without
+/// Firebase throws from `main` before `runApp` is ever reached: the window
+/// opens and stays black, with the real reason only in a log nobody sees.
+/// A null object that answers "nobody is signed in" turns that into a
+/// working app that says what it cannot do.
+class UnavailableAuth implements AuthSession {
+  const UnavailableAuth([this.reason = 'Firebase no está configurado.']);
+
+  /// Why, for the interface to show instead of an empty sign-in form.
+  final String reason;
+
+  @override
+  Stream<void> get changes => const Stream.empty();
+
+  @override
+  SignedInUser? get user => null;
+
+  @override
+  bool get signedIn => false;
+
+  @override
+  Future<String?> idToken({bool forceRefresh = false}) async => null;
+
+  /// Signing out of nothing is a no-op, not an error: the interface may call
+  /// it while tidying up and should not have to check first.
+  @override
+  Future<void> signOut() async {}
+
+  @override
+  Future<void> signInWithPassword(String email, String password) async =>
+      throw AuthException(reason);
+
+  @override
+  Future<void> signInWithGoogle() async => throw AuthException(reason);
+
+  @override
+  Future<void> createAccount(String email, String password) async =>
+      throw AuthException(reason);
+
+  @override
+  Future<void> sendPasswordReset(String email) async =>
+      throw AuthException(reason);
+
+  @override
+  Future<void> resendVerification() async => throw AuthException(reason);
+}
+
 /// Sign-in, and the token the API needs.
 class DidactaAuth implements AuthSession {
   DidactaAuth({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
