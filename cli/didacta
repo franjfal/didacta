@@ -7,6 +7,7 @@
     didacta build <document>             every default output
     didacta build <document> -p slides   one output
     didacta build --all                  the whole repository
+    didacta preview <unit>               compile one unit on its own
     didacta translations                 what needs translating
     didacta check                        validate the repository
     didacta new unit <path>              scaffold a unit
@@ -33,6 +34,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "engine"))
 from didacta import build as build_mod  # noqa: E402
 from didacta import index as index_mod  # noqa: E402
 from didacta import migrate as migrate_mod  # noqa: E402
+from didacta import preview as preview_mod  # noqa: E402
 from didacta import profiles as profiles_mod  # noqa: E402
 from didacta import repo as repo_mod  # noqa: E402
 from didacta import tidy as tidy_mod  # noqa: E402
@@ -766,6 +768,126 @@ def cmd_new_year(args):
 # index
 # --------------------------------------------------------------------------
 
+def cmd_preview(args):
+    """Compile one unit on its own, in the profiles that suit it.
+
+    The question this answers is the one asked while editing: «¿cómo queda
+    esto?» -- this unit, now, as a slide and as prose -- without building the
+    30-page tema around it.
+
+    The wrapper document is generated into the build directory and not into
+    the repository: the preamble is needed to compile and has no business
+    being visible in the library.
+    """
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+
+    units, _ = repo_mod.scan_units(root, settings)
+    unit = _find_unit(units, args.unit)
+    if unit is None:
+        print(S.bad("no unit matches %r" % args.unit))
+        print(S.dim("a reference looks like analysis/normed-spaces/definition"))
+        return 1
+
+    wanted = preview_mod.profiles_for(unit.kind, all_profiles)
+    if args.profile:
+        chosen = []
+        for name in args.profile:
+            if name not in all_profiles:
+                print(S.bad("unknown profile %r" % name))
+                print(S.dim("known: %s" % ", ".join(sorted(all_profiles))))
+                return 1
+            chosen.append(all_profiles[name])
+        wanted = chosen
+
+    languages = args.language or [unit.reference]
+
+    if args.list:
+        print(S.bold("%s (%s)" % (unit.relpath, unit.kind)))
+        for profile in wanted:
+            print("  %-20s %s" % (profile.id, profile.label))
+        print()
+        print(S.dim("languages available: %s"
+                    % ", ".join(sorted(unit.languages))))
+        return 0
+
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+        engine="pdflatex" if args.fast else "latexmk",
+        verbose=args.verbose,
+    )
+    ready, why = engine.available()
+    if not ready:
+        if args.json:
+            json.dump({"ok": False, "error": why, "results": []},
+                      sys.stdout, indent=2)
+            sys.stdout.write("\n")
+            return 2
+        print(S.bad("cannot build: %s" % why))
+        return 2
+
+    reference = unit.reference_path
+    title = unit.titles.get(languages[0]) or unit.titles.get(unit.reference) or unit.id
+
+    results = []
+    for language in languages:
+        for profile in wanted:
+            result = preview_mod.build(
+                engine, root, reference, profile, language,
+                title=title, kind=unit.kind,
+            )
+            results.append(result)
+            if not args.json:
+                mark = S.ok("ok  ") if result.ok else S.bad("FAIL")
+                print("  %s%-22s %-3s %s %5.1fs" % (
+                    pad(mark, 6), result.profile, result.language,
+                    "%3s pp" % result.pages if result.pages else "      ",
+                    result.seconds))
+                if not result.ok:
+                    for diagnostic in result.errors[:4]:
+                        print("       %s" % S.bad(str(diagnostic)))
+                elif result.pdf:
+                    print("       %s" % S.dim(result.pdf))
+
+    if args.json:
+        json.dump(
+            {
+                "ok": all(r.ok for r in results),
+                "unit": unit.relpath,
+                "reference": reference,
+                "results": [r.as_dict() for r in results],
+            },
+            sys.stdout,
+            indent=2,
+            ensure_ascii=False,
+        )
+        sys.stdout.write("\n")
+    return 0 if all(r.ok for r in results) else 1
+
+
+def _find_unit(units, wanted):
+    """Accepts a reference, a repository path, or a unit id.
+
+    Three spellings because three callers use three: a composition writes
+    `analysis/normed/definition`, the interface holds
+    `content/analysis/normed/definition`, and a person types whichever they
+    have on the clipboard.
+    """
+    wanted = wanted.strip().strip("/")
+    for unit in units.values():
+        if wanted in (unit.relpath, unit.reference_path, unit.id):
+            return unit
+    # A path with the area on the front, matched against the reference.
+    for area in ("content/", "problems/"):
+        if wanted.startswith(area):
+            trimmed = wanted[len(area):]
+            for unit in units.values():
+                if unit.reference_path == trimmed:
+                    return unit
+    return None
+
+
 def cmd_tidy(args):
     """Remove the migration header from every unit source.
 
@@ -1340,6 +1462,22 @@ def main(argv=None):
                    help="say what would be written")
     p.add_argument("--json", action="store_true", help="print the manifest")
     p.set_defaults(func=cmd_index)
+
+    p = sub.add_parser("preview", help="compile one unit on its own")
+    p.add_argument("unit", help="a unit reference, or a path under content/")
+    p.add_argument("-p", "--profile", action="append",
+                   help="output profile (repeatable; default: what suits the kind)")
+    p.add_argument("-l", "--language", action="append",
+                   choices=sorted(profiles_mod.LANGUAGES),
+                   help="language (repeatable; default: the unit's reference)")
+    p.add_argument("--list", action="store_true",
+                   help="show the profiles this unit can be built in")
+    p.add_argument("--fast", action="store_true",
+                   help="one pdflatex pass; quick, but references may be wrong")
+    p.add_argument("--json", action="store_true",
+                   help="write the results as JSON, for an interface to read")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_preview)
 
     p = sub.add_parser(
         "tidy", help="remove the migration header from the unit sources"

@@ -91,6 +91,15 @@ _INTERESTING_WARNINGS = (
     "Marginpar on page",
 )
 
+#: Didacta's own warnings are always shown, whatever they say.
+#:
+#: They were being filtered by the list above, which was a real gap: "no `va`
+#: version of this unit, using `es` instead" and "no version of unit X in any
+#: language" are the most actionable messages a build produces -- they name a
+#: translation that is missing and a reference that does not resolve -- and
+#: they were being dropped while `Marginpar on page` was kept.
+_OURS = "Package didacta Warning:"
+
 
 def parse_log(text):
     """Extract diagnostics from a LaTeX log.
@@ -146,10 +155,21 @@ def parse_log(text):
                     context=" ".join(context[:2]) or None,
                 )
             )
-        elif "LaTeX Warning:" in line or "Package" in line and "Warning:" in line:
+        elif "LaTeX Warning:" in line or ("Package" in line and "Warning:" in line):
             after = line.split("Warning:", 1)[1].strip()
-            if any(marker in after for marker in _INTERESTING_WARNINGS):
-                diagnostics.append(Diagnostic("warning", after, file=current))
+            ours = _OURS in line
+            if ours or any(marker in after for marker in _INTERESTING_WARNINGS):
+                diagnostics.append(
+                    Diagnostic(
+                        "warning",
+                        after,
+                        # Our own warnings name the unit in the message, which
+                        # is more use than a path -- and the file the log
+                        # happens to be inside when the warning fires is the
+                        # generated injection file, which is nobody's problem.
+                        file=None if ours else current,
+                    )
+                )
 
     return diagnostics
 

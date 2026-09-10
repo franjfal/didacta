@@ -249,6 +249,17 @@ class Unit:
         entry = self.languages.get(language)
         return entry.path if entry and entry.exists else None
 
+    @property
+    def reference_path(self):
+        """The path a composition writes: the relpath without its area.
+
+        `content/analysis/normed/definition` is referenced as
+        `analysis/normed/definition`, because the LaTeX side appends the tree
+        itself and a composition should not have to know which one.
+        """
+        parts = self.relpath.split("/")
+        return "/".join(parts[1:]) if len(parts) > 1 else self.relpath
+
     def statuses(self, reference_hash=None):
         """Effective status per language."""
         return {
