@@ -1,14 +1,15 @@
-// Application-level settings for the Runner target.
+// Los datos de la aplicación para macOS.
 //
-// This may be replaced with something auto-generated from metadata (e.g., pubspec.yaml) in the
-// future. If not, the values below would default to using the project name when this becomes a
-// 'flutter create' template.
+// Editado a mano y versionado: la plantilla de `flutter create` pone el
+// nombre del paquete de Dart --`didacta_app`-- y eso es lo que sale en la
+// barra de menú, en el Dock y en «Acerca de». Un icono bien hecho al lado de
+// un nombre que dice `didacta_app` no acaba de estar terminado.
 
-// The application's name. By default this is also the title of the Flutter window.
-PRODUCT_NAME = didacta_app
+// El nombre de la aplicación, y el título de la ventana.
+PRODUCT_NAME = Didacta
 
-// The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.didactaApp
+// El identificador del paquete. `uv.es` porque es donde se usa; `com.example`
+// es el de la plantilla y no identifica nada.
+PRODUCT_BUNDLE_IDENTIFIER = es.uv.didacta
 
-// The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 Javier Falcó. Todos los derechos reservados.

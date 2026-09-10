@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 
 import '../data/content_gateway.dart';
 import '../router.dart';
+import 'brand.dart';
 import 'theme.dart';
 
 class DidactaShell extends StatelessWidget {
@@ -162,25 +163,11 @@ class _Mark extends StatelessWidget {
   const _Mark();
 
   @override
-  Widget build(BuildContext context) => Tooltip(
+  Widget build(BuildContext context) => const Tooltip(
     message: 'Didacta',
-    child: Container(
-      width: 30,
-      height: 30,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: didactaAccentDark,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: const Text(
-        'D',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    ),
+    // La misma marca que el icono de la aplicación, del mismo código: un
+    // logo dibujado aparte se separa del icono en el primer retoque.
+    child: DidactaMark(),
   );
 }
 

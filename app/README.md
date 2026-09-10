@@ -150,13 +150,61 @@ Cosas que salieron de mirar los datos reales, no de suponer:
 ## Compilar en escritorio
 
 ```bash
-flutter build macos --release --dart-define=DIDACTA_CLONE=$HOME/didacta_db
+flutter build macos --release \
+  --dart-define=DIDACTA_CLONE=$HOME/didacta_db \
+  --dart-define=DIDACTA_ENGINE=$HOME/didacta
 ```
+
+Sale en `build/macos/Build/Products/Release/Didacta.app`. `DIDACTA_ENGINE` es
+el repositorio que tiene `cli/didacta`, que es lo que compila una unidad; si
+no se pasa, la aplicación lo busca al lado del clon.
 
 El sandbox de macOS queda **desactivado**, y el entitlement explica por qué: una
 app en sandbox no puede ejecutar un binario fuera de su bundle ni volver a abrir
 una carpeta elegida en otra sesión, así que no puede llevar un clon de git. El
 coste es que este build no puede ir a la Mac App Store, que aquí no es un coste.
+
+## El icono y el nombre
+
+La marca la dibuja `lib/ui/brand.dart`, en Dart, con la geometría en
+constantes con nombre. El **icono de la aplicación y el logo del carril son el
+mismo código**: un icono dibujado aparte se separa de la interfaz en el primer
+retoque, y acabas con dos marcas parecidas que no son la misma.
+
+Lo que dibuja es lo que hace la plataforma: tres hojas desplazadas, y en la de
+delante un titular y dos líneas. La misma unidad sale en diapositivas, en
+apuntes y en libro del mismo `.tex`.
+
+Para cambiarlo: se ajusta un número en `brand.dart` y se regenera.
+
+```bash
+flutter test tool/generate_icons.dart
+```
+
+Escribe los siete PNG que pide macOS y los cinco de la web. Por debajo de
+40 px dibuja solo las siluetas, sin el titular ni las líneas: a ese tamaño
+tres píxeles de verde sobre blanco se ven como suciedad y no como un
+documento. Es arte por tamaño, que es lo que Apple pide y lo que
+`Contents.json` permite dar.
+
+### Por qué no persiste solo, y qué lo garantiza
+
+Los PNG están versionados, así que compilar no depende de haberlos generado.
+Lo que **sí** puede pisarlos es `flutter create` —que es lo que se ejecuta
+para añadir una plataforma o reparar los ficheros de una—: restaura los iconos
+por defecto de Flutter y el nombre `didacta_app`, sin avisar.
+
+Para eso está `test/icons_test.dart`, que corre en CI y falla si:
+
+- falta alguno de los doce ficheros, o no tiene el tamaño que dice su nombre;
+- el color del icono no es el verde de la casa (o sea: es el azul de Flutter);
+- el «maskable» de la web no llega al borde, o el de macOS no tiene margen
+  —el primero lo recorta el sistema y un margen transparente se vería como un
+  mordisco; el segundo necesita el hueco donde el sistema pone la sombra—;
+- la aplicación ha vuelto a llamarse `didacta_app`, en macOS o en el
+  manifiesto de la web.
+
+El mensaje del test dice qué ejecutar para arreglarlo.
 
 ## Qué no hace todavía
 
