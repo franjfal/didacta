@@ -112,6 +112,73 @@ class _UnitPageState extends State<UnitPage> {
     });
   }
 
+  /// Vuelve a compilar un solo panel, en su sitio.
+  ///
+  /// La acción de después de editar: cambias el valenciano, lo recompilas y
+  /// se actualiza esa columna sin tocar la de al lado --que es lo que permite
+  /// ver el cambio-- y sin volver a la pantalla de compilar.
+  Future<void> _recompilePane(
+    Session session,
+    String groupId,
+    String language,
+  ) async {
+    final unit = session.unitByPath(widget.unitPath);
+    final compiler = session.compiler();
+    if (unit == null || compiler == null) return;
+
+    final at = _open.indexWhere((group) => group.id == groupId);
+    if (at < 0) return;
+    final pane = _open[at].pane(language);
+    if (pane == null) return;
+
+    setState(() => _open[at] = _open[at].replacing(pane.working()));
+
+    try {
+      final results = await compiler.compile(
+        unitPath: unit.path,
+        profiles: [pane.profile],
+        languages: [language],
+      );
+      if (!mounted) return;
+      final result = results.firstOrNull;
+      // El índice se vuelve a buscar: entre el await y aquí alguien puede
+      // haber cerrado la pestaña o separado el panel.
+      final now = _open.indexWhere((group) => group.id == groupId);
+      if (now < 0) return;
+      final current = _open[now].pane(language);
+      if (current == null) return;
+
+      setState(() {
+        _open[now] = _open[now].replacing(
+          result != null && result.ok
+              ? current.refreshed(pages: result.pages)
+              : current.idle(),
+        );
+      });
+
+      if (result != null && !result.ok) {
+        _say(result.errors.isEmpty ? 'No compiló.' : result.errors.first);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      final now = _open.indexWhere((group) => group.id == groupId);
+      if (now >= 0) {
+        final current = _open[now].pane(language);
+        if (current != null) {
+          setState(() => _open[now] = _open[now].replacing(current.idle()));
+        }
+      }
+      _say('$error');
+    }
+  }
+
+  void _say(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 6)),
+    );
+  }
+
   /// Saca una versión del grupo a su propia pestaña.
   void _detach(String groupId, String language) {
     setState(() {
@@ -259,6 +326,7 @@ class _UnitPageState extends State<UnitPage> {
           onOpenExternally: (path) => _external(session, path, reveal: false),
           onReveal: (path) => _external(session, path, reveal: true),
           onRecompile: () => setState(() => _active = previewTab),
+          onRecompilePane: (language) => _recompilePane(session, id, language),
           onDetach: (language) => _detach(id, language),
         );
       }

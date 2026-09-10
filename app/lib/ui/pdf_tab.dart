@@ -1,12 +1,20 @@
-/// Un PDF compilado, abierto dentro de la aplicación.
+/// Los PDF compilados, abiertos dentro de la aplicación.
 ///
-/// Antes esto salía al visor del sistema, y estaba mal por una razón que se
-/// ve en cuanto se usa: comparar «cómo queda en diapositivas» con «cómo queda
-/// en libro» es mirar dos cosas a la vez, y salir a otra aplicación para cada
-/// una rompe justo eso. Ahora cada salida es una pestaña más, al lado de los
-/// idiomas y de `unit.yaml`, y se abren varias.
+/// Antes esto salía al visor del sistema, y estaba mal por una razón que se ve
+/// en cuanto se usa: comparar «cómo queda en diapositivas» con «cómo queda en
+/// libro», o el castellano con el valenciano, es mirar dos cosas a la vez, y
+/// salir a otra aplicación para cada una rompe justo eso. Ahora cada salida es
+/// una pestaña más, al lado de los idiomas y de `unit.yaml`, y los idiomas de
+/// un mismo perfil van en la misma pestaña, lado a lado.
 ///
-/// El visor del sistema **sigue estando**, en dos botones. No es redundancia:
+/// **Las acciones sobre un PDF viven en su panel.** Con dos PDF a la vez,
+/// «abrir en el visor» en la barra de la pestaña no dice cuál, y resolverlo
+/// con un menú que pregunta es un clic de más para contestar algo que el
+/// sitio del botón ya contesta. En la barra queda lo que vale para toda la
+/// pestaña: pasar página en los dos paneles a la vez, separar una versión, y
+/// elegir otras.
+///
+/// El visor del sistema **sigue estando**, en cada panel. No es redundancia:
 /// tiene pantalla completa para pasar diapositivas de verdad, y el Finder es
 /// desde donde se arrastra un PDF a un correo. Lo que se quita es la
 /// obligación de salir para verlo.
@@ -24,6 +32,8 @@ class OpenPdf {
     required this.profile,
     required this.language,
     required this.pages,
+    this.revision = 0,
+    this.busy = false,
   });
 
   final String path;
@@ -31,21 +41,55 @@ class OpenPdf {
   final String language;
   final int pages;
 
+  /// Sube al recompilar. Va en la clave del visor porque la ruta no cambia
+  /// --el mismo perfil y el mismo idioma escriben el mismo fichero-- y sin
+  /// esto el visor seguiría enseñando el PDF de antes.
+  final int revision;
+
+  /// Mientras se recompila este panel, y no los demás.
+  final bool busy;
+
   String get label => '$profile · $language';
+
+  /// El mismo panel, recién compilado: nueva revisión y ya no ocupado.
+  OpenPdf refreshed({int? pages}) => OpenPdf(
+    path: path,
+    profile: profile,
+    language: language,
+    pages: pages ?? this.pages,
+    revision: revision + 1,
+  );
+
+  OpenPdf working() => OpenPdf(
+    path: path,
+    profile: profile,
+    language: language,
+    pages: pages,
+    revision: revision,
+    busy: true,
+  );
+
+  OpenPdf idle() => OpenPdf(
+    path: path,
+    profile: profile,
+    language: language,
+    pages: pages,
+    revision: revision,
+  );
 }
 
 /// Una pestaña: uno o varios PDF, lado a lado.
 ///
 /// Varios porque la comparación que importa es la del mismo perfil en dos
-/// idiomas: si la traducción valenciana sigue cabiendo en la diapositiva no
-/// se puede saber sin las dos delante. Así que al compilar dos idiomas de un
+/// idiomas: si la traducción valenciana sigue cabiendo en la diapositiva no se
+/// puede saber sin las dos delante. Así que al compilar dos idiomas de un
 /// perfil se abren juntos, y se pueden separar de un botón.
 class PdfGroup {
   const PdfGroup({required this.id, required this.panes});
 
-  /// La identidad de la pestaña. El perfil cuando el grupo salió de
-  /// compilar; perfil e idioma cuando alguien lo desacopló, para que la
-  /// versión separada no vuelva a caer en el grupo.
+  /// La identidad de la pestaña. El perfil cuando el grupo salió de compilar;
+  /// perfil e idioma cuando alguien lo desacopló, para que la versión
+  /// separada no vuelva a caer en el grupo.
   final String id;
 
   final List<OpenPdf> panes;
@@ -64,6 +108,22 @@ class PdfGroup {
   int get pages =>
       panes.fold(0, (most, pane) => pane.pages > most ? pane.pages : most);
 
+  OpenPdf? pane(String language) {
+    for (final pane in panes) {
+      if (pane.language == language) return pane;
+    }
+    return null;
+  }
+
+  /// El mismo grupo con un panel sustituido, para recompilar uno solo.
+  PdfGroup replacing(OpenPdf pane) => PdfGroup(
+    id: id,
+    panes: [
+      for (final other in panes)
+        if (other.language == pane.language) pane else other,
+    ],
+  );
+
   PdfGroup without(String language) => PdfGroup(
     id: id,
     panes: [
@@ -80,6 +140,7 @@ class PdfTabView extends StatefulWidget {
     required this.onOpenExternally,
     required this.onReveal,
     required this.onRecompile,
+    required this.onRecompilePane,
     required this.onDetach,
   });
 
@@ -91,8 +152,15 @@ class PdfTabView extends StatefulWidget {
   /// El Finder: desde donde se arrastra un PDF a un correo.
   final ValueChanged<String> onReveal;
 
-  /// Volver a compilar, para después de editar.
+  /// Ir a la pantalla de compilar, para elegir otras versiones.
   final VoidCallback onRecompile;
+
+  /// Volver a compilar **este** panel, en su sitio.
+  ///
+  /// Es la acción de después de editar: cambias el valenciano, lo recompilas
+  /// y se actualiza esa columna sin tocar la de al lado, que es lo que
+  /// permite ver el cambio.
+  final ValueChanged<String> onRecompilePane;
 
   /// Sacar una versión a su propia pestaña.
   final ValueChanged<String> onDetach;
@@ -117,7 +185,12 @@ class _PdfTabViewState extends State<PdfTabView> {
   // sin ir a mirar el otro.
   void _noteReady(String path, int pages) {
     if (!mounted) return;
-    setState(() => _pages[path] = pages);
+    setState(() {
+      _pages[path] = pages;
+      // Un PDF que abre bien deja de tener el problema de antes: tras
+      // recompilar, el error de «no existe» ya no vale.
+      _problem.remove(path);
+    });
   }
 
   void _notePage(String path, int page) {
@@ -138,10 +211,7 @@ class _PdfTabViewState extends State<PdfTabView> {
 
   int get _current => _page[widget.group.panes.first.path] ?? 1;
 
-  int get _total {
-    final known = _pages[widget.group.panes.first.path];
-    return known ?? widget.group.pages;
-  }
+  int get _total => _pages[widget.group.panes.first.path] ?? widget.group.pages;
 
   void _goTo(int page) {
     for (final pane in widget.group.panes) {
@@ -166,8 +236,6 @@ class _PdfTabViewState extends State<PdfTabView> {
           onFirst: _total > 1 ? () => _goTo(1) : null,
           onPrevious: _current > 1 ? () => _goTo(_current - 1) : null,
           onNext: _current < _total ? () => _goTo(_current + 1) : null,
-          onOpenExternally: widget.onOpenExternally,
-          onReveal: widget.onReveal,
           onRecompile: widget.onRecompile,
           onDetach: widget.onDetach,
         ),
@@ -177,7 +245,15 @@ class _PdfTabViewState extends State<PdfTabView> {
               for (var i = 0; i < panes.length; i += 1) ...[
                 if (i > 0) const VerticalDivider(width: 1),
                 Expanded(
-                  child: _Pane(pane: panes[i], parent: this),
+                  child: _Pane(
+                    pane: panes[i],
+                    parent: this,
+                    onOpenExternally: () =>
+                        widget.onOpenExternally(panes[i].path),
+                    onReveal: () => widget.onReveal(panes[i].path),
+                    onRecompile: () =>
+                        widget.onRecompilePane(panes[i].language),
+                  ),
                 ),
               ],
             ],
@@ -188,23 +264,33 @@ class _PdfTabViewState extends State<PdfTabView> {
   }
 }
 
-/// Un panel: un PDF, con su idioma escrito encima.
+/// Un panel: un PDF, con su idioma y sus acciones encima.
 ///
-/// El idioma se rotula siempre, incluso con un solo panel: dos capturas de
-/// la misma diapositiva en dos idiomas son indistinguibles si el texto no se
-/// lee, y el rótulo es lo que las distingue.
+/// Los botones van aquí y no en la barra de la pestaña, y esa es la
+/// corrección importante: con dos PDF a la vez, «abrir en el visor» en la
+/// barra no dice cuál.
+///
+/// El idioma se rotula siempre, incluso con un solo panel: dos capturas de la
+/// misma diapositiva en dos idiomas son indistinguibles si el texto no se lee,
+/// y el rótulo es lo que las distingue.
 class _Pane extends StatelessWidget {
-  const _Pane({required this.pane, required this.parent});
+  const _Pane({
+    required this.pane,
+    required this.parent,
+    required this.onOpenExternally,
+    required this.onReveal,
+    required this.onRecompile,
+  });
 
   final OpenPdf pane;
   final _PdfTabViewState parent;
+  final VoidCallback onOpenExternally;
+  final VoidCallback onReveal;
+  final VoidCallback onRecompile;
 
   @override
   Widget build(BuildContext context) {
     final problem = parent.problemOf(pane);
-    if (problem != null) {
-      return _Failure(path: pane.path, problem: problem);
-    }
     final total = parent.pagesOf(pane);
     final page = parent.pageOf(pane);
 
@@ -212,14 +298,17 @@ class _Pane extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          color: didactaPanel,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: const BoxDecoration(
+            color: didactaPanel,
+            border: Border(bottom: BorderSide(color: didactaRule)),
+          ),
+          padding: const EdgeInsets.fromLTRB(10, 1, 2, 1),
           child: Row(
             children: [
               Text(
                 pane.language,
                 style: const TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: didactaAccentDark,
                 ),
@@ -227,7 +316,8 @@ class _Pane extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '$page / $total',
+                  pane.busy ? 'compilando…' : '$page / $total',
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 11,
                     color: didactaMuted,
@@ -235,36 +325,74 @@ class _Pane extends StatelessWidget {
                   ),
                 ),
               ),
+              IconButton(
+                key: Key('pane-recompile-${pane.language}'),
+                tooltip: 'Volver a compilar ${pane.language}',
+                visualDensity: VisualDensity.compact,
+                icon: pane.busy
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh, size: 16),
+                onPressed: pane.busy ? null : onRecompile,
+              ),
+              IconButton(
+                key: Key('pane-external-${pane.language}'),
+                tooltip:
+                    'Abrir ${pane.language} en el visor del sistema '
+                    '(pantalla completa)',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.open_in_new, size: 15),
+                onPressed: onOpenExternally,
+              ),
+              IconButton(
+                key: Key('pane-reveal-${pane.language}'),
+                tooltip: 'Ver ${pane.language} en el Finder',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.folder_open_outlined, size: 15),
+                onPressed: onReveal,
+              ),
             ],
           ),
         ),
         Expanded(
-          child: ColoredBox(
-            // Gris y no blanco: un PDF blanco sobre blanco no tiene bordes,
-            // y en diapositivas el borde es donde se ve si algo se sale.
-            color: const Color(0xFF52565C),
-            child: PdfViewer.file(
-              pane.path,
-              controller: parent._controllerFor(pane.path),
-              params: PdfViewerParams(
-                margin: 8,
-                backgroundColor: const Color(0xFF52565C),
-                onViewerReady: (document, controller) =>
-                    parent._noteReady(pane.path, document.pages.length),
-                onPageChanged: (page) {
-                  if (page != null) parent._notePage(pane.path, page);
-                },
-                errorBannerBuilder: (context, error, stackTrace, documentRef) {
-                  // Después del frame: esto se llama durante el build del
-                  // visor, y un setState ahí no está permitido.
-                  WidgetsBinding.instance.addPostFrameCallback(
-                    (_) => parent._noteProblem(pane.path, error),
-                  );
-                  return const SizedBox.shrink();
-                },
-              ),
-            ),
-          ),
+          child: problem != null
+              ? _Failure(path: pane.path, problem: problem)
+              : ColoredBox(
+                  // Gris y no blanco: un PDF blanco sobre blanco no tiene
+                  // bordes, y en diapositivas el borde es donde se ve si algo
+                  // se sale de la caja.
+                  color: const Color(0xFF52565C),
+                  child: PdfViewer.file(
+                    pane.path,
+                    // La revisión en la clave: recompilar escribe el mismo
+                    // fichero, así que sin esto el visor seguiría enseñando
+                    // el PDF de antes.
+                    key: ValueKey('${pane.path}#${pane.revision}'),
+                    controller: parent._controllerFor(pane.path),
+                    params: PdfViewerParams(
+                      margin: 8,
+                      backgroundColor: const Color(0xFF52565C),
+                      onViewerReady: (document, controller) =>
+                          parent._noteReady(pane.path, document.pages.length),
+                      onPageChanged: (page) {
+                        if (page != null) parent._notePage(pane.path, page);
+                      },
+                      errorBannerBuilder:
+                          (context, error, stackTrace, documentRef) {
+                            // Después del frame: esto se llama durante el
+                            // build del visor, y un setState ahí no está
+                            // permitido.
+                            WidgetsBinding.instance.addPostFrameCallback(
+                              (_) => parent._noteProblem(pane.path, error),
+                            );
+                            return const SizedBox.shrink();
+                          },
+                    ),
+                  ),
+                ),
         ),
       ],
     );
@@ -279,8 +407,6 @@ class _Bar extends StatelessWidget {
     required this.onFirst,
     required this.onPrevious,
     required this.onNext,
-    required this.onOpenExternally,
-    required this.onReveal,
     required this.onRecompile,
     required this.onDetach,
   });
@@ -291,8 +417,6 @@ class _Bar extends StatelessWidget {
   final VoidCallback? onFirst;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
-  final ValueChanged<String> onOpenExternally;
-  final ValueChanged<String> onReveal;
   final VoidCallback onRecompile;
   final ValueChanged<String> onDetach;
 
@@ -300,82 +424,66 @@ class _Bar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        color: didactaPanel,
+        color: didactaSurface,
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final narrow = constraints.maxWidth < 700;
-          return Row(
-            children: [
-              IconButton(
-                tooltip: 'Primera página',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.first_page, size: 18),
-                onPressed: onFirst,
-              ),
-              IconButton(
-                tooltip: 'Anterior',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_left, size: 18),
-                onPressed: onPrevious,
-              ),
-              Text(
-                '$page / $pages',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                  color: didactaMuted,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Siguiente',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.chevron_right, size: 18),
-                onPressed: onNext,
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  group.isSingle
-                      ? group.panes.single.path.split('/').last
-                      : '${group.panes.length} versiones a la vez',
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  textDirection: group.isSingle
-                      ? TextDirection.rtl
-                      : TextDirection.ltr,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontFamily: 'monospace',
-                    color: didactaMuted,
-                  ),
-                ),
-              ),
-              // Separar una versión: solo tiene sentido cuando hay más de
-              // una, así que solo aparece entonces.
-              if (!group.isSingle)
-                _DetachButton(group: group, onDetach: onDetach),
-              IconButton(
-                key: const Key('pdf-recompile'),
-                tooltip: 'Volver a compilar',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.refresh, size: 18),
-                onPressed: onRecompile,
-              ),
-              // Los dos caminos externos, que siguen haciendo falta: pantalla
-              // completa para pasar diapositivas, y el Finder para arrastrar
-              // el PDF a un correo. Con varios paneles preguntan cuál.
-              _ExternalButtons(
-                group: group,
-                narrow: narrow,
-                onOpenExternally: onOpenExternally,
-                onReveal: onReveal,
-              ),
-            ],
-          );
-        },
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      // Aquí van las acciones que valen para toda la pestaña: pasar página en
+      // los dos paneles a la vez, separar, y elegir otras versiones. Lo que
+      // se hace a *un* PDF va en su panel, donde no hay que preguntar cuál.
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Primera página',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.first_page, size: 18),
+            onPressed: onFirst,
+          ),
+          IconButton(
+            tooltip: 'Anterior',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_left, size: 18),
+            onPressed: onPrevious,
+          ),
+          Text(
+            '$page / $pages',
+            style: const TextStyle(
+              fontSize: 12,
+              fontFeatures: [FontFeature.tabularFigures()],
+              color: didactaMuted,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Siguiente',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.chevron_right, size: 18),
+            onPressed: onNext,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              group.isSingle
+                  ? group.panes.single.path.split('/').last
+                  : '${group.panes.length} versiones · las páginas se mueven '
+                        'juntas',
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              textDirection: group.isSingle
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            ),
+          ),
+          // Separar una versión: solo tiene sentido cuando hay más de una.
+          if (!group.isSingle) _DetachButton(group: group, onDetach: onDetach),
+          IconButton(
+            key: const Key('pdf-recompile'),
+            tooltip: 'Elegir otras versiones',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.tune, size: 17),
+            onPressed: onRecompile,
+          ),
+        ],
       ),
     );
   }
@@ -424,81 +532,6 @@ class _DetachButton extends StatelessWidget {
   }
 }
 
-class _ExternalButtons extends StatelessWidget {
-  const _ExternalButtons({
-    required this.group,
-    required this.narrow,
-    required this.onOpenExternally,
-    required this.onReveal,
-  });
-
-  final PdfGroup group;
-  final bool narrow;
-  final ValueChanged<String> onOpenExternally;
-  final ValueChanged<String> onReveal;
-
-  @override
-  Widget build(BuildContext context) {
-    // Con varios paneles hay que preguntar cuál, así que siempre es un menú
-    // en ese caso; con uno solo, dos botones directos.
-    if (narrow || !group.isSingle) {
-      return MenuAnchor(
-        builder: (context, controller, child) => IconButton(
-          key: const Key('pdf-more'),
-          tooltip: 'Abrir fuera',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.more_horiz, size: 18),
-          onPressed: () =>
-              controller.isOpen ? controller.close() : controller.open(),
-        ),
-        menuChildren: [
-          for (final pane in group.panes)
-            MenuItemButton(
-              leadingIcon: const Icon(Icons.open_in_new, size: 15),
-              onPressed: () => onOpenExternally(pane.path),
-              child: Text(
-                group.isSingle
-                    ? 'Abrir en el visor del sistema'
-                    : 'Abrir ${pane.language} en el visor del sistema',
-              ),
-            ),
-          const Divider(height: 1),
-          for (final pane in group.panes)
-            MenuItemButton(
-              leadingIcon: const Icon(Icons.folder_open_outlined, size: 15),
-              onPressed: () => onReveal(pane.path),
-              child: Text(
-                group.isSingle
-                    ? 'Ver en el Finder'
-                    : 'Ver ${pane.language} en el Finder',
-              ),
-            ),
-        ],
-      );
-    }
-    final only = group.panes.single;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          key: const Key('pdf-external'),
-          tooltip: 'Abrir en el visor del sistema (pantalla completa)',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.open_in_new, size: 17),
-          onPressed: () => onOpenExternally(only.path),
-        ),
-        IconButton(
-          key: const Key('pdf-reveal'),
-          tooltip: 'Ver en el Finder',
-          visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.folder_open_outlined, size: 17),
-          onPressed: () => onReveal(only.path),
-        ),
-      ],
-    );
-  }
-}
-
 class _Failure extends StatelessWidget {
   const _Failure({required this.path, required this.problem});
 
@@ -510,14 +543,14 @@ class _Failure extends StatelessWidget {
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 480),
       child: Padding(
-        padding: const EdgeInsets.all(26),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'No se ha podido abrir el PDF',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             SelectableText(
@@ -532,7 +565,7 @@ class _Failure extends StatelessWidget {
             const Text(
               'Lo más probable es que la compilación se haya borrado: el '
               'directorio de compilación no se versiona y se puede limpiar. '
-              'Vuelve a compilar.',
+              'Vuelve a compilar con el botón de arriba.',
               style: TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 10),
