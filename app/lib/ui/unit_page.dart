@@ -173,6 +173,24 @@ class _UnitPageState extends State<UnitPage> {
           subtitle: unit.path,
           breadcrumbs: [('Biblioteca', Routes.library())],
           actions: [
+            // Solo cuando la pestaña activa es un idioma: partir en dos no
+            // significa nada en `unit.yaml`, en compilar ni en un PDF.
+            if (_isLanguage(_active!, languages))
+              _SplitToggle(
+                on: session.splitEditors,
+                onChanged: (value) => sessionOf(context).setSplitEditors(value),
+              ),
+            IconButton(
+              tooltip: session.unitPanelVisible
+                  ? 'Ocultar el panel de la derecha'
+                  : 'Mostrar el panel de la derecha',
+              isSelected: session.unitPanelVisible,
+              icon: const Icon(Icons.info_outline, size: 18),
+              selectedIcon: const Icon(Icons.info, size: 18),
+              onPressed: () => sessionOf(
+                context,
+              ).setUnitPanelVisible(!session.unitPanelVisible),
+            ),
             IconButton(
               tooltip: 'Copiar la referencia para una composición',
               icon: const Icon(Icons.content_copy_outlined, size: 18),
@@ -207,7 +225,7 @@ class _UnitPageState extends State<UnitPage> {
               // Side by side when there is room; the metadata panel is
               // reference material you consult while writing, so hiding it
               // behind a tab would mean leaving the text to check a tag.
-              if (constraints.maxWidth >= 1000) {
+              if (constraints.maxWidth >= 1000 && session.unitPanelVisible) {
                 return Row(
                   children: [
                     Expanded(child: editor),
@@ -245,6 +263,18 @@ class _UnitPageState extends State<UnitPage> {
         );
       }
     }
+    final languages = session.catalogue.languages;
+    if (session.splitEditors && _isLanguage(active, languages)) {
+      return _SplitEditors(
+        unit: unit,
+        session: session,
+        languages: languages,
+        active: active,
+        editorFor: (language) => _editorFor(unit, language, session),
+        onSelect: (language) => setState(() => _active = language),
+      );
+    }
+
     return switch (active) {
       // Keyed by path so moving to another unit rebuilds it rather than
       // showing the previous unit's file while it loads.
@@ -289,6 +319,10 @@ class _UnitPageState extends State<UnitPage> {
       ).showSnackBar(SnackBar(content: Text('$error')));
     }
   }
+
+  /// Si una pestaña es un idioma, y no `unit.yaml`, compilar ni un PDF.
+  static bool _isLanguage(String tab, List<String> languages) =>
+      languages.contains(tab);
 
   /// Which language to open first: the one being browsed if it exists, else
   /// the unit's own reference. Opening a missing translation by default would
@@ -534,6 +568,13 @@ class _EditorBar extends StatelessWidget {
           // that overflows hides its own save button, which on a tablet is the
           // whole screen being useless.
           final narrow = constraints.maxWidth < 520;
+          // Dos umbrales y no uno, porque el modo lado a lado hace paneles
+          // estrechos a propósito: un tercio de una ventana ancha son unos
+          // 530 px, y a ese ancho quitar el contador no bastaba. Por debajo
+          // del segundo se va también la etiqueta --el estado sin guardar ya
+          // está en el punto de la pestaña y en que el botón esté vivo-- y
+          // «Descartar» se queda en su icono.
+          final tight = constraints.maxWidth < 620;
           return Row(
             children: [
               Expanded(
@@ -553,7 +594,7 @@ class _EditorBar extends StatelessWidget {
               const SizedBox(width: 10),
               if (!editor.exists)
                 const _Tag('nuevo', colour: didactaAccentDark)
-              else if (dirty)
+              else if (dirty && !tight)
                 const _Tag('sin guardar', colour: didactaEx),
               if (!narrow) ...[
                 const SizedBox(width: 10),
@@ -564,10 +605,21 @@ class _EditorBar extends StatelessWidget {
               ],
               const SizedBox(width: 10),
               if (dirty)
-                TextButton(
-                  onPressed: editor.saving ? null : () => _discard(context),
-                  child: const Text('Descartar'),
-                ),
+                tight
+                    ? IconButton(
+                        tooltip: 'Descartar los cambios',
+                        visualDensity: VisualDensity.compact,
+                        icon: const Icon(Icons.undo, size: 16),
+                        onPressed: editor.saving
+                            ? null
+                            : () => _discard(context),
+                      )
+                    : TextButton(
+                        onPressed: editor.saving
+                            ? null
+                            : () => _discard(context),
+                        child: const Text('Descartar'),
+                      ),
               const SizedBox(width: 4),
               FilledButton.icon(
                 // Keyed because the commit dialog's confirm button carries the
@@ -1250,5 +1302,221 @@ class _WithEditor extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) => builder(context, constraints, editor),
+  );
+}
+
+/// El interruptor de editar los idiomas lado a lado.
+///
+/// Una casilla y no un botón, porque es un modo y no una acción: se queda
+/// puesto, y lo que dice es en qué estado está la pantalla.
+class _SplitToggle extends StatelessWidget {
+  const _SplitToggle({required this.on, required this.onChanged});
+
+  final bool on;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: on
+          ? 'Volver a un idioma a la vez'
+          : 'Ver los idiomas uno al lado del otro',
+      child: InkWell(
+        onTap: () => onChanged(!on),
+        borderRadius: BorderRadius.circular(5),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 17,
+                height: 17,
+                child: Checkbox(
+                  key: const Key('split-editors'),
+                  value: on,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onChanged: (value) => onChanged(value ?? false),
+                ),
+              ),
+              const SizedBox(width: 7),
+              Text(
+                'lado a lado',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: on ? FontWeight.w700 : FontWeight.w500,
+                  color: on ? didactaAccentDark : didactaMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Los idiomas de una unidad, editables a la vez.
+///
+/// Cada panel es el editor completo del idioma --su barra, su estado sin
+/// guardar y su propio commit-- porque son tres ficheros y no tres vistas de
+/// uno. Lo que comparten es la unidad.
+///
+/// El panel del idioma activo va marcado: con tres columnas de LaTeX
+/// idénticas en forma, saber cuál responde a la pestaña de arriba y a los
+/// atajos deja de ser evidente.
+class _SplitEditors extends StatelessWidget {
+  const _SplitEditors({
+    required this.unit,
+    required this.session,
+    required this.languages,
+    required this.active,
+    required this.editorFor,
+    required this.onSelect,
+  });
+
+  final Unit unit;
+  final Session session;
+  final List<String> languages;
+  final String active;
+  final Widget Function(String language) editorFor;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Un panel de LaTeX por debajo de 300 px no es un panel: se cortan
+        // las líneas y no se puede leer nada. Así que se muestran los que
+        // caben, empezando por el activo y siguiendo por los que existen.
+        final room = (constraints.maxWidth / 300).floor().clamp(1, 4);
+        final shown = _order().take(room).toList();
+
+        if (shown.length == 1) {
+          // No cabe más de uno: se enseña el activo tal cual, con un aviso
+          // en lugar de fingir una comparación de una columna.
+          return Column(
+            children: [
+              const _TooNarrow(),
+              Expanded(child: editorFor(shown.single)),
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            for (var i = 0; i < shown.length; i += 1) ...[
+              if (i > 0) const VerticalDivider(width: 1),
+              Expanded(
+                child: _Pane(
+                  language: shown[i],
+                  unit: unit,
+                  selected: shown[i] == active,
+                  onTap: () => onSelect(shown[i]),
+                  child: editorFor(shown[i]),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  /// El activo primero, luego los que existen, luego los que faltan.
+  ///
+  /// Los que faltan van al final pero van: empezar una traducción con el
+  /// original al lado es justo para lo que sirve esto.
+  List<String> _order() {
+    final rest =
+        [
+          for (final code in languages)
+            if (code != active) code,
+        ]..sort((a, b) {
+          final exists = unit.statusIn(b).exists ? 1 : 0;
+          return exists.compareTo(unit.statusIn(a).exists ? 1 : 0);
+        });
+    return [active, ...rest];
+  }
+}
+
+class _Pane extends StatelessWidget {
+  const _Pane({
+    required this.language,
+    required this.unit,
+    required this.selected,
+    required this.onTap,
+    required this.child,
+  });
+
+  final String language;
+  final Unit unit;
+  final bool selected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = unit.statusIn(language);
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: selected
+                  ? didactaAccentDark.withValues(alpha: 0.10)
+                  : didactaPanel,
+              border: Border(
+                bottom: BorderSide(
+                  color: selected ? didactaAccentDark : didactaRule,
+                  width: selected ? 1.6 : 1,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            child: Row(
+              children: [
+                Text(
+                  language,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    color: selected ? didactaAccentDark : didactaInk,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                StatusBadge(language: language, status: status),
+                const Spacer(),
+                if (selected)
+                  const Text(
+                    'activo',
+                    style: TextStyle(fontSize: 10.5, color: didactaMuted),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(child: child),
+      ],
+    );
+  }
+}
+
+class _TooNarrow extends StatelessWidget {
+  const _TooNarrow();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    color: didactaPanel,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    child: const Text(
+      'No hay ancho para dos columnas de LaTeX. Oculta el panel de la '
+      'derecha o ensancha la ventana.',
+      style: TextStyle(fontSize: 11.5, color: didactaMuted),
+    ),
   );
 }

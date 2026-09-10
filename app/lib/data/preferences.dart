@@ -16,6 +16,18 @@ abstract class Preferences {
   Future<bool> pushOnCommit();
   Future<void> setPushOnCommit(bool value);
 
+  /// Si el panel de la derecha de una unidad está desplegado.
+  ///
+  /// Guardado y no un estado de la pantalla: es una decisión sobre el sitio
+  /// de trabajo --cuánto ancho quiero para el texto-- y se toma una vez, no
+  /// cada vez que se abre una unidad.
+  Future<bool> unitPanelVisible();
+  Future<void> setUnitPanelVisible(bool value);
+
+  /// Si los idiomas de una unidad se editan lado a lado.
+  Future<bool> splitEditors();
+  Future<void> setSplitEditors(bool value);
+
   /// Dónde está el repositorio del motor: el que tiene `cli/didacta`.
   ///
   /// Hace falta para compilar, y no se puede deducir del clon de contenido:
@@ -43,6 +55,8 @@ class StoredPreferences implements Preferences {
   static const String _clone = 'didacta.clone.path';
   static const String _push = 'didacta.clone.push';
   static const String _engine = 'didacta.engine.path';
+  static const String _panel = 'didacta.unit.panel';
+  static const String _split = 'didacta.unit.split';
 
   /// The stored value, then the build-time default. A stored empty string is
   /// a real answer -- "I turned the clone off" -- and must win over the
@@ -80,6 +94,33 @@ class StoredPreferences implements Preferences {
   }
 
   @override
+  Future<bool> unitPanelVisible() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Desplegado por defecto: lo que dice --dónde se usa esta unidad-- es la
+    // respuesta a «¿puedo cambiar esto?», y esconderlo de entrada dejaría a
+    // alguien editando sin saberlo.
+    return prefs.getBool(_panel) ?? true;
+  }
+
+  @override
+  Future<void> setUnitPanelVisible(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_panel, value);
+  }
+
+  @override
+  Future<bool> splitEditors() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_split) ?? false;
+  }
+
+  @override
+  Future<void> setSplitEditors(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_split, value);
+  }
+
+  @override
   Future<String?> enginePath() async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.containsKey(_engine)) {
@@ -109,6 +150,21 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setEnginePath(String? value) async => engine = value;
+
+  bool panel = true;
+  bool split = false;
+
+  @override
+  Future<bool> unitPanelVisible() async => panel;
+
+  @override
+  Future<void> setUnitPanelVisible(bool value) async => panel = value;
+
+  @override
+  Future<bool> splitEditors() async => split;
+
+  @override
+  Future<void> setSplitEditors(bool value) async => split = value;
 
   @override
   Future<String?> clonePath() async => path;
