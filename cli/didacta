@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import sys
 import time
 
@@ -762,6 +763,231 @@ def cmd_new_year(args):
     print()
     print(S.dim("  Structure only: every unit is still referenced, not copied."))
     print(S.dim("  Edit year.yaml to change the selection or the order."))
+    return 0
+
+
+def cmd_new_course(args):
+    """Create a subject.
+
+    Only `course.yaml`, and no year: a subject with an empty year would be a
+    year somebody has to remember to fill, and `new year` already exists to
+    make one by copying.
+
+    With `--from` it copies another subject's metadata, which is the case that
+    actually happens: the same subject in another group or another language,
+    where everything but the title and the code is the same.
+    """
+    root, settings = load_repo(args)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    if args.id in courses:
+        print(S.bad("%s already exists" % args.id))
+        return 1
+    if not re.match(r"^[a-z0-9][a-z0-9-]*$", args.id):
+        # The id is the directory name and it is what a composition
+        # references, so it has to survive being typed, sorted and put in a
+        # URL.
+        print(S.bad("the id must be lowercase letters, digits and hyphens"))
+        return 1
+
+    directory = os.path.join(root, "courses", args.id)
+    os.makedirs(directory)
+
+    if args.From:
+        source = courses.get(args.From)
+        if source is None:
+            print(S.bad("no course %r to copy" % args.From))
+            os.rmdir(directory)
+            return 1
+        with open(os.path.join(source.directory, "course.yaml"),
+                  encoding="utf-8") as handle:
+            text = handle.read()
+        # El id tiene que cambiar o las dos asignaturas chocan. El resto se
+        # deja igual, comentarios incluidos, porque es para lo que se copia.
+        text = re.sub(r"^id:.*$", "id: %s" % args.id, text, count=1,
+                      flags=re.M)
+        if args.title:
+            text = _retitle(text, args.title, args.lang or source.language)
+        # La cabecera sí se cambia: la de la copia dice el título viejo y, si
+        # la original salió de la migración, de qué fichero salió --y eso
+        # deja de ser verdad en cuanto se copia. Los comentarios de los
+        # campos, que son los que llevan los TODO, se quedan.
+        text = _recomment(
+            text,
+            args.title or source.title(),
+            "Copiada de %s." % args.From,
+        )
+        note = "copiada de %s" % args.From
+    else:
+        language = args.lang or settings.default_language
+        title = args.title or args.id.replace("-", " ").capitalize()
+        text = _blank_course(args.id, title, language)
+        note = "en blanco"
+
+    with open(os.path.join(directory, "course.yaml"), "w",
+              encoding="utf-8") as handle:
+        handle.write(text)
+
+    print(S.ok("created ") + "courses/%s/course.yaml (%s)" % (args.id, note))
+    print()
+    print(S.dim("  Sin años todavía. El siguiente paso:"))
+    print(S.dim("    didacta new year %s <año> --from <otro>" % args.id))
+    return 0
+
+
+def _blank_course(course_id, title, language):
+    return """# %(title)s
+#
+# Lo que no cambia de un año a otro. La selección y el orden del contenido
+# viven en los ficheros de cada año, al lado de este.
+
+id: %(id)s
+title:
+  %(lang)s: %(title)s
+
+# TODO: el código de la asignatura, la titulación y el departamento.
+code: null
+
+institution: Universitat de Val\u00e8ncia
+
+teacher: null
+
+# El idioma en el que se da. Fija el de cada documento; un documento puede
+# decir otro.
+language: %(lang)s
+""" % {"title": title, "id": course_id, "lang": language}
+
+
+def _recomment(text, title, provenance):
+    """Replace the file's leading comment block, keeping the rest.
+
+    Only the block at the top, and only if there is one: the comments further
+    down are the field notes and the TODOs, and those are worth keeping.
+    """
+    lines = text.split("\n")
+    end = 0
+    while end < len(lines) and (
+        lines[end].startswith("#") or lines[end].strip() == ""
+    ):
+        end += 1
+        if end < len(lines) and lines[end].strip() == "" and (
+            end + 1 >= len(lines) or not lines[end + 1].startswith("#")
+        ):
+            break
+    if end == 0:
+        return text
+    header = [
+        "# %s" % title,
+        "#",
+        "# %s" % provenance,
+        "#",
+        "# Lo que no cambia de un año a otro. La selección y el orden del",
+        "# contenido viven en los ficheros de cada año, al lado de este.",
+        "",
+    ]
+    return "\n".join(header + lines[end:])
+
+
+def _retitle(text, title, language):
+    """Replace the title block of a `course.yaml`, keeping everything else."""
+    patch = yaml_patch_title(text, title, language)
+    return patch if patch is not None else text
+
+
+def yaml_patch_title(text, title, language):
+    """Set `title.<language>` in a YAML text, or return None if it cannot.
+
+    Deliberately narrow: this is not a YAML editor, it is one field of one
+    file, and anything it does not recognise it leaves alone rather than
+    rewriting the file.
+    """
+    lines = text.split("\n")
+    for index, line in enumerate(lines):
+        if not re.match(r"^title:\s*$", line):
+            continue
+        for offset in range(index + 1, len(lines)):
+            current = lines[offset]
+            if current.strip() == "" or current.startswith("#"):
+                continue
+            if not current.startswith(" "):
+                break
+            match = re.match(r"^(\s+)([a-z]{2}):", current)
+            if match and match.group(2) == language:
+                lines[offset] = "%s%s: %s" % (match.group(1), language, title)
+                return "\n".join(lines)
+            if match:
+                lines.insert(offset, "%s%s: %s" % (match.group(1), language,
+                                                   title))
+                return "\n".join(lines)
+        return None
+    return None
+
+
+def cmd_remove_course(args):
+    """Delete a subject: every year, every composition.
+
+    A dry run by default, and it says what goes. Deleting a subject removes
+    the only record of what was taught and in what order for as many years as
+    it has -- the units survive, but the selection does not -- so the number
+    of years and documents is exactly what somebody needs to see before
+    agreeing.
+    """
+    root, settings = load_repo(args)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    course = courses.get(args.id)
+    if course is None:
+        print(S.bad("no course %r" % args.id))
+        print(S.dim("known: %s" % ", ".join(sorted(courses))))
+        return 1
+
+    documents = sum(len(year.documents) for year in course.years.values())
+    print(S.bold("%s (%s)" % (course.title(), args.id)))
+    print("  %d año(s): %s" % (len(course.years),
+                               ", ".join(sorted(course.years)) or "ninguno"))
+    print("  %d documento(s)" % documents)
+    print(S.dim("  las unidades no se tocan: lo que se pierde es la "
+                "selección y el orden"))
+
+    if not args.apply:
+        print()
+        print(S.warn("nada borrado. Añade --apply."))
+        return 0
+
+    shutil.rmtree(course.directory)
+    print()
+    print(S.ok("deleted ") + os.path.relpath(course.directory, root))
+    return 0
+
+
+def cmd_remove_year(args):
+    """Delete one year of a subject."""
+    root, settings = load_repo(args)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    course = courses.get(args.course)
+    if course is None:
+        print(S.bad("no course %r" % args.course))
+        return 1
+    year = course.years.get(args.year)
+    if year is None:
+        print(S.bad("no year %r in %s" % (args.year, args.course)))
+        print(S.dim("known: %s" % ", ".join(sorted(course.years))))
+        return 1
+
+    print(S.bold("%s %s" % (args.course, args.year)))
+    print("  %d documento(s)" % len(year.documents))
+    if len(course.years) == 1:
+        print(S.warn("  es el único año de la asignatura"))
+
+    if not args.apply:
+        print()
+        print(S.warn("nada borrado. Añade --apply."))
+        return 0
+
+    shutil.rmtree(year.directory)
+    print()
+    print(S.ok("deleted ") + os.path.relpath(year.directory, root))
     return 0
 
 
@@ -1513,6 +1739,22 @@ def main(argv=None):
     p = sub.add_parser("check", help="validate the repository")
     p.set_defaults(func=cmd_check)
 
+    p = sub.add_parser("remove", help="delete a subject or one of its years")
+    remove_sub = p.add_subparsers(dest="what")
+
+    q = remove_sub.add_parser("course", help="a whole subject, every year")
+    q.add_argument("id")
+    q.add_argument("--apply", action="store_true",
+                   help="actually delete; without it this only says what would go")
+    q.set_defaults(func=cmd_remove_course)
+
+    q = remove_sub.add_parser("year", help="one year of a subject")
+    q.add_argument("course")
+    q.add_argument("year")
+    q.add_argument("--apply", action="store_true",
+                   help="actually delete; without it this only says what would go")
+    q.set_defaults(func=cmd_remove_year)
+
     p = sub.add_parser("index", help="generate the derived catalogues")
     p.add_argument("--check", action="store_true",
                    help="fail if the index on disk is stale; writes nothing")
@@ -1574,6 +1816,14 @@ def main(argv=None):
     q.add_argument("--lang", choices=profiles_mod.LANGUAGES)
     q.add_argument("--title")
     q.set_defaults(func=cmd_new_unit)
+
+    q = new_sub.add_parser("course", help="a new subject")
+    q.add_argument("id", help="the subject's id, which is its directory name")
+    q.add_argument("--from", dest="From", metavar="ID",
+                   help="subject to copy the metadata from")
+    q.add_argument("--title")
+    q.add_argument("--lang", choices=profiles_mod.LANGUAGES)
+    q.set_defaults(func=cmd_new_course)
 
     q = new_sub.add_parser("year", help="duplicate a course year")
     q.add_argument("course")
