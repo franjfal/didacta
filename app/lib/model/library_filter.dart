@@ -107,6 +107,20 @@ class LibraryFilter {
     );
   }
 
+  /// Whether any facet other than the query is set.
+  ///
+  /// Separate from [isNarrowed] because the two are shown in different
+  /// places: the query lives in the search box, where it is already visible,
+  /// and the facets need chips of their own or a filter nobody can see is
+  /// silently hiding material.
+  bool get hasFacets =>
+      category != null ||
+      kind != null ||
+      tag != null ||
+      area != null ||
+      status != StatusFilter.any ||
+      unusedOnly;
+
   bool get isNarrowed =>
       query.isNotEmpty ||
       category != null ||

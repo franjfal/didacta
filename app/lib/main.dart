@@ -22,6 +22,8 @@
 /// a token is configured.
 library;
 
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -34,6 +36,7 @@ import 'data/preferences.dart';
 import 'data/repository_access.dart';
 import 'router.dart';
 import 'state/session.dart';
+import 'ui/platform_menus.dart';
 import 'ui/theme.dart';
 
 /// Where the generated catalogue is served from.
@@ -66,6 +69,24 @@ const String clonePath = String.fromEnvironment('DIDACTA_CLONE');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Every error goes to the console with its stack, and none of them takes
+  // the app down. Both halves of that are deliberate.
+  //
+  // Silence is what made two black screens expensive to diagnose: the app
+  // died before its first frame and the only trace was a minified object in
+  // a console nobody was looking at. An error that is printed with a stack
+  // is an error somebody can act on in a minute.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('Didacta · error: ${details.exception}\n${details.stack}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Didacta · error sin capturar: $error\n$stack');
+    // Handled: an unhandled asynchronous error terminates the isolate, and
+    // a failed keychain read is not worth the whole application.
+    return true;
+  };
 
   // Firebase is only for identity, and the app has to work without it: a
   // static publication of public material needs no sign-in, and a
@@ -188,13 +209,17 @@ class _BootstrapState extends State<_Bootstrap> {
       debugShowCheckedModeBanner: false,
       theme: didactaTheme(),
       routerConfig: _router,
-      builder: (context, child) => Column(
-        children: [
-          if (!widget.firebaseReady) const _FirebaseBanner(),
-          if (session.catalogue.errors.isNotEmpty)
-            _ErrorBanner(errors: session.catalogue.errors),
-          Expanded(child: child ?? const SizedBox.shrink()),
-        ],
+      // El menú del sistema va aquí, por debajo del router, porque sus
+      // acciones navegan: por encima no habría a dónde.
+      builder: (context, child) => PlatformMenus(
+        child: Column(
+          children: [
+            if (!widget.firebaseReady) const _FirebaseBanner(),
+            if (session.catalogue.errors.isNotEmpty)
+              _ErrorBanner(errors: session.catalogue.errors),
+            Expanded(child: child ?? const SizedBox.shrink()),
+          ],
+        ),
       ),
     );
   }
