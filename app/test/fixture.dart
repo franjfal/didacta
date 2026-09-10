@@ -309,6 +309,20 @@ class FakeCompiler implements Compiler {
   @override
   Future<List<BuildableProfile>> profilesFor(String unitPath) async => profiles;
 
+  /// Lo que el motor diría que hay compilado. Por defecto, nada: es el
+  /// estado de una unidad recién abierta.
+  List<ExistingOutput> existing = const [];
+
+  /// Las rutas que se preguntó si estaban viejas, y la respuesta.
+  final Map<String, bool> staleness = {};
+
+  @override
+  Future<List<ExistingOutput>> outputsFor(String unitPath) async => existing;
+
+  @override
+  Future<bool> isStale({required String pdf, required String unitPath}) async =>
+      staleness[pdf] ?? false;
+
   @override
   Future<List<CompileOutput>> compile({
     required String unitPath,

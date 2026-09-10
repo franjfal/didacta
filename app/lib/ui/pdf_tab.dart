@@ -34,6 +34,7 @@ class OpenPdf {
     required this.pages,
     this.revision = 0,
     this.busy = false,
+    this.stale = false,
   });
 
   final String path;
@@ -48,6 +49,14 @@ class OpenPdf {
 
   /// Mientras se recompila este panel, y no los demás.
   final bool busy;
+
+  /// El origen se tocó después de compilar esto.
+  ///
+  /// Se marca en la pestaña y en el panel, en ámbar y discreto: lo que se
+  /// está mirando sigue siendo un PDF de verdad --no es un error-- pero ya
+  /// no es lo que dice el fichero, y eso hay que saberlo antes de
+  /// proyectarlo en una clase.
+  final bool stale;
 
   String get label => '$profile · $language';
 
@@ -67,6 +76,7 @@ class OpenPdf {
     pages: pages,
     revision: revision,
     busy: true,
+    stale: stale,
   );
 
   OpenPdf idle() => OpenPdf(
@@ -75,6 +85,18 @@ class OpenPdf {
     language: language,
     pages: pages,
     revision: revision,
+    stale: stale,
+  );
+
+  /// El mismo panel, con el aviso de viejo puesto o quitado.
+  OpenPdf marked({required bool stale}) => OpenPdf(
+    path: path,
+    profile: profile,
+    language: language,
+    pages: pages,
+    revision: revision,
+    busy: busy,
+    stale: stale,
   );
 }
 
@@ -95,6 +117,10 @@ class PdfGroup {
   final List<OpenPdf> panes;
 
   bool get isSingle => panes.length == 1;
+
+  /// Si alguna de las versiones abiertas se ha quedado vieja. Es lo que
+  /// marca la pestaña.
+  bool get hasStale => panes.any((pane) => pane.stale);
 
   /// Lo que pone en la pestaña. Corto: caben tres o cuatro.
   String get label => isSingle
@@ -313,15 +339,33 @@ class _Pane extends StatelessWidget {
                   color: didactaAccentDark,
                 ),
               ),
+              if (pane.stale) ...[
+                const SizedBox(width: 6),
+                Tooltip(
+                  message:
+                      'La unidad ha cambiado después de compilar esto. Lo que '
+                      'se ve es de antes del cambio.',
+                  child: Icon(
+                    Icons.change_circle_outlined,
+                    size: 15,
+                    color: didactaEx,
+                  ),
+                ),
+              ],
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  pane.busy ? 'compilando…' : '$page / $total',
+                  pane.busy
+                      ? 'compilando…'
+                      : pane.stale
+                      ? 'modificada después · $page / $total'
+                      : '$page / $total',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: didactaMuted,
-                    fontFeatures: [FontFeature.tabularFigures()],
+                    color: pane.stale ? didactaEx : didactaMuted,
+                    fontWeight: pane.stale ? FontWeight.w600 : FontWeight.w400,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),

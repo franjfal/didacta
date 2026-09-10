@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/pdf_tab.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
 import 'package:didacta_app/ui/unit_preview.dart';
@@ -31,6 +32,9 @@ final Finder compile = find.byKey(const Key('compile'));
 /// Lo que la pantalla dijo que había compilado, que es lo que la página
 /// abre en pestañas.
 final List<CompileOutput> compiled = [];
+
+/// Los PDF que la pantalla pidió abrir en una pestaña.
+final List<OpenPdf> opened = [];
 
 /// Las rutas que pidió abrir fuera, con si era el Finder.
 final List<({String path, bool reveal})> external = [];
@@ -58,6 +62,7 @@ class _HostState extends State<_Host> {
 
   @override
   Widget build(BuildContext context) => UnitPreview(
+    onOpen: opened.add,
     state: _state ??= PreviewState(
       unit: widget.unit,
       session: widget.session,
@@ -81,6 +86,7 @@ Future<FakeCompiler?> pumpPreview(
   addTearDown(tester.view.reset);
 
   compiled.clear();
+  opened.clear();
   external.clear();
   final used = none ? null : (compiler ?? FakeCompiler());
   final catalogue = catalogueWith([unitJson()]);
@@ -312,6 +318,119 @@ void main() {
     expect(compile, findsNothing);
   });
 
+  group('lo que ya está compilado', () {
+    /// Una salida en disco, con la fecha que se le diga.
+    ExistingOutput built({
+      String profile = 'slides',
+      String label = 'Diapositivas',
+      String language = 'es',
+      bool stale = false,
+      Duration ago = const Duration(minutes: 20),
+    }) => ExistingOutput(
+      profile: profile,
+      label: label,
+      family: 'slides',
+      language: language,
+      pdf: '/salida/$profile-$language.pdf',
+      exists: true,
+      stale: stale,
+      modified: DateTime.now().subtract(ago),
+    );
+
+    testWidgets('se puede abrir sin volver a compilar', (tester) async {
+      // El punto: la versión está en disco, y mirarla no tiene por qué
+      // costar una compilación.
+      final compiler = FakeCompiler()..existing = [built()];
+      await pumpPreview(tester, compiler: compiler);
+
+      expect(find.text('YA COMPILADAS'), findsOneWidget);
+      expect(find.textContaining('compilada hace 20 min'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('open-slides-es')));
+      await settle(tester);
+
+      // Se abrió, y no se compiló nada.
+      expect(opened.map((p) => p.path), ['/salida/slides-es.pdf']);
+      expect(compiler.calls, isEmpty);
+    });
+
+    testWidgets('una versión modificada después lo dice, en ámbar', (
+      tester,
+    ) async {
+      await pumpPreview(
+        tester,
+        compiler: FakeCompiler()..existing = [built(stale: true)],
+      );
+
+      expect(
+        find.textContaining('la unidad ha cambiado desde que se compiló'),
+        findsOneWidget,
+      );
+      // Y sigue pudiéndose abrir: es un PDF de verdad, solo que de antes.
+      expect(find.byKey(const Key('open-slides-es')), findsOneWidget);
+    });
+
+    testWidgets('el aviso viaja a la pestaña que se abre', (tester) async {
+      await pumpPreview(
+        tester,
+        compiler: FakeCompiler()..existing = [built(stale: true)],
+      );
+      await tester.tap(find.byKey(const Key('open-slides-es')));
+      await settle(tester);
+
+      expect(opened.single.stale, isTrue);
+    });
+
+    testWidgets('se puede rehacer solo esa versión', (tester) async {
+      // Cuando una está vieja, lo que se quiere es rehacer *esa*, no las
+      // tres que estén marcadas arriba.
+      final compiler = FakeCompiler()
+        ..existing = [
+          built(stale: true),
+          built(profile: 'book', label: 'Libro'),
+        ];
+      await pumpPreview(tester, compiler: compiler);
+
+      await tester.tap(find.byKey(const Key('rebuild-slides-es')));
+      await settle(tester);
+
+      expect(compiler.calls, hasLength(1));
+      expect(compiler.calls.single.profiles, ['slides']);
+      expect(compiler.calls.single.languages, ['es']);
+    });
+
+    testWidgets('lo que no existe no sale en la lista', (tester) async {
+      // «Sin compilar» son los chips de arriba; repetirlo aquí sería la
+      // misma cosa dos veces.
+      await pumpPreview(
+        tester,
+        compiler: FakeCompiler()
+          ..existing = [
+            built(),
+            ExistingOutput(
+              profile: 'notes',
+              label: 'Apuntes',
+              family: 'notes',
+              language: 'va',
+              pdf: '/salida/notes-va.pdf',
+              exists: false,
+              stale: false,
+            ),
+          ],
+      );
+      expect(find.textContaining('Diapositivas · es'), findsOneWidget);
+      expect(find.textContaining('Apuntes · va'), findsNothing);
+    });
+
+    testWidgets('sin nada compilado, lo dice y no enseña la sección', (
+      tester,
+    ) async {
+      await pumpPreview(tester);
+      expect(find.text('YA COMPILADAS'), findsNothing);
+      expect(find.textContaining('Nada compilado todavía'), findsOneWidget);
+    });
+  });
+
   group('las pestañas de PDF', () {
     /// La unidad entera, con la pestaña de compilar abierta y los idiomas
     /// que se pidan marcados.
@@ -498,6 +617,45 @@ void main() {
       await tester.tap(find.byKey(const Key('pane-reveal-es')));
       await settle(tester);
       expect(compiler.revealed, ['/salida/slides-es.pdf']);
+    });
+
+    testWidgets('la pestaña marca en ámbar la versión que se quedó vieja', (
+      tester,
+    ) async {
+      // Lo que se pidió: un icono discreto en la pestaña del PDF cuando el
+      // fichero se ha modificado después de compilar.
+      final compiler = await pumpUnit(tester);
+
+      // Se guarda el `.tex` por detrás: eso es lo que deja el PDF viejo.
+      compiler.staleness['/salida/slides-es.pdf'] = true;
+
+      // Al volver a la pestaña se vuelven a mirar las fechas.
+      await tester.tap(find.text('compilar'));
+      await settle(tester);
+      await tester.tap(find.text('slides · es').first);
+      await settle(tester);
+
+      expect(find.byIcon(Icons.change_circle_outlined), findsWidgets);
+      expect(find.textContaining('modificada después'), findsOneWidget);
+    });
+
+    testWidgets('recompilar quita el aviso, que es lo que lo arregla', (
+      tester,
+    ) async {
+      final compiler = await pumpUnit(tester);
+      compiler.staleness['/salida/slides-es.pdf'] = true;
+      await tester.tap(find.text('compilar'));
+      await settle(tester);
+      await tester.tap(find.text('slides · es').first);
+      await settle(tester);
+      expect(find.textContaining('modificada después'), findsOneWidget);
+
+      // Se recompila ese panel: el fichero es nuevo y ya no está viejo.
+      compiler.staleness['/salida/slides-es.pdf'] = false;
+      await tester.tap(find.byKey(const Key('pane-recompile-es')));
+      await settle(tester);
+
+      expect(find.textContaining('modificada después'), findsNothing);
     });
 
     testWidgets('recompilar un panel no toca el de al lado', (tester) async {
