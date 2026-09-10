@@ -135,9 +135,21 @@ class TransformTests(unittest.TestCase):
         self.assertIn(r"\didactatitle{", text)
         self.assertNotIn(r"\frametitle", text)
 
-    def test_the_source_is_recorded_in_the_output(self):
-        self.assertIn("Migrated from 00classnotes/x/00Presentaciones/y/03CAS-z.tex",
-                      self.result.text)
+    def test_the_output_is_content_and_nothing_else(self):
+        """No provenance header at the top of the `.tex`.
+
+        It used to write three comment lines there, and that was the first
+        thing anyone saw on opening a unit to edit it -- above the content, in
+        an editor, in 2438 files. The provenance is not lost: `unit.yaml`
+        records the same source path and git records the migration commit.
+        """
+        self.assertNotIn("Migrated from", self.result.text)
+        self.assertNotIn("No preamble", self.result.text)
+        # And it starts with content, not with a blank line or a rule.
+        self.assertTrue(
+            self.result.text.startswith("\\section{Espacios normados}"),
+            repr(self.result.text[:60]),
+        )
 
     def test_a_unit_declaring_its_own_section_is_flagged(self):
         # A section inside a unit travels with it into every course that
