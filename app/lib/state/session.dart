@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/auth.dart';
 import '../data/catalogue_source.dart';
+import '../data/compiler.dart';
 import '../data/content_gateway.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
@@ -116,6 +117,48 @@ class Session extends ChangeNotifier {
 
   /// Who the clone's commits will be attributed to.
   ({String name, String email})? get cloneAuthor => _cloneAuthor;
+
+  String? _enginePath;
+
+  /// Where the engine repository is, for compiling.
+  String? get enginePath => _enginePath;
+
+  /// Whether compiling is possible on this platform at all. False on the
+  /// web, which has no LaTeX and no way to run a process that does.
+  bool get canCompile => Compiler.supported;
+
+  /// The compiler, or null when there is nothing to compile with -- no
+  /// engine, no clone, or a browser.
+  ///
+  /// Built fresh rather than held: it is a thin wrapper over a process, and
+  /// caching it would mean caching a stale engine path.
+  Compiler? compiler() {
+    if (!Compiler.supported) return null;
+    final engine = _enginePath;
+    final clone = _clonePath;
+    if (engine == null || clone == null) return null;
+    return Compiler(enginePath: engine, repositoryPath: clone);
+  }
+
+  /// Looks for the engine and remembers it.
+  ///
+  /// Called after the clone is known, because the likeliest place for the
+  /// engine is next to it.
+  Future<void> findEngine() async {
+    final found = await Compiler.discover(
+      configured: await preferences.enginePath(),
+      repositoryPath: _clonePath,
+    );
+    if (found != _enginePath) {
+      _enginePath = found;
+      notifyListeners();
+    }
+  }
+
+  Future<void> setEnginePath(String? path) async {
+    await preferences.setEnginePath(path);
+    await refreshAccess();
+  }
 
   /// The language the interface is working in. Not a locale -- the app's own
   /// text is Spanish -- but which language of the *content* is being looked
@@ -244,6 +287,21 @@ class Session extends ChangeNotifier {
     }
 
     _gateway = await _deriveGateway();
+
+    if (Compiler.supported) {
+      try {
+        _enginePath = await Compiler.discover(
+          configured: await preferences.enginePath(),
+          repositoryPath: _clonePath,
+        );
+      } catch (error) {
+        // Looking for the engine must not stop the app: not finding it means
+        // the compile screen says so, not that nothing loads.
+        _enginePath = null;
+        _accessProblem ??= error;
+      }
+    }
+
     notifyListeners();
   }
 

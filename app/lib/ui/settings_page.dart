@@ -16,7 +16,10 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'dart:async';
+
 import '../data/auth.dart';
+import '../data/compiler.dart';
 import '../data/local_clone.dart';
 import '../data/content_gateway.dart';
 import '../data/repository_access.dart';
@@ -57,6 +60,11 @@ class SettingsPage extends StatelessWidget {
               if (session.canUseClone) ...[
                 const SectionLabel('Clon en este equipo'),
                 _CloneSection(session: session),
+              ],
+
+              if (session.canCompile) ...[
+                const SectionLabel('Compilar'),
+                _EngineSection(session: session),
               ],
 
               const SectionLabel('Catálogo'),
@@ -1134,6 +1142,137 @@ class _AuthorDialogState extends State<_AuthorDialog> {
           child: const Text('Guardar'),
         ),
       ],
+    );
+  }
+}
+
+/// Dónde está el motor, que es lo que compila.
+///
+/// Son dos repositorios: `didacta` tiene el motor y el sistema LaTeX,
+/// `didacta_db` tiene el contenido. El `.app` no lleva el motor dentro, así
+/// que hay que decirle dónde está --y casi siempre está al lado del clon, que
+/// es lo que la aplicación busca primero para no preguntar.
+class _EngineSection extends StatefulWidget {
+  const _EngineSection({required this.session});
+
+  final Session session;
+
+  @override
+  State<_EngineSection> createState() => _EngineSectionState();
+}
+
+class _EngineSectionState extends State<_EngineSection> {
+  bool _busy = false;
+  CompilerStatus? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    scheduleMicrotask(_check);
+  }
+
+  Future<void> _check() async {
+    final compiler = widget.session.compiler();
+    if (compiler == null) {
+      if (mounted) setState(() => _status = null);
+      return;
+    }
+    final status = await compiler.status();
+    if (mounted) setState(() => _status = status);
+  }
+
+  Future<void> _choose() async {
+    final chosen = await getDirectoryPath(confirmButtonText: 'Usar este motor');
+    if (chosen == null) return;
+    setState(() => _busy = true);
+    await widget.session.setEnginePath(chosen);
+    if (mounted) setState(() => _busy = false);
+    await _check();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    final path = session.enginePath;
+    final status = _status;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (path == null)
+                const Text(
+                  'Sin motor. Compilar una unidad usa `didacta preview`, que '
+                  'vive en el repositorio de la aplicación: el que tiene '
+                  '`cli/didacta`.',
+                  style: TextStyle(fontSize: 12.5),
+                )
+              else ...[
+                SelectableText(
+                  path,
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+                const SizedBox(height: 8),
+                if (status == null)
+                  const Text(
+                    'Comprobando…',
+                    style: TextStyle(fontSize: 12, color: didactaMuted),
+                  )
+                else if (status.ready)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        size: 15,
+                        color: didactaAccentDark,
+                      ),
+                      const SizedBox(width: 6),
+                      const Expanded(
+                        child: Text(
+                          'Listo: el motor y latexmk están donde hacen falta.',
+                          style: TextStyle(fontSize: 12.5),
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  // Con el motivo, no un «no disponible»: lo que falta suele
+                  // ser latexmk, y eso se arregla en un minuto sabiéndolo.
+                  Note(
+                    status.problem ?? 'No se puede compilar.',
+                    tone: didactaTeacher,
+                  ),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.folder_open_outlined, size: 16),
+                    label: Text(path == null ? 'Elegir el motor' : 'Cambiar'),
+                    onPressed: _busy ? null : _choose,
+                  ),
+                  if (path != null)
+                    OutlinedButton(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              await session.setEnginePath(null);
+                              await _check();
+                            },
+                      child: const Text('Olvidarlo'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

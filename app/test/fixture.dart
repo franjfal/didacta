@@ -9,6 +9,7 @@ library;
 
 import 'package:didacta_app/data/auth.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
+import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
@@ -269,23 +270,105 @@ class FakeGateway extends ContentGateway {
   }
 }
 
+/// A compiler that answers without launching anything.
+class FakeCompiler implements Compiler {
+  FakeCompiler({
+    this.ready = true,
+    this.problem,
+    this.profiles = const [
+      BuildableProfile(id: 'slides', label: 'Diapositivas', family: 'slides'),
+      BuildableProfile(id: 'book', label: 'Libro', family: 'notes'),
+      BuildableProfile(id: 'notes', label: 'Apuntes', family: 'notes'),
+      BuildableProfile(
+        id: 'notes-teacher',
+        label: 'Apuntes (profesor)',
+        family: 'notes',
+      ),
+    ],
+    this.failWith,
+    this.outputs,
+  });
+
+  final bool ready;
+  final String? problem;
+  final List<BuildableProfile> profiles;
+  final Object? failWith;
+  final List<CompileOutput>? outputs;
+
+  /// What it was asked for, so a test can check it was asked for what was
+  /// chosen and not something else.
+  final List<({List<String> profiles, String language})> calls = [];
+
+  final List<String> opened = [];
+  final List<String> revealed = [];
+
+  @override
+  Future<CompilerStatus> status() async =>
+      CompilerStatus(ready: ready, enginePath: '/motor', problem: problem);
+
+  @override
+  Future<List<BuildableProfile>> profilesFor(String unitPath) async => profiles;
+
+  @override
+  Future<List<CompileOutput>> compile({
+    required String unitPath,
+    required List<String> profiles,
+    required String language,
+    bool fast = false,
+  }) async {
+    calls.add((profiles: profiles, language: language));
+    if (failWith != null) throw failWith!;
+    return outputs ??
+        [
+          for (final id in profiles)
+            CompileOutput(
+              profile: id,
+              language: language,
+              ok: true,
+              pdf: '/salida/$id-$language.pdf',
+              pages: id == 'slides' ? 5 : 1,
+              seconds: 3.4,
+            ),
+        ];
+  }
+
+  @override
+  Future<void> open(String pdf) async => opened.add(pdf);
+
+  @override
+  Future<void> reveal(String pdf) async => revealed.add(pdf);
+}
+
 /// A session wired to a fake gateway, with no Firebase anywhere.
 class FakeSession extends Session {
-  FakeSession({required this.gatewayOverride, required Catalogue catalogue})
-    : super(
-        catalogueSource: StaticCatalogueSource(catalogue),
-        auth: StubAuth(),
-        tokenStore: StubStore(),
-        apiBase: '',
-        contentOwner: 'franjfal',
-        contentRepo: 'didacta_db',
-        contentBranch: 'main',
-      );
+  FakeSession({
+    required this.gatewayOverride,
+    required Catalogue catalogue,
+    this.compilerOverride,
+  }) : super(
+         catalogueSource: StaticCatalogueSource(catalogue),
+         auth: StubAuth(),
+         tokenStore: StubStore(),
+         apiBase: '',
+         contentOwner: 'franjfal',
+         contentRepo: 'didacta_db',
+         contentBranch: 'main',
+       );
 
   final ContentGateway gatewayOverride;
 
+  /// Null means "nothing to compile with", which is a state the screen has to
+  /// handle: the web, and a desktop with no engine configured.
+  final Compiler? compilerOverride;
+
   @override
   ContentGateway get gateway => gatewayOverride;
+
+  @override
+  Compiler? compiler() => compilerOverride;
+
+  @override
+  bool get canCompile => true;
 }
 
 /// Nothing in these tests reaches Firebase or a keychain.

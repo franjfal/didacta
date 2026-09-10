@@ -28,6 +28,7 @@ import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'metadata_editor.dart';
+import 'unit_preview.dart';
 import 'shell.dart';
 import 'theme.dart';
 
@@ -47,6 +48,9 @@ class UnitPage extends StatefulWidget {
 /// often wrong after a migration are the title and the kind, which is a
 /// thing you notice while reading the text.
 const String metadataTab = '\u0000metadata';
+
+/// La pestaña de compilar: «¿cómo queda esto?».
+const String previewTab = '\u0000preview';
 
 class _UnitPageState extends State<UnitPage> {
   /// One editor per language, created when its tab is first opened.
@@ -107,15 +111,21 @@ class _UnitPageState extends State<UnitPage> {
           // needed in both branches, and creating state during layout is a
           // worse place to do it than during build.
           child: _WithEditor(
-            editor: _active == metadataTab
-                // Keyed by path so moving to another unit rebuilds it rather
-                // than showing the previous unit's file while it loads.
-                ? MetadataEditor(
-                    key: ValueKey('metadata-${unit.path}'),
-                    unit: unit,
-                    session: session,
-                  )
-                : _editorFor(unit, _active!, session),
+            editor: switch (_active!) {
+              // Keyed by path so moving to another unit rebuilds it rather
+              // than showing the previous unit's file while it loads.
+              metadataTab => MetadataEditor(
+                key: ValueKey('metadata-${unit.path}'),
+                unit: unit,
+                session: session,
+              ),
+              previewTab => UnitPreview(
+                key: ValueKey('preview-${unit.path}'),
+                unit: unit,
+                session: session,
+              ),
+              final language => _editorFor(unit, language, session),
+            },
             builder: (context, constraints, editor) {
               // Side by side when there is room; the metadata panel is
               // reference material you consult while writing, so hiding it
@@ -609,6 +619,13 @@ class _LanguageTabs extends StatelessWidget {
             dirty: false,
             onTap: () => onSelect(metadataTab),
           ),
+          _Tab(
+            label: 'compilar',
+            icon: Icons.play_circle_outline,
+            selected: active == previewTab,
+            dirty: false,
+            onTap: () => onSelect(previewTab),
+          ),
         ],
       ),
     );
@@ -632,9 +649,14 @@ class _Tab extends StatelessWidget {
     required this.dirty,
     required this.onTap,
     this.status,
+    this.icon,
   });
 
   final String label;
+
+  /// Para una pestaña que no es un idioma: dice que hace algo, en lugar de
+  /// que muestra algo.
+  final IconData? icon;
 
   /// Null for the metadata tab, which has no translation state.
   final TranslationStatus? status;
@@ -659,6 +681,14 @@ class _Tab extends StatelessWidget {
         ),
         child: Row(
           children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 15,
+                color: selected ? didactaAccentDark : didactaMuted,
+              ),
+              const SizedBox(width: 5),
+            ],
             Text(
               label,
               style: TextStyle(

@@ -67,6 +67,10 @@ const String contentBranch = String.fromEnvironment(
 /// in Ajustes.
 const String clonePath = String.fromEnvironment('DIDACTA_CLONE');
 
+/// El repositorio del motor, el que tiene `cli/didacta`. Hace falta para
+/// compilar; si no se pasa, la aplicación lo busca al lado del clon.
+const String enginePath = String.fromEnvironment('DIDACTA_ENGINE');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -124,7 +128,10 @@ Future<void> main() async {
     contentOwner: contentOwner,
     contentRepo: contentRepo,
     contentBranch: contentBranch,
-    preferences: const StoredPreferences(defaultClonePath: clonePath),
+    preferences: const StoredPreferences(
+      defaultClonePath: clonePath,
+      defaultEnginePath: enginePath,
+    ),
   );
 
   runApp(DidactaApp(session: session, firebaseReady: firebaseReady));
