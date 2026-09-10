@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import sys
+import time
 import tempfile
 import unittest
 import zlib
@@ -151,6 +152,134 @@ class ProfileChoiceTests(unittest.TestCase):
         """
         for kind in preview_mod.UNIT_FAMILIES:
             self.assertIn(kind, repo_mod.UNIT_KINDS, kind)
+
+
+class StatusTests(unittest.TestCase):
+    """Lo que ya está compilado, y si sigue valiendo.
+
+    Es la pregunta que evita compilar de nuevo para mirar algo que ya está
+    hecho, y la que avisa de lo contrario: que lo que está hecho ya no
+    corresponde al fichero.
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="didacta-status-")
+        shutil.copytree(DEMO, os.path.join(self.root, "repo"))
+        self.repo = os.path.join(self.root, "repo")
+        self.profiles = profiles_mod.load(LATEX_DIR)
+        self.engine = build_mod.Engine(
+            latex_dir=LATEX_DIR,
+            build_dir=os.path.join(self.root, "build"),
+        )
+        settings = repo_mod.Settings.load(self.repo)
+        units, _ = repo_mod.scan_units(self.repo, settings)
+        self.unit = next(
+            u for u in units.values()
+            if u.reference_path == "analysis/normed-spaces/definition"
+        )
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def report(self, profiles=("slides",), languages=("es",)):
+        return preview_mod.status(
+            self.engine,
+            self.unit,
+            [self.profiles[p] for p in profiles],
+            list(languages),
+            "Definición",
+        )
+
+    def fake_pdf(self, profile="slides", language="es", when=None):
+        """Escribe un PDF donde el motor lo pondría, sin compilar."""
+        path = preview_mod.expected_pdf(
+            self.engine,
+            self.unit.reference_path,
+            self.profiles[profile],
+            language,
+            "Definición",
+        )
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as handle:
+            handle.write(b"%PDF-1.5\n")
+        if when is not None:
+            os.utime(path, (when, when))
+        return path
+
+    def test_a_record_per_profile_and_language(self):
+        # Aunque no exista: una interfaz que solo listara lo que hay no
+        # podría distinguir «sin compilar» de «no se ofrece».
+        report = self.report(profiles=("slides", "book"), languages=("es", "va"))
+        self.assertEqual(len(report["outputs"]), 4)
+        self.assertEqual(
+            {(r["profile"], r["language"]) for r in report["outputs"]},
+            {("slides", "es"), ("slides", "va"),
+             ("book", "es"), ("book", "va")},
+        )
+        for record in report["outputs"]:
+            self.assertFalse(record["exists"])
+            self.assertFalse(record["stale"])
+            self.assertIsNone(record["mtime"])
+
+    def test_the_path_is_the_one_the_engine_would_write(self):
+        """Y no una que la interfaz adivine.
+
+        El nombre del fichero sale de las reglas del perfil --el título
+        primero, los dos puntos fuera-- y reimplementarlas en Dart sería una
+        segunda copia que se desincroniza.
+        """
+        expected = self.fake_pdf()
+        record = self.report()["outputs"][0]
+        self.assertEqual(record["pdf"], expected)
+        self.assertTrue(record["exists"])
+        self.assertFalse(record["stale"])
+
+    def test_a_source_newer_than_the_pdf_is_stale(self):
+        # El caso que importa: se compiló, se editó, y lo compilado ya no es
+        # lo que dice el fichero.
+        self.fake_pdf(when=time.time() - 600)
+        tex = os.path.join(self.unit.directory, "es.tex")
+        os.utime(tex, None)
+        record = self.report()["outputs"][0]
+        self.assertTrue(record["exists"])
+        self.assertTrue(record["stale"])
+        self.assertEqual(report_source(self.report()), "es.tex")
+
+    def test_a_pdf_that_does_not_exist_is_missing_and_not_stale(self):
+        # Dos cosas distintas, y la interfaz dice cada una de otra forma.
+        record = self.report()["outputs"][0]
+        self.assertFalse(record["exists"])
+        self.assertFalse(record["stale"])
+
+    def test_any_file_of_the_unit_counts_as_a_source(self):
+        """No solo el `.tex` del idioma que se compila.
+
+        Una vista previa en `en` sin inglés se compila del `es.tex`,
+        `unit.yaml` cambia el título que va en la cabecera, y una figura es
+        tan origen como el texto.
+        """
+        self.fake_pdf(when=time.time() - 600)
+        figure = os.path.join(self.unit.directory, "figura.pdf")
+        with open(figure, "wb") as handle:
+            handle.write(b"x")
+        self.assertTrue(self.report()["outputs"][0]["stale"])
+        self.assertEqual(report_source(self.report()), "figura.pdf")
+
+    def test_a_pdf_newer_than_everything_is_current(self):
+        self.fake_pdf(when=time.time() + 60)
+        self.assertFalse(self.report()["outputs"][0]["stale"])
+
+    def test_the_report_names_what_was_touched_last(self):
+        # «Está desactualizado» sin decir por qué obliga a mirar el
+        # directorio a mano.
+        self.fake_pdf()
+        report = self.report()
+        self.assertIn(report["sourceNewest"], os.listdir(self.unit.directory))
+        self.assertIsNotNone(report["sourceMtime"])
+
+
+def report_source(report):
+    return report["sourceNewest"]
 
 
 @unittest.skipUnless(toolchain_available(), "latexmk and pdflatex are required")

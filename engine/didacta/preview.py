@@ -88,6 +88,96 @@ def write_wrapper(root, build_dir, reference, title, *, kind=None):
     return source
 
 
+def document_id_for(reference):
+    """The engine's document id for a preview of [reference].
+
+    Kept in one place because three things have to agree on it: where the
+    wrapper is written, where the output lands, and how the interface asks
+    whether an output already exists.
+    """
+    return os.path.join(PREVIEW_DIR, slug(reference.replace("/", "-")))
+
+
+def expected_pdf(engine, reference, profile, language, title):
+    """Where a preview's PDF *would* be, whether or not it is there.
+
+    The interface needs this to answer a question it asks constantly: «esta
+    versión ya está compilada, ¿la abro sin volver a compilar?». It cannot
+    work the path out itself -- the file name comes from the profile's own
+    naming rules, accents, dropped colons and all -- so it asks here.
+    """
+    outdir = engine.output_dir(document_id_for(reference), profile.id, language)
+    return os.path.join(outdir, profile.output_name(title, language) + ".pdf")
+
+
+def newest_source(unit):
+    """When the unit was last touched, and which file it was.
+
+    Every file in the unit's directory, not just the `.tex` of the language
+    being built: a preview in `en` falls back to `es.tex` when there is no
+    English, `unit.yaml` changes the title that goes in the running head, and
+    a figure is as much a source as the text. Anything in there being newer
+    than the PDF means the PDF is out of date.
+    """
+    newest = 0.0
+    culprit = None
+    for directory, _, names in os.walk(unit.directory):
+        for name in names:
+            if name.startswith("."):
+                continue
+            path = os.path.join(directory, name)
+            try:
+                when = os.path.getmtime(path)
+            except OSError:
+                continue
+            if when > newest:
+                newest = when
+                culprit = os.path.relpath(path, unit.directory)
+    return newest, culprit
+
+
+def status(engine, unit, profiles, languages, title):
+    """What is already built for this unit, and whether it is still current.
+
+    One record per profile and language, whether the PDF exists or not: an
+    interface that only listed what exists could not tell «no compilado» from
+    «no ofrecido».
+    """
+    source_when, culprit = newest_source(unit)
+    reference = unit.reference_path
+
+    records = []
+    for profile in profiles:
+        for language in languages:
+            pdf = expected_pdf(engine, reference, profile, language, title)
+            exists = os.path.isfile(pdf)
+            when = os.path.getmtime(pdf) if exists else None
+            records.append(
+                {
+                    "profile": profile.id,
+                    "label": profile.label,
+                    "family": profile.family,
+                    "language": language,
+                    "pdf": pdf,
+                    "exists": exists,
+                    "mtime": when,
+                    # Stale means: the unit was touched after this was built.
+                    # A PDF that does not exist is not stale, it is missing --
+                    # two different things, and the interface says each
+                    # differently.
+                    "stale": bool(exists and source_when > (when or 0)),
+                }
+            )
+
+    return {
+        "unit": unit.relpath,
+        "reference": reference,
+        "sourceMtime": source_when or None,
+        "sourceNewest": culprit,
+        "outputs": records,
+    }
+
+
 def build(engine, root, reference, profile, language, *, title=None,
           kind=None):
     """Compiles one unit in one profile and one language.
@@ -104,7 +194,7 @@ def build(engine, root, reference, profile, language, *, title=None,
         source,
         profile,
         language,
-        document_id=os.path.join(PREVIEW_DIR, slug(reference.replace("/", "-"))),
+        document_id=document_id_for(reference),
         document_title=title or reference,
         content_root=repo_mod.content_root_for(source, root),
     )
