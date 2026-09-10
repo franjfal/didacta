@@ -30,122 +30,142 @@ import '../data/compiler.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'pdf_tab.dart';
 import 'theme.dart';
 
-class UnitPreview extends StatefulWidget {
-  const UnitPreview({super.key, required this.unit, required this.session});
+/// El estado de compilar una unidad.
+///
+/// No es un widget, y por la misma razón que `_LanguageEditor` tampoco lo es:
+/// una pestaña de la que te vas tiene que conservar lo que había. Sin esto,
+/// abrir el PDF en su pestaña y volver a «compilar» borraba los resultados y
+/// obligaba a compilar otra vez -- que es justo lo que la pestaña venía a
+/// evitar.
+class PreviewState {
+  PreviewState({
+    required this.unit,
+    required this.session,
+    required this.onChanged,
+  }) {
+    language = unit.reference;
+    scheduleMicrotask(load);
+  }
 
   final Unit unit;
   final Session session;
+  final VoidCallback onChanged;
 
-  @override
-  State<UnitPreview> createState() => _UnitPreviewState();
-}
+  CompilerStatus? status;
+  List<BuildableProfile> profiles = const [];
+  final Set<String> chosen = {};
+  late String language;
 
-class _UnitPreviewState extends State<UnitPreview> {
-  CompilerStatus? _status;
-  List<BuildableProfile> _profiles = const [];
-  final Set<String> _chosen = {};
-  String? _language;
+  bool loading = true;
+  bool building = false;
+  Object? problem;
+  List<CompileOutput> results = const [];
 
-  bool _loading = true;
-  bool _building = false;
-  Object? _problem;
-  List<CompileOutput> _results = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _language = widget.unit.reference;
-    scheduleMicrotask(_load);
-  }
-
-  Future<void> _load() async {
-    final compiler = widget.session.compiler();
+  Future<void> load() async {
+    final compiler = session.compiler();
     if (compiler == null) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _status = CompilerStatus(
-          ready: false,
-          enginePath: widget.session.enginePath,
-          problem: widget.session.canCompile
-              ? 'Compilar necesita el motor y un clon del repositorio en '
-                    'disco. Los dos se eligen en Ajustes.'
-              : 'Compilar necesita LaTeX, y un navegador no lo tiene. Usa la '
-                    'aplicación de escritorio.',
-        );
-      });
+      status = CompilerStatus(
+        ready: false,
+        enginePath: session.enginePath,
+        problem: session.canCompile
+            ? 'Compilar necesita el motor y un clon del repositorio en '
+                  'disco. Los dos se eligen en Ajustes.'
+            : 'Compilar necesita LaTeX, y un navegador no lo tiene. Usa la '
+                  'aplicación de escritorio.',
+      );
+      loading = false;
+      onChanged();
       return;
     }
 
     try {
-      final status = await compiler.status();
-      final profiles = status.ready
-          ? await compiler.profilesFor(widget.unit.path)
+      final found = await compiler.status();
+      final available = found.ready
+          ? await compiler.profilesFor(unit.path)
           : const <BuildableProfile>[];
-      if (!mounted) return;
-      setState(() {
-        _status = status;
-        _profiles = profiles;
-        // Las dos que se piden por defecto: la de presentación y la de
-        // libro. Preseleccionadas porque son la respuesta al 90% de las
-        // veces que alguien abre esto.
-        _chosen
-          ..clear()
-          ..addAll(profiles.where((p) => p.isPrimary).map((p) => p.id));
-        if (_chosen.isEmpty && profiles.isNotEmpty) {
-          _chosen.add(profiles.first.id);
-        }
-        _loading = false;
-      });
+      status = found;
+      profiles = available;
+      // Las dos que se pidieron más la prosa por defecto, marcadas de
+      // entrada: son la respuesta casi siempre que alguien abre esto.
+      chosen
+        ..clear()
+        ..addAll(available.where((p) => p.isPrimary).map((p) => p.id));
+      if (chosen.isEmpty && available.isNotEmpty) {
+        chosen.add(available.first.id);
+      }
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _problem = error;
-        _loading = false;
-      });
+      problem = error;
+    } finally {
+      loading = false;
+      onChanged();
     }
   }
 
-  Future<void> _compile() async {
-    final compiler = widget.session.compiler();
-    if (compiler == null || _chosen.isEmpty) return;
-    setState(() {
-      _building = true;
-      _problem = null;
-      _results = const [];
-    });
+  void toggle(String id) {
+    if (!chosen.remove(id)) chosen.add(id);
+    onChanged();
+  }
+
+  void setLanguage(String code) {
+    language = code;
+    onChanged();
+  }
+
+  Future<void> compile() async {
+    final compiler = session.compiler();
+    if (compiler == null || chosen.isEmpty) return;
+    building = true;
+    problem = null;
+    results = const [];
+    onChanged();
     try {
-      final results = await compiler.compile(
-        unitPath: widget.unit.path,
-        profiles: _profiles
-            .where((p) => _chosen.contains(p.id))
+      results = await compiler.compile(
+        unitPath: unit.path,
+        profiles: profiles
+            .where((p) => chosen.contains(p.id))
             .map((p) => p.id)
             .toList(),
-        language: _language ?? widget.unit.reference,
+        language: language,
       );
-      if (!mounted) return;
-      setState(() {
-        _results = results;
-        _building = false;
-      });
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _problem = error;
-        _building = false;
-      });
+      problem = error;
+    } finally {
+      building = false;
+      onChanged();
     }
   }
+}
+
+class UnitPreview extends StatelessWidget {
+  const UnitPreview({
+    super.key,
+    required this.state,
+    required this.onOpen,
+    required this.onExternal,
+  });
+
+  final PreviewState state;
+
+  /// Abre el PDF en una pestaña de la unidad.
+  ///
+  /// Lo hace la página y no esta pantalla porque las pestañas son de la
+  /// unidad: sobreviven a salir de «compilar» y volver, que es exactamente
+  /// para lo que sirven.
+  final ValueChanged<OpenPdf> onOpen;
+
+  /// El visor del sistema y el Finder.
+  final void Function(String path, {required bool reveal}) onExternal;
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    if (state.loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final status = _status;
+    final status = state.status;
     if (status != null && !status.ready) {
       return _NotReady(problem: status.problem ?? 'No se puede compilar.');
     }
@@ -153,50 +173,32 @@ class _UnitPreviewState extends State<UnitPreview> {
     return Column(
       children: [
         _Controls(
-          unit: widget.unit,
-          profiles: _profiles,
-          chosen: _chosen,
-          language: _language ?? widget.unit.reference,
-          languages: widget.session.catalogue.languages,
-          building: _building,
-          onToggle: (id) => setState(() {
-            if (!_chosen.remove(id)) _chosen.add(id);
-          }),
-          onLanguage: (code) => setState(() => _language = code),
-          onCompile: _chosen.isEmpty || _building ? null : _compile,
+          unit: state.unit,
+          profiles: state.profiles,
+          chosen: state.chosen,
+          language: state.language,
+          languages: state.session.catalogue.languages,
+          building: state.building,
+          onToggle: state.toggle,
+          onLanguage: state.setLanguage,
+          onCompile: state.chosen.isEmpty || state.building
+              ? null
+              : state.compile,
         ),
         Expanded(
-          child: _problem != null
-              ? _Failure(problem: _problem!)
+          child: state.problem != null
+              ? _Failure(problem: state.problem!)
               : _Results(
-                  results: _results,
-                  building: _building,
-                  unit: widget.unit,
-                  onOpen: _open,
-                  onReveal: _reveal,
+                  results: state.results,
+                  building: state.building,
+                  unit: state.unit,
+                  onView: onOpen,
+                  onOpen: (path) => onExternal(path, reveal: false),
+                  onReveal: (path) => onExternal(path, reveal: true),
                 ),
         ),
       ],
     );
-  }
-
-  Future<void> _open(String pdf) => _act(() async {
-    await widget.session.compiler()?.open(pdf);
-  });
-
-  Future<void> _reveal(String pdf) => _act(() async {
-    await widget.session.compiler()?.reveal(pdf);
-  });
-
-  Future<void> _act(Future<void> Function() action) async {
-    try {
-      await action();
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
-    }
   }
 }
 
@@ -329,6 +331,7 @@ class _Results extends StatelessWidget {
     required this.results,
     required this.building,
     required this.unit,
+    required this.onView,
     required this.onOpen,
     required this.onReveal,
   });
@@ -336,6 +339,7 @@ class _Results extends StatelessWidget {
   final List<CompileOutput> results;
   final bool building;
   final Unit unit;
+  final ValueChanged<OpenPdf> onView;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
 
@@ -377,7 +381,12 @@ class _Results extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
       children: [
         for (final result in results)
-          _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
+          _ResultCard(
+            result: result,
+            onView: onView,
+            onOpen: onOpen,
+            onReveal: onReveal,
+          ),
         const SizedBox(height: 8),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 2),
@@ -395,11 +404,13 @@ class _Results extends StatelessWidget {
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
     required this.result,
+    required this.onView,
     required this.onOpen,
     required this.onReveal,
   });
 
   final CompileOutput result;
+  final ValueChanged<OpenPdf> onView;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
 
@@ -450,9 +461,27 @@ class _ResultCard extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
+                  // Dentro de la aplicación primero: es lo que permite tener
+                  // diapositivas y libro abiertos a la vez y comparar.
                   FilledButton.icon(
+                    key: Key('view-${result.profile}'),
+                    icon: const Icon(Icons.visibility_outlined, size: 15),
+                    label: const Text('Ver aquí'),
+                    onPressed: () => onView(
+                      OpenPdf(
+                        path: result.pdf!,
+                        profile: result.profile,
+                        language: result.language,
+                        pages: result.pages,
+                      ),
+                    ),
+                  ),
+                  // Y los dos externos, que siguen haciendo falta: pantalla
+                  // completa para pasar diapositivas de verdad, y el Finder
+                  // para arrastrar el PDF a un correo.
+                  OutlinedButton.icon(
                     icon: const Icon(Icons.open_in_new, size: 15),
-                    label: const Text('Abrir el PDF'),
+                    label: const Text('Visor del sistema'),
                     onPressed: () => onOpen(result.pdf!),
                   ),
                   OutlinedButton.icon(

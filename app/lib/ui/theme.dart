@@ -211,12 +211,41 @@ ThemeData didactaTheme() {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
     ),
+    // Un chip seleccionado tiene que verse seleccionado.
+    //
+    // Esto estaba mal y se notaba justo donde más importa: los chips son el
+    // control con el que se elige el tipo de una unidad, su estado de
+    // traducción y qué versiones compilar, y con `backgroundColor` en blanco
+    // y `selectedColor` sin poner, los dos estados se pintaban blancos. La
+    // marca de verificación era la única diferencia, y en una fila de siete
+    // no se lee.
+    //
+    // Tres señales a la vez y no una: relleno, borde y peso. Una sola es
+    // frágil --el relleno se pierde en una captura, el borde a tamaño
+    // pequeño-- y las tres juntas se leen de un vistazo.
     chipTheme: ChipThemeData(
-      side: const BorderSide(color: didactaRule),
       backgroundColor: Colors.white,
-      labelStyle: const TextStyle(fontSize: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+      selectedColor: didactaAccentDark.withValues(alpha: 0.16),
+      checkmarkColor: didactaAccentDark,
+      side: WidgetStateBorderSide.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? const BorderSide(color: didactaAccentDark, width: 1.4)
+            : const BorderSide(color: didactaRule),
+      ),
+      labelStyle: const TextStyle(
+        fontSize: 12,
+        color: didactaInk,
+        fontWeight: FontWeight.w500,
+      ),
+      // El de un ChoiceChip seleccionado.
+      secondaryLabelStyle: const TextStyle(
+        fontSize: 12,
+        color: didactaAccentDark,
+        fontWeight: FontWeight.w700,
+      ),
+      secondarySelectedColor: didactaAccentDark.withValues(alpha: 0.16),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
     tabBarTheme: const TabBarThemeData(
       labelColor: didactaInk,
