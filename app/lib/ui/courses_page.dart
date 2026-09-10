@@ -14,12 +14,19 @@ import 'package:go_router/go_router.dart';
 
 import '../model/catalogue.dart';
 import '../router.dart';
+import '../state/session.dart';
+import 'course_admin_ui.dart';
 import 'shell.dart';
 import 'theme.dart';
 
-class CoursesPage extends StatelessWidget {
+class CoursesPage extends StatefulWidget {
   const CoursesPage({super.key});
 
+  @override
+  State<CoursesPage> createState() => _CoursesPageState();
+}
+
+class _CoursesPageState extends State<CoursesPage> {
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
@@ -42,22 +49,133 @@ class CoursesPage extends StatelessWidget {
           subtitle:
               '${courses.length} asignaturas · $years cursos '
               'académicos · $documents documentos',
+          actions: [
+            if (session.admin() != null)
+              FilledButton.icon(
+                key: const Key('new-course'),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Nueva asignatura'),
+                onPressed: () => _createCourse(session),
+              ),
+          ],
         ),
         Expanded(
           child: ListView.separated(
             itemCount: courses.length,
             separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) =>
-                _CourseTile(course: courses[index]),
+            itemBuilder: (context, index) => _CourseTile(
+              course: courses[index],
+              admin: session.admin() != null,
+              onDuplicate: () => _duplicateYear(session, courses[index]),
+              onRemove: () => _removeCourse(session, courses[index]),
+            ),
           ),
         ),
       ],
     );
   }
+
+  Future<void> _createCourse(Session session) async {
+    final catalogue = session.catalogue;
+    final answer =
+        await showDialog<
+          ({String id, String title, String? from, String language})
+        >(
+          context: context,
+          builder: (context) => NewCourseDialog(
+            courses: catalogue.courses,
+            languages: catalogue.languages,
+            defaultLanguage: catalogue.defaultLanguage,
+          ),
+        );
+    if (answer == null || !mounted) return;
+
+    final done = await runAdmin(
+      context,
+      session,
+      (admin) => admin.createCourse(
+        id: answer.id,
+        title: answer.title,
+        from: answer.from,
+        language: answer.language,
+      ),
+      done: 'Asignatura «${answer.title}» creada como un commit.',
+    );
+    // El catálogo se genera aparte, así que sin recargarlo la pantalla no ve
+    // lo que acaba de crear.
+    if (done) await session.reloadCatalogue();
+  }
+
+  Future<void> _duplicateYear(Session session, Course course) async {
+    if (course.years.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Esta asignatura no tiene ningún curso del que copiar. El primero '
+            'se hace copiando el de otra asignatura desde el terminal: '
+            '`didacta new year`.',
+          ),
+          duration: Duration(seconds: 8),
+        ),
+      );
+      return;
+    }
+    final answer = await showDialog<({String year, String from})>(
+      context: context,
+      builder: (context) => DuplicateYearDialog(course: course),
+    );
+    if (answer == null || !mounted) return;
+
+    final done = await runAdmin(
+      context,
+      session,
+      (admin) => admin.duplicateYear(
+        course: course.id,
+        year: answer.year,
+        from: answer.from,
+      ),
+      done: 'Curso ${answer.year} creado, copiado de ${answer.from}.',
+    );
+    if (done) await session.reloadCatalogue();
+  }
+
+  Future<void> _removeCourse(Session session, Course course) async {
+    final admin = session.admin();
+    if (admin == null) return;
+
+    final confirmed = await confirmRemoval(
+      context,
+      title: '¿Quitar «${course.title()}»?',
+      preview: () => admin.previewRemoveCourse(course.id),
+      warning:
+          'Las unidades no se tocan: siguen en la biblioteca y en las demás '
+          'asignaturas que las usen. Lo que se pierde es la selección y el '
+          'orden de esta.',
+    );
+    if (!confirmed || !mounted) return;
+
+    final done = await runAdmin(
+      context,
+      session,
+      (admin) => admin.removeCourse(course.id, title: course.title()),
+      done: 'Asignatura «${course.title()}» quitada como un commit.',
+    );
+    if (done) await session.reloadCatalogue();
+  }
 }
 
 class _CourseTile extends StatelessWidget {
-  const _CourseTile({required this.course});
+  const _CourseTile({
+    required this.course,
+    required this.admin,
+    required this.onDuplicate,
+    required this.onRemove,
+  });
+
+  /// Si se pueden ofrecer las operaciones: hacen falta el clon y el motor.
+  final bool admin;
+  final VoidCallback onDuplicate;
+  final VoidCallback onRemove;
 
   final Course course;
 
@@ -99,6 +217,40 @@ class _CourseTile extends StatelessWidget {
                   ],
                 ),
               ),
+              // Las operaciones de la asignatura, en un menú y no en botones:
+              // son dos, una de ellas destructiva, y no compiten con los
+              // cursos por la atención de la fila.
+              if (admin)
+                MenuAnchor(
+                  builder: (context, controller, child) => IconButton(
+                    key: Key('course-menu-${course.id}'),
+                    tooltip: 'Operaciones de la asignatura',
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.more_horiz, size: 18),
+                    onPressed: () => controller.isOpen
+                        ? controller.close()
+                        : controller.open(),
+                  ),
+                  menuChildren: [
+                    MenuItemButton(
+                      key: Key('duplicate-${course.id}'),
+                      leadingIcon: const Icon(Icons.add, size: 15),
+                      onPressed: onDuplicate,
+                      child: const Text('Nuevo curso académico…'),
+                    ),
+                    const Divider(height: 1),
+                    MenuItemButton(
+                      key: Key('remove-${course.id}'),
+                      leadingIcon: const Icon(
+                        Icons.delete_outline,
+                        size: 15,
+                        color: didactaTeacher,
+                      ),
+                      onPressed: onRemove,
+                      child: const Text('Quitar la asignatura…'),
+                    ),
+                  ],
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -114,6 +266,13 @@ class _CourseTile extends StatelessWidget {
                   year: year,
                   entry: course.years[year]!,
                   current: year == sortedYears.first,
+                ),
+              if (admin)
+                ActionChip(
+                  key: Key('add-year-${course.id}'),
+                  avatar: const Icon(Icons.add, size: 14),
+                  label: const Text('curso'),
+                  onPressed: onDuplicate,
                 ),
             ],
           ),

@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'course_admin_ui.dart';
 import 'shell.dart';
 import 'theme.dart';
 
@@ -57,6 +58,16 @@ class YearPage extends StatelessWidget {
             'idioma ${entry.language}',
           ].join(' · '),
           breadcrumbs: [('Asignaturas', Routes.courses())],
+          actions: [
+            if (session.admin() != null)
+              IconButton(
+                key: const Key('remove-year'),
+                tooltip: 'Quitar este curso académico',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.delete_outline, size: 18),
+                onPressed: () => _removeYear(context, session, course),
+              ),
+          ],
         ),
         if (broken > 0)
           Padding(
@@ -93,6 +104,44 @@ class YearPage extends StatelessWidget {
       }
     }
     return broken;
+  }
+
+  /// Quita este curso académico, y vuelve a la asignatura.
+  ///
+  /// Vuelve porque la pantalla en la que estás deja de existir: quedarse
+  /// enseñando un curso borrado es peor que navegar.
+  Future<void> _removeYear(
+    BuildContext context,
+    Session session,
+    Course course,
+  ) async {
+    final admin = session.admin();
+    if (admin == null) return;
+
+    final onlyOne = course.years.length == 1;
+    final confirmed = await confirmRemoval(
+      context,
+      title: '¿Quitar el curso $year de «${course.title()}»?',
+      preview: () => admin.previewRemoveYear(course.id, year),
+      warning: onlyOne
+          ? 'Es el único curso de la asignatura, así que se queda sin '
+                'ninguno. Las unidades no se tocan: lo que se pierde es la '
+                'selección y el orden de este curso.'
+          : 'Las unidades no se tocan, y los demás cursos de la asignatura '
+                'tampoco. Lo que se pierde es la selección y el orden de '
+                'este.',
+    );
+    if (!confirmed || !context.mounted) return;
+
+    final done = await runAdmin(
+      context,
+      session,
+      (admin) => admin.removeYear(course.id, year),
+      done: 'Curso $year quitado como un commit.',
+    );
+    if (!done || !context.mounted) return;
+    await session.reloadCatalogue();
+    if (context.mounted) context.go(Routes.courses());
   }
 }
 

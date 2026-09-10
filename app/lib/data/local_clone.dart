@@ -151,6 +151,25 @@ abstract class LocalClone {
     bool push = true,
   });
 
+  /// Cierra en un commit lo que haya cambiado **bajo [paths]**.
+  ///
+  /// Por rutas y no un `git add -A`: una operación sobre una asignatura toca
+  /// `courses/<id>` y nada más, y barrer todo el árbol se llevaría al commit
+  /// un `.tex` que el autor tuviera a medias en otro sitio. Un commit que
+  /// dice «Quitar la asignatura X» y lleva dentro media traducción es peor
+  /// que no tener commit.
+  ///
+  /// Devuelve false cuando no había nada que guardar: un historial con
+  /// commits vacíos es un historial que nadie lee.
+  Future<bool> commitPaths({
+    required List<String> paths,
+    required String message,
+    required String authorName,
+    required String authorEmail,
+    required String token,
+    bool push = true,
+  });
+
   Future<void> pull({required String token});
 
   Future<void> push({required String token});

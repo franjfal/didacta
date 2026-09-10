@@ -11,6 +11,8 @@ import 'package:didacta_app/data/auth.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
+import 'package:didacta_app/data/course_admin.dart';
+import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
 
@@ -287,6 +289,7 @@ class FakeCompiler implements Compiler {
     ],
     this.failWith,
     this.outputs,
+    this.onRun,
   });
 
   final bool ready;
@@ -301,6 +304,14 @@ class FakeCompiler implements Compiler {
 
   final List<String> opened = [];
   final List<String> revealed = [];
+
+  /// Lo que el motor deja en el disco.
+  ///
+  /// Un motor de verdad **cambia ficheros**, y lo que la aplicación hace con
+  /// esos cambios --cerrarlos en un commit-- es justo lo que hay que probar.
+  /// Sin esto, un test del commit no probaría nada: `git commit` sobre un
+  /// árbol intacto no es un commit.
+  final Future<void> Function(List<String> arguments)? onRun;
 
   @override
   Future<CompilerStatus> status() async =>
@@ -347,11 +358,122 @@ class FakeCompiler implements Compiler {
         ];
   }
 
+  /// Las órdenes que se le pidió lanzar al motor, y qué contestó.
+  final List<List<String>> commands = [];
+  final Map<String, String> answers = {};
+
+  @override
+  Future<String> run(
+    List<String> arguments, {
+    bool allowFailure = false,
+  }) async {
+    commands.add(arguments);
+    if (failWith != null) throw failWith!;
+    // Solo lo que aplica toca el disco, como el motor: una
+    // previsualización que borrara ficheros sería el fallo que estos tests
+    // tienen que poder coger.
+    if (onRun != null &&
+        (arguments.contains('--apply') || arguments.contains('new'))) {
+      await onRun!(arguments);
+    }
+    // Se busca por la primera coincidencia de las claves puestas: los tests
+    // dicen «lo que conteste a `remove course`» y no la línea entera.
+    for (final entry in answers.entries) {
+      if (arguments.join(' ').contains(entry.key)) return entry.value;
+    }
+    return '';
+  }
+
   @override
   Future<void> open(String pdf) async => opened.add(pdf);
 
   @override
   Future<void> reveal(String pdf) async => revealed.add(pdf);
+}
+
+/// Un clon que no toca el disco, para los tests de pantalla.
+///
+/// Existe por una razón muy concreta: `testWidgets` corre con un reloj
+/// falso, y esperar un `Process.run` de verdad ahí dentro **cuelga el test**.
+/// Que un commit sea un commit se prueba contra git de verdad en
+/// `course_admin_test.dart` y `local_clone_test.dart`; lo que se prueba
+/// desde la pantalla es otra cosa --qué se le pide y qué se enseña-- y para
+/// eso basta con recordar la petición.
+class FakeClone implements LocalClone {
+  FakeClone({this.changed = true});
+
+  /// Si el motor cambió algo. False es el caso de borrar lo que ya no
+  /// estaba: el motor termina bien, no hay commit, y la pantalla lo dice.
+  final bool changed;
+
+  final List<({List<String> paths, String message, String author, bool push})>
+  commits = [];
+
+  @override
+  String get directory => '/clon';
+
+  @override
+  Future<bool> commitPaths({
+    required List<String> paths,
+    required String message,
+    required String authorName,
+    required String authorEmail,
+    required String token,
+    bool push = true,
+  }) async {
+    commits.add((
+      paths: paths,
+      message: message,
+      author: '$authorName <$authorEmail>',
+      push: push,
+    ));
+    return changed;
+  }
+
+  @override
+  Future<({String name, String email})?> configuredAuthor() async =>
+      (name: 'Javier', email: 'javier@uv.es');
+
+  @override
+  Future<CloneStatus> status() async => const CloneStatus(
+    directory: '/clon',
+    branch: 'main',
+    head: 'abc1234',
+    ahead: 0,
+    behind: 0,
+    dirtyPaths: [],
+  );
+
+  @override
+  Future<bool> looksRight({
+    required String owner,
+    required String repo,
+  }) async => true;
+
+  @override
+  Future<({String text, String sha})> readFile(String path) async =>
+      (text: '', sha: 'x');
+
+  @override
+  Future<String> commitFile({
+    required String path,
+    required String text,
+    required String expectedSha,
+    required String message,
+    required String authorName,
+    required String authorEmail,
+    required String token,
+    bool push = true,
+  }) async => 'x';
+
+  @override
+  Future<void> setAuthor({required String name, required String email}) async {}
+
+  @override
+  Future<void> pull({required String token}) async {}
+
+  @override
+  Future<void> push({required String token}) async {}
 }
 
 /// A session wired to a fake gateway, with no Firebase anywhere.
@@ -360,6 +482,8 @@ class FakeSession extends Session {
     required this.gatewayOverride,
     required Catalogue catalogue,
     this.compilerOverride,
+    this.adminOverride,
+    this.onReload,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
          auth: StubAuth(),
@@ -375,6 +499,27 @@ class FakeSession extends Session {
   /// Null means "nothing to compile with", which is a state the screen has to
   /// handle: the web, and a desktop with no engine configured.
   final Compiler? compilerOverride;
+
+  /// Null es la web: sin clon y sin motor no se pueden administrar
+  /// asignaturas, y la pantalla tiene que decirlo en lugar de ofrecer
+  /// botones que no funcionan.
+  final CourseAdmin? adminOverride;
+
+  /// Recargar el catálogo va a la red, que en un test no está. Cuenta las
+  /// veces: crear una asignatura y no recargar es el fallo de que la
+  /// pantalla no enseñe lo que acaba de crear.
+  final void Function()? onReload;
+
+  int reloads = 0;
+
+  @override
+  Future<void> reloadCatalogue() async {
+    reloads += 1;
+    onReload?.call();
+  }
+
+  @override
+  CourseAdmin? admin() => adminOverride;
 
   @override
   ContentGateway get gateway => gatewayOverride;

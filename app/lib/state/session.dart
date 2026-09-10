@@ -23,6 +23,7 @@ import '../data/auth.dart';
 import '../data/catalogue_source.dart';
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
+import '../data/course_admin.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../data/repository_access.dart';
@@ -85,6 +86,8 @@ class Session extends ChangeNotifier {
   ContentGateway get gateway => _gateway;
 
   bool _hasToken = false;
+  String? _token;
+  bool _pushOnCommit = true;
 
   /// Whether a repository token is stored on this machine.
   bool get hasStoredToken => _hasToken;
@@ -162,6 +165,24 @@ class Session extends ChangeNotifier {
     final clone = _clonePath;
     if (engine == null || clone == null) return null;
     return Compiler(enginePath: engine, repositoryPath: clone);
+  }
+
+  /// Crear, duplicar y borrar asignaturas y años.
+  ///
+  /// Null cuando no se puede: hace falta el clon --para escribir y para
+  /// hacer el commit-- y el motor, que es el que sabe hacer cada operación.
+  /// La pantalla lo dice en lugar de ofrecer botones que no funcionan.
+  CourseAdmin? admin() {
+    final compiler = this.compiler();
+    final path = _clonePath;
+    if (compiler == null || path == null) return null;
+    return CourseAdmin(
+      compiler: compiler,
+      clone: LocalClone(directory: path),
+      author: _cloneAuthor,
+      token: _token ?? '',
+      pushOnCommit: _pushOnCommit,
+    );
   }
 
   /// Looks for the engine and remembers it.
@@ -295,7 +316,9 @@ class Session extends ChangeNotifier {
   }
 
   Future<void> _refreshAccess() async {
-    _hasToken = (await tokenStore.read())?.isNotEmpty ?? false;
+    _token = await tokenStore.read();
+    _hasToken = _token?.isNotEmpty ?? false;
+    _pushOnCommit = await preferences.pushOnCommit();
 
     // The API is the authority on permissions, so ask it -- but only if there
     // is one and somebody is signed in. Its answer for an anonymous caller is

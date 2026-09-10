@@ -239,6 +239,149 @@ void main() {
     expect(gateway.commits.single.text, contains('  - id: hoja-1'));
   });
 
+  group('añadir en su sitio', () {
+    // Añadir al final es lo que menos se hace. Reestructurar un tema es
+    // partirlo: el apartado nuevo va **delante** de la unidad por la que
+    // empieza la parte nueva, y si solo se puede añadir al final hay que
+    // añadirlo y luego arrastrarlo cuatro filas, que es exactamente el paso
+    // que sobra.
+
+    testWidgets('un apartado se inserta encima de la fila', (tester) async {
+      final gateway = await pumpComposition(tester);
+
+      // Encima de la tercera fila, que es `banach`.
+      await tester.tap(find.byKey(const Key('insert-2')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('insert-section-2')));
+      await settle(tester);
+
+      expect(find.text('Título nuevo'), findsOneWidget);
+      await tester.tap(save);
+      await settle(tester);
+      await tester.tap(commit);
+      await settle(tester);
+
+      expect(committedEntries(gateway), [
+        '- section: Normas',
+        '- unit: analysis/normed/definition',
+        '- section: Título nuevo',
+        '- unit: analysis/normed/banach',
+        '# - unit: analysis/normed/dedekind',
+        '- unit: analysis/normed/no-existe',
+      ]);
+      // Nace con el título por idiomas y con los que faltan marcados: es la
+      // forma que usa el repositorio, y la lista de lo que queda por
+      // traducir.
+      expect(
+        gateway.commits.single.text,
+        contains('''
+      - section:
+          es: Título nuevo
+          # TODO: va
+          # TODO: en
+'''),
+      );
+    });
+
+    testWidgets('y un subapartado, con su nivel', (tester) async {
+      final gateway = await pumpComposition(tester);
+
+      await tester.tap(find.byKey(const Key('insert-1')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('insert-subsection-1')));
+      await settle(tester);
+      await tester.tap(save);
+      await settle(tester);
+      await tester.tap(commit);
+      await settle(tester);
+
+      expect(committedEntries(gateway)[1], '- subsection: Título nuevo');
+    });
+
+    testWidgets('una unidad se elige y entra en su sitio', (tester) async {
+      final gateway = await pumpComposition(tester);
+
+      await tester.tap(find.byKey(const Key('insert-0')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('insert-unit-0')));
+      await settle(tester);
+
+      // El buscador de la biblioteca, filtrado por lo que se teclea.
+      await tester.enterText(find.byType(TextField).last, 'rank');
+      await settle(tester);
+      await tester.tap(find.textContaining('algebra/matrices/rank'));
+      await settle(tester);
+
+      await tester.tap(save);
+      await settle(tester);
+      await tester.tap(commit);
+      await settle(tester);
+
+      expect(committedEntries(gateway), [
+        '- unit: algebra/matrices/rank',
+        '- section: Normas',
+        '- unit: analysis/normed/definition',
+        '- unit: analysis/normed/banach',
+        '# - unit: analysis/normed/dedekind',
+        '- unit: analysis/normed/no-existe',
+      ]);
+    });
+
+    testWidgets('una unidad que ya está no se puede elegir dos veces', (
+      tester,
+    ) async {
+      await pumpComposition(tester);
+
+      await tester.tap(find.byKey(const Key('insert-0')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('insert-unit-0')));
+      await settle(tester);
+      await tester.enterText(find.byType(TextField).last, 'banach');
+      await settle(tester);
+
+      // Se ve, y dice por qué no: esconderla sería la respuesta a «por qué
+      // no la encuentro».
+      expect(find.text('ya está en este documento'), findsWidgets);
+      final tile = tester.widget<ListTile>(
+        find.widgetWithText(ListTile, 'Espacios de Banach'),
+      );
+      expect(tile.onTap, isNull);
+    });
+
+    testWidgets('encima de una entrada apagada también', (tester) async {
+      // El sitio no es ambiguo --va delante de la línea comentada, que es la
+      // que se ve-- y es justo donde se parte un tema que arrastra entradas
+      // apagadas de la migración.
+      final gateway = await pumpComposition(tester);
+
+      await tester.tap(find.byKey(const Key('insert-3')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('insert-section-3')));
+      await settle(tester);
+      await tester.tap(save);
+      await settle(tester);
+      await tester.tap(commit);
+      await settle(tester);
+
+      expect(committedEntries(gateway), [
+        '- section: Normas',
+        '- unit: analysis/normed/definition',
+        '- unit: analysis/normed/banach',
+        '- section: Título nuevo',
+        '# - unit: analysis/normed/dedekind',
+        '- unit: analysis/normed/no-existe',
+      ]);
+    });
+
+    testWidgets('sin permiso de escritura no hay ni insertar ni añadir', (
+      tester,
+    ) async {
+      await pumpComposition(tester, gateway: FakeGateway(writable: false));
+      expect(find.byKey(const Key('insert-0')), findsNothing);
+      expect(find.byKey(const Key('add-unit')), findsNothing);
+    });
+  });
+
   testWidgets('renaming a heading writes the language being browsed', (
     tester,
   ) async {
