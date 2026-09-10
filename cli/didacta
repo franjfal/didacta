@@ -27,6 +27,7 @@ import json
 import os
 import re
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "engine"))
@@ -802,6 +803,51 @@ def cmd_preview(args):
 
     languages = args.language or [unit.reference]
 
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+        engine="pdflatex" if args.fast else "latexmk",
+        verbose=args.verbose,
+    )
+
+    reference = unit.reference_path
+    title = (unit.titles.get(languages[0])
+             or unit.titles.get(unit.reference)
+             or unit.id)
+
+    if args.status:
+        # Every language of the repository, not just the ones asked for: the
+        # question this answers is «what is already built», and an output in
+        # a language nobody asked about is still built.
+        report = preview_mod.status(
+            engine, unit, wanted,
+            args.language or sorted(settings.languages),
+            title,
+        )
+        if args.json:
+            json.dump(report, sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+            return 0
+        print(S.bold("%s (%s)" % (unit.relpath, unit.kind)))
+        for record in report["outputs"]:
+            if not record["exists"]:
+                mark = S.dim("--  ")
+                note = S.dim("sin compilar")
+            elif record["stale"]:
+                mark = S.warn("old ")
+                note = S.warn("el origen ha cambiado despues de compilar")
+            else:
+                mark = S.ok("ok  ")
+                note = S.dim(_when(record["mtime"]))
+            print("  %s%-22s %-3s %s" % (
+                pad(mark, 6), record["profile"], record["language"], note))
+        if report["sourceNewest"]:
+            print()
+            print(S.dim("lo mas reciente del origen: %s (%s)"
+                        % (report["sourceNewest"],
+                           _when(report["sourceMtime"]))))
+        return 0
+
     if args.list:
         print(S.bold("%s (%s)" % (unit.relpath, unit.kind)))
         for profile in wanted:
@@ -811,12 +857,6 @@ def cmd_preview(args):
                     % ", ".join(sorted(unit.languages))))
         return 0
 
-    engine = build_mod.Engine(
-        latex_dir=LATEX_DIR,
-        build_dir=os.path.join(root, settings.build_dir),
-        engine="pdflatex" if args.fast else "latexmk",
-        verbose=args.verbose,
-    )
     ready, why = engine.available()
     if not ready:
         if args.json:
@@ -826,9 +866,6 @@ def cmd_preview(args):
             return 2
         print(S.bad("cannot build: %s" % why))
         return 2
-
-    reference = unit.reference_path
-    title = unit.titles.get(languages[0]) or unit.titles.get(unit.reference) or unit.id
 
     results = []
     for language in languages:
@@ -864,6 +901,27 @@ def cmd_preview(args):
         )
         sys.stdout.write("\n")
     return 0 if all(r.ok for r in results) else 1
+
+
+def _when(stamp):
+    """A timestamp as something readable, relative to now.
+
+    Relative and not absolute: what matters about a compiled PDF is whether
+    it is from a minute ago or from March, and a date makes the reader do that
+    subtraction themselves.
+    """
+    if not stamp:
+        return "nunca"
+    seconds = max(0, time.time() - stamp)
+    if seconds < 90:
+        return "hace un momento"
+    minutes = seconds / 60
+    if minutes < 90:
+        return "hace %d min" % round(minutes)
+    hours = minutes / 60
+    if hours < 36:
+        return "hace %d h" % round(hours)
+    return "hace %d dias" % round(hours / 24)
 
 
 def _find_unit(units, wanted):
@@ -1472,6 +1530,8 @@ def main(argv=None):
                    help="language (repeatable; default: the unit's reference)")
     p.add_argument("--list", action="store_true",
                    help="show the profiles this unit can be built in")
+    p.add_argument("--status", action="store_true",
+                   help="say what is already built, and whether it is current")
     p.add_argument("--fast", action="store_true",
                    help="one pdflatex pass; quick, but references may be wrong")
     p.add_argument("--json", action="store_true",
