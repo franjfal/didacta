@@ -112,6 +112,69 @@ class _UnitPageState extends State<UnitPage> {
     });
   }
 
+  /// Abre un PDF en su pestaña, sin compilar nada.
+  ///
+  /// Es lo que se pulsa en «ya compiladas»: la versión está en disco y
+  /// mirarla no tiene por qué costar una compilación.
+  void _openPdf(OpenPdf pdf) {
+    setState(() {
+      final id = pdf.profile;
+      final at = _open.indexWhere((group) => group.id == id);
+      if (at >= 0) {
+        final existing = _open[at].pane(pdf.language);
+        _open[at] = existing == null
+            ? PdfGroup(id: id, panes: [..._open[at].panes, pdf])
+            : _open[at].replacing(pdf);
+      } else {
+        _open.add(PdfGroup(id: id, panes: [pdf]));
+      }
+      _active = _pdfTab(id);
+    });
+  }
+
+  /// Vuelve a comprobar las fechas de lo que está abierto.
+  ///
+  /// Hace falta porque el estado cambia sin que esta pantalla haga nada:
+  /// guardas el `.tex` en la pestaña de al lado y el PDF que tienes abierto
+  /// pasa a ser de antes del cambio. Se pregunta al activar una pestaña y
+  /// después de guardar, no por frame: son dos `stat` por panel, pero
+  /// hacerlos sesenta veces por segundo sería absurdo.
+  Future<void> _refreshStaleness(Session session) async {
+    final compiler = session.compiler();
+    if (compiler == null || _open.isEmpty) return;
+
+    final marks = <String, bool>{};
+    for (final group in _open) {
+      for (final pane in group.panes) {
+        marks[pane.path] = await compiler.isStale(
+          pdf: pane.path,
+          unitPath: widget.unitPath,
+        );
+      }
+    }
+    if (!mounted) return;
+
+    var changed = false;
+    final next = <PdfGroup>[];
+    for (final group in _open) {
+      var updated = group;
+      for (final pane in group.panes) {
+        final stale = marks[pane.path] ?? pane.stale;
+        if (stale != pane.stale) {
+          updated = updated.replacing(pane.marked(stale: stale));
+          changed = true;
+        }
+      }
+      next.add(updated);
+    }
+    if (!changed) return;
+    setState(() {
+      _open
+        ..clear()
+        ..addAll(next);
+    });
+  }
+
   /// Vuelve a compilar un solo panel, en su sitio.
   ///
   /// La acción de después de editar: cambias el valenciano, lo recompilas y
@@ -151,7 +214,9 @@ class _UnitPageState extends State<UnitPage> {
       setState(() {
         _open[now] = _open[now].replacing(
           result != null && result.ok
-              ? current.refreshed(pages: result.pages)
+              // Recién compilado ya no está viejo, que es lo que acaba de
+              // arreglar el compilar.
+              ? current.refreshed(pages: result.pages).marked(stale: false)
               : current.idle(),
         );
       });
@@ -278,7 +343,15 @@ class _UnitPageState extends State<UnitPage> {
               for (final entry in _editors.entries)
                 if (entry.value.isDirty) entry.key,
             },
-            onSelect: (code) => setState(() => _active = code),
+            onSelect: (code) {
+              setState(() => _active = code);
+              // Al volver a un PDF o a compilar, se vuelven a mirar las
+              // fechas: puede haberse guardado un `.tex` mientras tanto.
+              if (code == previewTab || code.startsWith(pdfTabPrefix)) {
+                _refreshStaleness(session);
+                if (code == previewTab) _preview?.refreshExisting();
+              }
+            },
             onClose: _closePdf,
           ),
         ),
@@ -352,6 +425,7 @@ class _UnitPageState extends State<UnitPage> {
         session: session,
       ),
       previewTab => UnitPreview(
+        onOpen: _openPdf,
         state: _preview ??= PreviewState(
           unit: unit,
           session: session,
@@ -896,9 +970,18 @@ class _LanguageTabs extends StatelessWidget {
           for (final group in open)
             _Tab(
               label: group.label,
-              icon: group.isSingle
+              // Ámbar y discreto: lo que hay abierto sigue siendo un PDF de
+              // verdad, pero es de antes del último cambio, y eso hay que
+              // saberlo antes de proyectarlo en una clase.
+              icon: group.hasStale
+                  ? Icons.change_circle_outlined
+                  : group.isSingle
                   ? Icons.picture_as_pdf_outlined
                   : Icons.compare_outlined,
+              iconColour: group.hasStale ? didactaEx : null,
+              tooltip: group.hasStale
+                  ? 'La unidad ha cambiado después de compilar esto'
+                  : null,
               selected: active == _pdfTab(group.id),
               dirty: false,
               onTap: () => onSelect(_pdfTab(group.id)),
@@ -928,6 +1011,8 @@ class _Tab extends StatelessWidget {
     required this.onTap,
     this.status,
     this.icon,
+    this.iconColour,
+    this.tooltip,
     this.onClose,
   });
 
@@ -936,6 +1021,12 @@ class _Tab extends StatelessWidget {
   /// Para una pestaña que no es un idioma: dice que hace algo, en lugar de
   /// que muestra algo.
   final IconData? icon;
+
+  /// Para el aviso de que lo compilado se ha quedado viejo.
+  final Color? iconColour;
+
+  /// Lo que dice al pasar por encima, cuando hay algo que decir.
+  final String? tooltip;
 
   /// Puesto en una pestaña que se puede cerrar, que son las de PDF. Los
   /// idiomas y `unit.yaml` no se cierran: son la unidad.
@@ -950,6 +1041,11 @@ class _Tab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = status;
+    final tab = _build(context, state);
+    return tooltip == null ? tab : Tooltip(message: tooltip!, child: tab);
+  }
+
+  Widget _build(BuildContext context, TranslationStatus? state) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -968,7 +1064,8 @@ class _Tab extends StatelessWidget {
               Icon(
                 icon,
                 size: 15,
-                color: selected ? didactaAccentDark : didactaMuted,
+                color:
+                    iconColour ?? (selected ? didactaAccentDark : didactaMuted),
               ),
               const SizedBox(width: 5),
             ],

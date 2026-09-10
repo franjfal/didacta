@@ -39,6 +39,52 @@ class BuildableProfile {
   bool get isPrimary => id == 'slides' || id == 'book' || id == 'notes';
 }
 
+/// Una salida que puede estar compilada, y en qué estado.
+///
+/// Existe para responder a dos preguntas que la interfaz hacía a ciegas:
+/// «¿esto ya está compilado?» --y entonces se abre sin volver a compilar-- y
+/// «¿sigue valiendo?» --y si no, se dice, porque un PDF que no corresponde al
+/// fichero es peor que no tenerlo.
+class ExistingOutput {
+  const ExistingOutput({
+    required this.profile,
+    required this.label,
+    required this.family,
+    required this.language,
+    required this.pdf,
+    required this.exists,
+    required this.stale,
+    this.modified,
+  });
+
+  final String profile;
+
+  /// El nombre en castellano: «Diapositivas», «Libro».
+  final String label;
+  final String family;
+  final String language;
+
+  /// Donde estaría el PDF, exista o no.
+  final String pdf;
+
+  final bool exists;
+
+  /// El origen se tocó después de compilar esto.
+  ///
+  /// «No existe» y «está viejo» son dos cosas distintas: un PDF que falta no
+  /// está viejo, y la interfaz dice cada una de otra forma.
+  final bool stale;
+
+  /// Cuándo se compiló, si está.
+  final DateTime? modified;
+
+  bool get usable => exists && !stale;
+
+  /// Si es una de las que se miran primero.
+  bool get isPrimary =>
+      profile == 'slides' || profile == 'book' || profile == 'notes';
+}
+
 /// El resultado de compilar una unidad en un perfil y un idioma.
 class CompileOutput {
   const CompileOutput({
@@ -129,6 +175,20 @@ abstract class Compiler {
   /// Los perfiles en los que merece la pena compilar esta unidad, en el
   /// orden en el que el motor los ofrece.
   Future<List<BuildableProfile>> profilesFor(String unitPath);
+
+  /// Qué hay compilado de esta unidad, y si sigue valiendo.
+  ///
+  /// Una llamada al motor y no un `stat` propio: la ruta del PDF sale de las
+  /// reglas de nombrado del perfil, y adivinarlas aquí sería una segunda
+  /// copia de esas reglas.
+  Future<List<ExistingOutput>> outputsFor(String unitPath);
+
+  /// Si un PDF que ya está abierto se ha quedado viejo.
+  ///
+  /// Esto sí se hace aquí: con la ruta ya en la mano solo hace falta comparar
+  /// fechas, y lanzar un proceso cada vez que alguien cambia de pestaña para
+  /// preguntar algo que son dos `stat` sería absurdo.
+  Future<bool> isStale({required String pdf, required String unitPath});
 
   /// Compila una unidad. Un resultado por perfil y por idioma.
   ///

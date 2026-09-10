@@ -30,6 +30,7 @@ import '../data/compiler.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'pdf_tab.dart';
 import 'theme.dart';
 
 /// El estado de compilar una unidad.
@@ -64,6 +65,13 @@ class PreviewState {
 
   CompilerStatus? status;
   List<BuildableProfile> profiles = const [];
+
+  /// Lo que ya está compilado de esta unidad, y si sigue valiendo.
+  ///
+  /// Se pregunta al abrir la pestaña y después de compilar: es lo que permite
+  /// abrir una versión sin volver a hacerla, que era lo único que obligaba a
+  /// pedir dos veces la misma compilación.
+  List<ExistingOutput> existing = const [];
   final Set<String> chosen = {};
 
   /// Los idiomas elegidos. Varios: la comparación que importa es la del
@@ -99,6 +107,7 @@ class PreviewState {
           : const <BuildableProfile>[];
       status = found;
       profiles = available;
+      if (found.ready) await _loadExisting(compiler);
       // Las dos que se pidieron más la prosa por defecto, marcadas de
       // entrada: son la respuesta casi siempre que alguien abre esto.
       chosen
@@ -113,6 +122,33 @@ class PreviewState {
       loading = false;
       onChanged();
     }
+  }
+
+  Future<void> _loadExisting(Compiler compiler) async {
+    try {
+      final found = await compiler.outputsFor(unit.path);
+      // Solo lo que existe: la lista de lo que *no* está compilado son los
+      // chips de arriba, y repetirla aquí sería la misma cosa dos veces.
+      existing = [
+        for (final output in found)
+          if (output.exists) output,
+      ];
+    } catch (error) {
+      // No saber qué hay compilado no impide compilar: se pierde el atajo,
+      // no la pantalla.
+      existing = const [];
+    }
+  }
+
+  /// Vuelve a preguntar qué hay compilado.
+  ///
+  /// Después de guardar un `.tex`, lo que había pasa a estar viejo, y eso
+  /// tiene que verse sin recargar nada.
+  Future<void> refreshExisting() async {
+    final compiler = session.compiler();
+    if (compiler == null) return;
+    await _loadExisting(compiler);
+    onChanged();
   }
 
   void toggle(String id) {
@@ -130,6 +166,32 @@ class PreviewState {
 
   /// Cuántas salidas produciría compilar ahora: perfiles por idiomas.
   int get outputCount => chosen.length * languages.length;
+
+  /// Compila una sola salida: la de una tarjeta de «ya compiladas».
+  ///
+  /// Es lo que se pulsa cuando una está vieja: rehacer *esa*, y no las tres
+  /// que estén marcadas arriba.
+  Future<void> compileOne(ExistingOutput output) async {
+    final compiler = session.compiler();
+    if (compiler == null) return;
+    building = true;
+    problem = null;
+    onChanged();
+    try {
+      results = await compiler.compile(
+        unitPath: unit.path,
+        profiles: [output.profile],
+        languages: [output.language],
+      );
+      onCompiled(results);
+      await _loadExisting(compiler);
+    } catch (error) {
+      problem = error;
+    } finally {
+      building = false;
+      onChanged();
+    }
+  }
 
   Future<void> compile() async {
     final compiler = session.compiler();
@@ -154,6 +216,7 @@ class PreviewState {
         ],
       );
       onCompiled(results);
+      await _loadExisting(compiler);
     } catch (error) {
       problem = error;
     } finally {
@@ -164,9 +227,18 @@ class PreviewState {
 }
 
 class UnitPreview extends StatelessWidget {
-  const UnitPreview({super.key, required this.state, required this.onExternal});
+  const UnitPreview({
+    super.key,
+    required this.state,
+    required this.onOpen,
+    required this.onExternal,
+  });
 
   final PreviewState state;
+
+  /// Abre un PDF en una pestaña de la unidad. Lo hace la página, porque las
+  /// pestañas son suyas y sobreviven a salir de aquí y volver.
+  final ValueChanged<OpenPdf> onOpen;
 
   /// El visor del sistema y el Finder.
   final void Function(String path, {required bool reveal}) onExternal;
@@ -203,10 +275,13 @@ class UnitPreview extends StatelessWidget {
               ? _Failure(problem: state.problem!)
               : _Results(
                   results: state.results,
+                  existing: state.existing,
                   building: state.building,
                   unit: state.unit,
+                  onView: onOpen,
                   onOpen: (path) => onExternal(path, reveal: false),
                   onReveal: (path) => onExternal(path, reveal: true),
+                  onRecompile: state.compileOne,
                 ),
         ),
       ],
@@ -356,21 +431,27 @@ class _Controls extends StatelessWidget {
 class _Results extends StatelessWidget {
   const _Results({
     required this.results,
+    required this.existing,
     required this.building,
     required this.unit,
+    required this.onView,
     required this.onOpen,
     required this.onReveal,
+    required this.onRecompile,
   });
 
   final List<CompileOutput> results;
+  final List<ExistingOutput> existing;
   final bool building;
   final Unit unit;
+  final ValueChanged<OpenPdf> onView;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
+  final ValueChanged<ExistingOutput> onRecompile;
 
   @override
   Widget build(BuildContext context) {
-    if (results.isEmpty) {
+    if (results.isEmpty && existing.isEmpty) {
       return Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
@@ -391,7 +472,8 @@ class _Results extends StatelessWidget {
                   building
                       ? 'Compilando. La primera vez tarda más: LaTeX está '
                             'construyendo los formatos.'
-                      : 'Elige las versiones y pulsa compilar.',
+                      : 'Nada compilado todavía. Elige las versiones y pulsa '
+                            'compilar.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 13, color: didactaMuted),
                 ),
@@ -403,22 +485,185 @@ class _Results extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
       children: [
-        for (final result in results)
-          _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
-        const SizedBox(height: 8),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 2),
-          child: Note(
-            'Es una unidad sola, así que la numeración de apartados y las '
-            'referencias cruzadas serán las del documento donde se use, no '
-            'estas. Para verlas bien, compila el documento.',
+        if (existing.isNotEmpty) ...[
+          const _Label('Ya compiladas'),
+          // Lo importante de esta sección: se abren sin volver a compilar.
+          // Y las que se hayan quedado viejas lo dicen, porque un PDF que no
+          // corresponde al fichero es peor que no tener ninguno.
+          for (final output in existing)
+            _ExistingCard(
+              output: output,
+              onView: onView,
+              onOpen: onOpen,
+              onReveal: onReveal,
+              onRecompile: () => onRecompile(output),
+            ),
+          const SizedBox(height: 14),
+        ],
+        if (results.isNotEmpty) ...[
+          const _Label('Esta compilación'),
+          for (final result in results)
+            _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
+          const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 2),
+            child: Note(
+              'Es una unidad sola, así que la numeración de apartados y las '
+              'referencias cruzadas serán las del documento donde se use, no '
+              'estas. Para verlas bien, compila el documento.',
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
+}
+
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(2, 4, 2, 7),
+    child: Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 10.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.7,
+        color: didactaMuted,
+      ),
+    ),
+  );
+}
+
+/// Una versión que ya está en disco.
+class _ExistingCard extends StatelessWidget {
+  const _ExistingCard({
+    required this.output,
+    required this.onView,
+    required this.onOpen,
+    required this.onReveal,
+    required this.onRecompile,
+  });
+
+  final ExistingOutput output;
+  final ValueChanged<OpenPdf> onView;
+  final ValueChanged<String> onOpen;
+  final ValueChanged<String> onReveal;
+  final VoidCallback onRecompile;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = output.stale ? didactaEx : didactaAccentDark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(
+            color: output.stale
+                ? didactaEx.withValues(alpha: 0.55)
+                : didactaRule,
+          ),
+          borderRadius: BorderRadius.circular(7),
+        ),
+        padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+        child: Row(
+          children: [
+            Icon(
+              output.stale
+                  ? Icons.change_circle_outlined
+                  : Icons.check_circle_outline,
+              size: 17,
+              color: tone,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${output.label} · ${output.language}',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    output.stale
+                        ? 'la unidad ha cambiado desde que se compiló'
+                        : 'compilada ${describeWhen(output.modified)}',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: output.stale ? didactaEx : didactaMuted,
+                      fontWeight: output.stale
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Abrir sin compilar, que es el punto de esta sección.
+            FilledButton.icon(
+              key: Key('open-${output.profile}-${output.language}'),
+              icon: const Icon(Icons.visibility_outlined, size: 15),
+              label: const Text('Abrir'),
+              onPressed: () => onView(
+                OpenPdf(
+                  path: output.pdf,
+                  profile: output.profile,
+                  language: output.language,
+                  pages: 0,
+                  stale: output.stale,
+                ),
+              ),
+            ),
+            IconButton(
+              key: Key('rebuild-${output.profile}-${output.language}'),
+              tooltip: 'Volver a compilar esta versión',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.refresh, size: 17),
+              onPressed: onRecompile,
+            ),
+            IconButton(
+              tooltip: 'Abrir en el visor del sistema',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.open_in_new, size: 15),
+              onPressed: () => onOpen(output.pdf),
+            ),
+            IconButton(
+              tooltip: 'Ver en el Finder',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.folder_open_outlined, size: 15),
+              onPressed: () => onReveal(output.pdf),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Una fecha como algo que se lee, en relación a ahora.
+///
+/// Relativo y no absoluto: de un PDF compilado lo que importa es si es de
+/// hace un minuto o de marzo, y una fecha obliga a hacer esa resta.
+String describeWhen(DateTime? when) {
+  if (when == null) return 'en algún momento';
+  final seconds = DateTime.now().difference(when).inSeconds;
+  if (seconds < 90) return 'hace un momento';
+  final minutes = seconds ~/ 60;
+  if (minutes < 90) return 'hace $minutes min';
+  final hours = minutes ~/ 60;
+  if (hours < 36) return 'hace $hours h';
+  return 'hace ${hours ~/ 24} días';
 }
 
 class _ResultCard extends StatelessWidget {

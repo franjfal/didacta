@@ -147,6 +147,59 @@ class _ProcessCompiler implements Compiler {
   }
 
   @override
+  Future<List<ExistingOutput>> outputsFor(String unitPath) async {
+    final output = await _run(['preview', unitPath, '--status', '--json']);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (error) {
+      throw CompileException(
+        'El motor no devolvió un estado legible.',
+        detail: output.trim(),
+      );
+    }
+    return [
+      for (final item in (decoded['outputs'] as List? ?? const []))
+        _existingFrom((item as Map).cast<String, dynamic>()),
+    ];
+  }
+
+  static ExistingOutput _existingFrom(Map<String, dynamic> json) {
+    final when = json['mtime'] as num?;
+    return ExistingOutput(
+      profile: json['profile'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      family: json['family'] as String? ?? '',
+      language: json['language'] as String? ?? '',
+      pdf: json['pdf'] as String? ?? '',
+      exists: json['exists'] == true,
+      stale: json['stale'] == true,
+      modified: when == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch((when * 1000).round()),
+    );
+  }
+
+  @override
+  Future<bool> isStale({required String pdf, required String unitPath}) async {
+    final file = File(pdf);
+    if (!await file.exists()) return false;
+    final built = await file.lastModified();
+
+    // Cualquier fichero del directorio de la unidad, por lo mismo que en el
+    // motor: un `en` sin inglés se compila del `es.tex`, `unit.yaml` cambia
+    // el título, y una figura es tan origen como el texto.
+    final directory = Directory('$repositoryPath/$unitPath');
+    if (!await directory.exists()) return false;
+    await for (final entry in directory.list(recursive: true)) {
+      if (entry is! File) continue;
+      if (entry.uri.pathSegments.last.startsWith('.')) continue;
+      if ((await entry.lastModified()).isAfter(built)) return true;
+    }
+    return false;
+  }
+
+  @override
   Future<List<CompileOutput>> compile({
     required String unitPath,
     required List<String> profiles,
