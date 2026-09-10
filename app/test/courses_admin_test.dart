@@ -172,12 +172,10 @@ void main() {
       await tester.tap(find.byKey(const Key('confirm-removal')));
       await settle(tester);
 
-      expect(harness.engine.commands.last, [
-        'remove',
-        'course',
-        '--apply',
-        '--',
-        'am-iii',
+      expect(harness.engine.commands, [
+        ['remove', 'course', '--', 'am-iii'],
+        ['remove', 'course', '--apply', '--', 'am-iii'],
+        ['index'],
       ]);
       expect(
         harness.session.reloads,
@@ -186,9 +184,11 @@ void main() {
       );
       expect(find.textContaining('quitada como un commit'), findsOneWidget);
 
-      // Un commit, con la asignatura dentro y nada más, firmado.
+      // Un commit, con la asignatura y el índice dentro --son la misma
+      // cosa: un commit que quita el curso y deja el índice como estaba
+      // describe un repositorio que se contradice-- y nada más.
       final commit = harness.clone!.commits.single;
-      expect(commit.paths, ['courses/am-iii']);
+      expect(commit.paths, ['courses/am-iii', 'generated']);
       expect(
         commit.message,
         'Quitar la asignatura «Análisis Matemático III» (am-iii)',
@@ -283,6 +283,35 @@ void main() {
       expect(find.textContaining('Se escribe'), findsOneWidget);
     });
 
+    testWidgets('un año no consecutivo se avisa, pero se puede crear', (
+      tester,
+    ) async {
+      // El caso que ocurrió: `2024-2026` cumple el formato, se creó, y
+      // salieron cursos que nadie quería. Aviso y no bloqueo: quien lo
+      // escriba a propósito sabrá por qué.
+      final harness = await pump(tester, const CoursesPage());
+
+      await tester.tap(find.byKey(const Key('add-year-am-iii')));
+      await settle(tester);
+      await tester.enterText(find.byKey(const Key('new-year')), '2024-2026');
+      await settle(tester);
+
+      expect(find.textContaining('suele ser 2024-2025'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('confirm-duplicate')))
+            .onPressed,
+        isNotNull,
+        reason: 'es un aviso, no un bloqueo',
+      );
+
+      // Y con uno normal no molesta.
+      await tester.enterText(find.byKey(const Key('new-year')), '2026-2027');
+      await settle(tester);
+      expect(find.textContaining('suele ser'), findsNothing);
+      expect(harness.engine.commands, isEmpty);
+    });
+
     testWidgets('crear pasa el año y de cuál copiarlo', (tester) async {
       final harness = await pump(tester, const CoursesPage());
 
@@ -291,17 +320,15 @@ void main() {
       await tester.tap(find.byKey(const Key('confirm-duplicate')));
       await settle(tester);
 
-      expect(harness.engine.commands.single, [
-        'new',
-        'year',
-        '--from',
-        '2025-2026',
-        '--',
-        'am-iii',
-        '2026-2027',
+      expect(harness.engine.commands, [
+        ['new', 'year', '--from', '2025-2026', '--', 'am-iii', '2026-2027'],
+        ['index'],
       ]);
       expect(harness.session.reloads, 1);
-      expect(harness.clone!.commits.single.paths, ['courses/am-iii/2026-2027']);
+      expect(harness.clone!.commits.single.paths, [
+        'courses/am-iii/2026-2027',
+        'generated',
+      ]);
     });
   });
 
@@ -386,19 +413,25 @@ void main() {
       await tester.tap(find.byKey(const Key('confirm-new-course')));
       await settle(tester);
 
-      expect(harness.engine.commands.single, [
-        'new',
-        'course',
-        '--title',
-        'Topología',
-        '--lang',
-        'va',
-        '--',
-        'topologia',
+      expect(harness.engine.commands, [
+        [
+          'new',
+          'course',
+          '--title',
+          'Topología',
+          '--lang',
+          'va',
+          '--',
+          'topologia',
+        ],
+        ['index'],
       ]);
       expect(find.textContaining('creada como un commit'), findsOneWidget);
       expect(harness.session.reloads, 1);
-      expect(harness.clone!.commits.single.paths, ['courses/topologia']);
+      expect(harness.clone!.commits.single.paths, [
+        'courses/topologia',
+        'generated',
+      ]);
     });
   });
 

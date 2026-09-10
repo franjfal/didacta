@@ -128,6 +128,14 @@ class CourseAdmin {
     );
   }
 
+  /// El índice, que es lo que lee la biblioteca.
+  ///
+  /// `generated/` va **en el mismo commit** que el cambio de contenido, y no
+  /// en uno aparte, porque son la misma cosa: un commit que añade un curso y
+  /// deja el índice como estaba describe un repositorio que se contradice, y
+  /// quien lo revierta tendría que acordarse de revertir los dos.
+  static const String _index = 'generated';
+
   Future<void> removeCourse(String course, {required String title}) => _change(
     arguments: ['remove', 'course', '--apply', '--', course],
     paths: ['courses/$course'],
@@ -173,10 +181,15 @@ class CourseAdmin {
     message: 'Añadir el curso $year de $course, copiado de $from',
   );
 
-  /// Lanza el motor y cierra lo que haya cambiado en un commit.
+  /// Lanza el motor, regenera el índice y cierra todo en un commit.
   ///
   /// Si el motor falla no hay commit, y si no cambió nada tampoco: un
   /// historial con commits vacíos es un historial que nadie lee.
+  ///
+  /// El índice se regenera aquí y no se deja para después porque sin él la
+  /// operación no existe para nadie: la biblioteca y la lista de asignaturas
+  /// leen `generated/`, así que crear un curso y no regenerarlo se ve como
+  /// «dice que lo ha creado y no aparece». Pasó.
   Future<void> _change({
     required List<String> arguments,
     required List<String> paths,
@@ -196,9 +209,20 @@ class CourseAdmin {
       throw AdminException(error.message, detail: error.detail);
     }
 
+    // El índice, después del cambio. Si falla, el commit se hace igual: los
+    // ficheros ya están escritos y dejarlos sin commit sería perder el
+    // cambio de vista, que es peor que tener el índice viejo. Se dice, eso
+    // sí, porque hasta que se regenere la pantalla no verá lo que se hizo.
+    Object? indexProblem;
+    try {
+      await compiler.run(const ['index']);
+    } on CompileException catch (error) {
+      indexProblem = error;
+    }
+
     try {
       final committed = await clone.commitPaths(
-        paths: paths,
+        paths: [...paths, _index],
         message: message,
         authorName: who.name,
         authorEmail: who.email,
@@ -209,6 +233,14 @@ class CourseAdmin {
         throw AdminException(
           'El motor no cambió nada, así que no hay nada que guardar.',
           detail: output.trim(),
+        );
+      }
+      if (indexProblem != null) {
+        throw AdminException(
+          'El cambio está hecho y guardado, pero el índice no se pudo '
+          'regenerar, así que la pantalla no lo verá todavía. Ejecuta '
+          '`didacta index` en el repositorio.',
+          detail: '$indexProblem',
         );
       }
     } on CloneException catch (error) {
