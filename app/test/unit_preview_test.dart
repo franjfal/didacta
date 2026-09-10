@@ -397,8 +397,10 @@ void main() {
       // Una sola pestaña, rotulada con los dos idiomas.
       expect(find.text('slides · es va'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget);
-      // Y dos paneles, cada uno con su idioma escrito encima.
-      expect(find.textContaining('2 versiones a la vez'), findsOneWidget);
+      // Y dos paneles, cada uno con su idioma y sus propias acciones.
+      expect(find.textContaining('2 versiones'), findsOneWidget);
+      expect(find.byKey(const Key('pane-external-es')), findsOneWidget);
+      expect(find.byKey(const Key('pane-external-va')), findsOneWidget);
     });
 
     testWidgets('dos perfiles son dos pestañas, no una', (tester) async {
@@ -481,15 +483,39 @@ void main() {
       expect(find.text('Compilar esta unidad'), findsOneWidget);
     });
 
-    testWidgets('el visor del sistema pregunta cuál cuando hay dos', (
-      tester,
-    ) async {
-      await pumpUnit(tester, languages: const ['es', 'va']);
+    testWidgets('cada panel abre el suyo, sin preguntar cuál', (tester) async {
+      // La corrección: con dos PDF a la vez, un botón en la barra de la
+      // pestaña no dice cuál, y un menú que lo pregunta es un clic de más
+      // para contestar algo que el sitio del botón ya contesta.
+      // Aquí el anfitrión es la página de verdad, así que lo que se abre
+      // fuera pasa por el compilador.
+      final compiler = await pumpUnit(tester, languages: const ['es', 'va']);
 
-      await tester.tap(find.byKey(const Key('pdf-more')));
+      await tester.tap(find.byKey(const Key('pane-external-va')));
       await settle(tester);
-      expect(find.text('Abrir es en el visor del sistema'), findsOneWidget);
-      expect(find.text('Ver va en el Finder'), findsOneWidget);
+      expect(compiler.opened, ['/salida/slides-va.pdf']);
+
+      await tester.tap(find.byKey(const Key('pane-reveal-es')));
+      await settle(tester);
+      expect(compiler.revealed, ['/salida/slides-es.pdf']);
+    });
+
+    testWidgets('recompilar un panel no toca el de al lado', (tester) async {
+      // La acción de después de editar: cambias el valenciano, lo recompilas
+      // y se actualiza esa columna sin perder de vista la otra.
+      final compiler = await pumpUnit(tester, languages: const ['es', 'va']);
+      expect(compiler.calls, hasLength(1));
+
+      await tester.tap(find.byKey(const Key('pane-recompile-va')));
+      await settle(tester);
+
+      // Una compilación más, de un solo perfil y un solo idioma.
+      expect(compiler.calls, hasLength(2));
+      expect(compiler.calls.last.profiles, ['slides']);
+      expect(compiler.calls.last.languages, ['va']);
+      // Y la pestaña sigue teniendo los dos paneles.
+      expect(find.text('slides · es va'), findsOneWidget);
+      expect(find.byKey(const Key('pane-recompile-es')), findsOneWidget);
     });
   });
 
