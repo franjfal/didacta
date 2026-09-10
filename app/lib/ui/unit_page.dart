@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/compiler.dart';
 import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
@@ -64,42 +65,86 @@ class _UnitPageState extends State<UnitPage> {
   final Map<String, _LanguageEditor> _editors = {};
   String? _active;
 
-  /// Los PDF abiertos, en el orden en que se abrieron.
+  /// Las pestañas de PDF abiertas, en el orden en que se abrieron.
   ///
-  /// Varios a la vez a propósito: comparar «cómo queda en diapositivas» con
-  /// «cómo queda en libro» es mirar dos cosas, y una sola pestaña de PDF
-  /// obliga a recompilar para volver a la otra.
-  final List<OpenPdf> _open = [];
+  /// Cada una puede tener varias versiones lado a lado: al compilar dos
+  /// idiomas de un perfil se abren juntos, porque la comparación que importa
+  /// es esa --si la traducción valenciana sigue cabiendo en la diapositiva no
+  /// se sabe sin las dos delante-- y se separan de un botón.
+  final List<PdfGroup> _open = [];
+
+  /// Abre lo que acaba de compilar, agrupado por perfil.
+  ///
+  /// Automático y no a botones: acabas de pedir estas versiones, quererlas
+  /// ver es la única razón por la que las pediste.
+  void _openResults(List<CompileOutput> results) {
+    final byProfile = <String, List<OpenPdf>>{};
+    for (final result in results) {
+      if (!result.ok || result.pdf == null) continue;
+      byProfile
+          .putIfAbsent(result.profile, () => [])
+          .add(
+            OpenPdf(
+              path: result.pdf!,
+              profile: result.profile,
+              language: result.language,
+              pages: result.pages,
+            ),
+          );
+    }
+    if (byProfile.isEmpty) return;
+
+    setState(() {
+      for (final entry in byProfile.entries) {
+        final at = _open.indexWhere((group) => group.id == entry.key);
+        final group = PdfGroup(id: entry.key, panes: entry.value);
+        if (at >= 0) {
+          _open[at] = group;
+        } else {
+          _open.add(group);
+        }
+        // Y se quitan las versiones sueltas que alguien había desacoplado de
+        // este perfil: acaban de recompilarse dentro del grupo, y dejarlas
+        // apuntaría a un PDF viejo.
+        _open.removeWhere((other) => other.id.startsWith('${entry.key}:'));
+      }
+      _active = _pdfTab(_open.first.id);
+    });
+  }
+
+  /// Saca una versión del grupo a su propia pestaña.
+  void _detach(String groupId, String language) {
+    setState(() {
+      final at = _open.indexWhere((group) => group.id == groupId);
+      if (at < 0) return;
+      final group = _open[at];
+      final pane = group.panes
+          .where((other) => other.language == language)
+          .firstOrNull;
+      if (pane == null || group.isSingle) return;
+
+      _open[at] = group.without(language);
+      final id = '$groupId:$language';
+      _open.insert(at + 1, PdfGroup(id: id, panes: [pane]));
+      _active = _pdfTab(id);
+    });
+  }
+
+  void _closePdf(String id) {
+    setState(() {
+      _open.removeWhere((group) => group.id == id);
+      if (_active == _pdfTab(id)) {
+        // Se vuelve a compilar y no al primer idioma: es de donde se venía.
+        _active = previewTab;
+      }
+    });
+  }
 
   /// El estado de compilar, creado al abrir la pestaña por primera vez.
   ///
   /// Vive aquí y no en el widget por lo mismo que los editores: al volver de
   /// mirar el PDF, lo compilado tiene que seguir estando.
   PreviewState? _preview;
-
-  void _openPdf(OpenPdf pdf) {
-    setState(() {
-      // La misma salida no se abre dos veces: se reemplaza, porque tras
-      // recompilar el fichero es nuevo y la pestaña es la misma.
-      final at = _open.indexWhere((other) => other.key == pdf.key);
-      if (at >= 0) {
-        _open[at] = pdf;
-      } else {
-        _open.add(pdf);
-      }
-      _active = _pdfTab(pdf.key);
-    });
-  }
-
-  void _closePdf(String key) {
-    setState(() {
-      _open.removeWhere((pdf) => pdf.key == key);
-      if (_active == _pdfTab(key)) {
-        // Se vuelve a compilar y no al primer idioma: es de donde se venía.
-        _active = previewTab;
-      }
-    });
-  }
 
   @override
   void dispose() {
@@ -186,16 +231,17 @@ class _UnitPageState extends State<UnitPage> {
   Widget _panelFor(Unit unit, Session session) {
     final active = _active!;
     if (active.startsWith(pdfTabPrefix)) {
-      final key = active.substring(pdfTabPrefix.length);
-      final pdf = _open.where((other) => other.key == key).firstOrNull;
+      final id = active.substring(pdfTabPrefix.length);
+      final group = _open.where((other) => other.id == id).firstOrNull;
       // Puede no estar si se cerró justo antes de este build.
-      if (pdf != null) {
+      if (group != null) {
         return PdfTabView(
-          key: ValueKey('pdf-$key'),
-          pdf: pdf,
-          onOpenExternally: () => _external(session, pdf.path, reveal: false),
-          onReveal: () => _external(session, pdf.path, reveal: true),
+          key: ValueKey('pdf-$id'),
+          group: group,
+          onOpenExternally: (path) => _external(session, path, reveal: false),
+          onReveal: (path) => _external(session, path, reveal: true),
           onRecompile: () => setState(() => _active = previewTab),
+          onDetach: (language) => _detach(id, language),
         );
       }
     }
@@ -214,8 +260,8 @@ class _UnitPageState extends State<UnitPage> {
           onChanged: () {
             if (mounted) setState(() {});
           },
+          onCompiled: _openResults,
         ),
-        onOpen: _openPdf,
         onExternal: (path, {required bool reveal}) =>
             _external(session, path, reveal: reveal),
       ),
@@ -690,8 +736,8 @@ class _LanguageTabs extends StatelessWidget {
   final Set<String> dirty;
   final ValueChanged<String> onSelect;
 
-  /// Los PDF abiertos, cada uno con su pestaña cerrable.
-  final List<OpenPdf> open;
+  /// Las pestañas de PDF abiertas, cada una cerrable.
+  final List<PdfGroup> open;
   final ValueChanged<String> onClose;
 
   @override
@@ -727,14 +773,16 @@ class _LanguageTabs extends StatelessWidget {
             onTap: () => onSelect(previewTab),
           ),
           if (open.isNotEmpty) const _Separator(),
-          for (final pdf in open)
+          for (final group in open)
             _Tab(
-              label: pdf.label,
-              icon: Icons.picture_as_pdf_outlined,
-              selected: active == _pdfTab(pdf.key),
+              label: group.label,
+              icon: group.isSingle
+                  ? Icons.picture_as_pdf_outlined
+                  : Icons.compare_outlined,
+              selected: active == _pdfTab(group.id),
               dirty: false,
-              onTap: () => onSelect(_pdfTab(pdf.key)),
-              onClose: () => onClose(pdf.key),
+              onTap: () => onSelect(_pdfTab(group.id)),
+              onClose: () => onClose(group.id),
             ),
         ],
       ),

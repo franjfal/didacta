@@ -30,7 +30,6 @@ import '../data/compiler.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
-import 'pdf_tab.dart';
 import 'theme.dart';
 
 /// El estado de compilar una unidad.
@@ -45,8 +44,11 @@ class PreviewState {
     required this.unit,
     required this.session,
     required this.onChanged,
+    required this.onCompiled,
   }) {
-    language = unit.reference;
+    // El idioma de referencia, marcado de entrada. Los demás se añaden: se
+    // compila `es` y `va` juntos para ver si la traducción cabe.
+    languages.add(unit.reference);
     scheduleMicrotask(load);
   }
 
@@ -54,10 +56,19 @@ class PreviewState {
   final Session session;
   final VoidCallback onChanged;
 
+  /// Lo que acaba de compilar, para que la página lo abra.
+  ///
+  /// Automático y no a botones: acabas de pedir estas versiones, y quererlas
+  /// ver es la única razón por la que las pediste.
+  final ValueChanged<List<CompileOutput>> onCompiled;
+
   CompilerStatus? status;
   List<BuildableProfile> profiles = const [];
   final Set<String> chosen = {};
-  late String language;
+
+  /// Los idiomas elegidos. Varios: la comparación que importa es la del
+  /// mismo perfil en dos idiomas.
+  final Set<String> languages = {};
 
   bool loading = true;
   bool building = false;
@@ -109,14 +120,20 @@ class PreviewState {
     onChanged();
   }
 
-  void setLanguage(String code) {
-    language = code;
+  void toggleLanguage(String code) {
+    if (!languages.remove(code)) languages.add(code);
+    // Nunca ninguno: compilar cero idiomas no es un estado que quiera nadie,
+    // y un botón deshabilitado por eso sería un acertijo.
+    if (languages.isEmpty) languages.add(code);
     onChanged();
   }
 
+  /// Cuántas salidas produciría compilar ahora: perfiles por idiomas.
+  int get outputCount => chosen.length * languages.length;
+
   Future<void> compile() async {
     final compiler = session.compiler();
-    if (compiler == null || chosen.isEmpty) return;
+    if (compiler == null || chosen.isEmpty || languages.isEmpty) return;
     building = true;
     problem = null;
     results = const [];
@@ -128,8 +145,15 @@ class PreviewState {
             .where((p) => chosen.contains(p.id))
             .map((p) => p.id)
             .toList(),
-        language: language,
+        // En el orden del catálogo y no del conjunto, para que `es` quede
+        // siempre a la izquierda de `va`: comparar dos cosas que cambian de
+        // lado entre compilaciones es peor que no compararlas.
+        languages: [
+          for (final code in session.catalogue.languages)
+            if (languages.contains(code)) code,
+        ],
       );
+      onCompiled(results);
     } catch (error) {
       problem = error;
     } finally {
@@ -140,21 +164,9 @@ class PreviewState {
 }
 
 class UnitPreview extends StatelessWidget {
-  const UnitPreview({
-    super.key,
-    required this.state,
-    required this.onOpen,
-    required this.onExternal,
-  });
+  const UnitPreview({super.key, required this.state, required this.onExternal});
 
   final PreviewState state;
-
-  /// Abre el PDF en una pestaña de la unidad.
-  ///
-  /// Lo hace la página y no esta pantalla porque las pestañas son de la
-  /// unidad: sobreviven a salir de «compilar» y volver, que es exactamente
-  /// para lo que sirven.
-  final ValueChanged<OpenPdf> onOpen;
 
   /// El visor del sistema y el Finder.
   final void Function(String path, {required bool reveal}) onExternal;
@@ -176,11 +188,12 @@ class UnitPreview extends StatelessWidget {
           unit: state.unit,
           profiles: state.profiles,
           chosen: state.chosen,
-          language: state.language,
+          chosenLanguages: state.languages,
           languages: state.session.catalogue.languages,
+          outputs: state.outputCount,
           building: state.building,
           onToggle: state.toggle,
-          onLanguage: state.setLanguage,
+          onLanguage: state.toggleLanguage,
           onCompile: state.chosen.isEmpty || state.building
               ? null
               : state.compile,
@@ -192,7 +205,6 @@ class UnitPreview extends StatelessWidget {
                   results: state.results,
                   building: state.building,
                   unit: state.unit,
-                  onView: onOpen,
                   onOpen: (path) => onExternal(path, reveal: false),
                   onReveal: (path) => onExternal(path, reveal: true),
                 ),
@@ -207,8 +219,9 @@ class _Controls extends StatelessWidget {
     required this.unit,
     required this.profiles,
     required this.chosen,
-    required this.language,
+    required this.chosenLanguages,
     required this.languages,
+    required this.outputs,
     required this.building,
     required this.onToggle,
     required this.onLanguage,
@@ -218,8 +231,17 @@ class _Controls extends StatelessWidget {
   final Unit unit;
   final List<BuildableProfile> profiles;
   final Set<String> chosen;
-  final String language;
+
+  /// Los idiomas elegidos. Varios a la vez: es lo que permite comparar.
+  final Set<String> chosenLanguages;
+
   final List<String> languages;
+
+  /// Cuántas salidas produciría compilar: perfiles por idiomas. Se dice en
+  /// el botón, porque tres perfiles por tres idiomas son nueve compilaciones
+  /// y eso se tarda.
+  final int outputs;
+
   final bool building;
   final ValueChanged<String> onToggle;
   final ValueChanged<String> onLanguage;
@@ -244,15 +266,17 @@ class _Controls extends StatelessWidget {
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ),
-              // El idioma de la salida, que no tiene que ser el que se está
-              // editando: se compila en valenciano para ver si la traducción
-              // cuadra con las figuras.
+              // Los idiomas de la salida, que no tienen que ser el que se
+              // está editando, y pueden ser varios: dos idiomas del mismo
+              // perfil se abren lado a lado, y comparar es para lo que se
+              // compila.
               for (final code in languages)
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
-                  child: ChoiceChip(
+                  child: FilterChip(
+                    key: Key('language-$code'),
                     label: Text(code),
-                    selected: code == language,
+                    selected: chosenLanguages.contains(code),
                     visualDensity: VisualDensity.compact,
                     onSelected: building ? null : (_) => onLanguage(code),
                   ),
@@ -296,17 +320,20 @@ class _Controls extends StatelessWidget {
                 label: Text(
                   building
                       ? 'Compilando…'
-                      : chosen.length <= 1
+                      : outputs <= 1
                       ? 'Compilar'
-                      : 'Compilar ${chosen.length} versiones',
+                      : 'Compilar $outputs versiones',
                 ),
                 onPressed: onCompile,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'El preámbulo lo pone Didacta al compilar; no está en el '
-                  'fichero.',
+                  chosenLanguages.length > 1
+                      ? 'Los idiomas de un mismo perfil se abren lado a lado, '
+                            'para comparar.'
+                      : 'El preámbulo lo pone Didacta al compilar; no está '
+                            'en el fichero.',
                   style: const TextStyle(fontSize: 11.5, color: didactaMuted),
                 ),
               ),
@@ -331,7 +358,6 @@ class _Results extends StatelessWidget {
     required this.results,
     required this.building,
     required this.unit,
-    required this.onView,
     required this.onOpen,
     required this.onReveal,
   });
@@ -339,7 +365,6 @@ class _Results extends StatelessWidget {
   final List<CompileOutput> results;
   final bool building;
   final Unit unit;
-  final ValueChanged<OpenPdf> onView;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
 
@@ -381,12 +406,7 @@ class _Results extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
       children: [
         for (final result in results)
-          _ResultCard(
-            result: result,
-            onView: onView,
-            onOpen: onOpen,
-            onReveal: onReveal,
-          ),
+          _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
         const SizedBox(height: 8),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 2),
@@ -404,13 +424,11 @@ class _Results extends StatelessWidget {
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
     required this.result,
-    required this.onView,
     required this.onOpen,
     required this.onReveal,
   });
 
   final CompileOutput result;
-  final ValueChanged<OpenPdf> onView;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
 
@@ -461,22 +479,8 @@ class _ResultCard extends StatelessWidget {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  // Dentro de la aplicación primero: es lo que permite tener
-                  // diapositivas y libro abiertos a la vez y comparar.
-                  FilledButton.icon(
-                    key: Key('view-${result.profile}'),
-                    icon: const Icon(Icons.visibility_outlined, size: 15),
-                    label: const Text('Ver aquí'),
-                    onPressed: () => onView(
-                      OpenPdf(
-                        path: result.pdf!,
-                        profile: result.profile,
-                        language: result.language,
-                        pages: result.pages,
-                      ),
-                    ),
-                  ),
-                  // Y los dos externos, que siguen haciendo falta: pantalla
+                  // Sin «ver aquí»: ya está abierto en su pestaña. Quedan
+                  // los dos externos, que siguen haciendo falta: pantalla
                   // completa para pasar diapositivas de verdad, y el Finder
                   // para arrastrar el PDF a un correo.
                   OutlinedButton.icon(

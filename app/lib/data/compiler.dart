@@ -130,11 +130,15 @@ abstract class Compiler {
   /// orden en el que el motor los ofrece.
   Future<List<BuildableProfile>> profilesFor(String unitPath);
 
-  /// Compila una unidad. Un resultado por perfil.
+  /// Compila una unidad. Un resultado por perfil y por idioma.
+  ///
+  /// Varios idiomas de una vez porque la comparación que importa es esa: si
+  /// la traducción valenciana sigue cabiendo en la diapositiva no se puede
+  /// saber sin las dos delante.
   Future<List<CompileOutput>> compile({
     required String unitPath,
     required List<String> profiles,
-    required String language,
+    required List<String> languages,
     bool fast = false,
   });
 

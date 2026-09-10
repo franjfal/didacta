@@ -98,7 +98,7 @@ void main() {
         compiler.compile(
           unitPath: 'content/a/b/c',
           profiles: const ['notes'],
-          language: 'es',
+          languages: const ['es'],
         ),
         throwsA(isA<CompileException>()),
       );
@@ -153,7 +153,7 @@ void main() {
         final results = await compiler.compile(
           unitPath: 'content/analysis/normed-spaces/definition',
           profiles: const ['slides', 'book'],
-          language: 'es',
+          languages: const ['es'],
         );
 
         expect(results, hasLength(2));
@@ -183,7 +183,7 @@ void main() {
         final results = await compiler.compile(
           unitPath: 'content/analysis/normed-spaces/definition',
           profiles: const ['notes'],
-          language: 'en',
+          languages: const ['en'],
         );
         final result = results.single;
         expect(result.ok, isTrue, reason: result.errors.join('\n'));
@@ -208,7 +208,7 @@ void main() {
         await Compiler(enginePath: root, repositoryPath: repository).compile(
           unitPath: 'content/analysis/normed-spaces/definition',
           profiles: const ['notes'],
-          language: 'es',
+          languages: const ['es'],
         );
 
         final after = Directory(

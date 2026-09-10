@@ -150,15 +150,14 @@ class _ProcessCompiler implements Compiler {
   Future<List<CompileOutput>> compile({
     required String unitPath,
     required List<String> profiles,
-    required String language,
+    required List<String> languages,
     bool fast = false,
   }) async {
     final arguments = <String>[
       'preview',
       unitPath,
-      '-l',
-      language,
       '--json',
+      for (final language in languages) ...['-l', language],
       for (final profile in profiles) ...['-p', profile],
       if (fast) '--fast',
     ];
