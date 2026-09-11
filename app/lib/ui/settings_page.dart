@@ -1190,6 +1190,20 @@ class _EngineSectionState extends State<_EngineSection> {
     await _check();
   }
 
+  /// Decir dónde está TeX, para una instalación en un sitio raro.
+  ///
+  /// Casi nunca hace falta: se busca en los sitios de siempre. Está porque
+  /// el caso que no se puede adivinar --TinyTeX en una carpeta cualquiera,
+  /// un MiKTeX portátil-- deja la aplicación sin compilar y sin salida.
+  Future<void> _chooseTex() async {
+    final chosen = await getDirectoryPath(confirmButtonText: 'Usar este TeX');
+    if (chosen == null) return;
+    setState(() => _busy = true);
+    await widget.session.setTexPath(chosen);
+    if (mounted) setState(() => _busy = false);
+    await _check();
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
@@ -1267,8 +1281,39 @@ class _EngineSectionState extends State<_EngineSection> {
                             },
                       child: const Text('Olvidarlo'),
                     ),
+                  // Solo cuando hace falta: mientras TeX se encuentre, este
+                  // botón sería una decisión que nadie tiene que tomar.
+                  if (status != null && !status.ready ||
+                      session.texPath != null)
+                    OutlinedButton.icon(
+                      key: const Key('choose-tex'),
+                      icon: const Icon(Icons.functions, size: 16),
+                      label: Text(
+                        session.texPath == null
+                            ? 'Decir dónde está TeX'
+                            : 'Cambiar TeX',
+                      ),
+                      onPressed: _busy ? null : _chooseTex,
+                    ),
+                  if (session.texPath != null)
+                    OutlinedButton(
+                      onPressed: _busy
+                          ? null
+                          : () async {
+                              await session.setTexPath(null);
+                              await _check();
+                            },
+                      child: const Text('Buscar TeX solo'),
+                    ),
                 ],
               ),
+              if (session.texPath != null) ...[
+                const SizedBox(height: 8),
+                SelectableText(
+                  'TeX: ${session.texPath}',
+                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
+                ),
+              ],
             ],
           ),
         ),

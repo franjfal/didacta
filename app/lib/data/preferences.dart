@@ -33,6 +33,14 @@ abstract class Preferences {
   /// Hace falta para compilar, y no se puede deducir del clon de contenido:
   /// son dos repositorios, y el de la aplicación no viaja dentro del `.app`.
   Future<String?> enginePath();
+
+  /// La carpeta `bin` de TeX, cuando no está en ninguno de los sitios de
+  /// siempre.
+  ///
+  /// Normalmente vacía: se busca. Está para la instalación en un sitio raro,
+  /// que es el caso que no se puede adivinar.
+  Future<String?> texPath();
+  Future<void> setTexPath(String? path);
   Future<void> setEnginePath(String? path);
 }
 
@@ -55,6 +63,7 @@ class StoredPreferences implements Preferences {
   static const String _clone = 'didacta.clone.path';
   static const String _push = 'didacta.clone.push';
   static const String _engine = 'didacta.engine.path';
+  static const String _tex = 'didacta.tex.path';
   static const String _panel = 'didacta.unit.panel';
   static const String _split = 'didacta.unit.split';
 
@@ -135,6 +144,19 @@ class StoredPreferences implements Preferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_engine, path ?? '');
   }
+
+  @override
+  Future<String?> texPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_tex);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  @override
+  Future<void> setTexPath(String? path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tex, path ?? '');
+  }
 }
 
 /// For tests, and for a platform where nothing is remembered.
@@ -150,6 +172,14 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setEnginePath(String? value) async => engine = value;
+
+  String? tex;
+
+  @override
+  Future<String?> texPath() async => tex;
+
+  @override
+  Future<void> setTexPath(String? value) async => tex = value;
 
   bool panel = true;
   bool split = false;

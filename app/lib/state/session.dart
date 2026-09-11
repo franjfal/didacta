@@ -147,6 +147,10 @@ class Session extends ChangeNotifier {
 
   String? _enginePath;
 
+  /// La carpeta `bin` de TeX, si se ha tenido que decir a mano. Casi siempre
+  /// null: se busca en los sitios de siempre.
+  String? _texPath;
+
   /// Where the engine repository is, for compiling.
   String? get enginePath => _enginePath;
 
@@ -164,7 +168,20 @@ class Session extends ChangeNotifier {
     final engine = _enginePath;
     final clone = _clonePath;
     if (engine == null || clone == null) return null;
-    return Compiler(enginePath: engine, repositoryPath: clone);
+    return Compiler(
+      enginePath: engine,
+      repositoryPath: clone,
+      texPath: _texPath,
+    );
+  }
+
+  /// Dónde está TeX, si se ha tenido que decir a mano.
+  String? get texPath => _texPath;
+
+  Future<void> setTexPath(String? path) async {
+    await preferences.setTexPath(path);
+    _texPath = path == null || path.isEmpty ? null : path;
+    notifyListeners();
   }
 
   /// Crear, duplicar y borrar asignaturas y años.
@@ -236,6 +253,7 @@ class Session extends ChangeNotifier {
     // would let the library disagree with the editor.
     try {
       _clonePath = await preferences.clonePath();
+      _texPath = await preferences.texPath();
       _unitPanel = await preferences.unitPanelVisible();
       _split = await preferences.splitEditors();
     } catch (error) {

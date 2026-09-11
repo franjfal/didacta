@@ -15,10 +15,130 @@ bool get supported => true;
 Compiler makeCompiler({
   required String enginePath,
   required String repositoryPath,
-}) => _ProcessCompiler(enginePath: enginePath, repositoryPath: repositoryPath);
+  String? texPath,
+}) => _ProcessCompiler(
+  enginePath: enginePath,
+  repositoryPath: repositoryPath,
+  texPath: texPath,
+);
 
 /// El script del motor dentro de su repositorio.
 String cliIn(String engineRoot) => '$engineRoot/cli/didacta';
+
+/// Dónde vive TeX, además de lo que diga el PATH.
+///
+/// Esto existe por una razón que no se ve venir: **una aplicación de
+/// escritorio no hereda el PATH del terminal**. A una app lanzada desde el
+/// Finder launchd le da `/usr/bin:/bin:/usr/sbin:/sbin` y nada más, y en
+/// macOS `latexmk` vive en `/Library/TeX/texbin`, que está en el PATH porque
+/// `/etc/paths.d/TeX` lo añade --y eso solo lo lee un shell de login--. El
+/// resultado era que Didacta decía «necesita una distribución de TeX» con
+/// TeX Live 2026 instalada y funcionando en el terminal.
+///
+/// Así que se buscan los sitios de siempre en lugar de confiar en el PATH.
+/// La lista es de instalaciones por defecto de TeX Live, MacTeX, MiKTeX y
+/// TinyTeX; [configured] es la escapatoria para una instalación en un sitio
+/// raro, y va primero.
+List<String> texDirectories({String? configured}) {
+  final found = <String>[];
+  if (configured != null && configured.isNotEmpty) found.add(configured);
+
+  final home =
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
+
+  /// `/usr/local/texlive/2026/bin/universal-darwin` y sus parientes. Por
+  /// glob y no con el año escrito: el año cambia todos los abriles, y una
+  /// lista con años dentro caduca sola.
+  void texliveUnder(String root) {
+    final directory = Directory(root);
+    if (!directory.existsSync()) return;
+    for (final year in directory.listSync().whereType<Directory>()) {
+      final bin = Directory('${year.path}/bin');
+      if (!bin.existsSync()) continue;
+      for (final platform in bin.listSync().whereType<Directory>()) {
+        found.add(platform.path);
+      }
+    }
+  }
+
+  if (Platform.isMacOS) {
+    // El enlace que pone MacTeX, que es lo que tiene casi todo el mundo.
+    found.add('/Library/TeX/texbin');
+    texliveUnder('/usr/local/texlive');
+    if (home.isNotEmpty) {
+      texliveUnder('$home/texlive');
+      found.addAll([
+        '$home/Library/TinyTeX/bin/universal-darwin',
+        '$home/.TinyTeX/bin/universal-darwin',
+      ]);
+    }
+    // Homebrew, por si viene de ahí --`brew install tectonic`, o un
+    // basictex-- y por si el PATH de la app no lo lleva.
+    found.addAll(['/opt/homebrew/bin', '/usr/local/bin']);
+  } else if (Platform.isLinux) {
+    texliveUnder('/usr/local/texlive');
+    texliveUnder('/opt/texlive');
+    if (home.isNotEmpty) {
+      texliveUnder('$home/texlive');
+      found.addAll([
+        '$home/.TinyTeX/bin/x86_64-linux',
+        '$home/.TinyTeX/bin/aarch64-linux',
+        '$home/bin',
+        '$home/.local/bin',
+      ]);
+    }
+  } else if (Platform.isWindows) {
+    texliveUnder(r'C:	exlive');
+    final local = Platform.environment['LOCALAPPDATA'] ?? '';
+    final roaming = Platform.environment['APPDATA'] ?? '';
+    found.addAll([
+      if (local.isNotEmpty) '$local\\Programs\\MiKTeX\\miktex\\bin\\x64',
+      if (roaming.isNotEmpty) '$roaming\\TinyTeX\\bin\\windows',
+      r'C:\Program Files\MiKTeX\miktex\bin\x64',
+      r'C:\Program Files (x86)\MiKTeX\miktex\bin\x64',
+    ]);
+  }
+
+  // Sin repetidos y solo lo que existe: la lista va a un PATH, y un PATH con
+  // basura dentro hace que cada búsqueda mire en carpetas que no están.
+  final seen = <String>{};
+  return [
+    for (final directory in found)
+      if (seen.add(directory) && Directory(directory).existsSync()) directory,
+  ];
+}
+
+/// El PATH con TeX dentro.
+String texAwarePath({String? configured}) {
+  final separator = Platform.isWindows ? ';' : ':';
+  final inherited = Platform.environment['PATH'] ?? '';
+  final extra = texDirectories(configured: configured);
+  // Lo heredado primero: si alguien ha puesto una versión suya delante en el
+  // PATH, es la que quiere usar, y esto no es quién para adelantarle otra.
+  return [if (inherited.isNotEmpty) inherited, ...extra].join(separator);
+}
+
+/// Busca una herramienta en el PATH y en donde vive TeX.
+///
+/// A mano en lugar de `which`, porque `which` busca en el PATH del proceso
+/// --el que launchd le dio-- y ese es justo el que no sirve.
+Future<String?> findTool(String name, {String? configured}) async {
+  final separator = Platform.isWindows ? ';' : ':';
+  final names = Platform.isWindows
+      ? ['$name.exe', '$name.bat', '$name.cmd', name]
+      : [name];
+  for (final directory in texAwarePath(
+    configured: configured,
+  ).split(separator)) {
+    if (directory.isEmpty) continue;
+    for (final candidate in names) {
+      if (await File('$directory/$candidate').exists()) {
+        return '$directory/$candidate';
+      }
+    }
+  }
+  return null;
+}
 
 Future<String?> discover({String? configured, String? repositoryPath}) async {
   // Lo configurado manda, incluso si no existe: decirlo es mejor que
@@ -59,10 +179,18 @@ Future<String?> discover({String? configured, String? repositoryPath}) async {
 }
 
 class _ProcessCompiler implements Compiler {
-  _ProcessCompiler({required this.enginePath, required this.repositoryPath});
+  _ProcessCompiler({
+    required this.enginePath,
+    required this.repositoryPath,
+    this.texPath,
+  });
 
   final String enginePath;
   final String repositoryPath;
+
+  /// La carpeta `bin` de TeX, cuando está en un sitio que no es ninguno de
+  /// los de siempre. Normalmente null: se busca.
+  final String? texPath;
 
   @override
   Future<CompilerStatus> status() async {
@@ -93,26 +221,24 @@ class _ProcessCompiler implements Compiler {
     }
     // latexmk: lo comprueba el motor, pero preguntar aquí permite decirlo
     // antes de que alguien pulse compilar y espere.
-    final latex = await _which('latexmk');
-    if (!latex) {
+    final latex = await findTool('latexmk', configured: texPath);
+    if (latex == null) {
       return CompilerStatus(
         ready: false,
         enginePath: enginePath,
         problem:
-            'Falta latexmk. Didacta necesita una distribución de TeX; en '
-            'macOS, MacTeX o BasicTeX.',
+            'No encuentro latexmk. Didacta necesita una distribución de TeX '
+            '--en macOS MacTeX o BasicTeX, en Windows MiKTeX o TeX Live, en '
+            'Linux el texlive de la distribución-- o TinyTeX, que vale en '
+            'las tres.\n\n'
+            // Dónde se ha mirado, porque el caso frecuente no es que falte
+            // TeX: es que esté en un sitio que no está en esta lista. Sin
+            // decirlo, «instálalo» es el consejo equivocado y no hay forma
+            // de saberlo.
+            'He mirado en: ${texDirectories(configured: texPath).join(', ')}.',
       );
     }
     return CompilerStatus(ready: true, enginePath: enginePath);
-  }
-
-  Future<bool> _which(String tool) async {
-    try {
-      final result = await Process.run('which', [tool]);
-      return result.exitCode == 0;
-    } on ProcessException {
-      return false;
-    }
   }
 
   @override
@@ -293,11 +419,16 @@ class _ProcessCompiler implements Compiler {
         arguments,
         // Desde el clon: el motor busca la raíz subiendo hasta didacta.yaml.
         workingDirectory: repositoryPath,
-        environment: const {
+        environment: {
           // Sin colores: los códigos de escape en un JSON o en una tabla que
           // se va a parsear son ruido.
           'NO_COLOR': '1',
           'TERM': 'dumb',
+          // Con TeX dentro. El motor busca `latexmk` con `shutil.which`, o
+          // sea en el PATH, y el PATH que launchd da a una aplicación de
+          // escritorio no lleva TeX: sin esto el motor no lo encuentra
+          // aunque esté instalado.
+          'PATH': texAwarePath(configured: texPath),
         },
       );
     } on ProcessException catch (error) {

@@ -150,9 +150,11 @@ abstract class Compiler {
   factory Compiler({
     required String enginePath,
     required String repositoryPath,
+    String? texPath,
   }) => platform.makeCompiler(
     enginePath: enginePath,
     repositoryPath: repositoryPath,
+    texPath: texPath,
   );
 
   /// Si compilar es posible aquí. Falso en web, donde no hay LaTeX ni forma

@@ -268,6 +268,31 @@ basta, sin instalar nada más. El sistema anterior arrastraba seis `.sty`
 no-CTAN y una fuente empaquetada en el repositorio, lo que hacía imposible
 compilar en una máquina limpia.
 
+Sirve cualquiera de las tres, y la aplicación **no obliga a configurar nada**:
+busca `latexmk` donde cada una se instala.
+
+| | |
+|---|---|
+| macOS | MacTeX, o BasicTeX si importa el disco (`brew install --cask basictex`) |
+| Windows | TeX Live o MiKTeX |
+| Linux | el `texlive` de la distribución |
+| las tres | [TinyTeX](https://yihui.org/tinytex/), ~100 MB y ampliable con `tlmgr` |
+
+Didacta **no lleva una distribución dentro**, y es deliberado: la completa son
+varios gigas, la versión de cada paquete la tiene que poder elegir quien
+compila, y las actualizaciones de CTAN no pueden depender de que se publique
+una versión de esta aplicación. Lo que sí hace es encontrar la que haya y
+decir dónde ha mirado cuando no encuentra ninguna; si está en un sitio raro,
+se le dice en Ajustes.
+
+Que la aplicación de escritorio busque en lugar de preguntar al PATH no es un
+lujo: **una app no hereda el PATH del terminal**. A una aplicación lanzada
+desde el Finder launchd le da `/usr/bin:/bin:/usr/sbin:/sbin`, y en macOS
+`latexmk` vive en `/Library/TeX/texbin`, que entra en el PATH por
+`/etc/paths.d/TeX` --que solo lee un shell de login--. Didacta decía
+«necesita una distribución de TeX» con TeX Live 2026 instalada y compilando
+en el terminal.
+
 PyYAML se usa si está instalado; si no, el motor trae su propio lector del
 subconjunto que los esquemas necesitan. Es deliberado: la plataforma tiene que
 funcionar en un runner de CI sin un paso de `pip`.

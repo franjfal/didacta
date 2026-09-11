@@ -15,6 +15,7 @@ Future<String?> discover({String? configured, String? repositoryPath}) async =>
 Compiler makeCompiler({
   required String enginePath,
   required String repositoryPath,
+  String? texPath,
 }) => throw const CompileException(
   'Un navegador no puede compilar LaTeX. Usa la aplicación de escritorio, o '
   'el comando que da la pantalla del documento.',
