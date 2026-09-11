@@ -270,17 +270,22 @@ class _CompositionRow extends StatelessWidget {
     }
 
     final status = unit!.statusIn(language);
-    return InkWell(
+    return Hoverable(
       onTap: () => context.go(Routes.unit(unit!.path)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+      builder: (context, hovering) => AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
+        color: hovering ? didactaHover : Colors.transparent,
+        padding: const EdgeInsets.fromLTRB(16, 9, 12, 9),
         child: Row(
           children: [
             _Position(position),
-            Container(
-              width: 3,
-              height: 26,
-              margin: const EdgeInsets.only(right: 9),
+            // La barra del tipo, que crece al pasar por encima: es la
+            // respuesta a «¿esta fila hace algo?» sin añadir un icono más.
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 90),
+              width: hovering ? 4 : 3,
+              height: 28,
+              margin: const EdgeInsets.only(right: 10),
               decoration: BoxDecoration(
                 color: kindColour(unit!.kind),
                 borderRadius: BorderRadius.circular(2),
@@ -296,6 +301,12 @@ class _CompositionRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13.5,
+                      height: 1.3,
+                      // En negrita frente a la ruta, que es lo que pone el
+                      // título por delante: antes los dos pesaban igual y en
+                      // una lista se leía primero la ruta, que es lo que
+                      // menos importa.
+                      fontWeight: FontWeight.w600,
                       // Italic and grey when the title shown is a fallback,
                       // so a Castilian title in a Valencian document does not
                       // read as translated.
@@ -307,13 +318,13 @@ class _CompositionRow extends StatelessWidget {
                           : null,
                     ),
                   ),
-                  const SizedBox(height: 1),
+                  const SizedBox(height: 2),
                   Text(
                     reference,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontFamily: 'monospace',
                       color: didactaMuted,
                     ),
@@ -344,6 +355,19 @@ class _CompositionRow extends StatelessWidget {
                 ),
               ),
             StatusBadge(language: language, status: status),
+            // La flecha solo cuando el ratón está encima: dice que la fila
+            // lleva a algún sitio, y no ocupa una columna cuando no hace
+            // falta.
+            SizedBox(
+              width: 18,
+              child: hovering
+                  ? const Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: didactaMuted,
+                    )
+                  : null,
+            ),
           ],
         ),
       ),

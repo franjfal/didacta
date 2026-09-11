@@ -111,8 +111,13 @@ class DidactaShell extends StatelessWidget {
                 selectedIndex: _index,
                 onDestinationSelected: (index) =>
                     context.go(_destinations[index].path),
+                // Un poco más ancho que el mínimo de Material: las etiquetas
+                // («Asignaturas», «Traducción») llegaban al borde y el
+                // carril se leía apretado al lado de una página con aire.
+                minWidth: 76,
+                groupAlignment: -0.92,
                 leading: const Padding(
-                  padding: EdgeInsets.only(top: 12, bottom: 4),
+                  padding: EdgeInsets.only(top: 14, bottom: 10),
                   child: _Mark(),
                 ),
                 destinations: [
@@ -122,8 +127,31 @@ class DidactaShell extends StatelessWidget {
                           ? Badge(
                               // The number, not a dot: "how much is waiting"
                               // is the question, and a dot cannot answer it.
-                              label: Text('$pending'),
-                              backgroundColor: didactaEx,
+                              //
+                              // Arriba a la derecha y en pequeño: centrado
+                              // sobre el glifo, un «2147» tapaba el icono y
+                              // el naranja chillaba más que la navegación
+                              // entera.
+                              // Con tope: «2147» es una etiqueta de cuatro
+                              // cifras encima de un icono de 20 px, y además
+                              // no dice nada que «+99» no diga. El número
+                              // exacto está en la pantalla de traducción.
+                              label: Text(pending > 99 ? '+99' : '$pending'),
+                              alignment: const Alignment(1.9, -1.2),
+                              // Ámbar apagado y no naranja fuerte: dice
+                              // «queda trabajo», no «algo ha fallado», y en
+                              // un carril de cuatro iconos era lo que más
+                              // llamaba de toda la aplicación.
+                              backgroundColor: const Color(0xFFC08A3E),
+                              textStyle: const TextStyle(
+                                fontSize: 9,
+                                height: 1.1,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               child: Icon(destination.icon),
                             )
                           : Icon(destination.icon),
@@ -148,6 +176,47 @@ class DidactaShell extends StatelessWidget {
       },
     );
   }
+}
+
+/// Una miga de pan: gris hasta que el ratón pasa por encima.
+///
+/// Antes eran azules y en cada pantalla. Un enlace que se sabe que es un
+/// enlace en cuanto se apunta no necesita gritarlo todo el rato, y así lo
+/// más llamativo de la cabecera vuelve a ser el título.
+class _Crumb extends StatefulWidget {
+  const _Crumb({required this.label, required this.route});
+
+  final String label;
+  final String route;
+
+  @override
+  State<_Crumb> createState() => _CrumbState();
+}
+
+class _CrumbState extends State<_Crumb> {
+  bool _over = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: SystemMouseCursors.click,
+    onEnter: (_) => setState(() => _over = true),
+    onExit: (_) => setState(() => _over = false),
+    child: GestureDetector(
+      onTap: () => context.go(widget.route),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Text(
+          widget.label,
+          style: TextStyle(
+            fontSize: 12,
+            color: _over ? didactaAccentDark : didactaMuted,
+            decoration: _over ? TextDecoration.underline : null,
+            decorationColor: didactaAccentDark,
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _Destination {
@@ -258,10 +327,14 @@ class PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      // Blanca sobre la página gris, en lugar de una raya debajo: la
+      // cabecera se separa del contenido por el tono y no por una línea
+      // más, que es lo que hacía que cada pantalla pareciera un formulario.
       decoration: const BoxDecoration(
+        color: didactaCard,
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 12, 0),
+      padding: const EdgeInsets.fromLTRB(20, 14, 14, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -272,25 +345,14 @@ class PageHeader extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   for (final (index, crumb) in breadcrumbs.indexed) ...[
-                    InkWell(
-                      onTap: () => context.go(crumb.$2),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          crumb.$1,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: didactaThm,
-                          ),
-                        ),
-                      ),
-                    ),
+                    _Crumb(label: crumb.$1, route: crumb.$2),
                     if (index < breadcrumbs.length - 1)
                       const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 5),
-                        child: Text(
-                          '/',
-                          style: TextStyle(fontSize: 12, color: didactaMuted),
+                        padding: EdgeInsets.symmetric(horizontal: 3),
+                        child: Icon(
+                          Icons.chevron_right,
+                          size: 14,
+                          color: didactaRule,
                         ),
                       ),
                   ],
@@ -306,19 +368,16 @@ class PageHeader extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     if (subtitle != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.only(top: 3),
                         child: Text(
                           subtitle!,
                           style: const TextStyle(
-                            fontSize: 12,
+                            fontSize: 12.5,
+                            height: 1.35,
                             color: didactaMuted,
                           ),
                         ),
@@ -329,7 +388,7 @@ class PageHeader extends StatelessWidget {
               ...actions,
             ],
           ),
-          if (bottom != null) bottom! else const SizedBox(height: 12),
+          if (bottom != null) bottom! else const SizedBox(height: 14),
         ],
       ),
     );

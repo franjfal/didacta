@@ -954,27 +954,54 @@ class _AreaFilter extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-      child: Row(
-        children: [
-          _AreaTab(
-            label: 'Todo',
-            selected: filter.area == null,
-            onTap: () => onFilter(filter.copyWith(clearArea: true)),
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        // Del tamaño de sus palabras, no del ancho de la columna.
+        //
+        // Estaban con `Expanded` y en una ventana estrecha se convertían en
+        // tres botones enormes que dominaban la pantalla: es un filtro, no
+        // la acción principal. Agrupados en una sola cápsula además se leen
+        // como lo que son, tres estados de lo mismo.
+        child: Container(
+          decoration: BoxDecoration(
+            color: didactaPanel,
+            border: Border.all(color: didactaRule),
+            borderRadius: BorderRadius.circular(Radii.control),
           ),
-          const SizedBox(width: 5),
-          _AreaTab(
-            label: 'Teoría',
-            selected: filter.area == 'content',
-            onTap: () => onFilter(filter.copyWith(area: 'content')),
+          padding: const EdgeInsets.all(2),
+          // `Flexible` y no `Expanded`: cada pestaña ocupa lo que dice su
+          // palabra cuando hay sitio, y se encoge cuando no. La columna de
+          // categorías puede quedarse en 200 px, y ahí las tres juntas no
+          // caben; con `Expanded` siempre ocupaban todo el ancho, que era el
+          // problema contrario.
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: _AreaTab(
+                  label: 'Todo',
+                  selected: filter.area == null,
+                  onTap: () => onFilter(filter.copyWith(clearArea: true)),
+                ),
+              ),
+              Flexible(
+                child: _AreaTab(
+                  label: 'Teoría',
+                  selected: filter.area == 'content',
+                  onTap: () => onFilter(filter.copyWith(area: 'content')),
+                ),
+              ),
+              Flexible(
+                child: _AreaTab(
+                  label: 'Problemas',
+                  selected: filter.area == 'problems',
+                  onTap: () => onFilter(filter.copyWith(area: 'problems')),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 5),
-          _AreaTab(
-            label: 'Problemas',
-            selected: filter.area == 'problems',
-            onTap: () => onFilter(filter.copyWith(area: 'problems')),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -992,27 +1019,36 @@ class _AreaTab extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.transparent,
-          border: Border.all(color: selected ? didactaAccentDark : didactaRule),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            color: selected ? didactaAccentDark : didactaMuted,
-          ),
+  Widget build(BuildContext context) => Hoverable(
+    onTap: onTap,
+    builder: (context, hovering) => AnimatedContainer(
+      duration: const Duration(milliseconds: 90),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: selected
+            ? didactaCard
+            : (hovering ? didactaHover : Colors.transparent),
+        borderRadius: BorderRadius.circular(Radii.small),
+        boxShadow: selected
+            ? [
+                BoxShadow(
+                  color: didactaInk.withValues(alpha: 0.08),
+                  blurRadius: 3,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : null,
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+          color: selected ? didactaAccentDark : didactaMuted,
         ),
       ),
     ),
@@ -1033,11 +1069,13 @@ class _ColumnHeader extends StatelessWidget {
   final bool selected;
 
   @override
-  Widget build(BuildContext context) => InkWell(
+  Widget build(BuildContext context) => Hoverable(
     onTap: onTap,
-    child: Container(
-      color: selected ? didactaAccentDark.withValues(alpha: 0.10) : null,
-      padding: const EdgeInsets.fromLTRB(14, 15, 12, 8),
+    builder: (context, hovering) => Container(
+      color: selected
+          ? didactaAccentDark.withValues(alpha: 0.08)
+          : (hovering ? didactaHover : null),
+      padding: const EdgeInsets.fromLTRB(14, 14, 12, 7),
       child: Row(
         children: [
           Expanded(
@@ -1084,19 +1122,26 @@ class _CategoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = category.progressIn(language);
-    return InkWell(
+    return Hoverable(
       onTap: onTap,
-      child: Container(
+      builder: (context, hovering) => AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : null,
+          color: selected
+              ? didactaCard
+              : (hovering ? didactaHover : Colors.transparent),
           border: Border(
             left: BorderSide(
               width: 3,
-              color: selected ? didactaAccentDark : Colors.transparent,
+              color: selected
+                  ? didactaAccentDark
+                  : (hovering
+                        ? didactaAccentDark.withValues(alpha: 0.35)
+                        : Colors.transparent),
             ),
           ),
         ),
-        padding: const EdgeInsets.fromLTRB(11, 7, 12, 7),
+        padding: const EdgeInsets.fromLTRB(11, 8, 12, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1307,111 +1352,125 @@ class UnitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final fallback = unit.titleIsFallback(language);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
-        child: InkWell(
-          onTap: () => context.go(Routes.unit(unit.path)),
-          borderRadius: BorderRadius.circular(7),
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border.all(color: didactaRule),
-              borderRadius: BorderRadius.circular(7),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Hoverable(
+        onTap: () => context.go(Routes.unit(unit.path)),
+        builder: (context, hovering) => AnimatedContainer(
+          duration: const Duration(milliseconds: 110),
+          decoration: BoxDecoration(
+            color: didactaCard,
+            // Al pasar por encima: el borde se tiñe del verde de la casa y
+            // aparece una sombra muy corta. Es lo que hace que una rejilla de
+            // tarjetas se sienta viva sin que las miles de filas de las
+            // listas lleven sombra, que sería ruido.
+            border: Border.all(
+              color: hovering ? didactaAccentDark : didactaRule,
+              width: hovering ? 1.4 : 1,
             ),
-            padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Dot(colour: kindColour(unit.kind)),
+            borderRadius: BorderRadius.circular(Radii.card),
+            boxShadow: hovering
+                ? [
+                    BoxShadow(
+                      color: didactaInk.withValues(alpha: 0.07),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        unit.title(language),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          height: 1.25,
-                          // Marcado cuando el título no está en el idioma
-                          // pedido, para que un título castellano en un
-                          // listado valenciano no se lea como traducido.
-                          fontStyle: fallback
-                              ? FontStyle.italic
-                              : FontStyle.normal,
-                          color: fallback ? didactaMuted : null,
-                        ),
-                      ),
-                    ),
-                    if (unit.warnings.isNotEmpty) ...[
-                      const SizedBox(width: 6),
-                      Tooltip(
-                        message: unit.warnings.join('\n'),
-                        child: const Icon(
-                          Icons.warning_amber_rounded,
-                          size: 15,
-                          color: didactaEx,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 9,
-                  runSpacing: 5,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      kindName(unit.kind),
+                  ]
+                : null,
+          ),
+          padding: EdgeInsets.fromLTRB(
+            hovering ? 11.6 : 12,
+            hovering ? 9.6 : 10,
+            hovering ? 9.6 : 10,
+            hovering ? 9.6 : 10,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Dot(colour: kindColour(unit.kind)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      unit.title(language),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 11.5,
-                        color: kindColour(unit.kind),
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        height: 1.25,
+                        // Marcado cuando el título no está en el idioma
+                        // pedido, para que un título castellano en un
+                        // listado valenciano no se lea como traducido.
+                        fontStyle: fallback
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                        color: fallback ? didactaMuted : null,
                       ),
                     ),
-                    for (final code in unit.statuses.keys)
-                      StatusBadge(language: code, status: unit.statusIn(code)),
-                    if (unit.usedBy.isEmpty)
-                      const Text(
-                        'sin usar',
-                        style: TextStyle(fontSize: 11, color: didactaEx),
-                      )
-                    else
-                      Tooltip(
-                        message: unit.usedBy
-                            .map((use) => use.toString())
-                            .join('\n'),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.link,
-                              size: 12,
+                  ),
+                  if (unit.warnings.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    Tooltip(
+                      message: unit.warnings.join('\n'),
+                      child: const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 15,
+                        color: didactaEx,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 9,
+                runSpacing: 5,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    kindName(unit.kind),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: kindColour(unit.kind),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  for (final code in unit.statuses.keys)
+                    StatusBadge(language: code, status: unit.statusIn(code)),
+                  if (unit.usedBy.isEmpty)
+                    const Text(
+                      'sin usar',
+                      style: TextStyle(fontSize: 11, color: didactaEx),
+                    )
+                  else
+                    Tooltip(
+                      message: unit.usedBy
+                          .map((use) => use.toString())
+                          .join('\n'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.link, size: 12, color: didactaMuted),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${unit.usedBy.length}',
+                            style: const TextStyle(
+                              fontSize: 11.5,
                               color: didactaMuted,
                             ),
-                            const SizedBox(width: 2),
-                            Text(
-                              '${unit.usedBy.length}',
-                              style: const TextStyle(
-                                fontSize: 11.5,
-                                color: didactaMuted,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                  ],
-                ),
-              ],
-            ),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
