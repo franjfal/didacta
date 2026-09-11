@@ -19,6 +19,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../model/slug.dart';
+
 import '../data/course_admin.dart';
 import '../model/catalogue.dart';
 import '../state/session.dart';
@@ -430,22 +432,6 @@ class _NewCourseDialogState extends State<NewCourseDialog> {
     _title.dispose();
     _id.dispose();
     super.dispose();
-  }
-
-  static String slugify(String text) {
-    const from = 'áàäâãéèëêíìïîóòöôõúùüûñçÁÀÄÂÃÉÈËÊÍÌÏÎÓÒÖÔÕÚÙÜÛÑÇ';
-    const to = 'aaaaaeeeeiiiiooooouuuuncAAAAAEEEEIIIIOOOOOUUUUNC';
-    final buffer = StringBuffer();
-    for (final rune in text.runes) {
-      final char = String.fromCharCode(rune);
-      final at = from.indexOf(char);
-      buffer.write(at >= 0 ? to[at] : char);
-    }
-    return buffer
-        .toString()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-+|-+$'), '');
   }
 
   bool get _valid {

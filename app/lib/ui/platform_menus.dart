@@ -14,7 +14,10 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:provider/provider.dart';
+
 import '../router.dart';
+import '../state/session.dart';
 
 /// Envuelve [child] con el menú del sistema donde lo haya.
 class PlatformMenus extends StatelessWidget {
@@ -77,6 +80,33 @@ class _MacMenus extends StatelessWidget {
         PlatformMenu(
           label: 'Ver',
           menus: [
+            // Atrás y adelante los primeros: son lo que se busca en un menú
+            // cuando el atajo no se recuerda, y son navegación antes que
+            // una vista concreta.
+            PlatformMenuItem(
+              label: 'Atrás',
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.bracketLeft,
+                meta: true,
+              ),
+              onSelected: () {
+                final session = context.read<Session>();
+                final target = session.history.back();
+                if (target != null) _go(context, target);
+              },
+            ),
+            PlatformMenuItem(
+              label: 'Adelante',
+              shortcut: const SingleActivator(
+                LogicalKeyboardKey.bracketRight,
+                meta: true,
+              ),
+              onSelected: () {
+                final session = context.read<Session>();
+                final target = session.history.forward();
+                if (target != null) _go(context, target);
+              },
+            ),
             PlatformMenuItem(
               label: 'Biblioteca',
               shortcut: const SingleActivator(

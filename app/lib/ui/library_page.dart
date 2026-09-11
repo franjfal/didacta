@@ -38,6 +38,7 @@ import '../model/library_tree.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'library_search.dart';
+import 'shell.dart';
 import 'theme.dart';
 
 /// Dónde está puesto el navegador. Un valor, no dos campos sueltos, para que
@@ -219,13 +220,22 @@ class _Header extends StatelessWidget {
         color: didactaSurface,
         border: Border(bottom: BorderSide(color: didactaRule)),
       ),
-      padding: const EdgeInsets.fromLTRB(18, 14, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final narrow = constraints.maxWidth < 700;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // La biblioteca tiene su propia cabecera --con el buscador y
+              // los idiomas-- pero el botón de volver tiene que estar en
+              // todas: si falta en una pantalla, deja de ser una forma de
+              // moverse y pasa a ser una que a veces está.
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: BackForward(),
+              ),
+              const SizedBox(height: 2),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
@@ -233,27 +243,33 @@ class _Header extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Biblioteca',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.4,
-                            height: 1.1,
+                        const Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: Text(
+                            'Biblioteca',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.4,
+                              height: 1.1,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          searching
-                              ? 'Buscando «${filter.query}»'
-                              : '${tree.unitCount} unidades · '
-                                    '${tree.categoryCount} categorías · '
-                                    '${tree.topicCount} temas',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: didactaMuted,
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            searching
+                                ? 'Buscando «${filter.query}»'
+                                : '${tree.unitCount} unidades · '
+                                      '${tree.categoryCount} categorías · '
+                                      '${tree.topicCount} temas',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: didactaMuted,
+                            ),
                           ),
                         ),
                       ],
