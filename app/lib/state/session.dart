@@ -28,6 +28,7 @@ import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../data/repository_access.dart';
 import '../model/catalogue.dart';
+import 'history.dart';
 
 /// Where the app is in bringing itself up.
 enum LoadState { loading, ready, failed }
@@ -45,6 +46,13 @@ class Session extends ChangeNotifier {
   }) : preferences = preferences ?? MemoryPreferences();
 
   final CatalogueSource catalogueSource;
+
+  /// Por dónde se ha pasado, para los botones de atrás y adelante.
+  ///
+  /// Aquí y no en un proveedor aparte porque es estado de la aplicación como
+  /// el idioma que se está mirando, y porque toda pantalla ya tiene la
+  /// sesión a mano.
+  final NavigationHistory history = NavigationHistory();
 
   /// Only an [AuthSession]: this class has no business knowing that Firebase
   /// is what provides it, and depending on Firebase here would make every

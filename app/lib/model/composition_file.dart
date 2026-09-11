@@ -225,6 +225,153 @@ class CompositionFile {
     for (final document in _documents()) document.id,
   ];
 
+  /// Reordena los documentos del año.
+  ///
+  /// Mueve **los bloques tal cual**, líneas incluidas: comentarios, TODO,
+  /// títulos por idioma y la composición entera de cada uno. Es la misma
+  /// regla que el resto de este fichero --reescribir líneas, nunca volver a
+  /// serializar-- y aquí importa todavía más, porque un documento son veinte
+  /// líneas y perder un comentario en cada movimiento vaciaría el fichero de
+  /// lo que alguien escribió a mano.
+  ///
+  /// [ids] tiene que ser los mismos documentos que ya hay, sin añadir ni
+  /// quitar: mover no es editar, y confundir las dos cosas es como se pierde
+  /// un documento sin enterarse.
+  void setDocumentOrder(List<String> ids) {
+    final documents = _documents();
+    if (documents.isEmpty) {
+      throw const CompositionException('este año no tiene documentos');
+    }
+    final known = [for (final d in documents) d.id];
+    if (ids.length != known.length || !ids.toSet().containsAll(known)) {
+      throw CompositionException(
+        'el orden nuevo no tiene los mismos documentos: $known contra $ids',
+      );
+    }
+
+    final blocks = {
+      for (final document in documents)
+        document.id: _trimTrailingBlanks(
+          _lines.sublist(document.firstLine, document.lastLine + 1),
+        ),
+    };
+
+    // Lo que había entre el último documento y lo que siga (o el final del
+    // fichero) se queda donde está: puede ser otra clave del año.
+    final first = documents.first.firstLine;
+    final last = documents.last.lastLine;
+    final tail = _lines.sublist(last + 1);
+    final trailingBlanks =
+        _lines.sublist(first, last + 1).length -
+        blocks.values.fold<int>(0, (sum, block) => sum + block.length) -
+        (documents.length - 1);
+
+    final written = <String>[];
+    for (final (index, id) in ids.indexed) {
+      if (index > 0) written.add('');
+      written.addAll(blocks[id]!);
+    }
+    // Las líneas en blanco que había al final del bloque, de vuelta.
+    for (var i = 0; i < trailingBlanks; i += 1) {
+      written.add('');
+    }
+
+    _lines
+      ..replaceRange(first, _lines.length, written)
+      ..addAll(tail);
+  }
+
+  /// Añade un documento al final del año.
+  ///
+  /// Con la composición vacía: un documento nuevo es un sitio donde poner
+  /// unidades, y elegirlas es el paso siguiente, en su propia pantalla.
+  /// [pending] son los idiomas que **todavía no tienen título**, y se
+  /// escriben como `# TODO: va`, no como `va: TODO`.
+  ///
+  /// La diferencia no es cosmética: un `va: TODO` es un título de verdad, y
+  /// saldría en la lista de documentos y dentro del PDF compilado en
+  /// valenciano. Comentado es lo que hace el repositorio en sus dos mil
+  /// unidades, y es lo que la pantalla de traducción cuenta como pendiente.
+  void addDocument({
+    required String id,
+    required String kind,
+    required Map<String, String> title,
+    List<String> pending = const [],
+    List<String> profiles = const [],
+  }) {
+    final documents = _documents();
+    if (documents.any((document) => document.id == id)) {
+      throw CompositionException('ya hay un documento `$id`');
+    }
+
+    // La sangría del fichero, no una inventada: los ficheros del repositorio
+    // usan dos espacios para el guion y cuatro para los campos, pero leerlo
+    // del que hay es lo que hace que esto valga también para los escritos a
+    // mano de otra manera.
+    final itemIndent = documents.isEmpty
+        ? 2
+        : _indentOf(_lines[documents.first.firstLine]);
+    final fieldIndent = documents.isEmpty ? 4 : documents.first.fieldIndent;
+    final pad = ' ' * itemIndent;
+    final field = ' ' * fieldIndent;
+
+    final block = <String>[
+      '$pad- id: ${_quote(id)}',
+      '${field}kind: ${_quote(kind)}',
+      '${field}title:',
+      for (final entry in title.entries)
+        '$field  ${entry.key}: ${_quote(entry.value)}',
+      for (final code in pending) '$field  # TODO: $code',
+      if (profiles.isNotEmpty) '${field}profiles: [${profiles.join(', ')}]',
+      '${field}structure: []',
+    ];
+
+    if (documents.isEmpty) {
+      final start = _lines.indexWhere((line) => _keyAt(line, 0) == 'documents');
+      if (start < 0) {
+        throw const CompositionException('el año no tiene clave `documents`');
+      }
+      // `documents: []` pasa a ser una lista con un elemento.
+      final head = _lines[start];
+      _lines[start] = head.substring(0, head.indexOf(':') + 1);
+      _lines.insertAll(start + 1, block);
+      return;
+    }
+
+    final last = documents.last.lastLine;
+    final existing = _trimTrailingBlanks(_lines.sublist(0, last + 1)).length;
+    _lines.insertAll(existing, ['', ...block]);
+  }
+
+  /// Quita un documento entero del año.
+  void removeDocument(String id) {
+    final documents = _documents();
+    final document = documents.where((d) => d.id == id).firstOrNull;
+    if (document == null) {
+      throw CompositionException('no existe el documento `$id`');
+    }
+    _lines.removeRange(document.firstLine, document.lastLine + 1);
+    // Si era el último, la línea en blanco que lo separaba del anterior
+    // sobra: dos en blanco al final de un bloque no las escribe nadie.
+    while (document.firstLine > 0 &&
+        document.firstLine - 1 < _lines.length &&
+        _lines[document.firstLine - 1].trim().isEmpty &&
+        (document.firstLine >= _lines.length ||
+            _lines.length == document.firstLine ||
+            _lines[document.firstLine].trim().isEmpty)) {
+      _lines.removeAt(document.firstLine - 1);
+      break;
+    }
+  }
+
+  static List<String> _trimTrailingBlanks(List<String> lines) {
+    final copy = [...lines];
+    while (copy.isNotEmpty && copy.last.trim().isEmpty) {
+      copy.removeLast();
+    }
+    return copy;
+  }
+
   /// The composition of one document, or null when there is no such document.
   ///
   /// Returns null rather than throwing for a missing document, and throws

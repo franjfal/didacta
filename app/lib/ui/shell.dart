@@ -11,11 +11,14 @@
 /// in a settings screen.
 library;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/content_gateway.dart';
 import '../router.dart';
+import '../state/session.dart';
 import 'brand.dart';
 import 'theme.dart';
 
@@ -69,111 +72,222 @@ class DidactaShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = watchSession(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 700;
-        final pending = session.catalogueOrNull == null
-            ? 0
-            : session.needingTranslation(session.language).length;
+    // Anotado después del fotograma: cambiar el historial avisa a quien lo
+    // escucha, y avisar mientras se construye es un `setState` en mitad de
+    // un build.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => session.history.record(location),
+    );
 
-        if (!wide) {
-          return Scaffold(
-            body: Column(
-              children: [
-                Expanded(child: child),
-                const Divider(height: 1),
-                _GatewayStrip(gateway: session.gateway),
-              ],
-            ),
-            bottomNavigationBar: NavigationBar(
-              elevation: 0,
-              height: 58,
-              backgroundColor: didactaPanel,
-              selectedIndex: _index,
-              onDestinationSelected: (index) =>
-                  context.go(_destinations[index].path),
-              destinations: [
-                for (final destination in _destinations)
-                  NavigationDestination(
-                    icon: Icon(destination.icon, size: 20),
-                    selectedIcon: Icon(destination.selectedIcon, size: 20),
-                    label: destination.label,
-                  ),
-              ],
-            ),
-          );
-        }
+    return _Shortcuts(
+      session: session,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 700;
+          final pending = session.catalogueOrNull == null
+              ? 0
+              : session.needingTranslation(session.language).length;
 
-        return Scaffold(
-          body: Row(
-            children: [
-              NavigationRail(
+          if (!wide) {
+            return Scaffold(
+              body: Column(
+                children: [
+                  Expanded(child: child),
+                  const Divider(height: 1),
+                  _GatewayStrip(gateway: session.gateway),
+                ],
+              ),
+              bottomNavigationBar: NavigationBar(
+                elevation: 0,
+                height: 58,
+                backgroundColor: didactaPanel,
                 selectedIndex: _index,
                 onDestinationSelected: (index) =>
                     context.go(_destinations[index].path),
-                // Un poco más ancho que el mínimo de Material: las etiquetas
-                // («Asignaturas», «Traducción») llegaban al borde y el
-                // carril se leía apretado al lado de una página con aire.
-                minWidth: 76,
-                groupAlignment: -0.92,
-                leading: const Padding(
-                  padding: EdgeInsets.only(top: 14, bottom: 10),
-                  child: _Mark(),
-                ),
                 destinations: [
                   for (final destination in _destinations)
-                    NavigationRailDestination(
-                      icon: destination.label == 'Traducción' && pending > 0
-                          ? Badge(
-                              // The number, not a dot: "how much is waiting"
-                              // is the question, and a dot cannot answer it.
-                              //
-                              // Arriba a la derecha y en pequeño: centrado
-                              // sobre el glifo, un «2147» tapaba el icono y
-                              // el naranja chillaba más que la navegación
-                              // entera.
-                              // Con tope: «2147» es una etiqueta de cuatro
-                              // cifras encima de un icono de 20 px, y además
-                              // no dice nada que «+99» no diga. El número
-                              // exacto está en la pantalla de traducción.
-                              label: Text(pending > 99 ? '+99' : '$pending'),
-                              alignment: const Alignment(1.9, -1.2),
-                              // Ámbar apagado y no naranja fuerte: dice
-                              // «queda trabajo», no «algo ha fallado», y en
-                              // un carril de cuatro iconos era lo que más
-                              // llamaba de toda la aplicación.
-                              backgroundColor: const Color(0xFFC08A3E),
-                              textStyle: const TextStyle(
-                                fontSize: 9,
-                                height: 1.1,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                              child: Icon(destination.icon),
-                            )
-                          : Icon(destination.icon),
-                      selectedIcon: Icon(destination.selectedIcon),
-                      label: Text(destination.label),
+                    NavigationDestination(
+                      icon: Icon(destination.icon, size: 20),
+                      selectedIcon: Icon(destination.selectedIcon, size: 20),
+                      label: destination.label,
                     ),
                 ],
               ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(child: child),
-                    const Divider(height: 1),
-                    _GatewayStrip(gateway: session.gateway),
+            );
+          }
+
+          return Scaffold(
+            body: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _index,
+                  onDestinationSelected: (index) =>
+                      context.go(_destinations[index].path),
+                  // Un poco más ancho que el mínimo de Material: las etiquetas
+                  // («Asignaturas», «Traducción») llegaban al borde y el
+                  // carril se leía apretado al lado de una página con aire.
+                  minWidth: 76,
+                  groupAlignment: -0.92,
+                  leading: const Padding(
+                    padding: EdgeInsets.only(top: 14, bottom: 10),
+                    child: _Mark(),
+                  ),
+                  destinations: [
+                    for (final destination in _destinations)
+                      NavigationRailDestination(
+                        icon: destination.label == 'Traducción' && pending > 0
+                            ? Badge(
+                                // The number, not a dot: "how much is waiting"
+                                // is the question, and a dot cannot answer it.
+                                //
+                                // Arriba a la derecha y en pequeño: centrado
+                                // sobre el glifo, un «2147» tapaba el icono y
+                                // el naranja chillaba más que la navegación
+                                // entera.
+                                // Con tope: «2147» es una etiqueta de cuatro
+                                // cifras encima de un icono de 20 px, y además
+                                // no dice nada que «+99» no diga. El número
+                                // exacto está en la pantalla de traducción.
+                                label: Text(pending > 99 ? '+99' : '$pending'),
+                                alignment: const Alignment(1.9, -1.2),
+                                // Ámbar apagado y no naranja fuerte: dice
+                                // «queda trabajo», no «algo ha fallado», y en
+                                // un carril de cuatro iconos era lo que más
+                                // llamaba de toda la aplicación.
+                                backgroundColor: const Color(0xFFC08A3E),
+                                textStyle: const TextStyle(
+                                  fontSize: 9,
+                                  height: 1.1,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
+                                child: Icon(destination.icon),
+                              )
+                            : Icon(destination.icon),
+                        selectedIcon: Icon(destination.selectedIcon),
+                        label: Text(destination.label),
+                      ),
                   ],
                 ),
-              ),
-            ],
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(child: child),
+                      const Divider(height: 1),
+                      _GatewayStrip(gateway: session.gateway),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Atrás y adelante desde el teclado y desde el ratón.
+///
+/// Los tres gestos que la gente ya tiene en los dedos: ⌘[ y ⌘] --lo que usa
+/// todo macOS--, Alt+flechas para quien viene de Windows o Linux, y los
+/// botones laterales del ratón, que en una aplicación de escritorio se
+/// prueban sin pensar.
+class _Shortcuts extends StatelessWidget {
+  const _Shortcuts({required this.session, required this.child});
+
+  final Session session;
+  final Widget child;
+
+  void _back(BuildContext context) {
+    final target = session.history.back();
+    if (target != null) context.go(target);
+  }
+
+  void _forward(BuildContext context) {
+    final target = session.history.forward();
+    if (target != null) context.go(target);
+  }
+
+  @override
+  Widget build(BuildContext context) => CallbackShortcuts(
+    bindings: {
+      const SingleActivator(LogicalKeyboardKey.bracketLeft, meta: true): () =>
+          _back(context),
+      const SingleActivator(LogicalKeyboardKey.bracketRight, meta: true): () =>
+          _forward(context),
+      const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () =>
+          _back(context),
+      const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): () =>
+          _forward(context),
+    },
+    child: Focus(
+      autofocus: true,
+      child: Listener(
+        onPointerDown: (event) {
+          // Los botones 4 y 5 del ratón. `kBackMouseButton` es el de atrás
+          // en cualquier plataforma.
+          if (event.buttons & kBackMouseButton != 0) _back(context);
+          if (event.buttons & kForwardMouseButton != 0) _forward(context);
+        },
+        child: child,
+      ),
+    ),
+  );
+}
+
+/// Atrás y adelante, donde están las migas de pan.
+///
+/// Ahí y no en una barra propia porque es la misma pregunta --dónde estoy y
+/// cómo vuelvo-- y porque una fila más de cromo en cada pantalla se paga en
+/// alto útil. «Atrás» apagado cuando no hay a dónde, y «adelante» escondido
+/// del todo mientras no se haya vuelto: un botón que nunca se enciende es
+/// ruido.
+class BackForward extends StatelessWidget {
+  const BackForward({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final session = watchSession(context);
+    final history = session.history;
+    return AnimatedBuilder(
+      animation: history,
+      builder: (context, _) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: const Key('go-back'),
+            tooltip: history.canGoBack ? 'Atrás  ⌘[' : 'No hay a dónde volver',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.arrow_back, size: 16),
+            onPressed: history.canGoBack
+                ? () {
+                    final target = history.back();
+                    if (target != null) context.go(target);
+                  }
+                : null,
           ),
-        );
-      },
+          if (history.canGoForward)
+            IconButton(
+              key: const Key('go-forward'),
+              tooltip: 'Adelante  ⌘]',
+              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.arrow_forward, size: 16),
+              onPressed: () {
+                final target = history.forward();
+                if (target != null) context.go(target);
+              },
+            ),
+        ],
+      ),
     );
   }
 }
@@ -338,27 +452,34 @@ class PageHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (breadcrumbs.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  for (final (index, crumb) in breadcrumbs.indexed) ...[
-                    _Crumb(label: crumb.$1, route: crumb.$2),
-                    if (index < breadcrumbs.length - 1)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 3),
-                        child: Icon(
-                          Icons.chevron_right,
-                          size: 14,
-                          color: didactaRule,
-                        ),
-                      ),
-                  ],
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const BackForward(),
+                if (breadcrumbs.isNotEmpty) const SizedBox(width: 4),
+                Expanded(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      for (final (index, crumb) in breadcrumbs.indexed) ...[
+                        _Crumb(label: crumb.$1, route: crumb.$2),
+                        if (index < breadcrumbs.length - 1)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 3),
+                            child: Icon(
+                              Icons.chevron_right,
+                              size: 14,
+                              color: didactaRule,
+                            ),
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
