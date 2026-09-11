@@ -20,6 +20,7 @@ import 'package:go_router/go_router.dart';
 import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
+import '../model/path_tree.dart';
 import '../model/line_diff.dart';
 import '../router.dart';
 import '../state/session.dart';
@@ -288,47 +289,39 @@ class _CompositionEditorState extends State<CompositionEditor> {
   );
 
   Future<void> _insertUnit(BuildContext context, int index) async {
-    final chosen = await _pickUnit(context);
-    if (chosen == null) return;
-    _insertAt(
-      index,
-      StructureEntry(
-        kind: chosen.isProblem ? EntryKind.problem : EntryKind.unit,
-        value: chosen.reference_,
-      ),
-    );
+    final chosen = await _pickUnits(context);
+    if (chosen.isEmpty) return;
+    // En el orden en que se eligieron, y todas en el mismo sitio: elegir
+    // cinco y que aparezcan del revés sería peor que elegirlas de una en una.
+    _apply([
+      ..._entries.take(index),
+      for (final unit in chosen) _entryFor(unit),
+      ..._entries.skip(index),
+    ]);
   }
 
-  Future<Unit?> _pickUnit(BuildContext context) {
+  static StructureEntry _entryFor(Unit unit) => StructureEntry(
+    kind: unit.isProblem ? EntryKind.problem : EntryKind.unit,
+    value: unit.reference_,
+  );
+
+  Future<List<Unit>> _pickUnits(BuildContext context) async {
     final already = {
       for (final entry in _entries)
         if (entry.isReference) entry.value,
     };
-    return showDialog<Unit>(
+    final chosen = await showDialog<List<Unit>>(
       context: context,
       builder: (context) =>
           _UnitPicker(session: widget.session, already: already),
     );
+    return chosen ?? const [];
   }
 
   Future<void> _addUnit(BuildContext context) async {
-    final already = {
-      for (final entry in _entries)
-        if (entry.isReference) entry.value,
-    };
-    final chosen = await showDialog<Unit>(
-      context: context,
-      builder: (context) =>
-          _UnitPicker(session: widget.session, already: already),
-    );
-    if (chosen == null) return;
-    _apply([
-      ..._entries,
-      StructureEntry(
-        kind: chosen.isProblem ? EntryKind.problem : EntryKind.unit,
-        value: chosen.reference_,
-      ),
-    ]);
+    final chosen = await _pickUnits(context);
+    if (chosen.isEmpty) return;
+    _apply([..._entries, for (final unit in chosen) _entryFor(unit)]);
   }
 
   void _addHeading(EntryKind kind) => _apply([..._entries, _newHeading(kind)]);
@@ -886,6 +879,24 @@ class _AddBar extends StatelessWidget {
 }
 
 /// Picking a unit to add: the library, filtered by typing.
+/// Elegir unidades para un documento: por carpetas o buscando.
+///
+/// Dos formas porque son dos preguntas distintas. El buscador responde a «sé
+/// cómo se llama»; el árbol, a «sé dónde la dejé», que es lo que pasa cuando
+/// se prepara un tema y se quiere ver **qué hay** en una carpeta antes de
+/// elegir. Sin árbol, la única manera de ver lo que tiene `analysis/normed`
+/// era acertar con la palabra.
+///
+/// Empieza todo cerrado y con las áreas del disco arriba --`content/` y
+/// `problems/`-- porque es la estructura que alguien tiene en la cabeza. En
+/// cuanto se escribe algo, el árbol deja sitio a los resultados, y al borrar
+/// vuelve; es lo mismo que hace la biblioteca, así que no hay un modo nuevo
+/// que aprender.
+///
+/// Y se eligen **varias**: preparar un tema es añadir cinco lecciones
+/// seguidas, y hacerlo de una en una son cinco veces abrir el diálogo,
+/// buscar y confirmar. Lo elegido se acumula aunque se cambie de carpeta o
+/// se busque otra cosa.
 class _UnitPicker extends StatefulWidget {
   const _UnitPicker({required this.session, required this.already});
 
@@ -899,40 +910,71 @@ class _UnitPicker extends StatefulWidget {
 class _UnitPickerState extends State<_UnitPicker> {
   final TextEditingController _query = TextEditingController();
 
+  /// Las carpetas abiertas. Vacío es todo cerrado, que es como empieza.
+  final Set<String> _open = {};
+
+  /// Lo elegido, por ruta y en el orden en que se fue eligiendo: es el orden
+  /// en que se van a añadir, y alfabetizarlo por detrás sería decidir por
+  /// quien está preparando el tema.
+  final List<Unit> _chosen = [];
+
+  late final PathNode _tree = buildPathTree(widget.session.catalogue.units);
+
   @override
   void dispose() {
     _query.dispose();
     super.dispose();
   }
 
+  bool _isChosen(Unit unit) => _chosen.any((u) => u.path == unit.path);
+
+  void _toggle(Unit unit) {
+    setState(() {
+      final at = _chosen.indexWhere((u) => u.path == unit.path);
+      if (at >= 0) {
+        _chosen.removeAt(at);
+      } else {
+        _chosen.add(unit);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final needle = _query.text.trim().toLowerCase();
     final language = widget.session.language;
+    final searching = needle.isNotEmpty;
     final matches = [
       for (final unit in widget.session.catalogue.units)
-        if (needle.isEmpty ||
-            unit.path.toLowerCase().contains(needle) ||
+        if (unit.path.toLowerCase().contains(needle) ||
             unit.title(language).toLowerCase().contains(needle) ||
             unit.tags.any((tag) => tag.toLowerCase().contains(needle)))
           unit,
     ];
 
     return AlertDialog(
-      title: const Text('Añadir una unidad'),
+      title: const Text('Añadir unidades'),
       content: SizedBox(
-        width: 560,
-        height: 460,
+        width: 620,
+        height: 520,
         child: Column(
           children: [
             TextField(
+              key: const Key('picker-search'),
               controller: _query,
               autofocus: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 isDense: true,
-                prefixIcon: Icon(Icons.search, size: 18),
+                prefixIcon: const Icon(Icons.search, size: 18),
                 hintText: 'Buscar por título, ruta o etiqueta…',
-                border: OutlineInputBorder(),
+                suffixIcon: searching
+                    ? IconButton(
+                        key: const Key('picker-clear'),
+                        tooltip: 'Volver a las carpetas',
+                        icon: const Icon(Icons.close, size: 16),
+                        onPressed: () => setState(_query.clear),
+                      )
+                    : null,
               ),
               onChanged: (_) => setState(() {}),
             ),
@@ -940,65 +982,65 @@ class _UnitPickerState extends State<_UnitPicker> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '${matches.length} de ${widget.session.catalogue.units.length}',
+                searching
+                    ? '${matches.length} de ${_tree.count}'
+                    : 'Carpetas del repositorio · ${_tree.count} unidades',
                 style: const TextStyle(fontSize: 11.5, color: didactaMuted),
               ),
             ),
             const SizedBox(height: 4),
             Expanded(
-              child: matches.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Nada coincide.',
-                        style: TextStyle(fontSize: 13, color: didactaMuted),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: matches.length,
-                      itemBuilder: (context, index) {
-                        final unit = matches[index];
-                        // Shown rather than hidden: knowing a unit is already
-                        // in the document is the answer to "why can I not
-                        // find it".
-                        final present = widget.already.contains(
-                          unit.reference_,
-                        );
-                        return ListTile(
-                          dense: true,
-                          enabled: !present,
-                          leading: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: kindColour(unit.kind),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          title: Text(
-                            unit.title(language),
-                            style: const TextStyle(fontSize: 13),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            present ? 'ya está en este documento' : unit.path,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontFamily: present ? null : 'monospace',
-                              color: present ? didactaEx : didactaMuted,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: StatusBadge(
-                            language: language,
-                            status: unit.statusIn(language),
-                          ),
-                          onTap: present
-                              ? null
-                              : () => Navigator.of(context).pop(unit),
-                        );
-                      },
-                    ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: didactaCard,
+                  border: Border.all(color: didactaRule),
+                  borderRadius: BorderRadius.circular(Radii.control),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(Radii.control),
+                  child: searching
+                      ? _results(matches, language)
+                      : _folders(language),
+                ),
+              ),
             ),
+            // El recuento, debajo de la lista y no en la fila de botones:
+            // las acciones de un diálogo viven en una barra que no reparte
+            // espacio, y un `Expanded` ahí dentro revienta el layout.
+            if (_chosen.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      size: 15,
+                      color: didactaAccentDark,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _chosen.length == 1
+                            ? '1 elegida: ${_chosen.single.title(language)}'
+                            : '${_chosen.length} elegidas, y se añaden en '
+                                  'este orden',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: didactaAccentDark,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      key: const Key('picker-clear-selection'),
+                      onPressed: () => setState(_chosen.clear),
+                      child: const Text('Quitar la selección'),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
@@ -1007,7 +1049,204 @@ class _UnitPickerState extends State<_UnitPicker> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
+        FilledButton(
+          key: const Key('picker-add'),
+          onPressed: _chosen.isEmpty
+              ? null
+              : () => Navigator.of(context).pop(List<Unit>.from(_chosen)),
+          child: Text(
+            _chosen.length <= 1 ? 'Añadir' : 'Añadir ${_chosen.length}',
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _results(List<Unit> matches, String language) {
+    if (matches.isEmpty) {
+      return const Center(
+        child: Text(
+          'Nada coincide.',
+          style: TextStyle(fontSize: 13, color: didactaMuted),
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: matches.length,
+      itemBuilder: (context, index) =>
+          _unitRow(matches[index], language, indent: 0, showPath: true),
+    );
+  }
+
+  /// El árbol, aplanado a la lista de lo que está abierto.
+  ///
+  /// Aplanado y no anidado a propósito: con dos mil unidades, construir
+  /// widgets de todo el árbol para enseñar tres carpetas abiertas es trabajo
+  /// tirado, y un `ListView.builder` sobre una lista plana solo construye lo
+  /// que se ve.
+  Widget _folders(String language) {
+    final rows = <Widget>[];
+
+    void walk(PathNode node, int depth) {
+      for (final child in node.children) {
+        final open = _open.contains(child.path);
+        rows.add(_folderRow(child, depth, open));
+        if (open) walk(child, depth + 1);
+      }
+      if (_open.contains(node.path) || depth == 0) {
+        for (final unit in node.units(language)) {
+          rows.add(_unitRow(unit, language, indent: depth));
+        }
+      }
+    }
+
+    walk(_tree, 0);
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: rows.length,
+      itemBuilder: (context, index) => rows[index],
+    );
+  }
+
+  Widget _folderRow(PathNode node, int depth, bool open) {
+    // Cuántas de las de dentro están ya elegidas: al cerrar una carpeta hay
+    // que seguir viendo que algo se eligió ahí, o se pierde la cuenta.
+    final inside = node.everything('es');
+    final chosen = inside.where(_isChosen).length;
+
+    return Hoverable(
+      key: Key('folder-${node.path}'),
+      onTap: () => setState(() {
+        if (!_open.remove(node.path)) _open.add(node.path);
+      }),
+      builder: (context, hovering) => Container(
+        color: hovering ? didactaHover : null,
+        padding: EdgeInsets.fromLTRB(8.0 + depth * 16, 7, 10, 7),
+        child: Row(
+          children: [
+            Icon(
+              open ? Icons.keyboard_arrow_down : Icons.chevron_right,
+              size: 17,
+              color: didactaMuted,
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              open ? Icons.folder_open : Icons.folder,
+              size: 15,
+              color: didactaAccentDark.withValues(alpha: 0.75),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: Text(
+                node.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (chosen > 0)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  '$chosen elegidas',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: didactaAccentDark,
+                  ),
+                ),
+              ),
+            Text(
+              '${node.count}',
+              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _unitRow(
+    Unit unit,
+    String language, {
+    required int indent,
+    bool showPath = false,
+  }) {
+    // Las que ya están se enseñan, no se esconden: saber que una unidad ya
+    // está en el documento es la respuesta a «por qué no la encuentro».
+    final present = widget.already.contains(unit.reference_);
+    final chosen = _isChosen(unit);
+
+    return Hoverable(
+      key: Key('unit-${unit.path}'),
+      onTap: present ? null : () => _toggle(unit),
+      builder: (context, hovering) => Container(
+        color: chosen
+            ? didactaSelected
+            : (hovering && !present ? didactaHover : null),
+        padding: EdgeInsets.fromLTRB(10.0 + indent * 16, 5, 10, 5),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 30,
+              child: Checkbox(
+                value: chosen,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: present ? null : (_) => _toggle(unit),
+              ),
+            ),
+            Container(
+              width: 8,
+              height: 8,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: BoxDecoration(
+                color: kindColour(unit.kind),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    unit.title(language),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: present ? didactaMuted : null,
+                      fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                  if (present)
+                    const Text(
+                      'ya está en este documento',
+                      style: TextStyle(fontSize: 11, color: didactaEx),
+                    )
+                  else if (showPath)
+                    Text(
+                      unit.path,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontFamily: 'monospace',
+                        color: didactaMuted,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+            StatusBadge(language: language, status: unit.statusIn(language)),
+          ],
+        ),
+      ),
     );
   }
 }
