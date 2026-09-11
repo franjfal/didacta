@@ -132,4 +132,50 @@ void main() {
       }
     });
   });
+
+  group('el tono de la interfaz', () {
+    test('el gris del texto secundario se lee sobre las dos superficies', () {
+      // Casi todo lo que va en este gris es contenido --rutas, recuentos,
+      // estados-- y no adorno, así que tiene que pasar AA en la página y en
+      // una tarjeta, que son los dos fondos que hay.
+      for (final over in [didactaSurface, didactaCard, didactaPanel]) {
+        expect(
+          contrastRatio(didactaMuted, over),
+          greaterThanOrEqualTo(4.5),
+          reason: 'sobre $over',
+        );
+      }
+    });
+
+    test('una tarjeta se distingue de la página sin necesitar sombra', () {
+      // La regla de la casa es que no hay sombras en las listas. Entonces lo
+      // único que separa una tarjeta del fondo es el tono, y si los dos son
+      // el mismo blanco no separa nada.
+      expect(didactaCard, isNot(didactaSurface));
+      expect(
+        contrastRatio(didactaCard, didactaSurface),
+        greaterThan(1.02),
+        reason: 'la tarjeta y la página son el mismo color',
+      );
+    });
+
+    test('el resalte del ratón se ve, y no tapa el texto', () {
+      final over = flatten(didactaHover, didactaCard);
+      // Que se vea...
+      expect(contrastRatio(over, didactaCard), greaterThan(1.01));
+      // ...y que el texto encima siga leyéndose.
+      expect(contrastRatio(didactaInk, over), greaterThanOrEqualTo(7));
+      expect(contrastRatio(didactaMuted, over), greaterThanOrEqualTo(4.5));
+    });
+
+    test('los radios son los del tema, no números sueltos', () {
+      // Que exista un sitio donde cambiarlos: el fallo que esto evita es
+      // media aplicación a 4 px y la otra media a 8.
+      final theme = didactaTheme();
+      final card = theme.cardTheme.shape! as RoundedRectangleBorder;
+      expect(card.borderRadius, BorderRadius.circular(Radii.card));
+      final dialog = theme.dialogTheme.shape! as RoundedRectangleBorder;
+      expect(dialog.borderRadius, BorderRadius.circular(Radii.dialog));
+    });
+  });
 }

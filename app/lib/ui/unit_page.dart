@@ -1046,11 +1046,18 @@ class _Tab extends StatelessWidget {
   }
 
   Widget _build(BuildContext context, TranslationStatus? state) {
-    return InkWell(
+    return Hoverable(
       onTap: onTap,
-      child: Container(
+      builder: (context, hovering) => AnimatedContainer(
+        duration: const Duration(milliseconds: 90),
         padding: const EdgeInsets.symmetric(horizontal: 14),
         decoration: BoxDecoration(
+          // La pestaña activa, además del subrayado, con el fondo de la
+          // página: así se lee como la hoja que está delante y no como un
+          // botón más de una fila de botones.
+          color: selected
+              ? didactaCard
+              : (hovering ? didactaHover : Colors.transparent),
           border: Border(
             bottom: BorderSide(
               color: selected ? didactaAccentDark : Colors.transparent,

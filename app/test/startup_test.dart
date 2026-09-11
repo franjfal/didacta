@@ -14,6 +14,7 @@
 library;
 
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,8 +24,21 @@ import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/main.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
+
+/// El contraste WCAG entre dos colores opacos.
+double contrast(Color a, Color b) {
+  double channel(double value) => value <= 0.03928
+      ? value / 12.92
+      : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
+  double luminance(Color c) =>
+      0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+  final one = luminance(a);
+  final two = luminance(b);
+  return (math.max(one, two) + 0.05) / (math.min(one, two) + 0.05);
+}
 
 const Map<String, Size> sizes = {
   'móvil': Size(390, 844),
@@ -76,6 +90,36 @@ void main() {
     // Y lo dice en lugar de fingir que se puede iniciar sesión.
     expect(find.textContaining('Firebase no ha arrancado'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('el aviso de Firebase se lee, no es una franja negra', (
+    tester,
+  ) async {
+    // El fallo que esto coge se veía horrible y solo en algunas máquinas:
+    // este aviso vive **por encima** del Scaffold, donde nada pinta el
+    // fondo, y llevaba un color con alfa. En un macOS en modo oscuro se
+    // componía sobre el fondo nativo de la ventana --negro-- y salía una
+    // franja negra con el texto ilegible.
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      DidactaApp(
+        session: sessionWith(auth: const UnavailableAuth()),
+        firebaseReady: false,
+      ),
+    );
+    await settle(tester);
+
+    final banner = find.ancestor(
+      of: find.textContaining('Firebase no ha arrancado'),
+      matching: find.byType(Material),
+    );
+    final colour = tester.widget<Material>(banner.first).color!;
+    expect(colour.a, 1.0, reason: 'con alfa se compone sobre la ventana');
+    // Y el texto encima tiene que leerse.
+    expect(contrast(didactaInk, colour), greaterThanOrEqualTo(7));
   });
 
   testWidgets('con Firebase arranca sin la advertencia', (tester) async {

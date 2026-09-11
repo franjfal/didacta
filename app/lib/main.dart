@@ -232,13 +232,24 @@ class _BootstrapState extends State<_Bootstrap> {
       // El menú del sistema va aquí, por debajo del router, porque sus
       // acciones navegan: por encima no habría a dónde.
       builder: (context, child) => PlatformMenus(
-        child: Column(
-          children: [
-            if (!widget.firebaseReady) const _FirebaseBanner(),
-            if (session.catalogue.errors.isNotEmpty)
-              _ErrorBanner(errors: session.catalogue.errors),
-            Expanded(child: child ?? const SizedBox.shrink()),
-          ],
+        // Pintado, y no transparente como estaba.
+        //
+        // Esto era un fallo que se veía feísimo y solo en según qué máquina:
+        // aquí arriba, por encima del Scaffold, **no hay nada que pinte el
+        // fondo**, así que un banner con alfa se componía sobre el fondo
+        // nativo de la ventana. En un macOS en modo oscuro eso es negro, y
+        // el aviso de Firebase salía como una franja negra con el texto
+        // ilegible. Un color de fondo opaco lo arregla y no cuesta nada.
+        child: ColoredBox(
+          color: didactaSurface,
+          child: Column(
+            children: [
+              if (!widget.firebaseReady) const _FirebaseBanner(),
+              if (session.catalogue.errors.isNotEmpty)
+                _ErrorBanner(errors: session.catalogue.errors),
+              Expanded(child: child ?? const SizedBox.shrink()),
+            ],
+          ),
         ),
       ),
     );
@@ -261,12 +272,14 @@ class _FirebaseBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: didactaEx.withValues(alpha: 0.12),
+    // Opaco: con alfa se compone sobre el fondo de la ventana, que en un
+    // macOS oscuro es negro.
+    color: const Color(0xFFFBF3E4),
     child: const Padding(
       padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
         children: [
-          Icon(Icons.info_outline, size: 15, color: didactaEx),
+          Icon(Icons.info_outline, size: 15, color: Color(0xFF8A5D1B)),
           SizedBox(width: 8),
           Expanded(
             child: Text(
@@ -293,7 +306,7 @@ class _ErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: didactaTeacher.withValues(alpha: 0.10),
+      color: const Color(0xFFFBEDED),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         child: Row(
