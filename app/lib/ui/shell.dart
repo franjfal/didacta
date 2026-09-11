@@ -28,18 +28,24 @@ class DidactaShell extends StatelessWidget {
   final String location;
   final Widget child;
 
+  /// El orden del carril.
+  ///
+  /// Asignaturas primero, y no la biblioteca: es donde se trabaja. La
+  /// biblioteca son dos mil unidades ordenadas por materia, que es cómo se
+  /// busca material; una asignatura es lo que se está dando este cuatrimestre,
+  /// que es lo que se abre cada día.
   static const List<_Destination> _destinations = [
-    _Destination(
-      '/',
-      Icons.library_books_outlined,
-      Icons.library_books,
-      'Biblioteca',
-    ),
     _Destination(
       '/courses',
       Icons.school_outlined,
       Icons.school,
       'Asignaturas',
+    ),
+    _Destination(
+      '/',
+      Icons.library_books_outlined,
+      Icons.library_books,
+      'Biblioteca',
     ),
     _Destination(
       '/translations',
@@ -61,11 +67,16 @@ class DidactaShell extends StatelessWidget {
   /// `/courses/am-iii/2025-2026` keeps Asignaturas selected -- a rail that
   /// deselects everything when you open a detail leaves the reader unsure
   /// where they are.
+  ///
+  /// Por posición en [_destinations] y no con números escritos a mano: eran
+  /// cuatro constantes que había que acordarse de cambiar al reordenar el
+  /// carril, y olvidarse deja la sección marcada en el sitio equivocado.
   int get _index {
-    if (location.startsWith('/courses')) return 1;
-    if (location.startsWith('/translations')) return 2;
-    if (location.startsWith('/settings')) return 3;
-    return 0;
+    for (final (index, destination) in _destinations.indexed) {
+      if (destination.path == '/') continue;
+      if (location.startsWith(destination.path)) return index;
+    }
+    return _destinations.indexWhere((destination) => destination.path == '/');
   }
 
   @override

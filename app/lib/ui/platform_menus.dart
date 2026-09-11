@@ -107,21 +107,23 @@ class _MacMenus extends StatelessWidget {
                 if (target != null) _go(context, target);
               },
             ),
+            // En el mismo orden que el carril, y con los mismos números: un
+            // menú que dice ⌘1 para lo segundo de la lista se aprende mal.
             PlatformMenuItem(
-              label: 'Biblioteca',
+              label: 'Asignaturas',
               shortcut: const SingleActivator(
                 LogicalKeyboardKey.digit1,
                 meta: true,
               ),
-              onSelected: () => _go(context, Routes.library()),
+              onSelected: () => _go(context, Routes.courses()),
             ),
             PlatformMenuItem(
-              label: 'Asignaturas',
+              label: 'Biblioteca',
               shortcut: const SingleActivator(
                 LogicalKeyboardKey.digit2,
                 meta: true,
               ),
-              onSelected: () => _go(context, Routes.courses()),
+              onSelected: () => _go(context, Routes.library()),
             ),
             PlatformMenuItem(
               label: 'Traducción',
