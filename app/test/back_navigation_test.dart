@@ -130,6 +130,8 @@ void main() {
     expect(where(tester), '/courses');
   });
 
+  group('el carril', railTests);
+
   testWidgets('una unidad abierta desde la biblioteca vuelve a ella', (
     tester,
   ) async {
@@ -138,5 +140,46 @@ void main() {
     await tester.tap(back);
     await settle(tester);
     expect(where(tester), '/');
+  });
+}
+
+/// El orden del carril, y que lo seleccionado siga a la dirección.
+///
+/// Esto se prueba porque el índice del carril era cuatro números escritos a
+/// mano: al reordenar las secciones había que acordarse de cambiarlos, y
+/// olvidarse deja marcada la sección equivocada mientras estás en otra, que
+/// es de los fallos que se ven todo el rato y nadie sabe explicar.
+void railTests() {
+  testWidgets('asignaturas va la primera y la biblioteca la segunda', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+    expect(
+      [for (final d in rail.destinations) (d.label as Text).data],
+      ['Asignaturas', 'Biblioteca', 'Traducción', 'Ajustes'],
+    );
+  });
+
+  testWidgets('lo marcado sigue a la dirección, detalles incluidos', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    NavigationRail rail() =>
+        tester.widget<NavigationRail>(find.byType(NavigationRail));
+
+    expect(rail().selectedIndex, 1, reason: 'la biblioteca es la segunda');
+
+    await goTo(tester, '/courses/am-iii/2025-2026/tema-1');
+    expect(rail().selectedIndex, 0, reason: 'un documento sigue en su curso');
+
+    await goTo(tester, '/unit/content/analysis/normed/definition');
+    expect(rail().selectedIndex, 1, reason: 'una unidad es la biblioteca');
+
+    await goTo(tester, '/translations');
+    expect(rail().selectedIndex, 2);
+
+    await goTo(tester, '/settings');
+    expect(rail().selectedIndex, 3);
   });
 }
