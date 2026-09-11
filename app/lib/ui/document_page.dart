@@ -21,7 +21,11 @@ import '../router.dart';
 import '../state/session.dart';
 import 'composition_editor.dart';
 import 'shell.dart';
+import '../data/compiler.dart';
+import 'pdf_tab.dart';
+import 'tabs.dart';
 import 'theme.dart';
+import 'unit_preview.dart';
 
 class DocumentPage extends StatefulWidget {
   const DocumentPage({
@@ -39,6 +43,14 @@ class DocumentPage extends StatefulWidget {
   State<DocumentPage> createState() => _DocumentPageState();
 }
 
+/// La pestaña de la composición, y la de compilar el tema entero.
+const String compositionTab = 'composicion';
+const String buildTab = 'compilar';
+
+/// Prefijo de las pestañas de PDF. Con un carácter que no puede estar en un
+/// perfil, para que no choque con las otras dos.
+const String documentPdfPrefix = '\u0000pdf:';
+
 class _DocumentPageState extends State<DocumentPage> {
   /// Reading a composition needs neither write access nor a fetch -- the
   /// catalogue already has it -- so the editor is opened deliberately rather
@@ -46,9 +58,144 @@ class _DocumentPageState extends State<DocumentPage> {
   /// view does not need at all.
   bool _editing = false;
 
+  String _active = compositionTab;
+
+  /// Los PDF abiertos, una pestaña por versión y un panel por idioma dentro.
+  final List<PdfGroup> _open = [];
+
+  /// El estado de compilar, vivo mientras la pantalla lo esté.
+  ///
+  /// Aquí y no dentro del panel por lo mismo que en la unidad: si vive en el
+  /// widget, cambiar de pestaña tira los resultados que se acaban de
+  /// compilar, y volver a la de compilar enseña una pantalla vacía como si
+  /// no hubiera pasado nada.
+  PreviewState? _preview;
+
   String get courseId => widget.courseId;
   String get year => widget.year;
   String get documentId => widget.documentId;
+
+  String _pdfTab(String id) => '$documentPdfPrefix$id';
+
+  /// Lo que se acaba de compilar, en sus pestañas.
+  void _openResults(List<CompileOutput> results) {
+    final groups = groupResults(results);
+    if (groups.isEmpty) return;
+    setState(() {
+      for (final group in groups) {
+        final at = _open.indexWhere((other) => other.id == group.id);
+        if (at >= 0) {
+          _open[at] = group;
+        } else {
+          _open.add(group);
+        }
+        _open.removeWhere((other) => other.id.startsWith('${group.id}:'));
+      }
+      _active = _pdfTab(groups.first.id);
+    });
+  }
+
+  void _openPdf(OpenPdf pdf) {
+    setState(() {
+      final id = pdf.profile;
+      final at = _open.indexWhere((group) => group.id == id);
+      if (at >= 0) {
+        _open[at] = _open[at].replacing(pdf);
+      } else {
+        _open.add(PdfGroup(id: id, panes: [pdf]));
+      }
+      _active = _pdfTab(id);
+    });
+  }
+
+  void _closePdf(String id) {
+    setState(() {
+      _open.removeWhere((group) => group.id == id);
+      if (_active == _pdfTab(id)) _active = buildTab;
+    });
+  }
+
+  /// Saca un idioma a su propia pestaña.
+  void _detach(String groupId, String language) {
+    final at = _open.indexWhere((group) => group.id == groupId);
+    if (at < 0) return;
+    final group = _open[at];
+    final pane = group.pane(language);
+    if (pane == null || group.panes.length < 2) return;
+    setState(() {
+      _open[at] = group.without(language);
+      final id = '$groupId:$language';
+      _open.add(PdfGroup(id: id, panes: [pane]));
+      _active = _pdfTab(id);
+    });
+  }
+
+  /// Vuelve a compilar una sola versión: la del panel que se está mirando.
+  Future<void> _recompilePane(
+    Session session,
+    String groupId,
+    String language,
+  ) async {
+    final compiler = session.compiler();
+    final at = _open.indexWhere((group) => group.id == groupId);
+    if (compiler == null || at < 0) return;
+    final pane = _open[at].pane(language);
+    if (pane == null) return;
+
+    setState(() => _open[at] = _open[at].replacing(pane.working()));
+    try {
+      final results = await compiler.compileDocument(
+        document: DocumentTarget(
+          courseId: courseId,
+          year: year,
+          documentId: documentId,
+          language: language,
+        ).reference,
+        profiles: [pane.profile],
+        languages: [language],
+      );
+      if (!mounted) return;
+      final made = results.where((r) => r.ok && r.pdf != null).firstOrNull;
+      setState(() {
+        final now = _open.indexWhere((group) => group.id == groupId);
+        if (now < 0) return;
+        _open[now] = _open[now].replacing(
+          made == null ? pane.idle() : pane.refreshed(pages: made.pages),
+        );
+      });
+      await _preview?.refreshExisting();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        final now = _open.indexWhere((group) => group.id == groupId);
+        if (now >= 0) _open[now] = _open[now].replacing(pane.idle());
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$error'),
+          backgroundColor: didactaTeacher,
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    }
+  }
+
+  Future<void> _external(
+    Session session,
+    String path, {
+    required bool reveal,
+  }) async {
+    final compiler = session.compiler();
+    if (compiler == null) return;
+    try {
+      reveal ? await compiler.reveal(path) : await compiler.open(path);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -102,52 +249,103 @@ class _DocumentPageState extends State<DocumentPage> {
             ),
           ],
         ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final Widget composition = _editing
-                  ? CompositionEditor(
-                      key: ValueKey('edit-$courseId-$year-$documentId'),
-                      courseId: courseId,
-                      year: year,
-                      documentId: documentId,
-                      session: session,
-                    )
-                  : _Composition(
-                      document: document,
-                      session: session,
-                      language: language,
-                    );
-              if (constraints.maxWidth >= 1000) {
-                return Row(
-                  children: [
-                    Expanded(child: composition),
-                    const VerticalDivider(width: 1),
-                    SizedBox(
-                      width: 320,
-                      child: _OutputsPanel(
-                        document: document,
-                        profiles: profiles,
-                      ),
-                    ),
-                  ],
-                );
-              }
-              // Narrow: two panels, one at a time. The previous version
-              // stacked them in a scroll view, which nested one list inside
-              // another -- unbounded height, so the whole screen rendered
-              // nothing on a phone. Tabs give each panel the full height and
-              // no nesting.
-              return _NarrowPanels(
-                composition: composition,
-                outputs: _OutputsPanel(document: document, profiles: profiles),
-                outputCount: profiles.length,
-                unitCount: document.unitRefs.length,
-              );
-            },
-          ),
+        _TabBar(
+          active: _active,
+          units: document.unitRefs.length,
+          open: _open,
+          onSelect: (code) => setState(() => _active = code),
+          onClose: _closePdf,
         ),
+        Expanded(child: _panel(session, course, document, profiles, language)),
       ],
+    );
+  }
+
+  /// Lo que se ve debajo de las pestañas.
+  Widget _panel(
+    Session session,
+    Course course,
+    Document document,
+    List<OutputProfile> profiles,
+    String language,
+  ) {
+    if (_active.startsWith(documentPdfPrefix)) {
+      final id = _active.substring(documentPdfPrefix.length);
+      final group = _open.where((group) => group.id == id).firstOrNull;
+      if (group == null) return const SizedBox.shrink();
+      return PdfTabView(
+        group: group,
+        onOpenExternally: (path) => _external(session, path, reveal: false),
+        onReveal: (path) => _external(session, path, reveal: true),
+        onRecompile: () =>
+            _recompilePane(session, id, group.panes.first.language),
+        onRecompilePane: (code) => _recompilePane(session, id, code),
+        onDetach: (code) => _detach(id, code),
+      );
+    }
+
+    if (_active == buildTab) {
+      return UnitPreview(
+        onOpen: _openPdf,
+        state: _preview ??= PreviewState(
+          // El tema entero, no sus lecciones sueltas: con su portada, su
+          // orden y sus referencias cruzadas, que es lo que se proyecta en
+          // clase y lo que una lección compilada por su cuenta no dice.
+          target: DocumentTarget(
+            courseId: courseId,
+            year: year,
+            documentId: documentId,
+            language: language,
+          ),
+          session: session,
+          onChanged: () {
+            if (mounted) setState(() {});
+          },
+          onCompiled: _openResults,
+        ),
+        onExternal: (path, {required bool reveal}) =>
+            _external(session, path, reveal: reveal),
+      );
+    }
+
+    final Widget composition = _editing
+        ? CompositionEditor(
+            key: ValueKey('edit-$courseId-$year-$documentId'),
+            courseId: courseId,
+            year: year,
+            documentId: documentId,
+            session: session,
+          )
+        : _Composition(
+            document: document,
+            session: session,
+            language: language,
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth >= 1000) {
+          return Row(
+            children: [
+              Expanded(child: composition),
+              const VerticalDivider(width: 1),
+              SizedBox(
+                width: 320,
+                child: _OutputsPanel(document: document, profiles: profiles),
+              ),
+            ],
+          );
+        }
+        // Narrow: two panels, one at a time. The previous version stacked
+        // them in a scroll view, which nested one list inside another --
+        // unbounded height, so the whole screen rendered nothing on a phone.
+        return _NarrowPanels(
+          composition: composition,
+          outputs: _OutputsPanel(document: document, profiles: profiles),
+          outputCount: profiles.length,
+          unitCount: document.unitRefs.length,
+        );
+      },
     );
   }
 
@@ -176,6 +374,59 @@ class _DocumentPageState extends State<DocumentPage> {
         if (families.contains(profile.family)) profile,
     ];
   }
+}
+
+/// Las pestañas del tema: su composición, compilarlo, y lo compilado.
+class _TabBar extends StatelessWidget {
+  const _TabBar({
+    required this.active,
+    required this.units,
+    required this.open,
+    required this.onSelect,
+    required this.onClose,
+  });
+
+  final String active;
+  final int units;
+  final List<PdfGroup> open;
+  final ValueChanged<String> onSelect;
+  final ValueChanged<String> onClose;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 38,
+    decoration: const BoxDecoration(
+      color: didactaPanel,
+      border: Border(bottom: BorderSide(color: didactaRule)),
+    ),
+    child: ListView(
+      scrollDirection: Axis.horizontal,
+      children: [
+        DidactaTab(
+          label: 'Composición ($units)',
+          selected: active == compositionTab,
+          dirty: false,
+          onTap: () => onSelect(compositionTab),
+        ),
+        DidactaTab(
+          label: 'Compilar',
+          icon: Icons.play_arrow_outlined,
+          selected: active == buildTab,
+          dirty: false,
+          onTap: () => onSelect(buildTab),
+        ),
+        for (final group in open)
+          DidactaTab(
+            label: group.label,
+            icon: Icons.picture_as_pdf_outlined,
+            selected: active == '$documentPdfPrefix${group.id}',
+            dirty: false,
+            onTap: () => onSelect('$documentPdfPrefix${group.id}'),
+            onClose: () => onClose(group.id),
+          ),
+      ],
+    ),
+  );
 }
 
 class _Composition extends StatelessWidget {

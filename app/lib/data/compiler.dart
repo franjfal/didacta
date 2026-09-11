@@ -24,6 +24,7 @@ class BuildableProfile {
     required this.id,
     required this.label,
     required this.family,
+    this.byDefault = false,
   });
 
   final String id;
@@ -37,6 +38,13 @@ class BuildableProfile {
   /// Si es una de las que se miran primero: las dos que se pidieron
   /// --presentación y libro-- más los apuntes, que son la prosa por defecto.
   bool get isPrimary => id == 'slides' || id == 'book' || id == 'notes';
+
+  /// Para un documento: si es una de las que declara en `year.yaml`.
+  ///
+  /// Es lo que se preselecciona. Las demás se pueden elegir igual --el mismo
+  /// tema se quiere en libro un día y en diapositivas otro-- pero lo que el
+  /// documento dice de sí mismo es el punto de partida razonable.
+  final bool byDefault;
 }
 
 /// Una salida que puede estar compilada, y en qué estado.
@@ -199,6 +207,24 @@ abstract class Compiler {
   /// saber sin las dos delante.
   Future<List<CompileOutput>> compile({
     required String unitPath,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+  });
+
+  /// Las versiones en las que se puede compilar un **documento entero**.
+  ///
+  /// [document] es la referencia que usa el motor, `curso@año/documento`.
+  ///
+  /// Todas las de su familia y no solo las que el documento declara en
+  /// `year.yaml`: el mismo tema se quiere en libro un día y en diapositivas
+  /// otro, y eso no puede obligar a editar el fichero. Las suyas vienen
+  /// marcadas, que es lo que se preselecciona.
+  Future<List<BuildableProfile>> documentProfiles(String document);
+
+  /// Compila un documento entero. Un resultado por versión y por idioma.
+  Future<List<CompileOutput>> compileDocument({
+    required String document,
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,

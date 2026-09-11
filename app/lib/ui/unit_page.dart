@@ -32,6 +32,7 @@ import 'metadata_editor.dart';
 import 'pdf_tab.dart';
 import 'unit_preview.dart';
 import 'shell.dart';
+import 'tabs.dart';
 import 'theme.dart';
 
 class UnitPage extends StatefulWidget {
@@ -78,26 +79,12 @@ class _UnitPageState extends State<UnitPage> {
   /// Automático y no a botones: acabas de pedir estas versiones, quererlas
   /// ver es la única razón por la que las pediste.
   void _openResults(List<CompileOutput> results) {
-    final byProfile = <String, List<OpenPdf>>{};
-    for (final result in results) {
-      if (!result.ok || result.pdf == null) continue;
-      byProfile
-          .putIfAbsent(result.profile, () => [])
-          .add(
-            OpenPdf(
-              path: result.pdf!,
-              profile: result.profile,
-              language: result.language,
-              pages: result.pages,
-            ),
-          );
-    }
-    if (byProfile.isEmpty) return;
+    final groups = groupResults(results);
+    if (groups.isEmpty) return;
 
     setState(() {
-      for (final entry in byProfile.entries) {
-        final at = _open.indexWhere((group) => group.id == entry.key);
-        final group = PdfGroup(id: entry.key, panes: entry.value);
+      for (final group in groups) {
+        final at = _open.indexWhere((other) => other.id == group.id);
         if (at >= 0) {
           _open[at] = group;
         } else {
@@ -106,7 +93,7 @@ class _UnitPageState extends State<UnitPage> {
         // Y se quitan las versiones sueltas que alguien había desacoplado de
         // este perfil: acaban de recompilarse dentro del grupo, y dejarlas
         // apuntaría a un PDF viejo.
-        _open.removeWhere((other) => other.id.startsWith('${entry.key}:'));
+        _open.removeWhere((other) => other.id.startsWith('${group.id}:'));
       }
       _active = _pdfTab(_open.first.id);
     });
@@ -427,7 +414,7 @@ class _UnitPageState extends State<UnitPage> {
       previewTab => UnitPreview(
         onOpen: _openPdf,
         state: _preview ??= PreviewState(
-          unit: unit,
+          target: UnitTarget(unit),
           session: session,
           onChanged: () {
             if (mounted) setState(() {});
@@ -945,7 +932,7 @@ class _LanguageTabs extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         children: [
           for (final code in languages)
-            _Tab(
+            DidactaTab(
               label: code,
               status: unit.statusIn(code),
               selected: code == active,
@@ -953,13 +940,13 @@ class _LanguageTabs extends StatelessWidget {
               onTap: () => onSelect(code),
             ),
           const _Separator(),
-          _Tab(
+          DidactaTab(
             label: 'unit.yaml',
             selected: active == metadataTab,
             dirty: false,
             onTap: () => onSelect(metadataTab),
           ),
-          _Tab(
+          DidactaTab(
             label: 'compilar',
             icon: Icons.play_circle_outline,
             selected: active == previewTab,
@@ -968,7 +955,7 @@ class _LanguageTabs extends StatelessWidget {
           ),
           if (open.isNotEmpty) const _Separator(),
           for (final group in open)
-            _Tab(
+            DidactaTab(
               label: group.label,
               // Ámbar y discreto: lo que hay abierto sigue siendo un PDF de
               // verdad, pero es de antes del último cambio, y eso hay que
@@ -1001,127 +988,6 @@ class _Separator extends StatelessWidget {
     padding: EdgeInsets.symmetric(horizontal: 4, vertical: 9),
     child: SizedBox(width: 1, child: ColoredBox(color: didactaRule)),
   );
-}
-
-class _Tab extends StatelessWidget {
-  const _Tab({
-    required this.label,
-    required this.selected,
-    required this.dirty,
-    required this.onTap,
-    this.status,
-    this.icon,
-    this.iconColour,
-    this.tooltip,
-    this.onClose,
-  });
-
-  final String label;
-
-  /// Para una pestaña que no es un idioma: dice que hace algo, en lugar de
-  /// que muestra algo.
-  final IconData? icon;
-
-  /// Para el aviso de que lo compilado se ha quedado viejo.
-  final Color? iconColour;
-
-  /// Lo que dice al pasar por encima, cuando hay algo que decir.
-  final String? tooltip;
-
-  /// Puesto en una pestaña que se puede cerrar, que son las de PDF. Los
-  /// idiomas y `unit.yaml` no se cierran: son la unidad.
-  final VoidCallback? onClose;
-
-  /// Null for the metadata tab, which has no translation state.
-  final TranslationStatus? status;
-  final bool selected;
-  final bool dirty;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = status;
-    final tab = _build(context, state);
-    return tooltip == null ? tab : Tooltip(message: tooltip!, child: tab);
-  }
-
-  Widget _build(BuildContext context, TranslationStatus? state) {
-    return Hoverable(
-      onTap: onTap,
-      builder: (context, hovering) => AnimatedContainer(
-        duration: const Duration(milliseconds: 90),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          // La pestaña activa, además del subrayado, con el fondo de la
-          // página: así se lee como la hoja que está delante y no como un
-          // botón más de una fila de botones.
-          color: selected
-              ? didactaCard
-              : (hovering ? didactaHover : Colors.transparent),
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? didactaAccentDark : Colors.transparent,
-              width: 2,
-            ),
-          ),
-        ),
-        child: Row(
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 15,
-                color:
-                    iconColour ?? (selected ? didactaAccentDark : didactaMuted),
-              ),
-              const SizedBox(width: 5),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? didactaInk : didactaMuted,
-              ),
-            ),
-            if (state != null) ...[
-              const SizedBox(width: 6),
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: state.exists
-                      ? statusColour(state)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: state.exists ? statusColour(state) : didactaRule,
-                  ),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-            if (dirty) ...[
-              const SizedBox(width: 4),
-              // A dot rather than a word: it has to survive in a 38-pixel tab
-              // and "sin guardar" is already spelled out in the editor bar.
-              const Icon(Icons.circle, size: 6, color: didactaEx),
-            ],
-            if (onClose != null) ...[
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: onClose,
-                borderRadius: BorderRadius.circular(9),
-                child: const Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Icon(Icons.close, size: 12, color: didactaMuted),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// The reference panel: what this unit is, and what depends on it.
