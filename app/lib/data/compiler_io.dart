@@ -364,6 +364,64 @@ class _ProcessCompiler implements Compiler {
     ];
   }
 
+  @override
+  Future<List<BuildableProfile>> documentProfiles(String document) async {
+    final output = await _run(['build', document, '--profiles', '--json']);
+    final decoded = _listIn(output, document);
+    return [
+      for (final item in decoded)
+        BuildableProfile(
+          id: item['profile'] as String? ?? '',
+          label: item['label'] as String? ?? '',
+          family: item['family'] as String? ?? '',
+          byDefault: item['default'] == true,
+        ),
+    ];
+  }
+
+  @override
+  Future<List<CompileOutput>> compileDocument({
+    required String document,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+  }) async {
+    final output = await _run([
+      'build',
+      document,
+      '--json',
+      for (final language in languages) ...['-l', language],
+      for (final profile in profiles) ...['-p', profile],
+      if (fast) '--fast',
+    ], allowFailure: true);
+
+    return [
+      for (final item in _listIn(output, document))
+        _outputFrom(item.cast<String, dynamic>()),
+    ];
+  }
+
+  /// La lista JSON dentro de la salida.
+  ///
+  /// `build --json` imprime solo JSON, pero buscar el primer corchete en
+  /// lugar de exigirlo cuesta una línea y sobrevive a que algún día el motor
+  /// escupa un aviso por delante.
+  static List<Map<String, dynamic>> _listIn(String output, String what) {
+    final start = output.indexOf('[');
+    try {
+      final decoded = jsonDecode(start < 0 ? output : output.substring(start));
+      return [
+        for (final item in decoded as List)
+          (item as Map).cast<String, dynamic>(),
+      ];
+    } catch (error) {
+      throw CompileException(
+        'El motor no devolvió un resultado legible para $what.',
+        detail: output.trim(),
+      );
+    }
+  }
+
   /// El JSON dentro de la salida.
   ///
   /// El motor imprime avisos antes del JSON en algunos casos, y buscar la

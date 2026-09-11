@@ -64,7 +64,7 @@ class _HostState extends State<_Host> {
   Widget build(BuildContext context) => UnitPreview(
     onOpen: opened.add,
     state: _state ??= PreviewState(
-      unit: widget.unit,
+      target: UnitTarget(widget.unit),
       session: widget.session,
       onChanged: () {
         if (mounted) setState(() {});

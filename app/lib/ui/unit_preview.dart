@@ -40,20 +40,131 @@ import 'theme.dart';
 /// abrir el PDF en su pestaña y volver a «compilar» borraba los resultados y
 /// obligaba a compilar otra vez -- que es justo lo que la pestaña venía a
 /// evitar.
+/// Lo que se puede compilar: una unidad suelta o un tema entero.
+///
+/// Existe para que las dos pantallas sean **la misma pantalla**. Elegir
+/// versiones, elegir idiomas, ver lo que salió, abrirlo lado a lado, en el
+/// visor del sistema o en el Finder: eso no cambia porque lo que se compile
+/// sea una lección o el tema que la contiene, y tener dos implementaciones
+/// de lo mismo es tener dos sitios donde arreglar cada cosa.
+///
+/// Lo único que cambia es qué le pide al motor, que es justo lo que hay
+/// debajo.
+abstract class PreviewTarget {
+  /// El idioma marcado de entrada.
+  String get defaultLanguage;
+
+  /// Las versiones que admite, con las suyas marcadas.
+  Future<List<BuildableProfile>> profilesFrom(Compiler compiler);
+
+  /// Lo que ya está compilado, si se puede saber.
+  Future<List<ExistingOutput>> existingFrom(Compiler compiler);
+
+  Future<List<CompileOutput>> buildWith(
+    Compiler compiler, {
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast,
+  });
+}
+
+/// Una unidad suelta: `didacta preview`.
+class UnitTarget implements PreviewTarget {
+  const UnitTarget(this.unit);
+
+  final Unit unit;
+
+  @override
+  String get defaultLanguage => unit.reference;
+
+  @override
+  Future<List<BuildableProfile>> profilesFrom(Compiler compiler) =>
+      compiler.profilesFor(unit.path);
+
+  @override
+  Future<List<ExistingOutput>> existingFrom(Compiler compiler) =>
+      compiler.outputsFor(unit.path);
+
+  @override
+  Future<List<CompileOutput>> buildWith(
+    Compiler compiler, {
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+  }) => compiler.compile(
+    unitPath: unit.path,
+    profiles: profiles,
+    languages: languages,
+    fast: fast,
+  );
+}
+
+/// Un documento entero: `didacta build`.
+///
+/// El tema tal como se da, con sus unidades en su orden, su portada y sus
+/// referencias cruzadas. Compilar una lección suelta dice si esa lección
+/// está bien; compilar el tema dice si **la clase** está bien, que es otra
+/// pregunta y la que se hace la víspera.
+class DocumentTarget implements PreviewTarget {
+  const DocumentTarget({
+    required this.courseId,
+    required this.year,
+    required this.documentId,
+    required this.language,
+  });
+
+  final String courseId;
+  final String year;
+  final String documentId;
+  final String language;
+
+  /// Cómo nombra el motor a un documento: `curso@año/documento`. Los ids se
+  /// repiten entre asignaturas --hay nueve «capitulo-1»-- así que el nombre
+  /// a secas no vale.
+  String get reference => '$courseId@$year/$documentId';
+
+  @override
+  String get defaultLanguage => language;
+
+  @override
+  Future<List<BuildableProfile>> profilesFrom(Compiler compiler) =>
+      compiler.documentProfiles(reference);
+
+  /// Todavía no: el motor sabe decir qué hay compilado de una unidad, y para
+  /// un documento aún no. Vacío en lugar de inventárselo, que enseñaría un
+  /// atajo que abre un PDF que no existe.
+  @override
+  Future<List<ExistingOutput>> existingFrom(Compiler compiler) async =>
+      const [];
+
+  @override
+  Future<List<CompileOutput>> buildWith(
+    Compiler compiler, {
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+  }) => compiler.compileDocument(
+    document: reference,
+    profiles: profiles,
+    languages: languages,
+    fast: fast,
+  );
+}
+
 class PreviewState {
   PreviewState({
-    required this.unit,
+    required this.target,
     required this.session,
     required this.onChanged,
     required this.onCompiled,
   }) {
     // El idioma de referencia, marcado de entrada. Los demás se añaden: se
     // compila `es` y `va` juntos para ver si la traducción cabe.
-    languages.add(unit.reference);
+    languages.add(target.defaultLanguage);
     scheduleMicrotask(load);
   }
 
-  final Unit unit;
+  final PreviewTarget target;
   final Session session;
   final VoidCallback onChanged;
 
@@ -103,7 +214,7 @@ class PreviewState {
     try {
       final found = await compiler.status();
       final available = found.ready
-          ? await compiler.profilesFor(unit.path)
+          ? await target.profilesFrom(compiler)
           : const <BuildableProfile>[];
       status = found;
       profiles = available;
@@ -126,7 +237,7 @@ class PreviewState {
 
   Future<void> _loadExisting(Compiler compiler) async {
     try {
-      final found = await compiler.outputsFor(unit.path);
+      final found = await target.existingFrom(compiler);
       // Solo lo que existe: la lista de lo que *no* está compilado son los
       // chips de arriba, y repetirla aquí sería la misma cosa dos veces.
       existing = [
@@ -178,8 +289,8 @@ class PreviewState {
     problem = null;
     onChanged();
     try {
-      results = await compiler.compile(
-        unitPath: unit.path,
+      results = await target.buildWith(
+        compiler,
         profiles: [output.profile],
         languages: [output.language],
       );
@@ -201,8 +312,8 @@ class PreviewState {
     results = const [];
     onChanged();
     try {
-      results = await compiler.compile(
-        unitPath: unit.path,
+      results = await target.buildWith(
+        compiler,
         profiles: profiles
             .where((p) => chosen.contains(p.id))
             .map((p) => p.id)
@@ -257,7 +368,6 @@ class UnitPreview extends StatelessWidget {
     return Column(
       children: [
         _Controls(
-          unit: state.unit,
           profiles: state.profiles,
           chosen: state.chosen,
           chosenLanguages: state.languages,
@@ -277,7 +387,6 @@ class UnitPreview extends StatelessWidget {
                   results: state.results,
                   existing: state.existing,
                   building: state.building,
-                  unit: state.unit,
                   onView: onOpen,
                   onOpen: (path) => onExternal(path, reveal: false),
                   onReveal: (path) => onExternal(path, reveal: true),
@@ -291,7 +400,6 @@ class UnitPreview extends StatelessWidget {
 
 class _Controls extends StatelessWidget {
   const _Controls({
-    required this.unit,
     required this.profiles,
     required this.chosen,
     required this.chosenLanguages,
@@ -303,7 +411,6 @@ class _Controls extends StatelessWidget {
     required this.onCompile,
   });
 
-  final Unit unit;
   final List<BuildableProfile> profiles;
   final Set<String> chosen;
 
@@ -433,7 +540,6 @@ class _Results extends StatelessWidget {
     required this.results,
     required this.existing,
     required this.building,
-    required this.unit,
     required this.onView,
     required this.onOpen,
     required this.onReveal,
@@ -443,7 +549,6 @@ class _Results extends StatelessWidget {
   final List<CompileOutput> results;
   final List<ExistingOutput> existing;
   final bool building;
-  final Unit unit;
   final ValueChanged<OpenPdf> onView;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;

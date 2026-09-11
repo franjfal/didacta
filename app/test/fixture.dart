@@ -383,6 +383,53 @@ class FakeCompiler implements Compiler {
     return '';
   }
 
+  /// Las versiones que un documento admite, y lo que se compiló de él.
+  List<BuildableProfile> documentProfileList = const [
+    BuildableProfile(
+      id: 'slides',
+      label: 'Diapositivas',
+      family: 'slides',
+      byDefault: true,
+    ),
+    BuildableProfile(id: 'book', label: 'Libro', family: 'notes'),
+    BuildableProfile(id: 'notes', label: 'Apuntes', family: 'notes'),
+  ];
+
+  final List<({String document, List<String> profiles, List<String> languages})>
+  documentCalls = [];
+
+  @override
+  Future<List<BuildableProfile>> documentProfiles(String document) async =>
+      documentProfileList;
+
+  @override
+  Future<List<CompileOutput>> compileDocument({
+    required String document,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+  }) async {
+    documentCalls.add((
+      document: document,
+      profiles: profiles,
+      languages: languages,
+    ));
+    if (failWith != null) throw failWith!;
+    return outputs ??
+        [
+          for (final id in profiles)
+            for (final language in languages)
+              CompileOutput(
+                profile: id,
+                language: language,
+                ok: true,
+                pdf: '/salida/$document-$id-$language.pdf',
+                pages: id == 'slides' ? 24 : 12,
+                seconds: 9.1,
+              ),
+        ];
+  }
+
   @override
   Future<void> open(String pdf) async => opened.add(pdf);
 

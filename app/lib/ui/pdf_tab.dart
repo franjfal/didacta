@@ -23,6 +23,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import '../data/compiler.dart';
 import 'theme.dart';
 
 /// Un PDF abierto: qué es, y de dónde salió.
@@ -157,6 +158,37 @@ class PdfGroup {
         if (pane.language != language) pane,
     ],
   );
+}
+
+/// Los resultados de una compilación, repartidos en pestañas.
+///
+/// Una pestaña por versión y dentro un panel por idioma. Es la regla que
+/// hace útil compilar dos idiomas a la vez: lo que se compara es la misma
+/// diapositiva en castellano y en valenciano, lado a lado, y no dos pestañas
+/// entre las que hay que alternar.
+///
+/// Compartida entre la unidad y el tema porque es la misma regla: cambiarla
+/// en un sitio y no en el otro daría dos comportamientos para el mismo
+/// gesto.
+List<PdfGroup> groupResults(List<CompileOutput> results) {
+  final byProfile = <String, List<OpenPdf>>{};
+  for (final result in results) {
+    if (!result.ok || result.pdf == null) continue;
+    byProfile
+        .putIfAbsent(result.profile, () => [])
+        .add(
+          OpenPdf(
+            path: result.pdf!,
+            profile: result.profile,
+            language: result.language,
+            pages: result.pages,
+          ),
+        );
+  }
+  return [
+    for (final entry in byProfile.entries)
+      PdfGroup(id: entry.key, panes: entry.value),
+  ];
 }
 
 class PdfTabView extends StatefulWidget {
