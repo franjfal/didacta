@@ -399,6 +399,49 @@ def collect_jobs(root, settings, args, all_profiles):
     return jobs
 
 
+def report_profiles(root, settings, args, all_profiles):
+    """Las versiones que un documento admite, con las suyas marcadas."""
+    courses, _ = repo_mod.scan_courses(root, settings)
+    found = None
+    for course in courses.values():
+        for year in course.years.values():
+            for document in year.documents:
+                names = {document.id, "%s/%s" % (year.id, document.id)}
+                if names & set(args.document):
+                    found = (course, year, document)
+                    break
+
+    if found is None:
+        print(S.bad("no document matches %s" % ", ".join(sorted(args.document))))
+        return 1
+
+    _, _, document = found
+    suitable = profiles_mod.default_profiles(all_profiles, document.kind)
+    own = set(document.profiles or [])
+
+    if args.json:
+        json.dump(
+            [
+                {
+                    "profile": profile.id,
+                    "label": profile.label,
+                    "family": profile.family,
+                    "default": profile.id in own or not own,
+                }
+                for profile in suitable
+            ],
+            sys.stdout, indent=2, ensure_ascii=False,
+        )
+        sys.stdout.write("\n")
+        return 0
+
+    print(S.bold("%s (%s)" % (document.id, document.kind)))
+    for profile in suitable:
+        mark = "*" if profile.id in own or not own else " "
+        print("  %s %-20s %s" % (mark, profile.id, profile.label))
+    return 0
+
+
 def cmd_build(args):
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
@@ -416,6 +459,16 @@ def cmd_build(args):
         print(S.dim("Didacta needs a TeX distribution with latexmk and pdflatex."))
         return 2
 
+    if args.profiles:
+        # Qué versiones admite este documento, no cuáles se van a compilar.
+        #
+        # Son dos preguntas distintas y la interfaz necesita la primera: un
+        # documento declara en `year.yaml` las suyas --las que se compilan
+        # por defecto-- pero cualquier profesor puede querer el mismo tema en
+        # libro un día y en diapositivas otro. Así que aquí salen todas las
+        # de su familia, con las suyas marcadas.
+        return report_profiles(root, settings, args, all_profiles)
+
     jobs = collect_jobs(root, settings, args, all_profiles)
     if jobs is None:
         return 1
@@ -424,18 +477,43 @@ def cmd_build(args):
         return 0
 
     if args.list:
+        if args.json:
+            json.dump(
+                [
+                    {
+                        "document": extra["document_id"],
+                        "profile": profile.id,
+                        "label": profile.label,
+                        "family": profile.family,
+                        "language": language,
+                    }
+                    for source, profile, language, extra in jobs
+                ],
+                sys.stdout, indent=2, ensure_ascii=False,
+            )
+            sys.stdout.write("\n")
+            return 0
         print(S.bold("%d output(s) would be built" % len(jobs)))
         for source, profile, language, extra in jobs:
             print("  %-26s %-20s %s" % (extra["document_id"], profile.id, language))
         return 0
 
-    print(S.bold("building %d output(s)" % len(jobs)))
-    if args.fast:
-        print(S.warn("  --fast: single pdflatex pass, so cross-references and the"))
-        print(S.warn("  slide total may be wrong until a full build"))
-    print()
+    # Con `--json`, la salida estándar es JSON y nada más, como en
+    # `preview --json`: al otro lado hay un programa, y una tabla bonita
+    # antes del JSON es algo que ese programa tiene que aprender a saltarse.
+    # El `summary.json` se sigue escribiendo igual.
+    quiet = args.json
+
+    if not quiet:
+        print(S.bold("building %d output(s)" % len(jobs)))
+        if args.fast:
+            print(S.warn("  --fast: single pdflatex pass, so cross-references and the"))
+            print(S.warn("  slide total may be wrong until a full build"))
+        print()
 
     def report(result):
+        if quiet:
+            return
         mark = S.ok("ok  ") if result.ok else S.bad("FAIL")
         pages = "%3s pp" % result.pages if result.pages else "      "
         print("  %s%-30s %-20s %-3s %s %5.1fs" % (
@@ -453,10 +531,11 @@ def cmd_build(args):
     succeeded = [r for r in results if r.ok]
     failed = [r for r in results if not r.ok]
 
-    print()
-    print("%d succeeded, %d failed" % (len(succeeded), len(failed)))
-    if succeeded:
-        print(S.dim("  output: %s" % engine.build_dir))
+    if not quiet:
+        print()
+        print("%d succeeded, %d failed" % (len(succeeded), len(failed)))
+        if succeeded:
+            print(S.dim("  output: %s" % engine.build_dir))
 
     if args.json:
         summary = os.path.join(engine.build_dir, "summary.json")
@@ -464,8 +543,16 @@ def cmd_build(args):
         with open(summary, "w", encoding="utf-8") as handle:
             json.dump([r.as_dict() for r in results], handle,
                       indent=1, ensure_ascii=False)
-        print(S.dim("  summary: %s" % summary))
+        json.dump([r.as_dict() for r in results], sys.stdout,
+                  indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
 
+    # Cero aunque algo falle cuando se pide JSON: el fallo está dentro del
+    # informe, documento por documento, y quien lo lee necesita el informe
+    # más de lo que necesita el código de salida. Sin esto, una interfaz que
+    # mira el código tira el informe justo cuando hay algo que enseñar.
+    if args.json:
+        return 0
     return 1 if failed else 0
 
 
@@ -1730,6 +1817,8 @@ def main(argv=None):
     p.add_argument("--course")
     p.add_argument("--year")
     p.add_argument("--list", action="store_true", help="show what would be built")
+    p.add_argument("--profiles", action="store_true",
+                   help="the profiles this document can be built in")
     p.add_argument("--fast", action="store_true",
                    help="one pdflatex pass; quick, but references may be wrong")
     p.add_argument("--json", action="store_true", help="write summary.json")

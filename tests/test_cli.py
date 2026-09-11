@@ -11,6 +11,7 @@ Loaded by path because the script has no `.py` extension, being a command.
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import sys
 import unittest
@@ -379,3 +380,133 @@ class CourseAdminTests(unittest.TestCase):
 
     def test_duplicating_refuses_when_the_year_exists(self):
         self.assertEqual(self.run_cli("new", "year", "mates", "2024-2025"), 1)
+
+
+class BuildInterfaceTests(unittest.TestCase):
+    """Lo que `build` le cuenta a una interfaz.
+
+    Compilar un tema desde la aplicación necesita dos respuestas que antes no
+    se podían leer sin adivinar: **qué versiones admite este documento** y
+    **cómo ha ido la compilación**. Lo primero no es lo mismo que «qué se va
+    a compilar»: un documento declara las suyas en `year.yaml`, pero el mismo
+    tema se quiere en libro un día y en diapositivas otro.
+
+    Nada de esto compila de verdad --eso ya está probado en `test_engine`--;
+    lo que se comprueba es la forma de lo que sale, que es de lo que depende
+    otro programa.
+    """
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        self.cli = load_cli()
+        self.root = tempfile.mkdtemp(prefix="didacta-build-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+        os.makedirs(os.path.join(self.root, "content", "a", "b", "c"))
+        with open(os.path.join(self.root, "content", "a", "b", "c", "es.tex"),
+                  "w", encoding="utf-8") as handle:
+            handle.write("El contenido.\n")
+        with open(os.path.join(self.root, "content", "a", "b", "c", "unit.yaml"),
+                  "w", encoding="utf-8") as handle:
+            handle.write("id: a.b.c\nkind: theory\ntitle:\n  es: Uno\n"
+                         "category: a\ntopic: b\nreference: es\n"
+                         "languages:\n  es: {status: draft}\n")
+        with open(os.path.join(self.root, "didacta.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write("name: Prueba\nlanguages: [es, va, en]\n"
+                         "default_language: es\nbuild_dir: .build\n")
+
+        year_dir = os.path.join(self.root, "courses", "mates", "2024-2025")
+        os.makedirs(year_dir)
+        with open(os.path.join(self.root, "courses", "mates", "course.yaml"),
+                  "w", encoding="utf-8") as handle:
+            handle.write("id: mates\ntitle:\n  es: Matemáticas\nlanguage: es\n")
+        with open(os.path.join(year_dir, "year.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(
+                "course: mates\nyear: 2024-2025\nlanguage: es\n\n"
+                "documents:\n  - id: tema-1\n    kind: theory\n"
+                "    title:\n      es: Tema 1\n"
+                "    profiles: [slides]\n"
+                "    structure:\n      - unit: a/b/c\n"
+            )
+        with open(os.path.join(year_dir, "tema-1.tex"), "w",
+                  encoding="utf-8") as handle:
+            handle.write("% Tema 1\n\\input{didacta-bootstrap}\n")
+
+    def run_cli(self, *args):
+        return self.cli.main(["--root", self.root, *args])
+
+    def capture(self, *args):
+        import contextlib
+        import io
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = self.run_cli(*args)
+        return code, out.getvalue()
+
+    def test_profiles_lists_every_one_the_kind_admits(self):
+        # No solo las que el documento declara: el mismo tema se quiere en
+        # libro un día y en diapositivas otro, y la interfaz tiene que poder
+        # ofrecerlo sin que nadie edite el YAML.
+        code, output = self.capture(
+            "build", "mates@2024-2025/tema-1", "--profiles", "--json")
+        self.assertEqual(code, 0)
+        listed = json.loads(output)
+        ids = [entry["profile"] for entry in listed]
+        self.assertIn("slides", ids)
+        self.assertIn("book", ids)
+        self.assertIn("notes", ids)
+
+    def test_profiles_marks_the_document_s_own(self):
+        _, output = self.capture(
+            "build", "mates@2024-2025/tema-1", "--profiles", "--json")
+        listed = {entry["profile"]: entry["default"] for entry in json.loads(output)}
+        self.assertTrue(listed["slides"], "la que declara el documento")
+        self.assertFalse(listed["book"], "una que no declara")
+
+    def test_profiles_carry_a_readable_name(self):
+        # La interfaz enseña «Diapositivas», no `slides-flat`.
+        _, output = self.capture(
+            "build", "mates@2024-2025/tema-1", "--profiles", "--json")
+        labels = {e["profile"]: e["label"] for e in json.loads(output)}
+        self.assertEqual(labels["slides"], "Diapositivas")
+        self.assertEqual(labels["book"], "Libro")
+
+    def test_profiles_of_a_document_that_is_not_there(self):
+        code, output = self.capture(
+            "build", "mates@2024-2025/no-existe", "--profiles", "--json")
+        self.assertEqual(code, 1)
+        self.assertIn("no document matches", output)
+
+    def test_list_as_json_says_what_would_be_built(self):
+        code, output = self.capture(
+            "build", "mates@2024-2025/tema-1", "--list", "--json")
+        self.assertEqual(code, 0)
+        jobs = json.loads(output)
+        self.assertEqual(
+            [(j["profile"], j["language"]) for j in jobs], [("slides", "es")])
+        self.assertEqual(jobs[0]["document"], "mates@2024-2025/tema-1")
+        self.assertEqual(jobs[0]["label"], "Diapositivas")
+
+    def test_list_as_json_honours_the_chosen_profiles(self):
+        _, output = self.capture(
+            "build", "mates@2024-2025/tema-1", "--list", "--json",
+            "-p", "book", "-l", "va", "-l", "es")
+        jobs = json.loads(output)
+        self.assertEqual(
+            sorted((j["profile"], j["language"]) for j in jobs),
+            [("book", "es"), ("book", "va")])
+
+    def test_json_output_is_only_json(self):
+        # Al otro lado hay un programa. Una tabla bonita antes del JSON es
+        # algo que ese programa tiene que aprender a saltarse, y el día que
+        # cambie una palabra se rompe.
+        _, output = self.capture(
+            "build", "mates@2024-2025/tema-1", "--list", "--json")
+        self.assertTrue(output.lstrip().startswith("["), output[:80])
+        json.loads(output)
+
