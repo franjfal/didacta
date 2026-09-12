@@ -1097,6 +1097,36 @@ def cmd_preview(args):
     all_profiles = profiles_mod.load(LATEX_DIR)
 
     units, _ = repo_mod.scan_units(root, settings)
+
+    if args.built:
+        # Todo lo compilado, de una vez. La biblioteca lo pregunta al abrirse
+        # para saber qué unidades se pueden ojear sin compilar; unidad por
+        # unidad serían dos mil procesos.
+        engine = build_mod.Engine(
+            latex_dir=LATEX_DIR,
+            build_dir=os.path.join(root, settings.build_dir),
+        )
+        report = preview_mod.built(
+            engine, units.values(), all_profiles,
+            args.language or sorted(settings.languages),
+            lambda u: (u.titles.get(u.reference) or u.id),
+        )
+        if args.json:
+            json.dump(report, sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+            return 0
+        for record in report["units"]:
+            print(S.bold(record["unit"]))
+            for output in record["outputs"]:
+                mark = S.warn("viejo") if output["stale"] else S.ok("al día")
+                print("  %-20s %-3s %s" % (output["profile"],
+                                           output["language"], mark))
+        return 0
+
+    if args.unit is None:
+        print(S.bad("name a unit, or pass --built"))
+        return 1
+
     unit = _find_unit(units, args.unit)
     if unit is None:
         print(S.bad("no unit matches %r" % args.unit))
@@ -1853,7 +1883,8 @@ def main(argv=None):
     p.set_defaults(func=cmd_index)
 
     p = sub.add_parser("preview", help="compile one unit on its own")
-    p.add_argument("unit", help="a unit reference, or a path under content/")
+    p.add_argument("unit", nargs="?",
+                   help="a unit reference, or a path under content/")
     p.add_argument("-p", "--profile", action="append",
                    help="output profile (repeatable; default: what suits the kind)")
     p.add_argument("-l", "--language", action="append",
@@ -1861,6 +1892,8 @@ def main(argv=None):
                    help="language (repeatable; default: the unit's reference)")
     p.add_argument("--list", action="store_true",
                    help="show the profiles this unit can be built in")
+    p.add_argument("--built", action="store_true",
+                   help="what is compiled across the whole library")
     p.add_argument("--status", action="store_true",
                    help="say what is already built, and whether it is current")
     p.add_argument("--fast", action="store_true",

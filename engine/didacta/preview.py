@@ -136,6 +136,35 @@ def newest_source(unit):
     return newest, culprit
 
 
+def built(engine, units, all_profiles, languages, title_of):
+    """Todo lo que hay compilado, de todas las unidades, de una vez.
+
+    Existe para una pregunta de la biblioteca: al listar dos mil unidades,
+    ¿cuáles se pueden ojear ya sin compilar nada? Preguntarlo unidad por
+    unidad serían dos mil procesos, así que se pregunta una vez.
+
+    Barato porque se mira primero si la unidad tiene carpeta de salida --un
+    `isdir` por unidad-- y solo para las que la tienen se hace el trabajo de
+    comprobar ficheros y fechas. En un repositorio donde se han compilado
+    veinte, se tocan veinte.
+    """
+    found = []
+    for unit in units:
+        # La carpeta del motor, preguntada al motor: `output_dir` cambia las
+        # barras por guiones bajos, y repetir esa regla aquí sería tenerla
+        # en dos sitios.
+        outdir = os.path.dirname(
+            engine.output_dir(document_id_for(unit.reference_path), "x", "y"))
+        if not os.path.isdir(outdir):
+            continue
+        wanted = profiles_for(unit.kind, all_profiles)
+        record = status(engine, unit, wanted, languages, title_of(unit))
+        record["outputs"] = [r for r in record["outputs"] if r["exists"]]
+        if record["outputs"]:
+            found.append(record)
+    return {"units": found}
+
+
 def status(engine, unit, profiles, languages, title):
     """What is already built for this unit, and whether it is still current.
 
