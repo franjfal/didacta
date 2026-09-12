@@ -33,6 +33,7 @@ import 'metadata_editor.dart';
 import 'pdf_tab.dart';
 import 'unit_preview.dart';
 import 'shell.dart';
+import 'problem_editor.dart';
 import 'tabs.dart';
 import 'theme.dart';
 
@@ -526,6 +527,30 @@ class _LanguageEditor {
 
   bool get isDirty => !loading && controller.text != _loadedText;
 
+  /// Si el problema se está editando por campos en lugar de como texto.
+  ///
+  /// Empieza en campos: es la forma de escribir un problema, y el texto
+  /// sigue a un botón de distancia para cuando hace falta ver el LaTeX
+  /// entero. Vive aquí y no en la pantalla para que cambiar de idioma y
+  /// volver no reinicie la elección.
+  bool asFields = true;
+
+  void setAsFields(bool value) {
+    asFields = value;
+    onChanged();
+  }
+
+  /// Sustituye el fichero entero, desde los campos.
+  ///
+  /// Por el mismo controlador que el editor de texto, y no por un camino
+  /// aparte: así guardar, el diff y el aviso de conflicto siguen siendo
+  /// exactamente los mismos, que es lo que hace que esto sea una vista y no
+  /// un segundo editor.
+  void replaceText(String text) {
+    if (controller.text == text) return;
+    controller.text = text;
+  }
+
   bool get exists => unit.statusIn(language).exists;
 
   void _onEdit() => onChanged();
@@ -635,10 +660,20 @@ class _EditorView extends StatelessWidget {
     }
 
     final canWrite = watchSession(context).gateway.canWrite;
+    // Los tres campos, para los problemas. El fichero manda: si no tiene la
+    // forma de un problema --porque son tres en un fichero-- el editor de
+    // texto es lo que hay, y la pantalla lo dice en lugar de esconder el
+    // botón.
+    final structured = unit.isProblem;
 
     return Column(
       children: [
-        _EditorBar(editor: editor, canWrite: canWrite),
+        _EditorBar(
+          editor: editor,
+          canWrite: canWrite,
+          fields: structured ? editor.asFields : null,
+          onFields: structured ? (value) => editor.setAsFields(value) : null,
+        ),
         if (editor.conflicted)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -650,39 +685,160 @@ class _EditorView extends StatelessWidget {
             ),
           ),
         Expanded(
-          child: Container(
-            color: Colors.white,
-            child: TextField(
-              controller: editor.controller,
-              readOnly: !canWrite,
-              maxLines: null,
-              expands: true,
-              // LaTeX is code: monospace, no autocorrect, no capitalisation.
-              // A phone helpfully capitalising `\begin` is a compile error.
-              style: monoStyle,
-              keyboardType: TextInputType.multiline,
-              textCapitalization: TextCapitalization.none,
-              autocorrect: false,
-              enableSuggestions: false,
-              decoration: const InputDecoration(
-                border: InputBorder.none,
-                filled: false,
-                contentPadding: EdgeInsets.all(14),
-                hintText: 'El fichero está vacío.',
-              ),
-            ),
-          ),
+          child: structured && editor.asFields
+              ? ColoredBox(
+                  color: didactaCard,
+                  child: ProblemFields(
+                    text: editor.controller.text,
+                    readOnly: !canWrite,
+                    onChanged: editor.replaceText,
+                  ),
+                )
+              : Container(
+                  color: Colors.white,
+                  child: TextField(
+                    controller: editor.controller,
+                    readOnly: !canWrite,
+                    maxLines: null,
+                    expands: true,
+                    // LaTeX is code: monospace, no autocorrect, no capitalisation.
+                    // A phone helpfully capitalising `\begin` is a compile error.
+                    style: monoStyle,
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.none,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      filled: false,
+                      contentPadding: EdgeInsets.all(14),
+                      hintText: 'El fichero está vacío.',
+                    ),
+                  ),
+                ),
         ),
       ],
     );
   }
 }
 
+/// Campos o texto.
+class _ViewToggle extends StatelessWidget {
+  const _ViewToggle({
+    required this.fields,
+    required this.compact,
+    required this.onChanged,
+  });
+
+  final bool fields;
+  final bool compact;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return IconButton(
+        key: const Key('problem-view-toggle'),
+        tooltip: fields ? 'Ver el LaTeX' : 'Ver los campos',
+        visualDensity: VisualDensity.compact,
+        icon: Icon(fields ? Icons.code : Icons.view_agenda_outlined, size: 16),
+        onPressed: () => onChanged(!fields),
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: didactaPanel,
+        border: Border.all(color: didactaRule),
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ViewOption(
+            key: const Key('problem-view-fields'),
+            label: 'Campos',
+            icon: Icons.view_agenda_outlined,
+            selected: fields,
+            onTap: () => onChanged(true),
+          ),
+          _ViewOption(
+            key: const Key('problem-view-text'),
+            label: 'LaTeX',
+            icon: Icons.code,
+            selected: !fields,
+            onTap: () => onChanged(false),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ViewOption extends StatelessWidget {
+  const _ViewOption({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Hoverable(
+    onTap: onTap,
+    builder: (context, hovering) => AnimatedContainer(
+      duration: const Duration(milliseconds: 90),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: selected
+            ? didactaCard
+            : (hovering ? didactaHover : Colors.transparent),
+        borderRadius: BorderRadius.circular(Radii.small),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 13,
+            color: selected ? didactaAccentDark : didactaMuted,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              color: selected ? didactaAccentDark : didactaMuted,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _EditorBar extends StatelessWidget {
-  const _EditorBar({required this.editor, required this.canWrite});
+  const _EditorBar({
+    required this.editor,
+    required this.canWrite,
+    this.fields,
+    this.onFields,
+  });
 
   final _LanguageEditor editor;
   final bool canWrite;
+
+  /// Null cuando esta unidad no es un problema: entonces no hay dos vistas
+  /// entre las que elegir.
+  final bool? fields;
+  final ValueChanged<bool>? onFields;
 
   @override
   Widget build(BuildContext context) {
@@ -725,6 +881,17 @@ class _EditorBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
+              // Campos o texto, para un problema. Un botón y no una pestaña
+              // más: es la misma cosa vista de dos maneras, y guardar guarda
+              // lo mismo desde las dos.
+              if (fields != null && onFields != null) ...[
+                _ViewToggle(
+                  fields: fields!,
+                  compact: tight,
+                  onChanged: onFields!,
+                ),
+                const SizedBox(width: 10),
+              ],
               if (!editor.exists)
                 const _Tag('nuevo', colour: didactaAccentDark)
               else if (dirty && !tight)
