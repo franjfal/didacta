@@ -41,6 +41,10 @@ abstract class Preferences {
   /// que es el caso que no se puede adivinar.
   Future<String?> texPath();
   Future<void> setTexPath(String? path);
+
+  /// La versión que se abre al ojear una unidad desde la biblioteca.
+  Future<String?> previewProfile();
+  Future<void> setPreviewProfile(String id);
   Future<void> setEnginePath(String? path);
 }
 
@@ -64,6 +68,7 @@ class StoredPreferences implements Preferences {
   static const String _push = 'didacta.clone.push';
   static const String _engine = 'didacta.engine.path';
   static const String _tex = 'didacta.tex.path';
+  static const String _preview = 'didacta.preview.profile';
   static const String _panel = 'didacta.unit.panel';
   static const String _split = 'didacta.unit.split';
 
@@ -157,6 +162,19 @@ class StoredPreferences implements Preferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tex, path ?? '');
   }
+
+  @override
+  Future<String?> previewProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_preview);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  @override
+  Future<void> setPreviewProfile(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_preview, id);
+  }
 }
 
 /// For tests, and for a platform where nothing is remembered.
@@ -180,6 +198,14 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setTexPath(String? value) async => tex = value;
+
+  String? preview;
+
+  @override
+  Future<String?> previewProfile() async => preview;
+
+  @override
+  Future<void> setPreviewProfile(String id) async => preview = id;
 
   bool panel = true;
   bool split = false;

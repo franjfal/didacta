@@ -303,7 +303,13 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors):
             "byLanguageStatus": dict(sorted(by_status.items())),
         },
         "profiles": [
-            {"id": profile.id, "family": profile.family,
+            # Con su nombre legible. Lo deriva el perfil de sus propios ejes,
+            # así que ponerlo aquí no es duplicarlo: es lo que evita que una
+            # interfaz que lista versiones tenga que inventárselo y acabe
+            # enseñando `slides-flat` donde debería decir «Diapositivas (sin
+            # pausas)».
+            {"id": profile.id, "label": profile.label,
+             "family": profile.family,
              "documentClass": profile.document_class}
             for profile in sorted(profiles.values(), key=lambda item: item.id)
         ],

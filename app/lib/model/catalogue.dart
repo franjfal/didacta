@@ -340,17 +340,27 @@ class OutputProfile {
     required this.id,
     required this.family,
     required this.documentClass,
+    this.label = '',
   });
 
   factory OutputProfile.fromJson(Map<String, dynamic> json) => OutputProfile(
     id: json['id'] as String? ?? '',
     family: json['family'] as String? ?? '',
     documentClass: json['documentClass'] as String? ?? '',
+    label: json['label'] as String? ?? '',
   );
 
   final String id;
   final String family;
   final String documentClass;
+
+  /// El nombre que se lee: «Diapositivas (sin pausas)», no `slides-flat`.
+  ///
+  /// Lo deriva el motor de los ejes del perfil y viaja en el índice. Vacío
+  /// en un índice viejo, y entonces se enseña el id, que es feo pero cierto.
+  final String label;
+
+  String get name => label.isEmpty ? id : label;
 
   bool get isSlides => documentClass == 'beamer';
 }

@@ -28,6 +28,7 @@ import 'package:go_router/go_router.dart';
 import '../model/catalogue.dart';
 import '../model/library_filter.dart';
 import '../router.dart';
+import 'quick_look.dart';
 import 'theme.dart';
 
 class SortMenu extends StatelessWidget {
@@ -329,9 +330,10 @@ class UnitRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final fallback = unit.titleIsFallback(language);
 
-    return InkWell(
+    return Hoverable(
       onTap: () => context.go(Routes.unit(unit.path)),
-      child: Padding(
+      builder: (context, hovering) => Container(
+        color: hovering ? didactaHover : null,
         padding: const EdgeInsets.fromLTRB(14, 7, 12, 7),
         child: Row(
           children: [
@@ -420,6 +422,12 @@ class UnitRow extends StatelessWidget {
               ),
             for (final code in unit.statuses.keys)
               StatusBadge(language: code, status: unit.statusIn(code)),
+            QuickLookButton(
+              unit: unit,
+              language: language,
+              visible: hovering,
+              compact: true,
+            ),
           ],
         ),
       ),

@@ -22,6 +22,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
@@ -97,6 +98,9 @@ class _UnitPageState extends State<UnitPage> {
       }
       _active = _pdfTab(_open.first.id);
     });
+    // La biblioteca enseña un botón de ojear en las unidades que tienen algo
+    // compilado, y esta acaba de tenerlo.
+    unawaited(context.read<Session>().refreshBuilt());
   }
 
   /// Abre un PDF en su pestaña, sin compilar nada.

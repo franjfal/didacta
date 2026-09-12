@@ -212,7 +212,29 @@ Catalogue catalogueWith(
     'languages': const ['es', 'va', 'en'],
     'defaultLanguage': 'es',
     'contentHash': 'abc',
-    'profiles': const [],
+    // Con las versiones que el motor ofrece de verdad, y con su nombre:
+    // sin ellas, cualquier pantalla que las liste se prueba contra una
+    // lista vacía, que es el único caso que no ocurre nunca.
+    'profiles': const [
+      {
+        'id': 'slides',
+        'label': 'Diapositivas',
+        'family': 'slides',
+        'documentClass': 'beamer',
+      },
+      {
+        'id': 'book',
+        'label': 'Libro',
+        'family': 'notes',
+        'documentClass': 'book',
+      },
+      {
+        'id': 'notes',
+        'label': 'Apuntes',
+        'family': 'notes',
+        'documentClass': 'article',
+      },
+    ],
     'errors': const <String>[],
   },
   units: {'schemaVersion': supportedSchemaVersion, 'units': units},
@@ -329,6 +351,18 @@ class FakeCompiler implements Compiler {
 
   @override
   Future<List<ExistingOutput>> outputsFor(String unitPath) async => existing;
+
+  /// Lo que la biblioteca cree que hay compilado.
+  Map<String, List<ExistingOutput>> built = const {};
+
+  int builtCalls = 0;
+
+  @override
+  Future<Map<String, List<ExistingOutput>>> builtOutputs() async {
+    builtCalls += 1;
+    if (failWith != null) throw failWith!;
+    return built;
+  }
 
   @override
   Future<bool> isStale({required String pdf, required String unitPath}) async =>
