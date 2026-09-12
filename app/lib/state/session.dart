@@ -186,6 +186,60 @@ class Session extends ChangeNotifier {
   /// Dónde está TeX, si se ha tenido que decir a mano.
   String? get texPath => _texPath;
 
+  /// Qué hay compilado, por unidad.
+  ///
+  /// En la sesión y no en la pantalla porque la pregunta la hace la
+  /// biblioteca --¿cuáles puedo ojear?-- y la respuesta vale para toda la
+  /// aplicación: compilar una unidad la cambia, y la lista tiene que
+  /// enterarse sin volver a preguntarle al motor por las dos mil.
+  Map<String, List<ExistingOutput>> get built => _built;
+  Map<String, List<ExistingOutput>> _built = const {};
+
+  /// Si ya se ha preguntado. Distinto de «no hay nada compilado».
+  bool get builtKnown => _builtKnown;
+  bool _builtKnown = false;
+
+  /// La versión que se abre al ojear una unidad desde la biblioteca.
+  ///
+  /// Una sola y elegida arriba, no una por unidad: quien prepara una clase
+  /// está mirando diapositivas toda la tarde, y elegirlo en cada tarjeta
+  /// sería el mismo clic dos mil veces.
+  String get previewProfile => _previewProfile;
+  String _previewProfile = 'slides';
+
+  Future<void> setPreviewProfile(String id) async {
+    _previewProfile = id;
+    notifyListeners();
+    await preferences.setPreviewProfile(id);
+  }
+
+  /// Para un test: lo compilado, sin motor que lo diga.
+  @visibleForTesting
+  Future<void> setBuiltForTest(Map<String, List<ExistingOutput>> built) async {
+    _built = built;
+    _builtKnown = true;
+    notifyListeners();
+  }
+
+  /// Vuelve a preguntar qué hay compilado.
+  ///
+  /// Silencioso a propósito: no saberlo quita un atajo, no una pantalla, y
+  /// un error aquí no puede impedir listar la biblioteca.
+  Future<void> refreshBuilt() async {
+    final compiler = this.compiler();
+    if (compiler == null) {
+      _builtKnown = true;
+      return;
+    }
+    try {
+      _built = await compiler.builtOutputs();
+    } catch (error) {
+      _built = const {};
+    }
+    _builtKnown = true;
+    notifyListeners();
+  }
+
   Future<void> setTexPath(String? path) async {
     await preferences.setTexPath(path);
     _texPath = path == null || path.isEmpty ? null : path;
@@ -262,6 +316,7 @@ class Session extends ChangeNotifier {
     try {
       _clonePath = await preferences.clonePath();
       _texPath = await preferences.texPath();
+      _previewProfile = await preferences.previewProfile() ?? _previewProfile;
       _unitPanel = await preferences.unitPanelVisible();
       _split = await preferences.splitEditors();
     } catch (error) {

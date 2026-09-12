@@ -28,9 +28,12 @@
 /// de 1000 px.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../model/catalogue.dart';
 import '../model/library_filter.dart';
@@ -38,6 +41,7 @@ import '../model/library_tree.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'library_search.dart';
+import 'quick_look.dart';
 import 'shell.dart';
 import 'theme.dart';
 
@@ -86,6 +90,18 @@ class _LibraryPageState extends State<LibraryPage> {
   LibraryTree? _tree;
   Catalogue? _treeFor;
   String? _treeArea;
+
+  @override
+  void initState() {
+    super.initState();
+    // Qué hay compilado, una vez. Es lo que decide qué lecciones se pueden
+    // ojear, y se pregunta aquí y no en cada tarjeta porque la respuesta es
+    // una sola para las dos mil.
+    scheduleMicrotask(() {
+      final session = context.read<Session>();
+      if (!session.builtKnown) session.refreshBuilt();
+    });
+  }
 
   @override
   void dispose() {
@@ -276,6 +292,14 @@ class _Header extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  // En una pantalla ancha. En un móvil, el título, el
+                  // idioma y esto no caben en la misma línea, y de las tres
+                  // la que se puede dejar para el escritorio es esta:
+                  // ojear un PDF de diapositivas en 390 px no es ojear.
+                  if (!narrow && session.canCompile) ...[
+                    _PreviewPicker(session: session),
+                    const SizedBox(width: 8),
+                  ],
                   _LanguagePicker(session: session),
                 ],
               ),
@@ -549,6 +573,71 @@ class _SearchField extends StatelessWidget {
         enabledBorder: border,
       ),
       onChanged: (_) => onChanged(),
+    );
+  }
+}
+
+/// Qué versión se abre al ojear una lección.
+///
+/// Arriba y una sola para toda la biblioteca: quien prepara una clase está
+/// mirando diapositivas toda la tarde, y elegirlo en cada tarjeta sería el
+/// mismo clic dos mil veces.
+class _PreviewPicker extends StatelessWidget {
+  const _PreviewPicker({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    // Las que tienen sentido para ojear una lección: lo que se proyecta y lo
+    // que se lee. Un examen o una hoja de problemas del profesor no son
+    // versiones de una lección suelta.
+    final profiles = [
+      for (final profile in session.catalogue.profiles)
+        if (const {
+          'slides',
+          'notes',
+          'handout',
+          'problems',
+        }.contains(profile.family))
+          profile,
+    ];
+    if (profiles.isEmpty) return const SizedBox.shrink();
+
+    return MenuAnchor(
+      key: const Key('preview-picker'),
+      builder: (context, controller, child) => Tooltip(
+        message: 'Qué versión se abre al ojear una lección',
+        child: OutlinedButton.icon(
+          icon: const Icon(Icons.visibility_outlined, size: 15),
+          label: Text(
+            profiles
+                    .where((p) => p.id == session.previewProfile)
+                    .map((p) => p.name)
+                    .firstOrNull ??
+                session.previewProfile,
+          ),
+          onPressed: () =>
+              controller.isOpen ? controller.close() : controller.open(),
+        ),
+      ),
+      menuChildren: [
+        for (final profile in profiles)
+          MenuItemButton(
+            key: Key('preview-${profile.id}'),
+            leadingIcon: Icon(
+              profile.id == session.previewProfile
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              size: 15,
+              color: profile.id == session.previewProfile
+                  ? didactaAccentDark
+                  : didactaMuted,
+            ),
+            onPressed: () => session.setPreviewProfile(profile.id),
+            child: Text(profile.name),
+          ),
+      ],
     );
   }
 }
@@ -1429,6 +1518,11 @@ class UnitCard extends StatelessWidget {
                         color: fallback ? didactaMuted : null,
                       ),
                     ),
+                  ),
+                  QuickLookButton(
+                    unit: unit,
+                    language: language,
+                    visible: hovering,
                   ),
                   if (unit.warnings.isNotEmpty) ...[
                     const SizedBox(width: 6),

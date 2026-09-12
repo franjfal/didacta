@@ -290,6 +290,27 @@ class _ProcessCompiler implements Compiler {
     ];
   }
 
+  @override
+  Future<Map<String, List<ExistingOutput>>> builtOutputs() async {
+    final output = await _run(['preview', '--built', '--json']);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (error) {
+      throw CompileException(
+        'El motor no devolvió un estado legible.',
+        detail: output.trim(),
+      );
+    }
+    return {
+      for (final item in (decoded['units'] as List? ?? const []))
+        (item as Map)['unit'] as String: [
+          for (final record in (item['outputs'] as List? ?? const []))
+            _existingFrom((record as Map).cast<String, dynamic>()),
+        ],
+    };
+  }
+
   static ExistingOutput _existingFrom(Map<String, dynamic> json) {
     final when = json['mtime'] as num?;
     return ExistingOutput(

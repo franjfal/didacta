@@ -212,6 +212,16 @@ abstract class Compiler {
     bool fast = false,
   });
 
+  /// Qué hay compilado en toda la biblioteca, de una vez.
+  ///
+  /// Una llamada y no una por unidad: la biblioteca lista dos mil, y lo que
+  /// quiere saber es cuáles se pueden ojear ya. Dos mil procesos para pintar
+  /// una lista no es una opción.
+  ///
+  /// La clave es la ruta de la unidad, como en el catálogo. Solo salen las
+  /// que tienen algo compilado.
+  Future<Map<String, List<ExistingOutput>>> builtOutputs();
+
   /// Las versiones en las que se puede compilar un **documento entero**.
   ///
   /// [document] es la referencia que usa el motor, `curso@año/documento`.
