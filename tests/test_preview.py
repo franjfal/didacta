@@ -375,3 +375,109 @@ class CompileTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BuiltTests(unittest.TestCase):
+    """Todo lo compilado, de una vez.
+
+    La biblioteca lista dos mil unidades y necesita saber cuáles se pueden
+    ojear ya. Preguntarlo unidad por unidad serían dos mil procesos, así que
+    esto contesta por todas; lo que hay que demostrar es que contesta lo
+    mismo que preguntar de una en una, y que no se inventa lo que no está.
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="didacta-built-")
+        shutil.copytree(DEMO, os.path.join(self.root, "repo"))
+        self.repo = os.path.join(self.root, "repo")
+        self.profiles = profiles_mod.load(LATEX_DIR)
+        self.engine = build_mod.Engine(
+            latex_dir=LATEX_DIR,
+            build_dir=os.path.join(self.root, "build"),
+        )
+        settings = repo_mod.Settings.load(self.repo)
+        self.units, _ = repo_mod.scan_units(self.repo, settings)
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def unit(self, reference):
+        return next(u for u in self.units.values()
+                    if u.reference_path == reference)
+
+    def fake_pdf(self, unit, profile="slides", language="es", when=None):
+        path = preview_mod.expected_pdf(
+            self.engine, unit.reference_path, self.profiles[profile],
+            language, unit.titles.get(unit.reference) or unit.id)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as handle:
+            handle.write(b"%PDF-1.5\n")
+        if when is not None:
+            os.utime(path, (when, when))
+        return path
+
+    def report(self, languages=("es", "va")):
+        return preview_mod.built(
+            self.engine, self.units.values(), self.profiles, list(languages),
+            lambda u: u.titles.get(u.reference) or u.id)
+
+    def test_nothing_compiled_is_an_empty_answer(self):
+        # Y no una lista de dos mil «no». La biblioteca pregunta «cuáles
+        # puedo ojear», no «cuáles no».
+        self.assertEqual(self.report()["units"], [])
+
+    def test_a_compiled_unit_appears_with_its_pdf(self):
+        unit = self.unit("analysis/normed-spaces/definition")
+        path = self.fake_pdf(unit)
+
+        report = self.report()
+        self.assertEqual(len(report["units"]), 1)
+        record = report["units"][0]
+        self.assertEqual(record["unit"], unit.relpath)
+        self.assertEqual([o["pdf"] for o in record["outputs"]], [path])
+        self.assertEqual(record["outputs"][0]["profile"], "slides")
+
+    def test_only_what_exists(self):
+        # Lo contrario que `status`, y a propósito: ahí la pregunta es «qué
+        # se ofrece», aquí «qué hay».
+        unit = self.unit("analysis/normed-spaces/definition")
+        self.fake_pdf(unit, profile="slides", language="es")
+        record = self.report()["units"][0]
+        self.assertTrue(all(o["exists"] for o in record["outputs"]))
+        self.assertEqual(len(record["outputs"]), 1)
+
+    def test_it_says_which_ones_went_stale(self):
+        # Es lo que evita enseñar como previo un PDF que ya no corresponde al
+        # fichero.
+        unit = self.unit("analysis/normed-spaces/definition")
+        self.fake_pdf(unit, when=1)
+        record = self.report()["units"][0]
+        self.assertTrue(record["outputs"][0]["stale"])
+
+    def test_two_units_are_two_records(self):
+        first = self.unit("analysis/normed-spaces/definition")
+        second = next(u for u in self.units.values()
+                      if u.reference_path != first.reference_path)
+        self.fake_pdf(first)
+        self.fake_pdf(second)
+        report = self.report()
+        self.assertEqual(
+            {r["unit"] for r in report["units"]},
+            {first.relpath, second.relpath})
+
+    def test_it_agrees_with_asking_one_by_one(self):
+        # La propiedad que importa: preguntar por todas tiene que dar lo
+        # mismo que preguntar por una, o la biblioteca enseñaría una cosa y
+        # la pantalla de la unidad otra.
+        unit = self.unit("analysis/normed-spaces/definition")
+        self.fake_pdf(unit, profile="slides", language="es")
+
+        one = preview_mod.status(
+            self.engine, unit,
+            preview_mod.profiles_for(unit.kind, self.profiles),
+            ["es", "va"], unit.titles.get(unit.reference) or unit.id)
+        many = self.report()["units"][0]
+
+        self.assertEqual(
+            [o for o in one["outputs"] if o["exists"]], many["outputs"])
+
