@@ -290,6 +290,11 @@ def _course_record(course, settings):
                               for code in sorted(document.titles or {})},
                     "profiles": list(document.profiles or []),
                     "unitRefs": list(document.unit_refs or []),
+                    # La estructura entera, con los apartados. `unitRefs` es
+                    # la lista plana de lo que se compila; esto es cómo está
+                    # repartido, que es lo que una interfaz enseña para que se
+                    # vea dónde empieza cada bloque de un tema.
+                    "structure": list(document.structure or []),
                 }
                 for document in entry.documents
             ],

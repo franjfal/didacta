@@ -396,28 +396,80 @@ void main() {
     });
   });
 
-  testWidgets('renaming a heading writes the language being browsed', (
-    tester,
-  ) async {
-    final gateway = await pumpComposition(tester);
+  group('el título de un apartado', () {
+    // El título se editaba en la fila, y eso era editar **solo el idioma que
+    // se estaba mirando**: para poner el valenciano había que cambiar de
+    // idioma toda la pantalla y volver. Con los ficheros no pasa --tienen una
+    // pestaña por idioma-- y con los apartados sí, que es donde más fácil es
+    // dejarse uno.
 
-    await tester.enterText(
-      find.widgetWithText(TextField, 'Normas'),
-      'Espacios normados y de Banach',
-    );
-    await settle(tester);
-    await tester.tap(save);
-    await settle(tester);
-    await tester.tap(commit);
-    await settle(tester);
+    Future<void> openTitles(WidgetTester tester) async {
+      await tester.tap(find.byIcon(Icons.edit_outlined).first);
+      await settle(tester);
+    }
 
-    expect(
-      gateway.commits.single.text,
-      contains('          es: Espacios normados y de Banach'),
-    );
-    // The TODO markers for the languages still missing are not collateral.
-    expect(gateway.commits.single.text, contains('          # TODO: va'));
-    expect(gateway.commits.single.text, contains('          # TODO: en'));
+    testWidgets('se editan los tres idiomas de una vez', (tester) async {
+      final gateway = await pumpComposition(tester);
+      await openTitles(tester);
+
+      // Con lo que ya hay puesto, y lo que falta en blanco.
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('heading-title-es')))
+            .controller!
+            .text,
+        'Normas',
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('heading-title-va')))
+            .controller!
+            .text,
+        isEmpty,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('heading-title-es')),
+        'Espacios normados y de Banach',
+      );
+      await tester.enterText(
+        find.byKey(const Key('heading-title-va')),
+        'Espais normats i de Banach',
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('heading-title-save')));
+      await settle(tester);
+
+      await tester.tap(save);
+      await settle(tester);
+      await tester.tap(commit);
+      await settle(tester);
+
+      final text = gateway.commits.single.text;
+      expect(text, contains('          es: Espacios normados y de Banach'));
+      expect(text, contains('          va: Espais normats i de Banach'));
+      // El que sigue faltando se queda marcado, no se inventa.
+      expect(text, contains('          # TODO: en'));
+    });
+
+    testWidgets('un idioma en blanco no borra el apartado', (tester) async {
+      // Se queda pendiente, que es lo que el fichero ya sabía decir y lo que
+      // hace que la pantalla de traducción lo cuente.
+      final gateway = await pumpComposition(tester);
+      await openTitles(tester);
+      await tester.tap(find.byKey(const Key('heading-title-save')));
+      await settle(tester);
+
+      expect(tester.widget<FilledButton>(save).onPressed, isNull);
+      expect(gateway.commits, isEmpty);
+    });
+
+    testWidgets('dice cuántos idiomas tienen título', (tester) async {
+      // Sin abrir nada: es la lista de lo que queda por traducir de este
+      // documento.
+      await pumpComposition(tester);
+      expect(find.text('1/3'), findsOneWidget);
+    });
   });
 
   testWidgets('adding a unit picks it from the library', (tester) async {
@@ -623,10 +675,14 @@ void main() {
 
     await tester.tap(find.widgetWithText(OutlinedButton, 'Subapartado'));
     await settle(tester);
+    await tester.tap(find.byIcon(Icons.edit_outlined).last);
+    await settle(tester);
     await tester.enterText(
-      find.widgetWithText(TextField, 'Título nuevo'),
+      find.byKey(const Key('heading-title-es')),
       'Desigualdad triangular',
     );
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('heading-title-save')));
     await settle(tester);
     await tester.tap(save);
     await settle(tester);

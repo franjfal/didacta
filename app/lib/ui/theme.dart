@@ -593,6 +593,42 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
+/// El tipo de una unidad, con su nombre.
+///
+/// Un color dice «estos dos son distintos»; no dice cuál es la explicación y
+/// cuál el ejercicio. En la composición de un tema esa es justo la pregunta,
+/// y la respuesta cabe en cinco letras.
+class KindChip extends StatelessWidget {
+  const KindChip({super.key, required this.kind, this.faded = false});
+
+  final String kind;
+
+  /// Para una entrada desactivada, que sigue en su sitio pero no se da.
+  final bool faded;
+
+  @override
+  Widget build(BuildContext context) {
+    final colour = kindColour(kind);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: colour.withValues(alpha: faded ? 0.06 : 0.12),
+        borderRadius: BorderRadius.circular(Radii.small),
+      ),
+      child: Text(
+        kindName(kind),
+        style: TextStyle(
+          fontSize: 10.5,
+          height: 1.3,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+          color: colour.withValues(alpha: faded ? 0.55 : 1),
+        ),
+      ),
+    );
+  }
+}
+
 /// A short note in a panel: explains a state without looking like an error.
 class Note extends StatelessWidget {
   const Note(this.text, {super.key, this.tone});
