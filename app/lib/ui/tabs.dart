@@ -90,7 +90,14 @@ class DidactaTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? didactaInk : didactaMuted,
+                // Un idioma que no existe, en rojo. Aquí sí y en la
+                // biblioteca no: allí «falta» es el estado de dos tercios de
+                // las dos mil unidades y pintarlo de rojo sería una pantalla
+                // roja que nadie mira; aquí es *esta* unidad, y es lo que hay
+                // que ir a arreglar.
+                color: state != null && !state.exists
+                    ? didactaTeacher
+                    : (selected ? didactaInk : didactaMuted),
               ),
             ),
             if (state != null) ...[
@@ -103,7 +110,8 @@ class DidactaTab extends StatelessWidget {
                       ? statusColour(state)
                       : Colors.transparent,
                   border: Border.all(
-                    color: state.exists ? statusColour(state) : didactaRule,
+                    color: state.exists ? statusColour(state) : didactaTeacher,
+                    width: state.exists ? 1 : 1.4,
                   ),
                   shape: BoxShape.circle,
                 ),
