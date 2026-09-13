@@ -1342,6 +1342,23 @@ def cmd_index(args):
     without writing, which is what CI runs so a stale index is a failed build
     rather than something noticed months later.
     """
+
+    if args.stale:
+        # Barato a propósito: es lo que se pregunta en cada arranque de la
+        # aplicación, y generar el índice para compararlo cuesta tres
+        # segundos. Contar ficheros y mirar fechas cuesta una décima.
+        root, settings = load_repo(args)
+        report = index_mod.staleness(root, settings)
+        if args.json:
+            json.dump(report, sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+            return 0
+        if report["stale"]:
+            print(S.bad("index is stale: %s" % report["reason"]))
+            print(S.dim("  run `didacta index` to regenerate it"))
+            return 1
+        print(S.ok("index is up to date"))
+        return 0
     root, settings = load_repo(args)
     data = index_mod.build(root, settings, latex_dir=LATEX_DIR)
     manifest = data[index_mod.MANIFEST]
@@ -1875,6 +1892,8 @@ def main(argv=None):
     q.set_defaults(func=cmd_remove_year)
 
     p = sub.add_parser("index", help="generate the derived catalogues")
+    p.add_argument("--stale", action="store_true",
+                   help="say whether the index still describes the disk")
     p.add_argument("--check", action="store_true",
                    help="fail if the index on disk is stale; writes nothing")
     p.add_argument("--dry-run", action="store_true",

@@ -14,6 +14,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -260,3 +261,103 @@ class NumericNameTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class StalenessTests(unittest.TestCase):
+    """Si el índice sigue describiendo lo que hay en el disco.
+
+    Existe por un caso real: alguien movió `content/` y `courses/` a
+    `content_backup/` y `courses_backup/`, arrancó la aplicación, y la
+    biblioteca seguía enseñando dos mil unidades. Y era verdad lo que
+    enseñaba --el índice las tenía-- solo que el índice hablaba de ficheros
+    que ya no estaban ahí.
+
+    Tiene que ser barato porque se pregunta en cada arranque: generar el
+    índice para compararlo son tres segundos, y esto es un `walk` sin abrir
+    ningún fichero.
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="didacta-stale-")
+        shutil.copytree(DEMO, os.path.join(self.root, "repo"))
+        self.repo = os.path.join(self.root, "repo")
+        self.settings = repo_mod.Settings.load(self.repo)
+
+    def tearDown(self):
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def write_index(self):
+        data = index_mod.build(self.repo, self.settings)
+        index_mod.write(self.repo, data)
+        return data
+
+    def report(self):
+        return index_mod.staleness(self.repo, self.settings)
+
+    def test_without_an_index_everything_is_stale(self):
+        report = self.report()
+        self.assertTrue(report["stale"])
+        self.assertIn("no hay índice", report["reason"])
+
+    def test_a_fresh_index_is_not_stale(self):
+        self.write_index()
+        self.assertFalse(self.report()["stale"], self.report()["reason"])
+
+    def test_moving_the_content_away_is_stale(self):
+        # El caso que trajo todo esto. Una fecha no lo ve: el `content/` que
+        # queda no es más nuevo que nada, simplemente ya no hay nada.
+        self.write_index()
+        shutil.move(os.path.join(self.repo, "content"),
+                    os.path.join(self.repo, "content_backup"))
+
+        report = self.report()
+        self.assertTrue(report["stale"])
+        self.assertIn("unidades", report["reason"])
+        self.assertLess(report["disk"]["units"], report["indexed"]["units"])
+
+    def test_emptying_problems_is_stale_too(self):
+        self.write_index()
+        problems = os.path.join(self.repo, "problems")
+        if os.path.isdir(problems):
+            shutil.rmtree(problems)
+            self.assertTrue(self.report()["stale"])
+
+    def test_editing_a_file_is_stale(self):
+        self.write_index()
+        # Con una fecha por delante del índice, que es lo que hace un editor.
+        target = None
+        for directory, _, names in os.walk(os.path.join(self.repo, "content")):
+            for name in names:
+                if name.endswith(".tex"):
+                    target = os.path.join(directory, name)
+                    break
+        self.assertIsNotNone(target)
+        later = time.time() + 60
+        os.utime(target, (later, later))
+
+        report = self.report()
+        self.assertTrue(report["stale"])
+        self.assertIn("editado", report["reason"])
+
+    def test_adding_a_year_is_stale(self):
+        # Un `year.yaml` más y el índice habla de un curso menos.
+        self.write_index()
+        before = self.report()["indexed"]["years"]
+        year = os.path.join(self.repo, "courses", "nueva", "2030-2031")
+        os.makedirs(year)
+        with open(os.path.join(year, "year.yaml"), "w", encoding="utf-8") as h:
+            h.write("course: nueva\nyear: 2030-2031\ndocuments: []\n")
+
+        report = self.report()
+        self.assertTrue(report["stale"])
+        self.assertEqual(report["disk"]["years"], before + 1)
+
+    def test_the_survey_does_not_open_any_file(self):
+        # La garantía de que es barato: si un día alguien le mete un
+        # `yaml.load`, esto lo coge. Un fichero ilegible no puede romperlo.
+        self.write_index()
+        broken = os.path.join(self.repo, "content", "roto.yaml")
+        with open(broken, "wb") as handle:
+            handle.write(b"\x00\x01\x02 no es texto")
+        self.assertIsNotNone(index_mod.survey(self.repo, self.settings))
+
