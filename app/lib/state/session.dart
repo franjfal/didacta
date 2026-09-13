@@ -17,6 +17,8 @@
 /// gateway.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/auth.dart';
@@ -24,6 +26,7 @@ import '../data/catalogue_source.dart';
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
 import '../data/course_admin.dart';
+import '../data/disk_watch.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../data/repository_access.dart';
@@ -186,6 +189,62 @@ class Session extends ChangeNotifier {
   /// Dónde está TeX, si se ha tenido que decir a mano.
   String? get texPath => _texPath;
 
+  /// Cuándo se escribió el índice que está cargado.
+  ///
+  /// Es lo que permite saber que el de disco es otro: la comprobación de
+  /// arranque compara el índice con el contenido, y eso no ve que el índice
+  /// haya cambiado **después** de leerlo --que es lo que pasa cuando alguien
+  /// lo regenera desde el terminal con la aplicación abierta--.
+  DateTime? _indexRead;
+
+  StreamSubscription<void>? _watching;
+  Timer? _settle;
+
+  /// Empieza a vigilar `generated/` del clon.
+  ///
+  /// Idempotente: llamarlo dos veces no deja dos vigilantes.
+  void watchDisk() {
+    final path = _clonePath;
+    if (path == null) return;
+    _watching?.cancel();
+    _watching = watchIndex(path).listen((_) {
+      // Con un respiro: el motor escribe cuatro ficheros, y recargar el
+      // catálogo cuatro veces por una regeneración es tirar el trabajo tres
+      // veces.
+      _settle?.cancel();
+      _settle = Timer(const Duration(milliseconds: 400), () {
+        unawaited(_reloadIfIndexChanged());
+      });
+    });
+  }
+
+  /// Al volver a la ventana: ¿ha cambiado algo mientras no mirábamos?
+  ///
+  /// Dos `stat` y, si el índice está viejo respecto al contenido, una
+  /// regeneración. Es el momento exacto en que alguien vuelve después de
+  /// tocar ficheros por fuera.
+  Future<void> checkDisk() async {
+    if (await _reloadIfIndexChanged()) return;
+    if (await refreshIndex()) await reloadCatalogue();
+
+    // Desde aquí, el disco avisa solo.
+    _indexRead = await indexModified(_clonePath ?? '');
+    watchDisk();
+  }
+
+  /// Relee el catálogo si el índice del disco es más nuevo que el cargado.
+  Future<bool> _reloadIfIndexChanged() async {
+    final path = _clonePath;
+    if (path == null) return false;
+    final when = await indexModified(path);
+    if (when == null) return false;
+    if (_indexRead != null && !when.isAfter(_indexRead!)) return false;
+    _indexRead = when;
+    await reloadCatalogue();
+    await refreshBuilt();
+    return true;
+  }
+
   /// Lo que pasó con el índice la última vez que se miró.
   ///
   /// Null cuando no había nada que decir. Se enseña porque regenerarlo
@@ -233,6 +292,13 @@ class Session extends ChangeNotifier {
   }
 
   /// El botón de actualizar: el índice, el catálogo y lo compilado.
+  @override
+  void dispose() {
+    _settle?.cancel();
+    _watching?.cancel();
+    super.dispose();
+  }
+
   Future<void> refreshEverything() async {
     // Buscar el motor solo si no hay: encontrarlo es mirar el disco, y
     // hacerlo cuando ya tenemos uno es trabajo por nada.
@@ -281,6 +347,12 @@ class Session extends ChangeNotifier {
     _previewProfile = id;
     notifyListeners();
     await preferences.setPreviewProfile(id);
+  }
+
+  /// Para un test: el clon, sin pasar por Ajustes ni por el disco.
+  @visibleForTesting
+  Future<void> useCloneForTest(String path) async {
+    _clonePath = path;
   }
 
   /// Para un test: lo compilado, sin motor que lo diga.
