@@ -114,6 +114,101 @@ def dumps(payload):
                       sort_keys=True) + "\n"
 
 
+def survey(root, settings):
+    """Lo que hay en el disco ahora mismo, a golpe de `stat`.
+
+    La pregunta que contesta es «¿el índice sigue valiendo?», y tiene que ser
+    barata porque se hace en cada arranque. Generar el índice para
+    compararlo cuesta tres segundos; contar ficheros y mirar fechas, una
+    décima: son las dos mil llamadas a `stat` que hace un `walk`, sin abrir
+    ni parsear nada.
+
+    Cuenta las unidades y los años, y se queda con la fecha más nueva de
+    todo lo que hay debajo --directorios incluidos--. Las dos cosas hacen
+    falta: la fecha coge una edición, y el recuento coge lo que una fecha no
+    ve. Alguien que mueve `content/` a `content_backup/` deja un índice que
+    habla de dos mil unidades que ya no están ahí, y el `content/` vacío que
+    queda no es más nuevo que nada.
+    """
+    newest = 0.0
+    units = 0
+    years = 0
+
+    for area in (repo_mod.CONTENT, repo_mod.PROBLEMS, repo_mod.COURSES):
+        top = os.path.join(root, area)
+        if not os.path.isdir(top):
+            continue
+        for directory, names, files in os.walk(top):
+            names[:] = [n for n in names if not n.startswith(".")]
+            try:
+                when = os.path.getmtime(directory)
+            except OSError:
+                when = 0.0
+            newest = max(newest, when)
+            for name in files:
+                if name.startswith("."):
+                    continue
+                if name == repo_mod.UNIT_META:
+                    units += 1
+                elif name == repo_mod.YEAR_META:
+                    years += 1
+                try:
+                    newest = max(newest, os.path.getmtime(
+                        os.path.join(directory, name)))
+                except OSError:
+                    continue
+
+    return {"units": units, "years": years, "newest": newest or None}
+
+
+def staleness(root, settings):
+    """Si el índice de `generated/` ya no describe lo que hay en el disco.
+
+    Con el motivo en palabras, porque las dos razones se arreglan igual pero
+    significan cosas distintas: «has editado algo» y «ya no está lo que el
+    índice dice» no son el mismo susto.
+    """
+    manifest = os.path.join(root, GENERATED, MANIFEST)
+    found = survey(root, settings)
+
+    if not os.path.isfile(manifest):
+        return {"stale": True, "reason": "no hay índice todavía",
+                "disk": found, "indexed": None}
+
+    try:
+        with open(manifest, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {"stale": True, "reason": "el índice no se puede leer",
+                "disk": found, "indexed": None}
+
+    counts = data.get("counts") or {}
+    indexed = {"units": counts.get("units"), "years": counts.get("years"),
+               "generated": os.path.getmtime(manifest)}
+
+    if found["units"] != indexed["units"]:
+        return {
+            "stale": True,
+            "reason": "el disco tiene %d unidades y el índice %s"
+                      % (found["units"], indexed["units"]),
+            "disk": found, "indexed": indexed,
+        }
+    if found["years"] != indexed["years"]:
+        return {
+            "stale": True,
+            "reason": "el disco tiene %d cursos académicos y el índice %s"
+                      % (found["years"], indexed["years"]),
+            "disk": found, "indexed": indexed,
+        }
+    if (found["newest"] or 0) > indexed["generated"]:
+        return {
+            "stale": True,
+            "reason": "se ha editado algo después de generar el índice",
+            "disk": found, "indexed": indexed,
+        }
+    return {"stale": False, "reason": None, "disk": found, "indexed": indexed}
+
+
 def unchanged(root, data):
     """True when what is on disk already matches ``data`` byte for byte."""
     for name, payload in data.items():

@@ -47,6 +47,14 @@ from . import yamlio
 CONTENT = "content"
 PROBLEMS = "problems"
 COURSES = "courses"
+
+#: Los ficheros que hacen que un directorio sea una unidad, una asignatura o
+#: un curso académico. Con nombre porque no solo los lee el escáner: contar
+#: cuántos hay es como se sabe, sin abrir ninguno, si el índice sigue
+#: describiendo lo que hay en el disco.
+UNIT_META = "unit.yaml"
+COURSE_META = "course.yaml"
+YEAR_META = "year.yaml"
 SHARED = "shared"
 SETTINGS = "didacta.yaml"
 
@@ -294,7 +302,7 @@ class Unit:
 def load_unit(root, relpath, settings):
     """Read one unit directory."""
     directory = os.path.join(root, relpath)
-    meta_path = os.path.join(directory, "unit.yaml")
+    meta_path = os.path.join(directory, UNIT_META)
     warnings = []
 
     data = yamlio.load_file(meta_path) if os.path.isfile(meta_path) else {}
@@ -531,7 +539,7 @@ class Course:
 def load_course(root, course_dir, settings):
     """Read one course directory, including every year in it."""
     directory = os.path.join(root, COURSES, course_dir)
-    meta_path = os.path.join(directory, "course.yaml")
+    meta_path = os.path.join(directory, COURSE_META)
     data = yamlio.load_file(meta_path) if os.path.isfile(meta_path) else {}
 
     course = Course(
@@ -561,7 +569,7 @@ def load_course(root, course_dir, settings):
 
 def load_year(root, course, year, directory, settings):
     """Read one academic year: its selection, order and documents."""
-    meta_path = os.path.join(directory, "year.yaml")
+    meta_path = os.path.join(directory, YEAR_META)
     data = yamlio.load_file(meta_path) if os.path.isfile(meta_path) else {}
 
     entry = CourseYear(
