@@ -291,6 +291,33 @@ class _ProcessCompiler implements Compiler {
   }
 
   @override
+  Future<({bool stale, String? reason})> indexStale() async {
+    // `--stale` sale con 1 cuando lo está, y eso no es un fallo de la
+    // llamada: es la respuesta.
+    final output = await _run([
+      'index',
+      '--stale',
+      '--json',
+    ], allowFailure: true);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (error) {
+      throw CompileException(
+        'El motor no dijo si el índice está al día.',
+        detail: output.trim(),
+      );
+    }
+    return (
+      stale: decoded['stale'] == true,
+      reason: decoded['reason'] as String?,
+    );
+  }
+
+  @override
+  Future<String> reindex() => _run(['index']);
+
+  @override
   Future<Map<String, List<ExistingOutput>>> builtOutputs() async {
     final output = await _run(['preview', '--built', '--json']);
     final Map<String, dynamic> decoded;

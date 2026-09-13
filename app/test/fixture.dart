@@ -352,6 +352,24 @@ class FakeCompiler implements Compiler {
   @override
   Future<List<ExistingOutput>> outputsFor(String unitPath) async => existing;
 
+  /// Si el índice está viejo, y por qué.
+  ({bool stale, String? reason}) staleIndex = (stale: false, reason: null);
+
+  int reindexCalls = 0;
+
+  @override
+  Future<({bool stale, String? reason})> indexStale() async => staleIndex;
+
+  @override
+  Future<String> reindex() async {
+    reindexCalls += 1;
+    commands.add(const ['index']);
+    if (failWith != null) throw failWith!;
+    // Regenerar deja de estar viejo, como el de verdad.
+    staleIndex = (stale: false, reason: null);
+    return 'generated';
+  }
+
   /// Lo que la biblioteca cree que hay compilado.
   Map<String, List<ExistingOutput>> built = const {};
 

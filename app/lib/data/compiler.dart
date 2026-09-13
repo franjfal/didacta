@@ -212,6 +212,16 @@ abstract class Compiler {
     bool fast = false,
   });
 
+  /// Si el índice de `generated/` ya no describe lo que hay en el disco.
+  ///
+  /// Barato: el motor cuenta ficheros y mira fechas, sin abrir ninguno. Se
+  /// pregunta en cada arranque, así que tres segundos de generar el índice
+  /// para saberlo no valdrían.
+  Future<({bool stale, String? reason})> indexStale();
+
+  /// Regenera el índice. Devuelve lo que el motor imprimió.
+  Future<String> reindex();
+
   /// Qué hay compilado en toda la biblioteca, de una vez.
   ///
   /// Una llamada y no una por unidad: la biblioteca lista dos mil, y lo que
