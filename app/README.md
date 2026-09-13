@@ -145,8 +145,13 @@ Cosas que salieron de mirar los datos reales, no de suponer:
 - **traducción se ordena por cuántos documentos usan cada unidad.** Con más
   huecos de los que nadie va a cerrar, una lista alfabética no es una cola de
   trabajo: es un reproche;
-- **el editor de un idioma que no existe arranca con el original debajo**, para
-  que quien traduce tenga el texto delante en vez de una página en blanco.
+- **el editor de un idioma que no existe arranca vacío y marcado en rojo.**
+  Arrancaba con el original debajo, para que quien traduce tuviera el texto
+  delante; el efecto era el contrario del buscado, porque abrir la pestaña de
+  valenciano y ver castellano se lee como «ya está traducida», y un guardado
+  distraído archiva el castellano como si fuera la traducción. El texto
+  delante lo da la vista lado a lado, donde el original se ve y no se puede
+  guardar por error.
 
 ## Compilar en escritorio
 

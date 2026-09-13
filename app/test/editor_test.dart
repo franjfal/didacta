@@ -152,22 +152,61 @@ void main() {
     expect(find.text('Mi versión'), findsOneWidget);
   });
 
-  testWidgets('a language that does not exist opens from the original', (
+  testWidgets('un idioma que no existe se abre vacío y marcado', (
     tester,
   ) async {
-    // A translator should have the source text in front of them, not a blank
-    // page.
+    // Antes se abría con el original debajo, para que quien traduce tuviera
+    // el texto delante. El efecto era el contrario: abrir «va» y ver
+    // castellano se lee como «ya está traducida», y guardar sin darse cuenta
+    // archiva el castellano como si fuera la traducción.
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 
     await tester.tap(find.text('va'));
     await settle(tester);
 
-    expect(find.textContaining('Traducción pendiente'), findsOneWidget);
+    // Vacío: ni el original ni una plantilla.
     expect(
       find.textContaining('El contenido original en castellano.'),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(find.textContaining('Traducción pendiente'), findsNothing);
+
+    // Y dicho: qué falta y qué pasa mientras tanto.
+    expect(find.textContaining('No existe la versión en va'), findsOneWidget);
+    expect(find.textContaining('compilará con la de es'), findsOneWidget);
+  });
+
+  testWidgets('y el original sigue a un clic, al lado', (tester) async {
+    // La razón de copiarlo era buena --traducir con el texto delante-- y la
+    // vista lado a lado ya la cubre, con la diferencia de que ahí el original
+    // se ve y no se puede guardar por error como si fuera la traducción.
+    final gateway = FakeGateway();
+    await pumpEditor(tester, gateway: gateway);
+
+    await tester.tap(find.text('va'));
+    await settle(tester);
+    // Dos: el botón de arriba y la frase que lo señala.
+    expect(find.textContaining('lado a lado'), findsNWidgets(2));
+  });
+
+  testWidgets('guardar vacío no crea un fichero vacío', (tester) async {
+    // El botón tiene que estar apagado: un `va.tex` vacío cuenta como
+    // traducción existente, y a partir de ahí la unidad dice que está
+    // traducida a un idioma en el que no hay nada.
+    final gateway = FakeGateway();
+    await pumpEditor(tester, gateway: gateway);
+
+    await tester.tap(find.text('va'));
+    await settle(tester);
+
+    expect(
+      tester
+          .widget<FilledButton>(find.byKey(const Key('editor-save')))
+          .onPressed,
+      isNull,
+    );
+    expect(gateway.commits, isEmpty);
   });
 
   testWidgets('saving a new language suggests adding, not editing', (
@@ -291,10 +330,10 @@ void main() {
           .where((button) => button.onPressed != null)
           .length;
 
-      // De entrada hay uno vivo, y no es un fallo: el panel del inglés no
-      // existe, así que se abre precargado desde el original y tiene algo
-      // que guardar desde el primer momento.
-      expect(liveSaves(), 1);
+      // Ninguno de entrada. El panel del inglés no existe, pero se abre
+      // vacío: una pestaña que nadie ha tocado no puede parecer que tiene
+      // algo sin guardar.
+      expect(liveSaves(), 0);
 
       await tester.enterText(
         find.byType(TextField).first,
@@ -302,8 +341,8 @@ void main() {
       );
       await settle(tester);
 
-      // Uno más, y solo uno: el valenciano sigue como estaba.
-      expect(liveSaves(), 2);
+      // Uno, y solo uno: el valenciano sigue como estaba.
+      expect(liveSaves(), 1);
       expect(find.text('Cambiado el castellano.'), findsOneWidget);
       expect(find.text('El original en valencià.'), findsOneWidget);
     });

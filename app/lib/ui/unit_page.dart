@@ -562,19 +562,21 @@ class _LanguageEditor {
     onChanged();
     try {
       if (!exists) {
-        // A language that does not exist yet is a new file, not an error. It
-        // starts from the reference version so a translator has the original
-        // in front of them rather than a blank page.
-        final reference = unit.statusIn(unit.reference).exists
-            ? await session.gateway.read(unit.fileFor(unit.reference))
-            : null;
+        // Vacío, y no con el original debajo.
+        //
+        // Empezaba copiando la versión de referencia para que quien traduce
+        // tuviera el texto delante, y el efecto era el contrario del
+        // buscado: abrir la pestaña de valenciano y ver castellano se lee
+        // como «ya está traducida», y un descuido al guardar deja el
+        // castellano archivado como si fuera la traducción. Ahora la
+        // pestaña está vacía y lo dice en rojo.
+        //
+        // Tener el original delante sigue siendo lo correcto para traducir,
+        // pero eso es lo que hace la vista lado a lado, donde el original se
+        // ve y **no se puede guardar por error** como si fuera otro idioma.
         file = ContentFile(path: unit.fileFor(language), text: '', sha: '');
         _loadedText = '';
-        controller.text = reference == null
-            ? ''
-            : '%% Traducción pendiente. El original en '
-                  '${unit.reference} está debajo; sustitúyelo.\n'
-                  '${reference.text}';
+        controller.text = '';
       } else {
         final loaded = await session.gateway.read(unit.fileFor(language));
         file = loaded;
@@ -681,6 +683,19 @@ class _EditorView extends StatelessWidget {
               'El fichero ha cambiado en el repositorio desde que lo abriste. '
               'Vuelve a cargarlo para no sobrescribir el trabajo de otra '
               'persona; tu texto sigue aquí mientras decides.',
+              tone: didactaTeacher,
+            ),
+          )
+        else if (!editor.exists)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Note(
+              'No existe la versión en $language de esta unidad. Lo que se '
+              'escriba aquí la crea, y hasta entonces cualquier documento '
+              'que la use compilará con la de ${unit.reference} y un aviso.'
+              '${canWrite ? '\n\nPara traducir con el original delante, '
+                        'marca «lado a lado» arriba: así se ve al lado y no '
+                        'se puede guardar por error como si fuera esta.' : ''}',
               tone: didactaTeacher,
             ),
           ),
