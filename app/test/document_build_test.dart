@@ -90,7 +90,7 @@ void main() {
     await tester.tap(find.text('Compilar'));
     await settle(tester);
 
-    await tester.tap(find.textContaining('Compilar').last);
+    await tester.tap(find.byKey(const Key('compile')));
     await settle(tester);
 
     // La referencia que usa el motor: `curso@año/documento`. Los ids se
@@ -131,7 +131,7 @@ void main() {
     await pumpDocument(tester, compiler: compiler);
     await tester.tap(find.text('Compilar'));
     await settle(tester);
-    await tester.tap(find.textContaining('Compilar').last);
+    await tester.tap(find.byKey(const Key('compile')));
     await settle(tester);
 
     // Una pestaña por versión; los dos idiomas de las diapositivas van
@@ -169,5 +169,55 @@ void main() {
 
     expect(find.text('Normas'), findsOneWidget, reason: 'el apartado');
     expect(find.text('teoría'), findsWidgets, reason: 'el tipo, con su nombre');
+  });
+
+  group('sin traducir no se compila', () {
+    // Compilar un tema en valenciano con cinco unidades en castellano da un
+    // PDF que no se puede llevar a clase. Antes salía igual, con un aviso
+    // dentro; ahora no sale, y en su lugar está la lista de lo que falta.
+
+    Future<void> chooseLanguage(WidgetTester tester, String code) async {
+      await tester.tap(find.text('Compilar'));
+      await settle(tester);
+      await tester.tap(find.widgetWithText(FilterChip, code));
+      await settle(tester);
+    }
+
+    testWidgets('lo dice, y dice qué falta', (tester) async {
+      final compiler = await pumpDocument(tester);
+      await chooseLanguage(tester, 'va');
+
+      expect(find.textContaining('No se puede compilar'), findsOneWidget);
+      expect(find.textContaining('Espacios normados'), findsWidgets);
+      expect(find.textContaining('traducir a va'), findsWidgets);
+      expect(compiler.documentCalls, isEmpty);
+    });
+
+    testWidgets('y el botón está apagado', (tester) async {
+      // Enterarte de que no se puede después de esperar la compilación es la
+      // peor forma de enterarse.
+      await pumpDocument(tester);
+      await chooseLanguage(tester, 'va');
+
+      expect(
+        tester.widget<FilledButton>(find.byKey(const Key('compile'))).onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('una referencia rota no cuenta como traducción', (
+      tester,
+    ) async {
+      // `analysis/normed/no-existe` no está en el catálogo: eso es otra cosa
+      // --se dice en la composición, en rojo-- y meterla aquí haría que
+      // «traducir esto» no se pudiera terminar nunca.
+      final compiler = await pumpDocument(tester);
+      await tester.tap(find.text('Compilar'));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('compile')));
+      await settle(tester);
+
+      expect(compiler.documentCalls, hasLength(1));
+    });
   });
 }

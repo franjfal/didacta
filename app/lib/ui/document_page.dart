@@ -145,12 +145,10 @@ class _DocumentPageState extends State<DocumentPage> {
     setState(() => _open[at] = _open[at].replacing(pane.working()));
     try {
       final results = await compiler.compileDocument(
-        document: DocumentTarget(
-          courseId: courseId,
-          year: year,
-          documentId: documentId,
-          language: language,
-        ).reference,
+        // La referencia que usa el motor. Aquí no hace falta el documento
+        // entero: lo que falte por traducir ya lo bloqueó la pantalla de
+        // compilar, y este panel salió de una compilación que sí pudo.
+        document: '$courseId@$year/$documentId',
         profiles: [pane.profile],
         languages: [language],
       );
@@ -296,6 +294,7 @@ class _DocumentPageState extends State<DocumentPage> {
             year: year,
             documentId: documentId,
             language: language,
+            document: document,
           ),
           session: session,
           onChanged: () {

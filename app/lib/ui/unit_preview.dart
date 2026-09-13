@@ -31,6 +31,7 @@ import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'pdf_tab.dart';
+import 'missing_translations.dart';
 import 'theme.dart';
 
 /// El estado de compilar una unidad.
@@ -54,6 +55,13 @@ abstract class PreviewTarget {
   /// El idioma marcado de entrada.
   String get defaultLanguage;
 
+  /// Qué falta por traducir para poder compilar en [language].
+  ///
+  /// Vacío es «se puede compilar». No vacío es que **no se compila**: lo que
+  /// saldría es un documento con partes en otro idioma, y eso no se lleva a
+  /// un aula. La lista es el trabajo que queda.
+  List<MissingPiece> missingIn(Catalogue catalogue, String language);
+
   /// Las versiones que admite, con las suyas marcadas.
   Future<List<BuildableProfile>> profilesFrom(Compiler compiler);
 
@@ -76,6 +84,18 @@ class UnitTarget implements PreviewTarget {
 
   @override
   String get defaultLanguage => unit.reference;
+
+  /// Una unidad suelta se previsualiza igual.
+  ///
+  /// La regla de no compilar sin traducción es del documento: lo que sale de
+  /// ahí es lo que se proyecta en clase, y un tema con cinco páginas en otro
+  /// idioma no se lleva a un aula. Una unidad suelta es lo contrario: se
+  /// mira para ver cómo queda, el motor marca en el PDF que ese idioma
+  /// falta, y quitar el botón dejaría sin forma de ver el original mientras
+  /// se traduce.
+  @override
+  List<MissingPiece> missingIn(Catalogue catalogue, String language) =>
+      const [];
 
   @override
   Future<List<BuildableProfile>> profilesFrom(Compiler compiler) =>
@@ -111,12 +131,20 @@ class DocumentTarget implements PreviewTarget {
     required this.year,
     required this.documentId,
     required this.language,
+    required this.document,
   });
 
   final String courseId;
   final String year;
   final String documentId;
   final String language;
+
+  /// El documento, para saber qué unidades lleva dentro.
+  final Document document;
+
+  @override
+  List<MissingPiece> missingIn(Catalogue catalogue, String language) =>
+      missingFor(document, catalogue, language);
 
   /// Cómo nombra el motor a un documento: `curso@año/documento`. Los ids se
   /// repiten entre asignaturas --hay nueve «capitulo-1»-- así que el nombre
@@ -275,6 +303,23 @@ class PreviewState {
     onChanged();
   }
 
+  /// Lo que falta por traducir de los idiomas elegidos.
+  ///
+  /// Vacío es «se puede compilar». Se mira aquí y no al pulsar porque el
+  /// botón tiene que estar apagado antes: enterarte de que no se puede
+  /// después de esperar la compilación es la peor forma de enterarse.
+  Map<String, List<MissingPiece>> get blocked {
+    final catalogue = session.catalogueOrNull;
+    if (catalogue == null) return const {};
+    final found = <String, List<MissingPiece>>{};
+    for (final code in catalogue.languages) {
+      if (!languages.contains(code)) continue;
+      final missing = target.missingIn(catalogue, code);
+      if (missing.isNotEmpty) found[code] = missing;
+    }
+    return found;
+  }
+
   /// Cuántas salidas produciría compilar ahora: perfiles por idiomas.
   int get outputCount => chosen.length * languages.length;
 
@@ -307,6 +352,10 @@ class PreviewState {
   Future<void> compile() async {
     final compiler = session.compiler();
     if (compiler == null || chosen.isEmpty || languages.isEmpty) return;
+    // Nunca a medias: si falta una traducción de las elegidas, no se compila
+    // ninguna. Compilar «las que se puedan» dejaría a alguien con la mitad
+    // de lo que pidió y sin saber qué mitad.
+    if (blocked.isNotEmpty) return;
     building = true;
     problem = null;
     results = const [];
@@ -376,13 +425,16 @@ class UnitPreview extends StatelessWidget {
           building: state.building,
           onToggle: state.toggle,
           onLanguage: state.toggleLanguage,
-          onCompile: state.chosen.isEmpty || state.building
+          onCompile:
+              state.chosen.isEmpty || state.building || state.blocked.isNotEmpty
               ? null
               : state.compile,
         ),
         Expanded(
           child: state.problem != null
               ? _Failure(problem: state.problem!)
+              : state.blocked.isNotEmpty
+              ? MissingTranslations(byLanguage: state.blocked)
               : _Results(
                   results: state.results,
                   existing: state.existing,

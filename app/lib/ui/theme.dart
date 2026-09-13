@@ -606,17 +606,29 @@ class KindChip extends StatelessWidget {
   /// Para una entrada desactivada, que sigue en su sitio pero no se da.
   final bool faded;
 
+  /// Todos del mismo ancho.
+  ///
+  /// «teoría», «ejemplo» y «problemas» no miden lo mismo, y con el ancho del
+  /// texto los títulos de al lado empiezan cada uno en un sitio: una columna
+  /// de cuarenta filas en la que nada está alineado se lee peor que una sin
+  /// etiquetas. Cabe la palabra más larga que usa el repositorio.
+  static const double width = 74;
+
   @override
   Widget build(BuildContext context) {
     final colour = kindColour(kind);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      width: width,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
       decoration: BoxDecoration(
         color: colour.withValues(alpha: faded ? 0.06 : 0.12),
         borderRadius: BorderRadius.circular(Radii.small),
       ),
       child: Text(
         kindName(kind),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 10.5,
           height: 1.3,

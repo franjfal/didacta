@@ -174,7 +174,10 @@ void main() {
 
     // Y dicho: qué falta y qué pasa mientras tanto.
     expect(find.textContaining('No existe la versión en va'), findsOneWidget);
-    expect(find.textContaining('compilará con la de es'), findsOneWidget);
+    expect(
+      find.textContaining('ningún documento que la use se puede compilar'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('y el original sigue a un clic, al lado', (tester) async {

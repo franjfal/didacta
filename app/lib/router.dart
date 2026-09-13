@@ -54,7 +54,10 @@ GoRouter buildRouter(Session session) {
             // is what lets a unit path stay readable in the address bar.
             path: '/unit/:path(.*)',
             pageBuilder: (context, state) => NoTransitionPage(
-              child: UnitPage(unitPath: state.pathParameters['path'] ?? ''),
+              child: UnitPage(
+                unitPath: state.pathParameters['path'] ?? '',
+                language: state.uri.queryParameters['lang'],
+              ),
             ),
           ),
           GoRoute(
@@ -105,7 +108,13 @@ class Routes {
 
   static String library() => '/';
 
-  static String unit(String path) => '/unit/$path';
+  /// Una unidad. Con [language], abierta en ese idioma.
+  ///
+  /// Hace falta para «esto falta por traducir»: llevar a la unidad y dejar
+  /// que abra el idioma de siempre obligaría a buscar la pestaña, que es
+  /// justo el paso que sobra cuando se viene de una lista de lo que falta.
+  static String unit(String path, {String? language}) =>
+      language == null ? '/unit/$path' : '/unit/$path?lang=$language';
 
   static String courses() => '/courses';
 
