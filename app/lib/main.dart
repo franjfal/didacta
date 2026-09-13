@@ -247,6 +247,11 @@ class _BootstrapState extends State<_Bootstrap> {
               if (!widget.firebaseReady) const _FirebaseBanner(),
               if (session.catalogue.errors.isNotEmpty)
                 _ErrorBanner(errors: session.catalogue.errors),
+              if (session.indexNote != null)
+                _IndexBanner(
+                  note: session.indexNote!,
+                  onDismiss: session.dismissIndexNote,
+                ),
               Expanded(child: child ?? const SizedBox.shrink()),
             ],
           ),
@@ -298,6 +303,53 @@ class _FirebaseBanner extends StatelessWidget {
 ///
 /// Surfaced rather than swallowed: an interface built on a repository that
 /// does not load cleanly should say so.
+/// Que el índice se ha regenerado, o que no se ha podido.
+///
+/// Se enseña porque cambia lo que la biblioteca lista. Quien acaba de mover
+/// una carpeta tiene que ver que la aplicación se ha enterado; y quien no ha
+/// tocado nada, enterarse de que alguien sí.
+class _IndexBanner extends StatelessWidget {
+  const _IndexBanner({required this.note, required this.onDismiss});
+
+  final String note;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: const Color(0xFFEFF5EC),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(14, 5, 6, 5),
+      child: Row(
+        children: [
+          const Icon(Icons.autorenew, size: 15, color: didactaAccentDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              note,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ),
+          // Sin `Tooltip` y sin `IconButton`: esta franja vive **por
+          // encima** del Navigator, donde no hay Overlay, y un tooltip ahí
+          // arriba revienta la construcción entera. Un gesto y un icono
+          // hacen lo mismo sin pedir nada.
+          InkResponse(
+            key: const Key('dismiss-index-note'),
+            onTap: onDismiss,
+            radius: 16,
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(Icons.close, size: 15, color: didactaMuted),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _ErrorBanner extends StatelessWidget {
   const _ErrorBanner({required this.errors});
 

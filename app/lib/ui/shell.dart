@@ -370,13 +370,38 @@ class _Mark extends StatelessWidget {
 /// Always present. The alternative -- surfacing it only when something fails
 /// -- means the first time anyone learns they are in read-only mode is when
 /// they lose an edit.
-class _GatewayStrip extends StatelessWidget {
+class _GatewayStrip extends StatefulWidget {
   const _GatewayStrip({required this.gateway});
 
   final ContentGateway gateway;
 
   @override
+  State<_GatewayStrip> createState() => _GatewayStripState();
+}
+
+class _GatewayStripState extends State<_GatewayStrip> {
+  bool _busy = false;
+
+  Future<void> _refresh(Session session) async {
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await session.refreshEverything();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Actualizado desde el disco.')),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final gateway = widget.gateway;
+    // Leída aquí y no dentro del `onPressed`: `watch` solo vale mientras se
+    // construye, y llamarlo desde una pulsación lanza --y el botón no hacía
+    // nada sin decir por qué.
+    final session = watchSession(context);
     final (icon, colour) = switch (gateway.kind) {
       GatewayKind.direct => (Icons.vpn_key_outlined, didactaAccentDark),
       GatewayKind.api =>
@@ -419,6 +444,29 @@ class _GatewayStrip extends StatelessWidget {
                     'solo lectura',
                     style: TextStyle(fontSize: 10.5, color: didactaMuted),
                   ),
+                ),
+              // Actualizar, aquí, porque esta barra es lo que dice de dónde
+              // sale lo que se está viendo: el sitio donde se pregunta «¿esto
+              // es lo que hay en el disco?» es el mismo donde se contesta.
+              if (session.canCompile)
+                SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: _busy
+                      ? const Padding(
+                          padding: EdgeInsets.all(6),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : IconButton(
+                          key: const Key('refresh-everything'),
+                          tooltip:
+                              'Actualizar: releer el disco y regenerar el '
+                              'índice  ⌘R',
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.refresh, size: 15),
+                          onPressed: () => _refresh(session),
+                        ),
                 ),
             ],
           ),

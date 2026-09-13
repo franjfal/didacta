@@ -183,15 +183,15 @@ class _MacMenus extends StatelessWidget {
             PlatformMenuItemGroup(
               members: [
                 PlatformMenuItem(
-                  label: 'Recargar el catálogo',
+                  label: 'Actualizar desde el disco',
                   shortcut: const SingleActivator(
                     LogicalKeyboardKey.keyR,
                     meta: true,
                   ),
                   onSelected: () => _run(
                     context,
-                    session.reloadCatalogue,
-                    'Catálogo recargado',
+                    session.refreshEverything,
+                    'Actualizado desde el disco',
                   ),
                 ),
                 PlatformMenuItem(

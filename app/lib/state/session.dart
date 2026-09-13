@@ -186,6 +186,76 @@ class Session extends ChangeNotifier {
   /// Dónde está TeX, si se ha tenido que decir a mano.
   String? get texPath => _texPath;
 
+  /// Lo que pasó con el índice la última vez que se miró.
+  ///
+  /// Null cuando no había nada que decir. Se enseña porque regenerarlo
+  /// cambia lo que la biblioteca lista, y un cambio así no puede ocurrir en
+  /// silencio: quien acaba de mover una carpeta tiene que ver que la
+  /// aplicación se ha enterado.
+  String? get indexNote => _indexNote;
+  String? _indexNote;
+
+  void dismissIndexNote() {
+    _indexNote = null;
+    notifyListeners();
+  }
+
+  /// Si el índice sigue describiendo el disco; si no, lo regenera.
+  ///
+  /// [force] lo regenera igual, que es lo que hace el botón de actualizar:
+  /// pedirlo a mano significa «ponlo como está el disco», no «mira a ver».
+  ///
+  /// Devuelve si lo regeneró, que es cuando hay que volver a leerlo.
+  Future<bool> refreshIndex({bool force = false}) async {
+    final compiler = this.compiler();
+    if (compiler == null) return false;
+    try {
+      final why = force
+          ? (stale: true, reason: 'a mano')
+          : await compiler.indexStale();
+      if (!why.stale) return false;
+      await compiler.reindex();
+      _indexNote = force
+          ? 'Índice actualizado.'
+          : 'El índice no describía lo que hay en el disco '
+                '(${why.reason}), así que se ha regenerado.';
+      notifyListeners();
+      return true;
+    } catch (error) {
+      // No poder regenerarlo no puede impedir arrancar: se lee el que hay y
+      // se dice que puede no corresponder.
+      _indexNote =
+          'El índice puede estar desactualizado y no se ha podido '
+          'regenerar: $error';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// El botón de actualizar: el índice, el catálogo y lo compilado.
+  Future<void> refreshEverything() async {
+    // Buscar el motor solo si no hay: encontrarlo es mirar el disco, y
+    // hacerlo cuando ya tenemos uno es trabajo por nada.
+    if (compiler() == null) await _findEngine();
+    await refreshIndex(force: true);
+    await reloadCatalogue();
+    await refreshBuilt();
+  }
+
+  /// Busca el motor y lo recuerda.
+  Future<void> _findEngine() async {
+    if (!Compiler.supported) return;
+    try {
+      _enginePath = await Compiler.discover(
+        configured: await preferences.enginePath(),
+        repositoryPath: _clonePath,
+      );
+    } catch (error) {
+      // No encontrarlo no para nada: la pantalla de compilar lo dice.
+      _enginePath = null;
+    }
+  }
+
   /// Qué hay compilado, por unidad.
   ///
   /// En la sesión y no en la pantalla porque la pregunta la hace la
@@ -361,6 +431,21 @@ class Session extends ChangeNotifier {
       _accessProblem = error;
     }
     await refreshAccess();
+
+    // El índice, después de pintar.
+    //
+    // Es un fichero generado que describe el disco, y el disco cambia entre
+    // arranques: mover `content/` a otro sitio deja un índice que habla de
+    // dos mil unidades que ya no están, y la biblioteca las enseñaba tan
+    // contenta. Preguntar cuesta una décima --el motor cuenta ficheros, no
+    // los abre-- y solo se regenera cuando hace falta.
+    //
+    // Después y no antes a propósito: buscar el motor y hablar con él es
+    // lanzar procesos, y ponerlo delante de la primera pantalla haría que un
+    // motor lento o ausente retrasara el arranque entero. Así la biblioteca
+    // aparece con lo que había y se corrige sola un segundo después, con el
+    // aviso diciendo qué ha cambiado.
+    if (await refreshIndex()) await reloadCatalogue();
   }
 
   Object? _settingsProblem;
@@ -418,19 +503,9 @@ class Session extends ChangeNotifier {
 
     _gateway = await _deriveGateway();
 
-    if (Compiler.supported) {
-      try {
-        _enginePath = await Compiler.discover(
-          configured: await preferences.enginePath(),
-          repositoryPath: _clonePath,
-        );
-      } catch (error) {
-        // Looking for the engine must not stop the app: not finding it means
-        // the compile screen says so, not that nothing loads.
-        _enginePath = null;
-        _accessProblem ??= error;
-      }
-    }
+    // Solo si no hay: buscar el motor es mirar el disco, y una vez
+    // encontrado no hace falta volver a buscarlo en cada refresco.
+    if (compiler() == null) await _findEngine();
 
     notifyListeners();
   }
