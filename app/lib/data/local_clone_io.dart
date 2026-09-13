@@ -395,6 +395,15 @@ class _GitClone implements LocalClone {
   }
 
   @override
+  Future<void> fetch({required String token}) => _run(
+    // Solo las ramas: traerse las etiquetas de un repositorio de contenido es
+    // tráfico por nada.
+    ['fetch', '--no-tags', '--quiet'],
+    token: token,
+    what: 'mirar si hay cambios en el repositorio',
+  );
+
+  @override
   Future<void> pull({required String token}) => _run(
     // `--ff-only`: a merge commit made behind someone's back is not a
     // thing an editor should produce. Diverged history is a conversation,

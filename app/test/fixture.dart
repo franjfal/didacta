@@ -498,7 +498,16 @@ class FakeCompiler implements Compiler {
 /// desde la pantalla es otra cosa --qué se le pide y qué se enseña-- y para
 /// eso basta con recordar la petición.
 class FakeClone implements LocalClone {
-  FakeClone({this.changed = true});
+  FakeClone({this.changed = true, this.behind = 0, this.failFetch = false});
+
+  /// Commits que hay en el remoto y no aquí.
+  final int behind;
+
+  /// Sin red, sin token o sin remoto: preguntar falla y lo local sigue
+  /// valiendo.
+  final bool failFetch;
+
+  int pulls = 0;
 
   /// Si el motor cambió algo. False es el caso de borrar lo que ya no
   /// estaba: el motor termina bien, no hay commit, y la pantalla lo dice.
@@ -533,13 +542,13 @@ class FakeClone implements LocalClone {
       (name: 'Javier', email: 'javier@uv.es');
 
   @override
-  Future<CloneStatus> status() async => const CloneStatus(
+  Future<CloneStatus> status() async => CloneStatus(
     directory: '/clon',
     branch: 'main',
     head: 'abc1234',
     ahead: 0,
-    behind: 0,
-    dirtyPaths: [],
+    behind: behind,
+    dirtyPaths: const [],
   );
 
   @override
@@ -567,8 +576,16 @@ class FakeClone implements LocalClone {
   @override
   Future<void> setAuthor({required String name, required String email}) async {}
 
+  int fetches = 0;
+
   @override
-  Future<void> pull({required String token}) async {}
+  Future<void> fetch({required String token}) async {
+    fetches += 1;
+    if (failFetch) throw const CloneException('sin red');
+  }
+
+  @override
+  Future<void> pull({required String token}) async => pulls += 1;
 
   @override
   Future<void> push({required String token}) async {}
@@ -581,6 +598,7 @@ class FakeSession extends Session {
     required Catalogue catalogue,
     this.compilerOverride,
     this.adminOverride,
+    this.cloneOverride,
     this.onReload,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
@@ -602,6 +620,13 @@ class FakeSession extends Session {
   /// asignaturas, y la pantalla tiene que decirlo en lugar de ofrecer
   /// botones que no funcionan.
   final CourseAdmin? adminOverride;
+
+  /// El clon, sin git detrás.
+  final FakeClone? cloneOverride;
+
+  @override
+  LocalClone cloneAt(String directory) =>
+      cloneOverride ?? super.cloneAt(directory);
 
   /// Recargar el catálogo va a la red, que en un test no está. Cuenta las
   /// veces: crear una asignatura y no recargar es el fallo de que la

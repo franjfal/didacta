@@ -123,4 +123,79 @@ void main() {
       expect(session.reloads, 0);
     });
   });
+
+  group('el botón de actualizar', refreshTests);
+}
+
+/// El botón de actualizar, y lo que mira.
+///
+/// «Actualizar» son tres preguntas, no una: ¿ha cambiado el índice?, ¿ha
+/// cambiado el material que el índice describe?, ¿hay algo en GitHub que no
+/// está aquí? Las tres tienen que pasar cuando se pulsa, porque se pulsa
+/// justo cuando no te fías de lo que estás viendo.
+void refreshTests() {
+  test('rehace el índice aunque parezca al día, y pregunta a GitHub', () async {
+    final root = seed();
+    addTearDown(() => root.deleteSync(recursive: true));
+
+    final compiler = FakeCompiler();
+    final clone = FakeClone();
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: compiler,
+      cloneOverride: clone,
+    );
+    await session.useCloneForTest(root.path);
+
+    await session.refreshEverything();
+
+    // Un reíndice de verdad: lee todos los ficheros, que es lo que coge una
+    // edición hecha por fuera con cualquier programa.
+    expect(compiler.reindexCalls, 1);
+    expect(session.reloads, 1);
+    // Y la otra mitad.
+    expect(clone.fetches, 1);
+  });
+
+  test('lo de GitHub no se trae solo', () async {
+    // Un `pull` cambia los ficheros de debajo de quien está editando. Mirar
+    // es una decisión; traer es otra.
+    final root = seed();
+    addTearDown(() => root.deleteSync(recursive: true));
+
+    final clone = FakeClone(behind: 3);
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: FakeCompiler(),
+      cloneOverride: clone,
+    );
+    await session.useCloneForTest(root.path);
+
+    await session.refreshEverything();
+    expect(session.behind, 3);
+    expect(clone.pulls, 0, reason: 'traerlo es otra decisión');
+  });
+
+  test('sin red, lo local se actualiza igual', () async {
+    // Preguntar a GitHub puede fallar --sin red, sin token, sin remoto-- y
+    // eso no puede tirar un refresco que ya ha hecho su trabajo.
+    final root = seed();
+    addTearDown(() => root.deleteSync(recursive: true));
+
+    final compiler = FakeCompiler();
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: compiler,
+      cloneOverride: FakeClone(failFetch: true),
+    );
+    await session.useCloneForTest(root.path);
+
+    await session.refreshEverything();
+    expect(compiler.reindexCalls, 1);
+    expect(session.reloads, 1);
+    expect(session.remoteProblem, isNotNull);
+  });
 }

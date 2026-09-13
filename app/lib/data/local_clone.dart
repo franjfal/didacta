@@ -191,6 +191,14 @@ abstract class LocalClone {
     bool push = true,
   });
 
+  /// Trae de GitHub lo que haya, **sin tocar el clon**.
+  ///
+  /// Separado de `pull` a propósito: preguntar «¿hay algo nuevo?» y «tráelo»
+  /// son dos decisiones distintas, y la primera se puede hacer sola mientras
+  /// alguien trabaja. Después de esto, `status()` sabe cuántos commits hay
+  /// detrás sin volver a la red.
+  Future<void> fetch({required String token});
+
   Future<void> pull({required String token});
 
   Future<void> push({required String token});

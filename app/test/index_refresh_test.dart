@@ -144,7 +144,9 @@ void main() {
       await settle(tester);
 
       expect(compiler.reindexCalls, 1);
-      expect(find.textContaining('Actualizado desde el disco'), findsWidgets);
+      // Y dice las dos mitades: lo de este disco y lo de GitHub.
+      expect(find.textContaining('Actualizado'), findsWidgets);
+      expect(find.textContaining('GitHub'), findsWidgets);
     });
   });
 }
