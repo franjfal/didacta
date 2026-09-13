@@ -38,9 +38,14 @@ import 'tabs.dart';
 import 'theme.dart';
 
 class UnitPage extends StatefulWidget {
-  const UnitPage({super.key, required this.unitPath});
+  const UnitPage({super.key, required this.unitPath, this.language});
 
   final String unitPath;
+
+  /// El idioma en el que abrirla, si la dirección lo dice. Null es «el que
+  /// tenga más sentido», que es lo que hace falta al entrar desde la
+  /// biblioteca.
+  final String? language;
 
   @override
   State<UnitPage> createState() => _UnitPageState();
@@ -288,7 +293,11 @@ class _UnitPageState extends State<UnitPage> {
     }
 
     final languages = session.catalogue.languages;
-    _active ??= _preferredLanguage(unit, session, languages);
+    // El de la dirección manda: se llega aquí desde «esto falta por
+    // traducir», y abrir otra pestaña sería mandar a buscarla.
+    _active ??= languages.contains(widget.language)
+        ? widget.language
+        : _preferredLanguage(unit, session, languages);
 
     return Column(
       children: [
@@ -691,8 +700,8 @@ class _EditorView extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Note(
               'No existe la versión en $language de esta unidad. Lo que se '
-              'escriba aquí la crea, y hasta entonces cualquier documento '
-              'que la use compilará con la de ${unit.reference} y un aviso.'
+              'escriba aquí la crea, y hasta entonces ningún documento que '
+              'la use se puede compilar en $language.'
               '${canWrite ? '\n\nPara traducir con el original delante, '
                         'marca «lado a lado» arriba: así se ve al lado y no '
                         'se puede guardar por error como si fuera esta.' : ''}',
