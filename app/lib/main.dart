@@ -27,6 +27,8 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:file_selector/file_selector.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -169,10 +171,29 @@ class DidactaApp extends StatefulWidget {
 }
 
 class _DidactaAppState extends State<DidactaApp> {
+  /// Al volver a la ventana, mirar el disco.
+  ///
+  /// El vigilante del sistema de ficheros se pierde eventos --un `mv`
+  /// atómico, un volumen de red-- y no avisa de que se los ha perdido. Volver
+  /// a la aplicación después de tocar algo por fuera es exactamente cuando
+  /// hay que comprobarlo, y cuesta dos `stat`.
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onShow: () => unawaited(widget.session.checkDisk()),
+    onRestart: () => unawaited(widget.session.checkDisk()),
+  );
+
   @override
   void initState() {
     super.initState();
     widget.session.start();
+    // Tocarlo es crearlo: el oyente se suscribe al construirse.
+    _lifecycle;
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   @override
