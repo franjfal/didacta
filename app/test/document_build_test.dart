@@ -158,4 +158,16 @@ void main() {
     await pumpDocument(tester);
     expect(find.text('Espacios normados'), findsOneWidget);
   });
+
+  testWidgets('la composición se ve por apartados, y con el tipo de cada uno', (
+    tester,
+  ) async {
+    // Dos preguntas que una lista plana no contesta: dónde acaba un bloque y
+    // empieza otro, y cuál de estas filas es la explicación y cuál el
+    // ejercicio.
+    await pumpDocument(tester);
+
+    expect(find.text('Normas'), findsOneWidget, reason: 'el apartado');
+    expect(find.text('teoría'), findsWidgets, reason: 'el tipo, con su nombre');
+  });
 }

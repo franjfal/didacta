@@ -25,6 +25,7 @@ import '../model/line_diff.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'commit_dialog.dart';
+import 'heading_title.dart';
 import 'theme.dart';
 
 class CompositionEditor extends StatefulWidget {
@@ -178,6 +179,13 @@ class _CompositionEditorState extends State<CompositionEditor> {
                     session: session,
                     enabled: canWrite,
                     position: _positionOf(index),
+                    // Dónde está la fila dentro de su apartado, para que la
+                    // lista se lea como tarjetas. La lista sigue siendo una
+                    // sola, que es lo que permite arrastrar dentro de un
+                    // apartado y de un apartado a otro sin nada especial:
+                    // anidar listas para dibujar tarjetas habría comprado el
+                    // aspecto al precio de la función.
+                    place: _placeOf(index),
                     onToggle: () => _apply([
                       for (var i = 0; i < _entries.length; i += 1)
                         i == index
@@ -190,10 +198,10 @@ class _CompositionEditorState extends State<CompositionEditor> {
                     onInsertHeading: (kind) =>
                         _insertAt(index, _newHeading(kind)),
                     onInsertUnit: () => _insertUnit(context, index),
-                    onRename: (text) => _apply([
+                    onTitles: (titles) => _apply([
                       for (var i = 0; i < _entries.length; i += 1)
                         i == index
-                            ? _entries[i].withTitle(session.language, text)
+                            ? _retitle(_entries[i], titles)
                             : _entries[i],
                     ]),
                   ),
@@ -206,6 +214,19 @@ class _CompositionEditorState extends State<CompositionEditor> {
           ),
       ],
     );
+  }
+
+  /// Dónde cae una fila dentro de su apartado.
+  _Place _placeOf(int index) {
+    final entry = _entries[index];
+    if (!entry.isReference) {
+      return entry.kind == EntryKind.section ? _Place.section : _Place.inside;
+    }
+    // La última de su apartado es la que cierra la tarjeta: la que va justo
+    // antes de otro apartado, o la última de todas.
+    final next = index + 1 < _entries.length ? _entries[index + 1] : null;
+    final closes = next == null || next.kind == EntryKind.section;
+    return closes ? _Place.last : _Place.inside;
   }
 
   /// The number shown against an entry: its place among the active ones, so
@@ -325,6 +346,21 @@ class _CompositionEditorState extends State<CompositionEditor> {
   }
 
   void _addHeading(EntryKind kind) => _apply([..._entries, _newHeading(kind)]);
+
+  /// Aplica los títulos de todos los idiomas a la vez.
+  ///
+  /// Uno en blanco no borra el apartado: se queda como pendiente, que es lo
+  /// que el fichero ya sabía decir con `# TODO: va` y lo que hace que la
+  /// pantalla de traducción lo cuente.
+  StructureEntry _retitle(StructureEntry entry, Map<String, String> titles) {
+    var updated = entry;
+    for (final language in widget.session.catalogue.languages) {
+      final text = titles[language] ?? '';
+      if (text.isEmpty) continue;
+      updated = updated.withTitle(language, text);
+    }
+    return updated;
+  }
 
   Future<void> _save() async {
     final message = await showDialog<String>(
@@ -517,6 +553,18 @@ class _Bar extends StatelessWidget {
   }
 }
 
+/// Dónde cae una fila dentro de la tarjeta de su apartado.
+enum _Place {
+  /// La cabecera: abre la tarjeta.
+  section,
+
+  /// Una fila más, entre la cabecera y el cierre.
+  inside,
+
+  /// La última del apartado: cierra la tarjeta.
+  last,
+}
+
 class _EntryRow extends StatelessWidget {
   const _EntryRow({
     super.key,
@@ -525,9 +573,10 @@ class _EntryRow extends StatelessWidget {
     required this.session,
     required this.enabled,
     required this.position,
+    required this.place,
     required this.onToggle,
     required this.onRemove,
-    required this.onRename,
+    required this.onTitles,
     required this.onInsertHeading,
     required this.onInsertUnit,
   });
@@ -537,9 +586,12 @@ class _EntryRow extends StatelessWidget {
   final Session session;
   final bool enabled;
   final int? position;
+  final _Place place;
   final VoidCallback onToggle;
   final VoidCallback onRemove;
-  final ValueChanged<String> onRename;
+
+  /// Los títulos del apartado, todos a la vez.
+  final ValueChanged<Map<String, String>> onTitles;
 
   /// Insertar **encima de esta fila**. Es lo que convierte «añadir un
   /// apartado» en algo útil al reestructurar: el apartado va delante de la
@@ -555,10 +607,31 @@ class _EntryRow extends StatelessWidget {
         : null;
     final broken = entry.isReference && unit == null;
 
+    // La tarjeta del apartado, dibujada fila a fila: la cabecera pone el
+    // borde de arriba y las esquinas, las de dentro solo los lados, y la
+    // última cierra por abajo. Parece una tarjeta y sigue siendo una lista,
+    // que es lo que deja arrastrar de un apartado a otro.
+    final head = place == _Place.section;
+    final closes = place == _Place.last;
+    const radius = Radius.circular(Radii.card);
+
     return Container(
+      margin: EdgeInsets.fromLTRB(8, head ? 10 : 0, 8, closes ? 4 : 0),
       decoration: BoxDecoration(
-        color: off ? didactaPanel : Colors.white,
-        border: const Border(bottom: BorderSide(color: didactaRule)),
+        color: off
+            ? didactaPanel
+            : (head ? const Color(0xFFF3F6F1) : didactaCard),
+        // Borde igual por los cuatro lados: Flutter no admite un radio con
+        // lados de colores distintos, y la alternativa --dibujar cada línea
+        // a mano para que no se doblen entre filas-- es mucho enredo por un
+        // pelo de un gris que casi no se ve.
+        border: Border.all(color: didactaRule),
+        borderRadius: BorderRadius.only(
+          topLeft: head ? radius : Radius.zero,
+          topRight: head ? radius : Radius.zero,
+          bottomLeft: closes ? radius : Radius.zero,
+          bottomRight: closes ? radius : Radius.zero,
+        ),
       ),
       child: Opacity(
         opacity: off ? 0.55 : 1,
@@ -603,8 +676,9 @@ class _EntryRow extends StatelessWidget {
                   : _Heading(
                       entry: entry,
                       language: session.language,
+                      languages: session.catalogue.languages,
                       enabled: enabled,
-                      onRename: onRename,
+                      onTitles: onTitles,
                     ),
             ),
             if (enabled)
@@ -694,15 +768,12 @@ class _Reference extends StatelessWidget {
             Row(
               children: [
                 if (unit != null) ...[
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: kindColour(unit!.kind),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 7),
+                  // El tipo con su nombre, no solo con un color. Una barra
+                  // de color dice «estos dos son distintos»; no dice cuál es
+                  // la explicación y cuál el ejercicio, que es la pregunta
+                  // que se hace al mirar la composición de un tema.
+                  KindChip(kind: unit!.kind),
+                  const SizedBox(width: 8),
                 ] else
                   const Padding(
                     padding: EdgeInsets.only(right: 6),
@@ -747,91 +818,92 @@ class _Reference extends StatelessWidget {
   }
 }
 
-/// A heading, editable in place.
-class _Heading extends StatefulWidget {
+/// La cabecera de un apartado dentro de la composición.
+///
+/// El título ya no se edita en la fila. Editarlo ahí significaba editar
+/// **solo el idioma que se está mirando**, y para poner el valenciano había
+/// que cambiar de idioma toda la pantalla y volver: con los ficheros no pasa
+/// --tienen una pestaña por idioma-- y con los apartados sí, que es donde más
+/// fácil es dejarse uno. El lápiz abre los tres a la vez.
+class _Heading extends StatelessWidget {
   const _Heading({
     required this.entry,
     required this.language,
+    required this.languages,
     required this.enabled,
-    required this.onRename,
+    required this.onTitles,
   });
 
   final StructureEntry entry;
   final String language;
+  final List<String> languages;
   final bool enabled;
-  final ValueChanged<String> onRename;
-
-  @override
-  State<_Heading> createState() => _HeadingState();
-}
-
-class _HeadingState extends State<_Heading> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.entry.label(widget.language),
-  );
-
-  @override
-  void didUpdateWidget(_Heading old) {
-    super.didUpdateWidget(old);
-    final now = widget.entry.label(widget.language);
-    if (now != _controller.text && now != old.entry.label(old.language)) {
-      _controller.text = now;
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  final ValueChanged<Map<String, String>> onTitles;
 
   @override
   Widget build(BuildContext context) {
-    final isSection = widget.entry.kind == EntryKind.section;
-    final missing =
-        widget.entry.isLocalised &&
-        !widget.entry.titles.containsKey(widget.language);
+    final isSection = entry.kind == EntryKind.section;
+    final missing = entry.isLocalised && !entry.titles.containsKey(language);
+    final label = entry.label(language);
 
     return Padding(
-      padding: EdgeInsets.only(
-        top: 6,
-        bottom: 6,
-        // Indented so the shape of the document is visible at a glance.
-        left: isSection ? 0 : 18,
-      ),
+      padding: EdgeInsets.only(top: 2, bottom: 2, left: isSection ? 0 : 18),
       child: Row(
         children: [
-          Text(
-            isSection ? '§' : '§§',
-            style: const TextStyle(
-              fontSize: 12,
-              color: didactaMuted,
-              fontWeight: FontWeight.w700,
-            ),
+          Icon(
+            isSection ? Icons.folder_outlined : Icons.segment,
+            size: isSection ? 16 : 14,
+            color: didactaAccentDark,
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: TextField(
-              controller: _controller,
-              enabled: widget.enabled,
+            child: Text(
+              label.isEmpty ? 'Apartado sin título' : label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: isSection ? 14 : 13,
                 fontWeight: isSection ? FontWeight.w700 : FontWeight.w600,
-                // A heading shown in another language is marked, the way
-                // titles are elsewhere: it is not translated, it is borrowed.
+                // Un título prestado de otro idioma se marca, como en el
+                // resto de la aplicación: no está traducido, está prestado.
                 fontStyle: missing ? FontStyle.italic : null,
-                color: missing ? didactaMuted : null,
+                color: missing || label.isEmpty ? didactaMuted : null,
               ),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: missing
-                    ? 'sin traducir a ${widget.language}'
-                    : 'título del apartado',
-              ),
-              onChanged: widget.onRename,
             ),
           ),
+          // Cuántos idiomas tienen título, que es lo que dice si hay trabajo
+          // pendiente sin abrir nada.
+          if (entry.isLocalised)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Text(
+                '${entry.titles.length}/${languages.length}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: entry.titles.length == languages.length
+                      ? didactaAccentDark
+                      : didactaTeacher,
+                ),
+              ),
+            ),
+          if (enabled)
+            IconButton(
+              key: Key('edit-title-${entry.value}-$label'),
+              tooltip: 'Editar el título en todos los idiomas',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.edit_outlined, size: 15),
+              onPressed: () async {
+                final titles = await editHeadingTitles(
+                  context,
+                  heading: isSection ? 'Apartado' : 'Subapartado',
+                  languages: languages,
+                  titles: entry.titles,
+                  reference: language,
+                );
+                if (titles != null) onTitles(titles);
+              },
+            ),
         ],
       ),
     );

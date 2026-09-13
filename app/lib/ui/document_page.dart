@@ -456,20 +456,162 @@ class _Composition extends StatelessWidget {
       );
     }
 
-    return ListView.separated(
-      padding: EdgeInsets.zero,
-      itemCount: document.unitRefs.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final reference = document.unitRefs[index];
-        final unit = session.catalogue.unitByReference(reference);
-        return _CompositionRow(
-          position: index + 1,
-          reference: reference,
-          unit: unit,
-          language: language,
-        );
-      },
+    // Por apartados, en tarjetas. Una lista plana de cuarenta y dos filas
+    // dice lo que hay; no dice dónde termina un bloque y empieza otro, que
+    // es lo primero que se mira al preparar una clase.
+    final parts = document.structure;
+    if (parts.isEmpty) {
+      return ListView.separated(
+        padding: EdgeInsets.zero,
+        itemCount: document.unitRefs.length,
+        separatorBuilder: (_, _) => const Divider(height: 1),
+        itemBuilder: (context, index) {
+          final reference = document.unitRefs[index];
+          return _CompositionRow(
+            position: index + 1,
+            reference: reference,
+            unit: session.catalogue.unitByReference(reference),
+            language: language,
+          );
+        },
+      );
+    }
+
+    // Lo que va antes del primer apartado --si va algo-- en una tarjeta sin
+    // título: el documento puede empezar sin apartado, y esconderlo sería
+    // perderlo.
+    final cards = <({CompositionPart? heading, List<CompositionPart> items})>[];
+    for (final part in parts) {
+      if (part.isHeading) {
+        cards.add((heading: part, items: []));
+      } else {
+        if (cards.isEmpty) cards.add((heading: null, items: []));
+        cards.last.items.add(part);
+      }
+    }
+
+    var position = 0;
+    final numbered = <CompositionPart, int>{};
+    for (final part in parts) {
+      if (!part.isHeading) numbered[part] = ++position;
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 24),
+      itemCount: cards.length,
+      itemBuilder: (context, index) => _SectionCard(
+        heading: cards[index].heading,
+        items: cards[index].items,
+        numbers: numbered,
+        session: session,
+        language: language,
+      ),
+    );
+  }
+}
+
+/// Un apartado y lo que lleva dentro.
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.heading,
+    required this.items,
+    required this.numbers,
+    required this.session,
+    required this.language,
+  });
+
+  final CompositionPart? heading;
+  final List<CompositionPart> items;
+  final Map<CompositionPart, int> numbers;
+  final Session session;
+  final String language;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = heading?.title(language) ?? '';
+    final borrowed = heading?.titleIsFallback(language) ?? false;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: didactaCard,
+          border: Border.all(color: didactaRule),
+          borderRadius: BorderRadius.circular(Radii.card),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (heading != null)
+              Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF3F6F1),
+                  border: Border(bottom: BorderSide(color: didactaRule)),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(Radii.card),
+                    topRight: Radius.circular(Radii.card),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(14, 9, 12, 9),
+                child: Row(
+                  children: [
+                    Icon(
+                      heading!.kind == 'section'
+                          ? Icons.folder_outlined
+                          : Icons.segment,
+                      size: 15,
+                      color: didactaAccentDark,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title.isEmpty ? 'Apartado sin título' : title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          // Prestado de otro idioma, marcado como en el resto
+                          // de la aplicación.
+                          fontStyle: borrowed ? FontStyle.italic : null,
+                          color: borrowed || title.isEmpty
+                              ? didactaMuted
+                              : null,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${items.length}',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: didactaMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            for (final (at, part) in items.indexed) ...[
+              if (at > 0) const Divider(height: 1),
+              _CompositionRow(
+                position: numbers[part] ?? at + 1,
+                reference: part.reference,
+                unit: session.catalogue.unitByReference(part.reference),
+                language: language,
+              ),
+            ],
+            if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.fromLTRB(14, 10, 14, 12),
+                child: Text(
+                  'Este apartado no lleva nada todavía.',
+                  style: TextStyle(fontSize: 12, color: didactaMuted),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -541,6 +683,13 @@ class _CompositionRow extends StatelessWidget {
                 color: kindColour(unit!.kind),
                 borderRadius: BorderRadius.circular(2),
               ),
+            ),
+            // Y su nombre. El color dice que dos filas son distintas; no dice
+            // cuál es la explicación y cuál el ejercicio, que es la pregunta
+            // que se hace mirando la composición de un tema.
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: KindChip(kind: unit!.kind),
             ),
             Expanded(
               child: Column(

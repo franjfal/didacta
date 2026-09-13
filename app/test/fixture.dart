@@ -188,6 +188,16 @@ Map<String, dynamic> courseJson() => {
             // is missing looks complete and compiles short.
             'analysis/normed/no-existe',
           ],
+          // Con su apartado, como la escribe el motor: la lista plana dice
+          // qué se compila, y esto cómo está repartido.
+          'structure': const [
+            {
+              'section': {'es': 'Normas'},
+            },
+            {'unit': 'analysis/normed/definition'},
+            {'unit': 'analysis/normed/banach'},
+            {'unit': 'analysis/normed/no-existe'},
+          ],
         },
         {
           'id': 'hoja-1',
@@ -196,6 +206,9 @@ Map<String, dynamic> courseJson() => {
           'title': const {'es': 'Hoja 1'},
           'profiles': const <String>[],
           'unitRefs': const ['analysis/normed/exercises'],
+          'structure': const [
+            {'problem': 'analysis/normed/exercises'},
+          ],
         },
       ],
     },

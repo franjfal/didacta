@@ -214,6 +214,39 @@ class Unit {
 }
 
 /// One compilable document inside a course year.
+/// Un trozo de la composición de un documento: un apartado o una referencia.
+class CompositionPart {
+  const CompositionPart({
+    required this.kind,
+    this.reference = '',
+    this.titles = const {},
+  });
+
+  /// `section`, `subsection`, `unit` o `problem`.
+  final String kind;
+
+  /// Lo que referencia, si referencia algo.
+  final String reference;
+
+  /// El título por idiomas, si es un apartado.
+  final Map<String, String> titles;
+
+  bool get isHeading => kind == 'section' || kind == 'subsection';
+
+  String title(String language) {
+    final wanted = titles[language];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return '';
+  }
+
+  /// Si el título que se enseña no es el del idioma pedido.
+  bool titleIsFallback(String language) =>
+      titles.isNotEmpty && (titles[language] ?? '').isEmpty;
+}
+
 class Document {
   const Document({
     required this.id,
@@ -222,6 +255,7 @@ class Document {
     required this.titles,
     required this.profiles,
     required this.unitRefs,
+    this.structure = const [],
   });
 
   factory Document.fromJson(Map<String, dynamic> json) => Document(
@@ -231,7 +265,31 @@ class Document {
     titles: _stringMap(json['title']),
     profiles: _stringList(json['profiles']),
     unitRefs: _stringList(json['unitRefs']),
+    structure: _structure(json['structure']),
   );
+
+  /// La estructura tal como la escribe el motor: una lista de mapas de una
+  /// sola clave, `{section: {es: ...}}` o `{unit: ruta}`.
+  ///
+  /// Vacía en un índice viejo, y entonces la pantalla enseña la lista plana,
+  /// que es lo que hacía antes.
+  static List<CompositionPart> _structure(Object? raw) {
+    if (raw is! List) return const [];
+    final parts = <CompositionPart>[];
+    for (final item in raw) {
+      if (item is! Map || item.isEmpty) continue;
+      final kind = item.keys.first.toString();
+      final value = item.values.first;
+      parts.add(
+        CompositionPart(
+          kind: kind,
+          reference: value is String ? value : '',
+          titles: value is Map ? _stringMap(value) : const {},
+        ),
+      );
+    }
+    return parts;
+  }
 
   final String id;
   final String kind;
@@ -243,6 +301,9 @@ class Document {
   final List<String> profiles;
 
   final List<String> unitRefs;
+
+  /// Cómo está repartido: los apartados y lo que va debajo de cada uno.
+  final List<CompositionPart> structure;
 
   String title([String? language]) {
     final wanted = titles[language ?? this.language];
