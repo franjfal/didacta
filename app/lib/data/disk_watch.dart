@@ -27,6 +27,16 @@ import 'disk_watch_stub.dart'
 /// contesta releer el índice, que es barato y no puede equivocarse.
 Stream<void> watchIndex(String directory) => platform.watchIndex(directory);
 
+/// Avisa cuando cambia cualquier fichero de `content/`, `problems/` o
+/// `courses/`.
+///
+/// Es la otra mitad: el índice cambia cuando alguien lo regenera, y el
+/// material cambia cuando alguien edita. Lo segundo ocurre mucho más --un
+/// `.tex` abierto en otro editor, un `git pull`, una figura copiada a mano--
+/// y hasta que el índice no se regenera, la aplicación sigue enseñando lo de
+/// antes.
+Stream<void> watchContent(String directory) => platform.watchContent(directory);
+
 /// Cuándo se escribió el índice por última vez, o null si no está.
 Future<DateTime?> indexModified(String directory) =>
     platform.indexModified(directory);

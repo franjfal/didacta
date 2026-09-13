@@ -198,7 +198,9 @@ class Session extends ChangeNotifier {
   DateTime? _indexRead;
 
   StreamSubscription<void>? _watching;
+  StreamSubscription<void>? _watchingContent;
   Timer? _settle;
+  Timer? _settleContent;
 
   /// Empieza a vigilar `generated/` del clon.
   ///
@@ -207,6 +209,20 @@ class Session extends ChangeNotifier {
     final path = _clonePath;
     if (path == null) return;
     _watching?.cancel();
+    // El material. Editar un `.tex` en otro programa, copiar una figura o
+    // traerse cien ficheros con un `git pull` son la misma cosa desde aquí:
+    // el disco ya no es lo que el índice dice. Con más respiro que el índice
+    // --un `pull` son cientos de eventos seguidos-- y sin forzar nada: se
+    // pregunta si hace falta, que cuesta una décima, y solo se regenera si
+    // la respuesta es que sí.
+    _watchingContent?.cancel();
+    _watchingContent = watchContent(path).listen((_) {
+      _settleContent?.cancel();
+      _settleContent = Timer(const Duration(seconds: 2), () {
+        unawaited(_rescan());
+      });
+    });
+
     _watching = watchIndex(path).listen((_) {
       // Con un respiro: el motor escribe cuatro ficheros, y recargar el
       // catálogo cuatro veces por una regeneración es tirar el trabajo tres
@@ -216,6 +232,15 @@ class Session extends ChangeNotifier {
         unawaited(_reloadIfIndexChanged());
       });
     });
+  }
+
+  /// Vuelve a mirar el disco: si el índice se ha quedado corto, lo regenera.
+  Future<void> _rescan() async {
+    if (await refreshIndex()) {
+      await reloadCatalogue();
+      await refreshBuilt();
+      if (_clonePath != null) _indexRead = await indexModified(_clonePath!);
+    }
   }
 
   /// Al volver a la ventana: ¿ha cambiado algo mientras no mirábamos?
@@ -228,8 +253,10 @@ class Session extends ChangeNotifier {
     if (await refreshIndex()) await reloadCatalogue();
 
     // Desde aquí, el disco avisa solo.
-    _indexRead = await indexModified(_clonePath ?? '');
-    watchDisk();
+    if (_clonePath != null) {
+      _indexRead = await indexModified(_clonePath!);
+      watchDisk();
+    }
   }
 
   /// Relee el catálogo si el índice del disco es más nuevo que el cargado.
@@ -291,11 +318,48 @@ class Session extends ChangeNotifier {
     }
   }
 
+  /// Qué dijo GitHub la última vez que se preguntó.
+  ///
+  /// Null cuando no se ha preguntado o no hay a quién preguntar. Es la
+  /// segunda mitad de «actualizar»: lo de este disco ya está al día, pero
+  /// puede haber trabajo de otra persona --o del mismo, desde otra máquina--
+  /// esperando en el repositorio.
+  int? get behind => _cloneStatus?.behind;
+
+  /// Pregunta a GitHub si hay algo nuevo, sin traerlo.
+  ///
+  /// Traerlo es otra decisión: un `pull` cambia los ficheros de debajo de
+  /// quien está editando, y eso no se hace sin decirlo. Aquí solo se mira.
+  Future<int> checkRemote() async {
+    final path = _clonePath;
+    if (path == null) return 0;
+    try {
+      final token = await tokenStore.read() ?? '';
+      final clone = cloneAt(path);
+      await clone.fetch(token: token);
+      _cloneStatus = await clone.status();
+      notifyListeners();
+      return _cloneStatus?.behind ?? 0;
+    } catch (error) {
+      // Sin red, sin token o sin remoto: lo local sigue valiendo, y decirlo
+      // como un error pararía un refresco que ya ha hecho su trabajo.
+      _remoteProblem = error;
+      notifyListeners();
+      return 0;
+    }
+  }
+
+  /// Por qué no se pudo preguntar a GitHub, si no se pudo.
+  Object? get remoteProblem => _remoteProblem;
+  Object? _remoteProblem;
+
   /// El botón de actualizar: el índice, el catálogo y lo compilado.
   @override
   void dispose() {
     _settle?.cancel();
+    _settleContent?.cancel();
     _watching?.cancel();
+    _watchingContent?.cancel();
     super.dispose();
   }
 
@@ -303,9 +367,14 @@ class Session extends ChangeNotifier {
     // Buscar el motor solo si no hay: encontrarlo es mirar el disco, y
     // hacerlo cuando ya tenemos uno es trabajo por nada.
     if (compiler() == null) await _findEngine();
+    _remoteProblem = null;
     await refreshIndex(force: true);
     await reloadCatalogue();
     await refreshBuilt();
+    if (_clonePath != null) _indexRead = await indexModified(_clonePath!);
+    // Y lo de fuera. Al final y no al principio: lo de este disco es lo que
+    // se está mirando ahora mismo, y la red puede tardar.
+    await checkRemote();
   }
 
   /// Busca el motor y lo recuerda.
@@ -348,6 +417,13 @@ class Session extends ChangeNotifier {
     notifyListeners();
     await preferences.setPreviewProfile(id);
   }
+
+  /// El clon en un directorio.
+  ///
+  /// Un solo sitio donde se construye, para que un test pueda dar otro sin
+  /// que la sesión tenga que saber que está en un test.
+  @visibleForTesting
+  LocalClone cloneAt(String directory) => LocalClone(directory: directory);
 
   /// Para un test: el clon, sin pasar por Ajustes ni por el disco.
   @visibleForTesting
@@ -722,7 +798,7 @@ class Session extends ChangeNotifier {
     final path = _clonePath;
     if (path == null) return;
     final token = await tokenStore.read() ?? '';
-    await LocalClone(directory: path).pull(token: token);
+    await cloneAt(path).pull(token: token);
     await refreshAccess();
     await reloadCatalogue();
   }

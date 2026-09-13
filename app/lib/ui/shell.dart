@@ -387,8 +387,51 @@ class _GatewayStripState extends State<_GatewayStrip> {
     final messenger = ScaffoldMessenger.of(context);
     try {
       await session.refreshEverything();
+      final behind = session.behind ?? 0;
+      final problem = session.remoteProblem;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Actualizado desde el disco.')),
+        SnackBar(
+          content: Text(
+            behind > 0
+                ? 'Actualizado. En GitHub hay $behind '
+                      '${behind == 1 ? 'commit' : 'commits'} que no están aquí.'
+                : problem != null
+                ? 'Actualizado desde el disco. No se pudo preguntar a '
+                      'GitHub: $problem'
+                : 'Actualizado. Nada nuevo en GitHub.',
+          ),
+          duration: Duration(seconds: behind > 0 || problem != null ? 8 : 3),
+          // Traerlo es otra decisión, y por eso es otro botón: un `pull`
+          // cambia los ficheros de debajo de quien está editando.
+          action: behind > 0
+              ? SnackBarAction(
+                  label: 'Traerlos',
+                  onPressed: () => _pull(session),
+                )
+              : null,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pull(Session session) async {
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await session.pullClone();
+      await session.refreshEverything();
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Traído de GitHub y actualizado.')),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$error'),
+          backgroundColor: didactaTeacher,
+          duration: const Duration(seconds: 10),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -460,13 +503,54 @@ class _GatewayStripState extends State<_GatewayStrip> {
                       : IconButton(
                           key: const Key('refresh-everything'),
                           tooltip:
-                              'Actualizar: releer el disco y regenerar el '
-                              'índice  ⌘R',
+                              'Actualizar: releer el disco, regenerar el '
+                              'índice y mirar si hay algo nuevo en GitHub'
+                              '  ⌘R',
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           icon: const Icon(Icons.refresh, size: 15),
                           onPressed: () => _refresh(session),
                         ),
+                ),
+              // Lo que espera en GitHub, en la misma barra que dice de dónde
+              // sale el contenido. Un número y no un punto: «hay tres
+              // commits» dice si merece la pena pararse ahora.
+              if ((session.behind ?? 0) > 0)
+                Hoverable(
+                  key: const Key('pull-pending'),
+                  onTap: () => _pull(session),
+                  builder: (context, hovering) => Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: hovering
+                          ? didactaThm.withValues(alpha: 0.18)
+                          : didactaThm.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(Radii.small),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.south_outlined,
+                          size: 12,
+                          color: didactaThm,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${session.behind} en GitHub',
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: didactaThm,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
