@@ -32,6 +32,32 @@ const String bare = r'''
 Calcular el límite de la sucesión.
 ''';
 
+/// La otra forma, y la que escribe `didacta new unit --kind problem`: todo
+/// dentro del `exercise`.
+const String nested = r'''
+\begin{exercise}[Axiomas de norma]
+Derivar $f(x) = x^2$.
+
+\dmarks{4}
+
+\begin{hint}
+Una pista, no una respuesta.
+\end{hint}
+
+\begin{answer}
+$f'(x) = 2x$
+\end{answer}
+
+\begin{solution}
+Por la regla de la potencia.
+\end{solution}
+
+\begin{marking}
+Un punto por apartado.
+\end{marking}
+\end{exercise}
+''';
+
 List<File> realProblems() {
   final directory = Directory(
     '${Directory.current.parent.parent.path}/didacta_db/problems',
@@ -55,6 +81,24 @@ void main() {
       );
       expect(problem.part(ProblemPart.answer), isEmpty);
       expect(problem.has(ProblemPart.answer), isFalse);
+    });
+
+    test('con los campos dentro del exercise, el enunciado es el enunciado', () {
+      // La forma que escribe `didacta new`, y la del material migrado. El
+      // enunciado acaba donde empieza lo que lleva dentro: si llegara hasta
+      // el `\end{exercise}` se comería la pista, el resultado, la solución y
+      // la corrección --y escribir en el campo los borraría--.
+      final problem = ProblemFile(nested);
+      expect(problem.shape.fits, isTrue);
+      expect(problem.part(ProblemPart.statement), contains('Derivar'));
+      expect(problem.part(ProblemPart.statement), isNot(contains('pista')));
+      expect(problem.part(ProblemPart.statement), isNot(contains('potencia')));
+      expect(problem.part(ProblemPart.answer), r"$f'(x) = 2x$");
+      expect(problem.part(ProblemPart.solution), 'Por la regla de la potencia.');
+      // El corte está en el primer entorno de dentro, así que lo que haya
+      // suelto antes --un `\dmarks`, un `\includegraphics`-- es enunciado y
+      // se edita con él. Es donde tiene que estar: se escribió ahí.
+      expect(problem.part(ProblemPart.statement), contains(r'\dmarks{4}'));
     });
 
     test('un fichero sin entornos es todo enunciado', () {
@@ -109,6 +153,39 @@ void main() {
       expect(again.shape.fits, isTrue);
       expect(again.part(ProblemPart.answer), r"$f'(x) = 2x$");
       expect(again.part(ProblemPart.statement), r'Derivar $f(x) = x^2$.');
+    });
+
+    test('editar el enunciado de un fichero anidado no borra lo demás', () {
+      // Era el fallo: `withPart` sustituía desde el `\begin{exercise}` hasta
+      // el `\end`, así que cambiar una coma del enunciado se llevaba por
+      // delante el resultado y la solución de un fichero recién creado.
+      final text = ProblemFile(
+        nested,
+      ).withPart(ProblemPart.statement, r'Derivar $f(x) = x^3$.');
+      final again = ProblemFile(text);
+      expect(again.part(ProblemPart.statement), r'Derivar $f(x) = x^3$.');
+      expect(again.part(ProblemPart.answer), r"$f'(x) = 2x$");
+      expect(again.part(ProblemPart.solution), 'Por la regla de la potencia.');
+      expect(text, contains(r'\begin{hint}'));
+      expect(text, contains(r'\begin{marking}'));
+    });
+
+    test('en un fichero anidado el resultado entra dentro', () {
+      // Se respeta la forma del fichero: un `answer` detrás del
+      // `\end{exercise}` en un fichero que lo lleva todo dentro se lee raro
+      // y se edita peor.
+      final without = nested.replaceFirst(
+        RegExp(r'\\begin\{answer\}[\s\S]*?\\end\{answer\}\n\n'),
+        '',
+      );
+      expect(ProblemFile(without).has(ProblemPart.answer), isFalse);
+      final text = ProblemFile(without).withPart(ProblemPart.answer, '42');
+      expect(
+        text.indexOf(r'\begin{answer}'),
+        lessThan(text.indexOf(r'\end{exercise}')),
+      );
+      expect(ProblemFile(text).part(ProblemPart.answer), '42');
+      expect(ProblemFile(text).part(ProblemPart.statement), contains('Derivar'));
     });
 
     test('vaciar el enunciado no se lleva el entorno', () {

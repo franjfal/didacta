@@ -68,9 +68,18 @@ class ProblemFile {
   /// dentro. Vacío cuando el entorno no está.
   final Map<ProblemPart, (int, int)> _body = {};
 
-  /// La línea del `\end{exercise}`, que es donde empieza a haber sitio para
-  /// un entorno nuevo.
+  /// La línea del `\end{exercise}`.
   int _exerciseEnd = -1;
+
+  /// La línea del primer entorno metido **dentro** del `exercise`, si lo hay.
+  ///
+  /// Los ficheros se escriben de las dos formas --el resultado y la solución
+  /// dentro del `exercise`, que es como los escribe `didacta new`, o detrás
+  /// de su `\end`-- y las dos compilan igual. La diferencia importa aquí:
+  /// sin esto el enunciado llegaba hasta el `\end{exercise}` y se comía el
+  /// `hint`, el resultado, la solución y la corrección. Editar el enunciado
+  /// los borraba.
+  int _innerStart = -1;
 
   ProblemShape shape = ProblemShape.ok;
 
@@ -83,8 +92,14 @@ class ProblemFile {
   bool bare = false;
 
   void _parse() {
-    final begin = RegExp(r'^\s*\\begin\{(exercise\*?|ej|answer|solution)\}');
-    final end = RegExp(r'^\s*\\end\{(exercise\*?|ej|answer|solution)\}');
+    // `marking` y `hint` no son campos del editor, pero sí marcan dónde deja
+    // de haber enunciado.
+    final begin = RegExp(
+      r'^\s*\\begin\{(exercise\*?|ej|answer|solution|marking|hint)\}',
+    );
+    final end = RegExp(
+      r'^\s*\\end\{(exercise\*?|ej|answer|solution|marking|hint)\}',
+    );
 
     final counts = <String, int>{};
     final opened = <String, int>{};
@@ -94,6 +109,11 @@ class ProblemFile {
       if (at != null) {
         final name = _canonical(at.group(1)!);
         counts[name] = (counts[name] ?? 0) + 1;
+        if (name != 'exercise' &&
+            opened.containsKey('exercise') &&
+            _innerStart < 0) {
+          _innerStart = i;
+        }
         opened[name] = i;
         continue;
       }
@@ -113,7 +133,11 @@ class ProblemFile {
       // dice abajo; quedarse con el primero evita además que un `solution`
       // dentro de otro lo pise.
       if (part != null && !_body.containsKey(part)) {
-        _body[part] = (from + 1, i - 1);
+        // El enunciado acaba donde empieza lo que lleve dentro.
+        final to = name == 'exercise' && _innerStart > from
+            ? _innerStart - 1
+            : i - 1;
+        _body[part] = (from + 1, to);
       }
     }
 
@@ -210,14 +234,19 @@ class ProblemFile {
       '\\end{${environmentFor(part)}}',
     ];
 
+    // Detrás del enunciado, y detrás del resultado si ya lo hay. Se respeta
+    // la forma del fichero: en uno que lleva el resultado dentro del
+    // `exercise` la solución entra al lado, y en uno que lo lleva detrás del
+    // `\end` entra detrás.
+    final statement = _body[ProblemPart.statement];
+    final afterStatement = _innerStart >= 0 && statement != null
+        ? statement.$2
+        : _exerciseEnd;
     final after = switch (part) {
-      // Detrás del enunciado.
-      ProblemPart.answer => _exerciseEnd,
-      // Detrás del resultado si lo hay, y si no detrás del enunciado.
-      ProblemPart.solution =>
-        _body[ProblemPart.answer] == null
-            ? _exerciseEnd
-            : _body[ProblemPart.answer]!.$2 + 1,
+      ProblemPart.answer => afterStatement,
+      ProblemPart.solution => _body[ProblemPart.answer] == null
+          ? afterStatement
+          : _body[ProblemPart.answer]!.$2 + 1,
       // Un enunciado que falta va el primero.
       ProblemPart.statement => -1,
     };
