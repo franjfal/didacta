@@ -36,6 +36,6 @@ documents:
     title:
       es: "Hoja 1: espacios normados"
       va: "Full 1: espais normats"
-    profiles: [problems, problems-answers, problems-solutions, problems-teacher]
+    profiles: [problems, problems-answers, problems-teacher]
     structure:
       - problem: analysis/normed-spaces/norm-axioms

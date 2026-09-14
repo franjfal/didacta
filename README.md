@@ -51,7 +51,7 @@ didacta build tema-1
 
 ---
 
-## Las 14 salidas
+## Las 15 salidas
 
 ```
 $ didacta profiles
@@ -67,9 +67,10 @@ $ didacta profiles
 | `notes-teacher` | article | documento | todas | profesor | — |
 | `book` | book | documento | — | alumno | — |
 | `handout` | article | documento | — | alumno | — |
+| `handout-answers` | article | documento | resultados | alumno | — |
+| `handout-teacher` | article | documento | todas | profesor | — |
 | `problems` | article | documento | — | alumno | — |
-| `problems-answers` | article | documento | respuestas | alumno | — |
-| `problems-solutions` | article | documento | todas | alumno | — |
+| `problems-answers` | article | documento | resultados | alumno | — |
 | `problems-teacher` | article | documento | todas | profesor | — |
 | `exam` | article | documento | — | alumno | — |
 | `exam-marking` | article | documento | todas | profesor | — |
@@ -81,18 +82,22 @@ sistema necesita saberlo.
 
 ---
 
-## Los cuatro niveles de un problema
+## Las tres versiones de un problema
 
-Un problema es un fichero. Los cuatro niveles conviven en él y cada perfil
-revela los que le tocan:
+Un problema es un fichero con tres campos —enunciado, resultado y solución
+detallada— y tres versiones que los revelan por niveles: la versión *n*
+enseña los campos 1 a *n*. La del profesor añade encima la corrección.
 
 | | `hint` | `answer` | `solution` | `marking` |
 |---|:---:|:---:|:---:|:---:|
-| `problems` | ✓ | | | |
-| `problems-answers` | ✓ | ✓ | | |
-| `problems-solutions` | ✓ | ✓ | ✓ | |
-| `problems-teacher` | ✓ | ✓ | ✓ | ✓ |
+| `problems` · alumnos, solo enunciados | ✓ | | | |
+| `problems-answers` · alumnos, con resultados | ✓ | ✓ | | |
+| `problems-teacher` · profesor, todo | ✓ | ✓ | ✓ | ✓ |
 | `exam` | | | | |
+
+Lo mismo, con `handout-*`, para un guion de prácticas: un documento con
+ejercicios dentro se reparte, se corrige y se entrega igual venga de donde
+venga.
 
 - **`answer`** el resultado, una línea, para que el alumno se corrija
 - **`solution`** el desarrollo
@@ -303,7 +308,7 @@ funcionar en un runner de CI sin un paso de `pip`.
 
 Lo que funciona hoy, verificado compilando de verdad:
 
-- las 14 salidas, desde un único origen;
+- las 15 salidas, desde un único origen;
 - los tres idiomas, con nombres de entorno y cadenas fijas traducidos;
 - los cuatro niveles de un problema, cada uno en su perfil;
 - el canal del profesor, distinto del canal de apuntes;

@@ -127,8 +127,20 @@ class ProfileChoiceTests(unittest.TestCase):
     def test_a_problem_is_offered_as_a_problem_sheet(self):
         offered = [p.id for p in preview_mod.profiles_for("problem", self.profiles)]
         self.assertEqual(offered[0], "problems")
-        self.assertIn("problems-solutions", offered)
+        self.assertIn("problems-teacher", offered)
         self.assertNotIn("slides", offered)
+
+    def test_the_three_levels_come_out_in_the_order_they_are_decided(self):
+        """Statements, then results, then the teacher's copy.
+
+        The menu is read as «how much do I give away», so it has to be
+        ordered by that and not by whatever the ids sort as.
+        """
+        for kind in ("problem", "practical"):
+            offered = preview_mod.profiles_for(kind, self.profiles)
+            levels = [p.reveals for p in offered
+                      if p.family in ("problems", "handout")]
+            self.assertEqual(levels, ["statements", "answers", "teacher"], kind)
 
     def test_a_handout_leads_with_handout(self):
         offered = [p.id for p in preview_mod.profiles_for("handout", self.profiles)]

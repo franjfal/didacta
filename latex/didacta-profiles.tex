@@ -105,16 +105,41 @@
 %% Single-sheet outputs
 %% ---------------------------------------------------------------------------
 
-%% A one- or two-page reference sheet. Tight margins, no section numbering.
+%% A one- or two-page reference sheet, and the format a lab or seminar script
+%% is built in. Tight margins, sections numbered but not subsections.
+%%
+%% Three levels, the same three a problem sheet has: a script with exercises in
+%% it is handed out, checked and marked exactly like one.
 \DidactaDeclareProfile{handout}{article}{11pt,oneside}{%
   medium=document,detail=full,audience=student,solutions=hidden,pauses=off,
+  layout=compact}
+
+%% The same sheet with the result under each exercise, so they can check
+%% themselves.
+\DidactaDeclareProfile{handout-answers}{article}{11pt,oneside}{%
+  medium=document,detail=full,audience=student,solutions=answers,pauses=off,
+  layout=compact}
+
+%% The teacher's copy: results, worked solutions and the marking notes.
+\DidactaDeclareProfile{handout-teacher}{article}{11pt,oneside}{%
+  medium=document,detail=full,audience=teacher,solutions=full,pauses=off,
   layout=compact}
 
 %% ---------------------------------------------------------------------------
 %% Problem-sheet outputs
 %%
-%% The same source produces all four. This is the axis the legacy system drove
-%% with \def\CurrentAudience and multiaudience; here it is just `solutions`.
+%% The same source produces the three, and they are the three levels of the
+%% problem editor: statement, result, worked solution. Level n shows fields 1
+%% to n, which is what makes the menu answerable without reading a table.
+%%
+%% This is the axis the legacy system drove with \def\CurrentAudience and
+%% multiaudience; here it is just `solutions`.
+%%
+%% There is deliberately no fourth `problems-solutions` -- a student copy with
+%% the full working and no marking notes. It produced the same PDF as the
+%% teacher's copy for every sheet in the repository (nothing uses `marking`),
+%% so it was two menu entries for one output, and choosing between them was a
+%% guess. The copy with everything in it is the teacher's.
 %% ---------------------------------------------------------------------------
 
 %% What the students receive: statements only.
@@ -127,12 +152,8 @@
   medium=document,detail=full,audience=student,solutions=answers,pauses=off,
   layout=compact}
 
-%% Statements with the full worked solution.
-\DidactaDeclareProfile{problems-solutions}{article}{12pt,oneside}{%
-  medium=document,detail=full,audience=student,solutions=full,pauses=off,
-  layout=compact}
-
-%% The teacher's copy: solutions plus the marking notes and common mistakes.
+%% The teacher's copy: the worked solution step by step, the marking notes and
+%% the common mistakes.
 \DidactaDeclareProfile{problems-teacher}{article}{12pt,oneside}{%
   medium=document,detail=full,audience=teacher,solutions=full,pauses=off,
   layout=compact}

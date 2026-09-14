@@ -426,6 +426,7 @@ def report_profiles(root, settings, args, all_profiles):
                     "profile": profile.id,
                     "label": profile.label,
                     "family": profile.family,
+                    "reveals": profile.reveals,
                     "default": profile.id in own or not own,
                 }
                 for profile in suitable
@@ -1192,6 +1193,15 @@ def cmd_preview(args):
         return 0
 
     if args.list:
+        if args.json:
+            # The whole record, not two columns: the interface needs to know
+            # how much of an exercise each one shows, and deriving that from
+            # the id on the other side would be the same knowledge in two
+            # places, drifting apart at the first new profile.
+            json.dump([p.as_dict() for p in wanted],
+                      sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+            return 0
         print(S.bold("%s (%s)" % (unit.relpath, unit.kind)))
         for profile in wanted:
             print("  %-20s %s" % (profile.id, profile.label))

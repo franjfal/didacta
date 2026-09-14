@@ -232,12 +232,15 @@ Qué muestra cada perfil:
 
 | | `hint` | `answer` | `solution` | `marking` |
 |---|:---:|:---:|:---:|:---:|
-| `problems` | ✓ | | | |
-| `problems-answers` | ✓ | ✓ | | |
-| `problems-solutions` | ✓ | ✓ | ✓ | |
-| `problems-teacher` | ✓ | ✓ | ✓ | ✓ |
+| `problems` · alumnos, solo enunciados | ✓ | | | |
+| `problems-answers` · alumnos, con resultados | ✓ | ✓ | | |
+| `problems-teacher` · profesor, todo | ✓ | ✓ | ✓ | ✓ |
 | `exam` | | | | |
 | `exam-marking` | | ✓ | ✓ | ✓ |
+
+Tres versiones y no cuatro: la que lo enseña todo es la del profesor. Un
+guion de prácticas tiene las mismas tres, con `handout`, `handout-answers` y
+`handout-teacher`.
 
 Los tres niveles son distintos a propósito:
 

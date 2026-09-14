@@ -4,7 +4,7 @@ Esta carpeta contiene el sistema LaTeX, el modelo de contenido, el motor de
 compilación, la herramienta, el migrador, los índices derivados y la aplicación
 completa: las siete rutas, el editor multilingüe, la edición de `unit.yaml` y el
 constructor de composiciones, con un clon local en escritorio y el Worker en
-web. Las 14 salidas funcionan; 255 tests de Python y 213 de Dart.
+web. Las 15 salidas funcionan; 255 tests de Python y 213 de Dart.
 
 Lo hecho está al principio con lo que se aprendió haciéndolo, y lo que queda
 después, en orden de dependencia.
@@ -66,7 +66,7 @@ una interfaz necesita para navegar y nada más:
 |---|---|
 | `units.json` | 2147 unidades · 2 MB · **77 KB comprimido** |
 | `courses.json` | asignaturas, años y documentos en orden de composición |
-| `manifest.json` | cuentas, idiomas, los 14 perfiles y lo que falló al leer |
+| `manifest.json` | cuentas, idiomas, los 15 perfiles y lo que falló al leer |
 
 Se generan en menos de un segundo sobre la biblioteca entera. Dos propiedades
 que los hacen fiables:

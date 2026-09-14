@@ -307,6 +307,29 @@ class FakeGateway extends ContentGateway {
   }
 }
 
+/// Las tres versiones de cualquier cosa con ejercicios dentro, tal como las
+/// lista el motor: enunciados, enunciados con el resultado, y la del
+/// profesor con la solución paso a paso.
+const problemProfiles = [
+  BuildableProfile(
+    id: 'problems',
+    label: 'Hoja de problemas',
+    family: 'problems',
+  ),
+  BuildableProfile(
+    id: 'problems-answers',
+    label: 'Hoja de problemas (con resultados)',
+    family: 'problems',
+    reveals: 'answers',
+  ),
+  BuildableProfile(
+    id: 'problems-teacher',
+    label: 'Hoja de problemas (profesor)',
+    family: 'problems',
+    reveals: 'teacher',
+  ),
+];
+
 /// A compiler that answers without launching anything.
 class FakeCompiler implements Compiler {
   FakeCompiler({
@@ -320,6 +343,7 @@ class FakeCompiler implements Compiler {
         id: 'notes-teacher',
         label: 'Apuntes (profesor)',
         family: 'notes',
+        reveals: 'teacher',
       ),
     ],
     this.failWith,

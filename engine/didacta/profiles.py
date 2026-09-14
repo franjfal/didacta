@@ -114,6 +114,27 @@ class Profile:
         return self.axes["pauses"] == "on"
 
     @property
+    def reveals(self):
+        """How much of an exercise this output shows.
+
+        ``statements`` | ``answers`` | ``solutions`` | ``teacher``, which are
+        the three fields of a problem --statement, result, worked solution--
+        read as levels: level *n* shows fields 1 to *n*, and the teacher's
+        copy adds the marking notes on top.
+
+        Derived rather than declared because it is not a new axis: it is the
+        one question a teacher asks of the menu --«does this one have the
+        solutions in it?»-- answered from the axes that already decide it.
+        """
+        if self.is_teacher:
+            return "teacher"
+        if self.solutions == "full":
+            return "solutions"
+        if self.solutions == "answers":
+            return "answers"
+        return "statements"
+
+    @property
     def layout(self):
         return self.axes.get("layout", "normal")
 
@@ -164,7 +185,10 @@ class Profile:
         elif self.solutions == "full":
             extra.append("con soluciones")
         elif self.solutions == "answers":
-            extra.append("con respuestas")
+            # «Resultado» and not «respuesta»: it is the word the editor puts
+            # on the field the author fills in, and the two have to be the
+            # same word or nobody can tell whether they are the same thing.
+            extra.append("con resultados")
         return "%s (%s)" % (base, ", ".join(extra)) if extra else base
 
     def __repr__(self):  # pragma: no cover - debugging aid
@@ -175,6 +199,7 @@ class Profile:
             "id": self.id,
             "label": self.label,
             "family": self.family,
+            "reveals": self.reveals,
             "documentClass": self.document_class,
             "classOptions": self.class_options,
             "axes": dict(self.axes),
