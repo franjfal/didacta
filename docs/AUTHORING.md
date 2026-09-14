@@ -148,11 +148,10 @@ Para una redefinición o un aparte.
 \end{definition*}
 ```
 
-### Lo que no es un teorema
+### Un recuadro sin etiqueta
 
-Para lo que se enuncia en un recuadro y no se demuestra --el principio en el
-que se apoya una sección entera, el axioma del que todo cuelga, el convenio
-que el resto da por supuesto-- está `keypoint`:
+`keypoint` es un recuadro con el título en negrita si se le pone, **sin número
+y sin etiqueta**:
 
 ```latex
 \begin{keypoint}[Principio de inducción matemática (PIM)]
@@ -161,11 +160,16 @@ para todo número natural $n$.
 \end{keypoint}
 ```
 
-Un recuadro, con el título en negrita si se le pone, **sin número y sin
-etiqueta**. La diferencia con `theorem` no es de aspecto: llamar teorema al
-principio de inducción dice que se ha demostrado, y en una práctica de primero
-no se demuestra nada a su alrededor --es la herramienta, enunciada para poder
-usarla--.
+Está para el material que destaca algo en un cuadro y no le pone nombre de
+nada. El caso que lo motivó: el principio de inducción, que no es un teorema
+--no es un resultado que se deduzca de nada, es de donde se parte-- y que la
+práctica de la que viene enuncia en un `\fbox`.
+
+**El entorno lo decide lo que la cosa es, no cuánto se enseña de ella.** Un
+teorema enunciado sin demostrar sigue siendo un teorema: el apéndice de
+trigonometría tiene tres, con su nombre y su número y sin una demostración a
+la vista. `keypoint` no es «un teorema sin demostrar»; es el recuadro para lo
+que no encaja en ninguno de los nombres de arriba.
 
 **Un solo contador compartido.** Definición 1.1, Teorema 1.2, Ejemplo 1.3.
 Contadores independientes producen un Teorema 2.3 seguido de una Definición
