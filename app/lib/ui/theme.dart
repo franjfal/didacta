@@ -62,6 +62,13 @@ const Color didactaEx = Color(0xFFBE8237);
 const Color didactaQues = Color(0xFF1E8C96);
 const Color didactaTeacher = Color(0xFFAA4B4B);
 
+/// El verde de una respuesta corta: `didactaAnswerRule` del PDF.
+///
+/// Los colores de los entornos son los de `didacta-colours.sty`, y no una
+/// paleta propia de la aplicación: una respuesta del mismo color en la
+/// pantalla y en el papel es un vocabulario que se aprende una vez.
+const Color didactaProp = Color(0xFF3C876E);
+
 /// One colour per translation state, used everywhere that state is shown.
 Color statusColour(TranslationStatus status) => switch (status) {
   TranslationStatus.source => didactaAccentDark,
@@ -468,6 +475,20 @@ const TextStyle monoStyle = TextStyle(
   fontFamilyFallback: monoFamilies,
   fontSize: 12.5,
   height: 1.45,
+);
+
+/// La altura de línea, forzada.
+///
+/// Sin esto, la caja de texto decide la altura de cada línea por lo que hay
+/// dentro —una fórmula alta la estira— y las columnas de colores, que se
+/// pintan aparte, dejan de cuadrar con el texto a partir de ahí. Con el strut
+/// forzado, una línea mide lo mismo siempre y las dos capas coinciden.
+const StrutStyle monoStrut = StrutStyle(
+  fontFamily: 'monospace',
+  fontFamilyFallback: monoFamilies,
+  fontSize: 12.5,
+  height: 1.45,
+  forceStrutHeight: true,
 );
 
 /// Un envoltorio que dice si el ratón está encima.

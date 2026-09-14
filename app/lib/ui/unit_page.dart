@@ -35,6 +35,7 @@ import 'unit_preview.dart';
 import 'shell.dart';
 import 'problem_editor.dart';
 import 'tabs.dart';
+import 'tex_toolbar.dart';
 import 'theme.dart';
 
 class UnitPage extends StatefulWidget {
@@ -524,6 +525,11 @@ class _LanguageEditor {
 
   final TextEditingController controller = TextEditingController();
 
+  /// El foco del área de texto. Aquí y no en el widget por lo mismo que el
+  /// controlador: la barra devuelve el cursor al editor después de envolver,
+  /// y un foco que se recrea en cada `build` lo devuelve a ninguna parte.
+  final FocusNode focusNode = FocusNode();
+
   ContentFile? file;
   String _loadedText = '';
   bool loading = true;
@@ -642,6 +648,7 @@ class _LanguageEditor {
   void dispose() {
     controller.removeListener(_onEdit);
     controller.dispose();
+    focusNode.dispose();
   }
 }
 
@@ -718,27 +725,43 @@ class _EditorView extends StatelessWidget {
                     onChanged: editor.replaceText,
                   ),
                 )
-              : Container(
-                  color: Colors.white,
-                  child: TextField(
-                    controller: editor.controller,
-                    readOnly: !canWrite,
-                    maxLines: null,
-                    expands: true,
-                    // LaTeX is code: monospace, no autocorrect, no capitalisation.
-                    // A phone helpfully capitalising `\begin` is a compile error.
-                    style: monoStyle,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.none,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      filled: false,
-                      contentPadding: EdgeInsets.all(14),
-                      hintText: 'El fichero está vacío.',
+              : Column(
+                  children: [
+                    // Solo sobre el texto: en los campos de un problema el
+                    // entorno ya lo pone el campo, y un botón «Respuesta»
+                    // encima del campo de la respuesta no significa nada.
+                    TexToolbar(
+                      controller: editor.controller,
+                      enabled: canWrite,
+                      focusNode: editor.focusNode,
                     ),
-                  ),
+                    Expanded(
+                      child: Container(
+                        color: Colors.white,
+                        child: TextField(
+                          controller: editor.controller,
+                          focusNode: editor.focusNode,
+                          readOnly: !canWrite,
+                          maxLines: null,
+                          expands: true,
+                          // LaTeX is code: monospace, no autocorrect, no
+                          // capitalisation. A phone helpfully capitalising
+                          // `\begin` is a compile error.
+                          style: monoStyle,
+                          keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.none,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          decoration: const InputDecoration(
+                            border: InputBorder.none,
+                            filled: false,
+                            contentPadding: EdgeInsets.all(14),
+                            hintText: 'El fichero está vacío.',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ],
