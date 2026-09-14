@@ -23,6 +23,7 @@ import 'composition_editor.dart';
 import 'shell.dart';
 import '../data/compiler.dart';
 import 'pdf_tab.dart';
+import 'source_view.dart';
 import 'tabs.dart';
 import 'theme.dart';
 import 'unit_preview.dart';
@@ -43,8 +44,9 @@ class DocumentPage extends StatefulWidget {
   State<DocumentPage> createState() => _DocumentPageState();
 }
 
-/// La pestaña de la composición, y la de compilar el tema entero.
+/// La pestaña de la composición, la del fuente entero y la de compilar.
 const String compositionTab = 'composicion';
+const String sourceTab = 'fuente';
 const String buildTab = 'compilar';
 
 /// Prefijo de las pestañas de PDF. Con un carácter que no puede estar en un
@@ -282,6 +284,17 @@ class _DocumentPageState extends State<DocumentPage> {
       );
     }
 
+    if (_active == sourceTab) {
+      return SourceTab(
+        key: ValueKey('fuente-$courseId-$year-$documentId-$language'),
+        courseId: courseId,
+        year: year,
+        document: document,
+        session: session,
+        language: language,
+      );
+    }
+
     if (_active == buildTab) {
       return UnitPreview(
         onOpen: _openPdf,
@@ -406,6 +419,13 @@ class _TabBar extends StatelessWidget {
           selected: active == compositionTab,
           dirty: false,
           onTap: () => onSelect(compositionTab),
+        ),
+        DidactaTab(
+          label: 'Fuente',
+          icon: Icons.notes_outlined,
+          selected: active == sourceTab,
+          dirty: false,
+          onTap: () => onSelect(sourceTab),
         ),
         DidactaTab(
           label: 'Compilar',
