@@ -53,18 +53,33 @@ import 'theme.dart';
 /// categorías con el mismo nombre, y separaba la teoría de sus ejercicios,
 /// que es justo lo que nadie quiere al preguntar «¿qué tengo de esto?».
 class BrowsePath {
-  const BrowsePath({this.category, this.topic});
+  const BrowsePath({this.category, this.topic, this.tag});
 
   final String? category;
   final String? topic;
 
+  /// La etiqueta elegida dentro del tema.
+  ///
+  /// Es un nivel más de navegación --categoría, tema, etiqueta-- pero no un
+  /// nivel más del árbol: se pinta como una fila de filtros encima de la
+  /// lista. Una unidad puede llevar varias etiquetas, así que un árbol la
+  /// pondría en varias ramas a la vez, y entonces contar deja de significar
+  /// nada.
+  final String? tag;
+
   bool get isRoot => category == null;
 
+  /// Entrar en un tema empieza sin etiqueta: las de un tema no son las del
+  /// anterior.
   BrowsePath toTopic(String topic) =>
       BrowsePath(category: category, topic: topic);
 
+  BrowsePath withTag(String? tag) =>
+      BrowsePath(category: category, topic: topic, tag: tag);
+
   /// Un nivel hacia arriba.
   BrowsePath up() {
+    if (tag != null) return BrowsePath(category: category, topic: topic);
     if (topic != null) return BrowsePath(category: category);
     return const BrowsePath();
   }
@@ -742,24 +757,47 @@ class _Breadcrumbs extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _Crumb(
+          key: const Key('crumb-root'),
           label: 'Biblioteca',
           onTap: () => onPath(const BrowsePath()),
           last: category == null,
         ),
         if (category != null)
           _Crumb(
+            key: const Key('crumb-category'),
             label: category.label,
             onTap: () => onPath(BrowsePath(category: category.category)),
             last: topic == null,
           ),
-        if (topic != null) _Crumb(label: topic.label, onTap: null, last: true),
+        if (topic != null)
+          _Crumb(
+            key: const Key('crumb-topic'),
+            label: topic.label,
+            onTap: path.tag == null
+                ? null
+                : () => onPath(BrowsePath(
+                    category: category?.category, topic: topic.topic)),
+            last: path.tag == null,
+          ),
+        if (path.tag != null)
+          _Crumb(
+            key: const Key('crumb-tag'),
+            label: humaniseSlug(path.tag!),
+            onTap: null,
+            last: true,
+          ),
       ],
     );
   }
 }
 
 class _Crumb extends StatelessWidget {
-  const _Crumb({required this.label, required this.onTap, required this.last});
+  const _Crumb({
+    super.key,
+    required this.label,
+    required this.onTap,
+    required this.last,
+  });
 
   final String label;
   final VoidCallback? onTap;
@@ -938,6 +976,7 @@ class _Browser extends StatelessWidget {
             category: category,
             path: path,
             language: language,
+            onPath: onPath,
           );
         }
 
@@ -979,6 +1018,7 @@ class _Browser extends StatelessWidget {
                   category: category,
                   path: path,
                   language: language,
+                  onPath: onPath,
                 ),
               ),
             ],
@@ -1399,48 +1439,124 @@ class _UnitColumn extends StatelessWidget {
     required this.category,
     required this.path,
     required this.language,
+    required this.onPath,
   });
 
   final CategoryNode category;
   final BrowsePath path;
   final String language;
+  final ValueChanged<BrowsePath> onPath;
 
   @override
   Widget build(BuildContext context) {
     final topic = path.topic == null ? null : category.topic(path.topic!);
     final groups = topic == null ? category.topics : [topic];
+    // Las etiquetas del sitio donde se está, no las del catálogo: dentro de
+    // un tema lo que se quiere es su reparto, no las cuatrocientas que hay en
+    // la biblioteca entera.
+    final tags = topic == null ? category.tags : topic.tags;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       children: [
-        for (final group in groups) ...[
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8, top: 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    group.label,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
+        if (tags.isNotEmpty) ...[
+          _TagFilter(
+            tags: tags,
+            selected: path.tag,
+            onSelected: (tag) => onPath(path.withTag(tag)),
+          ),
+          const SizedBox(height: 6),
+        ],
+        for (final group in groups)
+          if (_shown(group.units) case final shown when shown.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      group.label,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${group.count} '
-                  '${group.count == 1 ? 'unidad' : 'unidades'}',
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Text(
+                    '${shown.length} '
+                    '${shown.length == 1 ? 'unidad' : 'unidades'}',
+                    style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  ),
+                ],
+              ),
+            ),
+            for (final unit in shown) UnitCard(unit: unit, language: language),
+            const SizedBox(height: 16),
+          ],
+      ],
+    );
+  }
+
+  List<Unit> _shown(List<Unit> units) => path.tag == null
+      ? units
+      : [
+          for (final unit in units)
+            if (unit.tags.contains(path.tag)) unit,
+        ];
+}
+
+/// Las etiquetas de donde se está, encima de la lista.
+///
+/// El nivel que falta entre el tema y los ficheros. Va aquí y no en el árbol
+/// de la izquierda porque una unidad puede llevar varias etiquetas: en un
+/// árbol saldría en varias ramas a la vez, y entonces los números de al lado
+/// dejan de sumar lo que hay.
+class _TagFilter extends StatelessWidget {
+  const _TagFilter({
+    required this.tags,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<TagCount> tags;
+  final String? selected;
+
+  /// `null` para quitar el filtro.
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 5,
+      runSpacing: 5,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(right: 3, bottom: 1),
+          child: Text(
+            'Etiquetas',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: didactaMuted,
+              letterSpacing: 0.4,
             ),
           ),
-          for (final unit in group.units)
-            UnitCard(unit: unit, language: language),
-          const SizedBox(height: 16),
-        ],
+        ),
+        for (final entry in tags)
+          FilterChip(
+            key: Key('tag-${entry.tag}'),
+            label: Text('${humaniseSlug(entry.tag)} · ${entry.count}'),
+            selected: selected == entry.tag,
+            visualDensity: VisualDensity.compact,
+            labelStyle: const TextStyle(fontSize: 12),
+            // Volver a pulsar la que está puesta la quita: es el gesto que
+            // todo el mundo intenta, y sin él hace falta buscar una equis.
+            onSelected: (_) =>
+                onSelected(selected == entry.tag ? null : entry.tag),
+          ),
       ],
     );
   }

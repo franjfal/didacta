@@ -84,6 +84,35 @@ class TranslationProgress {
   bool get isUntouched => total > 0 && done == 0 && needsWork == 0;
 }
 
+/// Una etiqueta y cuántas unidades la llevan.
+class TagCount {
+  const TagCount(this.tag, this.count);
+
+  final String tag;
+  final int count;
+}
+
+/// Las etiquetas de un montón de unidades, de mayor a menor.
+///
+/// De mayor a menor y no alfabéticas: esta lista se lee para decidir por
+/// dónde entrar, y por donde se entra casi siempre es por donde más hay. A
+/// igualdad, alfabéticas, para que dos etiquetas con las mismas unidades no
+/// se cambien de sitio entre una pantalla y la siguiente.
+List<TagCount> tagCounts(Iterable<Unit> units) {
+  final counts = <String, int>{};
+  for (final unit in units) {
+    for (final tag in unit.tags) {
+      counts[tag] = (counts[tag] ?? 0) + 1;
+    }
+  }
+  final entries = counts.entries.toList()
+    ..sort((a, b) {
+      final byCount = b.value.compareTo(a.value);
+      return byCount != 0 ? byCount : a.key.compareTo(b.key);
+    });
+  return [for (final entry in entries) TagCount(entry.key, entry.value)];
+}
+
 /// One topic: the leaf group, holding units.
 class TopicNode {
   const TopicNode({
@@ -108,6 +137,11 @@ class TopicNode {
   /// The areas present. Now that the area is not a level of the tree, this
   /// is how a group says it holds both theory and exercises.
   Set<String> get blocks => {for (final unit in units) unit.block};
+
+  /// Las etiquetas de sus unidades. Es el nivel de navegación que hay dentro
+  /// de un tema: la categoría dice de qué asignatura es esto, el tema de qué
+  /// va, y la etiqueta por qué sección de la práctica anda.
+  List<TagCount> get tags => tagCounts(units);
 
   TranslationProgress progressIn(String language) =>
       TranslationProgress.of(units, language);
@@ -154,6 +188,10 @@ class CategoryNode {
   /// How many units are exercises, so a category can say it comes with
   /// problem sheets without opening it.
   int get problems => units.where((unit) => unit.isProblem).length;
+
+  /// Las etiquetas de toda la categoría, para cuando todavía no se ha entrado
+  /// en ningún tema.
+  List<TagCount> get tags => tagCounts(units);
 
   TopicNode? topic(String name) {
     for (final node in topics) {
