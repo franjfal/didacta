@@ -1225,7 +1225,7 @@ def cmd_preview(args):
         for profile in wanted:
             result = preview_mod.build(
                 engine, root, reference, profile, language,
-                title=title, kind=unit.kind,
+                title=title, area=unit.area,
             )
             results.append(result)
             if not args.json:

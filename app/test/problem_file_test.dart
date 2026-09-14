@@ -1,10 +1,11 @@
 /// Un problema como tres campos, y como un `.tex` que no pierde nada.
 ///
-/// Esto existe por un dato: de los 429 ficheros de `problems/` del
-/// repositorio, **ninguno** usa `\begin{answer}`. El entorno está definido y
-/// documentado desde el principio --«el resultado, una línea»-- y no lo usa
-/// nadie, porque para usarlo hay que saber que existe. Tres campos con su
-/// nombre lo convierten en algo que se rellena.
+/// Esto existe por un dato: de los 429 ficheros de `problems/` que tenía el
+/// repositorio, **ninguno** usaba `\begin{answer}`. El entorno estaba definido
+/// y documentado desde el principio --«el resultado, una línea»-- y no lo
+/// usaba nadie, porque para usarlo hay que saber que existe. Tres campos con
+/// su nombre lo convierten en algo que se rellena, y la prueba de abajo contra
+/// los ficheros de verdad es la que dice si eso ha ocurrido.
 ///
 /// Lo que hay que demostrar es lo de siempre aquí: que editar un campo no se
 /// lleva por delante lo que hay alrededor.
@@ -268,20 +269,40 @@ void main() {
       );
     });
 
-    test('ninguno usa todavía el resultado, que es el punto', () {
+    test('ya llevan resultado y solución, que era el punto', () {
       final files = realProblems();
       if (files.isEmpty) {
         markTestSkipped('sin didacta_db al lado');
         return;
       }
-      final withAnswer = files
-          .where(
-            (f) => ProblemFile(f.readAsStringSync()).has(ProblemPart.answer),
-          )
+      final parsed = [
+        for (final file in files) ProblemFile(file.readAsStringSync()),
+      ];
+      final withAnswer = parsed.where((p) => p.has(ProblemPart.answer)).length;
+      final withSolution = parsed
+          .where((p) => p.has(ProblemPart.solution))
           .length;
-      // Si algún día esto falla será porque alguien empezó a rellenarlo, que
-      // es exactamente lo que este editor viene a conseguir.
-      expect(withAnswer, 0);
+
+      // Cuando se escribió este fichero la cuenta era cero en los dos, y esa
+      // era la razón de ser de los tres campos: el entorno estaba definido y
+      // documentado desde el principio y no lo usaba nadie, así que las tres
+      // versiones de una hoja daban el mismo PDF. La mayoría, y no todos,
+      // porque un problema recién creado empieza sin ninguno de los dos.
+      expect(withAnswer, greaterThan(files.length * 0.8), reason: 'resultados');
+      expect(
+        withSolution,
+        greaterThan(files.length * 0.8),
+        reason: 'soluciones',
+      );
+
+      // Y se leen de vuelta. Un campo que no se puede volver a abrir no está
+      // escrito: está perdido.
+      for (final problem in parsed) {
+        for (final part in [ProblemPart.answer, ProblemPart.solution]) {
+          if (!problem.has(part)) continue;
+          expect(problem.part(part).trim(), isNotEmpty);
+        }
+      }
     });
   });
 }

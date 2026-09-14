@@ -63,6 +63,38 @@ class WrapperTests(unittest.TestCase):
         # No documentclass: the class comes from the profile, as always.
         self.assertNotIn(r"\documentclass", text)
 
+    def test_a_problem_is_included_from_the_problems_tree(self):
+        """The macro follows the area, not the kind.
+
+        `\\DidactaUnit` resolves against `content/` and `\\DidactaProblem`
+        against `problems/`. Emitting the first for everything made the
+        preview of every exercise in the library come out as a page with
+        `[ missing: ... ]` on it -- and quietly, because an unresolved
+        reference is a warning and the build still reported `ok`.
+        """
+        problem = preview_mod.wrapper_text(
+            "analysis/normed/axioms", "Axiomas", area="problems")
+        self.assertIn(r"\DidactaProblem{analysis/normed/axioms}", problem)
+        self.assertNotIn(r"\DidactaUnit", problem)
+
+        theory = preview_mod.wrapper_text(
+            "analysis/normed/definition", "Definición", area="content")
+        self.assertIn(r"\DidactaUnit{analysis/normed/definition}", theory)
+        self.assertNotIn(r"\DidactaProblem", theory)
+
+        # Sin decir nada, contenido: es donde vive la mayoría.
+        self.assertIn(r"\DidactaUnit", preview_mod.wrapper_text("a/b/c", "Uno"))
+
+    def test_the_area_decides_and_not_the_declared_kind(self):
+        # Una unidad puede vivir en `problems/` y declarar otro kind; lo que
+        # LaTeX tiene que resolver es el fichero, que está donde está.
+        units, errors = repo_mod.scan_units(DEMO, repo_mod.Settings.load(DEMO))
+        self.assertFalse(errors, errors)
+        areas = {u.area for u in units.values()}
+        self.assertEqual(areas, {"content", "problems"})
+        for unit in units.values():
+            self.assertEqual(unit.area, unit.relpath.split("/")[0])
+
     def test_no_title_page_for_one_unit(self):
         # A title page in front of a single definition is a page nobody wants
         # to look at.
@@ -321,7 +353,7 @@ class CompileTests(unittest.TestCase):
             self.profiles[profile],
             "es",
             title="Definición de espacio normado",
-            kind="theory",
+            area="content",
         )
 
     def test_one_unit_compiles_as_slides(self):
@@ -358,6 +390,30 @@ class CompileTests(unittest.TestCase):
                 after.add(os.path.join(directory, name))
         self.assertEqual(before, after)
 
+    def test_a_problem_preview_carries_the_problem(self):
+        """El fallo que esto viene a impedir, compilado de verdad.
+
+        La vista previa de cualquier ejercicio de la biblioteca salía como una
+        página con `[ missing: ... ]`, y el motor decía `ok`: una referencia
+        que LaTeX no resuelve es un aviso, no un error. Así que la única
+        comprobación que sirve es mirar dentro del PDF.
+        """
+        result = preview_mod.build(
+            self.engine,
+            self.repo,
+            "analysis/normed-spaces/norm-axioms",
+            self.profiles["problems"],
+            "es",
+            title="Axiomas de norma",
+            area="problems",
+        )
+        self.assertTrue(result.ok, [str(d) for d in result.errors])
+        text = pdf_letters(result.pdf)
+        self.assertNotIn("missing", text.lower())
+        # Una palabra del enunciado, para que la prueba no pase con una página
+        # en blanco.
+        self.assertIn("normas", text.lower())
+
     def test_a_missing_unit_is_marked_in_the_pdf_rather_than_failing(self):
         """The build succeeds, and says what is missing where it is missing.
 
@@ -374,7 +430,7 @@ class CompileTests(unittest.TestCase):
             self.profiles["notes"],
             "es",
             title="No existe",
-            kind="theory",
+            area="content",
         )
         self.assertTrue(result.ok, [str(d) for d in result.errors])
         self.assertIn("missing", pdf_letters(result.pdf).lower())
