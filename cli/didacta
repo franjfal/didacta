@@ -702,8 +702,8 @@ PROBLEM_TEMPLATE = """%% {title}
 %%
 %% Statement, answer, solution and marking notes in one file. Each level
 %% appears only in the profile that should show it, so this single file
-%% produces the student sheet, the sheet with answers, the sheet with worked
-%% solutions and the teacher's copy.
+%% produces the three versions: the students' sheet, the sheet with the
+%% results, and the teacher's copy with the working and the marking notes.
 
 \\begin{{exercise}}[{title}]
 State the problem here.
