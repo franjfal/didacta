@@ -126,6 +126,17 @@ class BuildTests(unittest.TestCase):
         self.assertIn("problems-teacher", ids)
         self.assertEqual(len(ids), 15)
 
+    def test_the_manifest_carries_the_taxonomy_and_the_blocks(self):
+        """Lo que una interfaz necesita para ofrecer la clasificación.
+
+        Deducirla de lo que las unidades usan hoy daría una lista que se
+        encoge en cuanto la última unidad de un tema cambia de sitio, y
+        entonces ese tema deja de poder elegirse.
+        """
+        self.assertIn("taxonomy", self.manifest)
+        self.assertIn("categories", self.manifest["taxonomy"])
+        self.assertEqual(self.manifest["blocks"], ["theory", "problems"])
+
     def test_repository_errors_reach_the_manifest(self):
         # An index built from a repository that does not load cleanly must say
         # so, or a reader is served something quietly incomplete.
