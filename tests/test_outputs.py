@@ -211,13 +211,14 @@ class OutputMatrixTests(unittest.TestCase):
                     )
 
     def test_a_keypoint_is_boxed_but_not_labelled(self):
-        """What is stated in a box and not proved.
+        """A box with no label on it.
 
         The legacy material writes it as \\fbox{\\begin{minipage}...}, and the
         migration turned the principle of induction into a `theorem` because
-        there was nothing else to turn it into. That reads as «this was
-        proved», which in a first-year practical is false: it is the tool,
-        stated so it can be used.
+        there was nothing else to turn it into. It is not one: it is not
+        derived from anything, it is where the reasoning starts. A theorem
+        stated without its proof, on the other hand, stays a theorem -- which
+        is why this test compiles one of each.
         """
         os.makedirs(self.build_dir, exist_ok=True)
         source = os.path.join(self.build_dir, "keypoint.tex")
