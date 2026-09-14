@@ -487,6 +487,20 @@ class FakeCompiler implements Compiler {
   final List<({String document, List<String> profiles, List<String> languages})>
   documentCalls = [];
 
+  /// Lo borrado, para que un test pueda mirarlo.
+  final List<String> deleted = [];
+
+  @override
+  Future<int> deleteOutputs(List<String> pdfs) async {
+    deleted.addAll(pdfs);
+    // Como el de verdad: lo borrado deja de estar en «ya compiladas».
+    existing = [
+      for (final output in existing)
+        if (!pdfs.contains(output.pdf)) output,
+    ];
+    return pdfs.length;
+  }
+
   @override
   Future<List<BuildableProfile>> documentProfiles(String document) async =>
       documentProfileList;

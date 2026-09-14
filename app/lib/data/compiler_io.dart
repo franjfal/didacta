@@ -443,6 +443,46 @@ class _ProcessCompiler implements Compiler {
   /// `build --json` imprime solo JSON, pero buscar el primer corchete en
   /// lugar de exigirlo cuesta una línea y sobrevive a que algún día el motor
   /// escupa un aviso por delante.
+  /// Lo que latexmk deja junto a un PDF y es suyo. Lista cerrada a
+  /// propósito: borrar por patrón en un directorio es la clase de atajo que
+  /// un día se lleva algo que no era.
+  static const _leftovers = [
+    '.log', '.aux', '.out', '.toc', '.synctex.gz',
+    '.fls', '.fdb_latexmk', '.nav', '.snm', '.vrb', '.bbl', '.blg',
+  ];
+
+  @override
+  Future<int> deleteOutputs(List<String> pdfs) async {
+    var removed = 0;
+    for (final pdf in pdfs) {
+      // Las rutas las da el motor, no las escribe nadie. Aun así se
+      // comprueban: es la única operación de la aplicación que borra, y una
+      // comprobación de dos líneas vale más que la confianza.
+      if (!pdf.endsWith('.pdf') || !_insideClone(pdf)) {
+        throw CompileException(
+          'No borro nada fuera del directorio de compilación.',
+          detail: pdf,
+        );
+      }
+      final stem = pdf.substring(0, pdf.length - '.pdf'.length);
+      for (final path in [pdf, for (final ext in _leftovers) '$stem$ext']) {
+        final file = File(path);
+        if (await file.exists()) {
+          await file.delete();
+          removed += 1;
+        }
+      }
+    }
+    return removed;
+  }
+
+  bool _insideClone(String path) {
+    final root = repositoryPath.endsWith(Platform.pathSeparator)
+        ? repositoryPath
+        : '$repositoryPath${Platform.pathSeparator}';
+    return path.startsWith(root) && !path.contains('..');
+  }
+
   static List<Map<String, dynamic>> _listIn(String output, String what) {
     final start = output.indexOf('[');
     try {
