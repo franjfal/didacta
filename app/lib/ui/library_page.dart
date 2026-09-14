@@ -89,7 +89,7 @@ class _LibraryPageState extends State<LibraryPage> {
   /// tirones sin que nadie sepa por qué.
   LibraryTree? _tree;
   Catalogue? _treeFor;
-  String? _treeArea;
+  String? _treeBlock;
 
   @override
   void initState() {
@@ -112,17 +112,17 @@ class _LibraryPageState extends State<LibraryPage> {
 
   /// El árbol, sobre las unidades del área elegida.
   ///
-  /// Se reconstruye al cambiar de catálogo o de área, no por frame: es una
+  /// Se reconstruye al cambiar de catálogo o de bloque, no por frame: es una
   /// pasada sobre 2147 unidades y ocurre cuando alguien pulsa un filtro.
-  LibraryTree _treeOf(Catalogue catalogue, String? area) {
-    if (_treeFor != catalogue || _treeArea != area) {
+  LibraryTree _treeOf(Catalogue catalogue, String? block) {
+    if (_treeFor != catalogue || _treeBlock != block) {
       _tree = LibraryTree.of(
-        area == null
+        block == null
             ? catalogue.units
-            : catalogue.units.where((unit) => unit.area == area),
+            : catalogue.units.where((unit) => unit.block == block),
       );
       _treeFor = catalogue;
-      _treeArea = area;
+      _treeBlock = block;
     }
     return _tree!;
   }
@@ -143,7 +143,7 @@ class _LibraryPageState extends State<LibraryPage> {
     final filter = _filter!.copyWith(query: _search.text.trim());
     // El mismo filtro de área gobierna el árbol y la búsqueda, para que las
     // dos vistas no puedan estar mirando material distinto.
-    final tree = _treeOf(catalogue, filter.area);
+    final tree = _treeOf(catalogue, filter.block);
 
     return CallbackShortcuts(
       bindings: {
@@ -369,7 +369,7 @@ class _LibraryMenus extends StatelessWidget {
               controller.isOpen ? controller.close() : controller.open(),
         ),
         menuChildren: [
-          ..._areaItems(),
+          ..._blockItems(),
           const Divider(height: 1),
           ..._statusItems(),
           const Divider(height: 1),
@@ -407,21 +407,21 @@ class _LibraryMenus extends StatelessWidget {
     );
   }
 
-  List<Widget> _areaItems() => [
+  List<Widget> _blockItems() => [
     _check(
       'Todo',
-      filter.area == null,
-      () => onFilter(filter.copyWith(clearArea: true)),
+      filter.block == null,
+      () => onFilter(filter.copyWith(clearBlock: true)),
     ),
     _check(
-      'Teoría y apuntes',
-      filter.area == 'content',
-      () => onFilter(filter.copyWith(area: 'content')),
+      'Teoría',
+      filter.block == 'theory',
+      () => onFilter(filter.copyWith(block: 'theory')),
     ),
     _check(
       'Problemas',
-      filter.area == 'problems',
-      () => onFilter(filter.copyWith(area: 'problems')),
+      filter.block == 'problems',
+      () => onFilter(filter.copyWith(block: 'problems')),
     ),
   ];
 
@@ -802,10 +802,10 @@ class _ActiveFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chips = <Widget>[
-      if (filter.area != null)
+      if (filter.block != null)
         _Chip(
-          label: filter.area == 'problems' ? 'problemas' : 'teoría y apuntes',
-          onRemove: () => onFilter(filter.copyWith(clearArea: true)),
+          label: filter.block == 'problems' ? 'problemas' : 'teoría',
+          onRemove: () => onFilter(filter.copyWith(clearBlock: true)),
         ),
       if (filter.kind != null)
         _Chip(
@@ -1086,22 +1086,22 @@ class _AreaFilter extends StatelessWidget {
               Flexible(
                 child: _AreaTab(
                   label: 'Todo',
-                  selected: filter.area == null,
-                  onTap: () => onFilter(filter.copyWith(clearArea: true)),
+                  selected: filter.block == null,
+                  onTap: () => onFilter(filter.copyWith(clearBlock: true)),
                 ),
               ),
               Flexible(
                 child: _AreaTab(
                   label: 'Teoría',
-                  selected: filter.area == 'content',
-                  onTap: () => onFilter(filter.copyWith(area: 'content')),
+                  selected: filter.block == 'theory',
+                  onTap: () => onFilter(filter.copyWith(block: 'theory')),
                 ),
               ),
               Flexible(
                 child: _AreaTab(
                   label: 'Problemas',
-                  selected: filter.area == 'problems',
-                  onTap: () => onFilter(filter.copyWith(area: 'problems')),
+                  selected: filter.block == 'problems',
+                  onTap: () => onFilter(filter.copyWith(block: 'problems')),
                 ),
               ),
             ],

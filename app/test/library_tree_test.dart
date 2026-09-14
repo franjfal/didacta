@@ -54,7 +54,7 @@ LibraryTree treeFixture() => LibraryTree.of([
 
 void main() {
   group('la forma', () {
-    test('agrupa por categoría y tema, sin partir por área', () {
+    test('agrupa por categoría y tema, sin partir por bloque', () {
       // El área NO es un nivel: `analysis` tiene teoría y problemas y es una
       // sola categoría. La primera versión la partía en dos con el mismo
       // nombre, y la interfaz decía «63 categorías» donde hay 51.
@@ -65,7 +65,7 @@ void main() {
 
       final analysis = tree.category('analysis')!;
       expect(analysis.count, 5);
-      expect(analysis.areas, {'content', 'problems'});
+      expect(analysis.blocks, {'theory', 'problems'});
       expect(analysis.problems, 1);
       expect(analysis.topics.map((t) => t.topic), ['normed', 'metric']);
       expect(analysis.topic('normed')!.count, 4);
@@ -75,7 +75,7 @@ void main() {
       // «¿Qué tengo de espacios normados?» quiere las dos cosas: se preparan
       // juntas, y separarlas obliga a mirar en dos sitios.
       final normed = treeFixture().topic('analysis', 'normed')!;
-      expect(normed.areas, {'content', 'problems'});
+      expect(normed.blocks, {'theory', 'problems'});
       expect(normed.kinds, {'theory', 'problem'});
     });
 
@@ -107,12 +107,12 @@ void main() {
       ]);
     });
 
-    test('cuenta cuántas unidades hay de cada área', () {
+    test('cuenta cuántas unidades hay de cada bloque', () {
       // Para que el filtro pueda decir qué daría pulsarlo.
-      expect(treeFixture().byArea, {'content': 5, 'problems': 1});
+      expect(treeFixture().byBlock, {'theory': 5, 'problems': 1});
     });
 
-    test('construido sobre un área, solo tiene esa área', () {
+    test('construido sobre un bloque, solo tiene ese bloque', () {
       // Así es como el filtro funciona: el árbol se hace con las unidades ya
       // filtradas, en lugar de llevar el área como nivel.
       final problems = LibraryTree.of(
@@ -134,7 +134,7 @@ void main() {
       final tree = LibraryTree.of(const []);
       expect(tree.categories, isEmpty);
       expect(tree.unitCount, 0);
-      expect(tree.byArea, isEmpty);
+      expect(tree.byBlock, isEmpty);
     });
   });
 

@@ -48,7 +48,7 @@ class LibraryFilter {
     this.category,
     this.kind,
     this.tag,
-    this.area,
+    this.block,
     this.language = 'es',
     this.status = StatusFilter.any,
     this.sort = LibrarySort.path,
@@ -62,7 +62,7 @@ class LibraryFilter {
 
   /// `content` or `problems`. Theory and exercises are browsed differently
   /// often enough to be worth one click.
-  final String? area;
+  final String? block;
 
   /// The language the listing is *about*: titles are shown in it and the
   /// status filter applies to it.
@@ -91,15 +91,15 @@ class LibraryFilter {
     bool clearKind = false,
     String? tag,
     bool clearTag = false,
-    String? area,
-    bool clearArea = false,
+    String? block,
+    bool clearBlock = false,
   }) {
     return LibraryFilter(
       query: query ?? this.query,
       category: clearCategory ? null : (category ?? this.category),
       kind: clearKind ? null : (kind ?? this.kind),
       tag: clearTag ? null : (tag ?? this.tag),
-      area: clearArea ? null : (area ?? this.area),
+      block: clearBlock ? null : (block ?? this.block),
       language: language ?? this.language,
       status: status ?? this.status,
       sort: sort ?? this.sort,
@@ -117,7 +117,7 @@ class LibraryFilter {
       category != null ||
       kind != null ||
       tag != null ||
-      area != null ||
+      block != null ||
       status != StatusFilter.any ||
       unusedOnly;
 
@@ -126,7 +126,7 @@ class LibraryFilter {
       category != null ||
       kind != null ||
       tag != null ||
-      area != null ||
+      block != null ||
       status != StatusFilter.any ||
       unusedOnly;
 
@@ -135,7 +135,7 @@ class LibraryFilter {
   String describe() {
     final parts = <String>[];
     if (query.isNotEmpty) parts.add('«$query»');
-    if (area != null) parts.add(area!);
+    if (block != null) parts.add(block!);
     if (category != null) parts.add(category!);
     if (kind != null) parts.add(kind!);
     if (tag != null) parts.add('#$tag');
@@ -154,7 +154,7 @@ class LibraryFilter {
   }
 
   bool matches(Unit unit) {
-    if (area != null && unit.area != area) return false;
+    if (block != null && unit.block != block) return false;
     if (category != null && unit.category != category) return false;
     if (kind != null && unit.kind != kind) return false;
     if (tag != null && !unit.tags.contains(tag)) return false;
@@ -234,14 +234,14 @@ class LibraryFacets {
     required this.shown,
     required this.byCategory,
     required this.byKind,
-    required this.byArea,
+    required this.byBlock,
     required this.byStatus,
   });
 
   factory LibraryFacets.of(List<Unit> units, LibraryFilter filter) {
     final byCategory = <String, int>{};
     final byKind = <String, int>{};
-    final byArea = <String, int>{};
+    final byBlock = <String, int>{};
     final byStatus = <TranslationStatus, int>{};
 
     for (final unit in units) {
@@ -251,8 +251,8 @@ class LibraryFacets {
       if (filter.copyWith(clearKind: true).matches(unit)) {
         byKind[unit.kind] = (byKind[unit.kind] ?? 0) + 1;
       }
-      if (filter.copyWith(clearArea: true).matches(unit)) {
-        byArea[unit.area] = (byArea[unit.area] ?? 0) + 1;
+      if (filter.copyWith(clearBlock: true).matches(unit)) {
+        byBlock[unit.block] = (byBlock[unit.block] ?? 0) + 1;
       }
       if (filter.matches(unit)) {
         final state = unit.statusIn(filter.language);
@@ -265,7 +265,7 @@ class LibraryFacets {
       shown: units.where(filter.matches).length,
       byCategory: byCategory,
       byKind: byKind,
-      byArea: byArea,
+      byBlock: byBlock,
       byStatus: byStatus,
     );
   }
@@ -274,7 +274,7 @@ class LibraryFacets {
   final int shown;
   final Map<String, int> byCategory;
   final Map<String, int> byKind;
-  final Map<String, int> byArea;
+  final Map<String, int> byBlock;
   final Map<TranslationStatus, int> byStatus;
 
   /// Categories with anything in them, most populated first -- a sidebar of 51
