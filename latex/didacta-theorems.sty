@@ -235,5 +235,45 @@
 %% Legacy name.
 \newenvironment{nformula}{\begin{keyformula}}{\end{keyformula}}
 
+%% ---------------------------------------------------------------------------
+%% A statement singled out in a box
+%%
+%%   \begin{keypoint} ... \end{keypoint}
+%%   \begin{keypoint}[Principio de inducción matemática] ... \end{keypoint}
+%%
+%% For what the student is given to work with and is not going to prove here:
+%% the principle a whole section rests on, the convention everything below
+%% assumes. The legacy material writes exactly this as
+%% `\noindent\fbox{\begin{minipage}{\textwidth} ... \end{minipage}}`, and it
+%% had nowhere to go: every Didacta environment either numbers and labels its
+%% content --«Teorema 1.2»-- or is a formula.
+%%
+%% That distinction is not cosmetic. Calling the principle of induction a
+%% theorem says it was proved, and in a first-year practical nothing around it
+%% proves anything: it is the tool, stated so it can be used. A box says
+%% «retén esto» without claiming a status the text does not earn.
+%%
+%% No counter and no label, on purpose. The optional title is set in bold at
+%% the head of the box, not as `\theoremname n.n`, so a box can carry a name
+%% without pretending to be a numbered result.
+%% ---------------------------------------------------------------------------
+
+\newtcolorbox{didacta@pointbox}{
+  enhanced, sharp corners,
+  breakable,
+  colback=white, colframe=didactaInk!55,
+  boxrule=0.5pt,
+  left=1.1em, right=1.1em, top=0.9ex, bottom=0.9ex,
+  before skip=1.6ex, after skip=1.6ex,
+}
+
+\newenvironment{keypoint}[1][]{%
+  \begin{didacta@pointbox}%
+  \ifblank{#1}{}{{\bfseries #1}\par\nobreak\smallskip}%
+  \ignorespaces
+}{%
+  \end{didacta@pointbox}%
+}
+
 \makeatother
 \endinput

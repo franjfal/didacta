@@ -210,6 +210,37 @@ class OutputMatrixTests(unittest.TestCase):
                         "the %s build carries the %s heading" % (language, other),
                     )
 
+    def test_a_keypoint_is_boxed_but_not_labelled(self):
+        """What is stated in a box and not proved.
+
+        The legacy material writes it as \\fbox{\\begin{minipage}...}, and the
+        migration turned the principle of induction into a `theorem` because
+        there was nothing else to turn it into. That reads as «this was
+        proved», which in a first-year practical is false: it is the tool,
+        stated so it can be used.
+        """
+        os.makedirs(self.build_dir, exist_ok=True)
+        source = os.path.join(self.build_dir, "keypoint.tex")
+        with open(source, "w", encoding="utf-8") as handle:
+            handle.write(
+                "\\input{didacta-bootstrap}\n\\usepackage{didacta}\n"
+                "\\DidactaDocument{Keypoint}\n\\begin{document}\n"
+                "\\begin{keypoint}[Principio de induccion]\n"
+                "Una propiedad cualquiera.\n\\end{keypoint}\n"
+                "\\begin{theorem}[del seno]\nOtra cosa.\n\\end{theorem}\n"
+                "\\end{document}\n"
+            )
+        result = self.engine.build(source, "notes", "es",
+                                   document_id="keypoint",
+                                   document_title="Keypoint")
+        self.assertTrue(result.ok, result.errors[:2])
+        text = pdf_text(result.pdf)
+        # El recuadro lleva su título...
+        self.assertIn("Principiodeinduccion", text)
+        # ...y no la palabra que diría que se ha demostrado. El `theorem` de
+        # al lado sí la lleva, que es lo que hace la prueba concluyente.
+        self.assertEqual(text.count("Teorema"), 1)
+
     # -- the answer levels appear exactly where they should ---------------
 
     #: Marker words present in the example problem, per level.
