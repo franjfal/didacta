@@ -258,6 +258,20 @@ class Unit:
         return entry.path if entry and entry.exists else None
 
     @property
+    def area(self):
+        """The tree this unit lives in: ``content`` or ``problems``.
+
+        Not the same question as ``kind``. The kind is what the unit *is* and
+        is declared; the area is where its file *is* and is a fact about the
+        disk. LaTeX resolves a reference against one tree or the other, so it
+        is the area that has to decide the macro -- a unit under ``problems/``
+        that declares ``kind: theory`` still has to be looked up in
+        ``problems/``.
+        """
+        parts = self.relpath.split("/")
+        return parts[0] if len(parts) > 1 else CONTENT
+
+    @property
     def reference_path(self):
         """The path a composition writes: the relpath without its area.
 

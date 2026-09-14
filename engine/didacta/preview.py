@@ -41,7 +41,7 @@ def slug(text):
     return cleaned or "unit"
 
 
-def wrapper_text(reference, title, *, kind=None):
+def wrapper_text(reference, title, *, area=None):
     r"""The smallest document that compiles one unit.
 
     No title page and no table of contents: this is one unit, and a title page
@@ -51,13 +51,22 @@ def wrapper_text(reference, title, *, kind=None):
     `\DidactaDocument` is still set, because the profile uses it for the PDF
     metadata and the running head, and a preview whose header says
     `preview-1a2b` would be worse than one that says what it is.
+
+    The include macro follows the *area*: `\DidactaUnit` resolves against
+    `content/` and `\DidactaProblem` against `problems/`. Emitting
+    `\DidactaUnit` for everything --which is what this did-- made the preview
+    of every exercise in the library come out as a page with
+    `[ missing: ... ]` on it, and it did so quietly: a reference LaTeX cannot
+    resolve is a package warning, so the build still reported `ok`.
     """
+    include = (r"\DidactaProblem" if area == repo_mod.PROBLEMS
+               else r"\DidactaUnit")
     return "\n".join(
         [
             "%% Vista previa de una unidad. Generado por `didacta preview`;",
             "%% se reescribe en cada compilación y no se versiona.",
             "%%",
-            "%% La unidad: %s" % reference,
+            "%% La unidad: %s/%s" % (area or repo_mod.CONTENT, reference),
             "",
             r"\input{didacta-bootstrap}",
             r"\usepackage{didacta}",
@@ -65,14 +74,14 @@ def wrapper_text(reference, title, *, kind=None):
             r"\DidactaDocument{%s}" % (title or reference),
             "",
             r"\begin{document}",
-            r"\DidactaUnit{%s}" % reference,
+            "%s{%s}" % (include, reference),
             r"\end{document}",
             "",
         ]
     )
 
 
-def write_wrapper(root, build_dir, reference, title, *, kind=None):
+def write_wrapper(root, build_dir, reference, title, *, area=None):
     """Writes the wrapper and returns its path.
 
     One directory per unit, so two previews of different units do not fight
@@ -84,7 +93,7 @@ def write_wrapper(root, build_dir, reference, title, *, kind=None):
     os.makedirs(directory, exist_ok=True)
     source = os.path.join(directory, stem + ".tex")
     with open(source, "w", encoding="utf-8") as handle:
-        handle.write(wrapper_text(reference, title, kind=kind))
+        handle.write(wrapper_text(reference, title, area=area))
     return source
 
 
@@ -208,7 +217,7 @@ def status(engine, unit, profiles, languages, title):
 
 
 def build(engine, root, reference, profile, language, *, title=None,
-          kind=None):
+          area=None):
     """Compiles one unit in one profile and one language.
 
     Returns the engine's own `BuildResult`, so a caller gets the same
@@ -217,7 +226,7 @@ def build(engine, root, reference, profile, language, *, title=None,
     thing to learn.
     """
     source = write_wrapper(
-        root, engine.build_dir, reference, title or reference, kind=kind
+        root, engine.build_dir, reference, title or reference, area=area
     )
     return engine.build(
         source,
