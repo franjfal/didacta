@@ -243,34 +243,29 @@ class _ProcessCompiler implements Compiler {
 
   @override
   Future<List<BuildableProfile>> profilesFor(String unitPath) async {
-    final output = await _run(['preview', unitPath, '--list']);
-    // `--list` imprime para leerlo, no para parsearlo: dos columnas después
-    // de la primera línea. Se parsea aquí y no se añade un `--json` más
-    // porque el formato es de dos campos y esto no crece.
-    final profiles = <BuildableProfile>[];
-    for (final line in output.split('\n')) {
-      final match = _listLine.firstMatch(line);
-      if (match == null) continue;
-      profiles.add(
-        BuildableProfile(
-          id: match.group(1)!,
-          label: match.group(2)!.trim(),
-          family: _familyOf(match.group(1)!),
-        ),
-      );
-    }
-    return profiles;
+    final output = await _run(['preview', unitPath, '--list', '--json']);
+    // El registro entero y no las dos columnas de `--list`: la familia y
+    // cuánto enseña cada versión las decide el motor, y deducirlas aquí del
+    // id era la misma cosa sabida en dos sitios. Ya se había desincronizado:
+    // `handout-answers` salía de la familia `notes`.
+    return [
+      for (final item in _listIn(output, unitPath)) _profileFrom(item),
+    ];
   }
 
-  static final RegExp _listLine = RegExp(r'^  ([a-z][a-z0-9-]*)\s{2,}(.+)$');
-
-  static String _familyOf(String id) {
-    if (id.startsWith('slides')) return 'slides';
-    if (id.startsWith('problems')) return 'problems';
-    if (id.startsWith('exam')) return 'exam';
-    if (id == 'handout') return 'handout';
-    return 'notes';
-  }
+  static BuildableProfile _profileFrom(
+    Map<String, dynamic> json, {
+    bool byDefault = false,
+  }) => BuildableProfile(
+    // `preview --list --json` lo llama `id` y `build --profiles --json`,
+    // `profile`: la primera lista perfiles y la segunda, lo que un documento
+    // hace con ellos.
+    id: (json['id'] ?? json['profile']) as String? ?? '',
+    label: json['label'] as String? ?? '',
+    family: json['family'] as String? ?? '',
+    reveals: json['reveals'] as String? ?? 'statements',
+    byDefault: byDefault,
+  );
 
   @override
   Future<List<ExistingOutput>> outputsFor(String unitPath) async {
@@ -415,15 +410,9 @@ class _ProcessCompiler implements Compiler {
   @override
   Future<List<BuildableProfile>> documentProfiles(String document) async {
     final output = await _run(['build', document, '--profiles', '--json']);
-    final decoded = _listIn(output, document);
     return [
-      for (final item in decoded)
-        BuildableProfile(
-          id: item['profile'] as String? ?? '',
-          label: item['label'] as String? ?? '',
-          family: item['family'] as String? ?? '',
-          byDefault: item['default'] == true,
-        ),
+      for (final item in _listIn(output, document))
+        _profileFrom(item, byDefault: item['default'] == true),
     ];
   }
 

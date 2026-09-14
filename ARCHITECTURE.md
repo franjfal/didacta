@@ -103,7 +103,7 @@ Un perfil no es una plantilla. Son cinco ejes independientes:
 | `solutions` | `hidden` · `answers` · `full` | qué nivel de respuesta se revela |
 | `pauses` | `on` · `off` | si `\dpause` revela o se colapsa |
 
-Las 14 salidas son combinaciones con nombre. Añadir una es una línea:
+Las 15 salidas son combinaciones con nombre. Añadir una es una línea:
 
 ```latex
 \DidactaDeclareProfile{notes-solutions}{article}{12pt,oneside}{%
@@ -460,7 +460,7 @@ app/lib/
 
 Esta fase es la infraestructura: el sistema LaTeX, el modelo de contenido, el
 motor de compilación, la herramienta y el migrador. Verificado compilando de
-verdad las 14 salidas, y migrando el material real: 194 unidades tomadas al
+verdad las 15 salidas, y migrando el material real: 194 unidades tomadas al
 azar de 51 categorías compilan sin un solo fallo, y el Tema 1 de 2025-2026
 sale de la composición migrada en sus 7 perfiles.
 

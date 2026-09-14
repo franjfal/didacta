@@ -1,7 +1,7 @@
 """The output matrix: the test the platform is judged by.
 
 Didacta's whole claim is that one source produces every output correctly. This
-compiles the example content in all 14 profiles and checks not just that the
+compiles the example content in all 15 profiles and checks not just that the
 PDFs appear but that each one contains what it should and omits what it should
 not -- which is the part that would otherwise fail silently. A profile that
 compiles and quietly drops the solutions looks fine until someone hands out the
@@ -151,7 +151,7 @@ class OutputMatrixTests(unittest.TestCase):
                 )
         self.assertEqual(untested, [], "\n".join(untested))
         self.assertEqual(
-            len(self.profiles), 14,
+            len(self.profiles), 15,
             "the profile count changed; update README.md and docs/AUTHORING.md",
         )
 
@@ -195,11 +195,16 @@ class OutputMatrixTests(unittest.TestCase):
         "marking": "Correccin",
     }
 
+    #: The three levels, and they are the three fields of a problem: level n
+    #: shows fields 1 to n. `handout-*` is the same three for a practical
+    #: script, which is handed out and marked exactly like a problem sheet.
     EXPECTED = {
         "problems":            {"hint": True,  "answer": False, "solution": False, "marking": False},
         "problems-answers":    {"hint": True,  "answer": True,  "solution": False, "marking": False},
-        "problems-solutions":  {"hint": True,  "answer": True,  "solution": True,  "marking": False},
         "problems-teacher":    {"hint": True,  "answer": True,  "solution": True,  "marking": True},
+        "handout":             {"hint": True,  "answer": False, "solution": False, "marking": False},
+        "handout-answers":     {"hint": True,  "answer": True,  "solution": False, "marking": False},
+        "handout-teacher":     {"hint": True,  "answer": True,  "solution": True,  "marking": True},
     }
 
     def test_answer_levels_match_the_documented_matrix(self):

@@ -220,4 +220,70 @@ void main() {
       expect(compiler.documentCalls, hasLength(1));
     });
   });
+
+  group('las tres versiones de lo que lleva ejercicios', () {
+    // Un tema con ejercicios dentro se entrega de tres formas: el enunciado
+    // solo, el enunciado con el resultado para que se corrijan ellos, y la
+    // del profesor con la solución paso a paso. Las tres salen de la misma
+    // fuente; lo único que hace falta es poder decir cuál se quiere.
+
+    Future<FakeCompiler> pumpProblems(WidgetTester tester) async {
+      final compiler = FakeCompiler(profiles: problemProfiles)
+        ..documentProfileList = problemProfiles;
+      await pumpDocument(tester, compiler: compiler);
+      await tester.tap(find.text('Compilar'));
+      await settle(tester);
+      return compiler;
+    }
+
+    testWidgets('están las tres, y cada una dice qué lleva dentro', (
+      tester,
+    ) async {
+      await pumpProblems(tester);
+
+      expect(find.text('Hoja de problemas'), findsOneWidget);
+      expect(find.text('Hoja de problemas (con resultados)'), findsOneWidget);
+      expect(find.text('Hoja de problemas (profesor)'), findsOneWidget);
+
+      // La etiqueta no basta: entre `problems` y `problems-answers` lo que se
+      // decide es qué ve un alumno, y eso se dice con todas las letras.
+      expect(find.text('solo los enunciados'), findsOneWidget);
+      expect(find.text('enunciados y resultados'), findsOneWidget);
+      expect(find.text('todo, con la solución paso a paso'), findsOneWidget);
+    });
+
+    testWidgets('la marcada de entrada no regala nada', (tester) async {
+      // Compilar sin mirar tiene que dar la hoja del alumno. Repartir por
+      // error la que lleva las soluciones no se deshace.
+      await pumpProblems(tester);
+
+      final chosen = [
+        for (final profile in problemProfiles)
+          if (tester
+              .widget<FilterChip>(find.byKey(Key('profile-${profile.id}')))
+              .selected)
+            profile,
+      ];
+      expect(chosen.map((p) => p.id), ['problems']);
+      expect(chosen.every((p) => !p.givesAway), isTrue);
+    });
+
+    testWidgets('se pueden pedir las tres a la vez', (tester) async {
+      // Es lo normal la víspera: la hoja para clase, la de resultados para
+      // colgar después y la del profesor para corregir.
+      final compiler = await pumpProblems(tester);
+      await tester.tap(find.byKey(const Key('profile-problems-answers')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('profile-problems-teacher')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('compile')));
+      await settle(tester);
+
+      expect(compiler.documentCalls.single.profiles, [
+        'problems',
+        'problems-answers',
+        'problems-teacher',
+      ]);
+    });
+  });
 }

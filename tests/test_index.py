@@ -124,7 +124,7 @@ class BuildTests(unittest.TestCase):
         ids = {profile["id"] for profile in self.manifest["profiles"]}
         self.assertIn("slides", ids)
         self.assertIn("problems-teacher", ids)
-        self.assertEqual(len(ids), 14)
+        self.assertEqual(len(ids), 15)
 
     def test_repository_errors_reach_the_manifest(self):
         # An index built from a repository that does not load cleanly must say

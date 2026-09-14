@@ -2,7 +2,7 @@
 ///
 /// La pregunta que responde es la que se hace editando: «¿cómo queda esto?»,
 /// en diapositivas y en libro, sin salir de la unidad. Lo hace el motor
-/// --`didacta preview`--, no la aplicación: el preámbulo, los 14 perfiles y
+/// --`didacta preview`--, no la aplicación: el preámbulo, los 15 perfiles y
 /// el parseo del log de LaTeX ya existen y están probados, y una segunda
 /// implementación en Dart sería una segunda cosa que se desincroniza.
 ///
@@ -24,6 +24,7 @@ class BuildableProfile {
     required this.id,
     required this.label,
     required this.family,
+    this.reveals = 'statements',
     this.byDefault = false,
   });
 
@@ -34,6 +35,30 @@ class BuildableProfile {
 
   /// `slides`, `notes`, `problems`, `handout`, `exam`.
   final String family;
+
+  /// Cuánto enseña de un ejercicio: `statements`, `answers`, `solutions` o
+  /// `teacher`.
+  ///
+  /// Lo dice el motor y no se deduce del id aquí: son los mismos tres campos
+  /// del editor --enunciado, resultado, solución detallada-- leídos como
+  /// niveles, y quien decide cuáles se ven es el perfil.
+  final String reveals;
+
+  /// Lo que un ejercicio enseña en esta versión, en una línea.
+  ///
+  /// Es la pregunta que se hace de verdad delante del menú --«¿esta lleva
+  /// las soluciones?»-- y la que no se puede contestar leyendo `problems` o
+  /// `problems-answers`. Entregar a una clase la hoja equivocada es el fallo
+  /// que esto viene a impedir.
+  String get shows => switch (reveals) {
+    'answers' => 'enunciados y resultados',
+    'solutions' => 'enunciados, resultados y solución',
+    'teacher' => 'todo, con la solución paso a paso',
+    _ => 'solo los enunciados',
+  };
+
+  /// Si enseña algo que un alumno no debería ver antes de tiempo.
+  bool get givesAway => reveals != 'statements';
 
   /// Si es una de las que se miran primero: las dos que se pidieron
   /// --presentación y libro-- más los apuntes, que son la prosa por defecto.

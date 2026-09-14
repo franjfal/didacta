@@ -235,6 +235,10 @@ def build(engine, root, reference, profile, language, *, title=None,
 #: kind. The two vocabularies overlap but are not the same -- a unit kind is
 #: `problem`, a document kind is `problems` -- and one map serving both would
 #: silently fall through to the default for half the values.
+#: How much of an exercise an output shows, least first. The order the menu
+#: is read in: you decide *how much* to give away, not which id to pick.
+REVEAL_ORDER = {"statements": 0, "answers": 1, "solutions": 2, "teacher": 3}
+
 UNIT_FAMILIES = {
     "theory": ("slides", "notes"),
     "example": ("slides", "notes"),
@@ -251,7 +255,7 @@ UNIT_FAMILIES = {
 def profiles_for(kind, all_profiles):
     """Which profiles are worth offering for a unit of this kind.
 
-    Every profile *works* — that is what one source and 14 outputs means — so
+    Every profile *works* — that is what one source and 15 outputs means — so
     this is about what to put in a menu, not about what is possible. A
     definition offered as an exam paper is a menu entry nobody reads.
 
@@ -279,7 +283,12 @@ def profiles_for(kind, all_profiles):
             if profile.id in ("slides", "notes", "book", "handout", "problems")
             else 1
         )
-        return (family, primary, profile.id)
+        # Then by how much of an exercise each one shows, so the three levels
+        # of a problem sheet come out in the order they are decided in:
+        # statements, results, the teacher's copy. Alphabetical order gets
+        # this right by luck today; saying it means it stays right.
+        return (family, primary, REVEAL_ORDER.get(profile.reveals, 9),
+                profile.id)
 
     wanted.sort(key=rank)
     return wanted

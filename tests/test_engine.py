@@ -35,8 +35,9 @@ class ProfileRegistryTests(unittest.TestCase):
     def test_the_documented_profiles_are_all_present(self):
         expected = {
             "slides", "slides-flat", "slides-teacher",
-            "notes", "notes-solutions", "notes-teacher", "book", "handout",
-            "problems", "problems-answers", "problems-solutions", "problems-teacher",
+            "notes", "notes-solutions", "notes-teacher", "book",
+            "handout", "handout-answers", "handout-teacher",
+            "problems", "problems-answers", "problems-teacher",
             "exam", "exam-marking",
         }
         self.assertEqual(set(self.profiles), expected)
@@ -78,7 +79,31 @@ class ProfileRegistryTests(unittest.TestCase):
         self.assertFalse(self.profiles["problems"].shows_answers)
         self.assertTrue(self.profiles["problems-answers"].shows_answers)
         self.assertFalse(self.profiles["problems-answers"].shows_solutions)
-        self.assertTrue(self.profiles["problems-solutions"].shows_solutions)
+        self.assertTrue(self.profiles["problems-teacher"].shows_solutions)
+
+    def test_anything_with_exercises_offers_exactly_three_levels(self):
+        """Statements, statements with the result, and the teacher's copy.
+
+        The three fields of a problem read as levels: level n shows fields 1
+        to n. A fourth entry in that menu is a guess, and the guess decides
+        what a class is handed.
+        """
+        for family in ("problems", "handout"):
+            offered = profiles_mod.for_family(self.profiles, family)
+            self.assertEqual(
+                [p.reveals for p in offered],
+                ["statements", "answers", "teacher"],
+                family,
+            )
+
+    def test_reveals_says_how_much_of_an_exercise_comes_out(self):
+        self.assertEqual(self.profiles["problems"].reveals, "statements")
+        self.assertEqual(self.profiles["problems-answers"].reveals, "answers")
+        self.assertEqual(self.profiles["problems-teacher"].reveals, "teacher")
+        self.assertEqual(self.profiles["notes-solutions"].reveals, "solutions")
+        # Y viaja hasta la interfaz, que es donde se decide qué se imprime.
+        self.assertEqual(
+            self.profiles["problems-answers"].as_dict()["reveals"], "answers")
 
     def test_families_group_profiles_sensibly(self):
         self.assertEqual(self.profiles["slides"].family, "slides")
@@ -96,7 +121,15 @@ class ProfileRegistryTests(unittest.TestCase):
         problems = {p.id for p in profiles_mod.default_profiles(self.profiles, "problems")}
         self.assertEqual(
             problems,
-            {"problems", "problems-answers", "problems-solutions", "problems-teacher"},
+            {"problems", "problems-answers", "problems-teacher"},
+        )
+
+        # Una práctica lleva ejercicios dentro, así que se entrega igual: las
+        # mismas tres versiones.
+        practical = {p.id for p in profiles_mod.default_profiles(self.profiles, "practical")}
+        self.assertEqual(
+            practical,
+            {"handout", "handout-answers", "handout-teacher"},
         )
 
     def test_labels_are_derived_and_never_contradict_the_axes(self):
@@ -115,9 +148,9 @@ class ProfileRegistryTests(unittest.TestCase):
         self.assertIn(r"\def\DidactaContentRoot{../../}", pretex)
 
     def test_output_names_are_readable_and_filesystem_safe(self):
-        name = self.profiles["problems-solutions"].output_name(
+        name = self.profiles["problems-answers"].output_name(
             "Hoja 1: espacios normados", "es")
-        self.assertEqual(name, "Hoja 1 espacios normados - problems-solutions - es")
+        self.assertEqual(name, "Hoja 1 espacios normados - problems-answers - es")
         for character in ':/\\*?"<>|':
             self.assertNotIn(character, name)
 

@@ -55,6 +55,11 @@ abstract class PreviewTarget {
   /// El idioma marcado de entrada.
   String get defaultLanguage;
 
+  /// Qué se está compilando, para decirlo en el título: «esta unidad», «este
+  /// tema». La misma pantalla sirve para las dos cosas y hasta ahora decía
+  /// «unidad» compilando un tema entero.
+  String get what;
+
   /// Qué falta por traducir para poder compilar en [language].
   ///
   /// Vacío es «se puede compilar». No vacío es que **no se compila**: lo que
@@ -84,6 +89,9 @@ class UnitTarget implements PreviewTarget {
 
   @override
   String get defaultLanguage => unit.reference;
+
+  @override
+  String get what => 'esta unidad';
 
   /// Una unidad suelta se previsualiza igual.
   ///
@@ -153,6 +161,9 @@ class DocumentTarget implements PreviewTarget {
 
   @override
   String get defaultLanguage => language;
+
+  @override
+  String get what => 'este tema';
 
   @override
   Future<List<BuildableProfile>> profilesFrom(Compiler compiler) =>
@@ -417,6 +428,7 @@ class UnitPreview extends StatelessWidget {
     return Column(
       children: [
         _Controls(
+          what: state.target.what,
           profiles: state.profiles,
           chosen: state.chosen,
           chosenLanguages: state.languages,
@@ -452,6 +464,7 @@ class UnitPreview extends StatelessWidget {
 
 class _Controls extends StatelessWidget {
   const _Controls({
+    required this.what,
     required this.profiles,
     required this.chosen,
     required this.chosenLanguages,
@@ -462,6 +475,9 @@ class _Controls extends StatelessWidget {
     required this.onLanguage,
     required this.onCompile,
   });
+
+  /// «esta unidad» o «este tema».
+  final String what;
 
   final List<BuildableProfile> profiles;
   final Set<String> chosen;
@@ -494,10 +510,13 @@ class _Controls extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Compilar esta unidad',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  'Compilar $what',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               // Los idiomas de la salida, que no tienen que ser el que se
@@ -524,7 +543,29 @@ class _Controls extends StatelessWidget {
             children: [
               for (final profile in profiles)
                 FilterChip(
-                  label: Text(profile.label),
+                  key: Key('profile-${profile.id}'),
+                  // Dos líneas: cómo se llama la versión y qué lleva dentro
+                  // de los ejercicios. La segunda es la pregunta que se hace
+                  // de verdad --«¿esta lleva las soluciones?»--, y con `problems`
+                  // y `problems-answers` uno al lado del otro no se contesta
+                  // sola. Lo que se imprime para una clase se decide aquí.
+                  label: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(profile.label),
+                      Text(
+                        profile.shows,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          height: 1.25,
+                          color: profile.givesAway
+                              ? didactaTeacher
+                              : didactaMuted,
+                        ),
+                      ),
+                    ],
+                  ),
                   selected: chosen.contains(profile.id),
                   visualDensity: VisualDensity.compact,
                   avatar: Container(
