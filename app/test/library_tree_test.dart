@@ -13,6 +13,7 @@ import 'package:didacta_app/model/library_tree.dart';
 Unit unit({
   required String path,
   String kind = 'theory',
+  List<String> tags = const [],
   Map<String, dynamic>? languages,
   List<Map<String, String>> usedBy = const [],
 }) {
@@ -24,7 +25,7 @@ Unit unit({
     'kind': kind,
     'category': parts[1],
     'topic': parts[2],
-    'tags': const <String>[],
+    'tags': tags,
     'title': {'es': parts.last},
     'reference': 'es',
     'languages':
@@ -247,6 +248,64 @@ void main() {
 
     test('vacío se queda vacío en lugar de reventar', () {
       expect(humaniseSlug(''), '');
+    });
+  });
+
+  group('las etiquetas', () {
+    // El nivel de navegación que hay dentro de un tema. Al colapsar los seis
+    // temas de la práctica en uno --«la recta real»--, la etiqueta es lo que
+    // dice por qué sección de la práctica anda cada fichero.
+    final units = [
+      unit(path: 'content/analisis/recta-real/suma-cuadrados',
+          tags: const ['induccion']),
+      unit(path: 'content/analisis/recta-real/suma-cubos',
+          tags: const ['induccion']),
+      unit(path: 'content/analisis/recta-real/binomio',
+          tags: const ['induccion']),
+      unit(path: 'content/analisis/recta-real/valor-absoluto',
+          tags: const ['valor-absoluto']),
+      unit(path: 'content/analisis/recta-real/sin-etiqueta'),
+    ];
+
+    test('se cuentan, y van de mayor a menor', () {
+      final counts = tagCounts(units);
+      expect([for (final t in counts) t.tag], ['induccion', 'valor-absoluto']);
+      expect([for (final t in counts) t.count], [3, 1]);
+    });
+
+    test('a igualdad van alfabéticas, para que no bailen de sitio', () {
+      // Dos etiquetas con las mismas unidades tienen que salir siempre en el
+      // mismo orden: una lista que se reordena sola entre dos pantallas no se
+      // puede usar para navegar.
+      final counts = tagCounts([
+        unit(path: 'content/a/t/uno', tags: const ['zeta']),
+        unit(path: 'content/a/t/dos', tags: const ['alfa']),
+      ]);
+      expect([for (final t in counts) t.tag], ['alfa', 'zeta']);
+    });
+
+    test('una unidad con varias cuenta en todas', () {
+      // Y es la razón de que esto sea un filtro y no una rama del árbol: en un
+      // árbol la unidad saldría en dos sitios y los números dejarían de sumar
+      // lo que hay.
+      final counts = tagCounts([
+        unit(path: 'content/a/t/uno', tags: const ['induccion', 'sucesiones']),
+      ]);
+      expect([for (final t in counts) t.count], [1, 1]);
+    });
+
+    test('el tema y la categoría las ofrecen', () {
+      final tree = LibraryTree.of(units);
+      final category = tree.categories.single;
+      expect([for (final t in category.tags) t.tag],
+          ['induccion', 'valor-absoluto']);
+      expect([for (final t in category.topic('recta-real')!.tags) t.tag],
+          ['induccion', 'valor-absoluto']);
+    });
+
+    test('sin etiquetas no hay fila que pintar', () {
+      final tree = LibraryTree.of([unit(path: 'content/a/t/uno')]);
+      expect(tree.categories.single.tags, isEmpty);
     });
   });
 }

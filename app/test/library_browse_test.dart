@@ -203,6 +203,90 @@ void main() {
     await settle(tester);
     expect(find.text('Espacios normados'), findsWidgets);
   });
+
+  group('las etiquetas, encima de la lista', () {
+    // El nivel que faltaba: categoría, tema, etiqueta, ficheros. Apareció al
+    // colapsar los seis temas de la práctica en uno --«la recta real»--, que
+    // dejó el segundo nivel del árbol sin nada dentro.
+
+    Future<void> entrarEnElTema(WidgetTester tester) async {
+      await pumpLibrary(tester);
+      await tester.tap(find.text('Analysis').first);
+      await settle(tester);
+      await tester.tap(find.text('Normed').first);
+      await settle(tester);
+    }
+
+    testWidgets('salen con su cuenta, y de mayor a menor', (tester) async {
+      await entrarEnElTema(tester);
+
+      expect(find.text('Etiquetas'), findsOneWidget);
+      // Dos unidades llevan `norma` y `banach`; una, `ejercicios`.
+      expect(find.text('Norma · 2'), findsOneWidget);
+      expect(find.text('Banach · 2'), findsOneWidget);
+      expect(find.text('Ejercicios · 1'), findsOneWidget);
+    });
+
+    testWidgets('elegir una deja solo sus ficheros', (tester) async {
+      await entrarEnElTema(tester);
+      expect(find.text('Ejercicios de normas'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('tag-norma')));
+      await settle(tester);
+
+      // Las dos que la llevan se quedan; la que no, se va.
+      expect(find.text('Espacios normados'), findsWidgets);
+      expect(find.text('Espacios de Banach'), findsWidgets);
+      expect(find.text('Ejercicios de normas'), findsNothing);
+      // Y la cuenta del grupo dice lo que se está viendo, no lo que había.
+      expect(find.text('2 unidades'), findsOneWidget);
+    });
+
+    testWidgets('volver a pulsarla la quita', (tester) async {
+      // Es el gesto que todo el mundo intenta; sin él hace falta buscar una
+      // equis en alguna parte.
+      await entrarEnElTema(tester);
+      await tester.tap(find.byKey(const Key('tag-norma')));
+      await settle(tester);
+      expect(find.text('Ejercicios de normas'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('tag-norma')));
+      await settle(tester);
+      expect(find.text('Ejercicios de normas'), findsWidgets);
+    });
+
+    testWidgets('la etiqueta es un nivel más de las migas de pan', (
+      tester,
+    ) async {
+      await entrarEnElTema(tester);
+      await tester.tap(find.byKey(const Key('tag-norma')));
+      await settle(tester);
+
+      // Categoría, tema y etiqueta, y el tema vuelve a ser pulsable para
+      // salir de la etiqueta sin salir del tema.
+      expect(find.byKey(const Key('crumb-tag')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('crumb-topic')));
+      await settle(tester);
+      expect(find.text('Ejercicios de normas'), findsWidgets);
+    });
+
+    testWidgets('cambiar de tema empieza sin etiqueta', (tester) async {
+      // Las etiquetas de un tema no son las del anterior, y arrastrar la
+      // elegida daría una lista vacía sin decir por qué.
+      await entrarEnElTema(tester);
+      await tester.tap(find.byKey(const Key('tag-norma')));
+      await settle(tester);
+
+      await tester.tap(find.text('Biblioteca').first);
+      await settle(tester);
+      await tester.tap(find.text('Analysis').first);
+      await settle(tester);
+      await tester.tap(find.text('Normed').first);
+      await settle(tester);
+
+      expect(find.text('Ejercicios de normas'), findsWidgets);
+    });
+  });
 }
 
 /// Bajar los tres niveles hasta una unidad, que es la razón de la pantalla.
