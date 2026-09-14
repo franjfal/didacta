@@ -37,6 +37,7 @@ import os
 
 from . import profiles as profiles_mod
 from . import repo as repo_mod
+from . import yamlio
 
 #: Where the generated files go, relative to the repository root.
 GENERATED = "generated"
@@ -64,6 +65,12 @@ def build(root, settings=None, latex_dir=None):
     settings = settings or repo_mod.Settings.load(root)
     units, unit_errors = repo_mod.scan_units(root, settings)
     courses, course_errors = repo_mod.scan_courses(root, settings)
+    try:
+        taxonomy = repo_mod.Taxonomy.load(root, settings)
+        taxonomy_errors = []
+    except (repo_mod.RepoError, yamlio.YamlError) as exc:
+        taxonomy = repo_mod.Taxonomy()
+        taxonomy_errors = [str(exc)]
 
     profiles = {}
     if latex_dir and os.path.isdir(latex_dir):
@@ -81,7 +88,9 @@ def build(root, settings=None, latex_dir=None):
 
     return {
         MANIFEST: _manifest(root, settings, unit_records, course_records,
-                            profiles, unit_errors + course_errors),
+                            profiles,
+                            unit_errors + course_errors + taxonomy_errors,
+                            taxonomy=taxonomy),
         UNITS: {"schemaVersion": SCHEMA_VERSION, "units": unit_records},
         COURSES: {"schemaVersion": SCHEMA_VERSION, "courses": course_records},
         CATEGORIES: {"schemaVersion": SCHEMA_VERSION,
@@ -368,7 +377,8 @@ def _categories(unit_records):
     return out
 
 
-def _manifest(root, settings, unit_records, course_records, profiles, errors):
+def _manifest(root, settings, unit_records, course_records, profiles, errors,
+              taxonomy=None):
     by_kind = {}
     by_status = {}
     for record in unit_records:
@@ -413,6 +423,13 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors):
              "documentClass": profile.document_class}
             for profile in sorted(profiles.values(), key=lambda item: item.id)
         ],
+        # La clasificación con la que se etiqueta una unidad, tal como está
+        # declarada. Va aquí porque una interfaz que ofrece cambiar la
+        # categoría o el tema de un fichero necesita la lista entera, y
+        # deducirla de lo que las unidades usan hoy daría una lista que se
+        # encoge en cuanto la última unidad de un tema cambia de sitio.
+        "taxonomy": (taxonomy or repo_mod.Taxonomy()).as_dict(),
+        "blocks": list(repo_mod.BLOCKS),
         "files": sorted([UNITS, COURSES, CATEGORIES]),
         # Whatever `scan_*` complained about, so a reader is not silently
         # served an index built from a repository that does not load cleanly.

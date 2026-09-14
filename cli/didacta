@@ -608,6 +608,30 @@ def cmd_check(args):
                             % (year.id, document.id, language, unit.relpath, language)
                         )
 
+    # La clasificación tiene que apuntar a algo que exista. Solo cuando hay
+    # taxonomía declarada: un repositorio que todavía no la ha escrito no es
+    # un repositorio con 2000 unidades mal clasificadas.
+    try:
+        taxonomy = repo_mod.Taxonomy.load(root, settings)
+    except (repo_mod.RepoError, yamlio.YamlError) as exc:
+        taxonomy = repo_mod.Taxonomy()
+        errors.append(str(exc))
+    if taxonomy.declared:
+        for unit in units.values():
+            category = taxonomy.category(unit.category)
+            if unit.category and category is None:
+                errors.append(
+                    "%s: category `%s` is not in %s"
+                    % (unit.relpath, unit.category, repo_mod.TAXONOMY)
+                )
+            elif category is not None and unit.topic:
+                if category.topic(unit.topic) is None:
+                    errors.append(
+                        "%s: topic `%s` is not a topic of `%s` in %s"
+                        % (unit.relpath, unit.topic, unit.category,
+                           repo_mod.TAXONOMY)
+                    )
+
     # Prerequisites must name real units.
     for unit in units.values():
         for prerequisite in unit.prerequisites:

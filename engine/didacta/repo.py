@@ -57,6 +57,14 @@ COURSE_META = "course.yaml"
 YEAR_META = "year.yaml"
 SHARED = "shared"
 SETTINGS = "didacta.yaml"
+TAXONOMY = "taxonomy.yaml"
+
+#: Los dos bloques en que se parte una asignatura. No es lo mismo que el
+#: `kind` de una unidad: el kind dice qué es el fichero --una explicación, un
+#: ejemplo, un ejercicio-- y el bloque dice de qué parte de la asignatura
+#: forma parte. Una explicación teórica dentro de una práctica de problemas
+#: es `kind: theory` y `block: problems`, y las dos cosas son ciertas a la vez.
+BLOCKS = ("theory", "problems")
 
 #: Kinds a unit may declare.
 UNIT_KINDS = (
@@ -121,6 +129,162 @@ def slugify(text):
         value = stripped
     value = re.sub(r"[^a-z0-9]+", "-", value).strip("-")
     return value or "untitled"
+
+
+# --------------------------------------------------------------------------
+# Taxonomy
+# --------------------------------------------------------------------------
+
+
+class Topic:
+    """One topic of one category: a stable id and a name per language."""
+
+    __slots__ = ("id", "titles", "raw")
+
+    def __init__(self, id, titles=None, raw=None):
+        self.id = id
+        self.titles = titles or {}
+        self.raw = raw or {}
+
+    def title(self, language=None):
+        """The name to show, falling back to the id rather than to nothing."""
+        if language and self.titles.get(language):
+            return self.titles[language]
+        for value in self.titles.values():
+            if value:
+                return value
+        return self.id
+
+    def as_dict(self):
+        return {"id": self.id, "title": dict(self.titles)}
+
+
+class Category:
+    """One category, with the topics declared inside it."""
+
+    __slots__ = ("id", "titles", "topics", "raw")
+
+    def __init__(self, id, titles=None, topics=None, raw=None):
+        self.id = id
+        self.titles = titles or {}
+        self.topics = topics or []
+        self.raw = raw or {}
+
+    def title(self, language=None):
+        if language and self.titles.get(language):
+            return self.titles[language]
+        for value in self.titles.values():
+            if value:
+                return value
+        return self.id
+
+    def topic(self, topic_id):
+        for topic in self.topics:
+            if topic.id == topic_id:
+                return topic
+        return None
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "title": dict(self.titles),
+            "topics": [t.as_dict() for t in self.topics],
+        }
+
+
+class Taxonomy:
+    """What a unit can be classified as.
+
+    Declared in ``taxonomy.yaml`` rather than read off the folder names, and
+    that is the whole point: a topic has an **id**, which is what a unit
+    stores, and a **name**, which is what a person reads. Renaming a topic
+    edits one line here and nothing else in the repository changes -- with the
+    name in the path, renaming meant moving every unit that carried it and
+    fixing every composition that referenced them.
+
+    A repository with no ``taxonomy.yaml`` gets an empty one, and everything
+    keeps working: the ids are then simply unchecked.
+    """
+
+    __slots__ = ("categories", "declared", "raw")
+
+    def __init__(self, categories=None, declared=False, raw=None):
+        self.categories = categories or []
+        #: Whether the file exists. Without it nothing is validated, because
+        #: a repository that has not declared its taxonomy is not a
+        #: repository whose every unit is misclassified.
+        self.declared = declared
+        self.raw = raw or {}
+
+    @classmethod
+    def load(cls, root, settings=None):
+        path = os.path.join(root, TAXONOMY)
+        if not os.path.isfile(path):
+            return cls()
+        data = yamlio.load_file(path) or {}
+        if not isinstance(data, dict):
+            raise RepoError("%s: expected a mapping" % path)
+        declared = data.get("categories") or []
+        if not isinstance(declared, list):
+            raise RepoError("%s: `categories` should be a list" % path)
+
+        languages = settings.languages if settings else list(profiles_mod.LANGUAGES)
+        categories = []
+        seen = set()
+        for item in declared:
+            if not isinstance(item, dict):
+                raise RepoError("%s: each category should be a mapping" % path)
+            identifier = item.get("id")
+            if not identifier:
+                raise RepoError("%s: a category is missing its `id`" % path)
+            if identifier in seen:
+                raise RepoError("%s: duplicate category `%s`" % (path, identifier))
+            seen.add(identifier)
+
+            topics = []
+            topic_ids = set()
+            for entry in (item.get("topics") or []):
+                if not isinstance(entry, dict):
+                    raise RepoError(
+                        "%s: each topic of `%s` should be a mapping"
+                        % (path, identifier)
+                    )
+                topic_id = entry.get("id")
+                if not topic_id:
+                    raise RepoError(
+                        "%s: a topic of `%s` is missing its `id`"
+                        % (path, identifier)
+                    )
+                if topic_id in topic_ids:
+                    raise RepoError(
+                        "%s: duplicate topic `%s` in `%s`"
+                        % (path, topic_id, identifier)
+                    )
+                topic_ids.add(topic_id)
+                topics.append(Topic(
+                    id=topic_id,
+                    titles=yamlio.localised(entry.get("title"), languages,
+                                            path=path, key="title"),
+                    raw=entry,
+                ))
+
+            categories.append(Category(
+                id=identifier,
+                titles=yamlio.localised(item.get("title"), languages,
+                                        path=path, key="title"),
+                topics=topics,
+                raw=item,
+            ))
+        return cls(categories=categories, declared=True, raw=data)
+
+    def category(self, category_id):
+        for category in self.categories:
+            if category.id == category_id:
+                return category
+        return None
+
+    def as_dict(self):
+        return {"categories": [c.as_dict() for c in self.categories]}
 
 
 # --------------------------------------------------------------------------
@@ -214,9 +378,10 @@ class Unit:
     """One reusable piece of content: a directory with a unit.yaml."""
 
     __slots__ = (
-        "id", "kind", "directory", "relpath", "titles", "category", "topic",
-        "tags", "reference", "languages", "prerequisites", "objectives",
-        "duration_minutes", "difficulty", "parts", "marks", "raw", "warnings",
+        "id", "kind", "block", "directory", "relpath", "titles", "category",
+        "topic", "tags", "reference", "languages", "prerequisites",
+        "objectives", "duration_minutes", "difficulty", "parts", "marks",
+        "raw", "warnings",
     )
 
     def __init__(self, **kwargs):
@@ -235,6 +400,18 @@ class Unit:
     @property
     def is_problem(self):
         return self.kind == "problem"
+
+    @property
+    def area(self):
+        """The tree this unit lives in: ``content`` or ``problems``.
+
+        Storage, not meaning. It used to be both --the tree decided which
+        block a unit belonged to-- and that is what `block` says now, in the
+        unit's own metadata. Kept because LaTeX still resolves a reference
+        against a tree and the engine has to know which one holds the file.
+        """
+        parts = self.relpath.split("/")
+        return parts[0] if len(parts) > 1 else CONTENT
 
     def title(self, language=None):
         """A title, preferring the requested language then the reference."""
@@ -293,6 +470,7 @@ class Unit:
         return {
             "id": self.id,
             "kind": self.kind,
+            "block": self.block,
             "path": self.relpath,
             "title": self.titles,
             "category": self.category,
@@ -334,6 +512,15 @@ def load_unit(root, relpath, settings):
     if kind not in UNIT_KINDS:
         raise RepoError(
             "%s: unknown kind `%s` (known: %s)" % (meta_path, kind, ", ".join(UNIT_KINDS))
+        )
+
+    # Qué parte de la asignatura. Declarado; si no lo está, se hereda del
+    # árbol, que es lo que decidía esto antes de que fuese un campo.
+    block = data.get("block") or ("problems" if area == PROBLEMS else "theory")
+    if block not in BLOCKS:
+        raise RepoError(
+            "%s: unknown block `%s` (known: %s)"
+            % (meta_path, block, ", ".join(BLOCKS))
         )
 
     identifier = data.get("id") or ".".join(
@@ -391,6 +578,7 @@ def load_unit(root, relpath, settings):
     return Unit(
         id=identifier,
         kind=kind,
+        block=block,
         directory=directory,
         relpath=relpath,
         titles=titles,
