@@ -25,6 +25,7 @@ documents:
       - section:
           va: Espais normats
           es: Espacios normados
+          en: Normed spaces
       - unit: analysis/normed-spaces/definition
       - unit: analysis/normed-spaces/induced-metric
 
