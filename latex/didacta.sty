@@ -281,6 +281,49 @@
 }
 
 %% ---------------------------------------------------------------------------
+%% Sections of a composition, in every language
+%%
+%%   \DidactaSection{es={Los números naturales},
+%%                   va={Els nombres naturals},
+%%                   en={The natural numbers}}
+%%
+%% A composition is the one place where prose lives outside a unit: the titles
+%% of its sections. Writing them with a plain \section means they stay in one
+%% language, and the Valencian build of a document comes out with Castilian
+%% headings over Valencian content -- which is exactly the kind of half
+%% translation that makes a document unusable in a classroom.
+%%
+%% Named keys rather than three positional arguments: a composition is read and
+%% edited by hand, and `{...}{...}{...}` with three titles in it is unreadable
+%% and silently wrong the day the order changes.
+%%
+%% A language that is not given falls back to the reference language rather
+%% than printing nothing -- a missing heading would silently merge two sections
+%% into one -- and says so in the log.
+%% ---------------------------------------------------------------------------
+
+\define@key{didacta@section}{es}{\def\didacta@sec@es{#1}}
+\define@key{didacta@section}{va}{\def\didacta@sec@va{#1}}
+\define@key{didacta@section}{en}{\def\didacta@sec@en{#1}}
+
+\newcommand{\didacta@sec@use}[1]{%
+  \expandafter\let\expandafter\didacta@sec@now\csname didacta@sec@#1\endcsname}
+
+\newcommand{\DidactaSection}[1]{%
+  \def\didacta@sec@es{}\def\didacta@sec@va{}\def\didacta@sec@en{}%
+  \setkeys{didacta@section}{#1}%
+  \didacta@sec@use{\DidactaLanguage}%
+  \ifx\didacta@sec@now\@empty
+    \PackageWarning{didacta}{No `\DidactaLanguage' title for this section;
+      using another language}%
+    \didacta@sec@use{es}%
+    \ifx\didacta@sec@now\@empty \didacta@sec@use{va}\fi
+    \ifx\didacta@sec@now\@empty \didacta@sec@use{en}\fi
+  \fi
+  \section{\didacta@sec@now}%
+}
+
+%% ---------------------------------------------------------------------------
 %% Including content
 %%
 %%   \DidactaUnit{analysis/normed-spaces/definition}     from content/

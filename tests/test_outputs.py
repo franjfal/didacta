@@ -185,6 +185,31 @@ class OutputMatrixTests(unittest.TestCase):
             "the teacher channel added nothing",
         )
 
+    def test_a_section_heading_follows_the_language(self):
+        """The one piece of prose that lives outside a unit.
+
+        A composition's section titles are written with \\DidactaSection in
+        three languages. Before that they were a plain \\section, so the
+        Valencian build of a document came out with Castilian headings over
+        Valencian content -- a half translation nobody can take to a class.
+        """
+        expected = {
+            "es": "Espaciosnormados",
+            "va": "Espaisnormats",
+            "en": "Normedspaces",
+        }
+        for language, heading in expected.items():
+            result = self.compile(self.theory, "notes", language)
+            self.assertTrue(result.ok, language)
+            text = pdf_text(result.pdf)
+            self.assertIn(heading, text, language)
+            for other, wrong in expected.items():
+                if other != language:
+                    self.assertNotIn(
+                        wrong, text,
+                        "the %s build carries the %s heading" % (language, other),
+                    )
+
     # -- the answer levels appear exactly where they should ---------------
 
     #: Marker words present in the example problem, per level.
