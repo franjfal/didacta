@@ -148,6 +148,25 @@ Para una redefinición o un aparte.
 \end{definition*}
 ```
 
+### Lo que no es un teorema
+
+Para lo que se enuncia en un recuadro y no se demuestra --el principio en el
+que se apoya una sección entera, el axioma del que todo cuelga, el convenio
+que el resto da por supuesto-- está `keypoint`:
+
+```latex
+\begin{keypoint}[Principio de inducción matemática (PIM)]
+Si una propiedad $P$ sobre números naturales cumple ... entonces $P$ es cierta
+para todo número natural $n$.
+\end{keypoint}
+```
+
+Un recuadro, con el título en negrita si se le pone, **sin número y sin
+etiqueta**. La diferencia con `theorem` no es de aspecto: llamar teorema al
+principio de inducción dice que se ha demostrado, y en una práctica de primero
+no se demuestra nada a su alrededor --es la herramienta, enunciada para poder
+usarla--.
+
 **Un solo contador compartido.** Definición 1.1, Teorema 1.2, Ejemplo 1.3.
 Contadores independientes producen un Teorema 2.3 seguido de una Definición
 2.1, que rompe cualquier referencia cruzada que el lector intente seguir.
