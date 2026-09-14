@@ -262,6 +262,10 @@ def _unit_record(unit, settings, usage):
         "path": unit.relpath,
         "area": unit.relpath.split("/")[0],
         "kind": unit.kind,
+        # De qué parte de la asignatura. Distinto del kind: el kind dice qué
+        # es el fichero y el bloque, de qué parte forma parte. Una explicación
+        # teórica dentro de una práctica de problemas es las dos cosas.
+        "block": unit.block,
         "category": str(unit.category),
         "topic": str(unit.topic),
         # Coerced to text: a folder named `15` gives `topic: 15`, which YAML
