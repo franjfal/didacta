@@ -196,8 +196,46 @@ void main() {
       expect(const LibraryFilter().isNarrowed, isFalse);
     });
 
-    test('by area', () {
-      final problems = const LibraryFilter(area: 'problems').apply(units);
+    test('el bloque manda, y no la carpeta ni el kind', () {
+      // El fallo que esto fija: al fundir los dos árboles, 42 unidades del
+      // bloque de problemas --catorce de ellas explicaciones teóricas--
+      // pasaron a vivir en content/ y la biblioteca las pintó todas como
+      // teoría, porque clasificaba por la carpeta.
+      final explicacion = Unit.fromJson({
+        'path': 'content/analisis/recta-real/valor-absoluto',
+        'area': 'content',
+        'block': 'problems',
+        'kind': 'theory',
+        'category': 'analisis',
+        'topic': 'la-recta-real',
+        'title': {'es': 'El valor absoluto'},
+        'languages': const {},
+      });
+      expect(explicacion.isProblem, isTrue, reason: 'está en el bloque');
+      expect(explicacion.kind, 'theory', reason: 'y sigue siendo teoría');
+      expect(
+        const LibraryFilter(block: 'problems').apply([explicacion]),
+        hasLength(1),
+      );
+      expect(const LibraryFilter(block: 'theory').apply([explicacion]), isEmpty);
+    });
+
+    test('un índice viejo, sin bloque, lo deduce del árbol', () {
+      // Un catálogo generado antes de que el bloque existiera se sigue
+      // leyendo: sin esto, todo saldría como teoría el día que alguien abra
+      // la aplicación contra un repositorio sin reindexar.
+      final viejo = Unit.fromJson({
+        'path': 'problems/analisis/induccion/suma',
+        'area': 'problems',
+        'kind': 'problem',
+        'languages': const {},
+      });
+      expect(viejo.block, 'problems');
+      expect(viejo.isProblem, isTrue);
+    });
+
+    test('by block', () {
+      final problems = const LibraryFilter(block: 'problems').apply(units);
       expect(problems.length, 1);
       expect(problems.single.kind, 'problem');
     });
@@ -359,7 +397,7 @@ void main() {
     test('other facets still constrain the count', () {
       final facets = LibraryFacets.of(
         units,
-        const LibraryFilter(area: 'content', category: 'a'),
+        const LibraryFilter(block: 'theory', category: 'a'),
       );
       // Category `a` has three units but only two are in content/.
       expect(facets.byCategory['a'], 2);

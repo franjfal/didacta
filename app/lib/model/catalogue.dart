@@ -95,6 +95,7 @@ class Unit {
     required this.id,
     required this.path,
     required this.area,
+    required this.block,
     required this.kind,
     required this.category,
     required this.topic,
@@ -116,6 +117,12 @@ class Unit {
       id: json['id'] as String? ?? '',
       path: json['path'] as String? ?? '',
       area: json['area'] as String? ?? 'content',
+      // Un índice de antes de que el bloque existiera lo decidía con el
+      // árbol, que es lo que hacía entonces: así un catálogo viejo se sigue
+      // leyendo y no aparece todo como teoría.
+      block:
+          json['block'] as String? ??
+          (json['area'] == 'problems' ? 'problems' : 'theory'),
       kind: json['kind'] as String? ?? 'theory',
       category: json['category'] as String? ?? '',
       topic: json['topic'] as String? ?? '',
@@ -143,9 +150,19 @@ class Unit {
   final String id;
   final String path;
 
-  /// `content` or `problems`. Kept because it decides which macro a
-  /// composition uses, and a reader should not have to parse the path.
+  /// El árbol donde vive el fichero. Almacenamiento, no significado: qué
+  /// parte de la asignatura es una unidad lo dice [block]. Se conserva porque
+  /// la referencia que escribe una composición es la ruta sin él.
   final String area;
+
+  /// `theory` o `problems`: de qué parte de la asignatura forma parte.
+  ///
+  /// Distinto de [kind], y confundirlos es el error que esto deshizo: el kind
+  /// dice qué **es** el fichero --una explicación, un ejemplo, un ejercicio--
+  /// y el bloque de qué parte de la asignatura forma parte. Una explicación
+  /// teórica dentro de una práctica de problemas es `kind: theory` y
+  /// `block: problems`, y las dos cosas son ciertas.
+  final String block;
 
   final String kind;
   final String category;
@@ -172,7 +189,7 @@ class Unit {
   String get reference_ =>
       path.contains('/') ? path.substring(path.indexOf('/') + 1) : path;
 
-  bool get isProblem => area == 'problems';
+  bool get isProblem => block == 'problems';
 
   /// The title in [language], falling back the way the engine does: the
   /// requested language, then the reference, then anything, then the id.

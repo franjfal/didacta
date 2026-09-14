@@ -107,7 +107,7 @@ class TopicNode {
 
   /// The areas present. Now that the area is not a level of the tree, this
   /// is how a group says it holds both theory and exercises.
-  Set<String> get areas => {for (final unit in units) unit.area};
+  Set<String> get blocks => {for (final unit in units) unit.block};
 
   TranslationProgress progressIn(String language) =>
       TranslationProgress.of(units, language);
@@ -149,7 +149,7 @@ class CategoryNode {
   /// candidate for deletion.
   int get unused => units.where((unit) => unit.usedBy.isEmpty).length;
 
-  Set<String> get areas => {for (final unit in units) unit.area};
+  Set<String> get blocks => {for (final unit in units) unit.block};
 
   /// How many units are exercises, so a category can say it comes with
   /// problem sheets without opening it.
@@ -261,10 +261,10 @@ class LibraryTree {
 
   /// How many of these units belong to each area, for the filter to say what
   /// choosing it would give.
-  Map<String, int> get byArea {
+  Map<String, int> get byBlock {
     final counts = <String, int>{};
     for (final unit in byPath.values) {
-      counts[unit.area] = (counts[unit.area] ?? 0) + 1;
+      counts[unit.block] = (counts[unit.block] ?? 0) + 1;
     }
     return counts;
   }

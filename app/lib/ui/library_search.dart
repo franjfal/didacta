@@ -128,16 +128,16 @@ class FilterPanel extends StatelessWidget {
               ),
             ),
           ],
-          const SectionLabel('Árbol'),
-          for (final area in const ['content', 'problems'])
+          const SectionLabel('Bloque'),
+          for (final block in const ['theory', 'problems'])
             _Facet(
-              label: area == 'content' ? 'teoría y apuntes' : 'problemas',
-              count: facets.byArea[area] ?? 0,
-              selected: filter.area == area,
+              label: block == 'theory' ? 'teoría' : 'problemas',
+              count: facets.byBlock[block] ?? 0,
+              selected: filter.block == block,
               onTap: () => onChanged(
-                filter.area == area
-                    ? filter.copyWith(clearArea: true)
-                    : filter.copyWith(area: area),
+                filter.block == block
+                    ? filter.copyWith(clearBlock: true)
+                    : filter.copyWith(block: block),
               ),
             ),
 

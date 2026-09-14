@@ -322,7 +322,9 @@ class _CompositionEditorState extends State<CompositionEditor> {
   }
 
   static StructureEntry _entryFor(Unit unit) => StructureEntry(
-    kind: unit.isProblem ? EntryKind.problem : EntryKind.unit,
+    // Un solo árbol, así que una sola forma de citar. `problem:` sigue
+    // leyéndose para las composiciones de antes, pero no se escribe.
+    kind: EntryKind.unit,
     value: unit.reference_,
   );
 

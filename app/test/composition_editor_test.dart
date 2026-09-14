@@ -503,11 +503,13 @@ void main() {
     await tester.tap(commit);
     await settle(tester);
 
-    // A unit under problems/ goes in as a `problem:` entry, which is what
-    // the engine keys the answer levels off.
+    // Una sola forma de citar, porque hay un solo árbol. `problem:` se sigue
+    // leyendo --las composiciones de antes lo usan-- pero no se escribe: de
+    // qué parte de la asignatura es una unidad lo dice su `block`, no la
+    // clave con la que se la nombra.
     expect(
       committedEntries(gateway).last,
-      '- problem: analysis/normed/exercises',
+      '- unit: analysis/normed/exercises',
     );
     // And the row is now in the list, numbered last among the active ones.
     expect(find.textContaining('5 de 6 activas'), findsOneWidget);
