@@ -293,4 +293,13 @@ abstract class Compiler {
 
   /// Lo enseña en el Finder, para arrastrarlo a un correo.
   Future<void> reveal(String pdf);
+
+  /// Borra salidas compiladas, y devuelve cuántos ficheros se ha llevado.
+  ///
+  /// Se lleva también los restos que LaTeX deja al lado de cada PDF --el
+  /// `.log`, el `.aux`, el `.synctex.gz`--, porque lo que se borra es la
+  /// salida entera y no su portada. Todo vive en el directorio de
+  /// compilación, que no se versiona: esto es tirar algo que se rehace
+  /// pulsando el botón de al lado, y por eso no pregunta dos veces.
+  Future<int> deleteOutputs(List<String> pdfs);
 }

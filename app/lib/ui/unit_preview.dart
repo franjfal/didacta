@@ -334,6 +334,27 @@ class PreviewState {
   /// Cuántas salidas produciría compilar ahora: perfiles por idiomas.
   int get outputCount => chosen.length * languages.length;
 
+  /// Borra lo que ya está compilado, y vuelve a preguntar qué queda.
+  ///
+  /// Sin confirmación cuando es una sola: vive en el directorio de
+  /// compilación, que no se versiona, y el botón de al lado la rehace. Lo que
+  /// sí se pregunta es el «borrar todas», porque ahí el clic no dice cuántos
+  /// ficheros se lleva.
+  Future<void> delete(List<ExistingOutput> outputs) async {
+    final compiler = session.compiler();
+    if (compiler == null || outputs.isEmpty) return;
+    problem = null;
+    onChanged();
+    try {
+      await compiler.deleteOutputs([for (final o in outputs) o.pdf]);
+    } catch (error) {
+      problem = error;
+    }
+    // Aunque falle: si se ha llevado la mitad, la lista tiene que decir cuál.
+    await _loadExisting(compiler);
+    onChanged();
+  }
+
   /// Compila una sola salida: la de una tarjeta de «ya compiladas».
   ///
   /// Es lo que se pulsa cuando una está vieja: rehacer *esa*, y no las tres
@@ -455,6 +476,8 @@ class UnitPreview extends StatelessWidget {
                   onOpen: (path) => onExternal(path, reveal: false),
                   onReveal: (path) => onExternal(path, reveal: true),
                   onRecompile: state.compileOne,
+                  onDelete: (output) => state.delete([output]),
+                  onDeleteAll: () => state.delete(state.existing),
                 ),
         ),
       ],
@@ -637,6 +660,8 @@ class _Results extends StatelessWidget {
     required this.onOpen,
     required this.onReveal,
     required this.onRecompile,
+    required this.onDelete,
+    required this.onDeleteAll,
   });
 
   final List<CompileOutput> results;
@@ -646,6 +671,8 @@ class _Results extends StatelessWidget {
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
   final ValueChanged<ExistingOutput> onRecompile;
+  final ValueChanged<ExistingOutput> onDelete;
+  final VoidCallback onDeleteAll;
 
   @override
   Widget build(BuildContext context) {
@@ -686,7 +713,27 @@ class _Results extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
       children: [
         if (existing.isNotEmpty) ...[
-          const _Label('Ya compiladas'),
+          Row(
+            children: [
+              const Expanded(child: _Label('Ya compiladas')),
+              TextButton.icon(
+                key: const Key('delete-all'),
+                icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                label: Text(
+                  existing.length == 1
+                      ? 'Borrar la compilada'
+                      : 'Borrar las ${existing.length}',
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: didactaMuted,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: building
+                    ? null
+                    : () => _confirmDeleteAll(context, existing.length),
+              ),
+            ],
+          ),
           // Lo importante de esta sección: se abren sin volver a compilar.
           // Y las que se hayan quedado viejas lo dicen, porque un PDF que no
           // corresponde al fichero es peor que no tener ninguno.
@@ -697,6 +744,7 @@ class _Results extends StatelessWidget {
               onOpen: onOpen,
               onReveal: onReveal,
               onRecompile: () => onRecompile(output),
+              onDelete: () => onDelete(output),
             ),
           const SizedBox(height: 14),
         ],
@@ -716,6 +764,40 @@ class _Results extends StatelessWidget {
         ],
       ],
     );
+  }
+
+  /// Borrar una se hace y ya está; borrar todas se pregunta.
+  ///
+  /// No porque sea grave --se rehace compilando-- sino porque el botón no
+  /// dice cuántos ficheros se lleva, y un número en un diálogo cuesta menos
+  /// que la sorpresa.
+  Future<void> _confirmDeleteAll(BuildContext context, int count) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          count == 1
+              ? 'Borrar la versión compilada'
+              : 'Borrar las $count versiones compiladas',
+        ),
+        content: const Text(
+          'Se borran los PDF y lo que LaTeX dejó al lado. No se toca ningún '
+          'fichero del repositorio: se rehacen compilando otra vez.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('delete-all-confirm'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) onDeleteAll();
   }
 }
 
@@ -747,6 +829,7 @@ class _ExistingCard extends StatelessWidget {
     required this.onOpen,
     required this.onReveal,
     required this.onRecompile,
+    required this.onDelete,
   });
 
   final ExistingOutput output;
@@ -754,6 +837,7 @@ class _ExistingCard extends StatelessWidget {
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
   final VoidCallback onRecompile;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -841,6 +925,13 @@ class _ExistingCard extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.folder_open_outlined, size: 15),
               onPressed: () => onReveal(output.pdf),
+            ),
+            IconButton(
+              key: Key('delete-${output.profile}-${output.language}'),
+              tooltip: 'Borrar este PDF. Se rehace compilando',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.delete_outline, size: 16),
+              onPressed: onDelete,
             ),
           ],
         ),

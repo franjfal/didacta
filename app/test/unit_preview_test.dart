@@ -381,6 +381,52 @@ void main() {
       expect(opened.single.stale, isTrue);
     });
 
+    testWidgets('se puede borrar una, y desaparece de la lista', (
+      tester,
+    ) async {
+      // Lo que se borra es un PDF del directorio de compilación, que no se
+      // versiona: por eso no se pregunta, y por eso el botón de al lado lo
+      // rehace.
+      final compiler = FakeCompiler()
+        ..existing = [built(), built(profile: 'book', label: 'Libro')];
+      await pumpPreview(tester, compiler: compiler);
+      expect(find.byKey(const Key('open-book-es')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('delete-book-es')));
+      await settle(tester);
+
+      expect(compiler.deleted, ['/salida/book-es.pdf']);
+      expect(find.byKey(const Key('open-book-es')), findsNothing);
+      // La otra sigue donde estaba, y no se ha compilado nada.
+      expect(find.byKey(const Key('open-slides-es')), findsOneWidget);
+      expect(compiler.calls, isEmpty);
+    });
+
+    testWidgets('borrar todas se pregunta antes, y se puede cancelar', (
+      tester,
+    ) async {
+      // El botón no dice cuántos ficheros se lleva; el diálogo sí.
+      final compiler = FakeCompiler()
+        ..existing = [built(), built(profile: 'book', label: 'Libro')];
+      await pumpPreview(tester, compiler: compiler);
+
+      await tester.tap(find.byKey(const Key('delete-all')));
+      await settle(tester);
+      expect(find.textContaining('Borrar las 2 versiones'), findsOneWidget);
+
+      await tester.tap(find.text('Cancelar'));
+      await settle(tester);
+      expect(compiler.deleted, isEmpty);
+
+      await tester.tap(find.byKey(const Key('delete-all')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('delete-all-confirm')));
+      await settle(tester);
+
+      expect(compiler.deleted, hasLength(2));
+      expect(find.text('YA COMPILADAS'), findsNothing);
+    });
+
     testWidgets('se puede rehacer solo esa versión', (tester) async {
       // Cuando una está vieja, lo que se quiere es rehacer *esa*, no las
       // tres que estén marcadas arriba.
