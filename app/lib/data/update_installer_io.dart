@@ -286,10 +286,39 @@ class _MacInstaller extends _DesktopInstaller {
   }
 
   @override
-  String? get unsupportedReason => bundlePath() == null
-      ? 'Didacta no se está ejecutando desde un paquete .app, así que no '
-            'puede sustituirse a sí misma. Descarga el DMG e instálala.'
-      : null;
+  String? get unsupportedReason {
+    final bundle = bundlePath();
+    if (bundle == null) {
+      return 'Didacta no se está ejecutando desde un paquete .app, así que no '
+          'puede sustituirse a sí misma. Descarga el DMG e instálala.';
+    }
+    // Sustituir un `.app` es escribir en la carpeta que lo contiene. Si está
+    // en `/Applications` y esta cuenta no es administradora, no se puede, y
+    // eso hay que saberlo **antes** de descargar 90 MB para nada.
+    if (!_canWriteInto(File(bundle).parent.path)) {
+      return 'Didacta está instalada en ${File(bundle).parent.path}, donde '
+          'esta cuenta no puede escribir, así que no puede actualizarse sola. '
+          'Descarga el DMG e instálala, o mueve Didacta a tu propia carpeta '
+          'de Aplicaciones.';
+    }
+    return null;
+  }
+
+  /// Si de verdad se puede escribir ahí.
+  ///
+  /// Escribiendo y borrando, y no mirando los permisos: en macOS el bit de
+  /// escritura puede decir que sí y una ACL decir que no, y lo que importa es
+  /// lo que pasará cuando se intente.
+  static bool _canWriteInto(String directory) {
+    try {
+      final probe = File('$directory/.didacta-escritura-${pid.toString()}');
+      probe.writeAsStringSync('');
+      probe.deleteSync();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   @override
   List<String> get _runner => const ['/bin/sh'];

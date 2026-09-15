@@ -41,6 +41,16 @@ class UpdateSection extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
+              // Cómo fue la anterior, si hubo una. Lo primero, porque es lo
+              // único de esta tarjeta que responde a algo que ya pasó.
+              if (updates.outcome != null) ...[
+                _Outcome(
+                  outcome: updates.outcome!,
+                  onDismiss: updates.dismissOutcome,
+                ),
+                const SizedBox(height: 10),
+              ],
+
               // Entrar en GitHub no es poder usar Didacta: lo segundo es
               // tener acceso al repositorio de versiones. Se dice aquí, y no
               // solo cuando alguien intenta actualizar y falla.
@@ -146,6 +156,48 @@ class UpdateSection extends StatelessWidget {
     if (days == 1) return 'Ayer';
     return '$stamp (hace $days días)';
   }
+}
+
+/// Lo que pasó con la actualización anterior.
+///
+/// Que saliera bien se dice una vez y se puede cerrar; que saliera mal hay
+/// que decirlo con lo que hay que hacer, porque alguien puede estar creyendo
+/// que tiene una versión que no tiene.
+class _Outcome extends StatelessWidget {
+  const _Outcome({required this.outcome, required this.onDismiss});
+
+  final UpdateOutcome outcome;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: outcome.succeeded
+            ? Note(
+                'Didacta se ha actualizado a la ${outcome.installed}.',
+                tone: didactaAccentDark,
+              )
+            : Note(
+                'La actualización a la ${outcome.installed} no se completó: '
+                'sigues con la ${outcome.running}, que funciona igual que '
+                'antes. Vuelve a intentarlo, y si sigue sin salir, descarga '
+                'el instalador.',
+                tone: didactaTeacher,
+              ),
+      ),
+      InkResponse(
+        key: const Key('dismiss-update-outcome'),
+        onTap: onDismiss,
+        radius: 16,
+        child: const Padding(
+          padding: EdgeInsets.all(6),
+          child: Icon(Icons.close, size: 15, color: didactaMuted),
+        ),
+      ),
+    ],
+  );
 }
 
 class _Fact extends StatelessWidget {
