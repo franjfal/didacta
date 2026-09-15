@@ -270,13 +270,36 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # Buscarlo en vez de dar por hecho dónde está: la imagen del runner
+          # trae Inno Setup, pero ni la ruta ni la versión son un contrato, y
+          # una ruta escrita a mano es la forma de que una publicación falle
+          # el día que cambien la imagen.
+          $iscc = Get-ChildItem -Path `
+            "${env:ProgramFiles(x86)}\Inno Setup 6", `
+            "${env:ProgramFiles}\Inno Setup 6" `
+            -Filter ISCC.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1 -ExpandProperty FullName
+
+          if (-not $iscc) {
+            Write-Host "Inno Setup no está en la imagen; instalándolo."
+            choco install innosetup --no-progress -y
+            $iscc = Get-ChildItem -Path `
+              "${env:ProgramFiles(x86)}\Inno Setup 6", `
+              "${env:ProgramFiles}\Inno Setup 6" `
+              -Filter ISCC.exe -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $iscc) { throw "no encuentro ISCC.exe" }
+          Write-Host "usando $iscc"
+
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+          & $iscc `
             "/DDidactaVersion=${{ needs.comprobar.outputs.version }}" `
             "/DDidactaSource=$(Resolve-Path app\build\windows\x64\runner\Release)" `
             "/DDidactaIcon=$(Resolve-Path app\windows\runner\resources\app_icon.ico)" `
             "/DDidactaOutput=$(Resolve-Path dist)" `
             packaging\windows\didacta.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC falló con $LASTEXITCODE" }
 
       - name: firmar el instalador
         if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
