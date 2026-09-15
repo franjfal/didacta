@@ -161,6 +161,38 @@ def bump(part=DEFAULT_PART):
 # ------------------------------------------------------------- changelog ---
 
 
+def _headings(lines):
+    """Los encabezados de versión del CHANGELOG, **fuera de los cercados**.
+
+    El propio CHANGELOG explica su formato con un ejemplo dentro de un bloque
+    de código:
+
+        ```markdown
+        ## 1.4.2 — 2026-09-15
+        - Lo nuevo…
+        ```
+
+    Un parser que solo mire si la línea empieza por `## ` se cree ese ejemplo.
+    El día que a alguien le tocase publicar la 1.4.2 --y con el número
+    subiendo solo, llega-- las notas del release habrían sido «Lo nuevo…, lo
+    mejorado…, lo corregido…», publicadas sin que nada fallara.
+
+    Devuelve pares (número de línea, versión).
+    """
+    found = []
+    fenced = False
+    for index, line in enumerate(lines):
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        match = re.match(r"^##\s+v?(\S+)", line)
+        if match:
+            found.append((index, match.group(1)))
+    return found
+
+
 def read_notes(version):
     """La sección de [version] del CHANGELOG, sin su encabezado.
 
@@ -173,11 +205,12 @@ def read_notes(version):
     with open(CHANGELOG, encoding="utf-8") as handle:
         lines = handle.read().split("\n")
 
+    headings = _headings(lines)
+
     # `## 1.4.2` o `## 1.4.2 — 2026-09-15`. La fecha es decorativa.
     start = None
-    for index, line in enumerate(lines):
-        match = re.match(r"^##\s+v?(\S+)", line)
-        if match and match.group(1) == version:
+    for index, found in headings:
+        if found == version:
             start = index + 1
             break
     if start is None:
@@ -192,8 +225,8 @@ def read_notes(version):
         )
 
     end = len(lines)
-    for index in range(start, len(lines)):
-        if lines[index].startswith("## "):
+    for index, _ in headings:
+        if index >= start:
             end = index
             break
 
