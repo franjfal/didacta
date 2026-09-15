@@ -19,6 +19,7 @@ app/build/
 app/.dart_tool/
 app/.flutter-plugins*
 
-# The Worker's dependencies.
-api/node_modules/
-api/.wrangler/
+# Los artefactos de una compilación de publicación, hecha a mano en local.
+# En el CI viven en el runner y se suben al release; aquí serían 200 MB de
+# binarios que se regeneran con una orden.
+dist/

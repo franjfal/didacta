@@ -173,6 +173,82 @@ void main() {
     },
   );
 
+  test('el icono de Windows está, y lleva los siete tamaños dentro', () {
+    // `flutter create --platforms=windows` deja el icono azul de Flutter, y
+    // un `.ico` con un solo tamaño se reescala fatal a 16 px. Se comprueba la
+    // estructura del contenedor, que es lo comprobable sin descodificar.
+    final bytes = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+    final header = ByteData.sublistView(bytes, 0, 6);
+    expect(header.getUint16(0, Endian.little), 0, reason: 'reservado');
+    expect(header.getUint16(2, Endian.little), 1, reason: 'tipo: icono');
+    final count = header.getUint16(4, Endian.little);
+    expect(count, 7, reason: 'los siete tamaños');
+
+    final sizes = <int>[];
+    for (var i = 0; i < count; i++) {
+      final entry = ByteData.sublistView(bytes, 6 + i * 16, 22 + i * 16);
+      // 256 se guarda como 0: es la convención del formato, no un error.
+      final width = entry.getUint8(0);
+      sizes.add(width == 0 ? 256 : width);
+      final offset = entry.getUint32(12, Endian.little);
+      // Cada entrada es un PNG de verdad, no relleno.
+      expect(
+        bytes.sublist(offset, offset + 8),
+        [137, 80, 78, 71, 13, 10, 26, 10],
+        reason: 'la entrada de ${sizes.last} px no es un PNG',
+      );
+    }
+    expect(sizes, [16, 24, 32, 48, 64, 128, 256]);
+  });
+
+  test('el icono de Windows es el nuestro, no el azul de Flutter', () async {
+    // El 256 de dentro del `.ico`, sacado por su desplazamiento.
+    final bytes = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+    final entry = ByteData.sublistView(bytes, 6 + 6 * 16, 22 + 6 * 16);
+    final offset = entry.getUint32(12, Endian.little);
+    final length = entry.getUint32(8, Endian.little);
+    final png = bytes.sublist(offset, offset + length);
+
+    final temp = File(
+      '${Directory.systemTemp.path}/didacta-icon-test.png',
+    )..writeAsBytesSync(png);
+    addTearDown(() => temp.deleteSync());
+    expect(await centreColour(temp), predicate(isDidactaGreen), reason: 'azul');
+  });
+
+  test('el icono de Linux está, para el AppImage y el escritorio', () {
+    for (final size in [256, 512]) {
+      final file = File('../packaging/linux/didacta-$size.png');
+      expect(file.existsSync(), isTrue, reason: file.path);
+      expect(pngSize(file.readAsBytesSync()).width, size);
+    }
+  });
+
+  test('el .desktop de Linux nombra el binario que de verdad se genera', () {
+    // `Exec=didacta` tiene que coincidir con el `BINARY_NAME` del CMake: si
+    // se separan, el AppImage se construye y no arranca.
+    final desktop = File('../packaging/linux/didacta.desktop').readAsStringSync();
+    expect(desktop, contains('Exec=didacta'));
+    expect(desktop, contains('Name=Didacta'));
+    expect(desktop, contains('Icon=didacta'));
+
+    final cmake = File('linux/CMakeLists.txt').readAsStringSync();
+    expect(cmake, contains('set(BINARY_NAME "didacta")'));
+    expect(cmake, contains('set(APPLICATION_ID "es.uv.didacta")'));
+  });
+
+  test('Windows también se llama Didacta, no didacta_app', () {
+    final rc = File('windows/runner/Runner.rc').readAsStringSync();
+    expect(rc, contains('"ProductName", "Didacta"'));
+    expect(rc, isNot(contains('didacta_app')));
+
+    final main = File('windows/runner/main.cpp').readAsStringSync();
+    expect(main, contains('L"Didacta"'));
+
+    final cmake = File('windows/CMakeLists.txt').readAsStringSync();
+    expect(cmake, contains('set(BINARY_NAME "didacta")'));
+  });
+
   test('la aplicación de macOS se llama Didacta', () {
     // La plantilla la llama `didacta_app`, que es el nombre del paquete de
     // Dart, y eso es lo que sale en la barra de menú y en el Dock.

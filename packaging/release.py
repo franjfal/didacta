@@ -1,0 +1,357 @@
+#!/usr/bin/env python3
+"""Lo que el workflow de publicación necesita saber, en un solo sitio.
+
+Existe para que el YAML del workflow no tenga lógica dentro. Un `grep` con una
+expresión regular metido en un paso de GitHub Actions no se puede ejecutar en
+la máquina de nadie, no se puede probar, y falla en el peor momento: cuando ya
+se han compilado los tres sistemas. Esto sí se puede ejecutar a mano:
+
+    python3 packaging/release.py version
+    python3 packaging/release.py check
+
+Sin dependencias y con Python 3.9, igual que el motor, para que se pueda
+ejecutar en cualquiera de las tres máquinas del CI sin instalar nada.
+
+La regla que impone: **la versión la dice `app/pubspec.yaml` y nadie más.**
+Ni el workflow, ni un `input` de la acción, ni un fichero aparte. Publicar es
+leer lo que ya está escrito, y por eso el procedimiento normal es cambiar una
+línea y pulsar un botón.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import sys
+from datetime import datetime, timezone
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PUBSPEC = os.path.join(ROOT, "app", "pubspec.yaml")
+CHANGELOG = os.path.join(ROOT, "CHANGELOG.md")
+
+# `1.4.2`, con preliberación opcional. Es la misma forma que acepta
+# `AppVersion.tryParse` en la aplicación; si una de las dos cambia, la otra
+# tiene que cambiar con ella.
+SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$")
+
+
+class Problem(Exception):
+    """Algo que impide publicar. Se imprime y se sale con 1."""
+
+
+# --------------------------------------------------------------- versión ---
+
+
+def read_version():
+    """La versión y el build de `pubspec.yaml`.
+
+    Leído con una expresión regular en vez de con un parser de YAML porque la
+    línea es `version: 1.4.2+142` y traer PyYAML al CI de los tres sistemas
+    para eso sería pagar una dependencia por una línea.
+    """
+    if not os.path.exists(PUBSPEC):
+        raise Problem("no encuentro app/pubspec.yaml")
+    with open(PUBSPEC, encoding="utf-8") as handle:
+        for line in handle:
+            match = re.match(r"^version:\s*(\S+)\s*$", line)
+            if not match:
+                continue
+            raw = match.group(1)
+            if "+" in raw:
+                name, _, build = raw.partition("+")
+            else:
+                name, build = raw, "0"
+            if not SEMVER.match(name):
+                raise Problem(
+                    "la versión de pubspec.yaml no es semántica: %r.\n"
+                    "Tiene que ser MAJOR.MINOR.PATCH, por ejemplo 1.4.2+142."
+                    % raw
+                )
+            if not build.isdigit():
+                raise Problem("el build de pubspec.yaml no es un número: %r" % build)
+            return name, int(build)
+    raise Problem("app/pubspec.yaml no tiene una línea `version:`")
+
+
+# ------------------------------------------------------------- changelog ---
+
+
+def read_notes(version):
+    """La sección de [version] del CHANGELOG, sin su encabezado.
+
+    Es lo que se publica como notas del release y lo que la aplicación enseña
+    al ofrecer la actualización. Que falte es un error y no un aviso: publicar
+    sin decir qué cambia es publicar algo que nadie puede decidir si quiere.
+    """
+    if not os.path.exists(CHANGELOG):
+        raise Problem("no encuentro CHANGELOG.md")
+    with open(CHANGELOG, encoding="utf-8") as handle:
+        lines = handle.read().split("\n")
+
+    # `## 1.4.2` o `## 1.4.2 — 2026-09-15`. La fecha es decorativa.
+    start = None
+    for index, line in enumerate(lines):
+        match = re.match(r"^##\s+v?(\S+)", line)
+        if match and match.group(1) == version:
+            start = index + 1
+            break
+    if start is None:
+        raise Problem(
+            "CHANGELOG.md no tiene una sección para %s.\n"
+            "Añade una antes de publicar:\n\n"
+            "    ## %s — %s\n\n"
+            "    - Lo que cambia…\n"
+            % (version, version, datetime.now().strftime("%Y-%m-%d"))
+        )
+
+    end = len(lines)
+    for index in range(start, len(lines)):
+        if lines[index].startswith("## "):
+            end = index
+            break
+
+    notes = "\n".join(lines[start:end]).strip()
+    if not notes:
+        raise Problem("la sección %s del CHANGELOG está vacía" % version)
+    return notes
+
+
+# -------------------------------------------------------------- assets ---
+
+# De qué es cada artefacto, por su nombre. El nombre es el contrato: si se
+# cambia aquí hay que cambiarlo en los scripts de empaquetado, y al revés.
+KINDS = [
+    # (sufijo, plataforma, arquitectura, para qué sirve)
+    (".dmg", "macos", "universal", "installer"),
+    ("-macos-universal.zip", "macos", "universal", "update"),
+    (".exe", "windows", "x64", "installer"),
+    (".AppImage", "linux", "x64", "installer"),
+]
+
+
+def classify(name):
+    """Plataforma, arquitectura y uso de un artefacto, o None si no es uno."""
+    for suffix, platform, architecture, kind in KINDS:
+        if name.endswith(suffix):
+            # La arquitectura de verdad, si el nombre la lleva: así añadir un
+            # `-linux-arm64.AppImage` no obliga a tocar esta tabla.
+            match = re.search(r"-(?:macos|windows|linux)-([a-z0-9]+)\.", name)
+            if match:
+                architecture = match.group(1)
+            return platform, architecture, kind
+    return None
+
+
+def sha256_of(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        # A trozos: un DMG son 90 MB y leerlo entero a memoria en el runner no
+        # hace falta para nada.
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+# ------------------------------------------------------------ manifiesto ---
+
+
+def build_manifest(version, build, notes, uploaded, minimum=None):
+    """El `latest.json` que la aplicación lee para saber qué descargar.
+
+    [uploaded] es lo que devuelve `gh release view --json assets`: cada asset
+    con su `name`, su `size` y su `id`. El `id` es la pieza que importa: es lo
+    que permite descargarlo con un `Authorization:` en vez de con una URL
+    pública, que es lo único compatible con que el repositorio sea privado.
+    """
+    assets = []
+    for item in uploaded:
+        name = item["name"]
+        if name == "latest.json" or name.endswith(".sha256") or name == "SHA256SUMS.txt":
+            continue
+        what = classify(name)
+        if what is None:
+            continue
+        platform, architecture, kind = what
+        digest = item.get("sha256")
+        if not digest:
+            raise Problem("falta el SHA-256 de %s" % name)
+        assets.append(
+            {
+                "platform": platform,
+                "architecture": architecture,
+                "kind": kind,
+                "name": name,
+                "size": int(item["size"]),
+                "sha256": digest,
+                "assetId": int(item["id"]),
+            }
+        )
+
+    if not assets:
+        raise Problem(
+            "el release no tiene ningún artefacto reconocible.\n"
+            "Se esperaban nombres como Didacta-%s-macos-universal.dmg" % version
+        )
+
+    manifest = {
+        "version": version,
+        "build": build,
+        "tag": "v%s" % version,
+        "publishedAt": datetime.now(timezone.utc)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z"),
+        "releaseNotes": notes,
+        "assets": assets,
+    }
+    if minimum:
+        manifest["minimumSupportedVersion"] = minimum
+    return manifest
+
+
+# --------------------------------------------------------------- órdenes ---
+
+
+def cmd_version(args):
+    name, _ = read_version()
+    print(name)
+
+
+def cmd_build(args):
+    _, build = read_version()
+    print(build)
+
+
+def cmd_tag(args):
+    name, _ = read_version()
+    print("v%s" % name)
+
+
+def cmd_notes(args):
+    name, _ = read_version()
+    print(read_notes(args.version or name))
+
+
+def cmd_check(args):
+    """Todo lo que se puede comprobar antes de compilar nada.
+
+    Va primero en el workflow a propósito: descubrir que falta la sección del
+    CHANGELOG después de tres compilaciones de quince minutos es tirar media
+    hora por algo que se ve en un segundo.
+    """
+    name, build = read_version()
+    notes = read_notes(name)
+    print("versión:  %s" % name)
+    print("build:    %s" % build)
+    print("tag:      v%s" % name)
+    print("notas:    %d líneas" % len(notes.split("\n")))
+    if args.github_output:
+        with open(args.github_output, "a", encoding="utf-8") as handle:
+            handle.write("version=%s\n" % name)
+            handle.write("build=%s\n" % build)
+            handle.write("tag=v%s\n" % name)
+            # Multilínea, con el delimitador que pide Actions.
+            handle.write("notes<<DIDACTA_EOF\n%s\nDIDACTA_EOF\n" % notes)
+
+
+def cmd_checksums(args):
+    """Los SHA-256 de una carpeta, en el formato de `sha256sum -c`."""
+    lines = []
+    for name in sorted(os.listdir(args.directory)):
+        path = os.path.join(args.directory, name)
+        if not os.path.isfile(path) or classify(name) is None:
+            continue
+        lines.append("%s  %s" % (sha256_of(path), name))
+    if not lines:
+        raise Problem("no hay ningún artefacto en %s" % args.directory)
+    text = "\n".join(lines) + "\n"
+    sys.stdout.write(text)
+    if args.out:
+        with open(args.out, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+
+def cmd_manifest(args):
+    name, build = read_version()
+    notes = read_notes(name)
+
+    with open(args.assets, encoding="utf-8") as handle:
+        listed = json.load(handle)
+    # `gh release view --json assets` devuelve {"assets": [...]}; se acepta
+    # también la lista suelta, que es lo que sale de `gh api`.
+    if isinstance(listed, dict):
+        listed = listed.get("assets", [])
+
+    # El SHA-256 se calcula de los ficheros locales, no se pide a GitHub: lo
+    # que tiene que cuadrar es lo que se subió, y GitHub no publica el hash.
+    by_name = {}
+    for item in listed:
+        by_name[item["name"]] = dict(item)
+    for name_ in sorted(os.listdir(args.directory)):
+        path = os.path.join(args.directory, name_)
+        if os.path.isfile(path) and name_ in by_name:
+            by_name[name_]["sha256"] = sha256_of(path)
+
+    manifest = build_manifest(
+        name, build, notes, list(by_name.values()), minimum=args.minimum
+    )
+    text = json.dumps(manifest, indent=2, ensure_ascii=False) + "\n"
+    with open(args.out, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    print("manifiesto con %d artefactos → %s" % (len(manifest["assets"]), args.out))
+    for asset in manifest["assets"]:
+        print(
+            "  %-10s %-9s %-9s %s"
+            % (asset["platform"], asset["architecture"], asset["kind"], asset["name"])
+        )
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    sub = parser.add_subparsers(dest="command")
+
+    sub.add_parser("version", help="la versión de pubspec.yaml").set_defaults(
+        run=cmd_version
+    )
+    sub.add_parser("build", help="el build de pubspec.yaml").set_defaults(run=cmd_build)
+    sub.add_parser("tag", help="el tag del release: vX.Y.Z").set_defaults(run=cmd_tag)
+
+    notes = sub.add_parser("notes", help="la sección del CHANGELOG")
+    notes.add_argument("version", nargs="?")
+    notes.set_defaults(run=cmd_notes)
+
+    check = sub.add_parser("check", help="todo lo comprobable antes de compilar")
+    check.add_argument(
+        "--github-output",
+        default=os.environ.get("GITHUB_OUTPUT"),
+        help="dónde escribir las salidas para GitHub Actions",
+    )
+    check.set_defaults(run=cmd_check)
+
+    sums = sub.add_parser("checksums", help="los SHA-256 de una carpeta")
+    sums.add_argument("directory")
+    sums.add_argument("--out")
+    sums.set_defaults(run=cmd_checksums)
+
+    manifest = sub.add_parser("manifest", help="genera latest.json")
+    manifest.add_argument("directory", help="la carpeta con los artefactos")
+    manifest.add_argument("--assets", required=True, help="el JSON de gh release view")
+    manifest.add_argument("--out", required=True)
+    manifest.add_argument("--minimum", help="minimumSupportedVersion, si procede")
+    manifest.set_defaults(run=cmd_manifest)
+
+    args = parser.parse_args(argv)
+    if not getattr(args, "run", None):
+        parser.print_help()
+        return 2
+    try:
+        args.run(args)
+    except Problem as problem:
+        sys.stderr.write("\nNo se puede publicar:\n\n%s\n\n" % problem)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

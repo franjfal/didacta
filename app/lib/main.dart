@@ -26,13 +26,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'data/app_info.dart';
 import 'data/catalogue_source.dart';
 import 'data/preferences.dart';
 import 'data/repository_access.dart';
 import 'router.dart';
 import 'state/session.dart';
+import 'state/update_service.dart';
 import 'ui/platform_menus.dart';
 import 'ui/theme.dart';
+import 'ui/update_section.dart';
 
 /// Where the generated catalogue is served from.
 const String indexBase = String.fromEnvironment(
@@ -105,13 +108,25 @@ Future<void> main() async {
     await session.preferences.setCloneBase('$home/Didacta');
   }
 
-  runApp(DidactaApp(session: session));
+  // Quién es esta copia de Didacta: la versión sale del paquete construido,
+  // no de una constante que puede quedarse atrás de la compilación.
+  final info = await AppInfo.load();
+  final updates = UpdateService(
+    info: info,
+    preferences: session.preferences,
+    // Una función y no el token: vive en el llavero, y leerlo en cada uso es
+    // lo que hace que salir de GitHub tenga efecto aquí sin avisar a nadie.
+    readToken: session.tokenStore.read,
+  );
+
+  runApp(DidactaApp(session: session, updates: updates));
 }
 
 class DidactaApp extends StatefulWidget {
-  const DidactaApp({super.key, required this.session});
+  const DidactaApp({super.key, required this.session, required this.updates});
 
   final Session session;
+  final UpdateService updates;
 
   @override
   State<DidactaApp> createState() => _DidactaAppState();
@@ -135,6 +150,18 @@ class _DidactaAppState extends State<DidactaApp> {
     widget.session.start();
     // Tocarlo es crearlo: el oyente se suscribe al construirse.
     _lifecycle;
+
+    // Las actualizaciones, después y sin esperarlas. Ni una petición de red
+    // ni una lectura de preferencias pueden retrasar la primera pantalla, y
+    // si fallan no se entera nadie: buscar actualizaciones nunca puede
+    // impedir usar Didacta.
+    unawaited(
+      widget.updates.load().then((_) => widget.updates.checkIfDue()).catchError(
+        (Object problem) {
+          debugPrint('Didacta · actualizaciones: $problem');
+        },
+      ),
+    );
   }
 
   @override
@@ -145,8 +172,14 @@ class _DidactaAppState extends State<DidactaApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: widget.session,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: widget.session),
+        // Aparte de la sesión, y no dentro: son dos cosas que cambian por
+        // motivos distintos, y una pantalla que solo mira la versión no
+        // tiene por qué repintarse cuando se recarga el catálogo.
+        ChangeNotifierProvider.value(value: widget.updates),
+      ],
       child: const _Bootstrap(),
     );
   }
@@ -217,6 +250,9 @@ class _BootstrapState extends State<_Bootstrap> {
               // Y solo cuando además no hay nada cargado: si la biblioteca
               // tiene unidades, el aviso sería mentira --hay con qué
               // trabajar-- y estaría ocupando sitio en cada pantalla.
+              // Lo primero de todo: si hay versión nueva, es lo más útil que
+              // se puede decir en esta franja.
+              const UpdateBanner(),
               if (session.needsRepository && session.catalogue.units.isEmpty)
                 const _NoRepositoriesBanner(),
               if (session.catalogue.errors.isNotEmpty)

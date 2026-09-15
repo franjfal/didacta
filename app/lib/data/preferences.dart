@@ -65,6 +65,14 @@ abstract class Preferences {
   Future<String?> previewProfile();
   Future<void> setPreviewProfile(String id);
   Future<void> setEnginePath(String? path);
+
+  /// Cuándo se miró por última vez si hay una versión nueva.
+  ///
+  /// Aquí y no en el llavero: es una fecha, no una credencial. Y guardada y
+  /// no en memoria, que es lo que hace que la comprobación sea cada siete
+  /// días de verdad y no cada vez que se abre la aplicación.
+  Future<DateTime?> lastUpdateCheck();
+  Future<void> setLastUpdateCheck(DateTime when);
 }
 
 class StoredPreferences implements Preferences {
@@ -98,6 +106,7 @@ class StoredPreferences implements Preferences {
   static const String _preview = 'didacta.preview.profile';
   static const String _panel = 'didacta.unit.panel';
   static const String _split = 'didacta.unit.split';
+  static const String _checked = 'didacta.update.lastCheck';
 
   /// The stored value, then the build-time default. A stored empty string is
   /// a real answer -- "I turned the clone off" -- and must win over the
@@ -227,6 +236,22 @@ class StoredPreferences implements Preferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_preview, id);
   }
+
+  /// Guardada en UTC y como texto ISO: un entero de milisegundos es ilegible
+  /// al mirar las preferencias, y la zona horaria importa aquí lo justo.
+  @override
+  Future<DateTime?> lastUpdateCheck() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_checked);
+    if (value == null || value.isEmpty) return null;
+    return DateTime.tryParse(value)?.toLocal();
+  }
+
+  @override
+  Future<void> setLastUpdateCheck(DateTime when) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_checked, when.toUtc().toIso8601String());
+  }
 }
 
 /// For tests, and for a platform where nothing is remembered.
@@ -313,4 +338,12 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setPushOnCommit(bool value) async => push = value;
+
+  DateTime? checked;
+
+  @override
+  Future<DateTime?> lastUpdateCheck() async => checked;
+
+  @override
+  Future<void> setLastUpdateCheck(DateTime when) async => checked = when;
 }

@@ -69,7 +69,7 @@ void main() {
           );
 
           await tester.pumpWidget(
-            DidactaApp(session: session),
+            DidactaApp(session: session, updates: offlineUpdates()),
           );
           await settle(tester);
 

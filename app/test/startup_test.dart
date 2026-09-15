@@ -60,7 +60,7 @@ Future<void> settle(WidgetTester tester) async {
 Future<void> pumpFromDisk(WidgetTester tester, Session session) async {
   await tester.runAsync(() async {
     await tester.pumpWidget(
-      DidactaApp(session: session),
+      DidactaApp(session: session, updates: offlineUpdates()),
     );
     await Future<void>.delayed(const Duration(milliseconds: 300));
   });
@@ -123,6 +123,7 @@ void main() {
       await tester.pumpWidget(
         DidactaApp(
           session: sessionWith(clonePath: clone.path),
+          updates: offlineUpdates(),
         ),
       );
       // Pintando y esperando de verdad: `start()` sale de `initState`, así
@@ -162,6 +163,7 @@ void main() {
           session: sessionWith(
             source: const HttpCatalogueSource(base: 'http://127.0.0.1:1/nada'),
           ),
+          updates: offlineUpdates(),
         ),
       );
       await settle(tester);
@@ -186,6 +188,7 @@ void main() {
                 base: 'http://127.0.0.1:1/nada',
               ),
             ),
+            updates: offlineUpdates(),
           ),
         );
         await settle(tester);

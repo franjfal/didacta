@@ -105,7 +105,7 @@ void main() {
     final compiler = FakeCompiler()
       ..staleIndex = (stale: true, reason: 'el disco tiene 0 unidades');
     await tester.pumpWidget(
-      DidactaApp(session: sessionWith(compiler)),
+      DidactaApp(session: sessionWith(compiler), updates: offlineUpdates()),
     );
     await settle(tester);
 
@@ -139,7 +139,7 @@ void main() {
 
       final compiler = FakeCompiler();
       await tester.pumpWidget(
-        DidactaApp(session: sessionWith(compiler)),
+        DidactaApp(session: sessionWith(compiler), updates: offlineUpdates()),
       );
       await settle(tester);
 

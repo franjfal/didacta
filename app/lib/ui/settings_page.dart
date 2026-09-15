@@ -25,6 +25,7 @@ import '../router.dart';
 import '../state/session.dart';
 import 'shell.dart';
 import 'theme.dart';
+import 'update_section.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -56,6 +57,9 @@ class SettingsPage extends StatelessWidget {
 
               const SectionLabel('Catálogo'),
               _CatalogueSection(session: session),
+
+              const SectionLabel('Actualizaciones'),
+              const UpdateSection(),
             ],
           ),
         ),
