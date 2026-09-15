@@ -21,7 +21,6 @@ version=${2:?falta la versión}
 out=${3:?falta la carpeta de salida}
 
 here=$(cd "$(dirname "$0")" && pwd)
-root=$(cd "$here/../.." && pwd)
 
 [ -x "$bundle/didacta" ] || {
   echo "no encuentro el ejecutable en $bundle/didacta" >&2
