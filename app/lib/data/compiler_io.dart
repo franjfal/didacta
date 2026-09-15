@@ -372,6 +372,7 @@ class _ProcessCompiler implements Compiler {
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   }) async {
     final arguments = <String>[
       'preview',
@@ -380,10 +381,14 @@ class _ProcessCompiler implements Compiler {
       for (final language in languages) ...['-l', language],
       for (final profile in profiles) ...['-p', profile],
       if (fast) '--fast',
+      // Solo cuando hay quien lo lea: el motor abre un pseudoterminal para
+      // que LaTeX escriba línea a línea, y eso no se paga por una
+      // compilación que nadie está mirando.
+      if (onOutput != null) '--progress',
     ];
     // `preview` sale con 1 cuando algo no compila, y eso no es un fallo de
     // la llamada: el JSON con los diagnósticos es justo lo que hace falta.
-    final output = await _run(arguments, allowFailure: true);
+    final output = await _run(arguments, allowFailure: true, onOutput: onOutput);
 
     final Map<String, dynamic> decoded;
     try {
@@ -420,6 +425,7 @@ class _ProcessCompiler implements Compiler {
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   }) async {
     final output = await _run([
       'build',
@@ -428,7 +434,8 @@ class _ProcessCompiler implements Compiler {
       for (final language in languages) ...['-l', language],
       for (final profile in profiles) ...['-p', profile],
       if (fast) '--fast',
-    ], allowFailure: true);
+      if (onOutput != null) '--progress',
+    ], allowFailure: true, onOutput: onOutput);
 
     return [
       for (final item in _listIn(output, document))
@@ -547,17 +554,30 @@ class _ProcessCompiler implements Compiler {
   }
 
   @override
-  Future<String> run(List<String> arguments, {bool allowFailure = false}) =>
-      _run(arguments, allowFailure: allowFailure);
+  Future<String> run(
+    List<String> arguments, {
+    bool allowFailure = false,
+    void Function(String line)? onOutput,
+  }) => _run(arguments, allowFailure: allowFailure, onOutput: onOutput);
 
+  /// Lanza el motor y devuelve lo que escribió en la salida estándar.
+  ///
+  /// `Process.start` y no `Process.run`, que es lo que da a elegir: `run`
+  /// devuelve las dos corrientes cuando el proceso ya ha terminado, y una
+  /// compilación de treinta segundos contada al final no es lo que se pidió.
+  /// Aquí la salida estándar se junta entera --es el JSON, y se lee de una
+  /// pieza-- mientras la de error se reparte línea a línea a [onOutput]
+  /// según llega. Los dos canales están separados a propósito: por uno habla
+  /// el motor con la aplicación y por el otro, con quien mira.
   Future<String> _run(
     List<String> arguments, {
     bool allowFailure = false,
+    void Function(String line)? onOutput,
   }) async {
     final script = cliIn(enginePath);
-    final ProcessResult result;
+    final Process process;
     try {
-      result = await Process.run(
+      process = await Process.start(
         script,
         arguments,
         // Desde el clon: el motor busca la raíz subiendo hasta didacta.yaml.
@@ -581,15 +601,47 @@ class _ProcessCompiler implements Compiler {
       );
     }
 
-    if (result.exitCode != 0 && !allowFailure) {
+    // Sin entrada: el motor no pregunta nada, y un proceso esperando en una
+    // tubería que nadie va a escribir se queda colgado para siempre.
+    try {
+      await process.stdin.close();
+    } catch (_) {
+      // Ya había terminado. No es un problema: no tenía nada que leer.
+    }
+
+    // Tolerante con los bytes sueltos. Un log de LaTeX lleva nombres de
+    // fuentes y mensajes de paquetes que no siempre son UTF-8, y un
+    // decodificador estricto convierte eso en una excepción que se lleva por
+    // delante una compilación que había ido bien.
+    const decoder = Utf8Decoder(allowMalformed: true);
+
+    final out = StringBuffer();
+    final errors = StringBuffer();
+    final reading = <Future<void>>[
+      process.stdout.transform(decoder).forEach(out.write),
+      process.stderr
+          .transform(decoder)
+          .transform(const LineSplitter())
+          .forEach((line) {
+            errors.writeln(line);
+            onOutput?.call(line);
+          }),
+    ];
+    final code = await process.exitCode;
+    // Después del código de salida: las corrientes pueden tener cola
+    // pendiente cuando el proceso ya ha muerto, y quedarse con media línea
+    // del error es quedarse sin el error.
+    await Future.wait(reading);
+
+    if (code != 0 && !allowFailure) {
       throw CompileException(
-        'El motor falló (código ${result.exitCode}).',
-        detail: ((result.stderr as String?) ?? '').trim().isEmpty
-            ? ((result.stdout as String?) ?? '').trim()
-            : (result.stderr as String).trim(),
+        'El motor falló (código $code).',
+        detail: errors.toString().trim().isEmpty
+            ? out.toString().trim()
+            : errors.toString().trim(),
       );
     }
-    return (result.stdout as String?) ?? '';
+    return out.toString();
   }
 
   @override

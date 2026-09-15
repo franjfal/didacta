@@ -273,12 +273,26 @@ class Engine:
     document happened to sit.
     """
 
-    def __init__(self, latex_dir, build_dir, engine="latexmk", verbose=False):
+    def __init__(self, latex_dir, build_dir, engine="latexmk", verbose=False,
+                 on_output=None):
         self.latex_dir = os.path.abspath(latex_dir)
         self.build_dir = os.path.abspath(build_dir)
         self.engine = engine
         self.verbose = verbose
+        #: Called with every line LaTeX writes, as it writes it.
+        #:
+        #: Exists because a build is the one thing Didacta does that takes
+        #: long enough for silence to be a bug: a spinner says «wait», and
+        #: the terminal says which file, which pass and which package is
+        #: taking the time. Without this the caller only ever saw the parsed
+        #: diagnostics, which is the summary of a run it never got to watch.
+        self.on_output = on_output
         self.profiles = profiles_mod.load(self.latex_dir)
+
+    def say(self, line):
+        """Emit one line of progress, if anybody is listening."""
+        if self.on_output:
+            self.on_output(line)
 
     # -- environment -----------------------------------------------------
 
@@ -370,15 +384,14 @@ class Engine:
         if self.verbose:
             print("  $ " + " ".join(command))
 
+        # Qué se está compilando, antes de compilarlo. Un watcher que sólo ve
+        # la salida de LaTeX no sabe de cuál de las nueve versiones que pidió
+        # es lo que está leyendo.
+        self.say("=== %s · %s · %s" % (document_id, profile.id, language))
+        self.say("$ " + " ".join(command))
+
         started = time.time()
-        completed = subprocess.run(
-            command,
-            cwd=source_dir,
-            env=self.environment(),
-            capture_output=True,
-            text=True,
-            errors="replace",
-        )
+        returncode, output = self._execute(command, source_dir)
         elapsed = time.time() - started
 
         pdf = os.path.join(outdir, job + ".pdf")
@@ -389,19 +402,34 @@ class Engine:
                 log_text = handle.read()
 
         diagnostics = parse_log(log_text) if log_text else []
-        ok = os.path.isfile(pdf) and completed.returncode == 0
+        ok = os.path.isfile(pdf) and returncode == 0
 
         if not ok and not any(d.severity == "error" for d in diagnostics):
             # latexmk failed without LaTeX reporting anything: a missing
             # binary, a permissions problem, a killed process. Surface its own
             # message rather than an empty error list.
-            detail = (completed.stderr or completed.stdout or "").strip()
+            detail = output.strip()
             diagnostics.append(
                 Diagnostic("error", detail[-400:] or "%s failed" % self.engine)
             )
 
         if not keep_aux and ok:
             self._prune_aux(outdir, job)
+
+        pages = page_count(log_text)
+        # Cómo acabó, en la misma corriente que la salida de LaTeX. El
+        # resultado estructurado llega después y por otro sitio; quien está
+        # mirando el terminal tiene que poder leer aquí que terminó.
+        self.say("--- %s · %s%.1fs" % (
+            "ok" if ok else "FAIL",
+            "%d pages · " % pages if pages else "",
+            elapsed,
+        ))
+        if ok and pdf:
+            self.say("--- %s" % pdf)
+        for diagnostic in diagnostics:
+            if diagnostic.severity == "error":
+                self.say("--- %s" % diagnostic)
 
         return BuildResult(
             document=document_id,
@@ -410,11 +438,107 @@ class Engine:
             ok=ok,
             pdf=pdf if os.path.isfile(pdf) else None,
             log=log if os.path.isfile(log) else None,
-            pages=page_count(log_text),
+            pages=pages,
             seconds=elapsed,
             diagnostics=diagnostics,
             command=command,
         )
+
+    # -- running the compiler -------------------------------------------
+
+    def _execute(self, command, cwd):
+        """Run the compiler, and return ``(returncode, combined output)``.
+
+        Streamed line by line when somebody is listening, captured in one go
+        when nobody is. The difference matters: a build takes tens of seconds
+        and the output is the only thing that says what it is doing, so
+        handing it over after the fact is handing over a transcript of a wait
+        that already happened.
+        """
+        env = self.environment()
+        if self.on_output is None:
+            completed = subprocess.run(
+                command, cwd=cwd, env=env,
+                capture_output=True, text=True, errors="replace",
+            )
+            return completed.returncode, (completed.stderr or completed.stdout or "")
+        if os.name == "posix":
+            return self._stream_pty(command, cwd, env)
+        return self._stream_pipe(command, cwd, env)
+
+    def _stream_pty(self, command, cwd, env):
+        """Stream through a pseudo-terminal, so the output arrives as it happens.
+
+        A plain pipe would be simpler and would be wrong for the purpose. TeX
+        writes through the C library, which block-buffers when its output is
+        not a terminal: the reader gets 4 KB at a time, so a progress view
+        built on a pipe shows nothing for ten seconds and then everything at
+        once. Down a pty TeX line-buffers, which is what «in real time»
+        actually requires.
+
+        Only on POSIX, because that is where `pty` exists; Windows falls back
+        to the pipe and to its buffering.
+        """
+        import errno
+        import pty
+
+        primary, secondary = pty.openpty()
+        try:
+            process = subprocess.Popen(
+                command, cwd=cwd, env=env,
+                stdout=secondary, stderr=secondary,
+                # Sin entrada: en `nonstopmode` LaTeX no pregunta, pero si
+                # alguna vez lo hiciera, en un pty no llega el fin de fichero
+                # y la compilación se quedaría esperando para siempre.
+                stdin=subprocess.DEVNULL,
+                close_fds=True,
+            )
+        finally:
+            os.close(secondary)
+
+        collected = []
+        pending = ""
+        try:
+            while True:
+                try:
+                    chunk = os.read(primary, 8192)
+                except OSError as exc:
+                    # El hijo cerró su extremo: así acaba una lectura de pty,
+                    # y no es un error.
+                    if exc.errno == errno.EIO:
+                        break
+                    raise
+                if not chunk:
+                    break
+                text = chunk.decode("utf-8", "replace")
+                collected.append(text)
+                pending += text
+                *lines, pending = pending.split("\n")
+                for line in lines:
+                    self.on_output(line.rstrip("\r"))
+        finally:
+            os.close(primary)
+        if pending.strip():
+            self.on_output(pending.rstrip("\r"))
+        process.wait()
+        return process.returncode, "".join(collected)
+
+    def _stream_pipe(self, command, cwd, env):
+        """Stream through a pipe. Whatever buffering the compiler decides."""
+        process = subprocess.Popen(
+            command, cwd=cwd, env=env,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            text=True, errors="replace", bufsize=1,
+        )
+        collected = []
+        for line in process.stdout:
+            line = line.rstrip("\n").rstrip("\r")
+            collected.append(line)
+            self.on_output(line)
+        process.stdout.close()
+        process.wait()
+        return process.returncode, "\n".join(collected)
 
     def _write_injection(self, outdir, document_title, course_keys):
         """Write the metadata the structure files know, for LaTeX to \input.
@@ -508,6 +632,7 @@ class Engine:
             try:
                 result = self.build(source, profile, language, **extra)
             except BuildError as exc:
+                self.say("--- FAIL %s" % exc)
                 result = BuildResult(
                     document=extra.get("document_id") or os.path.basename(source),
                     profile=profile if isinstance(profile, str) else profile.id,

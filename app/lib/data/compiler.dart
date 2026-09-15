@@ -230,11 +230,17 @@ abstract class Compiler {
   /// Varios idiomas de una vez porque la comparación que importa es esa: si
   /// la traducción valenciana sigue cabiendo en la diapositiva no se puede
   /// saber sin las dos delante.
+  ///
+  /// [onOutput] recibe cada línea que escribe LaTeX, según la escribe. Se
+  /// pasa cuando hay alguien mirando --la consola de compilación-- y se
+  /// omite cuando no, que es lo que decide si el motor la emite: una
+  /// compilación silenciosa no paga nada por la que se está viendo.
   Future<List<CompileOutput>> compile({
     required String unitPath,
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   });
 
   /// Si el índice de `generated/` ya no describe lo que hay en el disco.
@@ -273,6 +279,7 @@ abstract class Compiler {
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   });
 
   /// Lanza el motor con los argumentos que se le den, y devuelve su salida.
@@ -281,7 +288,11 @@ abstract class Compiler {
   /// `cli/didacta`, comprobar que está, ejecutarlo desde el clon y limpiar
   /// el token de lo que se enseñe. Tener un segundo objeto para lanzar otras
   /// órdenes sería tener dos sitios donde arreglar el mismo problema.
-  Future<String> run(List<String> arguments, {bool allowFailure = false});
+  Future<String> run(
+    List<String> arguments, {
+    bool allowFailure = false,
+    void Function(String line)? onOutput,
+  });
 
   /// Abre el PDF en el visor del sistema.
   ///

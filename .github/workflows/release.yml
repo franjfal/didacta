@@ -380,10 +380,15 @@ jobs:
         # La comprobación que impide publicar media versión: si falta el
         # AppImage, alguien en Linux se queda sin nada y sin enterarse.
         run: |
+          # `find` y no `ls dist/$patron`: que una variable con un comodín se
+          # expanda o no depende del shell --bash sí, zsh no-- y una
+          # comprobación que sólo funciona en uno de los dos no es una
+          # comprobación. Esto se ejecuta igual en cualquiera.
           missing=""
           for pattern in "*-macos-universal.dmg" "*-macos-universal.zip" \
                          "*-windows-x64.exe" "*-linux-x64.AppImage"; do
-            ls dist/$pattern >/dev/null 2>&1 || missing="$missing $pattern"
+            found=$(find dist -maxdepth 1 -name "$pattern" -type f | head -1)
+            [ -n "$found" ] || missing="$missing $pattern"
           done
           if [ -n "$missing" ]; then
             echo "::error::Faltan artefactos:$missing. No se publica un release incompleto."
