@@ -466,12 +466,17 @@ jobs:
           # Las notas se vuelven a leer del CHANGELOG en vez de venir
           # interpoladas desde el trabajo anterior.
           #
-          # Interpolar `${{ }}` dentro de un `run:` mete el texto **en el
-          # guion** antes de que exista ningún shell, así que una comilla en
-          # una nota de versión rompería la orden y un `$(…)` se ejecutaría.
-          # Es contenido del repositorio y no de un desconocido, pero no hay
-          # ninguna razón para dejar esa puerta abierta: el repositorio ya
-          # está aquí, y leerlo otra vez cuesta nada.
+          # Una interpolación de Actions dentro de un `run:` mete el texto
+          # **en el guion** antes de que exista ningún shell, así que una
+          # comilla en una nota de versión rompería la orden y un `$(…)` se
+          # ejecutaría. Es contenido del repositorio y no de un desconocido,
+          # pero no hay ninguna razón para dejar esa puerta abierta: el
+          # repositorio ya está aquí, y leerlo otra vez cuesta nada.
+          #
+          # Y este comentario no la escribe literal, porque Actions también
+          # interpola dentro de los comentarios del shell: la primera versión
+          # de esta explicación llevaba las llaves vacías y tumbaba el
+          # workflow entero con «An expression was expected».
           python3 packaging/release.py notes > notas.md
           gh release create "$TAG" \
             -R "$RELEASE_REPO" \

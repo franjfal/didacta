@@ -14,6 +14,7 @@ lógica no esté ahí dentro.
 
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -498,6 +499,50 @@ class PortalTest(unittest.TestCase):
     def test_explica_que_la_contraseña_no_se_escribe_en_didacta(self):
         page = portal.render(self.manifest())
         self.assertIn("github.com/login/device", page)
+
+
+class WorkflowTest(unittest.TestCase):
+    """Lo que GitHub valida al lanzar, comprobado antes de lanzar.
+
+    Estos ficheros no los mira ningún test de Dart ni de Python, y un fallo
+    aquí no se ve hasta que alguien pulsa el botón: GitHub responde 422 y el
+    workflow no llega a arrancar.
+    """
+
+    def workflows(self):
+        here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        folder = os.path.join(here, ".github", "workflows")
+        for name in sorted(os.listdir(folder)):
+            if name.endswith((".yml", ".yaml")):
+                with open(os.path.join(folder, name), encoding="utf-8") as h:
+                    yield name, h.read()
+
+    def test_no_hay_interpolaciones_vacias(self):
+        """`${ { } }` sin nada dentro tumba el workflow entero.
+
+        Y pasa donde menos se espera: Actions interpola también **dentro de
+        los comentarios del shell**, así que un comentario que explique la
+        sintaxis escribiéndola literal es un workflow que no arranca. Pasó
+        exactamente eso, en el comentario que avisaba de no interpolar.
+        """
+        pattern = re.compile(r"\$\{\{(.*?)\}\}", re.S)
+        for name, text in self.workflows():
+            for number, line in enumerate(text.split("\n"), 1):
+                for match in pattern.finditer(line):
+                    self.assertTrue(
+                        match.group(1).strip(),
+                        "%s:%d interpola nada: %s" % (name, number, line.strip()),
+                    )
+
+    def test_las_llaves_estan_equilibradas(self):
+        # `${{ algo }` o `${ algo }}` dan el mismo 422 y son igual de
+        # invisibles leyendo el fichero.
+        for name, text in self.workflows():
+            self.assertEqual(
+                text.count("${{"),
+                text.count("}}"),
+                "%s: abre y cierra distinto número de interpolaciones" % name,
+            )
 
 
 if __name__ == "__main__":
