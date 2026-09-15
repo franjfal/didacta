@@ -104,7 +104,9 @@ void main() {
 
     final compiler = FakeCompiler()
       ..staleIndex = (stale: true, reason: 'el disco tiene 0 unidades');
-    await tester.pumpWidget(DidactaApp(session: sessionWith(compiler)));
+    await tester.pumpWidget(
+      DidactaApp(session: sessionWith(compiler)),
+    );
     await settle(tester);
 
     expect(tester.takeException(), isNull);
@@ -136,7 +138,9 @@ void main() {
       addTearDown(tester.view.reset);
 
       final compiler = FakeCompiler();
-      await tester.pumpWidget(DidactaApp(session: sessionWith(compiler)));
+      await tester.pumpWidget(
+        DidactaApp(session: sessionWith(compiler)),
+      );
       await settle(tester);
 
       expect(find.byKey(const Key('refresh-everything')), findsOneWidget);

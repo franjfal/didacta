@@ -507,10 +507,7 @@ void main() {
     // leyendo --las composiciones de antes lo usan-- pero no se escribe: de
     // qué parte de la asignatura es una unidad lo dice su `block`, no la
     // clave con la que se la nombra.
-    expect(
-      committedEntries(gateway).last,
-      '- unit: analysis/normed/exercises',
-    );
+    expect(committedEntries(gateway).last, '- unit: analysis/normed/exercises');
     // And the row is now in the list, numbered last among the active ones.
     expect(find.textContaining('5 de 6 activas'), findsOneWidget);
   });

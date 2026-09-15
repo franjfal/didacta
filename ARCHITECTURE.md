@@ -344,6 +344,14 @@ que funcionar en un runner de CI sin un paso de `pip`.
 | D53 | Las columnas de colores se pintan también dentro del editor, midiendo el texto aparte con el mismo estilo y un strut forzado | una caja de texto no deja pintar entre sus líneas, así que la capa de guías mide por su cuenta y pinta por **línea visual**, que es lo que sigue cuadrando cuando una línea larga se parte. El strut forzado es lo que hace que las dos medidas coincidan; hay un test que compara la altura de las dos capas con una línea partida, porque si algún día dejan de coincidir no se ve leyendo el código |
 | D54 | La sangría por entornos es de la vista y no se escribe nunca | no es un dato del fichero: la misma unidad está un nivel más adentro leída con su tema —porque cuelga de una diapositiva que abrió la unidad anterior— que leída sola. Guardarla sería escribir en el fichero algo que solo es cierto desde dónde se está mirando, y dos lecturas del mismo fichero pelearían por él en cada commit |
 | D55 | En la vista del fuente no hay modo edición: cada fragmento es una caja de texto desde el principio, y la barra de entornos vive arriba | entrar y salir de un modo recomponía la lista bajo el ratón, así que el sitio que habías pulsado ya no estaba donde lo pulsaste; y la barra dentro del fragmento empujaba el texto al aparecer. El coste es que dentro de una caja no se puede sangrar línea a línea —tiene un solo margen izquierdo— así que el texto va como está en el fichero y la estructura la dicen las columnas del margen y el color del `\begin` y el `\end` |
+| D56 | El LaTeX se pinta dentro de la caja de texto, y el troceador va aparte del color | un `.tex` se lee como código y se editaba como un bloc de notas. Sin modo edición el color no puede pintarse por encima: lo dice el propio controlador de la caja, y así lo tienen los tres sitios donde se escribe —la unidad, los campos de un problema y cada fragmento del tema—. El recorrido que dice qué es cada trozo está en el modelo y probado por su cuenta, porque sus fallos no se ven: un `\%` tomado por comentario apaga media línea y un `$` sin cerrar tiñe el resto del fichero |
+| D57 | El idioma del documento y el de un fragmento son dos cosas distintas | el del documento es el que se compilaría, y cambiarlo vuelve a elegir idioma en todas las unidades con la caída del motor (D13): la que no está traducida se sigue viendo en el suyo y lo dice. El de un fragmento es una excepción para esa unidad, que es lo que permite mirar una traducción sin cambiar de pantalla y lo que hace posible una hoja bilingüe |
+| D58 | La identidad la da GitHub, no un servicio aparte | había tres cosas que cuadrar --quién eres para Firebase, qué permisos te da un `access.json` versionado, y un token pegado a mano para escribir-- y las tres contestaban a una sola pregunta que GitHub ya tenía contestada: quién puede escribir en este repositorio. Se entra con el *device flow*, que es el que usan las herramientas de terminal: sin secreto que guardar --un `client_id` es público y una aplicación de escritorio no puede esconder nada--, sin servidor que atienda una redirección, y con la contraseña tecleada en github.com y en ningún otro sitio |
+| D59 | Varios repositorios a la vez, y un fichero es de uno solo | un profesor tiene el suyo, comparte otro con el departamento y da clase en una asignatura que se arma con los dos. Lo que se mezcla es la **asignatura**: los años y los temas de cada repositorio se juntan en una sola vista. Lo que no se mezcla nunca son los ficheros: un documento se compila contra la raíz del suyo y referencia unidades suyas, así que nada de lo que había --el índice por repositorio, `\DidactaContentRoot`, el motor-- necesita saber que hay más de uno |
+| D60 | Dos repositorios pueden tener la misma ruta y son cosas distintas | `content/analysis/normed/definition` en dos sitios son dos unidades, no una con dos copias. Por eso la identidad de una unidad pasa a ser (repositorio, ruta) y cada pantalla pide la pasarela del repositorio del fichero que tiene en la mano. Escribir «en el repositorio» dejó de significar algo el día que hubo dos |
+| D61 | Quien no tenga uno de los repositorios ve el resto | un índice que no carga se cuenta como un aviso y no como un fallo: lo que se enseña es lo que hay. Es lo que permite compartir una asignatura sin obligar a compartir todo lo demás, y lo que hace que quitar un repositorio de la lista no rompa ninguna pantalla |
+| D62 | Cada repositorio tiene un color, y solo se enseña cuando hay más de uno | con dos abiertos, «¿esto dónde se está guardando?» es la pregunta que más se hace, y un color en la fila la contesta más barato que una ruta. Con uno solo no hay con qué confundirlo, así que no se marca nada: un adorno que siempre está deja de leerse |
+| D63 | Crear algo pregunta en qué repositorio | crear una asignatura en el equivocado cuesta media tarde de deshacer --hay que mover ficheros y rehacer dos historiales-- y la aplicación no tiene forma de adivinarlo. Con un solo repositorio no pregunta: no hay nada que elegir |
 
 ---
 
@@ -447,9 +455,9 @@ repositorio de contenido          la interfaz
 ```
 
 `didacta index` genera esos tres ficheros; la aplicación no habla con el
-repositorio directamente. Son estáticos, así que una publicación en GitHub
-Pages no necesita servidor — y `api/` solo hará falta cuando haya que
-*escribir*.
+repositorio directamente. Con varios repositorios abiertos, cada uno trae los
+suyos y la aplicación los mezcla: las asignaturas se juntan, los ficheros no
+(D59).
 
 Dentro de la aplicación el corte es el mismo por el mismo motivo:
 
@@ -474,17 +482,15 @@ sale de la composición migrada en sus 7 perfiles.
 
 El migrador (§8), los índices (§8.bis) y la aplicación están hechos sobre el
 material real: las siete rutas, el editor multilingüe, la edición de
-`unit.yaml` y el constructor de composiciones, con un clon local en escritorio
-y el Worker en web. Lo siguiente, en orden:
+`unit.yaml` y el constructor de composiciones, sobre **clones locales de
+varios repositorios a la vez**, con la identidad de GitHub (D58–D63). Lo
+siguiente, en orden:
 
 1. **Compilar desde la interfaz** — en escritorio, con un clon en disco y
    LaTeX instalado, ya es posible: falta lanzar `didacta build` y mostrar el
    log y el PDF. En web no lo es, y la pantalla del documento no lo finge.
 2. **Bibliografía** — 13 unidades citan y 5 usan `\cites` de biblatex, que hoy
    no compila. Hay que decidir dónde vive el `.bib` y con qué motor.
-3. **Desplegar el Worker y Firebase** — el código está escrito y probado, pero
-   `wrangler deploy`, el secreto del token y los proveedores de acceso piden
-   credenciales que solo tiene el autor.
 4. **Crear unidades desde la interfaz** — hoy se editan, traducen, reclasifican
    y recomponen las que hay; una nueva pide crear el directorio a mano.
 5. **CI** — compilar en cada push, `didacta index --check`, publicar los PDF

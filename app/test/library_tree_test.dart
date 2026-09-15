@@ -256,14 +256,22 @@ void main() {
     // temas de la práctica en uno --«la recta real»--, la etiqueta es lo que
     // dice por qué sección de la práctica anda cada fichero.
     final units = [
-      unit(path: 'content/analisis/recta-real/suma-cuadrados',
-          tags: const ['induccion']),
-      unit(path: 'content/analisis/recta-real/suma-cubos',
-          tags: const ['induccion']),
-      unit(path: 'content/analisis/recta-real/binomio',
-          tags: const ['induccion']),
-      unit(path: 'content/analisis/recta-real/valor-absoluto',
-          tags: const ['valor-absoluto']),
+      unit(
+        path: 'content/analisis/recta-real/suma-cuadrados',
+        tags: const ['induccion'],
+      ),
+      unit(
+        path: 'content/analisis/recta-real/suma-cubos',
+        tags: const ['induccion'],
+      ),
+      unit(
+        path: 'content/analisis/recta-real/binomio',
+        tags: const ['induccion'],
+      ),
+      unit(
+        path: 'content/analisis/recta-real/valor-absoluto',
+        tags: const ['valor-absoluto'],
+      ),
       unit(path: 'content/analisis/recta-real/sin-etiqueta'),
     ];
 
@@ -297,10 +305,14 @@ void main() {
     test('el tema y la categoría las ofrecen', () {
       final tree = LibraryTree.of(units);
       final category = tree.categories.single;
-      expect([for (final t in category.tags) t.tag],
-          ['induccion', 'valor-absoluto']);
-      expect([for (final t in category.topic('recta-real')!.tags) t.tag],
-          ['induccion', 'valor-absoluto']);
+      expect(
+        [for (final t in category.tags) t.tag],
+        ['induccion', 'valor-absoluto'],
+      );
+      expect(
+        [for (final t in category.topic('recta-real')!.tags) t.tag],
+        ['induccion', 'valor-absoluto'],
+      );
     });
 
     test('sin etiquetas no hay fila que pintar', () {

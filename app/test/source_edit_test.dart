@@ -101,7 +101,12 @@ Future<FakeGateway> pumpSource(
 }
 
 /// La caja de un fichero.
-Finder fieldFor(String path) => find.byKey(Key('source-field-$path'));
+/// La caja de texto de un fichero. La clave va en la caja de Didacta, que
+/// lleva las columnas de color; dentro está el `TextField` de siempre.
+Finder fieldFor(String path) => find.descendant(
+  of: find.byKey(Key('source-field-$path')),
+  matching: find.byType(TextField),
+);
 
 String textIn(WidgetTester tester, String path) =>
     tester.widget<TextField>(fieldFor(path)).controller!.text;
@@ -154,6 +159,12 @@ void main() {
     await settle(tester);
     tester.widget<TextField>(fieldFor('$banach/es.tex')).controller!.selection =
         const TextSelection(baseOffset: 0, extentOffset: 7);
+    await tester.pump();
+
+    // En escritorio, pulsar un botón le quita el foco al campo. La barra no
+    // puede apagarse por eso: entre que se aprieta y se suelta el botón ya
+    // estaría gris y el clic no haría nada, que es exactamente lo que pasaba.
+    tester.binding.focusManager.primaryFocus?.unfocus();
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('wrap-onlyslides')));
@@ -315,6 +326,28 @@ void main() {
     expect(find.textContaining('tocado'), findsNothing);
     expect(textIn(tester, '$definition/es.tex'), 'Una norma.\n');
     expect(gateway.commits, isEmpty);
+  });
+
+  testWidgets('el idioma del documento cambia todos los fragmentos', (
+    tester,
+  ) async {
+    await pumpSource(
+      tester,
+      files: {
+        '$definition/es.tex': 'Una norma.\n',
+        '$banach/es.tex': 'Banach.\n',
+        '$banach/va.tex': 'Banach en valencià.\n',
+      },
+    );
+
+    await tester.tap(find.byKey(const Key('source-document-language-va')));
+    await settle(tester);
+
+    // La que está traducida, en valenciano.
+    expect(textIn(tester, '$banach/va.tex'), 'Banach en valencià.\n');
+    // Y la que no, en el suyo y diciéndolo: un hueco describiría un documento
+    // que no es el que se compila (D13).
+    expect(textIn(tester, '$definition/es.tex'), 'Una norma.\n');
   });
 
   group('las pestañas de idioma de un fragmento', () {

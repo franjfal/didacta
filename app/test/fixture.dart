@@ -7,7 +7,7 @@
 /// nothing.
 library;
 
-import 'package:didacta_app/data/auth.dart';
+import 'package:didacta_app/data/secrets.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
@@ -110,7 +110,10 @@ List<Map<String, dynamic>> defaultUnits() => [
   unitJson(
     path: 'problems/analysis/normed/exercises',
     area: 'problems',
-    kind: 'exercise',
+    // El tipo que le pone el motor a una unidad de `problems/`, y uno de los
+    // que acepta: `exercise` no está entre ellos y aquí decidía si la pantalla
+    // ofrece los tres campos.
+    kind: 'problem',
     tags: const ['ejercicios'],
     title: const {'es': 'Ejercicios de normas'},
     usedBy: const <Map<String, String>>[],
@@ -280,7 +283,7 @@ class FakeGateway extends ContentGateway {
       [];
 
   @override
-  GatewayKind get kind => GatewayKind.direct;
+  GatewayKind get kind => GatewayKind.clone;
 
   @override
   bool get canWrite => writable;
@@ -597,6 +600,9 @@ class FakeClone implements LocalClone {
       (name: 'Javier', email: 'javier@uv.es');
 
   @override
+  Future<String?> remoteUrl() async => 'https://github.com/x/y.git';
+
+  @override
   Future<CloneStatus> status() async => CloneStatus(
     directory: '/clon',
     branch: 'main',
@@ -657,12 +663,7 @@ class FakeSession extends Session {
     this.onReload,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
-         auth: StubAuth(),
          tokenStore: StubStore(),
-         apiBase: '',
-         contentOwner: 'franjfal',
-         contentRepo: 'didacta_db',
-         contentBranch: 'main',
        );
 
   final ContentGateway gatewayOverride;
@@ -697,13 +698,13 @@ class FakeSession extends Session {
   }
 
   @override
-  CourseAdmin? admin() => adminOverride;
+  CourseAdmin? admin({String? repo}) => adminOverride;
 
   @override
   ContentGateway get gateway => gatewayOverride;
 
   @override
-  Compiler? compiler() => compilerOverride;
+  Compiler? compiler({String? repo}) => compilerOverride;
 
   @override
   bool get canCompile => true;
@@ -714,39 +715,6 @@ class FakeSession extends Session {
 /// Possible because `Session` takes an [AuthSession] and a [SecretStore]
 /// rather than the concrete Firebase and keychain classes -- which is the
 /// point of those interfaces existing.
-class StubAuth implements AuthSession {
-  @override
-  Stream<void> get changes => const Stream.empty();
-
-  @override
-  SignedInUser? get user =>
-      const SignedInUser(email: 'javier@uv.es', emailVerified: true);
-
-  @override
-  bool get signedIn => true;
-
-  @override
-  Future<String?> idToken({bool forceRefresh = false}) async => 'token';
-
-  @override
-  Future<void> signOut() async {}
-
-  @override
-  Future<void> signInWithPassword(String email, String password) async {}
-
-  @override
-  Future<void> signInWithGoogle() async {}
-
-  @override
-  Future<void> createAccount(String email, String password) async {}
-
-  @override
-  Future<void> sendPasswordReset(String email) async {}
-
-  @override
-  Future<void> resendVerification() async {}
-}
-
 class StubStore implements SecretStore {
   @override
   bool get canStoreSafely => true;

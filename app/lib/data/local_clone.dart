@@ -137,6 +137,14 @@ abstract class LocalClone {
   /// Whether [directory] is a git clone with the expected remote.
   Future<bool> looksRight({required String owner, required String repo});
 
+  /// La URL del remoto, o null si esto no es un clon.
+  ///
+  /// Hace falta para añadir una carpeta que ya está en el disco: de ahí sale
+  /// de qué repositorio es, sin preguntarle nada a nadie ni tener que entrar
+  /// en GitHub. Es lo que permite seguir trabajando con lo que ya tenías el
+  /// día que la aplicación pasó a manejar varios.
+  Future<String?> remoteUrl();
+
   Future<CloneStatus> status();
 
   /// The identity git is configured with here, if any.

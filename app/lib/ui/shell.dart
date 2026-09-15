@@ -20,6 +20,7 @@ import '../data/content_gateway.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'brand.dart';
+import 'sync_bar.dart';
 import 'theme.dart';
 
 class DidactaShell extends StatelessWidget {
@@ -103,6 +104,7 @@ class DidactaShell extends StatelessWidget {
             return Scaffold(
               body: Column(
                 children: [
+                  SyncBar(session: session),
                   Expanded(child: child),
                   const Divider(height: 1),
                   _GatewayStrip(gateway: session.gateway),
@@ -187,6 +189,7 @@ class DidactaShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
+                      SyncBar(session: session),
                       Expanded(child: child),
                       const Divider(height: 1),
                       _GatewayStrip(gateway: session.gateway),
@@ -420,7 +423,7 @@ class _GatewayStripState extends State<_GatewayStrip> {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      await session.pullClone();
+      await session.pullAll();
       await session.refreshEverything();
       messenger.showSnackBar(
         const SnackBar(content: Text('Traído de GitHub y actualizado.')),
@@ -446,11 +449,6 @@ class _GatewayStripState extends State<_GatewayStrip> {
     // nada sin decir por qué.
     final session = watchSession(context);
     final (icon, colour) = switch (gateway.kind) {
-      GatewayKind.direct => (Icons.vpn_key_outlined, didactaAccentDark),
-      GatewayKind.api =>
-        gateway.canWrite
-            ? (Icons.cloud_done_outlined, didactaThm)
-            : (Icons.cloud_outlined, didactaMuted),
       GatewayKind.clone => (Icons.folder_open_outlined, didactaAccentDark),
       GatewayKind.none => (Icons.lock_outline, didactaMuted),
     };

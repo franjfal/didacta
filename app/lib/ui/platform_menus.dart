@@ -45,7 +45,7 @@ class _MacMenus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
-    final clone = session.clonePath != null;
+    final clone = session.workspace.isNotEmpty;
 
     return PlatformMenuBar(
       menus: [
@@ -166,7 +166,7 @@ class _MacMenus extends StatelessWidget {
               // pulsar dice que hace falta un clon, y un menú que cambia de
               // contenido no se aprende.
               onSelected: clone
-                  ? () => _run(context, session.pullClone, 'Traído')
+                  ? () => _run(context, session.pullAll, 'Traído')
                   : null,
             ),
             PlatformMenuItem(
@@ -177,7 +177,14 @@ class _MacMenus extends StatelessWidget {
                 shift: true,
               ),
               onSelected: clone
-                  ? () => _run(context, session.pushClone, 'Enviado')
+                  ? () => _run(
+                      context,
+                      // Desde el menú va sin diálogo: envía lo que ya tiene
+                      // commit. Lo que está sin guardar necesita un mensaje, y
+                      // eso lo pide el botón de la barra.
+                      () => session.pushAll('Enviar'),
+                      'Enviado',
+                    )
                   : null,
             ),
             PlatformMenuItemGroup(

@@ -50,6 +50,9 @@ enum TexWrapGroup {
   /// La diapositiva.
   slide,
 
+  /// Negrita, cursiva y demás: lo que se marca dentro de un párrafo.
+  format,
+
   /// Las partes de un problema.
   problem,
 
@@ -132,6 +135,39 @@ const List<TexWrapper> didactaWrappers = [
     group: TexWrapGroup.channel,
     macro: 'onlystudent',
     environment: 'studentonly',
+  ),
+  TexWrapper(
+    id: 'textbf',
+    label: 'Negrita',
+    group: TexWrapGroup.format,
+    macro: 'textbf',
+  ),
+  TexWrapper(
+    id: 'emph',
+    label: 'Cursiva',
+    group: TexWrapGroup.format,
+    macro: 'emph',
+    // `\textit` hace lo mismo y el material migrado lo usa: desenvolver tiene
+    // que reconocerlo o el botón no sirve justo donde hace falta.
+    macroAliases: ['textit'],
+  ),
+  TexWrapper(
+    id: 'texttt',
+    label: 'Monoespaciada',
+    group: TexWrapGroup.format,
+    macro: 'texttt',
+  ),
+  TexWrapper(
+    id: 'keyterm',
+    label: 'Término que se define',
+    group: TexWrapGroup.format,
+    macro: 'keyterm',
+  ),
+  TexWrapper(
+    id: 'hl',
+    label: 'Resaltado',
+    group: TexWrapGroup.format,
+    macro: 'hl',
   ),
   TexWrapper(
     id: 'frame',
@@ -293,6 +329,45 @@ List<TexWrapper> wrappersAt(
   final spans = found.keys.toList()
     ..sort((a, b) => a.outerStart.compareTo(b.outerStart));
   return [for (final span in spans) found[span]!];
+}
+
+/// Escribe algo alrededor de lo marcado: `\sqrt{` … `}`.
+///
+/// Con un trozo seleccionado lo mete dentro y lo deja marcado; sin nada
+/// marcado, deja el cursor donde va el contenido. Es la misma regla que
+/// envolver, y es lo que hace que una paleta sirva mientras se escribe y no
+/// solo al empezar una fórmula.
+TexEdit insertAround(
+  String text,
+  int start,
+  int end,
+  String before,
+  String after,
+) {
+  if (start > end) {
+    final swap = start;
+    start = end;
+    end = swap;
+  }
+  // Lo que envuelve recorta los blancos de los extremos, igual que los
+  // envoltorios de entorno: un `\sqrt{contenido }` con el espacio dentro es
+  // una raíz mal escrita que nadie ha pedido.
+  if (after.isNotEmpty) {
+    while (start < end && _isBlank(text[start])) {
+      start += 1;
+    }
+    while (end > start && _isBlank(text[end - 1])) {
+      end -= 1;
+    }
+  }
+  final body = text.substring(start, end);
+  final out =
+      '${text.substring(0, start)}$before$body$after${text.substring(end)}';
+  return TexEdit(
+    out,
+    start + before.length,
+    start + before.length + body.length,
+  );
 }
 
 /// Inserta un trozo suelto —`\dpause`— en el cursor, sustituyendo lo marcado.

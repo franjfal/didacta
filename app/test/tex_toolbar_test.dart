@@ -13,6 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/model/tex_syntax.dart';
+import 'package:didacta_app/ui/tex_highlight.dart';
 import 'package:didacta_app/ui/tex_toolbar.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
@@ -36,9 +38,10 @@ Future<void> pumpUnit(
   bool writable = true,
   Map<String, String>? files,
 }) async {
-  // Ancho fijo: la barra se encoge a iconos en los paneles estrechos, y una
-  // prueba que cambia de forma con el tamaño de la ventana no prueba nada.
-  tester.view.physicalSize = const Size(1280, 1000);
+  // Ancho fijo y de sobra: la barra se encoge a iconos en los paneles
+  // estrechos y rueda cuando no cabe, y una prueba que cambia de forma con el
+  // tamaño de la ventana no prueba nada.
+  tester.view.physicalSize = const Size(1700, 1000);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
@@ -112,6 +115,53 @@ void main() {
     expect(editing(tester).text, 'El contenido original en castellano.');
   });
 
+  testWidgets('la negrita envuelve lo marcado', (tester) async {
+    await pumpUnit(tester);
+    select(tester, 3, 13);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('wrap-textbf')));
+    await tester.pump();
+
+    expect(
+      editing(tester).text,
+      'El \\textbf{contenido} original en castellano.',
+    );
+  });
+
+  testWidgets('la paleta de matemáticas escribe alrededor de lo marcado', (
+    tester,
+  ) async {
+    await pumpUnit(tester);
+    select(tester, 3, 13);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('palette-math')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('snippet-√')));
+    await tester.pumpAndSettle();
+
+    expect(
+      editing(tester).text,
+      'El \\sqrt{contenido} original en castellano.',
+    );
+  });
+
+  testWidgets('un símbolo escribe su orden, no su glifo', (tester) async {
+    await pumpUnit(tester);
+    select(tester, 2, 2);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('palette-symbols')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('snippet-≤')));
+    await tester.pumpAndSettle();
+
+    // El fichero no lleva Unicode: lo que se busca es «≤» y lo que se escribe
+    // es la orden.
+    expect(editing(tester).text, startsWith('El\\leq '));
+  });
+
   testWidgets('sin permiso de escritura la barra se ve apagada', (
     tester,
   ) async {
@@ -125,7 +175,42 @@ void main() {
     expect((tester.widget(slides) as dynamic).onPressed, isNull);
   });
 
-  testWidgets('sobre los campos de un problema no aparece', (tester) async {
+  testWidgets('el editor de una unidad pinta el LaTeX que contiene', (
+    tester,
+  ) async {
+    await pumpUnit(
+      tester,
+      files: {
+        '$unitPath/es.tex': '\\section{Normas}\n% nota\n',
+        '$unitPath/unit.yaml': unitYaml,
+        'courses/am-iii/2025-2026/year.yaml': yearYaml,
+      },
+    );
+
+    final controller = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!;
+    expect(controller, isA<TexEditingController>());
+
+    final span = controller.buildTextSpan(
+      context: tester.element(find.byType(TextField)),
+      style: const TextStyle(color: didactaInk),
+      withComposing: false,
+    );
+    final coloured = {
+      for (final child in span.children ?? const <InlineSpan>[])
+        (child as TextSpan).text!: child.style?.color,
+    };
+    // Un fichero suelto calcula su propio árbol, así que la orden va de su
+    // color sin que nadie le pase nada.
+    expect(coloured['\\section'], didactaAlgo);
+    expect(coloured['% nota'], isNot(didactaInk));
+    expect(colourForToken(TexTokenKind.text), isNull);
+  });
+
+  testWidgets('sobre los campos de un problema es la misma barra', (
+    tester,
+  ) async {
     await pumpUnit(
       tester,
       path: problemPath,
@@ -136,9 +221,32 @@ void main() {
       },
     );
 
-    // El entorno lo pone el campo: un botón «Respuesta» encima del campo de
-    // la respuesta no significa nada.
     expect(find.text('Enunciado'), findsOneWidget);
-    expect(find.byType(TexToolbar), findsNothing);
+    // La misma barra: lo que se aprende una vez sirve en las tres pantallas.
+    expect(find.byType(TexToolbar), findsOneWidget);
+
+    // Y escribe en el campo que tiene el cursor.
+    final statement = find.descendant(
+      of: find.byKey(const Key('problem-exercise')),
+      matching: find.byType(TextField),
+    );
+    await tester.tap(statement);
+    await tester.pump();
+    tester.widget<TextField>(statement).controller!.selection =
+        const TextSelection(baseOffset: 0, extentOffset: 7);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('wrap-textbf')));
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(statement).controller!.text,
+      startsWith('\\textbf{Derivar}'),
+    );
+
+    // Menos lo que aquí sería mentira: envolver la respuesta en `answer`.
+    await tester.tap(find.byKey(const Key('wrap-menu')));
+    await tester.pumpAndSettle();
+    expect(find.text('Problema'), findsNothing);
+    expect(find.text('Teoría'), findsOneWidget);
   });
 }

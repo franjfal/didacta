@@ -12,11 +12,15 @@ import 'dart:io';
 import '../model/catalogue.dart';
 import 'catalogue_source.dart';
 
-CatalogueSource? fileSource(String directory) =>
-    FileCatalogueSource(directory: directory);
+CatalogueSource? fileSource(String directory, String repo) =>
+    FileCatalogueSource(directory: directory, repo: repo);
 
 class FileCatalogueSource extends CatalogueSource {
-  const FileCatalogueSource({required this.directory});
+  const FileCatalogueSource({required this.directory, this.repo = ''});
+
+  /// De qué repositorio es este índice. Viaja con cada unidad y cada
+  /// documento: con varios abiertos, la ruta sola no dice de cuál es.
+  final String repo;
 
   /// The clone's root; the index lives in `generated/` inside it.
   final String directory;
@@ -30,6 +34,7 @@ class FileCatalogueSource extends CatalogueSource {
       manifest: await _read('manifest.json'),
       units: await _read('units.json'),
       courses: await _read('courses.json'),
+      repo: repo,
     );
   }
 

@@ -1,28 +1,26 @@
-/// Access, session and diagnostics.
+/// Ajustes: la cuenta de GitHub, los repositorios y lo que hay cargado.
 ///
-/// The screen where the two ways into the repository are made explicit,
-/// because "where does my change go, and as whom" should be answerable in one
-/// place rather than inferred.
+/// Esta pantalla cambió de raíz cuando la identidad pasó de Firebase a
+/// GitHub. Antes había tres cosas que cuadrar --quién eres para Firebase, qué
+/// permisos te da un `access.json`, y un token pegado a mano para escribir--
+/// y ahora hay una: **entras en GitHub**. Quien puede escribir en un
+/// repositorio es quien GitHub dice que puede, que es lo que ya era cierto
+/// antes de que lo dijéramos nosotros.
 ///
-/// The one thing this screen will not do is ask for a GitHub password. GitHub
-/// removed password authentication for git in 2021, so it would not work — and
-/// a form that asks for an account password in order to store it has the shape
-/// of a phishing page even when the intent is honest. What it asks for is a
-/// token scoped to one repository, and it checks against GitHub what that
-/// token can actually do before storing it.
+/// Y una sola pantalla para varios repositorios a la vez, porque eso es lo
+/// que la aplicación hace ahora: cada uno con su carpeta, su color y su
+/// estado respecto a GitHub.
 library;
+
+import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'dart:async';
-
-import '../data/auth.dart';
 import '../data/compiler.dart';
-import '../data/local_clone.dart';
-import '../data/content_gateway.dart';
-import '../data/repository_access.dart';
+import '../data/github.dart';
+import '../model/workspace.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'shell.dart';
@@ -39,28 +37,17 @@ class SettingsPage extends StatelessWidget {
       children: [
         const PageHeader(
           title: 'Ajustes',
-          subtitle: 'Quién eres, cómo se llega al contenido, y qué hay cargado',
+          subtitle: 'Tu cuenta, tus repositorios y qué hay cargado',
         ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.only(bottom: 28),
             children: [
-              const SectionLabel('Cómo se llega al contenido'),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: _GatewayCard(session: session),
-              ),
+              const SectionLabel('Cuenta de GitHub'),
+              _AccountSection(session: session),
 
-              const SectionLabel('Sesión'),
-              _SessionSection(session: session),
-
-              const SectionLabel('Token del repositorio'),
-              _TokenSection(session: session),
-
-              if (session.canUseClone) ...[
-                const SectionLabel('Clon en este equipo'),
-                _CloneSection(session: session),
-              ],
+              const SectionLabel('Repositorios'),
+              _ReposSection(session: session),
 
               if (session.canCompile) ...[
                 const SectionLabel('Compilar'),
@@ -77,331 +64,150 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class _GatewayCard extends StatelessWidget {
-  const _GatewayCard({required this.session});
+/// Entrar en GitHub, y con qué aplicación de OAuth.
+class _AccountSection extends StatefulWidget {
+  const _AccountSection({required this.session});
 
   final Session session;
 
   @override
-  Widget build(BuildContext context) {
-    final gateway = session.gateway;
-    final (title, explanation) = switch (gateway.kind) {
-      GatewayKind.direct => (
-        'Directo a GitHub',
-        'Con un token guardado en el llavero de este equipo. Los commits '
-            'van al repositorio sin pasar por la API.',
-      ),
-      GatewayKind.api => (
-        'A través de la API',
-        'La identidad la da Firebase y los permisos los decide access.json, '
-            'que vive en el repositorio de contenido. El token de GitHub lo '
-            'tiene el Worker: esta aplicación nunca lo ve.',
-      ),
-      GatewayKind.clone => (
-        'Un clon en este equipo',
-        'El repositorio está en disco, así que leer y editar funciona sin '
-            'conexión. Cada guardado es un commit, y se envía a GitHub con '
-            'el token; si no hay conexión el commit queda y se envía '
-            'después.',
-      ),
-      GatewayKind.none => (
-        'Sin acceso de escritura',
-        'Solo se puede leer el catálogo. Añade un token más abajo, o '
-            'compila la aplicación con --dart-define=DIDACTA_API.',
-      ),
-    };
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: gateway.canWrite
-                        ? didactaAccentDark.withValues(alpha: 0.12)
-                        : didactaPanel,
-                    border: Border.all(
-                      color: gateway.canWrite ? didactaAccentDark : didactaRule,
-                    ),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Text(
-                    gateway.canWrite ? 'lectura y escritura' : 'solo lectura',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
-                      color: gateway.canWrite
-                          ? didactaAccentDark
-                          : didactaMuted,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              explanation,
-              style: const TextStyle(fontSize: 12.5, height: 1.4),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              gateway.describe(),
-              style: const TextStyle(
-                fontSize: 11.5,
-                color: didactaMuted,
-                height: 1.3,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<_AccountSection> createState() => _AccountSectionState();
 }
 
-class _SessionSection extends StatefulWidget {
-  const _SessionSection({required this.session});
-
-  final Session session;
-
-  @override
-  State<_SessionSection> createState() => _SessionSectionState();
-}
-
-class _SessionSectionState extends State<_SessionSection> {
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  bool _busy = false;
-  String? _problem;
-  String? _notice;
+class _AccountSectionState extends State<_AccountSection> {
+  late final TextEditingController _clientId = TextEditingController(
+    text: widget.session.githubClientId,
+  );
+  bool _working = false;
+  Object? _problem;
 
   @override
   void dispose() {
-    _email.dispose();
-    _password.dispose();
+    _clientId.dispose();
     super.dispose();
   }
 
-  Session get session => widget.session;
+  Future<void> _signIn() async {
+    final clientId = _clientId.text.trim();
+    if (clientId.isEmpty) {
+      setState(
+        () => _problem =
+            'Falta el Client ID de la OAuth App. Créala en GitHub '
+            '(Settings → Developer settings → OAuth Apps) con «Enable '
+            'Device Flow» marcado, y pega aquí su Client ID.',
+      );
+      return;
+    }
+    await widget.session.setGithubClientId(clientId);
 
-  Future<void> _run(Future<void> Function() action, {String? notice}) async {
     setState(() {
-      _busy = true;
+      _working = true;
       _problem = null;
-      _notice = null;
     });
+    final auth = GitHubAuth(clientId: clientId);
     try {
-      await action();
-      if (mounted) setState(() => _notice = notice);
-    } on AuthException catch (error) {
-      if (mounted) setState(() => _problem = error.message);
-    } catch (error) {
-      if (mounted) setState(() => _problem = error.toString());
+      final code = await auth.start();
+      if (!mounted) return;
+      // El código, delante y con el enlace: la contraseña se teclea en
+      // github.com y en ningún otro sitio, que es la única forma honesta de
+      // pedirla.
+      final waiting = showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _DeviceCodeDialog(code: code),
+      );
+      final token = await auth.waitForToken(code);
+      await widget.session.signIn(token);
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      await waiting;
+    } catch (thrown) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+        setState(() => _problem = thrown);
+      }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      auth.close();
+      if (mounted) setState(() => _working = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authorisation = session.authorisation;
+    final session = widget.session;
+    final user = session.user;
 
-    if (authorisation.signedIn) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (user != null) ...[
                 Row(
                   children: [
-                    const Icon(Icons.person_outline, size: 18),
+                    const Icon(Icons.verified_user_outlined, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        authorisation.email ?? 'sesión iniciada',
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        '${user.authorName} (${user.login})',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
-                    OutlinedButton(
-                      onPressed: _busy ? null : () => _run(session.signOut),
+                    TextButton(
+                      key: const Key('github-sign-out'),
+                      onPressed: session.signOut,
                       child: const Text('Salir'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _Pill(
-                      authorisation.role == null
-                          ? 'sin rol en access.json'
-                          : 'rol: ${authorisation.role}',
-                      colour: authorisation.role == null
-                          ? didactaEx
-                          : didactaAccentDark,
-                    ),
-                    _Pill(
-                      authorisation.emailVerified
-                          ? 'correo verificado'
-                          : 'correo sin verificar',
-                      colour: authorisation.emailVerified
-                          ? didactaAccentDark
-                          : didactaTeacher,
-                    ),
-                  ],
+                const SizedBox(height: 4),
+                Text(
+                  'Los commits se firman como ${user.authorEmail}. Los '
+                  'permisos son los de GitHub: se puede escribir donde GitHub '
+                  'deje escribir.',
+                  style: const TextStyle(fontSize: 12, color: didactaMuted),
                 ),
-                if (!authorisation.emailVerified) ...[
-                  const SizedBox(height: 10),
-                  const Note(
-                    'La API rechaza escrituras desde una dirección sin '
-                    'verificar, porque una dirección sin verificar la puede '
-                    'reclamar cualquiera — incluida una que esté en '
-                    'access.json.',
-                    tone: didactaTeacher,
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.mail_outline, size: 15),
-                    label: const Text('Reenviar la verificación'),
-                    onPressed: _busy
-                        ? null
-                        : () => _run(
-                            session.auth.resendVerification,
-                            notice: 'Correo de verificación enviado.',
-                          ),
-                  ),
-                ],
-                if (authorisation.role == null) ...[
-                  const SizedBox(height: 10),
-                  Note(
-                    'Firebase te reconoce, pero ${authorisation.email ?? "esta "
-                            "dirección"} no está en access.json, así que solo '
-                    'puedes leer lo público. Quien tenga el rol de owner '
-                    'puede añadirte con un commit a ese fichero.',
-                  ),
-                ],
-                if (_notice != null) ...[
-                  const SizedBox(height: 10),
-                  Note(_notice!, tone: didactaAccentDark),
-                ],
-                if (_problem != null) ...[
-                  const SizedBox(height: 10),
-                  Note(_problem!, tone: didactaTeacher),
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Sin sesión. Puedes leer el catálogo público; para editar '
-                'hace falta identificarse.',
-                style: TextStyle(fontSize: 12.5),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.login, size: 16),
-                label: const Text('Entrar con Google'),
-                onPressed: _busy
-                    ? null
-                    : () => _run(session.auth.signInWithGoogle),
-              ),
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _email,
-                decoration: const InputDecoration(labelText: 'Correo'),
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _password,
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                obscureText: true,
-                autofillHints: const [AutofillHints.password],
-                onSubmitted: (_) => _signIn(),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  FilledButton(
-                    onPressed: _busy ? null : _signIn,
-                    child: const Text('Entrar'),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _run(
-                            () => session.auth.sendPasswordReset(_email.text),
-                            notice:
-                                'Si esa dirección tiene cuenta, le '
-                                'llegará un correo para cambiar la '
-                                'contraseña.',
-                          ),
-                    child: const Text('He olvidado la contraseña'),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: _busy
-                        ? null
-                        : () => _run(
-                            () => session.auth.createAccount(
-                              _email.text,
-                              _password.text,
-                            ),
-                            notice:
-                                'Cuenta creada. Verifica el correo '
-                                'antes de intentar editar.',
-                          ),
-                    child: const Text('Crear cuenta'),
-                  ),
-                ],
-              ),
-              if (_notice != null) ...[
+              ] else ...[
+                const Text(
+                  'Entra en GitHub para traer repositorios, y para que los '
+                  'commits salgan con tu nombre.',
+                  style: TextStyle(fontSize: 12.5, color: didactaMuted),
+                ),
                 const SizedBox(height: 10),
-                Note(_notice!, tone: didactaAccentDark),
+                TextField(
+                  key: const Key('github-client-id'),
+                  controller: _clientId,
+                  decoration: const InputDecoration(
+                    labelText: 'Client ID de la OAuth App',
+                    helperText:
+                        'GitHub → Settings → Developer settings → OAuth Apps, '
+                        'con «Enable Device Flow». Es público: no es un '
+                        'secreto que haya que proteger.',
+                    helperMaxLines: 3,
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  key: const Key('github-sign-in'),
+                  onPressed: _working ? null : _signIn,
+                  icon: _working
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.login, size: 16),
+                  label: Text(_working ? 'Esperando…' : 'Entrar en GitHub'),
+                ),
               ],
               if (_problem != null) ...[
                 const SizedBox(height: 10),
-                Note(_problem!, tone: didactaTeacher),
+                Note('$_problem', tone: didactaTeacher),
               ],
             ],
           ),
@@ -409,137 +215,223 @@ class _SessionSectionState extends State<_SessionSection> {
       ),
     );
   }
-
-  void _signIn() =>
-      _run(() => session.auth.signInWithPassword(_email.text, _password.text));
 }
 
-class _TokenSection extends StatefulWidget {
-  const _TokenSection({required this.session});
+/// El código del device flow, mientras se espera.
+class _DeviceCodeDialog extends StatelessWidget {
+  const _DeviceCodeDialog({required this.code});
+
+  final DeviceCode code;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Autoriza Didacta en GitHub'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Abre ${code.verificationUri} y escribe este código:'),
+        const SizedBox(height: 12),
+        SelectableText(
+          code.userCode,
+          style: const TextStyle(
+            fontSize: 26,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w700,
+            letterSpacing: 3,
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Esta ventana se cierra sola en cuanto lo autorices.',
+          style: TextStyle(fontSize: 12, color: didactaMuted),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Clipboard.setData(ClipboardData(text: code.userCode)),
+        child: const Text('Copiar el código'),
+      ),
+      FilledButton(
+        onPressed: () =>
+            Clipboard.setData(ClipboardData(text: code.verificationUri)),
+        child: const Text('Copiar el enlace'),
+      ),
+    ],
+  );
+}
+
+/// Los repositorios abiertos: su carpeta, su color y cómo están.
+class _ReposSection extends StatefulWidget {
+  const _ReposSection({required this.session});
 
   final Session session;
 
   @override
-  State<_TokenSection> createState() => _TokenSectionState();
+  State<_ReposSection> createState() => _ReposSectionState();
 }
 
-class _TokenSectionState extends State<_TokenSection> {
-  final _token = TextEditingController();
-  bool _busy = false;
-  TokenCheck? _check;
+class _ReposSectionState extends State<_ReposSection> {
+  bool _working = false;
+  String _progress = '';
+  Object? _problem;
 
-  @override
-  void dispose() {
-    _token.dispose();
-    super.dispose();
+  Future<void> _add() async {
+    final session = widget.session;
+    if (!session.signedIn) {
+      setState(() => _problem = 'Entra en GitHub primero.');
+      return;
+    }
+    final chosen = await showDialog<GitHubRepo>(
+      context: context,
+      builder: (context) => _RepoPicker(session: session),
+    );
+    if (chosen == null || !mounted) return;
+
+    setState(() {
+      _working = true;
+      _problem = null;
+      _progress = 'Clonando ${chosen.id}…';
+    });
+    try {
+      await session.addRepository(
+        owner: chosen.owner,
+        name: chosen.name,
+        branch: chosen.defaultBranch,
+        onProgress: (line) {
+          if (mounted) setState(() => _progress = line);
+        },
+      );
+    } catch (thrown) {
+      if (mounted) setState(() => _problem = thrown);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
   }
 
-  Session get session => widget.session;
+  /// Añadir una carpeta que ya está en el disco.
+  ///
+  /// Sin pasar por GitHub: de qué repositorio es lo dice su propio remoto. Es
+  /// lo que hace que un clon que ya tenías siga sirviendo, y lo que deja
+  /// trabajar antes de haber configurado la OAuth App.
+  Future<void> _addFolder() async {
+    final chosen = await getDirectoryPath();
+    if (chosen == null || !mounted) return;
+    setState(() {
+      _working = true;
+      _problem = null;
+      _progress = 'Leyendo $chosen…';
+    });
+    try {
+      await widget.session.addExistingRepository(chosen);
+    } catch (thrown) {
+      if (mounted) setState(() => _problem = thrown);
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  Future<void> _chooseBase() async {
+    final chosen = await getDirectoryPath();
+    if (chosen == null) return;
+    await widget.session.setCloneBase(chosen);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (!session.canStoreToken) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Note(
-          'Un navegador no puede guardar un token de forma segura: lo que la '
-          'página puede leer, lo puede leer cualquiera con las herramientas '
-          'de desarrollo abiertas, y un token de GitHub no está limitado a una '
-          'pestaña. En web el acceso va por la API, que lo guarda ella. Esta '
-          'opción existe en la versión de escritorio.',
-        ),
-      );
-    }
+    final session = widget.session;
+    final repos = session.workspace.repos;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (session.hasStoredToken) ...[
+              if (repos.isEmpty)
+                const Text(
+                  'Todavía no hay ninguno. Añade los repositorios de '
+                  'contenido con los que trabajes: se clonan en tu disco y se '
+                  'ven juntos, aunque una asignatura esté repartida entre '
+                  'varios.\n\n'
+                  'Si ya tienes uno clonado en el disco, añádelo como carpeta: '
+                  'para eso no hace falta entrar en GitHub.',
+                  style: TextStyle(fontSize: 12.5, color: didactaMuted),
+                ),
+              for (final repo in repos) ...[
+                _RepoRow(
+                  session: session,
+                  repo: repo,
+                  onRemove: () => session.removeRepository(repo.id),
+                ),
+                const Divider(height: 18),
+              ],
+              // En `Wrap` y no en una fila: en una ventana estrecha los dos
+              // botones no caben, y una barra que desborda esconde el suyo.
+              Wrap(
+                spacing: 10,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    key: const Key('add-repository'),
+                    onPressed: _working ? null : _add,
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Añadir desde GitHub'),
+                  ),
+                  // Y el camino que no pasa por GitHub: una carpeta que ya
+                  // está clonada en el disco.
+                  OutlinedButton.icon(
+                    key: const Key('add-repository-folder'),
+                    onPressed: _working ? null : _addFolder,
+                    icon: const Icon(Icons.folder_open_outlined, size: 16),
+                    label: const Text('Añadir una carpeta del disco'),
+                  ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 320),
+                    child: TextButton.icon(
+                      onPressed: _chooseBase,
+                      icon: const Icon(Icons.folder_outlined, size: 16),
+                      label: Text(
+                        session.cloneBase.isEmpty
+                            ? 'Elegir dónde se clonan'
+                            : 'Se clonan en ${session.cloneBase}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_working) ...[
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(
-                      Icons.vpn_key,
-                      size: 16,
-                      color: didactaAccentDark,
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Hay un token guardado en el llavero de este equipo.',
-                        style: TextStyle(fontSize: 12.5),
-                      ),
-                    ),
-                    OutlinedButton(
-                      onPressed: _busy
-                          ? null
-                          : () async {
-                              setState(() => _busy = true);
-                              await session.clearToken();
-                              if (mounted) {
-                                setState(() {
-                                  _busy = false;
-                                  _check = null;
-                                });
-                              }
-                            },
-                      child: const Text('Quitar'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'El token nunca se muestra, ni aquí ni en ningún sitio: '
-                  'guardarlo y poder volver a leerlo en pantalla son cosas '
-                  'distintas, y solo la primera hace falta.',
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
-                ),
-              ] else ...[
-                Text(
-                  'Un token de permisos limitados a '
-                  '${session.contentOwner}/${session.contentRepo} con '
-                  '«Contents: Read and write». Se guarda en el llavero del '
-                  'sistema y no sale de este equipo.',
-                  style: const TextStyle(fontSize: 12.5, height: 1.4),
-                ),
-                const SizedBox(height: 10),
-                _TokenHelp(
-                  owner: session.contentOwner,
-                  repo: session.contentRepo,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _token,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Token',
-                    hintText: 'github_pat_…',
-                  ),
-                  onSubmitted: (_) => _verify(),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    FilledButton(
-                      onPressed: _busy ? null : _verify,
-                      child: Text(
-                        _busy ? 'Comprobando…' : 'Comprobar y guardar',
+                        _progress,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          fontFamily: 'monospace',
+                          color: didactaMuted,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
               ],
-              if (_check?.problem != null) ...[
+              if (_problem != null) ...[
                 const SizedBox(height: 10),
-                Note(_check!.problem!, tone: didactaTeacher),
-              ],
-              if (_check?.scopeWarning != null) ...[
-                const SizedBox(height: 10),
-                Note(_check!.scopeWarning!, tone: didactaEx),
+                Note('$_problem', tone: didactaTeacher),
               ],
             ],
           ),
@@ -547,96 +439,236 @@ class _TokenSectionState extends State<_TokenSection> {
       ),
     );
   }
-
-  /// Checks the token against GitHub before storing it.
-  ///
-  /// Deliberately not "store then find out": a token that can only read, or
-  /// that does not reach the repository, otherwise fails at the moment
-  /// somebody tries to save an edit.
-  Future<void> _verify() async {
-    setState(() {
-      _busy = true;
-      _check = null;
-    });
-    final check = await GitHubDirect.check(
-      owner: session.contentOwner,
-      repo: session.contentRepo,
-      token: _token.text,
-    );
-    if (!mounted) return;
-    setState(() => _check = check);
-
-    if (check.valid && check.canWrite) {
-      await session.storeToken(_token.text);
-      if (!mounted) return;
-      _token.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Token guardado (${check.login}).')),
-      );
-    }
-    if (mounted) setState(() => _busy = false);
-  }
 }
 
-class _TokenHelp extends StatelessWidget {
-  const _TokenHelp({required this.owner, required this.repo});
+/// Un repositorio en la lista, con su color y su estado.
+class _RepoRow extends StatelessWidget {
+  const _RepoRow({
+    required this.session,
+    required this.repo,
+    required this.onRemove,
+  });
 
-  final String owner;
-  final String repo;
+  final Session session;
+  final ContentRepo repo;
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
-    const url = 'https://github.com/settings/personal-access-tokens/new';
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: didactaPanel,
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Dónde se crea',
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Expanded(
-                child: SelectableText(
-                  url,
-                  style: TextStyle(fontSize: 11, fontFamily: 'monospace'),
+    final status = session.statusOf(repo.id);
+    final problem = session.problemOf(repo.id);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _ColourPicker(
+              colour: repo.colour,
+              onPicked: (colour) =>
+                  session.setRepositoryColour(repo.id, colour),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    repo.id,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    repo.directory,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      color: didactaMuted,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            if (status != null)
+              Flexible(
+                child: Text(
+                  [
+                    if (status.ahead > 0) '${status.ahead} sin enviar',
+                    if (status.behind > 0) '${status.behind} por traer',
+                    if (status.dirtyPaths.isNotEmpty)
+                      '${status.dirtyPaths.length} sin guardar',
+                    if (status.isClean && status.isSynced) 'al día',
+                  ].join(' · '),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
                 ),
               ),
-              IconButton(
-                tooltip: 'Copiar la dirección',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.content_copy, size: 14),
-                onPressed: () {
-                  Clipboard.setData(const ClipboardData(text: url));
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Copiado.')));
-                },
+            IconButton(
+              tooltip: 'Quitarlo de la lista (la carpeta se queda)',
+              icon: const Icon(Icons.close, size: 16),
+              onPressed: onRemove,
+            ),
+          ],
+        ),
+        if (problem != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Note('$problem', tone: didactaTeacher),
+          ),
+      ],
+    );
+  }
+}
+
+/// El color de un repositorio.
+class _ColourPicker extends StatelessWidget {
+  const _ColourPicker({required this.colour, required this.onPicked});
+
+  final int colour;
+  final ValueChanged<int> onPicked;
+
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<int>(
+    key: Key('repo-colour-$colour'),
+    tooltip: 'El color con el que se marca en toda la aplicación',
+    onSelected: onPicked,
+    itemBuilder: (context) => [
+      for (final each in repoColours)
+        PopupMenuItem<int>(
+          value: each,
+          height: 34,
+          child: Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Color(each),
+                  borderRadius: BorderRadius.circular(3),
+                ),
               ),
+              const SizedBox(width: 8),
+              if (each == colour) const Icon(Icons.check, size: 14),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Repository access: solo $owner/$repo · Permissions → '
-            'Contents: Read and write. Nada más: un token clásico con «repo» '
-            'alcanza todos tus repositorios y aquí no hace falta ninguno más.',
-            style: const TextStyle(
-              fontSize: 11,
-              height: 1.35,
-              color: didactaMuted,
+        ),
+    ],
+    child: Container(
+      width: 18,
+      height: 18,
+      decoration: BoxDecoration(
+        color: Color(colour),
+        borderRadius: BorderRadius.circular(4),
+      ),
+    ),
+  );
+}
+
+/// Elegir de entre los repositorios de GitHub de esta persona.
+class _RepoPicker extends StatefulWidget {
+  const _RepoPicker({required this.session});
+
+  final Session session;
+
+  @override
+  State<_RepoPicker> createState() => _RepoPickerState();
+}
+
+class _RepoPickerState extends State<_RepoPicker> {
+  late final Future<List<GitHubRepo>> _repos = _load();
+  String _filter = '';
+
+  Future<List<GitHubRepo>> _load() async {
+    final token = await widget.session.tokenStore.read() ?? '';
+    final api = GitHubApi(token: token);
+    try {
+      final all = await api.repositories();
+      final already = {
+        for (final repo in widget.session.workspace.repos) repo.id,
+      };
+      return [
+        for (final repo in all)
+          if (!already.contains(repo.id)) repo,
+      ];
+    } finally {
+      api.close();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Añadir un repositorio'),
+    content: SizedBox(
+      width: 520,
+      height: 420,
+      child: Column(
+        children: [
+          TextField(
+            key: const Key('repo-filter'),
+            autofocus: true,
+            decoration: const InputDecoration(
+              prefixIcon: Icon(Icons.search, size: 18),
+              hintText: 'Buscar',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) => setState(() => _filter = value.toLowerCase()),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: FutureBuilder<List<GitHubRepo>>(
+              future: _repos,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Note('${snapshot.error}', tone: didactaTeacher);
+                }
+                final repos = snapshot.data;
+                if (repos == null) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final shown = [
+                  for (final repo in repos)
+                    if (_filter.isEmpty ||
+                        repo.id.toLowerCase().contains(_filter))
+                      repo,
+                ];
+                if (shown.isEmpty) {
+                  return const Center(
+                    child: Text('Ninguno que no esté ya abierto.'),
+                  );
+                }
+                return ListView.builder(
+                  itemCount: shown.length,
+                  itemBuilder: (context, index) {
+                    final repo = shown[index];
+                    return ListTile(
+                      key: Key('pick-${repo.id}'),
+                      dense: true,
+                      title: Text(repo.id),
+                      subtitle: Text(
+                        [
+                          repo.defaultBranch,
+                          if (repo.private) 'privado',
+                          if (!repo.canWrite) 'solo lectura',
+                        ].join(' · '),
+                        style: const TextStyle(fontSize: 11.5),
+                      ),
+                      onTap: () => Navigator.of(context).pop(repo),
+                    );
+                  },
+                );
+              },
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancelar'),
+      ),
+    ],
+  );
 }
 
 class _CatalogueSection extends StatelessWidget {
@@ -717,441 +749,6 @@ class _Fact extends StatelessWidget {
   );
 }
 
-class _Pill extends StatelessWidget {
-  const _Pill(this.text, {required this.colour});
-
-  final String text;
-  final Color colour;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: colour.withValues(alpha: 0.10),
-      border: Border.all(color: colour),
-      borderRadius: BorderRadius.circular(3),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontSize: 10.5,
-        color: colour,
-        fontWeight: FontWeight.w600,
-      ),
-    ),
-  );
-}
-
-/// The local clone: where it is, how it stands, and what to do about it.
-///
-/// This is the path the requirement asked for -- *clones del repositorio
-/// realizadas de forma local*, done *sin necesidad de instalar y configurar
-/// GitHub*. So the buttons here are clone, pull and push, and none of them
-/// assume anything has been set up by hand: no `gh auth login`, no credential
-/// helper, no SSH key. The token stored above is what authenticates them.
-class _CloneSection extends StatefulWidget {
-  const _CloneSection({required this.session});
-
-  final Session session;
-
-  @override
-  State<_CloneSection> createState() => _CloneSectionState();
-}
-
-class _CloneSectionState extends State<_CloneSection> {
-  bool _busy = false;
-  String? _problem;
-
-  /// git's own output while a clone runs. Shown rather than a spinner: a
-  /// clone of two thousand units takes long enough that "is it stuck?" is a
-  /// real question, and git already answers it line by line.
-  final List<String> _progress = [];
-
-  bool? _gitAvailable;
-
-  @override
-  void initState() {
-    super.initState();
-    LocalClone.gitAvailable().then((value) {
-      if (mounted) setState(() => _gitAvailable = value);
-    });
-  }
-
-  Future<void> _run(Future<void> Function() action) async {
-    setState(() {
-      _busy = true;
-      _problem = null;
-      _progress.clear();
-    });
-    try {
-      await action();
-    } catch (thrown) {
-      if (mounted) setState(() => _problem = thrown.toString());
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _choose() async {
-    final chosen = await getDirectoryPath(
-      confirmButtonText: 'Usar esta carpeta',
-    );
-    if (chosen == null) return;
-    await _run(() => widget.session.useClone(chosen));
-  }
-
-  Future<void> _editAuthor() async {
-    final current = widget.session.cloneAuthor;
-    final result = await showDialog<({String name, String email})>(
-      context: context,
-      builder: (context) =>
-          _AuthorDialog(name: current?.name ?? '', email: current?.email ?? ''),
-    );
-    if (result == null) return;
-    await _run(
-      () =>
-          widget.session.setCloneAuthor(name: result.name, email: result.email),
-    );
-  }
-
-  Future<void> _clone() async {
-    final chosen = await getDirectoryPath(confirmButtonText: 'Clonar aquí');
-    if (chosen == null) return;
-    await _run(
-      () => widget.session.cloneInto(
-        chosen,
-        onProgress: (line) {
-          if (!mounted) return;
-          setState(() {
-            _progress.add(line);
-            // Only the tail is useful, and an unbounded list of git's
-            // progress lines is a memory leak with a scrollbar.
-            if (_progress.length > 40) _progress.removeAt(0);
-          });
-        },
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final session = widget.session;
-    final path = session.clonePath;
-    final status = session.cloneStatus;
-
-    if (_gitAvailable == false) {
-      return const Padding(
-        padding: EdgeInsets.fromLTRB(12, 0, 12, 12),
-        child: Note(
-          'git no está instalado en este equipo, así que la aplicación no '
-          'puede llevar un clon. En macOS se instala con `xcode-select '
-          '--install`; en Linux, con el gestor de paquetes.',
-          tone: didactaTeacher,
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (path == null)
-                const Text(
-                  'Sin clon. Con uno, el repositorio entero está en disco: '
-                  'la biblioteca y el editor funcionan sin conexión y cada '
-                  'guardado es un commit que se envía cuando hay red.',
-                  style: TextStyle(fontSize: 12.5),
-                )
-              else ...[
-                SelectableText(
-                  path,
-                  style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                ),
-                const SizedBox(height: 8),
-                if (status != null)
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      _Pill('rama ${status.branch}', colour: didactaMuted),
-                      _Pill(status.head, colour: didactaMuted),
-                      if (status.ahead > 0)
-                        _Pill(
-                          '${status.ahead} commit(s) sin enviar',
-                          colour: didactaEx,
-                        ),
-                      if (status.behind > 0)
-                        _Pill(
-                          '${status.behind} commit(s) por traer',
-                          colour: didactaEx,
-                        ),
-                      if (status.isSynced && status.isClean)
-                        const _Pill('al día', colour: didactaAccentDark),
-                      if (!status.isClean)
-                        _Pill(
-                          '${status.dirtyPaths.length} fichero(s) '
-                          'cambiado(s) fuera de la aplicación',
-                          colour: didactaTeacher,
-                        ),
-                    ],
-                  ),
-                if (status != null && !status.isClean) ...[
-                  const SizedBox(height: 8),
-                  // Named rather than counted: knowing *which* file someone
-                  // has been editing in a text editor is the useful part.
-                  Note(
-                    'Cambiados fuera de la aplicación: '
-                    '${status.dirtyPaths.take(6).join(', ')}'
-                    '${status.dirtyPaths.length > 6 ? '…' : ''}. '
-                    'No es un problema, pero un guardado desde aquí fallará '
-                    'sobre un fichero que haya cambiado.',
-                  ),
-                ],
-              ],
-
-              if (path != null) ...[
-                const SizedBox(height: 10),
-                if (session.cloneAuthor case final author?)
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.person_outline,
-                        size: 15,
-                        color: didactaMuted,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Los commits irán como ${author.name} '
-                          '<${author.email}>',
-                          style: const TextStyle(fontSize: 12.5),
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _busy ? null : _editAuthor,
-                        child: const Text('Cambiar'),
-                      ),
-                    ],
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Note(
-                        'Un commit necesita un autor y aquí no hay ninguno: '
-                        'ni sesión iniciada, ni identidad de git configurada '
-                        'en este equipo. Sin eso no se puede guardar.',
-                        tone: didactaTeacher,
-                      ),
-                      const SizedBox(height: 6),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.person_add_alt, size: 15),
-                        label: const Text('Poner nombre y correo'),
-                        onPressed: _busy ? null : _editAuthor,
-                      ),
-                    ],
-                  ),
-              ],
-
-              if (session.cloneProblem != null) ...[
-                const SizedBox(height: 8),
-                Note(session.cloneProblem.toString(), tone: didactaTeacher),
-              ],
-              if (_problem != null) ...[
-                const SizedBox(height: 8),
-                Note(_problem!, tone: didactaTeacher),
-              ],
-              if (_progress.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  constraints: const BoxConstraints(maxHeight: 120),
-                  padding: const EdgeInsets.all(8),
-                  color: didactaInk,
-                  child: SingleChildScrollView(
-                    reverse: true,
-                    child: Text(
-                      _progress.join('\n'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontFamily: 'monospace',
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  if (path == null) ...[
-                    FilledButton.icon(
-                      icon: const Icon(Icons.cloud_download_outlined, size: 16),
-                      label: const Text('Clonar el repositorio'),
-                      onPressed: _busy ? null : _clone,
-                    ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.folder_open_outlined, size: 16),
-                      label: const Text('Usar un clon que ya tengo'),
-                      onPressed: _busy ? null : _choose,
-                    ),
-                  ] else ...[
-                    FilledButton.icon(
-                      icon: const Icon(Icons.download_outlined, size: 16),
-                      label: const Text('Traer cambios'),
-                      onPressed: _busy ? null : () => _run(session.pullClone),
-                    ),
-                    OutlinedButton.icon(
-                      icon: const Icon(Icons.upload_outlined, size: 16),
-                      label: Text(
-                        status != null && status.ahead > 0
-                            ? 'Enviar ${status.ahead} commit(s)'
-                            : 'Enviar commits',
-                      ),
-                      onPressed: _busy ? null : () => _run(session.pushClone),
-                    ),
-                    OutlinedButton(
-                      onPressed: _busy
-                          ? null
-                          : () => _run(() => session.useClone(null)),
-                      child: const Text('Dejar de usar este clon'),
-                    ),
-                  ],
-                ],
-              ),
-
-              if (path != null) ...[
-                const Divider(height: 20),
-                // Off is a legitimate choice on a bad connection, and the
-                // wording says what it costs rather than just naming it.
-                SwitchListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text(
-                    'Enviar cada commit al guardar',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  subtitle: const Text(
-                    'Un commit que no se envía no lo puede ver ni revertir '
-                    'nadie más. Desactívalo solo si la conexión es mala, y '
-                    'acuérdate de enviarlos.',
-                    style: TextStyle(fontSize: 11.5),
-                  ),
-                  value: session.gateway is CloneGateway
-                      ? (session.gateway as CloneGateway).pushOnCommit
-                      : true,
-                  onChanged: _busy
-                      ? null
-                      : (value) => _run(() => session.setPushOnCommit(value)),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Who the clone's commits are attributed to.
-///
-/// Written to this clone's own git config rather than the global one: the app
-/// has no business changing how git behaves everywhere else on the machine.
-class _AuthorDialog extends StatefulWidget {
-  const _AuthorDialog({required this.name, required this.email});
-
-  final String name;
-  final String email;
-
-  @override
-  State<_AuthorDialog> createState() => _AuthorDialogState();
-}
-
-class _AuthorDialogState extends State<_AuthorDialog> {
-  late final TextEditingController _name = TextEditingController(
-    text: widget.name,
-  );
-  late final TextEditingController _email = TextEditingController(
-    text: widget.email,
-  );
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _email.dispose();
-    super.dispose();
-  }
-
-  bool get _valid =>
-      _name.text.trim().isNotEmpty &&
-      // Not a full address grammar: enough to catch a typo, and git will
-      // accept anything anyway. A stricter check would reject real addresses.
-      _email.text.trim().contains('@');
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Autor de los commits'),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Va en cada commit de este clon, y es lo que hace que un '
-              'cambio se pueda atribuir. Se guarda solo para este clon, no '
-              'en la configuración global de git.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _name,
-              autofocus: true,
-              decoration: const InputDecoration(labelText: 'Nombre'),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _email,
-              decoration: const InputDecoration(labelText: 'Correo'),
-              keyboardType: TextInputType.emailAddress,
-              onChanged: (_) => setState(() {}),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _valid
-              ? () => Navigator.of(
-                  context,
-                ).pop((name: _name.text.trim(), email: _email.text.trim()))
-              : null,
-          child: const Text('Guardar'),
-        ),
-      ],
-    );
-  }
-}
-
-/// Dónde está el motor, que es lo que compila.
-///
-/// Son dos repositorios: `didacta` tiene el motor y el sistema LaTeX,
-/// `didacta_db` tiene el contenido. El `.app` no lleva el motor dentro, así
-/// que hay que decirle dónde está --y casi siempre está al lado del clon, que
-/// es lo que la aplicación busca primero para no preguntar.
 class _EngineSection extends StatefulWidget {
   const _EngineSection({required this.session});
 

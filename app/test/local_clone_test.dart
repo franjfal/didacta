@@ -19,7 +19,6 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:didacta_app/data/auth.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/local_clone.dart';
@@ -389,12 +388,7 @@ void main() {
 
       final session = Session(
         catalogueSource: StaticCatalogueSource(catalogueWith(defaultUnits())),
-        auth: const UnavailableAuth(),
         tokenStore: StubStore(),
-        apiBase: '',
-        contentOwner: 'x',
-        contentRepo: 'y',
-        contentBranch: 'main',
         preferences: MemoryPreferences(path: clone.directory),
       );
       // The fixture's remote is a path, so `looksRight` is what would refuse
@@ -427,19 +421,6 @@ void main() {
         '--pretty=%an|%s',
       ], workingDirectory: clone.directory);
       expect((log.stdout as String).trim(), 'Javier Falcó|Editar sin Firebase');
-    });
-
-    test('y el inicio de sesión dice por qué no puede', () async {
-      const auth = UnavailableAuth('No hay Firebase aquí.');
-      expect(auth.signedIn, isFalse);
-      expect(await auth.idToken(), isNull);
-      // Signing out of nothing is a no-op: the interface may call it while
-      // tidying up and should not have to check first.
-      await auth.signOut();
-      await expectLater(
-        auth.signInWithPassword('a@uv.es', 'x'),
-        throwsA(isA<AuthException>()),
-      );
     });
   });
 

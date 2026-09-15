@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/theme.dart';
+import 'package:didacta_app/ui/problem_editor.dart';
 import 'package:didacta_app/ui/unit_page.dart';
 
 import 'fixture.dart';
@@ -31,9 +32,16 @@ Por la regla de la potencia.
 \end{solution}
 ''';
 
-final Finder statement = find.byKey(const Key('problem-exercise'));
-final Finder answer = find.byKey(const Key('problem-answer'));
-final Finder solution = find.byKey(const Key('problem-solution'));
+/// Las cajas de los tres campos. La clave va en la caja de Didacta, que lleva
+/// las columnas de color; dentro está el `TextField` de siempre.
+Finder fieldOf(String environment) => find.descendant(
+  of: find.byKey(Key('problem-$environment')),
+  matching: find.byType(TextField),
+);
+
+final Finder statement = fieldOf('exercise');
+final Finder answer = fieldOf('answer');
+final Finder solution = fieldOf('solution');
 final Finder save = find.byKey(const Key('editor-save'));
 
 Future<void> settle(WidgetTester tester) async {
@@ -97,14 +105,67 @@ void main() {
     expect(tester.widget<TextField>(answer).controller!.text, isEmpty);
   });
 
+  testWidgets('una teoría dentro de una hoja se edita como texto', (
+    tester,
+  ) async {
+    // `kind: theory` con `block: problems`: va con la hoja y no tiene
+    // resultado ni solución que rellenar. Ofrecerle tres campos es
+    // inventarle una estructura que no tiene.
+    const path = 'problems/analysis/normed/explicacion';
+    tester.view.physicalSize = const Size(1280, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final gateway = FakeGateway(
+      files: {
+        '$path/es.tex': 'La teoría que hace falta para la práctica.\n',
+        '$path/unit.yaml': unitYaml,
+        'courses/am-iii/2025-2026/year.yaml': yearYaml,
+      },
+    );
+    final catalogue = catalogueWith([
+      ...defaultUnits(),
+      unitJson(path: path, area: 'problems', kind: 'theory'),
+    ]);
+    final session = FakeSession(gatewayOverride: gateway, catalogue: catalogue);
+    await session.primeForTest(catalogue);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<Session>.value(
+        value: session,
+        child: MaterialApp(
+          theme: didactaTheme(),
+          home: const Scaffold(body: UnitPage(unitPath: path)),
+        ),
+      ),
+    );
+    await settle(tester);
+
+    expect(find.text('Enunciado'), findsNothing);
+    expect(find.text('Solución detallada'), findsNothing);
+
+    // El interruptor sigue ahí, diciendo que esto ya es el LaTeX entero: es
+    // lo que contesta «¿dónde veo el LaTeX completo?». Y «Campos» apagado,
+    // con el porqué.
+    expect(find.byKey(const Key('problem-view-text')), findsOneWidget);
+    expect(
+      find.byTooltip(
+        'Solo un problema tiene enunciado, resultado y solución; '
+        'lo demás se escribe de corrido.',
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('una unidad de teoría se sigue editando como texto', (
     tester,
   ) async {
     // Los campos son de un problema: una lección no tiene enunciado ni
-    // solución, y ofrecérselos sería inventarle una estructura.
+    // solución, y ofrecérselos sería inventarle una estructura. La opción se
+    // ve --apagada-- en lugar de desaparecer: así la pantalla es la misma en
+    // todas las lecciones y se sabe que lo que hay delante es el LaTeX.
     await pumpUnit(tester, path: 'content/analysis/normed/definition');
     expect(find.text('Enunciado'), findsNothing);
-    expect(find.byKey(const Key('problem-view-fields')), findsNothing);
+    expect(find.byType(ProblemFields), findsNothing);
   });
 
   testWidgets('escribir el resultado lo mete en su entorno', (tester) async {

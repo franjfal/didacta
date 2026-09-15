@@ -244,9 +244,10 @@ class ProblemFile {
         : _exerciseEnd;
     final after = switch (part) {
       ProblemPart.answer => afterStatement,
-      ProblemPart.solution => _body[ProblemPart.answer] == null
-          ? afterStatement
-          : _body[ProblemPart.answer]!.$2 + 1,
+      ProblemPart.solution =>
+        _body[ProblemPart.answer] == null
+            ? afterStatement
+            : _body[ProblemPart.answer]!.$2 + 1,
       // Un enunciado que falta va el primero.
       ProblemPart.statement => -1,
     };

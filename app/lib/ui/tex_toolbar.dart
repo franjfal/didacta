@@ -7,6 +7,11 @@
 ///
 /// Dos decisiones:
 ///
+/// **Lo que se usa escribiendo, a la vista; lo que se usa al empezar, en un
+/// menú.** Los canales y el formato se aplican sobre lo que acabas de marcar,
+/// así que son botones. Los entornos y los símbolos se buscan, así que son
+/// menús: una barra con setenta símbolos a la vista no es una barra.
+///
 /// **Los canales se ven; el resto está en un menú.** Los paneles del editor
 /// pueden ser tres columnas de 300 px, así que una barra con veinte botones
 /// no cabe en ninguna. A la vista van los cuatro que contestan la pregunta
@@ -20,8 +25,18 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../model/tex_snippets.dart';
 import '../model/tex_wrap.dart';
 import 'theme.dart';
+
+/// El icono de cada botón de formato.
+const Map<String, IconData> _formatIcons = {
+  'textbf': Icons.format_bold,
+  'emph': Icons.format_italic,
+  'texttt': Icons.code,
+  'keyterm': Icons.abc,
+  'hl': Icons.format_color_fill,
+};
 
 /// Qué icono lleva cada canal. Solo los canales: son los que se ven.
 const Map<String, IconData> _channelIcons = {
@@ -58,6 +73,7 @@ class TexToolbar extends StatelessWidget {
     required this.controller,
     required this.enabled,
     this.focusNode,
+    this.without = const {},
   });
 
   final TextEditingController controller;
@@ -71,6 +87,14 @@ class TexToolbar extends StatelessWidget {
   /// cursor se queda en el botón y hay que volver a hacer clic en el editor
   /// para seguir escribiendo.
   final FocusNode? focusNode;
+
+  /// Grupos que aquí no significan nada.
+  ///
+  /// La barra es la misma en todas partes --lo que se aprende una vez sirve en
+  /// las tres pantallas-- salvo lo que sería mentira: sobre el campo
+  /// «Respuesta» de un problema, un botón que envuelve en `answer` envolvería
+  /// la respuesta dentro de otra respuesta.
+  final Set<TexWrapGroup> without;
 
   @override
   Widget build(BuildContext context) {
@@ -122,14 +146,40 @@ class TexToolbar extends StatelessWidget {
                               compact: tight,
                               onPressed: ready ? () => _apply(wrapper) : null,
                             ),
+                          const _Separator(),
+                          for (final wrapper in didactaWrappers.where(
+                            (each) => each.group == TexWrapGroup.format,
+                          ))
+                            _FormatButton(
+                              wrapper: wrapper,
+                              on: active.contains(wrapper.id),
+                              onPressed: ready ? () => _apply(wrapper) : null,
+                            ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 6),
+                  _PaletteButton(
+                    id: 'math',
+                    icon: Icons.functions,
+                    label: 'Matemáticas',
+                    palettes: const [texMathPalette],
+                    compact: tight,
+                    onPick: ready ? _insert : null,
+                  ),
+                  _PaletteButton(
+                    id: 'symbols',
+                    icon: Icons.emoji_symbols_outlined,
+                    label: 'Símbolos',
+                    palettes: texSymbolPalettes,
+                    compact: tight,
+                    onPick: ready ? _insert : null,
+                  ),
                   _EnvironmentMenu(
                     active: active,
                     compact: tight,
+                    without: without,
                     onSelected: ready ? _apply : null,
                   ),
                   _PauseButton(
@@ -157,6 +207,19 @@ class TexToolbar extends StatelessWidget {
     );
   }
 
+  void _insert(TexSnippet snippet) {
+    final selection = controller.selection;
+    _write(
+      insertAround(
+        controller.text,
+        selection.baseOffset,
+        selection.extentOffset,
+        snippet.before,
+        snippet.after,
+      ),
+    );
+  }
+
   void _pause() {
     final selection = controller.selection;
     _write(
@@ -176,6 +239,183 @@ class TexToolbar extends StatelessWidget {
     );
     focusNode?.requestFocus();
   }
+}
+
+/// Una raya entre dos grupos de botones.
+class _Separator extends StatelessWidget {
+  const _Separator();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1,
+    height: 18,
+    margin: const EdgeInsets.symmetric(horizontal: 6),
+    color: didactaRule,
+  );
+}
+
+/// Negrita, cursiva y demás: icono solo, que son universales.
+class _FormatButton extends StatelessWidget {
+  const _FormatButton({
+    required this.wrapper,
+    required this.on,
+    required this.onPressed,
+  });
+
+  final TexWrapper wrapper;
+  final bool on;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    key: Key('wrap-${wrapper.id}'),
+    tooltip: on ? 'Quitar «${wrapper.label}»' : wrapper.label,
+    visualDensity: VisualDensity.compact,
+    style: on
+        ? IconButton.styleFrom(
+            backgroundColor: didactaAccentDark.withValues(alpha: 0.12),
+          )
+        : null,
+    icon: Icon(
+      _formatIcons[wrapper.id] ?? Icons.text_fields,
+      size: 15,
+      color: onPressed == null
+          ? didactaMuted.withValues(alpha: 0.5)
+          : (on ? didactaAccentDark : didactaMuted),
+    ),
+    onPressed: onPressed,
+  );
+}
+
+/// Una paleta: una rejilla de cosas que se escriben al pulsarlas.
+///
+/// El rótulo de cada una es el glifo --se busca «≤», no «\leq»-- y lo que se
+/// escribe es la orden de LaTeX, que es lo que va al fichero.
+class _PaletteButton extends StatelessWidget {
+  const _PaletteButton({
+    required this.id,
+    required this.icon,
+    required this.label,
+    required this.palettes,
+    required this.compact,
+    required this.onPick,
+  });
+
+  final String id;
+  final IconData icon;
+  final String label;
+  final List<TexPalette> palettes;
+  final bool compact;
+  final ValueChanged<TexSnippet>? onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return MenuAnchor(
+      builder: (context, menu, child) => TextButton.icon(
+        key: Key('palette-$id'),
+        onPressed: onPick == null
+            ? null
+            : () => menu.isOpen ? menu.close() : menu.open(),
+        icon: Icon(
+          icon,
+          size: 15,
+          color: onPick == null
+              ? didactaMuted.withValues(alpha: 0.5)
+              : didactaMuted,
+        ),
+        label: compact
+            ? const SizedBox.shrink()
+            : Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: onPick == null
+                      ? didactaMuted.withValues(alpha: 0.5)
+                      : didactaMuted,
+                ),
+              ),
+        style: TextButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+      ),
+      menuChildren: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+          child: SizedBox(
+            width: 330,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final palette in palettes) ...[
+                  if (palettes.length > 1)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, bottom: 4),
+                      child: Text(
+                        palette.name,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: didactaMuted,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      for (final snippet in palette.items)
+                        _SnippetButton(snippet: snippet, onPick: onPick),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SnippetButton extends StatelessWidget {
+  const _SnippetButton({required this.snippet, required this.onPick});
+
+  final TexSnippet snippet;
+  final ValueChanged<TexSnippet>? onPick;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: snippet.tooltip ?? '${snippet.before}${snippet.after}'.trim(),
+    child: InkWell(
+      key: Key('snippet-${snippet.label}'),
+      onTap: onPick == null
+          ? null
+          : () {
+              onPick!(snippet);
+              // Cerrar la paleta al escribir: una fórmula se escribe símbolo
+              // a símbolo, pero cada uno va a un sitio distinto del texto.
+              MenuController.maybeOf(context)?.close();
+            },
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 34, minHeight: 28),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          border: Border.all(color: didactaRule),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          snippet.label,
+          style: const TextStyle(fontSize: 13, color: didactaInk),
+        ),
+      ),
+    ),
+  );
 }
 
 class _ChannelButton extends StatelessWidget {
@@ -257,11 +497,13 @@ class _EnvironmentMenu extends StatelessWidget {
   const _EnvironmentMenu({
     required this.active,
     required this.compact,
+    required this.without,
     required this.onSelected,
   });
 
   final Set<String> active;
   final bool compact;
+  final Set<TexWrapGroup> without;
   final ValueChanged<TexWrapper>? onSelected;
 
   static const Map<TexWrapGroup, String> _titles = {
@@ -278,7 +520,9 @@ class _EnvironmentMenu extends StatelessWidget {
       tooltip: 'Envolver en un entorno',
       onSelected: onSelected,
       itemBuilder: (context) => [
-        for (final group in _titles.keys) ...[
+        for (final group in _titles.keys.where(
+          (each) => !without.contains(each),
+        )) ...[
           PopupMenuItem<TexWrapper>(
             enabled: false,
             height: 28,

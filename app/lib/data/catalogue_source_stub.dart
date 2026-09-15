@@ -3,4 +3,4 @@ library;
 
 import 'catalogue_source.dart';
 
-CatalogueSource? fileSource(String directory) => null;
+CatalogueSource? fileSource(String directory, String repo) => null;

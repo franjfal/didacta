@@ -18,7 +18,12 @@ import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
 
-Finder fieldFor(String path) => find.byKey(Key('source-field-$path'));
+/// La caja de texto de un fichero. La clave va en la caja de Didacta, que
+/// lleva las columnas de color; dentro está el `TextField` de siempre.
+Finder fieldFor(String path) => find.descendant(
+  of: find.byKey(Key('source-field-$path')),
+  matching: find.byType(TextField),
+);
 
 String textIn(WidgetTester tester, String path) =>
     tester.widget<TextField>(fieldFor(path)).controller!.text;

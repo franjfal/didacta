@@ -59,45 +59,10 @@ import '../model/source_drafts.dart';
 import '../model/tex_outline.dart';
 import '../state/session.dart';
 import 'heading_title.dart';
+import 'tex_field.dart';
 import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
 import 'theme.dart';
-
-/// Lo que ocupa un nivel de sangría, y el grosor de su columna.
-///
-/// La sangría es **de la vista, no del fichero**: la calcula el árbol y se
-/// pinta, no se escribe. Tiene que ser así porque no es un dato del fichero:
-/// una unidad que cuelga de una diapositiva abierta en la unidad anterior está
-/// un nivel más adentro leída con su tema que leída sola, y el fichero es el
-/// mismo. Guardarla sería escribir en el fichero algo que solo es cierto desde
-/// dónde se está mirando.
-const double indentStep = 14;
-const double guideBar = 2;
-
-/// De qué color va la columna de un entorno.
-///
-/// Por nombre antes que por clase en lo que se revela: una respuesta, una
-/// solución y una corrección tienen tres colores distintos en el PDF, y
-/// juntarlos aquí en uno perdería justo la distinción que se mira.
-Color blockColour(TexBlock block) => switch (block.name) {
-  'answer' => didactaProp,
-  'solution' => didactaThm,
-  'marking' => didactaTeacher,
-  'hint' => didactaEx,
-  _ => switch (block.kind) {
-    TexBlockKind.slide => didactaAccentDark,
-    TexBlockKind.channel => didactaQues,
-    TexBlockKind.exercise => didactaEx,
-    TexBlockKind.reveal => didactaThm,
-    TexBlockKind.theorem => didactaThm,
-    TexBlockKind.teaching => didactaTeacher,
-    TexBlockKind.list => didactaRule,
-    TexBlockKind.math => didactaDefn,
-    TexBlockKind.figure => didactaDefn,
-    TexBlockKind.document => didactaRule,
-    TexBlockKind.other => didactaRule,
-  },
-};
 
 class SourceTab extends StatefulWidget {
   const SourceTab({
@@ -134,10 +99,19 @@ class _SourceTabState extends State<SourceTab> {
   /// Qué idioma se está viendo de cada referencia de la composición.
   final Map<String, String> _language = {};
 
+  /// El idioma en el que se está mirando el documento entero.
+  ///
+  /// Distinto del de cada fragmento: este es el del documento —lo que se
+  /// compilaría— y cambiarlo vuelve a elegir idioma en **todas** las unidades,
+  /// con la misma caída que hace el motor. El de un fragmento es una excepción
+  /// para esa unidad, que es lo que permite mirar una traducción sin cambiar
+  /// de pantalla.
+  late String _viewLanguage = widget.language;
+
   /// El fichero que tiene el cursor: sobre ese actúa la barra de arriba.
   String? _focused;
 
-  final Map<String, _FragmentController> _controllers = {};
+  final Map<String, TexEditingController> _controllers = {};
   final Map<String, FocusNode> _focus = {};
 
   /// Para la barra cuando no hay ningún cursor puesto. Apagada, pero en su
@@ -174,9 +148,11 @@ class _SourceTabState extends State<SourceTab> {
       final reading = await readDocument(
         document: widget.document,
         catalogue: widget.session.catalogue,
-        language: widget.language,
+        language: _viewLanguage,
         read: (unit, code) async {
-          final file = await widget.session.gateway.read(unit.fileFor(code));
+          final file = await widget.session
+              .gatewayFor(unit.repo)
+              .read(unit.fileFor(code));
           return (text: file.text, sha: file.sha);
         },
       );
@@ -207,6 +183,20 @@ class _SourceTabState extends State<SourceTab> {
   }
 
   // -- el texto de ahora mismo -------------------------------------------
+
+  /// La pasarela de un fichero, por la unidad de la que salió.
+  ///
+  /// Un fragmento es un fichero de un repositorio concreto, y con varios
+  /// abiertos escribir en «el repositorio» no significa nada: hay que saber
+  /// en cuál.
+  ContentGateway _gatewayForPath(String path) {
+    for (final piece in _reading?.pieces ?? const <ReadingPiece>[]) {
+      if (piece is ReadingFile && path.startsWith('${piece.unit.path}/')) {
+        return widget.session.gatewayFor(piece.unit.repo);
+      }
+    }
+    return widget.session.gatewayFor(widget.document.repo);
+  }
 
   /// La ruta que se está viendo de una referencia.
   String _pathOf(ReadingFile file) {
@@ -265,11 +255,11 @@ class _SourceTabState extends State<SourceTab> {
 
   // -- editar -------------------------------------------------------------
 
-  _FragmentController _controllerFor(String path) {
+  TexEditingController _controllerFor(String path) {
     final existing = _controllers[path];
     if (existing != null) return existing;
     final draft = _drafts.of(path);
-    final created = _FragmentController()..text = draft?.text ?? '';
+    final created = TexEditingController()..text = draft?.text ?? '';
     created.addListener(() {
       final draft = _drafts.of(path);
       if (draft == null || draft.text == created.text) return;
@@ -284,52 +274,76 @@ class _SourceTabState extends State<SourceTab> {
     final existing = _focus[path];
     if (existing != null) return existing;
     final created = FocusNode(debugLabel: path);
-    // Quién tiene el cursor es lo único que la barra de arriba necesita
-    // saber: sin esto, actuaría sobre el último fichero que se tocó aunque
-    // estés escribiendo en otro.
+    // Solo al **ganar** el foco, nunca al perderlo. Al perderlo también se
+    // apagaba la barra, y eso la dejaba inservible: pulsar uno de sus botones
+    // le quita el foco al campo, así que entre que se aprieta y se suelta el
+    // botón ya estaba gris y el clic no hacía nada. Lo que la barra necesita
+    // saber es sobre qué fichero actuar, y eso sigue siendo cierto mientras
+    // no se ponga el cursor en otro.
     created.addListener(() {
       if (!mounted) return;
-      if (created.hasFocus) {
-        if (_focused != path) setState(() => _focused = path);
-      } else if (_focused == path) {
-        setState(() => _focused = null);
+      if (created.hasFocus && _focused != path) {
+        setState(() => _focused = path);
       }
     });
     _focus[path] = created;
     return created;
   }
 
+  /// Cambia el idioma del documento entero.
+  ///
+  /// Vuelve a elegir idioma en cada unidad con la caída del motor: la que no
+  /// esté traducida se sigue viendo en el suyo y lo dice, en lugar de dejar un
+  /// hueco. Lo que estuviera sin guardar en otro idioma sigue sin guardarse y
+  /// sigue contando: los borradores son por fichero, no por pantalla.
+  Future<void> _switchDocument(String language) async {
+    final reading = _reading;
+    if (reading == null || language == _viewLanguage) return;
+
+    for (final file in reading.files) {
+      final chosen = languageForUnit(file.unit, language) ?? file.language;
+      await _draftFor(file.unit, chosen);
+      _language[file.reference] = chosen;
+    }
+    if (!mounted) return;
+    setState(() {
+      _viewLanguage = language;
+      _rebuild();
+    });
+  }
+
+  /// Se asegura de tener el borrador de un fichero, leyéndolo si hace falta.
+  Future<void> _draftFor(Unit unit, String language) async {
+    final path = '${unit.path}/$language.tex';
+    if (_drafts.has(path)) return;
+    if (!unit.statusIn(language).exists) {
+      // Vacío, y no con el original debajo: ver otro idioma en la pestaña de
+      // este se lee como «ya está traducido», y un descuido al guardar lo
+      // archiva como si lo estuviera.
+      _drafts.put(SourceDraft(path: path, loaded: '', sha: '', exists: false));
+      return;
+    }
+    try {
+      final loaded = await widget.session.gatewayFor(unit.repo).read(path);
+      _drafts.put(
+        SourceDraft(
+          path: path,
+          loaded: loaded.text,
+          sha: loaded.sha,
+          exists: true,
+        ),
+      );
+    } catch (thrown) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('$thrown')));
+    }
+  }
+
   /// Cambia de idioma un fragmento, cargando el fichero que toque.
   Future<void> _switchLanguage(ReadingFile file, String language) async {
-    final path = '${file.unit.path}/$language.tex';
-    if (!_drafts.has(path)) {
-      if (file.unit.statusIn(language).exists) {
-        try {
-          final loaded = await widget.session.gateway.read(path);
-          _drafts.put(
-            SourceDraft(
-              path: path,
-              loaded: loaded.text,
-              sha: loaded.sha,
-              exists: true,
-            ),
-          );
-        } catch (thrown) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('$thrown')));
-          return;
-        }
-      } else {
-        // Vacío, y no con el original debajo: ver otro idioma en la pestaña
-        // de este se lee como «ya está traducido», y un descuido al guardar
-        // lo archiva como si lo estuviera.
-        _drafts.put(
-          SourceDraft(path: path, loaded: '', sha: '', exists: false),
-        );
-      }
-    }
+    await _draftFor(file.unit, language);
     if (!mounted) return;
     setState(() {
       _language[file.reference] = language;
@@ -359,7 +373,7 @@ class _SourceTabState extends State<SourceTab> {
       builder: (context) => _SaveDialog(
         drafts: touched,
         suggested: _drafts.suggestedMessage(
-          widget.document.title(widget.language),
+          widget.document.title(_viewLanguage),
         ),
       ),
     );
@@ -376,7 +390,7 @@ class _SourceTabState extends State<SourceTab> {
       final current = <String, String>{};
       for (final draft in touched) {
         try {
-          final now = await widget.session.gateway.read(draft.path);
+          final now = await _gatewayForPath(draft.path).read(draft.path);
           current[draft.path] = now.sha;
         } on ContentException catch (thrown) {
           if (thrown.kind != ContentFailure.missing) rethrow;
@@ -393,7 +407,7 @@ class _SourceTabState extends State<SourceTab> {
       }
 
       for (final draft in touched) {
-        final sha = await widget.session.gateway.commit(
+        final sha = await _gatewayForPath(draft.path).commit(
           path: draft.path,
           text: draft.text,
           sha: draft.sha,
@@ -440,12 +454,14 @@ class _SourceTabState extends State<SourceTab> {
       heading: heading.kind == 'section' ? 'Apartado' : 'Subapartado',
       languages: languages,
       titles: heading.titles,
-      reference: widget.language,
+      reference: _viewLanguage,
     );
     if (titles == null || !mounted) return;
 
     try {
-      final file = await widget.session.gateway.read(widget.yearPath);
+      final file = await widget.session
+          .gatewayFor(widget.document.repo)
+          .read(widget.yearPath);
       final composition = CompositionFile(file.text);
       final block = composition.blockFor(widget.document.id);
       if (block == null) {
@@ -486,12 +502,14 @@ class _SourceTabState extends State<SourceTab> {
       final now = [...entries]..[at] = updated;
       composition.setStructure(widget.document.id, now);
 
-      await widget.session.gateway.commit(
-        path: widget.yearPath,
-        text: composition.text,
-        sha: file.sha,
-        message: 'Retitular un apartado de ${widget.document.id}',
-      );
+      await widget.session
+          .gatewayFor(widget.document.repo)
+          .commit(
+            path: widget.yearPath,
+            text: composition.text,
+            sha: file.sha,
+            message: 'Retitular un apartado de ${widget.document.id}',
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('year.yaml guardado como un commit.')),
@@ -525,7 +543,7 @@ class _SourceTabState extends State<SourceTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final canWrite = widget.session.gateway.canWrite;
+    final canWrite = widget.session.canWriteIn(widget.document.repo);
     final focused = _focused;
 
     return Column(
@@ -534,6 +552,9 @@ class _SourceTabState extends State<SourceTab> {
         _Header(
           reading: reading,
           outline: _outline,
+          languages: widget.session.catalogue.languages,
+          language: _viewLanguage,
+          onLanguage: _switchDocument,
           dim: _dim,
           canDim: _outline.slideCount > 0,
           onDim: (value) => setState(() => _dim = value),
@@ -571,7 +592,7 @@ class _SourceTabState extends State<SourceTab> {
               itemBuilder: (context, index) => switch (_rows[index]) {
                 _HeadingRow(:final heading) => _Heading(
                   heading: heading,
-                  language: widget.language,
+                  language: _viewLanguage,
                   onEdit: canWrite ? () => _editHeading(heading) : null,
                 ),
                 _GapRow(:final gap) => _Gap(gap: gap),
@@ -579,14 +600,10 @@ class _SourceTabState extends State<SourceTab> {
                   file: file,
                   path: path,
                   controller: _controllerFor(path)
-                    ..configure(outline: _outline, slice: slice, dim: _dim),
+                    ..inDocument(outline: _outline, slice: slice, dim: _dim),
                   focusNode: _focusFor(path),
                   canWrite: canWrite,
                   exists: _drafts.of(path)?.exists ?? true,
-                  indent: slice == null ? 0 : _outline.maxIndentIn(slice),
-                  guidesAt: slice == null
-                      ? (_) => const []
-                      : (line) => _outline.guidesAt(slice.startLine + line),
                   languages: widget.session.catalogue.languages,
                   language: _language[file.reference] ?? file.language,
                   dirty: _drafts.of(path)?.isDirty ?? false,
@@ -609,56 +626,6 @@ class _SourceTabState extends State<SourceTab> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// El controlador de un fichero: guarda su texto y dice cómo se pinta.
-///
-/// El color vive aquí y no en la vista porque sin modo edición no hay dos
-/// vistas: lo que se lee es lo mismo que se escribe.
-class _FragmentController extends TextEditingController {
-  TexOutline? _outline;
-  TexSlice? _slice;
-  bool _dim = false;
-
-  void configure({
-    required TexOutline outline,
-    required TexSlice? slice,
-    required bool dim,
-  }) {
-    _outline = outline;
-    _slice = slice;
-    _dim = dim;
-  }
-
-  @override
-  TextSpan buildTextSpan({
-    required BuildContext context,
-    TextStyle? style,
-    required bool withComposing,
-  }) {
-    final outline = _outline;
-    final slice = _slice;
-    // Mientras se compone con el teclado --acentos, IME-- manda el
-    // subrayado del sistema: pintar por encima se lleva por delante la marca
-    // de lo que se está escribiendo.
-    if (outline == null ||
-        slice == null ||
-        (withComposing && value.isComposingRangeValid)) {
-      return super.buildTextSpan(
-        context: context,
-        style: style,
-        withComposing: withComposing,
-      );
-    }
-    return highlightFragment(
-      text: text,
-      base: style ?? const TextStyle(),
-      outline: outline,
-      slice: slice,
-      dim: _dim,
-      colourOf: blockColour,
     );
   }
 }
@@ -696,6 +663,9 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.reading,
     required this.outline,
+    required this.languages,
+    required this.language,
+    required this.onLanguage,
     required this.dim,
     required this.canDim,
     required this.onDim,
@@ -708,6 +678,12 @@ class _Header extends StatelessWidget {
 
   final DocumentReading reading;
   final TexOutline outline;
+
+  /// El idioma del documento, y los que el repositorio tiene.
+  final List<String> languages;
+  final String language;
+  final ValueChanged<String> onLanguage;
+
   final bool dim;
   final bool canDim;
   final ValueChanged<bool> onDim;
@@ -727,6 +703,21 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
         children: [
+          // El idioma del documento, a la izquierda del todo: es lo primero
+          // que se decide al mirar un tema --«¿esto en valenciano cómo va?»--
+          // y cambia lo que se ve en todos los fragmentos a la vez.
+          const Text(
+            'Idioma',
+            style: TextStyle(fontSize: 11.5, color: didactaMuted),
+          ),
+          const SizedBox(width: 6),
+          for (final code in languages)
+            _DocumentLanguage(
+              code: code,
+              selected: code == language,
+              onTap: () => onLanguage(code),
+            ),
+          const SizedBox(width: 14),
           Expanded(
             child: Text(
               [
@@ -776,6 +767,48 @@ class _Header extends StatelessWidget {
       ),
     );
   }
+}
+
+/// El idioma del documento entero.
+class _DocumentLanguage extends StatelessWidget {
+  const _DocumentLanguage({
+    required this.code,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String code;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    key: Key('source-document-language-$code'),
+    onTap: onTap,
+    child: Container(
+      margin: const EdgeInsets.only(right: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: selected
+            ? didactaAccentDark.withValues(alpha: 0.14)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(
+          color: selected
+              ? didactaAccentDark.withValues(alpha: 0.4)
+              : didactaRule,
+        ),
+      ),
+      child: Text(
+        code,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          color: selected ? didactaAccentDark : didactaMuted,
+        ),
+      ),
+    ),
+  );
 }
 
 class _IssueBanner extends StatelessWidget {
@@ -902,8 +935,6 @@ class _Fragment extends StatelessWidget {
     required this.focusNode,
     required this.canWrite,
     required this.exists,
-    required this.indent,
-    required this.guidesAt,
     required this.languages,
     required this.language,
     required this.dirty,
@@ -914,22 +945,12 @@ class _Fragment extends StatelessWidget {
 
   final ReadingFile file;
   final String path;
-  final _FragmentController controller;
+  final TexEditingController controller;
   final FocusNode focusNode;
   final bool canWrite;
 
   /// Falso cuando el fichero todavía no existe: escribir aquí lo crea.
   final bool exists;
-
-  /// La sangría más honda del fichero: lo que se le aparta al texto.
-  ///
-  /// Fija para toda la caja, que tiene un solo margen izquierdo y no puede
-  /// sangrar línea a línea sin meter los espacios **dentro del texto**, que es
-  /// justo lo que no se hace: la sangría es de la vista y no se guarda.
-  final int indent;
-
-  /// Los entornos que sangran una línea del fichero, contando desde 0.
-  final List<TexBlock> Function(int line) guidesAt;
 
   final List<String> languages;
   final String language;
@@ -940,13 +961,6 @@ class _Fragment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gutter = indent * indentStep;
-    // El estilo **efectivo** de la caja, no `monoStyle` a secas: un `TextField`
-    // mezcla el suyo sobre el `bodyLarge` del tema, así que el espaciado de
-    // letra puede no ser el mismo y las líneas largas partirían en otro sitio
-    // en cada capa. Se calcula una vez y lo usan las dos.
-    final style = Theme.of(context).textTheme.bodyLarge!.merge(monoStyle);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -961,53 +975,13 @@ class _Fragment extends StatelessWidget {
               tone: didactaTeacher,
             ),
           ),
-        Padding(
+        TexField(
+          key: Key('source-field-$path'),
+          controller: controller,
+          focusNode: focusNode,
+          readOnly: !canWrite,
+          hintText: 'El fichero está vacío.',
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-          child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) => Stack(
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _GuidePainter(
-                      text: value.text,
-                      style: style,
-                      gutter: gutter,
-                      guidesAt: guidesAt,
-                      scaler: MediaQuery.textScalerOf(context),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: gutter),
-                  child: TextField(
-                    key: Key('source-field-$path'),
-                    controller: controller,
-                    focusNode: focusNode,
-                    readOnly: !canWrite,
-                    maxLines: null,
-                    // LaTeX es código: monoespaciada, sin autocorrección y sin
-                    // mayúscula automática, que sobre un `\begin` es un error
-                    // de compilación.
-                    style: style,
-                    strutStyle: monoStrut,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.none,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    cursorColor: didactaAccentDark,
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      filled: false,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      hintText: 'El fichero está vacío.',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );
@@ -1186,92 +1160,6 @@ class _Gap extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// Las columnas de colores del fragmento que se está editando.
-///
-/// Mide el texto por su cuenta con los mismos parámetros que la caja —tipo,
-/// strut, ancho y escala— y pinta una barra por línea visual. Lo que hace que
-/// las dos medidas coincidan es el strut forzado: sin él, una línea con una
-/// fórmula alta mide más en una capa que en la otra y todo lo de abajo queda
-/// corrido.
-class _GuidePainter extends CustomPainter {
-  _GuidePainter({
-    required this.text,
-    required this.style,
-    required this.gutter,
-    required this.guidesAt,
-    required this.scaler,
-  });
-
-  final String text;
-
-  /// El mismo con el que se pinta la caja de texto, o las líneas parten en
-  /// sitios distintos en cada capa.
-  final TextStyle style;
-
-  final double gutter;
-  final List<TexBlock> Function(int line) guidesAt;
-  final TextScaler scaler;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final width = size.width - gutter;
-    if (width <= 0 || text.isEmpty) return;
-
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      strutStyle: monoStrut,
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-    )..layout(maxWidth: width);
-
-    // Dónde empieza cada línea del fichero, para ir de un desplazamiento a
-    // una línea.
-    final starts = <int>[0];
-    for (var i = 0; i < text.length; i += 1) {
-      if (text[i] == '\n') starts.add(i + 1);
-    }
-
-    var top = 0.0;
-    for (final metric in painter.computeLineMetrics()) {
-      final at = painter
-          .getPositionForOffset(Offset(0, top + metric.height / 2))
-          .offset;
-      for (final (index, block) in guidesAt(_lineOf(starts, at)).indexed) {
-        canvas.drawRect(
-          Rect.fromLTWH(index * indentStep, top, guideBar, metric.height),
-          Paint()
-            ..color = blockColour(
-              block,
-            ).withValues(alpha: block.closed ? 0.55 : 1.0),
-        );
-      }
-      top += metric.height;
-    }
-    painter.dispose();
-  }
-
-  static int _lineOf(List<int> starts, int offset) {
-    var low = 0;
-    var high = starts.length - 1;
-    while (low < high) {
-      final middle = (low + high + 1) ~/ 2;
-      if (starts[middle] <= offset) {
-        low = middle;
-      } else {
-        high = middle - 1;
-      }
-    }
-    return low;
-  }
-
-  @override
-  bool shouldRepaint(covariant _GuidePainter old) =>
-      old.text != text ||
-      old.gutter != gutter ||
-      old.guidesAt != guidesAt ||
-      old.style != style;
 }
 
 /// Qué se va a escribir, antes de escribirlo.

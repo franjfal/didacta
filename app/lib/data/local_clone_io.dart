@@ -157,6 +157,16 @@ class _GitClone implements LocalClone {
   }
 
   @override
+  Future<String?> remoteUrl() async {
+    if (!await Directory('$directory/.git').exists()) return null;
+    try {
+      return await _text(['remote', 'get-url', 'origin']);
+    } on CloneException {
+      return null;
+    }
+  }
+
+  @override
   Future<CloneStatus> status() async {
     final branch = await _text(['rev-parse', '--abbrev-ref', 'HEAD']);
     final head = await _text(['rev-parse', '--short', 'HEAD']);

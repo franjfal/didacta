@@ -138,7 +138,9 @@ class _DocumentPageState extends State<DocumentPage> {
     String groupId,
     String language,
   ) async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(
+      repo: session.documentIn(courseId, year, documentId)?.repo,
+    );
     final at = _open.indexWhere((group) => group.id == groupId);
     if (compiler == null || at < 0) return;
     final pane = _open[at].pane(language);
@@ -185,7 +187,9 @@ class _DocumentPageState extends State<DocumentPage> {
     String path, {
     required bool reveal,
   }) async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(
+      repo: session.documentIn(courseId, year, documentId)?.repo,
+    );
     if (compiler == null) return;
     try {
       reveal ? await compiler.reveal(path) : await compiler.open(path);
