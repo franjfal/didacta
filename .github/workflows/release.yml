@@ -23,6 +23,16 @@
 # de asignar, y solo entonces se publica. Si algo se rompe a la mitad, lo que
 # queda es un borrador, que ni `releases/latest` devuelve ni la aplicación
 # mira.
+# La versión de Flutter está fijada en `.fvmrc`, no es «la última estable».
+#
+# Para una tubería que publica binarios, «stable» es un objetivo que se mueve:
+# el runner se trajo una 3.47 el día que aquí había una 3.44, y lo primero que
+# se notó fue que el formateador había cambiado de opinión sobre tres ficheros.
+# Lo que no se habría notado igual de pronto es que el binario que se reparte
+# viniera de un compilador que nadie eligió.
+#
+# Subirla es cambiar ese fichero, y entonces el cambio se ve en un diff y se
+# prueba antes de publicar con él.
 name: Publish Didacta Release
 
 on:
@@ -41,7 +51,6 @@ permissions:
 env:
   # El repositorio privado donde se publica.
   RELEASE_REPO: franjfal/didacta_public
-  FLUTTER_CHANNEL: stable
 
 # Una publicación a la vez. Dos a la vez sobre el mismo tag es cómo se acaba
 # con un release a medias y otro encima.
@@ -121,7 +130,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version-file: .fvmrc
           cache: true
 
       - name: las dependencias
@@ -169,7 +178,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          channel: ${{ env.FLUTTER_CHANNEL }}
+          flutter-version-file: .fvmrc
           cache: true
 
       - name: las dependencias
