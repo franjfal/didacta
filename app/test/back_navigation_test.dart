@@ -44,7 +44,7 @@ Future<FakeSession> pumpApp(WidgetTester tester) async {
     catalogue: catalogueWith(defaultUnits()),
   );
   await tester.pumpWidget(
-    DidactaApp(session: session),
+    DidactaApp(session: session, updates: offlineUpdates()),
   );
   await settle(tester);
   return session;

@@ -7,14 +7,39 @@
 /// nothing.
 library;
 
+import 'package:didacta_app/data/app_info.dart';
+import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/data/secrets.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/course_admin.dart';
 import 'package:didacta_app/data/local_clone.dart';
+import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/catalogue.dart';
+import 'package:didacta_app/model/update_manifest.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/state/update_service.dart';
+
+/// Un actualizador que no pregunta nada a nadie.
+///
+/// Los tests de pantalla no tienen red y no la quieren: lo que prueban es la
+/// interfaz. Se le da una comprobación recién hecha y ningún token, así que
+/// ni la automática ni la manual llegan a salir de la máquina.
+///
+/// Está aquí y no en cada fichero porque `DidactaApp` lo pide siempre: la
+/// aplicación real no se levanta sin saber qué versión es.
+UpdateService offlineUpdates() => UpdateService(
+  info: const AppInfo(
+    version: AppVersion(1, 0, 0),
+    build: 1,
+    packageName: 'es.uv.didacta',
+    platform: UpdatePlatform.macos,
+    architecture: 'universal',
+  ),
+  preferences: MemoryPreferences()..checked = DateTime.now(),
+  readToken: () async => '',
+);
 
 const String unitPath = 'content/analysis/normed/definition';
 

@@ -472,6 +472,64 @@ app/lib/
 
 ---
 
+## 8.ter Cómo se reparte y cómo se actualiza
+
+Didacta se distribuye desde un **segundo repositorio privado**,
+`franjfal/didacta_public`, que no tiene el código: solo las versiones
+compiladas. La idea es que el permiso ya existe y no hay que inventar otro.
+
+```
+   franjfal/didacta                 franjfal/didacta_public
+   (privado, el código)             (privado, las versiones)
+          │                                    ▲
+  «Publish Didacta                             │
+   Release» ──── macOS/Windows/Linux ──────────┘
+                              token de una GitHub App
+                              instalada SOLO allí
+```
+
+**Quién puede usar Didacta es quien tiene acceso a `didacta_public`.** Dar
+acceso es añadir un colaborador; quitarlo es quitarlo de ahí. No hay una lista
+de permitidos que mantener en paralelo, ni un servidor de licencias, ni nada
+que pueda quedar desincronizado con la realidad. Y quien lo tiene puede
+instalar la aplicación sin tener el código.
+
+Las cuatro decisiones que sostienen lo demás:
+
+1. **La versión la dice `app/pubspec.yaml` y nadie más.** De ahí salen el tag,
+   el nombre de los artefactos, lo que la aplicación dice de sí misma y lo que
+   declara el manifiesto. La aplicación lee el paquete construido y no una
+   constante, porque una constante puede quedarse atrás de la compilación.
+
+2. **Todo pasa por la API con un `Authorization:`.** El manifiesto guarda el
+   `assetId` de cada artefacto, no una URL: es lo único compatible con que el
+   repositorio sea privado, y no deja ningún enlace que sobreviva a que a
+   alguien se le retire el acceso.
+
+3. **Un binario cuyo SHA-256 no cuadra no se instala nunca**, y además no se
+   queda en el disco. Es la afirmación que sostiene el sistema entero.
+
+4. **El programa que se actualiza no puede ser el que actualiza.** La
+   sustitución la hace un script externo que espera a que Didacta cierre; la
+   versión anterior se aparta y solo desaparece cuando la nueva está en su
+   sitio y comprobada.
+
+La entrada es el **device flow** de la OAuth App que ya existía (§D63): la
+contraseña se teclea en github.com y el token va al llavero del sistema. La
+credencial con la que publica el CI es **otra distinta** --una GitHub App con
+`Contents: write` solo sobre `didacta_public`--, porque reutilizar la de las
+personas daría permiso de publicar a cualquiera que entre.
+
+Publicar una versión son cinco pasos y ninguno es una orden en un terminal:
+subir el número en `pubspec.yaml`, escribir la sección del `CHANGELOG.md`,
+Actions → «Publish Didacta Release» → Run workflow.
+
+El detalle entero --artefactos por sistema, el manifiesto, la firma, los
+secrets, cómo revocar un acceso y cómo hacer rollback-- está en
+[`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
+
+---
+
 ## 9. Lo que falta
 
 Esta fase es la infraestructura: el sistema LaTeX, el modelo de contenido, el

@@ -1,0 +1,464 @@
+# Publicar una versión de Didacta.
+#
+# Se lanza a mano desde Actions → «Publish Didacta Release» → Run workflow, y
+# no hay nada que rellenar: **la versión la dice `app/pubspec.yaml`**. El
+# procedimiento entero es cambiar esa línea, escribir la sección del CHANGELOG
+# y pulsar el botón.
+#
+# El orden de los trabajos no es casual:
+#
+#   1. `comprobar` mira la versión, las notas y que el tag no exista **antes**
+#      de compilar nada. Descubrir que falta la sección del CHANGELOG después
+#      de tres compilaciones de quince minutos es tirar media hora por algo
+#      que se ve en un segundo;
+#   2. `pruebas` corre los tests de los dos lados. Publicar algo que no pasa
+#      sus propios tests no es publicar, es repartir un problema;
+#   3. `construir` compila los tres sistemas **en paralelo y sin fail-fast**,
+#      para que un fallo en Windows no esconda si Linux estaba bien;
+#   4. `publicar` solo se ejecuta si los tres salieron. Si falta uno, no hay
+#      release: media versión publicada es peor que ninguna.
+#
+# Y dentro de `publicar`, el release se crea **en borrador**, se suben los
+# binarios, se genera el manifiesto con los identificadores que GitHub acaba
+# de asignar, y solo entonces se publica. Si algo se rompe a la mitad, lo que
+# queda es un borrador, que ni `releases/latest` devuelve ni la aplicación
+# mira.
+name: Publish Didacta Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Ensayo: compila y comprueba todo, pero no publica nada'
+        type: boolean
+        default: false
+
+# Lo mínimo. La escritura en el repositorio de distribución no sale de aquí:
+# va con el token de una GitHub App instalada solo allí.
+permissions:
+  contents: read
+
+env:
+  # El repositorio privado donde se publica.
+  RELEASE_REPO: franjfal/didacta_public
+  FLUTTER_CHANNEL: stable
+
+# Una publicación a la vez. Dos a la vez sobre el mismo tag es cómo se acaba
+# con un release a medias y otro encima.
+concurrency:
+  group: didacta-release
+  cancel-in-progress: false
+
+jobs:
+  # -------------------------------------------------------------------------
+  comprobar:
+    name: la versión y las notas
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.leer.outputs.version }}
+      build: ${{ steps.leer.outputs.build }}
+      tag: ${{ steps.leer.outputs.tag }}
+      notes: ${{ steps.leer.outputs.notes }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: la versión, el build y las notas
+        id: leer
+        run: python3 packaging/release.py check
+
+      - name: y que se lean igual desde la aplicación
+        # El mismo número, leído por el otro lado. Si `pubspec.yaml` dijera
+        # una cosa y la aplicación otra, el actualizador compararía contra
+        # algo que no es lo instalado.
+        run: |
+          grep -q "^version: ${{ steps.leer.outputs.version }}+" app/pubspec.yaml
+
+      - name: token de publicación
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.DIDACTA_RELEASE_APP_ID }}
+          private-key: ${{ secrets.DIDACTA_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: didacta_public
+
+      - name: que esa versión no esté publicada ya
+        # Republicar un tag es la forma más rápida de que alguien acabe con
+        # una 1.4.2 distinta de la 1.4.2 de al lado. Se comprueba antes de
+        # compilar; si ya existe, hay que subir la versión.
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          if gh release view "${{ steps.leer.outputs.tag }}" \
+               -R "$RELEASE_REPO" >/dev/null 2>&1; then
+            echo "::error::La versión ${{ steps.leer.outputs.version }} ya está publicada en $RELEASE_REPO. Sube el número en app/pubspec.yaml."
+            exit 1
+          fi
+          echo "· ${{ steps.leer.outputs.tag }} está libre."
+
+  # -------------------------------------------------------------------------
+  pruebas:
+    name: los tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: el motor
+        run: python3 -m unittest discover -s tests -v
+
+      - name: la herramienta de publicación
+        run: python3 -m unittest discover -s packaging -p 'test_*.py' -v
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: las dependencias
+        working-directory: app
+        run: flutter pub get
+
+      - name: el analizador, sin excepciones
+        working-directory: app
+        run: flutter analyze --fatal-infos
+
+      - name: el formato
+        working-directory: app
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      - name: los tests de la aplicación
+        working-directory: app
+        run: flutter test
+
+  # -------------------------------------------------------------------------
+  construir:
+    name: ${{ matrix.nombre }}
+    needs: [comprobar, pruebas]
+    # Sin fail-fast a propósito: si Windows falla, hay que poder ver si Linux
+    # y macOS estaban bien. Cancelar los otros dos esconde justo eso.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - nombre: macOS (universal)
+            os: macos-latest
+          - nombre: Windows (x64)
+            os: windows-latest
+          - nombre: Linux (x64)
+            os: ubuntu-22.04
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+
+      - name: las dependencias
+        working-directory: app
+        run: flutter pub get
+
+      # --------------------------------------------------------- macOS ----
+      - name: el certificado de macOS
+        if: runner.os == 'macOS' && env.MACOS_CERTIFICATE != ''
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          # Un llavero temporal y solo para este trabajo: importar en el
+          # llavero de sesión del runner dejaría la clave privada donde otro
+          # paso podría leerla.
+          keychain=$RUNNER_TEMP/didacta.keychain-db
+          password=$(uuidgen)
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$password" "$keychain" >/dev/null
+          security list-keychain -d user -s "$keychain" login.keychain
+          rm -f "$RUNNER_TEMP/cert.p12"
+
+      - name: compilar para macOS
+        if: runner.os == 'macOS'
+        working-directory: app
+        run: flutter build macos --release
+
+      - name: firmar
+        if: runner.os == 'macOS'
+        env:
+          MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+        run: |
+          chmod +x packaging/macos/*.sh
+          packaging/macos/sign.sh \
+            app/build/macos/Build/Products/Release/Didacta.app
+
+      - name: empaquetar (DMG + ZIP)
+        if: runner.os == 'macOS'
+        run: |
+          packaging/macos/package.sh \
+            app/build/macos/Build/Products/Release/Didacta.app \
+            "${{ needs.comprobar.outputs.version }}" \
+            dist
+
+      - name: notarizar
+        if: runner.os == 'macOS'
+        env:
+          MACOS_NOTARY_APPLE_ID: ${{ secrets.MACOS_NOTARY_APPLE_ID }}
+          MACOS_NOTARY_TEAM_ID: ${{ secrets.MACOS_NOTARY_TEAM_ID }}
+          MACOS_NOTARY_PASSWORD: ${{ secrets.MACOS_NOTARY_PASSWORD }}
+        run: |
+          for file in dist/*.dmg dist/*.zip; do
+            [ -f "$file" ] || continue
+            packaging/macos/notarize.sh "$file"
+          done
+
+      # ------------------------------------------------------- Windows ----
+      - name: compilar para Windows
+        if: runner.os == 'Windows'
+        working-directory: app
+        run: flutter build windows --release
+
+      - name: firmar el ejecutable
+        if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          # Se firma el ejecutable **antes** de meterlo en el instalador, y el
+          # instalador después: si solo se firmara el instalador, SmartScreen
+          # avisaría igual al ejecutar el programa.
+          $pfx = Join-Path $env:RUNNER_TEMP 'didacta.pfx'
+          [IO.File]::WriteAllBytes($pfx,
+            [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          & signtool sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
+            /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 `
+            app\build\windows\x64\runner\Release\didacta.exe
+          Remove-Item $pfx
+
+      - name: el instalador
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            "/DDidactaVersion=${{ needs.comprobar.outputs.version }}" `
+            "/DDidactaSource=$(Resolve-Path app\build\windows\x64\runner\Release)" `
+            "/DDidactaIcon=$(Resolve-Path app\windows\runner\resources\app_icon.ico)" `
+            "/DDidactaOutput=$(Resolve-Path dist)" `
+            packaging\windows\didacta.iss
+
+      - name: firmar el instalador
+        if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'didacta.pfx'
+          [IO.File]::WriteAllBytes($pfx,
+            [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          Get-ChildItem dist\*.exe | ForEach-Object {
+            & signtool sign /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD `
+              /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+          }
+          Remove-Item $pfx
+
+      # --------------------------------------------------------- Linux ----
+      - name: lo que Flutter necesita en Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libstdc++-12-dev libsecret-1-dev libjsoncpp-dev file desktop-file-utils
+
+      - name: compilar para Linux
+        if: runner.os == 'Linux'
+        working-directory: app
+        run: flutter build linux --release
+
+      - name: el AppImage
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x packaging/linux/package.sh
+          packaging/linux/package.sh \
+            app/build/linux/x64/release/bundle \
+            "${{ needs.comprobar.outputs.version }}" \
+            dist
+
+      # ----------------------------------------------------- los tres ----
+      - name: los SHA-256
+        shell: bash
+        run: python3 packaging/release.py checksums dist
+
+      - name: guardar los artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: didacta-${{ runner.os }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # -------------------------------------------------------------------------
+  publicar:
+    name: publicar en didacta_public
+    needs: [comprobar, construir]
+    # `success()` sobre la matriz entera: si a un sistema le falló la
+    # compilación, aquí no se llega. No hay release incompleto.
+    if: ${{ !inputs.dry_run && needs.construir.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # para el tag en este repositorio
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: recoger los tres
+        uses: actions/download-artifact@v4
+        with:
+          path: descargas
+          merge-multiple: true
+
+      - name: ver qué hay
+        run: |
+          mkdir -p dist
+          find descargas -type f -exec cp {} dist/ \;
+          ls -lh dist
+
+      - name: que estén los tres sistemas
+        # La comprobación que impide publicar media versión: si falta el
+        # AppImage, alguien en Linux se queda sin nada y sin enterarse.
+        run: |
+          missing=""
+          for pattern in "*-macos-universal.dmg" "*-macos-universal.zip" \
+                         "*-windows-x64.exe" "*-linux-x64.AppImage"; do
+            ls dist/$pattern >/dev/null 2>&1 || missing="$missing $pattern"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Faltan artefactos:$missing. No se publica un release incompleto."
+            exit 1
+          fi
+          echo "· Los cuatro artefactos están."
+
+      - name: los SHA-256, juntos
+        run: python3 packaging/release.py checksums dist --out dist/SHA256SUMS.txt
+
+      - name: token de publicación
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.DIDACTA_RELEASE_APP_ID }}
+          private-key: ${{ secrets.DIDACTA_RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: didacta_public
+
+      - name: el release, en borrador
+        # En borrador **a propósito**. Mientras se suben 200 MB de binarios,
+        # `releases/latest` no puede devolver un release al que todavía le
+        # faltan ficheros. Se publica al final, en un solo acto.
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          TAG: ${{ needs.comprobar.outputs.tag }}
+          VERSION: ${{ needs.comprobar.outputs.version }}
+        run: |
+          printf '%s\n' "${{ needs.comprobar.outputs.notes }}" > notas.md
+          gh release create "$TAG" \
+            -R "$RELEASE_REPO" \
+            --title "Didacta $VERSION" \
+            --notes-file notas.md \
+            --draft \
+            --target main
+          gh release upload "$TAG" -R "$RELEASE_REPO" dist/*
+
+      - name: el manifiesto
+        # Se genera **después** de subir, porque necesita el identificador que
+        # GitHub le asigna a cada asset: es lo que permite descargarlo con un
+        # `Authorization:` en lugar de con una URL pública, que es lo único
+        # compatible con que el repositorio sea privado.
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          TAG: ${{ needs.comprobar.outputs.tag }}
+        run: |
+          gh release view "$TAG" -R "$RELEASE_REPO" \
+            --json assets > assets.json
+          python3 packaging/release.py manifest dist \
+            --assets assets.json --out latest.json
+          cat latest.json
+          gh release upload "$TAG" -R "$RELEASE_REPO" latest.json
+
+      - name: publicarlo
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          TAG: ${{ needs.comprobar.outputs.tag }}
+        run: |
+          gh release edit "$TAG" -R "$RELEASE_REPO" --draft=false --latest
+          echo "· Publicado: https://github.com/$RELEASE_REPO/releases/tag/$TAG"
+
+      - name: el portal de descarga
+        # El README del repositorio privado es la página de descarga: quien
+        # tiene acceso lo ve al entrar, y quien no, no ve nada. No hay Pages
+        # de por medio, que en una cuenta sin Enterprise Cloud sería pública.
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          python3 packaging/portal.py latest.json > README.md
+          gh api "repos/$RELEASE_REPO/contents/README.md" \
+            --jq '.sha' > sha.txt 2>/dev/null || echo "" > sha.txt
+          gh api --method PUT "repos/$RELEASE_REPO/contents/README.md" \
+            -f message="Didacta ${{ needs.comprobar.outputs.version }}" \
+            -f content="$(base64 -w0 README.md)" \
+            $( [ -s sha.txt ] && echo "-f sha=$(cat sha.txt)" ) \
+            --silent
+
+      - name: el tag en el repositorio de código
+        # Para poder volver exactamente al código de una versión publicada.
+        # Va al final: si la publicación falló, el tag no debe existir.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.comprobar.outputs.tag }}
+        run: |
+          git tag -a "$TAG" -m "Didacta ${{ needs.comprobar.outputs.version }}"
+          git push origin "$TAG"
+
+      - name: el resumen
+        run: |
+          {
+            echo "## Didacta ${{ needs.comprobar.outputs.version }} publicada"
+            echo
+            echo "https://github.com/$RELEASE_REPO/releases/tag/${{ needs.comprobar.outputs.tag }}"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # -------------------------------------------------------------------------
+  ensayo:
+    name: ensayo (no se publica nada)
+    needs: [comprobar, construir]
+    if: ${{ inputs.dry_run }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: qué habría pasado
+        run: |
+          echo "## Ensayo de la ${{ needs.comprobar.outputs.version }}" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ needs.construir.result }}" = "success" ]; then
+            echo "Los tres sistemas compilaron. Se habría publicado." \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Alguna compilación falló.** No se habría publicado." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

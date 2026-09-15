@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Didacta
+GenericName=Material docente
+Comment=Gestión, edición y compilación de material docente multilingüe en LaTeX
+Exec=didacta %U
+Icon=didacta
+Terminal=false
+Categories=Education;Office;Publishing;
+Keywords=LaTeX;docencia;apuntes;diapositivas;
+StartupWMClass=didacta
