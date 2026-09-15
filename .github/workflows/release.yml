@@ -68,7 +68,7 @@ jobs:
       build: ${{ steps.leer.outputs.build }}
       tag: ${{ steps.leer.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: la versión, el build y las notas
         id: leer
@@ -88,7 +88,7 @@ jobs:
       - name: token de publicación
         id: token
         if: ${{ !inputs.dry_run }}
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.DIDACTA_RELEASE_APP_ID }}
           private-key: ${{ secrets.DIDACTA_RELEASE_APP_PRIVATE_KEY }}
@@ -115,9 +115,9 @@ jobs:
     name: los tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.9'
 
@@ -173,7 +173,7 @@ jobs:
       MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
@@ -344,7 +344,7 @@ jobs:
         run: python3 packaging/release.py checksums dist
 
       - name: guardar los artefactos
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: didacta-${{ runner.os }}
           path: dist/*
@@ -362,10 +362,10 @@ jobs:
     permissions:
       contents: write   # para el tag en este repositorio
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: recoger los tres
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: descargas
           merge-multiple: true
@@ -396,7 +396,7 @@ jobs:
 
       - name: token de publicación
         id: token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.DIDACTA_RELEASE_APP_ID }}
           private-key: ${{ secrets.DIDACTA_RELEASE_APP_PRIVATE_KEY }}

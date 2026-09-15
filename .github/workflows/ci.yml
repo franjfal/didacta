@@ -21,9 +21,9 @@ jobs:
     name: el motor (Python)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           # 3.9 on purpose: it is what macOS ships, and the engine is written
           # to run with no installation step and no dependencies at all.
@@ -46,7 +46,7 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: subosito/flutter-action@v2
         with:
