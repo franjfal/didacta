@@ -302,10 +302,64 @@ Por eso la sustitución la hace un script externo, lanzado con
 está en su sitio y se ha comprobado que su ejecutable existe. Si algo falla
 entre medias, el script la devuelve.
 
+**Y se comprueba que salió.** Antes de cerrar, la aplicación apunta a qué
+versión se estaba actualizando; al arrancar, compara esa nota con la versión
+que de verdad está corriendo. Si coincide, lo dice y se puede cerrar el aviso;
+si no, dice que no se completó y cuál se está ejecutando. Sin esto, una
+sustitución que falló y se restauró correctamente sería indistinguible de una
+que salió, y alguien podría quedarse creyendo que tiene una versión que no
+tiene.
+
+**Si no se puede escribir donde está instalada** --una Didacta en
+`/Applications` con una cuenta que no es administradora-- se dice antes de
+descargar nada. Se comprueba escribiendo de verdad en la carpeta y no mirando
+los permisos: en macOS el bit de escritura puede decir que sí y una ACL decir
+que no.
+
 **Errores.** Sin red, GitHub caído, token caducado, token revocado, sin acceso,
 release corrupta, checksum incorrecto, descarga interrumpida, sin espacio, sin
 permisos, cancelado por la persona: todos están en `UpdateProblem` y todos
 tienen un mensaje en castellano. **Ninguno impide usar Didacta.**
+
+## 10.bis Cómo se prueba
+
+Tres capas, porque ninguna sola vale:
+
+| Qué | Dónde | Qué coge |
+|---|---|---|
+| Unitario | `app/test/app_version_test.dart`, `update_manifest_test.dart` | Comparar versiones, leer un manifiesto roto, elegir artefacto |
+| Con red falsa | `app/test/update_service_test.dart`, `update_ui_test.dart` | Los códigos de estado de GitHub, los estados del servicio, lo que se ve |
+| Con red de verdad | `packaging/e2e-macos.sh` | **El contrato con GitHub** |
+
+La tercera es la que importa y es la que no se puede saltar. Los dos fallos
+que tenía el workflow al escribirlo solo se veían ejecutándolo:
+
+- **un release en borrador no tiene tag** --el tag de git se crea al
+  publicarlo--, así que pedir los assets por `releases/tags/` devuelve 404
+  justo en el momento en que el workflow los necesita;
+- `gh release view --json assets` devuelve el identificador de **GraphQL**
+  (`RA_kwDO…`) y la API de descarga pide el **numérico**. El manifiesto habría
+  salido con identificadores que no descargan nada.
+
+Ninguno de los dos se ve leyendo el código.
+
+```bash
+DIDACTA_E2E_TOKEN=$(gh auth token) \
+  packaging/e2e-macos.sh ~/Applications/Didacta.app
+```
+
+Prepara una **copia** de esa Didacta en una carpeta temporal y actualiza la
+copia, así que se puede ejecutar con Didacta abierta sin tocarla. Comprueba,
+por este orden: el acceso al repositorio privado, que un token inválido se
+rechaza, el manifiesto, que la copia es más vieja que lo publicado, la
+descarga por `assetId`, el SHA-256, que preparar no ha sustituido nada
+todavía, la sustitución, que la copia de seguridad se limpió, que arranca, y
+que lo que está corriendo dice ser la versión nueva.
+
+**Lo único manual que queda** es pulsar «Actualizar ahora» en la ventana. Ese
+camino --el diálogo, el progreso, «más tarde», los mensajes de error-- está
+cubierto por `update_ui_test.dart` contra el mismo `UpdateService`; lo que no
+se automatiza es el clic.
 
 ## 11. Firma
 
