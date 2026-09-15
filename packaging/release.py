@@ -461,7 +461,31 @@ def cmd_manifest(args):
         )
 
 
+def _utf8_output():
+    """Que se pueda imprimir en castellano también en Windows.
+
+    Allí Python escribe en la página de códigos de la consola --cp1252-- y
+    esta herramienta imprime «», →, … y acentos por todas partes. El primer
+    `print` con una flecha dentro revienta con un `UnicodeEncodeError` desde
+    dentro de `encodings/cp1252.py`, que es un sitio donde nadie va a buscar
+    por qué falló una publicación.
+
+    Pasó: el trabajo de Windows se cayó en `bump`, antes de compilar nada, por
+    un `→` en una línea de progreso.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        # `reconfigure` está desde 3.7 y esto se ejecuta con 3.9; el guardián
+        # es por si alguien redirige la salida a algo que no es un
+        # `TextIOWrapper`.
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:  # noqa: BLE001
+                pass
+
+
 def main(argv=None):
+    _utf8_output()
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command")
 

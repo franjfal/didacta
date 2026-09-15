@@ -12,6 +12,7 @@ lógica no esté ahí dentro.
     python3 -m unittest discover -s packaging -p 'test_*.py' -v
 """
 
+import io
 import json
 import os
 import re
@@ -499,6 +500,59 @@ class PortalTest(unittest.TestCase):
     def test_explica_que_la_contraseña_no_se_escribe_en_didacta(self):
         page = portal.render(self.manifest())
         self.assertIn("github.com/login/device", page)
+
+
+class WindowsOutputTest(unittest.TestCase):
+    """Que se pueda imprimir en castellano en los tres sistemas."""
+
+    def setUp(self):
+        self.temp = tempfile.mkdtemp()
+        self.original = release.PUBSPEC
+        release.PUBSPEC = os.path.join(self.temp, "pubspec.yaml")
+        with open(release.PUBSPEC, "w", encoding="utf-8") as handle:
+            # Con acentos, como el de verdad: si `bump` reescribiera el
+            # fichero en cp1252, «compilación» se perdería por el camino.
+            handle.write(
+                "name: didacta_app\n"
+                "description: Material docente multilingüe y su compilación.\n"
+                "version: 1.0.0+1\n"
+            )
+
+    def tearDown(self):
+        release.PUBSPEC = self.original
+        shutil.rmtree(self.temp, ignore_errors=True)
+
+    def test_la_flecha_de_bump_no_tumba_windows(self):
+        """El fallo que paró una publicación de verdad.
+
+        En Windows, Python escribe en la página de códigos de la consola
+        --cp1252-- y `bump` imprime «1.0.0 → 1.1.0+2». Esa flecha no existe en
+        cp1252, así que el trabajo se caía con un `UnicodeEncodeError` desde
+        dentro de `encodings/cp1252.py`: antes de compilar nada, y con un
+        rastro que no menciona ni la flecha ni el `print`.
+        """
+        raw = io.BytesIO()
+        wrapper = io.TextIOWrapper(raw, encoding="cp1252", newline="")
+        guardado = sys.stdout
+        sys.stdout = wrapper
+        try:
+            release.main(["bump"])
+            wrapper.flush()
+        finally:
+            sys.stdout = guardado
+
+        printed = raw.getvalue().decode("utf-8")
+        self.assertIn("→", printed)
+        self.assertIn("1.0.0", printed)
+        self.assertIn("1.1.0", printed)
+
+    def test_y_el_pubspec_conserva_los_acentos(self):
+        release.bump("minor")
+        with open(release.PUBSPEC, encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertIn("multilingüe", text)
+        self.assertIn("compilación", text)
+        self.assertIn("version: 1.1.0+2", text)
 
 
 class WorkflowTest(unittest.TestCase):
