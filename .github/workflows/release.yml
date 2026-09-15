@@ -151,6 +151,13 @@ jobs:
           - nombre: Linux (x64)
             os: ubuntu-22.04
     runs-on: ${{ matrix.os }}
+    # Al nivel del trabajo y no de cada paso: un `env` declarado en el propio
+    # paso no está disponible en su `if`, y el resultado sería un paso de
+    # firma que se ejecuta siempre y falla cuando no hay certificado.
+    # Vacíos cuando el secreto no existe, que es la condición que se mira.
+    env:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
     steps:
       - uses: actions/checkout@v4
 
@@ -167,7 +174,6 @@ jobs:
       - name: el certificado de macOS
         if: runner.os == 'macOS' && env.MACOS_CERTIFICATE != ''
         env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
         run: |
           # Un llavero temporal y solo para este trabajo: importar en el
@@ -232,7 +238,6 @@ jobs:
         if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
         shell: pwsh
         env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
           # Se firma el ejecutable **antes** de meterlo en el instalador, y el
@@ -262,7 +267,6 @@ jobs:
         if: runner.os == 'Windows' && env.WINDOWS_CERTIFICATE != ''
         shell: pwsh
         env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
           WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: |
           $pfx = Join-Path $env:RUNNER_TEMP 'didacta.pfx'
@@ -389,8 +393,12 @@ jobs:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
         run: |
-          gh release view "$TAG" -R "$RELEASE_REPO" \
-            --json assets > assets.json
+          # `gh api` y no `gh release view --json assets`: este devuelve el
+          # identificador de GraphQL (`RA_kwDO…`) y lo que la API de descarga
+          # pide es el numérico. Con el otro, el manifiesto quedaría con unos
+          # identificadores que no se pueden descargar.
+          gh api "repos/$RELEASE_REPO/releases/tags/$TAG" \
+            --jq '.assets' > assets.json
           python3 packaging/release.py manifest dist \
             --assets assets.json --out latest.json
           cat latest.json
@@ -412,13 +420,17 @@ jobs:
           GH_TOKEN: ${{ steps.token.outputs.token }}
         run: |
           python3 packaging/portal.py latest.json > README.md
-          gh api "repos/$RELEASE_REPO/contents/README.md" \
-            --jq '.sha' > sha.txt 2>/dev/null || echo "" > sha.txt
-          gh api --method PUT "repos/$RELEASE_REPO/contents/README.md" \
-            -f message="Didacta ${{ needs.comprobar.outputs.version }}" \
-            -f content="$(base64 -w0 README.md)" \
-            $( [ -s sha.txt ] && echo "-f sha=$(cat sha.txt)" ) \
-            --silent
+
+          # El SHA del README que hay, para poder sustituirlo. Si no hay
+          # ninguno --la primera publicación-- se crea.
+          sha=$(gh api "repos/$RELEASE_REPO/contents/README.md" \
+                  --jq '.sha' 2>/dev/null || true)
+
+          set -- --method PUT "repos/$RELEASE_REPO/contents/README.md" \
+            -f "message=Didacta ${{ needs.comprobar.outputs.version }}" \
+            -f "content=$(base64 -w0 README.md)"
+          [ -n "$sha" ] && set -- "$@" -f "sha=$sha"
+          gh api "$@" --silent
 
       - name: el tag en el repositorio de código
         # Para poder volver exactamente al código de una versión publicada.

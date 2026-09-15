@@ -219,9 +219,38 @@ Dos cosas que muestra y que el repositorio no puede contestar solo:
 - **qué unidades no usa nadie** — después de una migración, material que llegó
   y no se está dando.
 
-Lo que falta: editar, componer y compilar desde la interfaz. Los tres
-necesitan `api/`, porque escribir en el repositorio exige identidad y un token
-que un navegador no puede guardar.
+En escritorio hace bastante más: edita, traduce, reclasifica y recompone
+sobre **clones locales** de varios repositorios a la vez, con la identidad de
+GitHub. Escribir exige un token, y un token exige un sitio donde guardarlo que
+un navegador no tiene; en macOS, Windows y Linux ese sitio es el llavero del
+sistema.
+
+## Instalar Didacta
+
+No hace falta compilarla. Las versiones se publican en
+**[franjfal/didacta_public](https://github.com/franjfal/didacta_public)**, que
+es privado: quien tiene acceso ahí descarga la aplicación y la recibe
+actualizada; quien no, no ve nada.
+
+| Sistema | Qué se descarga |
+|---|---|
+| macOS | Un `.dmg`, arrastrar a Aplicaciones |
+| Windows | Un instalador, **sin administrador** |
+| Linux | Un AppImage: `chmod +x` y abrir |
+
+Dentro, **Ajustes → Cuenta de GitHub → Entrar en GitHub**. Da un código corto
+que se escribe en github.com; la contraseña no se teclea nunca dentro de
+Didacta. A partir de ahí se actualiza sola.
+
+### Publicar una versión
+
+1. subir el número en `app/pubspec.yaml`;
+2. escribir la sección en [`CHANGELOG.md`](CHANGELOG.md);
+3. Actions → **Publish Didacta Release** → Run workflow.
+
+Compila macOS, Windows y Linux, calcula los SHA-256, publica el release en
+`didacta_public` y reescribe su página de descarga. El detalle está en
+[`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
 
 ## Qué hay aquí
 
@@ -256,6 +285,9 @@ didacta/
 - **[docs/AUTHORING.md](docs/AUTHORING.md)** — todo lo que se puede escribir en
   un fichero de contenido. Es la referencia que se usa a diario.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — el diseño y por qué está así.
+- **[docs/DISTRIBUTION.md](docs/DISTRIBUTION.md)** — cómo se reparte la
+  aplicación, cómo se actualiza sola, qué secretos hacen falta y cómo dar o
+  quitar el acceso a alguien.
 - **[latex/didacta-profiles.tex](latex/didacta-profiles.tex)** — las salidas,
   documentadas en el propio registro.
 
