@@ -49,8 +49,12 @@ DisableDirPage=auto
 ; %LOCALAPPDATA%\Programs, que es donde se puede escribir sin UAC.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+; `x64` y no `x64compatible`: el segundo solo existe desde Inno Setup 6.3, y
+; en una 6.2 es un error de compilación, no un aviso. `x64` lo entienden todas
+; las 6.x --las nuevas lo traducen solas-- y la versión que trae la imagen del
+; runner no es algo que aquí se controle.
+ArchitecturesAllowed=x64
+ArchitecturesInstallIn64BitMode=x64
 
 OutputDir={#DidactaOutput}
 OutputBaseFilename=Didacta-{#DidactaVersion}-windows-x64
