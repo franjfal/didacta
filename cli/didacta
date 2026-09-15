@@ -454,12 +454,6 @@ def cmd_build(args):
         verbose=args.verbose,
     )
 
-    ready, why = engine.available()
-    if not ready:
-        print(S.bad("cannot build: %s" % why))
-        print(S.dim("Didacta needs a TeX distribution with latexmk and pdflatex."))
-        return 2
-
     if args.profiles:
         # Qué versiones admite este documento, no cuáles se van a compilar.
         #
@@ -498,6 +492,21 @@ def cmd_build(args):
         for source, profile, language, extra in jobs:
             print("  %-26s %-20s %s" % (extra["document_id"], profile.id, language))
         return 0
+
+    # Aquí, y no antes de `--profiles` y `--list`.
+    #
+    # Las dos son preguntas, no compilaciones: `--profiles` dice qué versiones
+    # admite un documento y `--list` dice cuáles saldrían. Ninguna toca LaTeX.
+    # Comprobando el sistema arriba, las dos se negaban a responder en una
+    # máquina sin TeX, y son justo las dos que la aplicación usa para llenar
+    # la pantalla del documento: sin TeX no se podía ni ver qué versiones hay,
+    # que es información que está en el repositorio y no en ningún programa
+    # que haya que instalar.
+    ready, why = engine.available()
+    if not ready:
+        print(S.bad("cannot build: %s" % why))
+        print(S.dim("Didacta needs a TeX distribution with latexmk and pdflatex."))
+        return 2
 
     # Con `--json`, la salida estándar es JSON y nada más, como en
     # `preview --json`: al otro lado hay un programa, y una tabla bonita

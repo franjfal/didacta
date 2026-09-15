@@ -194,12 +194,20 @@ macOS». Sin este campo el actualizador acabaría intentando montar un DMG.
 
 El **README de `didacta_public`**, escrito por el workflow desde el manifiesto.
 
-**No se usa GitHub Pages**, y es deliberado: una Page servida desde un
-repositorio privado es pública salvo que la cuenta tenga GitHub Enterprise
-Cloud. En una cuenta personal, activarla publicaría en internet la lista de
-versiones y los enlaces de descarga. El README lo ve quien entra al
-repositorio, y al repositorio entra quien tiene acceso: la misma puerta que ya
-controla quién puede actualizar.
+**No se usa GitHub Pages**, y es deliberado. El control de acceso de Pages
+--lo que hace que una Page sea privada-- solo existe para **organizaciones con
+GitHub Enterprise Cloud**. `franjfal` es una cuenta personal (la API la
+devuelve como `"type": "User"`), así que ahí no hay ninguna forma de tener una
+Page privada: activarla publicaría en internet la lista de versiones y los
+enlaces de descarga de un repositorio que es privado justamente para que eso
+no pase.
+
+El README, en cambio, lo ve quien entra al repositorio, y al repositorio entra
+quien tiene acceso: la misma puerta que ya controla quién puede actualizar.
+
+Si algún día esto se mueve a una organización con Enterprise Cloud, una
+landing page con estilo se puede añadir encima sin tocar nada de lo demás: el
+manifiesto y los releases seguirían siendo la fuente.
 
 Menos bonito y correcto. La seguridad va por delante de tener una página con
 estilo.
