@@ -33,9 +33,12 @@ UpdateService serviceWith(
   http.Client client, {
   String? cannotInstall,
   DateTime? checked,
+  String? pending,
 }) => UpdateService(
   info: installed,
-  preferences: MemoryPreferences()..checked = checked,
+  preferences: MemoryPreferences()
+    ..checked = checked
+    ..pending = pending,
   readToken: () async => 'gho_valido',
   openChannel: (token) => ReleaseChannel(
     owner: 'franjfal',
@@ -181,6 +184,37 @@ void main() {
 
     expect(find.text('Tu cuenta de GitHub está autorizada'), findsOneWidget);
     expect(find.textContaining('no tiene acceso'), findsNothing);
+  });
+
+  testWidgets('una actualización que salió bien se dice una vez', (
+    tester,
+  ) async {
+    final service = serviceWith(
+      MockClient((_) async => http.Response('{}', 404)),
+      pending: '1.4.1',
+    );
+    await service.load();
+    await pumpSection(tester, service);
+
+    expect(find.textContaining('se ha actualizado a la 1.4.1'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('dismiss-update-outcome')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('se ha actualizado'), findsNothing);
+  });
+
+  testWidgets('una que falló lo dice, y dice qué hacer', (tester) async {
+    // Alguien puede estar creyendo que tiene una versión que no tiene.
+    final service = serviceWith(
+      MockClient((_) async => http.Response('{}', 404)),
+      pending: '1.4.2',
+    );
+    await service.load();
+    await pumpSection(tester, service);
+
+    expect(find.textContaining('no se completó'), findsOneWidget);
+    expect(find.textContaining('sigues con la 1.4.1'), findsOneWidget);
+    expect(find.textContaining('funciona igual que antes'), findsOneWidget);
   });
 
   group('la franja de aviso', () {

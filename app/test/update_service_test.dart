@@ -594,6 +594,73 @@ void main() {
     });
   });
 
+  group('cómo fue la anterior', () {
+    // El paso que cierra el círculo. Quien sustituye los ficheros es un
+    // script externo, y para cuando termina, la aplicación que lo lanzó ya no
+    // existe para enterarse de si salió.
+
+    test('sin nada apuntado, no se dice nada', () async {
+      final service = serviceWith(routed({}));
+      await service.load();
+      expect(service.outcome, isNull);
+    });
+
+    test('la versión que arrancó es la apuntada: salió bien', () async {
+      final preferences = MemoryPreferences()..pending = '1.4.1';
+      final service = serviceWith(routed({}), preferences: preferences);
+      await service.load();
+      expect(service.outcome!.succeeded, isTrue);
+      expect(service.outcome!.installed.toString(), '1.4.1');
+      // Y la nota se borra: si no, el fallo se contaría en cada arranque.
+      expect(await preferences.pendingUpdate(), isNull);
+    });
+
+    test('arrancó la de antes: la sustitución falló', () async {
+      // El caso que justifica todo esto: alguien creyendo que tiene la 1.4.2
+      // cuando lo que se está ejecutando es la 1.4.1.
+      final preferences = MemoryPreferences()..pending = '1.4.2';
+      final service = serviceWith(routed({}), preferences: preferences);
+      await service.load();
+      expect(service.outcome!.succeeded, isFalse);
+      expect(service.outcome!.installed.toString(), '1.4.2');
+      expect(service.outcome!.running.toString(), '1.4.1');
+      expect(await preferences.pendingUpdate(), isNull);
+    });
+
+    test('una versión más nueva de la apuntada también vale', () async {
+      // Pasa si alguien instala a mano por encima mientras tanto.
+      final preferences = MemoryPreferences()..pending = '1.0.0';
+      final service = serviceWith(routed({}), preferences: preferences);
+      await service.load();
+      expect(service.outcome!.succeeded, isTrue);
+    });
+
+    test('una nota ilegible se ignora, no se cuenta como fallo', () async {
+      final preferences = MemoryPreferences()..pending = 'lo que sea';
+      final service = serviceWith(routed({}), preferences: preferences);
+      await service.load();
+      expect(service.outcome, isNull);
+    });
+
+    test('instalar apunta la versión antes de cerrar', () async {
+      final preferences = MemoryPreferences();
+      final service = serviceWith(
+        routed({
+          'releases/latest': http.Response(releaseBody(), 200),
+          'releases/assets/5': http.Response(manifestBody(), 200),
+        }),
+        preferences: preferences,
+      );
+      await service.checkForUpdates();
+      await service.downloadUpdate();
+      await service.installUpdate();
+      // El instalador de mentira falla al lanzar, así que la nota se borra:
+      // no se ha cerrado nada y contarlo sería contar un fallo que no hubo.
+      expect(await preferences.pendingUpdate(), isNull);
+      expect(service.stage, UpdateStage.failed);
+    });
+  });
+
   test('en web no se ofrece actualizar', () async {
     final service = serviceWith(
       routed({}),

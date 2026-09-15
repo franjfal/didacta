@@ -67,6 +67,23 @@ enum UpdateStage {
   failed,
 }
 
+/// Cómo acabó la actualización anterior.
+class UpdateOutcome {
+  const UpdateOutcome({
+    required this.installed,
+    required this.succeeded,
+    this.running,
+  });
+
+  /// La versión que se estaba instalando.
+  final AppVersion installed;
+
+  final bool succeeded;
+
+  /// La que de verdad arrancó, cuando no salió.
+  final AppVersion? running;
+}
+
 class UpdateService extends ChangeNotifier {
   UpdateService({
     required this.info,
@@ -134,6 +151,15 @@ class UpdateService extends ChangeNotifier {
   /// autorizado cuando lo que pasa es que no hay wifi es una acusación falsa
   /// que además le hace perder la tarde.
   bool? get authorised => _authorised;
+
+  /// Cómo fue la actualización anterior, si hubo una.
+  ///
+  /// Se rellena al arrancar comparando la versión que se está ejecutando con
+  /// la que se apuntó antes de cerrar. Es el paso que cierra el círculo: sin
+  /// esto, una sustitución que falló deja a alguien creyendo que tiene una
+  /// versión que no tiene.
+  UpdateOutcome? _outcome;
+  UpdateOutcome? get outcome => _outcome;
 
   bool _bannerDismissed = false;
 
@@ -214,9 +240,35 @@ class UpdateService extends ChangeNotifier {
     _set(UpdateStage.idle);
   }
 
-  /// Lee cuándo se miró por última vez. Se llama al arrancar.
+  /// Lee cuándo se miró por última vez, y cómo fue la última actualización.
+  ///
+  /// Se llama al arrancar, y es aquí donde se cierra el círculo de la
+  /// actualización anterior: quien sustituye los ficheros es un script
+  /// externo, y para cuando termina, la aplicación que lo lanzó ya no existe
+  /// para enterarse de si salió. Lo que sí queda es una nota en las
+  /// preferencias, y la versión que se está ejecutando ahora.
   Future<void> load() async {
     _lastCheck = await preferences.lastUpdateCheck();
+
+    final pending = AppVersion.tryParse(await preferences.pendingUpdate());
+    if (pending != null) {
+      // La nota se borra pase lo que pase: si no, un fallo se contaría en
+      // cada arranque a partir de ahora.
+      await preferences.setPendingUpdate(null);
+      _outcome = info.version >= pending
+          ? UpdateOutcome(installed: pending, succeeded: true)
+          : UpdateOutcome(
+              installed: pending,
+              succeeded: false,
+              running: info.version,
+            );
+    }
+    notifyListeners();
+  }
+
+  /// Quitar el aviso de cómo fue la última actualización.
+  void dismissOutcome() {
+    _outcome = null;
     notifyListeners();
   }
 
@@ -391,11 +443,19 @@ class UpdateService extends ChangeNotifier {
     }
     _set(UpdateStage.installing);
     try {
+      // Apuntado **antes** de lanzar nada: a partir de la línea siguiente
+      // este proceso puede desaparecer en cualquier momento, y entonces ya no
+      // hay quien escriba nada.
+      await preferences.setPendingUpdate(ready.manifest.version.toString());
       installer.applyAndExit();
     } on UpdateException catch (thrown) {
+      // No se llegó a cerrar nada, así que la nota sobraría: dejarla haría
+      // que el siguiente arranque contase un fallo que no hubo.
+      await preferences.setPendingUpdate(null);
       _problem = thrown;
       _set(UpdateStage.failed);
     } catch (thrown) {
+      await preferences.setPendingUpdate(null);
       _problem = UpdateException(
         UpdateProblem.installFailed,
         'No se pudo lanzar la actualización. Tu versión sigue intacta.',

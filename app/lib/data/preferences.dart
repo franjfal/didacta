@@ -73,6 +73,17 @@ abstract class Preferences {
   /// días de verdad y no cada vez que se abre la aplicación.
   Future<DateTime?> lastUpdateCheck();
   Future<void> setLastUpdateCheck(DateTime when);
+
+  /// La versión a la que se estaba actualizando cuando se cerró.
+  ///
+  /// Se apunta **antes** de cerrar y se borra al arrancar. Es la única forma
+  /// de saber si la sustitución salió: quien la hace es un script externo, y
+  /// para cuando termina, la aplicación que lo lanzó ya no existe para
+  /// enterarse. Al volver a arrancar, si la versión no es la apuntada, la
+  /// actualización falló y hay que decirlo en vez de dejar a alguien creyendo
+  /// que tiene una versión que no tiene.
+  Future<String?> pendingUpdate();
+  Future<void> setPendingUpdate(String? version);
 }
 
 class StoredPreferences implements Preferences {
@@ -107,6 +118,7 @@ class StoredPreferences implements Preferences {
   static const String _panel = 'didacta.unit.panel';
   static const String _split = 'didacta.unit.split';
   static const String _checked = 'didacta.update.lastCheck';
+  static const String _pending = 'didacta.update.pending';
 
   /// The stored value, then the build-time default. A stored empty string is
   /// a real answer -- "I turned the clone off" -- and must win over the
@@ -252,6 +264,23 @@ class StoredPreferences implements Preferences {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_checked, when.toUtc().toIso8601String());
   }
+
+  @override
+  Future<String?> pendingUpdate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_pending);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  @override
+  Future<void> setPendingUpdate(String? version) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (version == null) {
+      await prefs.remove(_pending);
+    } else {
+      await prefs.setString(_pending, version);
+    }
+  }
 }
 
 /// For tests, and for a platform where nothing is remembered.
@@ -346,4 +375,12 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setLastUpdateCheck(DateTime when) async => checked = when;
+
+  String? pending;
+
+  @override
+  Future<String?> pendingUpdate() async => pending;
+
+  @override
+  Future<void> setPendingUpdate(String? version) async => pending = version;
 }
