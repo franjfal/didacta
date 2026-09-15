@@ -246,6 +246,49 @@ class ChangelogTest(unittest.TestCase):
         with self.assertRaises(release.Problem):
             release.read_notes("1.4.2")
 
+    def test_el_ejemplo_del_encabezado_no_es_una_seccion(self):
+        """Un bloque de código no es contenido.
+
+        El CHANGELOG explica su propio formato con un ejemplo dentro de un
+        cercado. Un parser que sólo mire si la línea empieza por `## ` se lo
+        cree, y el día que tocase publicar esa versión --con el número
+        subiendo solo, llega-- las notas del release habrían sido «Lo
+        nuevo…», publicadas sin que nada fallara.
+        """
+        self.write(
+            "# Cambios\n\n"
+            "El formato es este:\n\n"
+            "```markdown\n"
+            "## 1.4.2 — 2026-09-15\n\n"
+            "- Lo nuevo…\n"
+            "```\n\n"
+            "## 1.1.0 — 2026-09-15\n\n"
+            "- Lo de verdad\n"
+        )
+        with self.assertRaises(release.Problem):
+            release.read_notes("1.4.2")
+        # Y la de verdad no se ve afectada por tener el ejemplo delante.
+        self.assertEqual(release.read_notes("1.1.0"), "- Lo de verdad")
+
+    def test_una_seccion_no_termina_en_un_ejemplo(self):
+        # El final de una sección es el siguiente encabezado **de verdad**.
+        # Con un cercado por medio, cortar en él dejaría fuera media sección.
+        self.write(
+            "# Cambios\n\n"
+            "## 1.1.0\n\n"
+            "- Antes del ejemplo\n\n"
+            "```markdown\n"
+            "## 9.9.9\n"
+            "```\n\n"
+            "- Después del ejemplo\n\n"
+            "## 1.0.0\n\n"
+            "- Lo viejo\n"
+        )
+        notes = release.read_notes("1.1.0")
+        self.assertIn("Antes del ejemplo", notes)
+        self.assertIn("Después del ejemplo", notes)
+        self.assertNotIn("Lo viejo", notes)
+
     def test_acepta_la_v_delante(self):
         self.write("# Cambios\n\n## v1.4.2\n\n- Algo\n")
         self.assertEqual(release.read_notes("1.4.2"), "- Algo")
