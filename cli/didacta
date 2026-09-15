@@ -527,8 +527,18 @@ def cmd_build(args):
     # que haya que instalar.
     ready, why = engine.available()
     if not ready:
-        print(S.bad("cannot build: %s" % why))
-        print(S.dim("Didacta needs a TeX distribution with latexmk and pdflatex."))
+        # A la salida de **error**, no a la estándar.
+        #
+        # Por la estándar habla el motor con el programa que lo llamó --con
+        # `--json`, JSON y nada más-- y por la de error, con quien está
+        # mirando. Una negativa es de las segundas: imprimiéndola en la
+        # estándar, `build --json` en una máquina sin TeX devolvía dos líneas
+        # de texto donde la aplicación esperaba JSON.
+        print(S.bad("cannot build: %s" % why), file=sys.stderr)
+        print(
+            S.dim("Didacta needs a TeX distribution with latexmk and pdflatex."),
+            file=sys.stderr,
+        )
         return 2
 
     # Con `--json`, la salida estándar es JSON y nada más, como en
