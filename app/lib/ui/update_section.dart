@@ -490,8 +490,3 @@ class UpdateBanner extends StatelessWidget {
     );
   }
 }
-
-/// Un problema que no se pudo enseñar en ningún sitio, para el log.
-String describeProblem(UpdateException problem) =>
-    '${problem.problem.name}: ${problem.message}'
-    '${problem.detail == null ? '' : ' (${problem.detail})'}';
