@@ -122,6 +122,28 @@ def load_repo(args):
     return root, settings
 
 
+def progress_sink(args):
+    """Where a build's live output goes, when `--progress` asked for it.
+
+    Always stderr, never stdout. With `--json` there is a program on the other
+    end of stdout waiting for one JSON document, and the point of streaming is
+    precisely to be able to watch a build that is *also* being parsed: the
+    application shows the terminal while it waits for the results. Two
+    channels, one for each reader.
+
+    Flushed per line, because a progress view that arrives in blocks of four
+    kilobytes is a progress view of a wait that already ended.
+    """
+    if not getattr(args, "progress", False):
+        return None
+
+    def write(line):
+        sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+
+    return write
+
+
 # --------------------------------------------------------------------------
 # status
 # --------------------------------------------------------------------------
@@ -452,6 +474,7 @@ def cmd_build(args):
         build_dir=os.path.join(root, settings.build_dir),
         engine="pdflatex" if args.fast else "latexmk",
         verbose=args.verbose,
+        on_output=progress_sink(args),
     )
 
     if args.profiles:
@@ -1185,6 +1208,7 @@ def cmd_preview(args):
         build_dir=os.path.join(root, settings.build_dir),
         engine="pdflatex" if args.fast else "latexmk",
         verbose=args.verbose,
+        on_output=progress_sink(args),
     )
 
     reference = unit.reference_path
@@ -1912,6 +1936,8 @@ def main(argv=None):
     p.add_argument("--fast", action="store_true",
                    help="one pdflatex pass; quick, but references may be wrong")
     p.add_argument("--json", action="store_true", help="write summary.json")
+    p.add_argument("--progress", action="store_true",
+                   help="stream LaTeX's output to stderr as it happens")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=cmd_build)
 
@@ -1962,6 +1988,8 @@ def main(argv=None):
                    help="one pdflatex pass; quick, but references may be wrong")
     p.add_argument("--json", action="store_true",
                    help="write the results as JSON, for an interface to read")
+    p.add_argument("--progress", action="store_true",
+                   help="stream LaTeX's output to stderr as it happens")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=cmd_preview)
 
