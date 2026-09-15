@@ -17,12 +17,14 @@ import 'dart:async';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
 import '../data/github.dart';
 import '../model/workspace.dart';
 import '../router.dart';
 import '../state/session.dart';
+import '../state/update_service.dart';
 import 'shell.dart';
 import 'theme.dart';
 import 'update_section.dart';
@@ -123,6 +125,10 @@ class _AccountSectionState extends State<_AccountSection> {
       final token = await auth.waitForToken(code);
       await widget.session.signIn(token);
       if (!mounted) return;
+      // Y acto seguido, la otra pregunta: si esta cuenta llega al repositorio
+      // de versiones. Son dos cosas distintas y alguien puede pasar la
+      // primera y no la segunda.
+      unawaited(context.read<UpdateService>().checkAuthorisation());
       Navigator.of(context, rootNavigator: true).pop();
       await waiting;
     } catch (thrown) {
@@ -162,7 +168,12 @@ class _AccountSectionState extends State<_AccountSection> {
                     ),
                     TextButton(
                       key: const Key('github-sign-out'),
-                      onPressed: session.signOut,
+                      onPressed: () {
+                        // Lo que se sabía de esta cuenta deja de valer: la
+                        // siguiente puede ser otra con otros permisos.
+                        context.read<UpdateService>().forgetAccount();
+                        session.signOut();
+                      },
                       child: const Text('Salir'),
                     ),
                   ],

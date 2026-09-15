@@ -49,4 +49,4 @@ class WebInstaller implements UpdateInstaller {
   Future<void> discard(DownloadedUpdate update) async {}
 }
 
-UpdateInstaller createInstaller() => const WebInstaller();
+UpdateInstaller createInstaller({String? installedAt}) => const WebInstaller();

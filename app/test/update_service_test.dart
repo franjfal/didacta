@@ -249,6 +249,71 @@ void main() {
       expect(service.problem, isNull);
     });
 
+    test('la autorización se comprueba aparte del login', () async {
+      // Poder entrar en GitHub no es poder usar Didacta. Son dos preguntas y
+      // alguien puede pasar la primera y no la segunda.
+      final concedido = serviceWith(
+        routed({'repos/franjfal/didacta_public': http.Response('{}', 200)}),
+      );
+      await concedido.checkAuthorisation();
+      expect(concedido.authorised, isTrue);
+
+      final denegado = serviceWith(routed({}));
+      await denegado.checkAuthorisation();
+      expect(denegado.authorised, isFalse);
+    });
+
+    test('sin poder preguntar, no se acusa a nadie', () async {
+      // `null` y no `false`: decirle a alguien que no está autorizado cuando
+      // lo que pasa es que no hay wifi es una acusación falsa.
+      final service = serviceWith(
+        MockClient((_) async => throw const SocketishError()),
+      );
+      await service.checkAuthorisation();
+      expect(service.authorised, isNull);
+    });
+
+    test('sin haber entrado tampoco', () async {
+      final service = serviceWith(routed({}), token: '');
+      await service.checkAuthorisation();
+      expect(service.authorised, isNull);
+    });
+
+    test('una comprobación que llega al final ya responde que sí', () async {
+      final service = serviceWith(
+        routed({
+          'releases/latest': http.Response(releaseBody(), 200),
+          'releases/assets/5': http.Response(manifestBody(), 200),
+        }),
+      );
+      await service.checkForUpdates();
+      expect(service.authorised, isTrue);
+    });
+
+    test('y una que falla por acceso responde que no', () async {
+      final service = serviceWith(routed({}));
+      await service.checkForUpdates();
+      expect(service.authorised, isFalse);
+    });
+
+    test('al salir se olvida lo de la cuenta anterior', () async {
+      final service = serviceWith(
+        routed({
+          'releases/latest': http.Response(releaseBody(), 200),
+          'releases/assets/5': http.Response(manifestBody(), 200),
+        }),
+      );
+      await service.checkForUpdates();
+      expect(service.hasUpdate, isTrue);
+
+      service.forgetAccount();
+      // La siguiente persona puede ser otra con otros permisos: arrastrar lo
+      // que se sabía de la anterior sería enseñarle algo que no es suyo.
+      expect(service.authorised, isNull);
+      expect(service.hasUpdate, isFalse);
+      expect(service.stage, UpdateStage.idle);
+    });
+
     test('token revocado o caducado', () async {
       final service = serviceWith(
         routed({'releases/latest': http.Response('{}', 401)}),
