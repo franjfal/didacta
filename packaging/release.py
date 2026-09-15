@@ -251,8 +251,14 @@ def cmd_check(args):
             handle.write("version=%s\n" % name)
             handle.write("build=%s\n" % build)
             handle.write("tag=v%s\n" % name)
-            # Multilínea, con el delimitador que pide Actions.
-            handle.write("notes<<DIDACTA_EOF\n%s\nDIDACTA_EOF\n" % notes)
+            # Las notas **no** salen por aquí.
+            #
+            # Un valor multilínea en `GITHUB_OUTPUT` se delimita con una marca,
+            # y una línea del CHANGELOG que coincidiera con esa marca cortaría
+            # el valor y dejaría el resto del texto interpretado como más
+            # salidas. Quien las necesita --el trabajo que publica-- tiene el
+            # repositorio delante y las lee de aquí otra vez, que es gratis y
+            # no tiene ese filo.
 
 
 def cmd_checksums(args):
