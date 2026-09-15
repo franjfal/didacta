@@ -61,9 +61,7 @@ Future<void> pumpSection(WidgetTester tester, UpdateService service) async {
     ChangeNotifierProvider<UpdateService>.value(
       value: service,
       child: const MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(child: UpdateSection()),
-        ),
+        home: Scaffold(body: SingleChildScrollView(child: UpdateSection())),
       ),
     ),
   );
@@ -74,7 +72,10 @@ void main() {
   testWidgets('enseña la versión instalada y que nunca se ha comprobado', (
     tester,
   ) async {
-    await pumpSection(tester, serviceWith(MockClient((_) async => http.Response('{}', 404))));
+    await pumpSection(
+      tester,
+      serviceWith(MockClient((_) async => http.Response('{}', 404))),
+    );
 
     expect(find.textContaining('1.4.1 (141)'), findsOneWidget);
     expect(find.textContaining('macOS arm64'), findsOneWidget);
@@ -128,7 +129,9 @@ void main() {
   });
 
   testWidgets('un fallo sale como nota, no como pantalla rota', (tester) async {
-    final service = serviceWith(MockClient((_) async => http.Response('{}', 401)));
+    final service = serviceWith(
+      MockClient((_) async => http.Response('{}', 401)),
+    );
     await pumpSection(tester, service);
     await tester.tap(find.byKey(const Key('check-for-updates')));
     await tester.pumpAndSettle();
@@ -138,13 +141,46 @@ void main() {
   });
 
   testWidgets('sin acceso al repositorio se explica qué pedir', (tester) async {
-    final service = serviceWith(MockClient((_) async => http.Response('{}', 404)));
+    final service = serviceWith(
+      MockClient((_) async => http.Response('{}', 404)),
+    );
     await pumpSection(tester, service);
     await tester.tap(find.byKey(const Key('check-for-updates')));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('no tiene acceso'), findsOneWidget);
     expect(find.textContaining('franjfal/didacta_public'), findsOneWidget);
+  });
+
+  testWidgets('sin acceso, la tarjeta lo dice y explica qué pedir', (
+    tester,
+  ) async {
+    final service = serviceWith(
+      MockClient((_) async => http.Response('{}', 404)),
+    );
+    await service.checkAuthorisation();
+    await pumpSection(tester, service);
+
+    expect(
+      find.textContaining('no tiene acceso a las versiones'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('franjfal/didacta_public'), findsOneWidget);
+  });
+
+  testWidgets('con acceso, lo dice y no molesta más', (tester) async {
+    final service = serviceWith(
+      MockClient(
+        (request) async => request.url.path.endsWith('didacta_public')
+            ? http.Response('{}', 200)
+            : http.Response('{}', 404),
+      ),
+    );
+    await service.checkAuthorisation();
+    await pumpSection(tester, service);
+
+    expect(find.text('Tu cuenta de GitHub está autorizada'), findsOneWidget);
+    expect(find.textContaining('no tiene acceso'), findsNothing);
   });
 
   group('la franja de aviso', () {

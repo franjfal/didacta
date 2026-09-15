@@ -32,10 +32,10 @@ import '../model/update_manifest.dart';
 import 'release_channel.dart';
 import 'update_installer.dart';
 
-UpdateInstaller createInstaller() {
-  if (Platform.isMacOS) return _MacInstaller();
-  if (Platform.isWindows) return _WindowsInstaller();
-  if (Platform.isLinux) return _LinuxInstaller();
+UpdateInstaller createInstaller({String? installedAt}) {
+  if (Platform.isMacOS) return _MacInstaller(installedAt);
+  if (Platform.isWindows) return _WindowsInstaller(installedAt);
+  if (Platform.isLinux) return _LinuxInstaller(installedAt);
   return _Unsupported(
     'Didacta solo se actualiza sola en macOS, Windows y Linux.',
   );
@@ -265,12 +265,19 @@ class _Unsupported extends _DesktopInstaller {
 // ---------------------------------------------------------------- macOS ----
 
 class _MacInstaller extends _DesktopInstaller {
+  _MacInstaller([this.installedAt]);
+
+  /// Dónde está la copia que hay que sustituir, si se dice explícitamente.
+  final String? installedAt;
+
+  String? bundlePath() => installedAt ?? detectBundle();
+
   /// La carpeta `.app` que se está ejecutando.
   ///
   /// `Platform.resolvedExecutable` es
   /// `…/Didacta.app/Contents/MacOS/Didacta`, así que el bundle son tres
   /// niveles hacia arriba.
-  static String? bundlePath() {
+  static String? detectBundle() {
     var dir = File(Platform.resolvedExecutable).parent; // MacOS
     for (var i = 0; i < 2; i++) {
       dir = dir.parent; // Contents, luego el .app
@@ -411,6 +418,12 @@ rm -rf "\$STAGING"
 // -------------------------------------------------------------- Windows ----
 
 class _WindowsInstaller extends _DesktopInstaller {
+  _WindowsInstaller([this.installedAt]);
+
+  final String? installedAt;
+
+  String get executable => installedAt ?? Platform.resolvedExecutable;
+
   @override
   String? get unsupportedReason => null;
 
@@ -423,7 +436,6 @@ class _WindowsInstaller extends _DesktopInstaller {
   @override
   Future<void> stage(DownloadedUpdate update) async {
     final staging = File(update.path).parent.path;
-    final executable = Platform.resolvedExecutable;
 
     // El instalador es un ejecutable firmado (cuando haya certificado) y ya
     // sabe sustituir ficheros en uso. Lo único que hace falta de este lado es
@@ -463,6 +475,12 @@ endlocal
 // ---------------------------------------------------------------- Linux ----
 
 class _LinuxInstaller extends _DesktopInstaller {
+  _LinuxInstaller([this.installedAt]);
+
+  final String? installedAt;
+
+  String? appImage() => installedAt ?? appImagePath();
+
   /// La ruta del AppImage que se está ejecutando, si es que es uno.
   ///
   /// La pone el propio runtime de AppImage en el entorno. Si no está,
@@ -476,7 +494,7 @@ class _LinuxInstaller extends _DesktopInstaller {
   }
 
   @override
-  String? get unsupportedReason => appImagePath() == null
+  String? get unsupportedReason => appImage() == null
       ? 'Didacta no se está ejecutando desde un AppImage, así que la '
             'actualización la gobierna tu gestor de paquetes. Descarga el '
             'AppImage si quieres que se actualice sola.'
@@ -487,7 +505,7 @@ class _LinuxInstaller extends _DesktopInstaller {
 
   @override
   Future<void> stage(DownloadedUpdate update) async {
-    final target = appImagePath();
+    final target = appImage();
     if (target == null) {
       throw UpdateException(UpdateProblem.installFailed, unsupportedReason!);
     }

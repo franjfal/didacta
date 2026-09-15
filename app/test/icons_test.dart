@@ -177,7 +177,9 @@ void main() {
     // `flutter create --platforms=windows` deja el icono azul de Flutter, y
     // un `.ico` con un solo tamaño se reescala fatal a 16 px. Se comprueba la
     // estructura del contenedor, que es lo comprobable sin descodificar.
-    final bytes = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+    final bytes = File(
+      'windows/runner/resources/app_icon.ico',
+    ).readAsBytesSync();
     final header = ByteData.sublistView(bytes, 0, 6);
     expect(header.getUint16(0, Endian.little), 0, reason: 'reservado');
     expect(header.getUint16(2, Endian.little), 1, reason: 'tipo: icono');
@@ -203,15 +205,16 @@ void main() {
 
   test('el icono de Windows es el nuestro, no el azul de Flutter', () async {
     // El 256 de dentro del `.ico`, sacado por su desplazamiento.
-    final bytes = File('windows/runner/resources/app_icon.ico').readAsBytesSync();
+    final bytes = File(
+      'windows/runner/resources/app_icon.ico',
+    ).readAsBytesSync();
     final entry = ByteData.sublistView(bytes, 6 + 6 * 16, 22 + 6 * 16);
     final offset = entry.getUint32(12, Endian.little);
     final length = entry.getUint32(8, Endian.little);
     final png = bytes.sublist(offset, offset + length);
 
-    final temp = File(
-      '${Directory.systemTemp.path}/didacta-icon-test.png',
-    )..writeAsBytesSync(png);
+    final temp = File('${Directory.systemTemp.path}/didacta-icon-test.png')
+      ..writeAsBytesSync(png);
     addTearDown(() => temp.deleteSync());
     expect(await centreColour(temp), predicate(isDidactaGreen), reason: 'azul');
   });
@@ -227,7 +230,9 @@ void main() {
   test('el .desktop de Linux nombra el binario que de verdad se genera', () {
     // `Exec=didacta` tiene que coincidir con el `BINARY_NAME` del CMake: si
     // se separan, el AppImage se construye y no arranca.
-    final desktop = File('../packaging/linux/didacta.desktop').readAsStringSync();
+    final desktop = File(
+      '../packaging/linux/didacta.desktop',
+    ).readAsStringSync();
     expect(desktop, contains('Exec=didacta'));
     expect(desktop, contains('Name=Didacta'));
     expect(desktop, contains('Icon=didacta'));

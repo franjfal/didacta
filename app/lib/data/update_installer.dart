@@ -102,4 +102,11 @@ abstract class UpdateInstaller {
 }
 
 /// El de este sistema.
-UpdateInstaller createInstaller() => platform.createInstaller();
+///
+/// [installedAt] dice dónde está la copia que hay que sustituir. Normalmente
+/// no se pasa y se deduce de dónde se está ejecutando esto, que es lo
+/// correcto; existe para el arnés de `tool/e2e_update.dart`, que prueba la
+/// sustitución de verdad contra una **copia** en una carpeta temporal en
+/// lugar de contra la Didacta que alguien está usando.
+UpdateInstaller createInstaller({String? installedAt}) =>
+    platform.createInstaller(installedAt: installedAt);

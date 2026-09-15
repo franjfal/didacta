@@ -125,6 +125,16 @@ class UpdateService extends ChangeNotifier {
   DateTime? _lastCheck;
   DateTime? get lastCheck => _lastCheck;
 
+  bool? _authorised;
+
+  /// Si esta cuenta llega al repositorio de versiones.
+  ///
+  /// `null` mientras no se ha podido comprobar --sin red, sin haber entrado--
+  /// y eso es distinto de «no tiene acceso»: decirle a alguien que no está
+  /// autorizado cuando lo que pasa es que no hay wifi es una acusación falsa
+  /// que además le hace perder la tarde.
+  bool? get authorised => _authorised;
+
   bool _bannerDismissed = false;
 
   /// Si toca enseñar la franja de aviso de arriba.
@@ -169,6 +179,41 @@ class UpdateService extends ChangeNotifier {
       ? installer.unsupportedReason
       : 'En el navegador no hay nada que actualizar.';
 
+  /// Si esta cuenta de GitHub puede usar Didacta.
+  ///
+  /// Se llama después de entrar. Poder autenticarse contra GitHub no es poder
+  /// usar Didacta: lo segundo es tener acceso al repositorio de versiones, y
+  /// es una pregunta aparte que hay que hacer explícitamente.
+  ///
+  /// No lanza nunca. Un fallo deja [authorised] en `null`, que la interfaz
+  /// lee como «no se ha podido comprobar».
+  Future<void> checkAuthorisation() async {
+    ReleaseChannel? channel;
+    try {
+      final token = await readToken() ?? '';
+      if (token.isEmpty) {
+        _authorised = null;
+        notifyListeners();
+        return;
+      }
+      channel = _openChannel(token);
+      _authorised = await channel.hasAccess();
+    } catch (_) {
+      _authorised = null;
+    } finally {
+      channel?.close();
+      notifyListeners();
+    }
+  }
+
+  /// Olvida lo que se sabía de la cuenta anterior. Se llama al salir.
+  void forgetAccount() {
+    _authorised = null;
+    _manifest = null;
+    _problem = null;
+    _set(UpdateStage.idle);
+  }
+
   /// Lee cuándo se miró por última vez. Se llama al arrancar.
   Future<void> load() async {
     _lastCheck = await preferences.lastUpdateCheck();
@@ -206,6 +251,9 @@ class UpdateService extends ChangeNotifier {
       final token = await readToken() ?? '';
       channel = _openChannel(token);
       final published = await channel.latest();
+      // Si se llegó hasta aquí, la cuenta tiene acceso: `latest()` habría
+      // lanzado si no. Se apunta, para no preguntarlo otra vez.
+      _authorised = true;
 
       // Se apunta la fecha aunque no hubiera nada: lo que se está evitando es
       // volver a preguntar mañana, y eso vale igual si la respuesta fue «no
@@ -226,6 +274,7 @@ class UpdateService extends ChangeNotifier {
       _set(UpdateStage.available);
     } on UpdateException catch (thrown) {
       _manifest = null;
+      if (thrown.problem == UpdateProblem.notAuthorised) _authorised = false;
       if (silent) {
         // Sin ruido, pero sin fingir que se comprobó: la fecha no se toca, así
         // que se volverá a intentar en el siguiente arranque.

@@ -393,12 +393,20 @@ jobs:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
         run: |
-          # `gh api` y no `gh release view --json assets`: este devuelve el
-          # identificador de GraphQL (`RA_kwDO…`) y lo que la API de descarga
-          # pide es el numérico. Con el otro, el manifiesto quedaría con unos
-          # identificadores que no se pueden descargar.
-          gh api "repos/$RELEASE_REPO/releases/tags/$TAG" \
-            --jq '.assets' > assets.json
+          # Dos cosas que hay que hacer justo así, y las dos se descubrieron
+          # probándolo:
+          #
+          # `gh api` y no `gh release view --json assets`, porque este
+          # devuelve el identificador de GraphQL (`RA_kwDO…`) y la API de
+          # descarga pide el numérico.
+          #
+          # Y la lista de releases y no `releases/tags/$TAG`, porque **un
+          # borrador todavía no tiene tag**: el tag de git se crea al
+          # publicarlo. Por tag, esto daría 404 siempre.
+          gh api "repos/$RELEASE_REPO/releases" --paginate \
+            --jq "[.[] | select(.tag_name==\"$TAG\")] | first | .assets" \
+            > assets.json
+          test -s assets.json
           python3 packaging/release.py manifest dist \
             --assets assets.json --out latest.json
           cat latest.json
