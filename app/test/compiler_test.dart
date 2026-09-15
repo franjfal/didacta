@@ -171,6 +171,54 @@ void main() {
     );
 
     test(
+      'entrega la salida de LaTeX según la escribe',
+      () async {
+        if (engineRoot() == null || !latexAvailable()) {
+          markTestSkipped('hace falta latexmk');
+          return;
+        }
+        // La costura entera: la aplicación pide progreso, el motor abre un
+        // pseudoterminal para que LaTeX escriba línea a línea, y lo que sale
+        // llega aquí mientras todavía se está compilando. Los tres trozos
+        // están probados por su cuenta; esto prueba que encajan.
+        final compiler = Compiler(enginePath: root, repositoryPath: repository);
+        final lines = <String>[];
+        final when = <Duration>[];
+        final clock = Stopwatch()..start();
+
+        final results = await compiler.compile(
+          unitPath: 'content/analysis/normed-spaces/definition',
+          profiles: const ['slides'],
+          languages: const ['es'],
+          onOutput: (line) {
+            lines.add(line);
+            when.add(clock.elapsed);
+          },
+        );
+        clock.stop();
+
+        expect(results.single.ok, isTrue);
+        // Todo lo que enseña el terminal, no unos cuantos pasos: la salida
+        // de una compilación de verdad pasa holgadamente de veinte líneas, y
+        // un resumen cabría en menos.
+        expect(lines.length, greaterThan(20));
+        // La orden que se lanzó, que es la primera pregunta cuando algo no
+        // compila desde la aplicación y sí desde el terminal.
+        expect(lines.join('\n'), contains('latexmk'));
+        expect(lines.join('\n'), contains('pdfTeX'));
+        // Y a lo largo de la compilación, no en un bloque al final: sin el
+        // pseudoterminal LaTeX escribe a bloques de cuatro kilobytes y esto
+        // llegaría entero en el último instante.
+        expect(
+          when.first,
+          lessThan(when.last * 0.75),
+          reason: 'la primera línea llega mucho antes que la última',
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    test(
       'un idioma que falta sale como aviso, no como error',
       () async {
         if (engineRoot() == null || !latexAvailable()) {

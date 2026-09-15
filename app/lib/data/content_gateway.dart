@@ -145,6 +145,7 @@ class CloneGateway extends ContentGateway {
     required this.token,
     required this.author,
     this.pushOnCommit = true,
+    this.beforeWrite,
   });
 
   final LocalClone clone;
@@ -160,6 +161,18 @@ class CloneGateway extends ContentGateway {
   /// keystroke-sized commit is the wrong shape for a long editing session on
   /// a bad connection, and the interface can offer "push now" instead.
   final bool pushOnCommit;
+
+  /// Ponerse al día con GitHub antes de escribir.
+  ///
+  /// Lo pone la sesión, que es quien sabe cuándo se miró la última vez y por
+  /// tanto si hace falta volver a preguntar. Aquí es una llamada y nada más:
+  /// una pasarela que decidiera cada cuánto consultar la red sería una
+  /// política escondida en la capa que solo debería saber escribir ficheros.
+  ///
+  /// Que falle no impide guardar. Un commit a un clon del propio disco no
+  /// necesita red, y perder trabajo para proteger una sincronización que se
+  /// hará después sería el peor cambio posible.
+  final Future<void> Function()? beforeWrite;
 
   @override
   GatewayKind get kind => GatewayKind.clone;
@@ -214,6 +227,13 @@ class CloneGateway extends ContentGateway {
         'Un commit necesita un autor. Inicia sesión antes de guardar.',
         kind: ContentFailure.unauthenticated,
       );
+    }
+    // Traer antes de modificar. Lo que no se puede traer no para el guardado:
+    // se avisa por otro lado, y el trabajo se queda a salvo en el clon.
+    try {
+      await beforeWrite?.call();
+    } catch (_) {
+      // Ya lo cuenta quien puso la llamada.
     }
     try {
       return await clone.commitFile(

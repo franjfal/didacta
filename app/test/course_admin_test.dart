@@ -499,6 +499,7 @@ class _FailingIndex extends FakeCompiler {
   Future<String> run(
     List<String> arguments, {
     bool allowFailure = false,
+    void Function(String line)? onOutput,
   }) async {
     commands.add(arguments);
     if (arguments.first == 'index') {

@@ -34,6 +34,7 @@ import 'router.dart';
 import 'state/session.dart';
 import 'state/update_service.dart';
 import 'ui/platform_menus.dart';
+import 'ui/sign_in.dart';
 import 'ui/theme.dart';
 import 'ui/update_section.dart';
 
@@ -205,6 +206,26 @@ class _BootstrapState extends State<_Bootstrap> {
   Widget build(BuildContext context) {
     final session = watchSession(context);
 
+    // La sesión, antes que nada.
+    //
+    // **Sin sesión no hay aplicación**: no es un velo por encima de la
+    // biblioteca sino la pantalla en lugar de ella. Construir el router y
+    // taparlo habría construido igual todo lo que hay debajo, y lo que hay
+    // debajo son los ficheros de un repositorio privado.
+    //
+    // El orden importa: mientras se lee el llavero la respuesta no es «no ha
+    // entrado» sino que todavía no se sabe, y ahí lo que toca es la pantalla
+    // de carga. Sin esa distinción, cada arranque enseñaría la puerta durante
+    // un parpadeo antes de abrir la biblioteca.
+    if (session.signInState == SignInState.signedOut) {
+      return MaterialApp(
+        title: 'Didacta',
+        debugShowCheckedModeBanner: false,
+        theme: didactaTheme(),
+        home: SignInGate(session: session),
+      );
+    }
+
     return switch (session.state) {
       LoadState.loading => const _Splash(),
       LoadState.failed => MaterialApp(
@@ -212,6 +233,8 @@ class _BootstrapState extends State<_Bootstrap> {
         theme: didactaTheme(),
         home: _LoadFailure(session: session),
       ),
+      LoadState.ready when session.signInState == SignInState.checking =>
+        const _Splash(),
       LoadState.ready => _buildApp(session),
     };
   }

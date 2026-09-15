@@ -49,7 +49,7 @@ Dar acceso a alguien es añadirlo como colaborador de `didacta_public`.
 Quitárselo es quitarlo de ahí. No hay ninguna otra lista que mantener, ni un
 servidor de licencias, ni nada que pueda quedar desincronizado con la realidad.
 
-## 3. La versión: una sola fuente
+## 3. La versión: una sola fuente, y la sube el ciclo
 
 `app/pubspec.yaml`:
 
@@ -60,6 +60,33 @@ version: 1.4.2+142
 De ahí sale **todo**: el tag (`v1.4.2`), el nombre de los artefactos, lo que la
 aplicación dice de sí misma, y lo que declara el manifiesto. Ningún otro sitio
 escribe un número de versión a mano.
+
+**Y ese número no lo escribe nadie: lo sube la publicación.** Cada release sube
+la mediana --1.4.2 → 1.5.0-- y el build de uno en uno. Esa línea deja de ser
+algo que se edita antes de publicar y pasa a ser el registro de lo último que
+se publicó.
+
+```
+$ python3 packaging/release.py next
+1.5.0
+```
+
+Es la orden que se ejecuta antes de escribir el CHANGELOG, porque la sección
+hay que titularla con el número que va a salir. El parche vuelve a cero
+--1.5.0 y no 1.5.2--: lo que una mediana dice es «otra tanda de cambios», y
+arrastrar el parche de la anterior no significa nada.
+
+Por qué la mediana y no el parche: lo que cada versión trae es lo que se haya
+hecho desde la anterior, y eso nadie lo clasifica al pulsar el botón. Un parche
+afirmaría que sólo se han arreglado cosas. Para los otros dos casos está
+`release.py bump --part major|patch`, que ya es una decisión y se toma a mano.
+
+**Cómo llega ese número a los cuatro trabajos** sin pasarse un commit entre
+ellos: cada uno ejecuta `release.py bump` sobre su propia copia nada más
+descargarla. La función es determinista, así que los cuatro llegan al mismo
+sitio, y el binario lleva dentro el número con el que se publica. El commit se
+hace al final, en `publicar`, cuando el release ya existe -- así un fallo a
+mitad de camino, o un ensayo, no gastan un número.
 
 La aplicación no lee una constante del código sino el paquete construido
 (`Info.plist` en macOS, `version.json` en Windows y Linux), vía
@@ -72,22 +99,24 @@ no es un error sino algo peor: una actualización que nunca se ofrece.
 
 ## 4. Publicar una versión
 
-Cinco pasos, y ninguno es una orden en un terminal:
+Cuatro pasos:
 
-1. subir el número en `app/pubspec.yaml`;
-2. escribir la sección en `CHANGELOG.md`;
-3. GitHub → Actions → **Publish Didacta Release**;
-4. Run workflow;
-5. nada más.
+1. `python3 packaging/release.py next`, para saber qué número va a salir;
+2. escribir esa sección en `CHANGELOG.md`;
+3. GitHub → Actions → **Publish Didacta Release** → Run workflow;
+4. nada más.
+
+`app/pubspec.yaml` no se toca. Subirlo a mano se salta un número, porque el
+ciclo lo subirá igual la próxima vez.
 
 El workflow (`.github/workflows/release.yml`) hace, en este orden:
 
 | # | Trabajo | Qué hace |
 |---|---|---|
-| 1 | `comprobar` | Lee la versión, exige la sección del CHANGELOG, comprueba que el tag no exista ya |
+| 1 | `comprobar` | Sube el número, exige la sección del CHANGELOG, comprueba que el tag no exista ya |
 | 2 | `pruebas` | Tests de Python, tests de Dart, `flutter analyze --fatal-infos`, formato |
-| 3 | `construir` | macOS, Windows y Linux **en paralelo, sin `fail-fast`** |
-| 4 | `publicar` | Solo si los tres salieron |
+| 3 | `construir` | macOS, Windows y Linux **en paralelo, sin `fail-fast`**, cada uno con el número ya subido |
+| 4 | `publicar` | Solo si los tres salieron. Al final escribe la versión nueva en `main` y la etiqueta |
 
 El orden importa. Descubrir que falta la sección del CHANGELOG después de tres
 compilaciones de quince minutos es tirar media hora por algo que se ve en un
@@ -116,7 +145,18 @@ mitad, lo que queda es un borrador invisible.
 ### Ensayo
 
 `dry_run` compila los tres sistemas y comprueba todo, pero no publica. Sirve
-para saber si una versión compila en Windows sin gastar un número de versión.
+para saber si una versión compila en Windows sin gastar un número: el commit
+con la versión nueva sólo lo hace `publicar`, así que después de un ensayo la
+próxima publicación asigna ese mismo número.
+
+### Si la publicación sale pero el commit de la versión no
+
+El último paso de `publicar` escribe `app/pubspec.yaml` en `main` y crea el
+tag. Si alguien empujó a la rama mientras se compilaba, reintenta poniéndose
+detrás; si aun así no puede --una rama protegida, por ejemplo--, el trabajo
+falla diciéndolo, y la versión ya está publicada. Entonces hay que subir esa
+línea a mano, o la siguiente publicación repetirá el número y se parará en la
+comprobación de que el tag no exista.
 
 ## 5. Qué se genera
 

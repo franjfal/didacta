@@ -12,6 +12,8 @@
 /// useful even when you have to run one command to get them.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'build_console.dart';
 import 'composition_editor.dart';
 import 'shell.dart';
 import '../data/compiler.dart';
@@ -147,6 +150,11 @@ class _DocumentPageState extends State<DocumentPage> {
     if (pane == null) return;
 
     setState(() => _open[at] = _open[at].replacing(pane.working()));
+
+    final console = session.buildConsole;
+    console.start('${pane.profile} · $language');
+    unawaited(showBuildConsole(context, console, autoClose: true));
+
     try {
       final results = await compiler.compileDocument(
         // La referencia que usa el motor. Aquí no hace falta el documento
@@ -155,7 +163,9 @@ class _DocumentPageState extends State<DocumentPage> {
         document: '$courseId@$year/$documentId',
         profiles: [pane.profile],
         languages: [language],
+        onOutput: console.add,
       );
+      console.finish(ok: results.every((result) => result.ok));
       if (!mounted) return;
       final made = results.where((r) => r.ok && r.pdf != null).firstOrNull;
       setState(() {
@@ -167,6 +177,7 @@ class _DocumentPageState extends State<DocumentPage> {
       });
       await _preview?.refreshExisting();
     } catch (error) {
+      console.finish(failure: error);
       if (!mounted) return;
       setState(() {
         final now = _open.indexWhere((group) => group.id == groupId);

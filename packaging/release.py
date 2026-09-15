@@ -7,15 +7,27 @@ la máquina de nadie, no se puede probar, y falla en el peor momento: cuando ya
 se han compilado los tres sistemas. Esto sí se puede ejecutar a mano:
 
     python3 packaging/release.py version
+    python3 packaging/release.py next
     python3 packaging/release.py check
 
 Sin dependencias y con Python 3.9, igual que el motor, para que se pueda
 ejecutar en cualquiera de las tres máquinas del CI sin instalar nada.
 
-La regla que impone: **la versión la dice `app/pubspec.yaml` y nadie más.**
-Ni el workflow, ni un `input` de la acción, ni un fichero aparte. Publicar es
-leer lo que ya está escrito, y por eso el procedimiento normal es cambiar una
-línea y pulsar un botón.
+Las dos reglas que impone:
+
+**La versión la dice `app/pubspec.yaml` y nadie más.** Ni el workflow, ni un
+`input` de la acción, ni un fichero aparte. Todo lo que este programa imprime
+sale de leer esa línea.
+
+**Y el número lo sube el ciclo de publicación, no una persona.** Publicar sube
+la mediana --1.1.0 → 1.2.0-- y el build de uno en uno. La línea de
+`pubspec.yaml` deja de ser algo que se edita antes de publicar y pasa a ser el
+registro de lo último que se publicó. Lo que había antes era un número escrito
+a mano justo antes de pulsar el botón, que es la clase de paso que un día se
+olvida y publica la versión de encima de la anterior.
+
+Quien escribe el CHANGELOG necesita saber el número antes de que exista, y por
+eso está `next`: lo calcula sin tocar nada.
 """
 
 import argparse
@@ -74,6 +86,78 @@ def read_version():
     raise Problem("app/pubspec.yaml no tiene una línea `version:`")
 
 
+def write_version(name, build):
+    """Deja `version: <name>+<build>` en pubspec.yaml y no toca nada más.
+
+    Línea a línea en vez de con un parser de YAML por lo mismo que se lee así:
+    reescribir el fichero con PyYAML se llevaría por delante los comentarios,
+    que en `pubspec.yaml` son la documentación de Flutter sobre qué significa
+    cada campo.
+    """
+    with open(PUBSPEC, encoding="utf-8") as handle:
+        lines = handle.readlines()
+    for index, line in enumerate(lines):
+        if re.match(r"^version:\s*\S+\s*$", line):
+            lines[index] = "version: %s+%d\n" % (name, build)
+            break
+    else:
+        raise Problem("app/pubspec.yaml no tiene una línea `version:`")
+    with open(PUBSPEC, "w", encoding="utf-8") as handle:
+        handle.writelines(lines)
+
+
+#: Qué sube una publicación. La mediana: 1.1.0 → 1.2.0.
+#:
+#: Es la regla del ciclo, no una preferencia de quien publica. Didacta se
+#: reparte a un grupo que la actualiza sola, y lo que cada versión trae es
+#: «lo que se haya hecho desde la anterior» -- que es exactamente lo que una
+#: mediana significa. Un parche diría que sólo se han arreglado cosas, y eso
+#: nadie lo comprueba al pulsar el botón.
+DEFAULT_PART = "minor"
+
+
+def next_version(name, part=DEFAULT_PART):
+    """La versión que asignará la próxima publicación.
+
+    Función pura y probada aparte porque es la que decide el número que va a
+    quedar publicado para siempre: un `sed` dentro del workflow no se puede
+    ejecutar en la máquina de nadie ni probar, y se descubriría equivocado
+    cuando ya hay un tag con el número que no era.
+
+    Una preliberación es el caso que no tiene respuesta obvia, así que no se
+    adivina: `1.5.0-rc.1` publica como **su propia final**, `1.5.0`. Subir la
+    mediana ahí daría `1.6.0` y dejaría un `1.5.0` que nunca existió, que es
+    justo lo que un número de versión no debe hacer.
+    """
+    match = SEMVER.match(name)
+    if not match:
+        raise Problem("no es una versión semántica: %r" % name)
+    major, minor, patch = (int(match.group(index)) for index in (1, 2, 3))
+    if match.group(4):
+        return "%d.%d.%d" % (major, minor, patch)
+    if part == "major":
+        return "%d.0.0" % (major + 1)
+    if part == "minor":
+        return "%d.%d.0" % (major, minor + 1)
+    if part == "patch":
+        return "%d.%d.%d" % (major, minor, patch + 1)
+    raise Problem("no sé subir %r: es major, minor o patch" % part)
+
+
+def bump(part=DEFAULT_PART):
+    """Sube la versión de pubspec.yaml y devuelve `(antes, después, build)`.
+
+    El build sube siempre de uno en uno, publique lo que publique: es un
+    contador monótono --lo que Windows llama el sufijo de build y macOS
+    `CFBundleVersion`-- y su único trabajo es no repetirse nunca.
+    """
+    name, build = read_version()
+    new_name = next_version(name, part)
+    new_build = build + 1
+    write_version(new_name, new_build)
+    return name, new_name, new_build
+
+
 # ------------------------------------------------------------- changelog ---
 
 
@@ -98,11 +182,13 @@ def read_notes(version):
             break
     if start is None:
         raise Problem(
-            "CHANGELOG.md no tiene una sección para %s.\n"
-            "Añade una antes de publicar:\n\n"
+            "CHANGELOG.md no tiene una sección para %s.\n\n"
+            "%s es el número que asigna esta publicación: el ciclo sube la\n"
+            "mediana, y `python3 packaging/release.py next` lo dice antes de\n"
+            "lanzarlo. Añade la sección y vuelve a publicar:\n\n"
             "    ## %s — %s\n\n"
             "    - Lo que cambia…\n"
-            % (version, version, datetime.now().strftime("%Y-%m-%d"))
+            % (version, version, version, datetime.now().strftime("%Y-%m-%d"))
         )
 
     end = len(lines)
@@ -228,6 +314,31 @@ def cmd_tag(args):
     print("v%s" % name)
 
 
+def cmd_next(args):
+    """Qué número asignará la próxima publicación, sin tocar nada.
+
+    Es la orden que se ejecuta antes de escribir el CHANGELOG: la sección hay
+    que titularla con el número que va a salir, y este lo dice.
+    """
+    name, _ = read_version()
+    print(next_version(name, args.part))
+
+
+def cmd_bump(args):
+    """Sube la versión en pubspec.yaml.
+
+    La ejecuta cada trabajo del workflow sobre su propia copia nada más
+    descargarla, y el resultado es el mismo en los cuatro porque la función es
+    determinista. Así los binarios llevan dentro el número con el que se
+    publican sin tener que pasarse un commit entre trabajos.
+
+    A mano no hace falta ejecutarla nunca, y hacerlo se salta un número: el
+    ciclo la ejecuta igual la próxima vez.
+    """
+    before, after, build = bump(args.part)
+    print("%s → %s+%d" % (before, after, build))
+
+
 def cmd_notes(args):
     name, _ = read_version()
     print(read_notes(args.version or name))
@@ -239,6 +350,10 @@ def cmd_check(args):
     Va primero en el workflow a propósito: descubrir que falta la sección del
     CHANGELOG después de tres compilaciones de quince minutos es tirar media
     hora por algo que se ve en un segundo.
+
+    Se ejecuta **después** de `bump`, así que la versión que lee ya es la que
+    se va a publicar: aquí no hay ningún número especial, sólo el que está
+    escrito.
     """
     name, build = read_version()
     notes = read_notes(name)
@@ -322,6 +437,18 @@ def main(argv=None):
     )
     sub.add_parser("build", help="el build de pubspec.yaml").set_defaults(run=cmd_build)
     sub.add_parser("tag", help="el tag del release: vX.Y.Z").set_defaults(run=cmd_tag)
+
+    following = sub.add_parser(
+        "next", help="qué versión asignará la próxima publicación"
+    )
+    following.add_argument("--part", default=DEFAULT_PART,
+                           choices=["major", "minor", "patch"])
+    following.set_defaults(run=cmd_next)
+
+    raise_it = sub.add_parser("bump", help="sube la versión en pubspec.yaml")
+    raise_it.add_argument("--part", default=DEFAULT_PART,
+                          choices=["major", "minor", "patch"])
+    raise_it.set_defaults(run=cmd_bump)
 
     notes = sub.add_parser("notes", help="la sección del CHANGELOG")
     notes.add_argument("version", nargs="?")

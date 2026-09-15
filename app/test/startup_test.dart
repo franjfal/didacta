@@ -67,19 +67,20 @@ Future<void> pumpFromDisk(WidgetTester tester, Session session) async {
   await settle(tester);
 }
 
-Session sessionWith({CatalogueSource? source, String? clonePath}) => Session(
-  catalogueSource:
-      source ?? StaticCatalogueSource(catalogueWith(defaultUnits())),
-  tokenStore: StubStore(),
-  preferences: MemoryPreferences(
-    path: clonePath,
-    repos: clonePath == null
-        ? null
-        : Workspace([
-            ContentRepo(owner: 'x', name: 'repo', directory: clonePath),
-          ]).toJson(),
-  ),
-);
+Session sessionWith({CatalogueSource? source, String? clonePath}) =>
+    LocalSession(
+      catalogueSource:
+          source ?? StaticCatalogueSource(catalogueWith(defaultUnits())),
+      tokenStore: StubStore(),
+      preferences: MemoryPreferences(
+        path: clonePath,
+        repos: clonePath == null
+            ? null
+            : Workspace([
+                ContentRepo(owner: 'x', name: 'repo', directory: clonePath),
+              ]).toJson(),
+      ),
+    );
 
 void main() {
   // A tres anchos: es la pantalla que ningún otro test alcanza --todos

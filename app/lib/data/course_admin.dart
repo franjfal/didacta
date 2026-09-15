@@ -71,6 +71,7 @@ class CourseAdmin {
     required this.author,
     required this.token,
     required this.pushOnCommit,
+    this.beforeWrite,
   });
 
   /// El que sabe lanzar el motor. Se reutiliza en lugar de tener otro:
@@ -82,6 +83,13 @@ class CourseAdmin {
   final ({String name, String email})? author;
   final String token;
   final bool pushOnCommit;
+
+  /// Ponerse al día con GitHub antes de tocar nada.
+  ///
+  /// Lo pone la sesión, que es quien sabe cuándo se miró por última vez.
+  /// Crear o borrar una asignatura sobre una copia vieja del repositorio es
+  /// de lo que peor se arregla después: mueve ficheros y reescribe el índice.
+  final Future<void> Function()? beforeWrite;
 
   Future<AdminStatus> status() async {
     if (author == null) {
@@ -200,6 +208,14 @@ class CourseAdmin {
       throw const AdminException(
         'Un commit necesita un autor. Pon un nombre y un correo en Ajustes.',
       );
+    }
+
+    // Al día antes de tocar. Que no se pueda no para la operación: lo escrito
+    // queda en el clon y la barra de sincronización dice lo que falta.
+    try {
+      await beforeWrite?.call();
+    } catch (_) {
+      // Ya lo cuenta quien puso la llamada.
     }
 
     final String output;

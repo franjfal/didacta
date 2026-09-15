@@ -22,7 +22,7 @@ import 'package:didacta_app/ui/unit_preview.dart';
 import 'fixture.dart';
 
 Future<void> settle(WidgetTester tester) async {
-  for (var i = 0; i < 8; i += 1) {
+  for (var i = 0; i < 24; i += 1) {
     await tester.pump(const Duration(milliseconds: 20));
   }
 }
@@ -287,7 +287,10 @@ void main() {
     await tester.tap(compile);
     await settle(tester);
     expect(find.text('La compilación no se pudo lanzar'), findsOneWidget);
-    expect(find.textContaining('No such file or directory'), findsOneWidget);
+    // En los dos sitios: la pantalla de detrás y el terminal, que cuando
+    // algo falla se queda abierto en lugar de quitarse de en medio.
+    expect(find.textContaining('No such file or directory'), findsWidgets);
+    expect(find.byKey(const Key('build-console-lines')), findsOneWidget);
   });
 
   testWidgets('sin nada con lo que compilar, ofrece Ajustes y no un botón', (

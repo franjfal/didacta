@@ -280,6 +280,69 @@ class EngineTests(unittest.TestCase):
         self.assertIsNone(self.engine._write_injection(outdir, None, None))
 
 
+class StreamingTests(unittest.TestCase):
+    """Handing over the compiler's output while it is still being written.
+
+    No TeX here: what is under test is the plumbing, so the child is a shell
+    command that prints known lines. Testing it through latexmk would test
+    latexmk.
+    """
+
+    def setUp(self):
+        self.build_dir = tempfile.mkdtemp(prefix="didacta-test-")
+
+    def tearDown(self):
+        shutil.rmtree(self.build_dir, ignore_errors=True)
+
+    def engine(self, on_output=None):
+        return build_mod.Engine(LATEX_DIR, self.build_dir, on_output=on_output)
+
+    def test_every_line_is_handed_over_in_order(self):
+        seen = []
+        engine = self.engine(seen.append)
+        code, output = engine._execute(
+            [sys.executable, "-c",
+             "print('one'); print('two'); print('three')"],
+            self.build_dir,
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(seen, ["one", "two", "three"])
+        # Y también entera, que es de donde sale el mensaje de un fallo que
+        # LaTeX no llegó a contar en su log.
+        for word in ("one", "two", "three"):
+            self.assertIn(word, output)
+
+    def test_the_error_stream_is_handed_over_too(self):
+        # Un `latexmk` que no encuentra pdflatex se queja por ahí, y eso es
+        # exactamente lo que hay que poder leer.
+        seen = []
+        engine = self.engine(seen.append)
+        engine._execute(
+            [sys.executable, "-c",
+             "import sys; sys.stderr.write('boom\\n')"],
+            self.build_dir,
+        )
+        self.assertIn("boom", seen)
+
+    def test_a_failure_code_comes_back(self):
+        engine = self.engine(lambda line: None)
+        code, _ = engine._execute(
+            [sys.executable, "-c", "raise SystemExit(3)"], self.build_dir)
+        self.assertEqual(code, 3)
+
+    def test_without_a_listener_nothing_is_streamed_and_nothing_breaks(self):
+        # El camino de siempre: la línea de órdenes y CI no piden progreso, y
+        # no deben pagar por él.
+        engine = self.engine()
+        code, output = engine._execute(
+            [sys.executable, "-c", "print('quiet')"], self.build_dir)
+        self.assertEqual(code, 0)
+        self.assertIn("quiet", output)
+
+    def test_say_is_silent_when_nobody_is_listening(self):
+        self.engine().say("nadie lee esto")
+
+
 class ContentRepositoryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -7,6 +7,8 @@
 /// nothing.
 library;
 
+import 'dart:io';
+
 import 'package:didacta_app/data/app_info.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/data/secrets.dart';
@@ -14,6 +16,7 @@ import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/course_admin.dart';
+import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/catalogue.dart';
@@ -455,14 +458,34 @@ class FakeCompiler implements Compiler {
   Future<bool> isStale({required String pdf, required String unitPath}) async =>
       staleness[pdf] ?? false;
 
+  /// Lo que el motor «escribió» mientras compilaba.
+  ///
+  /// Una lista y no un texto: es lo que la consola recibe línea a línea, y un
+  /// test de la consola tiene que poder decir qué líneas llegaron y en qué
+  /// orden.
+  List<String> output = const ['=== fake', 'compilando', '--- ok'];
+
+  /// Las líneas que se entregaron, para comprobar que se entregaron.
+  final List<String> streamed = [];
+
+  void _stream(void Function(String line)? onOutput) {
+    if (onOutput == null) return;
+    for (final line in output) {
+      streamed.add(line);
+      onOutput(line);
+    }
+  }
+
   @override
   Future<List<CompileOutput>> compile({
     required String unitPath,
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   }) async {
     calls.add((profiles: profiles, languages: languages));
+    _stream(onOutput);
     if (failWith != null) throw failWith!;
     return outputs ??
         [
@@ -487,8 +510,10 @@ class FakeCompiler implements Compiler {
   Future<String> run(
     List<String> arguments, {
     bool allowFailure = false,
+    void Function(String line)? onOutput,
   }) async {
     commands.add(arguments);
+    _stream(onOutput);
     if (failWith != null) throw failWith!;
     // Todo menos una previsualización, como el motor: `remove` sin
     // `--apply` cuenta lo que se llevaría y no toca nada, y que un test
@@ -543,12 +568,14 @@ class FakeCompiler implements Compiler {
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   }) async {
     documentCalls.add((
       document: document,
       profiles: profiles,
       languages: languages,
     ));
+    _stream(onOutput);
     if (failWith != null) throw failWith!;
     return outputs ??
         [
@@ -691,6 +718,10 @@ class FakeSession extends Session {
          tokenStore: StubStore(),
        );
 
+  /// Sin red y sin preguntar: quien monta una pantalla ya ha entrado.
+  @override
+  Future<GitHubUser> whoIs(String token) async => testUser;
+
   final ContentGateway gatewayOverride;
 
   /// Null means "nothing to compile with", which is a state the screen has to
@@ -740,16 +771,80 @@ class FakeSession extends Session {
 /// Possible because `Session` takes an [AuthSession] and a [SecretStore]
 /// rather than the concrete Firebase and keychain classes -- which is the
 /// point of those interfaces existing.
+/// El llavero, en memoria.
+///
+/// Con un token dentro por defecto, y eso es deliberado: **sin sesión Didacta
+/// no se abre**, así que una pantalla que se prueba es siempre una pantalla de
+/// alguien que entró. Los tests de la puerta son los que piden un llavero
+/// vacío, y lo dicen: `StubStore(token: null)`.
 class StubStore implements SecretStore {
+  StubStore({this.token = 'gho_de_prueba'});
+
+  String? token;
+
   @override
   bool get canStoreSafely => true;
 
   @override
-  Future<String?> read() async => null;
+  Future<String?> read() async => token;
 
   @override
-  Future<void> write(String value) async {}
+  Future<void> write(String value) async => token = value;
 
   @override
-  Future<void> clear() async {}
+  Future<void> clear() async => token = null;
+}
+
+/// Quién contesta GitHub en un test.
+const GitHubUser testUser = GitHubUser(
+  login: 'profe',
+  name: 'Profe de Prueba',
+  email: 'profe@uv.es',
+);
+
+/// Una sesión de verdad que no pregunta a GitHub quién eres.
+///
+/// Para los tests que montan la aplicación entera: todo lo demás de `Session`
+/// es el de producción, y lo único que se sustituye es la única parte que
+/// necesita internet.
+class LocalSession extends Session {
+  LocalSession({
+    required super.catalogueSource,
+    required super.tokenStore,
+    super.preferences,
+    this.who = testUser,
+  });
+
+  /// Null es «GitHub no contesta», para probar el arranque sin red.
+  final GitHubUser? who;
+
+  /// A qué repositorios llega esta cuenta.
+  ///
+  /// Null --el valor por defecto-- es «a todos»: casi ningún test va de
+  /// permisos, y los que sí lo dicen poniendo la lista.
+  Set<String>? reaches;
+
+  /// Lo que se preguntó a GitHub, para comprobar que se preguntó.
+  final List<String> asked = [];
+
+  @override
+  Future<GitHubUser> whoIs(String token) async {
+    final found = who;
+    if (found == null) throw const SocketException('sin red');
+    return found;
+  }
+
+  @override
+  Future<GitHubRepo?> accessTo(String owner, String name) async {
+    asked.add('$owner/$name');
+    final allowed = reaches;
+    if (allowed != null && !allowed.contains('$owner/$name')) return null;
+    return GitHubRepo(
+      owner: owner,
+      name: name,
+      defaultBranch: 'main',
+      private: true,
+      canWrite: true,
+    );
+  }
 }

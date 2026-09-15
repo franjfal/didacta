@@ -551,3 +551,47 @@ class BuildInterfaceTests(unittest.TestCase):
         self.assertTrue(output.lstrip().startswith("["), output[:80])
         json.loads(output)
 
+    def test_progress_parses_on_the_commands_that_compile(self):
+        """La bandera existe donde compila algo, y en ningún sitio más.
+
+        `preview` y `build` son las dos órdenes que lanzan LaTeX y por tanto
+        las dos que tienen algo que contar mientras tanto. Que una de ellas
+        deje de aceptarla deja a la aplicación sin terminal y sin decir nada:
+        el JSON seguiría llegando igual.
+        """
+        for command in ("build", "preview"):
+            with self.subTest(command=command):
+                with self.assertRaises(SystemExit) as raised:
+                    self.cli.main([command, "--help"])
+                self.assertEqual(raised.exception.code, 0)
+        self.assertEqual(
+            self.run_cli("build", "mates@2024-2025/tema-1",
+                         "--list", "--json", "--progress"),
+            0,
+        )
+
+    def test_progress_goes_to_stderr_so_the_json_stays_readable(self):
+        """Las dos corrientes, una para cada lector.
+
+        Por la salida estándar habla el motor con el programa que lo llamó y
+        por la de error, con quien está mirando. Si el progreso se colara en
+        la primera, la aplicación tendría que aprender a saltárselo -- y lo
+        que la aplicación hace es justo enseñarlo aparte.
+        """
+        import contextlib
+        import io
+
+        args = ["--root", self.root, "build", "mates@2024-2025/tema-1",
+                "--json", "--progress"]
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            self.cli.main(args)
+
+        printed = out.getvalue().strip()
+        if printed:
+            # Sin TeX no llega a compilar y no imprime nada; con TeX imprime
+            # el informe, y tiene que seguir siendo JSON y nada más.
+            self.assertTrue(printed.startswith(("[", "{")), printed[:80])
+            json.loads(printed)
+        self.assertNotIn("=== ", printed)
+

@@ -26,7 +26,40 @@ El formato lo lee `packaging/release.py`, y es el mínimo que hace falta:
 El encabezado tiene que empezar por `## ` seguido de la versión. La fecha
 detrás es opcional y no se usa para nada más que para leerla aquí.
 
+**Qué versión.** La que asigne la próxima publicación, que sube la mediana por
+su cuenta. La dice:
+
+```
+python3 packaging/release.py next
+```
+
+Sin esa sección no se publica: el workflow se para antes de compilar nada.
+
 ---
+
+## 1.1.0 — 2026-09-15
+
+- **Compilar ya no es una espera a oscuras.** Se abre un terminal que enseña
+  lo que LaTeX va escribiendo, línea a línea y mientras compila: qué fichero
+  está leyendo, qué paquete carga y en qué pasada va. Vale tanto para una
+  unidad suelta como para un tema entero.
+- La ventana se quita sola cuando la compilación sale bien y se queda cuando
+  algo falla, que es cuando hay algo que leer. El registro se puede volver a
+  abrir, y copiar entero.
+- **Didacta pide entrar en GitHub para abrirse.** El material está en
+  repositorios privados y cada cambio se guarda con el nombre de quien lo hace,
+  así que la sesión es el permiso. Se entra una vez; a partir de ahí la
+  aplicación abre también sin conexión, y solo vuelve a pedirlo si GitHub deja
+  de reconocer la sesión.
+- **Solo se abren repositorios de GitHub a los que llegas.** Una carpeta
+  cualquiera del disco ya no vale: lo que se escriba en ella no tendría a dónde
+  ir. Al añadir un clon se comprueba de qué repositorio es y si tu cuenta
+  alcanza ese repositorio, y se pone al día con GitHub en ese momento.
+- **Lo que se edita está al día.** Antes de guardar un cambio se comprueba que
+  el repositorio no se haya quedado atrás, y si se ha quedado se trae. La
+  comprobación vale unos minutos, así que guardar sigue siendo instantáneo. Si
+  las dos versiones han seguido por su lado, no se toca nada y se avisa en la
+  barra de arriba.
 
 ## 1.0.0 — 2026-09-15
 
