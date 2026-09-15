@@ -31,13 +31,55 @@ import 'theme.dart';
 /// Devuelve true cuando algo cambió, para que quien llame recargue el
 /// catálogo: el índice se genera aparte, así que después de crear un año la
 /// pantalla no lo ve hasta que se vuelve a leer.
+/// Pregunta en qué repositorio se crea algo.
+///
+/// Con uno solo no pregunta: no hay nada que elegir. Con varios **sí**, y no
+/// elige por su cuenta: crear una asignatura en el repositorio equivocado es
+/// de las cosas que cuesta media tarde deshacer, porque hay que mover
+/// ficheros y rehacer dos historiales.
+Future<String?> pickRepository(BuildContext context, Session session) async {
+  final repos = session.workspace.repos;
+  // Sin repositorios abiertos no hay nada que preguntar y tampoco nada que
+  // impedir: quien llame ya se encontrará con que no hay dónde escribir.
+  if (repos.isEmpty) return '';
+  if (repos.length == 1) return repos.single.id;
+  return showDialog<String>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: const Text('¿En qué repositorio?'),
+      children: [
+        for (final repo in repos)
+          SimpleDialogOption(
+            key: Key('pick-repo-${repo.id}'),
+            onPressed: () => Navigator.of(context).pop(repo.id),
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Color(repo.colour),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(repo.id),
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 Future<bool> runAdmin(
   BuildContext context,
   Session session,
   Future<void> Function(CourseAdmin admin) action, {
   required String done,
+  String? repo,
 }) async {
-  final admin = session.admin();
+  final admin = session.admin(repo: repo);
   final messenger = ScaffoldMessenger.of(context);
   // Los dos, antes del primer `await`: después, el `context` de la pantalla
   // puede haber dejado de valer, y son lo que hace falta para decir cómo ha

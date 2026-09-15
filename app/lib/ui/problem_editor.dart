@@ -14,6 +14,10 @@ library;
 import 'package:flutter/material.dart';
 
 import '../model/problem_file.dart';
+import '../model/tex_wrap.dart';
+import 'tex_field.dart';
+import 'tex_highlight.dart';
+import 'tex_toolbar.dart';
 import 'theme.dart';
 
 class ProblemFields extends StatefulWidget {
@@ -36,9 +40,21 @@ class ProblemFields extends StatefulWidget {
 }
 
 class _ProblemFieldsState extends State<ProblemFields> {
-  final Map<ProblemPart, TextEditingController> _fields = {
-    for (final part in ProblemPart.values) part: TextEditingController(),
+  /// Cada campo pinta su LaTeX: dentro de un enunciado hay fórmulas, órdenes
+  /// y entornos como en cualquier otro trozo del fichero.
+  final Map<ProblemPart, TexEditingController> _fields = {
+    for (final part in ProblemPart.values) part: TexEditingController(),
   };
+
+  /// Un foco por campo, para que la barra sepa sobre cuál actuar.
+  final Map<ProblemPart, FocusNode> _focus = {
+    for (final part in ProblemPart.values) part: FocusNode(),
+  };
+
+  /// El campo que tiene el cursor. Se apunta al **ganar** el foco y no al
+  /// perderlo: pulsar un botón de la barra se lo quita al campo, y apagarla
+  /// por eso la dejaría inservible.
+  ProblemPart _focused = ProblemPart.statement;
 
   /// Lo último que escribieron los campos, para no recargarlos con lo que
   /// ellos mismos acaban de producir: reescribir un controlador mientras se
@@ -48,6 +64,12 @@ class _ProblemFieldsState extends State<ProblemFields> {
   @override
   void initState() {
     super.initState();
+    for (final entry in _focus.entries) {
+      entry.value.addListener(() {
+        if (!mounted || !entry.value.hasFocus || _focused == entry.key) return;
+        setState(() => _focused = entry.key);
+      });
+    }
     _load(widget.text);
   }
 
@@ -69,6 +91,9 @@ class _ProblemFieldsState extends State<ProblemFields> {
     for (final controller in _fields.values) {
       controller.dispose();
     }
+    for (final node in _focus.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
@@ -85,6 +110,23 @@ class _ProblemFieldsState extends State<ProblemFields> {
       return _DoesNotFit(reason: problem.shape.reason!);
     }
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // La misma barra que en todas partes, menos lo que aquí sería mentira:
+        // envolver en `answer` el campo de la respuesta.
+        TexToolbar(
+          controller: _fields[_focused]!,
+          focusNode: _focus[_focused],
+          enabled: !widget.readOnly,
+          without: const {TexWrapGroup.problem},
+        ),
+        Expanded(child: _list(problem)),
+      ],
+    );
+  }
+
+  Widget _list(ProblemFile problem) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 60),
       children: [
@@ -92,6 +134,7 @@ class _ProblemFieldsState extends State<ProblemFields> {
           _Field(
             part: part,
             controller: _fields[part]!,
+            focusNode: _focus[part]!,
             readOnly: widget.readOnly,
             // El enunciado es lo que más se escribe; los otros dos suelen
             // ser cortos, y darles el mismo alto de entrada haría una
@@ -117,13 +160,15 @@ class _Field extends StatelessWidget {
   const _Field({
     required this.part,
     required this.controller,
+    required this.focusNode,
     required this.readOnly,
     required this.minLines,
     required this.onChanged,
   });
 
   final ProblemPart part;
-  final TextEditingController controller;
+  final TexEditingController controller;
+  final FocusNode focusNode;
   final bool readOnly;
   final int minLines;
   final ValueChanged<String> onChanged;
@@ -159,19 +204,23 @@ class _Field extends StatelessWidget {
         style: const TextStyle(fontSize: 11.5, color: didactaMuted),
       ),
       const SizedBox(height: 6),
-      TextField(
-        key: Key('problem-${environmentFor(part)}'),
-        controller: controller,
-        readOnly: readOnly,
-        minLines: minLines,
-        maxLines: null,
-        style: monoStyle,
-        keyboardType: TextInputType.multiline,
-        textCapitalization: TextCapitalization.none,
-        autocorrect: false,
-        enableSuggestions: false,
-        onChanged: onChanged,
-        decoration: InputDecoration(
+      // La misma caja que en todas partes: el LaTeX coloreado y una columna
+      // por cada entorno que envuelve a la línea. Dentro de un enunciado hay
+      // fórmulas, listas y entornos como en cualquier otro trozo del fichero.
+      Container(
+        decoration: BoxDecoration(
+          color: didactaCard,
+          border: Border.all(color: didactaRule),
+          borderRadius: BorderRadius.circular(Radii.control),
+        ),
+        child: TexField(
+          key: Key('problem-${environmentFor(part)}'),
+          controller: controller,
+          focusNode: focusNode,
+          readOnly: readOnly,
+          minLines: minLines,
+          onChanged: onChanged,
+          padding: const EdgeInsets.all(10),
           hintText: switch (part) {
             ProblemPart.statement => 'Derivar \$f(x) = x^2\$.',
             ProblemPart.answer => '\$f\'(x) = 2x\$',

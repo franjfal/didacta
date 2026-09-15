@@ -1,41 +1,32 @@
 /// Didacta.
 ///
-/// Brings up Firebase, the session and the router, in that order, and shows
-/// the app once the catalogue has loaded.
+/// Levanta la sesión y el router, en ese orden, y enseña la aplicación en
+/// cuanto el catálogo está cargado.
 ///
-/// Everything configurable is a build-time define, so one build can serve any
-/// content repository:
+/// Aquí ya no se configura casi nada: los repositorios se eligen dentro de la
+/// aplicación --se entra en GitHub y se añaden-- y cada uno se clona en su
+/// carpeta. Antes había que compilar una versión por repositorio, con su
+/// dueño, su nombre y la dirección de un Worker metidos en el binario.
 ///
-///     flutter build web --release \
-///       --dart-define=DIDACTA_INDEX=generated \
-///       --dart-define=DIDACTA_API=https://didacta-api.<sub>.workers.dev \
-///       --dart-define=DIDACTA_OWNER=franjfal \
-///       --dart-define=DIDACTA_REPO=didacta_db
+/// Lo único que se puede pasar al compilar es el Client ID de la OAuth App, y
+/// tampoco hace falta: se escribe en Ajustes y se guarda.
 ///
-/// On desktop there is one more, for a clone that is already on disk:
-///
-///     flutter run -d macos --dart-define=DIDACTA_CLONE=~/didacta_db
-///
-/// The defaults point at a `generated/` directory next to the app and at no
-/// API, which is exactly what a static publication of a content repository
-/// looks like: the library browses, and nothing can be written until an API or
-/// a token is configured.
+///     flutter build macos --release \
+///       --dart-define=DIDACTA_GITHUB_CLIENT=Iv1.xxxxxxxx
 library;
 
 import 'dart:ui' show PlatformDispatcher;
 
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
+
 import 'package:file_selector/file_selector.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'data/auth.dart';
 import 'data/catalogue_source.dart';
-import 'data/firebase_options.dart';
-import 'data/local_clone.dart';
 import 'data/preferences.dart';
 import 'data/repository_access.dart';
 import 'router.dart';
@@ -49,22 +40,13 @@ const String indexBase = String.fromEnvironment(
   defaultValue: 'generated',
 );
 
-/// The Worker's origin. Empty is legitimate: a desktop build with a token
-/// needs no API at all.
-const String apiBase = String.fromEnvironment('DIDACTA_API');
-
-const String contentOwner = String.fromEnvironment(
-  'DIDACTA_OWNER',
-  defaultValue: 'franjfal',
-);
-const String contentRepo = String.fromEnvironment(
-  'DIDACTA_REPO',
-  defaultValue: 'didacta_db',
-);
-const String contentBranch = String.fromEnvironment(
-  'DIDACTA_BRANCH',
-  defaultValue: 'main',
-);
+/// El Client ID de la OAuth App con la que se entra en GitHub.
+///
+/// Se puede pasar al compilar, pero no hace falta: se escribe en Ajustes y se
+/// guarda. Es público por definición --una aplicación de escritorio no puede
+/// esconder un secreto-- así que no hay nada que proteger aquí; lo que se
+/// evita es tener que recompilar para cambiar de aplicación de OAuth.
+const String githubClientId = String.fromEnvironment('DIDACTA_GITHUB_CLIENT');
 
 /// A clone already on disk, for a desktop build handed to someone who has
 /// the repository. Ignored on the web, and overridden by whatever is chosen
@@ -102,69 +84,34 @@ Future<void> main() async {
     return true;
   };
 
-  // Firebase is only for identity, and the app has to work without it: a
-  // static publication of public material needs no sign-in, and a
-  // misconfigured project must not take the whole app down with it.
-  //
-  // Only attempted where there are options for the platform, which today
-  // means the web. On desktop there is no `GoogleService-Info.plist` and
-  // there does not need to be: a clone on your own disk takes its commit
-  // author from git, so the whole editor works with no sign-in anywhere.
-  var firebaseReady = false;
-  if (kIsWeb) {
-    try {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
-      firebaseReady = true;
-    } catch (error) {
-      debugPrint('Firebase no disponible: $error');
-    }
-  }
-
-  // Dónde está el repositorio de contenido. Lo que se haya elegido en
-  // Ajustes manda sobre esto; esto es solo el valor por defecto, y buscarlo
-  // es mejor que no tenerlo: en escritorio, sin clon no hay catálogo --el
-  // índice se pediría por HTTP a una ruta relativa que no resuelve-- y la
-  // pantalla diría «no se pudo cargar el catálogo» sin que falte ninguno.
-  final defaultClone = clonePath.isNotEmpty
-      ? clonePath
-      : await LocalClone.discover(repo: contentRepo) ?? '';
+  // Dónde se clonan los repositorios, si no se ha dicho otra cosa.
+  final home =
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
 
   final session = Session(
     catalogueSource: const HttpCatalogueSource(base: indexBase),
-    // Only when Firebase actually came up. `DidactaAuth` reads
-    // `FirebaseAuth.instance` in its constructor, so building it without
-    // Firebase throws here -- before `runApp` -- and the window stays black
-    // with the reason only in a log. That is exactly what happened.
-    auth: firebaseReady
-        ? DidactaAuth()
-        : const UnavailableAuth(
-            'Firebase no está configurado en esta versión, así que no hay '
-            'inicio de sesión. En escritorio no hace falta: el clon local '
-            'toma el autor de los commits de la identidad de git.',
-          ),
     tokenStore: TokenStore(),
-    apiBase: apiBase,
-    contentOwner: contentOwner,
-    contentRepo: contentRepo,
-    contentBranch: contentBranch,
     preferences: StoredPreferences(
-      defaultClonePath: defaultClone,
+      defaultClonePath: '',
       defaultEnginePath: enginePath,
+      defaultClientId: githubClientId,
     ),
   );
 
-  runApp(DidactaApp(session: session, firebaseReady: firebaseReady));
+  // La primera vez, los repositorios se clonan aquí. Se puede cambiar en
+  // Ajustes; esto es solo un sitio razonable para no preguntar de entrada.
+  if ((await session.preferences.cloneBase() ?? '').isEmpty &&
+      home.isNotEmpty) {
+    await session.preferences.setCloneBase('$home/Didacta');
+  }
+
+  runApp(DidactaApp(session: session));
 }
 
 class DidactaApp extends StatefulWidget {
-  const DidactaApp({
-    super.key,
-    required this.session,
-    this.firebaseReady = true,
-  });
+  const DidactaApp({super.key, required this.session});
 
   final Session session;
-  final bool firebaseReady;
 
   @override
   State<DidactaApp> createState() => _DidactaAppState();
@@ -200,7 +147,7 @@ class _DidactaAppState extends State<DidactaApp> {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider.value(
       value: widget.session,
-      child: _Bootstrap(firebaseReady: widget.firebaseReady),
+      child: const _Bootstrap(),
     );
   }
 }
@@ -211,9 +158,7 @@ class _DidactaAppState extends State<DidactaApp> {
 /// and a router whose screens have to handle a null catalogue puts that check
 /// in every one of them for a state none of them can do anything about.
 class _Bootstrap extends StatefulWidget {
-  const _Bootstrap({required this.firebaseReady});
-
-  final bool firebaseReady;
+  const _Bootstrap();
 
   @override
   State<_Bootstrap> createState() => _BootstrapState();
@@ -259,13 +204,21 @@ class _BootstrapState extends State<_Bootstrap> {
         // aquí arriba, por encima del Scaffold, **no hay nada que pinte el
         // fondo**, así que un banner con alfa se componía sobre el fondo
         // nativo de la ventana. En un macOS en modo oscuro eso es negro, y
-        // el aviso de Firebase salía como una franja negra con el texto
+        // un aviso salía como una franja negra con el texto
         // ilegible. Un color de fondo opaco lo arregla y no cuesta nada.
         child: ColoredBox(
           color: didactaSurface,
           child: Column(
             children: [
-              if (!widget.firebaseReady) const _FirebaseBanner(),
+              // Sin repositorios la aplicación abre vacía a propósito: no
+              // es un error, es que falta decirle con qué trabajas. Un aviso
+              // con el camino, en lugar de una biblioteca vacía sin
+              // explicación.
+              // Y solo cuando además no hay nada cargado: si la biblioteca
+              // tiene unidades, el aviso sería mentira --hay con qué
+              // trabajar-- y estaría ocupando sitio en cada pantalla.
+              if (session.needsRepository && session.catalogue.units.isEmpty)
+                const _NoRepositoriesBanner(),
               if (session.catalogue.errors.isNotEmpty)
                 _ErrorBanner(errors: session.catalogue.errors),
               if (session.indexNote != null)
@@ -293,42 +246,6 @@ class _Splash extends StatelessWidget {
   );
 }
 
-class _FirebaseBanner extends StatelessWidget {
-  const _FirebaseBanner();
-
-  @override
-  Widget build(BuildContext context) => Material(
-    // Opaco: con alfa se compone sobre el fondo de la ventana, que en un
-    // macOS oscuro es negro.
-    color: const Color(0xFFFBF3E4),
-    child: const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, size: 15, color: Color(0xFF8A5D1B)),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Firebase no ha arrancado: se puede leer el catálogo, pero '
-              'no iniciar sesión.',
-              style: TextStyle(fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-/// What the engine complained about while reading the repository.
-///
-/// Surfaced rather than swallowed: an interface built on a repository that
-/// does not load cleanly should say so.
-/// Que el índice se ha regenerado, o que no se ha podido.
-///
-/// Se enseña porque cambia lo que la biblioteca lista. Quien acaba de mover
-/// una carpeta tiene que ver que la aplicación se ha enterado; y quien no ha
-/// tocado nada, enterarse de que alguien sí.
 class _IndexBanner extends StatelessWidget {
   const _IndexBanner({required this.note, required this.onDismiss});
 
@@ -366,6 +283,42 @@ class _IndexBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    ),
+  );
+}
+
+/// Todavía no hay ningún repositorio con el que trabajar.
+class _NoRepositoriesBanner extends StatelessWidget {
+  const _NoRepositoriesBanner();
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: didactaAccentDark.withValues(alpha: 0.10),
+    child: InkWell(
+      onTap: () => context.go(Routes.settings()),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(
+          children: [
+            const Icon(Icons.folder_open_outlined, size: 16),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Todavía no hay ningún repositorio abierto. Añade uno en '
+                'Ajustes: desde GitHub, o eligiendo una carpeta que ya tengas '
+                'clonada en el disco.',
+                style: TextStyle(fontSize: 12.5),
+              ),
+            ),
+            const SizedBox(width: 8),
+            FilledButton(
+              key: const Key('go-to-settings'),
+              onPressed: () => context.go(Routes.settings()),
+              child: const Text('Abrir Ajustes'),
+            ),
+          ],
+        ),
       ),
     ),
   );
@@ -462,14 +415,18 @@ class _LoadFailureState extends State<_LoadFailure> {
 
   void onRetry() => widget.session.start();
 
-  /// Elegir la carpeta del clon y volver a arrancar.
+  /// Añadir una carpeta que ya esté clonada, y volver a arrancar.
+  ///
+  /// Sin pasar por GitHub: de qué repositorio es lo dice su propio remoto.
+  /// Aquí importa más que en ningún sitio, porque esta pantalla es la que se
+  /// ve cuando todavía no hay nada configurado.
   Future<void> _choose() async {
     try {
       final chosen = await getDirectoryPath(
         confirmButtonText: 'Usar este repositorio',
       );
       if (chosen == null) return;
-      await widget.session.useClone(chosen);
+      await widget.session.addExistingRepository(chosen);
       await widget.session.start();
     } catch (problem) {
       if (mounted) setState(() => _problem = problem);
@@ -482,7 +439,7 @@ class _LoadFailureState extends State<_LoadFailure> {
     // el consejo es otro: aquí no falta ningún catálogo, falta decir dónde
     // está el repositorio.
     final noClone =
-        widget.session.canUseClone && widget.session.clonePath == null;
+        widget.session.canUseClone && widget.session.workspace.isEmpty;
     return _body(context, noClone);
   }
 
@@ -534,9 +491,10 @@ class _LoadFailureState extends State<_LoadFailure> {
                 const SizedBox(height: 20),
                 if (noClone) ...[
                   const Text(
-                    'No hay ninguna carpeta del repositorio de contenido '
-                    'elegida, así que no hay de dónde leer el catálogo. '
-                    'Elige el clon que tengas en el disco.',
+                    'Todavía no hay ningún repositorio de contenido abierto. '
+                    'Añade uno: si ya lo tienes clonado en el disco, elige su '
+                    'carpeta; si no, entra en GitHub desde Ajustes y añádelo '
+                    'desde allí.',
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 6),
@@ -582,7 +540,7 @@ class _LoadFailureState extends State<_LoadFailure> {
                         OutlinedButton.icon(
                           key: const Key('choose-clone'),
                           icon: const Icon(Icons.folder_open, size: 18),
-                          label: const Text('Elegir la carpeta…'),
+                          label: const Text('Añadir una carpeta…'),
                           onPressed: _choose,
                         ),
                       FilledButton.icon(

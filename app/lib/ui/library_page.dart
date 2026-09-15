@@ -775,8 +775,12 @@ class _Breadcrumbs extends StatelessWidget {
             label: topic.label,
             onTap: path.tag == null
                 ? null
-                : () => onPath(BrowsePath(
-                    category: category?.category, topic: topic.topic)),
+                : () => onPath(
+                    BrowsePath(
+                      category: category?.category,
+                      topic: topic.topic,
+                    ),
+                  ),
             last: path.tag == null,
           ),
         if (path.tag != null)
@@ -1572,6 +1576,7 @@ class UnitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fallback = unit.titleIsFallback(language);
+    final repoColour = watchSession(context).colourOf(unit.repo);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Hoverable(
@@ -1616,6 +1621,21 @@ class UnitCard extends StatelessWidget {
                     child: Dot(colour: kindColour(unit.kind)),
                   ),
                   const SizedBox(width: 8),
+                  // El repositorio del que sale, cuando hay más de uno: dos
+                  // pueden tener la misma ruta y son cosas distintas.
+                  if (repoColour != null) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3, right: 6),
+                      child: Container(
+                        width: 3,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: Color(repoColour),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ],
                   Expanded(
                     child: Text(
                       unit.title(language),

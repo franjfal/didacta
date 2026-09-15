@@ -170,6 +170,50 @@ void main() {
     });
   });
 
+  group('escribir alrededor', () {
+    test('lo marcado queda dentro, y marcado', () {
+      final result = insertAround('La norma de x.', 13, 13, r'\sqrt{', '}');
+      expect(result.text, r'La norma de x\sqrt{}.');
+      expect(result.start, result.end);
+    });
+
+    test('con un trozo marcado, lo mete dentro', () {
+      const text = 'La norma de x.';
+      final result = insertAround(text, 12, 13, r'\sqrt{', '}');
+      expect(result.text, r'La norma de \sqrt{x}.');
+      // Y lo deja marcado, para poder seguir envolviéndolo.
+      expect(result.text.substring(result.start, result.end), 'x');
+    });
+
+    test('lo que envuelve deja fuera los blancos del borde', () {
+      final result = insertAround('La norma de x .', 12, 14, r'\sqrt{', '}');
+      expect(result.text, r'La norma de \sqrt{x} .');
+    });
+
+    test('un símbolo suelto no envuelve nada', () {
+      final result = insertAround('a  b', 2, 2, r'\leq ', '');
+      expect(result.text, r'a \leq  b');
+    });
+  });
+
+  test('la negrita se pone y se quita como cualquier envoltorio', () {
+    const text = 'Una norma.';
+    final wrapped = toggleWrap(text, 4, 9, wrapper('textbf'));
+    expect(wrapped.text, r'Una \textbf{norma}.');
+    final undone = toggleWrap(
+      wrapped.text,
+      wrapped.start,
+      wrapped.end,
+      wrapper('textbf'),
+    );
+    expect(undone.text, text);
+  });
+
+  test('la cursiva reconoce el nombre que usa el material migrado', () {
+    final result = toggleWrap(r'a \textit{eso} b', 12, 12, wrapper('emph'));
+    expect(result.text, 'a eso b');
+  });
+
   test('insertar una pausa sustituye lo marcado', () {
     const text = 'Antes XXX después.';
     final result = insertSnippet(text, 6, 9, '\\dpause');

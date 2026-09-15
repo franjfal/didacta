@@ -68,7 +68,9 @@ void main() {
             catalogue: catalogueWith(defaultUnits()),
           );
 
-          await tester.pumpWidget(DidactaApp(session: session));
+          await tester.pumpWidget(
+            DidactaApp(session: session),
+          );
           await settle(tester);
 
           // Reached by navigating rather than by mounting the screen alone,

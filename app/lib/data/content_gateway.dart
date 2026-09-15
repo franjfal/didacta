@@ -22,9 +22,7 @@
 library;
 
 import '../model/catalogue.dart';
-import 'auth.dart';
 import 'local_clone.dart';
-import 'repository_access.dart';
 
 /// A file as it exists in the repository right now.
 class ContentFile {
@@ -76,12 +74,6 @@ enum ContentFailure {
 
 /// How the content is being reached, for the interface to show plainly.
 enum GatewayKind {
-  /// Through the Worker: identity by Firebase, policy in the repository.
-  api,
-
-  /// Straight to GitHub with a token from the keychain.
-  direct,
-
   /// A clone on this machine, driven by git. Works with no network.
   clone,
 
@@ -147,154 +139,6 @@ class UnconfiguredGateway extends ContentGateway {
 }
 
 /// Through the Worker. The web path.
-class ApiGateway extends ContentGateway {
-  const ApiGateway({required this.api, required this.authorisation});
-
-  final DidactaApi api;
-  final Authorisation authorisation;
-
-  @override
-  GatewayKind get kind => GatewayKind.api;
-
-  @override
-  bool get canWrite => authorisation.mayWriteSomething;
-
-  @override
-  String describe() {
-    if (!authorisation.signedIn) return 'Sin sesión: solo material público.';
-    final who = authorisation.email ?? 'sesión iniciada';
-    final role = authorisation.role;
-    if (role == null) {
-      return '$who — sin permisos en access.json, solo lectura pública.';
-    }
-    return '$who — rol «$role» vía la API.';
-  }
-
-  @override
-  Future<ContentFile> read(String path) async {
-    try {
-      final file = await api.readFile(path);
-      return ContentFile(path: file.path, text: file.text, sha: file.sha);
-    } on ApiException catch (error) {
-      throw ContentException(error.message, kind: _kindOf(error));
-    }
-  }
-
-  @override
-  Future<String> commit({
-    required String path,
-    required String text,
-    required String sha,
-    required String message,
-  }) async {
-    try {
-      final written = await api.writeFile(
-        path: path,
-        text: text,
-        sha: sha,
-        message: message,
-      );
-      return written.sha;
-    } on ApiException catch (error) {
-      throw ContentException(error.message, kind: _kindOf(error));
-    }
-  }
-
-  static ContentFailure _kindOf(ApiException error) {
-    if (error.isConflict) return ContentFailure.conflict;
-    if (error.isForbidden) return ContentFailure.forbidden;
-    if (error.isUnauthenticated) return ContentFailure.unauthenticated;
-    if (error.status == 404) return ContentFailure.missing;
-    return ContentFailure.other;
-  }
-}
-
-/// Straight to GitHub with a stored token. The desktop path.
-///
-/// Note what is *not* here: any consultation of `access.json`. A token that
-/// can write the repository can write all of it, and pretending otherwise in
-/// the interface would be theatre. The policy is enforced by the Worker for
-/// people who go through it; someone holding a repository token is, by
-/// definition, someone trusted with the repository.
-class DirectGateway extends ContentGateway {
-  const DirectGateway({required this.github, required this.author});
-
-  final GitHubDirect github;
-
-  /// Who the commits are attributed to.
-  final ({String name, String email})? author;
-
-  @override
-  GatewayKind get kind => GatewayKind.direct;
-
-  @override
-  bool get canWrite => true;
-
-  @override
-  String describe() {
-    final who = author?.email ?? 'token local';
-    return '$who — directo a ${github.owner}/${github.repo} '
-        '(${github.branch}).';
-  }
-
-  @override
-  Future<ContentFile> read(String path) async {
-    try {
-      final file = await github.read(path);
-      return ContentFile(path: path, text: file.text, sha: file.sha);
-    } on RepositoryAccessException catch (error) {
-      throw ContentException(error.message);
-    }
-  }
-
-  @override
-  Future<String> commit({
-    required String path,
-    required String text,
-    required String sha,
-    required String message,
-  }) async {
-    try {
-      return await github.commit(
-        path: path,
-        text: text,
-        sha: sha,
-        message: message,
-        author: author,
-      );
-    } on RepositoryAccessException catch (error) {
-      throw ContentException(
-        error.message,
-        kind: error.message.contains('ha cambiado')
-            ? ContentFailure.conflict
-            : ContentFailure.other,
-      );
-    }
-  }
-}
-
-/// The paths a unit's files live at, derived rather than guessed.
-///
-/// Kept here next to the gateway because it is the one place that knows how a
-/// catalogue record maps onto repository paths, and getting it wrong means
-/// editing the wrong file.
-extension UnitPaths on Unit {
-  String fileFor(String language) => '$path/$language.tex';
-
-  String get metadataPath => '$path/unit.yaml';
-}
-
-/// A clone on this machine, read and written through git.
-///
-/// The offline path, and the one the requirement asked for: everything is on
-/// disk, so reading is instant and works on a train, and a save is a commit
-/// followed by a push. Nothing about git has to be set up by hand -- the
-/// token the author pasted is what authenticates the push.
-///
-/// Note what this does *not* do: consult `access.json`. A token that can
-/// write the repository can write all of it, and a gateway that pretended
-/// otherwise in the interface would be theatre. The policy is the Worker's
-/// job, for the case where the app cannot be trusted with a token at all.
 class CloneGateway extends ContentGateway {
   const CloneGateway({
     required this.clone,
@@ -399,4 +243,17 @@ class CloneGateway extends ContentGateway {
       );
     }
   }
+}
+
+/// Dónde vive cada fichero de una unidad.
+///
+/// Aquí al lado de las pasarelas porque es el único sitio que sabe cómo una
+/// ficha del catálogo se convierte en rutas del repositorio, y equivocarse
+/// significa editar el fichero que no era. Las rutas son **relativas a su
+/// repositorio**: con varios abiertos, la ruta sola no dice de cuál es, y por
+/// eso cada unidad lleva el suyo y cada pantalla pide la pasarela de ese.
+extension UnitPaths on Unit {
+  String fileFor(String language) => '$path/$language.tex';
+
+  String get metadataPath => '$path/unit.yaml';
 }

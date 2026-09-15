@@ -62,6 +62,12 @@ const Color didactaEx = Color(0xFFBE8237);
 const Color didactaQues = Color(0xFF1E8C96);
 const Color didactaTeacher = Color(0xFFAA4B4B);
 
+/// El añil de una orden de LaTeX: `didactaAlgo` en el PDF.
+const Color didactaAlgo = Color(0xFF646EAF);
+
+/// El morado de un corolario, y de los caracteres que LaTeX se reserva.
+const Color didactaCor = Color(0xFF8C5A96);
+
 /// El verde de una respuesta corta: `didactaAnswerRule` del PDF.
 ///
 /// Los colores de los entornos son los de `didacta-colours.sty`, y no una

@@ -217,7 +217,10 @@ void main() {
         const LibraryFilter(block: 'problems').apply([explicacion]),
         hasLength(1),
       );
-      expect(const LibraryFilter(block: 'theory').apply([explicacion]), isEmpty);
+      expect(
+        const LibraryFilter(block: 'theory').apply([explicacion]),
+        isEmpty,
+      );
     });
 
     test('un índice viejo, sin bloque, lo deduce del árbol', () {

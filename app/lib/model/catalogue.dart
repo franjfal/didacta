@@ -94,6 +94,7 @@ class Unit {
   const Unit({
     required this.id,
     required this.path,
+    this.repo = '',
     required this.area,
     required this.block,
     required this.kind,
@@ -111,9 +112,10 @@ class Unit {
     this.difficulty,
   });
 
-  factory Unit.fromJson(Map<String, dynamic> json) {
+  factory Unit.fromJson(Map<String, dynamic> json, {String repo = ''}) {
     final languages = (json['languages'] as Map?) ?? const {};
     return Unit(
+      repo: repo,
       id: json['id'] as String? ?? '',
       path: json['path'] as String? ?? '',
       area: json['area'] as String? ?? 'content',
@@ -148,6 +150,16 @@ class Unit {
   }
 
   final String id;
+
+  /// De qué repositorio salió.
+  ///
+  /// Un mismo usuario puede trabajar en varios a la vez, y la ruta sola no
+  /// identifica nada: dos repositorios pueden tener
+  /// `content/analysis/normed/definition` y son unidades distintas. Vacío
+  /// cuando se lee un índice suelto, que es como está escrito cualquier test
+  /// que no trate de esto.
+  final String repo;
+
   final String path;
 
   /// El árbol donde vive el fichero. Almacenamiento, no significado: qué
@@ -190,6 +202,15 @@ class Unit {
       path.contains('/') ? path.substring(path.indexOf('/') + 1) : path;
 
   bool get isProblem => block == 'problems';
+
+  /// Si se edita por campos: enunciado, resultado y solución.
+  ///
+  /// Lo decide **qué es** la unidad, no dónde vive. Una explicación teórica o
+  /// un ejemplo dentro de una práctica de problemas son `kind: theory` y
+  /// `kind: example` con `block: problems`, y las dos cosas son ciertas: van
+  /// con la hoja, y no tienen resultado ni solución que rellenar. Ofrecerles
+  /// tres campos es inventarles una estructura que no tienen.
+  bool get editsAsProblem => kind == 'problem';
 
   /// The title in [language], falling back the way the engine does: the
   /// requested language, then the reference, then anything, then the id.
@@ -268,6 +289,7 @@ class Document {
   const Document({
     required this.id,
     required this.kind,
+    this.repo = '',
     required this.language,
     required this.titles,
     required this.profiles,
@@ -275,15 +297,17 @@ class Document {
     this.structure = const [],
   });
 
-  factory Document.fromJson(Map<String, dynamic> json) => Document(
-    id: json['id'] as String? ?? '',
-    kind: json['kind'] as String? ?? 'theory',
-    language: json['language'] as String? ?? 'es',
-    titles: _stringMap(json['title']),
-    profiles: _stringList(json['profiles']),
-    unitRefs: _stringList(json['unitRefs']),
-    structure: _structure(json['structure']),
-  );
+  factory Document.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
+      Document(
+        repo: repo,
+        id: json['id'] as String? ?? '',
+        kind: json['kind'] as String? ?? 'theory',
+        language: json['language'] as String? ?? 'es',
+        titles: _stringMap(json['title']),
+        profiles: _stringList(json['profiles']),
+        unitRefs: _stringList(json['unitRefs']),
+        structure: _structure(json['structure']),
+      );
 
   /// La estructura tal como la escribe el motor: una lista de mapas de una
   /// sola clave, `{section: {es: ...}}` o `{unit: ruta}`.
@@ -309,6 +333,12 @@ class Document {
   }
 
   final String id;
+
+  /// El repositorio del que sale. Una asignatura puede tener temas en varios,
+  /// y cada documento vive entero en el suyo: se compila contra su raíz y
+  /// referencia unidades suyas.
+  final String repo;
+
   final String kind;
   final String language;
   final Map<String, String> titles;
@@ -341,15 +371,43 @@ class CourseYear {
     this.group,
   });
 
-  factory CourseYear.fromJson(Map<String, dynamic> json) => CourseYear(
-    year: json['year'] as String? ?? '',
-    language: json['language'] as String? ?? 'es',
-    group: json['group'] is String ? json['group'] as String : null,
-    documents: [
-      for (final item in (json['documents'] as List?) ?? const [])
-        Document.fromJson((item as Map).cast<String, dynamic>()),
-    ],
-  );
+  factory CourseYear.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
+      CourseYear(
+        year: json['year'] as String? ?? '',
+        language: json['language'] as String? ?? 'es',
+        group: json['group'] is String ? json['group'] as String : null,
+        documents: [
+          for (final item in (json['documents'] as List?) ?? const [])
+            Document.fromJson(
+              (item as Map).cast<String, dynamic>(),
+              repo: repo,
+            ),
+        ],
+      );
+
+  /// El mismo año visto en dos repositorios: los documentos se juntan.
+  ///
+  /// Cada documento sigue siendo de su repositorio; lo que se mezcla es la
+  /// lista. Un id repetido en los dos se queda con el primero y se cuenta
+  /// como conflicto, porque son dos documentos distintos que dicen ser el
+  /// mismo y elegir en silencio es esconder el problema.
+  CourseYear mergedWith(CourseYear other, List<String> conflicts) {
+    final known = {for (final document in documents) document.id};
+    final added = <Document>[];
+    for (final document in other.documents) {
+      if (known.contains(document.id)) {
+        conflicts.add('${document.id} está en dos repositorios');
+        continue;
+      }
+      added.add(document);
+    }
+    return CourseYear(
+      year: year,
+      language: language,
+      group: group ?? other.group,
+      documents: [...documents, ...added],
+    );
+  }
 
   final String year;
   final String language;
@@ -357,6 +415,9 @@ class CourseYear {
 
   /// In composition order, which is content: the order units are taught in.
   final List<Document> documents;
+
+  /// Los repositorios que aportan algo a este año.
+  Set<String> get repos => {for (final document in documents) document.repo};
 }
 
 /// A subject, across the years it has run.
@@ -371,7 +432,7 @@ class Course {
     this.institution,
   });
 
-  factory Course.fromJson(Map<String, dynamic> json) {
+  factory Course.fromJson(Map<String, dynamic> json, {String repo = ''}) {
     final years = (json['years'] as Map?) ?? const {};
     return Course(
       id: json['id'] as String? ?? '',
@@ -384,8 +445,34 @@ class Course {
         for (final entry in years.entries)
           entry.key as String: CourseYear.fromJson(
             (entry.value as Map).cast<String, dynamic>(),
+            repo: repo,
           ),
       },
+    );
+  }
+
+  /// La misma asignatura descrita en dos repositorios.
+  ///
+  /// Los años se juntan y, dentro de cada año, los documentos. Lo que es un
+  /// dato suelto --el título, el código, quién la da-- se queda con el primero
+  /// que lo tenga: son la misma asignatura, y dos `course.yaml` que no
+  /// coincidan es algo que hay que arreglar en el repositorio, no aquí.
+  Course mergedWith(Course other, List<String> conflicts) {
+    final merged = <String, CourseYear>{...years};
+    for (final entry in other.years.entries) {
+      final mine = merged[entry.key];
+      merged[entry.key] = mine == null
+          ? entry.value
+          : mine.mergedWith(entry.value, conflicts);
+    }
+    return Course(
+      id: id,
+      titles: {...other.titles, ...titles},
+      language: language,
+      code: code ?? other.code,
+      teacher: teacher ?? other.teacher,
+      institution: institution ?? other.institution,
+      years: merged,
     );
   }
 
@@ -409,6 +496,9 @@ class Course {
   /// Newest first: the year being taught is the one you want on top.
   List<String> get sortedYears =>
       years.keys.toList()..sort((a, b) => b.compareTo(a));
+
+  /// Los repositorios que aportan algo a esta asignatura.
+  Set<String> get repos => {for (final year in years.values) ...year.repos};
 }
 
 /// An output profile, so the interface can offer what exists rather than a
@@ -464,6 +554,7 @@ class Catalogue {
     required Map<String, dynamic> manifest,
     required Map<String, dynamic> units,
     required Map<String, dynamic> courses,
+    String repo = '',
   }) {
     for (final entry in {
       'manifest': manifest,
@@ -492,11 +583,11 @@ class Catalogue {
       contentHash: manifest['contentHash'] as String? ?? '',
       units: [
         for (final item in (units['units'] as List?) ?? const [])
-          Unit.fromJson((item as Map).cast<String, dynamic>()),
+          Unit.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
       ],
       courses: [
         for (final item in (courses['courses'] as List?) ?? const [])
-          Course.fromJson((item as Map).cast<String, dynamic>()),
+          Course.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
       ],
       profiles: [
         for (final item in (manifest['profiles'] as List?) ?? const [])
@@ -537,22 +628,96 @@ class Catalogue {
     return all.toList()..sort();
   }
 
-  Unit? unitByPath(String path) {
+  /// Los repositorios que hay cargados, en el orden en que se leyeron.
+  List<String> get repos {
+    final found = <String>[];
     for (final unit in units) {
-      if (unit.path == path) return unit;
+      if (unit.repo.isNotEmpty && !found.contains(unit.repo)) {
+        found.add(unit.repo);
+      }
+    }
+    for (final course in courses) {
+      for (final repo in course.repos) {
+        if (repo.isNotEmpty && !found.contains(repo)) found.add(repo);
+      }
+    }
+    return found;
+  }
+
+  /// Varios repositorios vistos como una sola biblioteca.
+  ///
+  /// Lo que se mezcla es la asignatura: los años y los documentos de cada uno
+  /// se juntan, y cada documento sigue siendo de su repositorio --se compila
+  /// contra su raíz y referencia unidades suyas--. Las unidades no se mezclan
+  /// nunca: dos repositorios pueden tener la misma ruta y son cosas distintas.
+  static Catalogue merge(List<Catalogue> parts) {
+    if (parts.isEmpty) {
+      return const Catalogue(
+        name: 'Didacta',
+        languages: ['es'],
+        defaultLanguage: 'es',
+        contentHash: '',
+        units: [],
+        courses: [],
+        profiles: [],
+        errors: [],
+      );
+    }
+    if (parts.length == 1) return parts.single;
+
+    final courses = <String, Course>{};
+    final conflicts = <String>[];
+    for (final part in parts) {
+      for (final course in part.courses) {
+        final mine = courses[course.id];
+        courses[course.id] = mine == null
+            ? course
+            : mine.mergedWith(course, conflicts);
+      }
+    }
+
+    final languages = <String>[];
+    for (final part in parts) {
+      for (final code in part.languages) {
+        if (!languages.contains(code)) languages.add(code);
+      }
+    }
+
+    return Catalogue(
+      name: parts.first.name,
+      languages: languages,
+      defaultLanguage: parts.first.defaultLanguage,
+      // Uno por repositorio, juntos: sirve para lo de siempre --saber si esto
+      // sigue describiendo lo que hay en disco-- y cambia si cambia
+      // cualquiera.
+      contentHash: [for (final part in parts) part.contentHash].join('+'),
+      units: [for (final part in parts) ...part.units],
+      courses: courses.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
+      profiles: parts.first.profiles,
+      errors: [for (final part in parts) ...part.errors, ...conflicts],
+    );
+  }
+
+  /// La unidad en esa ruta. Con varios repositorios hay que decir en cuál:
+  /// la misma ruta puede existir en dos y son unidades distintas.
+  Unit? unitByPath(String path, {String? repo}) {
+    for (final unit in units) {
+      if (unit.path != path) continue;
+      if (repo != null && repo.isNotEmpty && unit.repo != repo) continue;
+      return unit;
     }
     return null;
   }
 
   /// Units a composition reference resolves to, matching the engine's rule:
   /// the reference is a path without its area, so try both trees.
-  Unit? unitByReference(String reference) {
+  Unit? unitByReference(String reference, {String? repo}) {
     final trimmed = reference.replaceAll(RegExp(r'^/+|/+$'), '');
     for (final area in const ['content', 'problems']) {
-      final found = unitByPath('$area/$trimmed');
+      final found = unitByPath('$area/$trimmed', repo: repo);
       if (found != null) return found;
     }
-    return unitByPath(trimmed);
+    return unitByPath(trimmed, repo: repo);
   }
 }
 

@@ -42,8 +42,57 @@ abstract class CatalogueSource {
   /// truth on this machine, so reading the index from it means the library
   /// cannot disagree with the files the editor is writing, and it needs no
   /// network.
-  static CatalogueSource? inClone(String directory) =>
-      platform.fileSource(directory);
+  static CatalogueSource? inClone(String directory, {String repo = ''}) =>
+      platform.fileSource(directory, repo);
+
+  /// Varios repositorios leídos como una sola biblioteca.
+  static CatalogueSource merged(List<CatalogueSource> parts) =>
+      MergedCatalogueSource(parts);
+}
+
+/// Varios orígenes, una biblioteca.
+///
+/// Cada repositorio trae su propio índice generado --lo escribe el motor en
+/// su carpeta-- y aquí se juntan. Lo que se mezcla es la asignatura; las
+/// unidades se quedan cada una con la suya, porque dos repositorios pueden
+/// tener la misma ruta y son cosas distintas.
+class MergedCatalogueSource extends CatalogueSource {
+  const MergedCatalogueSource(this.parts);
+
+  final List<CatalogueSource> parts;
+
+  @override
+  String get describe => parts.map((each) => each.describe).join(', ');
+
+  @override
+  Future<Catalogue> load() async {
+    final loaded = <Catalogue>[];
+    final failures = <String>[];
+    for (final part in parts) {
+      try {
+        loaded.add(await part.load());
+      } catch (thrown) {
+        // Un repositorio que no carga no puede llevarse por delante a los
+        // demás: quien tenga uno de los dos tiene que ver el suyo.
+        failures.add('${part.describe}: $thrown');
+      }
+    }
+    if (loaded.isEmpty && failures.isNotEmpty) {
+      throw CatalogueFormatException(failures.join('\n'));
+    }
+    final merged = Catalogue.merge(loaded);
+    if (failures.isEmpty) return merged;
+    return Catalogue(
+      name: merged.name,
+      languages: merged.languages,
+      defaultLanguage: merged.defaultLanguage,
+      contentHash: merged.contentHash,
+      units: merged.units,
+      courses: merged.courses,
+      profiles: merged.profiles,
+      errors: [...merged.errors, ...failures],
+    );
+  }
 }
 
 /// Reads the three generated files over HTTP.

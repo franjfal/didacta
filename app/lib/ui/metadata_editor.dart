@@ -107,7 +107,9 @@ class _MetadataEditorState extends State<MetadataEditor> {
       _conflicted = false;
     });
     try {
-      final file = await widget.session.gateway.read(widget.unit.metadataPath);
+      final file = await widget.session
+          .gatewayFor(widget.unit.repo)
+          .read(widget.unit.metadataPath);
       if (!mounted) return;
       setState(() {
         _file = file;
@@ -166,7 +168,7 @@ class _MetadataEditorState extends State<MetadataEditor> {
       );
     }
 
-    final canWrite = widget.session.gateway.canWrite;
+    final canWrite = widget.session.canWriteIn(widget.unit.repo);
     final patch = YamlPatch(_text);
     final size = diffSize(_loaded, _text);
 
@@ -235,12 +237,14 @@ class _MetadataEditorState extends State<MetadataEditor> {
       _conflicted = false;
     });
     try {
-      final sha = await widget.session.gateway.commit(
-        path: widget.unit.metadataPath,
-        text: _text,
-        sha: _file?.sha ?? '',
-        message: message,
-      );
+      final sha = await widget.session
+          .gatewayFor(widget.unit.repo)
+          .commit(
+            path: widget.unit.metadataPath,
+            text: _text,
+            sha: _file?.sha ?? '',
+            message: message,
+          );
       if (!mounted) return;
       setState(() {
         _loaded = _text;

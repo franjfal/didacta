@@ -163,7 +163,7 @@ Future<DocumentReading> readDocument({
       continue;
     }
 
-    final chosen = _languageFor(unit, language);
+    final chosen = languageForUnit(unit, language);
     if (chosen == null) {
       pieces.add(
         ReadingGap(
@@ -211,7 +211,11 @@ Future<DocumentReading> readDocument({
 
 /// El idioma que se va a leer de verdad, como lo elige LaTeX: el pedido, y si
 /// no está, el de referencia, y si tampoco, el primero que exista.
-String? _languageFor(Unit unit, String language) {
+///
+/// Público porque la vista lo necesita para lo mismo: cambiar el idioma del
+/// documento entero es volver a hacer esta elección en cada unidad, y hacerla
+/// de otra manera enseñaría un documento que no es el que se compila.
+String? languageForUnit(Unit unit, String language) {
   if (unit.statusIn(language).exists) return language;
   if (unit.statusIn(unit.reference).exists) return unit.reference;
   for (final code in const ['es', 'va', 'en']) {

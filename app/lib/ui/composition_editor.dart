@@ -45,6 +45,9 @@ class CompositionEditor extends StatefulWidget {
   /// Where the composition of a year lives.
   String get path => 'courses/$courseId/$year/year.yaml';
 
+  /// El repositorio del documento: es su `year.yaml` el que se edita.
+  String get repo => session.documentIn(courseId, year, documentId)?.repo ?? '';
+
   @override
   State<CompositionEditor> createState() => _CompositionEditorState();
 }
@@ -75,7 +78,9 @@ class _CompositionEditorState extends State<CompositionEditor> {
       _conflicted = false;
     });
     try {
-      final file = await widget.session.gateway.read(widget.path);
+      final file = await widget.session
+          .gatewayFor(widget.repo)
+          .read(widget.path);
       final composition = CompositionFile(file.text);
       final block = composition.blockFor(widget.documentId);
       if (block == null) {
@@ -137,7 +142,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
     }
 
     final session = widget.session;
-    final canWrite = session.gateway.canWrite;
+    final canWrite = session.canWriteIn(widget.repo);
     final size = diffSize(_loaded, _text);
     final active = _entries.where((e) => e.enabled).length;
 
@@ -251,7 +256,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
   /// handles are already absent without write access; this is the belt to
   /// that braces.
   void _reorder(int from, int to) {
-    if (!widget.session.gateway.canWrite) return;
+    if (!widget.session.canWriteIn(widget.repo)) return;
     final next = [..._entries];
     next.insert(to, next.removeAt(from));
     _apply(next);
@@ -380,12 +385,14 @@ class _CompositionEditorState extends State<CompositionEditor> {
       _conflicted = false;
     });
     try {
-      final sha = await widget.session.gateway.commit(
-        path: widget.path,
-        text: _text,
-        sha: _file?.sha ?? '',
-        message: message,
-      );
+      final sha = await widget.session
+          .gatewayFor(widget.repo)
+          .commit(
+            path: widget.path,
+            text: _text,
+            sha: _file?.sha ?? '',
+            message: message,
+          );
       if (!mounted) return;
       setState(() {
         _loaded = _text;

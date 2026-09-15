@@ -10,6 +10,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// What the app remembers between runs, other than secrets.
 abstract class Preferences {
+  /// Los repositorios abiertos, serializados.
+  ///
+  /// Aquí y no en el llavero: es una lista de rutas y de colores, no un
+  /// secreto. El token sí es un secreto y vive aparte.
+  Future<String?> workspace();
+  Future<void> setWorkspace(String value);
+
+  /// El Client ID de la OAuth App con la que se entra en GitHub.
+  ///
+  /// Configurable y no compilado dentro: es público por definición --una
+  /// aplicación de escritorio no puede esconderlo-- y así se puede cambiar la
+  /// aplicación de OAuth sin volver a compilar.
+  Future<String?> githubClientId();
+  Future<void> setGithubClientId(String value);
+
+  /// Dónde se clonan los repositorios nuevos.
+  Future<String?> cloneBase();
+  Future<void> setCloneBase(String path);
+
   Future<String?> clonePath();
   Future<void> setClonePath(String? path);
 
@@ -52,7 +71,12 @@ class StoredPreferences implements Preferences {
   const StoredPreferences({
     this.defaultClonePath = '',
     this.defaultEnginePath = '',
+    this.defaultClientId = '',
   });
+
+  /// El Client ID que traiga la compilación, si trae alguno. Lo que se haya
+  /// guardado manda por encima.
+  final String defaultClientId;
 
   /// Where the clone is when nothing has been chosen yet.
   ///
@@ -64,6 +88,9 @@ class StoredPreferences implements Preferences {
   /// Igual, para el motor.
   final String defaultEnginePath;
 
+  static const String _workspace = 'didacta.workspace';
+  static const String _clientId = 'didacta.github.clientId';
+  static const String _cloneBase = 'didacta.clone.base';
   static const String _clone = 'didacta.clone.path';
   static const String _push = 'didacta.clone.push';
   static const String _engine = 'didacta.engine.path';
@@ -84,6 +111,31 @@ class StoredPreferences implements Preferences {
     }
     return defaultClonePath.isEmpty ? null : defaultClonePath;
   }
+
+  @override
+  Future<String?> workspace() async =>
+      (await SharedPreferences.getInstance()).getString(_workspace);
+
+  @override
+  Future<void> setWorkspace(String value) async =>
+      (await SharedPreferences.getInstance()).setString(_workspace, value);
+
+  @override
+  Future<String?> githubClientId() async =>
+      (await SharedPreferences.getInstance()).getString(_clientId) ??
+      (defaultClientId.isEmpty ? null : defaultClientId);
+
+  @override
+  Future<void> setGithubClientId(String value) async =>
+      (await SharedPreferences.getInstance()).setString(_clientId, value);
+
+  @override
+  Future<String?> cloneBase() async =>
+      (await SharedPreferences.getInstance()).getString(_cloneBase);
+
+  @override
+  Future<void> setCloneBase(String path) async =>
+      (await SharedPreferences.getInstance()).setString(_cloneBase, path);
 
   @override
   Future<void> setClonePath(String? path) async {
@@ -179,11 +231,39 @@ class StoredPreferences implements Preferences {
 
 /// For tests, and for a platform where nothing is remembered.
 class MemoryPreferences implements Preferences {
-  MemoryPreferences({this.path, this.engine, this.push = true});
+  MemoryPreferences({
+    this.path,
+    this.engine,
+    this.push = true,
+    this.repos,
+    this.clientId,
+    this.base,
+  });
 
   String? path;
   String? engine;
   bool push;
+  String? repos;
+  String? clientId;
+  String? base;
+
+  @override
+  Future<String?> workspace() async => repos;
+
+  @override
+  Future<void> setWorkspace(String value) async => repos = value;
+
+  @override
+  Future<String?> githubClientId() async => clientId;
+
+  @override
+  Future<void> setGithubClientId(String value) async => clientId = value;
+
+  @override
+  Future<String?> cloneBase() async => base;
+
+  @override
+  Future<void> setCloneBase(String value) async => base = value;
 
   @override
   Future<String?> enginePath() async => engine;

@@ -43,7 +43,9 @@ Future<FakeSession> pumpApp(WidgetTester tester) async {
     gatewayOverride: FakeGateway(),
     catalogue: catalogueWith(defaultUnits()),
   );
-  await tester.pumpWidget(DidactaApp(session: session));
+  await tester.pumpWidget(
+    DidactaApp(session: session),
+  );
   await settle(tester);
   return session;
 }

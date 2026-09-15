@@ -49,10 +49,9 @@ estabas.
   propio clon para que no pueda discrepar de los ficheros que el editor escribe.
 - **directo a GitHub** (escritorio, sin clon): un token de permisos limitados en
   el llavero del sistema, contra la API de GitHub.
-- **el Worker** (web): un navegador no puede guardar un secreto —lo que la página
-  puede leer lo puede leer cualquiera con las herramientas de desarrollo—, así
-  que aquí no hay token: la app demuestra quién es con un token de Firebase de
-  vida corta y el Worker aplica `access.json`.
+- **clones locales**: uno por repositorio, con el token de GitHub que dejó el
+  sign in. Todo el trabajo es sobre disco, así que funciona sin red, y enviar
+  es un push.
 
 Se eligen en ese orden, y el orden no es arbitrario: cada paso está más lejos de
 la máquina, y quien ha clonado el repositorio en este equipo ya ha dicho lo que

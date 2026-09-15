@@ -367,7 +367,7 @@ class QuickLookButton extends StatelessWidget {
     String path, {
     bool reveal = false,
   }) async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: unit.repo);
     if (compiler == null) return;
     final messenger = ScaffoldMessenger.of(context);
     try {

@@ -248,9 +248,7 @@ class _ProcessCompiler implements Compiler {
     // cuánto enseña cada versión las decide el motor, y deducirlas aquí del
     // id era la misma cosa sabida en dos sitios. Ya se había desincronizado:
     // `handout-answers` salía de la familia `notes`.
-    return [
-      for (final item in _listIn(output, unitPath)) _profileFrom(item),
-    ];
+    return [for (final item in _listIn(output, unitPath)) _profileFrom(item)];
   }
 
   static BuildableProfile _profileFrom(
@@ -447,8 +445,18 @@ class _ProcessCompiler implements Compiler {
   /// propósito: borrar por patrón en un directorio es la clase de atajo que
   /// un día se lleva algo que no era.
   static const _leftovers = [
-    '.log', '.aux', '.out', '.toc', '.synctex.gz',
-    '.fls', '.fdb_latexmk', '.nav', '.snm', '.vrb', '.bbl', '.blg',
+    '.log',
+    '.aux',
+    '.out',
+    '.toc',
+    '.synctex.gz',
+    '.fls',
+    '.fdb_latexmk',
+    '.nav',
+    '.snm',
+    '.vrb',
+    '.bbl',
+    '.blg',
   ];
 
   @override

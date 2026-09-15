@@ -73,6 +73,22 @@ void main() {
     expect(colourOf(highlight(text, dim: true), 'Dentro.'), didactaInk);
   });
 
+  test('una orden, unas matemáticas y un comentario van de tres colores', () {
+    final span = highlight(r'\section{Normas} con $a+b$ % nota');
+    expect(colourOf(span, r'\section'), didactaAlgo);
+    expect(colourOf(span, 'a+b'), didactaProp);
+    expect(colourOf(span, '% nota'), isNot(didactaInk));
+    // Y lo que es prosa, prosa.
+    expect(colourOf(span, ' con '), didactaInk);
+  });
+
+  test('el nombre del entorno manda sobre el color de la orden', () {
+    final span = highlight('\\begin{frame}\nA\n\\end{frame}\n');
+    // `\begin{frame}` entero va del color de la diapositiva, no del añil de
+    // las órdenes: es lo que se busca al recorrer un fichero.
+    expect(colourOf(span, '\\begin{frame}'), didactaAccentDark);
+  });
+
   test('el texto entero sobrevive, carácter a carácter', () {
     const text = '\\begin{frame}\n% nota\nUna cosa.\n\\end{frame}\n';
     final span = highlight(text, dim: true);

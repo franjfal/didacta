@@ -84,23 +84,32 @@ void main() {
       expect(problem.has(ProblemPart.answer), isFalse);
     });
 
-    test('con los campos dentro del exercise, el enunciado es el enunciado', () {
-      // La forma que escribe `didacta new`, y la del material migrado. El
-      // enunciado acaba donde empieza lo que lleva dentro: si llegara hasta
-      // el `\end{exercise}` se comería la pista, el resultado, la solución y
-      // la corrección --y escribir en el campo los borraría--.
-      final problem = ProblemFile(nested);
-      expect(problem.shape.fits, isTrue);
-      expect(problem.part(ProblemPart.statement), contains('Derivar'));
-      expect(problem.part(ProblemPart.statement), isNot(contains('pista')));
-      expect(problem.part(ProblemPart.statement), isNot(contains('potencia')));
-      expect(problem.part(ProblemPart.answer), r"$f'(x) = 2x$");
-      expect(problem.part(ProblemPart.solution), 'Por la regla de la potencia.');
-      // El corte está en el primer entorno de dentro, así que lo que haya
-      // suelto antes --un `\dmarks`, un `\includegraphics`-- es enunciado y
-      // se edita con él. Es donde tiene que estar: se escribió ahí.
-      expect(problem.part(ProblemPart.statement), contains(r'\dmarks{4}'));
-    });
+    test(
+      'con los campos dentro del exercise, el enunciado es el enunciado',
+      () {
+        // La forma que escribe `didacta new`, y la del material migrado. El
+        // enunciado acaba donde empieza lo que lleva dentro: si llegara hasta
+        // el `\end{exercise}` se comería la pista, el resultado, la solución y
+        // la corrección --y escribir en el campo los borraría--.
+        final problem = ProblemFile(nested);
+        expect(problem.shape.fits, isTrue);
+        expect(problem.part(ProblemPart.statement), contains('Derivar'));
+        expect(problem.part(ProblemPart.statement), isNot(contains('pista')));
+        expect(
+          problem.part(ProblemPart.statement),
+          isNot(contains('potencia')),
+        );
+        expect(problem.part(ProblemPart.answer), r"$f'(x) = 2x$");
+        expect(
+          problem.part(ProblemPart.solution),
+          'Por la regla de la potencia.',
+        );
+        // El corte está en el primer entorno de dentro, así que lo que haya
+        // suelto antes --un `\dmarks`, un `\includegraphics`-- es enunciado y
+        // se edita con él. Es donde tiene que estar: se escribió ahí.
+        expect(problem.part(ProblemPart.statement), contains(r'\dmarks{4}'));
+      },
+    );
 
     test('un fichero sin entornos es todo enunciado', () {
       // 72 de los 429 están así: enunciados que la migración no envolvió.
@@ -186,7 +195,10 @@ void main() {
         lessThan(text.indexOf(r'\end{exercise}')),
       );
       expect(ProblemFile(text).part(ProblemPart.answer), '42');
-      expect(ProblemFile(text).part(ProblemPart.statement), contains('Derivar'));
+      expect(
+        ProblemFile(text).part(ProblemPart.statement),
+        contains('Derivar'),
+      );
     });
 
     test('vaciar el enunciado no se lleva el entorno', () {

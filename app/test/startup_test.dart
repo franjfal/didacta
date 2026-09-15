@@ -19,12 +19,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:didacta_app/data/auth.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/main.dart';
+import 'package:didacta_app/model/workspace.dart';
 import 'package:didacta_app/state/session.dart';
-import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
 
@@ -52,91 +51,37 @@ Future<void> settle(WidgetTester tester) async {
   }
 }
 
-Session sessionWith({
-  required AuthSession auth,
-  CatalogueSource? source,
-  String? clonePath,
-}) => Session(
+/// Arranca la aplicación dejando correr el reloj de verdad.
+///
+/// Hace falta cuando el arranque toca el disco: dentro de `testWidgets` el
+/// tiempo es falso, y una lectura de fichero se queda esperando para siempre
+/// por mucho que se pumpee. Con `runAsync` corre de verdad, y después se
+/// pinta con el reloj falso de siempre.
+Future<void> pumpFromDisk(WidgetTester tester, Session session) async {
+  await tester.runAsync(() async {
+    await tester.pumpWidget(
+      DidactaApp(session: session),
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+  });
+  await settle(tester);
+}
+
+Session sessionWith({CatalogueSource? source, String? clonePath}) => Session(
   catalogueSource:
       source ?? StaticCatalogueSource(catalogueWith(defaultUnits())),
-  auth: auth,
   tokenStore: StubStore(),
-  apiBase: '',
-  contentOwner: 'franjfal',
-  contentRepo: 'didacta_db',
-  contentBranch: 'main',
-  preferences: MemoryPreferences(path: clonePath),
+  preferences: MemoryPreferences(
+    path: clonePath,
+    repos: clonePath == null
+        ? null
+        : Workspace([
+            ContentRepo(owner: 'x', name: 'repo', directory: clonePath),
+          ]).toJson(),
+  ),
 );
 
 void main() {
-  testWidgets('sin Firebase arranca y llega a la biblioteca', (tester) async {
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      DidactaApp(
-        session: sessionWith(auth: const UnavailableAuth()),
-        // Como en escritorio: Firebase no ha arrancado.
-        firebaseReady: false,
-      ),
-    );
-    await settle(tester);
-
-    // La biblioteca, no una pantalla en blanco. Dos veces: en la
-    // navegación y en la cabecera de la página.
-    expect(find.text('Biblioteca'), findsNWidgets(2));
-    expect(find.textContaining('4 unidades'), findsOneWidget);
-    // Y lo dice en lugar de fingir que se puede iniciar sesión.
-    expect(find.textContaining('Firebase no ha arrancado'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('el aviso de Firebase se lee, no es una franja negra', (
-    tester,
-  ) async {
-    // El fallo que esto coge se veía horrible y solo en algunas máquinas:
-    // este aviso vive **por encima** del Scaffold, donde nada pinta el
-    // fondo, y llevaba un color con alfa. En un macOS en modo oscuro se
-    // componía sobre el fondo nativo de la ventana --negro-- y salía una
-    // franja negra con el texto ilegible.
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      DidactaApp(
-        session: sessionWith(auth: const UnavailableAuth()),
-        firebaseReady: false,
-      ),
-    );
-    await settle(tester);
-
-    final banner = find.ancestor(
-      of: find.textContaining('Firebase no ha arrancado'),
-      matching: find.byType(Material),
-    );
-    final colour = tester.widget<Material>(banner.first).color!;
-    expect(colour.a, 1.0, reason: 'con alfa se compone sobre la ventana');
-    // Y el texto encima tiene que leerse.
-    expect(contrast(didactaInk, colour), greaterThanOrEqualTo(7));
-  });
-
-  testWidgets('con Firebase arranca sin la advertencia', (tester) async {
-    tester.view.physicalSize = const Size(1200, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(
-      DidactaApp(session: sessionWith(auth: StubAuth()), firebaseReady: true),
-    );
-    await settle(tester);
-
-    expect(find.text('Biblioteca'), findsNWidgets(2));
-    expect(find.textContaining('Firebase no ha arrancado'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
   // A tres anchos: es la pantalla que ningún otro test alcanza --todos
   // tienen un catálogo que carga-- y es justo donde se colaba un
   // desbordamiento que tapaba el motivo, que es lo único que hay en ella.
@@ -148,19 +93,12 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(
-        DidactaApp(
-          session: sessionWith(
-            auth: const UnavailableAuth(),
-            source: const HttpCatalogueSource(base: 'http://127.0.0.1:1/nada'),
-          ),
-          firebaseReady: false,
-        ),
-      );
-      await settle(tester);
+      // Con un repositorio abierto: sin ninguno, que no haya catálogo no es
+      // un fallo sino una instalación recién puesta, y la pantalla es otra.
+      await pumpFromDisk(tester, sessionWith(clonePath: '/didacta-no-existe'));
 
       expect(find.text('No se pudo cargar el catálogo'), findsOneWidget);
-      expect(find.textContaining('http://127.0.0.1:1/nada'), findsWidgets);
+      expect(find.textContaining('/didacta-no-existe'), findsWidgets);
       expect(tester.takeException(), isNull, reason: 'desborda en ${size.key}');
     });
   }
@@ -184,11 +122,7 @@ void main() {
     await tester.runAsync(() async {
       await tester.pumpWidget(
         DidactaApp(
-          session: sessionWith(
-            auth: const UnavailableAuth(),
-            clonePath: clone.path,
-          ),
-          firebaseReady: false,
+          session: sessionWith(clonePath: clone.path),
         ),
       );
       // Pintando y esperando de verdad: `start()` sale de `initState`, así
@@ -211,17 +145,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  group('sin clon, la pantalla de fallo es una salida', () {
-    // El fallo que esto coge ya ocurrió: una compilación de escritorio hecha
-    // sin `--dart-define=DIDACTA_CLONE` abrió diciendo «no se pudo cargar el
-    // catálogo» con el catálogo generado y en su sitio, y desde esa pantalla
-    // no se podía llegar a Ajustes --que vive dentro del router, y el router
-    // solo existe cuando hay catálogo-- así que no había forma de arreglarlo
-    // desde la aplicación.
+  group('sin repositorios, la aplicación abre y dice qué falta', () {
+    // Antes, sin clon configurado, la primera pantalla era «No se pudo cargar
+    // el catálogo» con una dirección relativa que en escritorio no resuelve
+    // --y desde ahí no se llegaba a Ajustes, que vive dentro del router y el
+    // router solo existe cuando hay catálogo--. No es un fallo: es que
+    // todavía no se le ha dicho con qué trabajar.
 
-    testWidgets('dice que falta la carpeta, no que falte el índice', (
-      tester,
-    ) async {
+    testWidgets('abre vacía, sin pantalla de fallo', (tester) async {
       tester.view.physicalSize = const Size(1200, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -229,28 +160,21 @@ void main() {
       await tester.pumpWidget(
         DidactaApp(
           session: sessionWith(
-            auth: const UnavailableAuth(),
             source: const HttpCatalogueSource(base: 'http://127.0.0.1:1/nada'),
           ),
-          firebaseReady: false,
         ),
       );
       await settle(tester);
 
-      expect(
-        find.textContaining('No hay ninguna carpeta del repositorio'),
-        findsOneWidget,
-      );
-      // Y no el consejo que aquí no sirve: no falta ningún índice. Exacto
-      // y no `textContaining`, porque el motivo del error sí puede
-      // mencionarlo; lo que no tiene que estar es el consejo.
+      expect(find.text('No se pudo cargar el catálogo'), findsNothing);
       expect(find.text('didacta index'), findsNothing);
-      expect(find.byKey(const Key('choose-clone')), findsOneWidget);
+      // Y con el camino delante, que es lo que faltaba.
+      expect(find.byKey(const Key('go-to-settings')), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 
     for (final size in sizes.entries) {
-      testWidgets('y los dos botones caben (${size.key})', (tester) async {
+      testWidgets('y el aviso cabe (${size.key})', (tester) async {
         tester.view.physicalSize = size.value;
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
@@ -258,18 +182,15 @@ void main() {
         await tester.pumpWidget(
           DidactaApp(
             session: sessionWith(
-              auth: const UnavailableAuth(),
               source: const HttpCatalogueSource(
                 base: 'http://127.0.0.1:1/nada',
               ),
             ),
-            firebaseReady: false,
           ),
         );
         await settle(tester);
 
-        expect(find.byKey(const Key('choose-clone')), findsOneWidget);
-        expect(find.text('Reintentar'), findsOneWidget);
+        expect(find.byKey(const Key('go-to-settings')), findsOneWidget);
         expect(
           tester.takeException(),
           isNull,

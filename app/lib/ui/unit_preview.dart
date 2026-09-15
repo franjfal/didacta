@@ -60,6 +60,9 @@ abstract class PreviewTarget {
   /// «unidad» compilando un tema entero.
   String get what;
 
+  /// De qué repositorio es lo que se compila: se compila contra su raíz.
+  String get repo;
+
   /// Qué falta por traducir para poder compilar en [language].
   ///
   /// Vacío es «se puede compilar». No vacío es que **no se compila**: lo que
@@ -92,6 +95,9 @@ class UnitTarget implements PreviewTarget {
 
   @override
   String get what => 'esta unidad';
+
+  @override
+  String get repo => unit.repo;
 
   /// Una unidad suelta se previsualiza igual.
   ///
@@ -149,6 +155,9 @@ class DocumentTarget implements PreviewTarget {
 
   /// El documento, para saber qué unidades lleva dentro.
   final Document document;
+
+  @override
+  String get repo => document.repo;
 
   @override
   List<MissingPiece> missingIn(Catalogue catalogue, String language) =>
@@ -234,7 +243,7 @@ class PreviewState {
   List<CompileOutput> results = const [];
 
   Future<void> load() async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: target.repo);
     if (compiler == null) {
       status = CompilerStatus(
         ready: false,
@@ -295,7 +304,7 @@ class PreviewState {
   /// Después de guardar un `.tex`, lo que había pasa a estar viejo, y eso
   /// tiene que verse sin recargar nada.
   Future<void> refreshExisting() async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: target.repo);
     if (compiler == null) return;
     await _loadExisting(compiler);
     onChanged();
@@ -341,7 +350,7 @@ class PreviewState {
   /// sí se pregunta es el «borrar todas», porque ahí el clic no dice cuántos
   /// ficheros se lleva.
   Future<void> delete(List<ExistingOutput> outputs) async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: target.repo);
     if (compiler == null || outputs.isEmpty) return;
     problem = null;
     onChanged();
@@ -360,7 +369,7 @@ class PreviewState {
   /// Es lo que se pulsa cuando una está vieja: rehacer *esa*, y no las tres
   /// que estén marcadas arriba.
   Future<void> compileOne(ExistingOutput output) async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: target.repo);
     if (compiler == null) return;
     building = true;
     problem = null;
@@ -382,7 +391,7 @@ class PreviewState {
   }
 
   Future<void> compile() async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: target.repo);
     if (compiler == null || chosen.isEmpty || languages.isEmpty) return;
     // Nunca a medias: si falta una traducción de las elegidas, no se compila
     // ninguna. Compilar «las que se puedan» dejaría a alguien con la mitad

@@ -35,6 +35,8 @@ import 'unit_preview.dart';
 import 'shell.dart';
 import 'problem_editor.dart';
 import 'tabs.dart';
+import 'tex_field.dart';
+import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
 import 'theme.dart';
 
@@ -138,7 +140,9 @@ class _UnitPageState extends State<UnitPage> {
   /// después de guardar, no por frame: son dos `stat` por panel, pero
   /// hacerlos sesenta veces por segundo sería absurdo.
   Future<void> _refreshStaleness(Session session) async {
-    final compiler = session.compiler();
+    final compiler = session.compiler(
+      repo: session.unitByPath(widget.unitPath)?.repo,
+    );
     if (compiler == null || _open.isEmpty) return;
 
     final marks = <String, bool>{};
@@ -184,7 +188,7 @@ class _UnitPageState extends State<UnitPage> {
     String language,
   ) async {
     final unit = session.unitByPath(widget.unitPath);
-    final compiler = session.compiler();
+    final compiler = session.compiler(repo: unit?.repo);
     if (unit == null || compiler == null) return;
 
     final at = _open.indexWhere((group) => group.id == groupId);
@@ -304,7 +308,11 @@ class _UnitPageState extends State<UnitPage> {
       children: [
         PageHeader(
           title: unit.title(session.language),
-          subtitle: unit.path,
+          // Con varios repositorios abiertos, la ruta sola no dice de cuál
+          // es: dos pueden tener la misma.
+          subtitle: session.colourOf(unit.repo) != null
+              ? '${unit.repo} · ${unit.path}'
+              : unit.path,
           breadcrumbs: [('Biblioteca', Routes.library())],
           actions: [
             // Solo cuando la pestaña activa es un idioma: partir en dos no
@@ -449,7 +457,9 @@ class _UnitPageState extends State<UnitPage> {
     required bool reveal,
   }) async {
     try {
-      final compiler = session.compiler();
+      final compiler = session.compiler(
+        repo: session.unitByPath(widget.unitPath)?.repo,
+      );
       if (compiler == null) return;
       if (reveal) {
         await compiler.reveal(path);
@@ -523,7 +533,11 @@ class _LanguageEditor {
   final Session session;
   final VoidCallback onChanged;
 
-  final TextEditingController controller = TextEditingController();
+  /// Pinta el LaTeX que contiene: órdenes, comentarios, matemáticas y los
+  /// delimitadores de cada entorno, del color de ese entorno. Un fichero
+  /// suelto calcula su propio árbol, así que aquí también sale en rojo lo que
+  /// se quedó sin cerrar.
+  final TexEditingController controller = TexEditingController();
 
   /// El foco del área de texto. Aquí y no en el widget por lo mismo que el
   /// controlador: la barra devuelve el cursor al editor después de envolver,
@@ -593,7 +607,9 @@ class _LanguageEditor {
         _loadedText = '';
         controller.text = '';
       } else {
-        final loaded = await session.gateway.read(unit.fileFor(language));
+        final loaded = await session
+            .gatewayFor(unit.repo)
+            .read(unit.fileFor(language));
         file = loaded;
         _loadedText = loaded.text;
         controller.text = loaded.text;
@@ -621,12 +637,14 @@ class _LanguageEditor {
     conflicted = false;
     onChanged();
     try {
-      final sha = await session.gateway.commit(
-        path: unit.fileFor(language),
-        text: controller.text,
-        sha: file?.sha ?? '',
-        message: message,
-      );
+      final sha = await session
+          .gatewayFor(unit.repo)
+          .commit(
+            path: unit.fileFor(language),
+            text: controller.text,
+            sha: file?.sha ?? '',
+            message: message,
+          );
       _loadedText = controller.text;
       file = ContentFile(
         path: unit.fileFor(language),
@@ -677,19 +695,28 @@ class _EditorView extends StatelessWidget {
       );
     }
 
-    final canWrite = watchSession(context).gateway.canWrite;
-    // Los tres campos, para los problemas. El fichero manda: si no tiene la
-    // forma de un problema --porque son tres en un fichero-- el editor de
-    // texto es lo que hay, y la pantalla lo dice en lugar de esconder el
-    // botón.
-    final structured = unit.isProblem;
+    final canWrite = watchSession(context).canWriteIn(unit.repo);
+    // Los tres campos, para los problemas. Lo decide el tipo de la unidad y
+    // no el árbol donde vive: una teoría o un ejemplo dentro de una práctica
+    // se escriben de corrido. Y el fichero manda por encima de eso: si no
+    // tiene la forma de un problema --porque son tres en un fichero-- el
+    // editor de texto es lo que hay, y la pantalla lo dice en lugar de
+    // esconder el botón.
+    final structured = unit.editsAsProblem;
 
     return Column(
       children: [
         _EditorBar(
           editor: editor,
           canWrite: canWrite,
-          fields: structured ? editor.asFields : null,
+          // El interruptor sale **siempre**, también en una lección que no
+          // tiene campos: decir «estás viendo el LaTeX entero» es lo que
+          // contesta «¿dónde veo el LaTeX entero?», y un control que aparece y
+          // desaparece según el tipo de unidad es una pantalla que nadie sabe
+          // describir. En las que no son problemas, «Campos» está apagado y
+          // dice por qué.
+          fields: structured && editor.asFields,
+          hasFields: structured,
           onFields: structured ? (value) => editor.setAsFields(value) : null,
         ),
         if (editor.conflicted)
@@ -738,26 +765,17 @@ class _EditorView extends StatelessWidget {
                     Expanded(
                       child: Container(
                         color: Colors.white,
-                        child: TextField(
+                        // La misma caja que en el tema: el LaTeX coloreado y
+                        // una columna por cada entorno que envuelve a la
+                        // línea. Una lección suelta calcula su propio árbol,
+                        // así que las columnas salen sin que nadie le pase
+                        // nada.
+                        child: TexField(
                           controller: editor.controller,
                           focusNode: editor.focusNode,
                           readOnly: !canWrite,
-                          maxLines: null,
-                          expands: true,
-                          // LaTeX is code: monospace, no autocorrect, no
-                          // capitalisation. A phone helpfully capitalising
-                          // `\begin` is a compile error.
-                          style: monoStyle,
-                          keyboardType: TextInputType.multiline,
-                          textCapitalization: TextCapitalization.none,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            filled: false,
-                            contentPadding: EdgeInsets.all(14),
-                            hintText: 'El fichero está vacío.',
-                          ),
+                          hintText: 'El fichero está vacío.',
+                          padding: const EdgeInsets.all(14),
                         ),
                       ),
                     ),
@@ -773,23 +791,31 @@ class _EditorView extends StatelessWidget {
 class _ViewToggle extends StatelessWidget {
   const _ViewToggle({
     required this.fields,
+    required this.hasFields,
     required this.compact,
     required this.onChanged,
   });
 
   final bool fields;
+  final bool hasFields;
   final bool compact;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
+
+  static const String _noFields =
+      'Solo un problema tiene enunciado, resultado y solución; '
+      'lo demás se escribe de corrido.';
 
   @override
   Widget build(BuildContext context) {
     if (compact) {
       return IconButton(
         key: const Key('problem-view-toggle'),
-        tooltip: fields ? 'Ver el LaTeX' : 'Ver los campos',
+        tooltip: hasFields
+            ? (fields ? 'Ver el LaTeX' : 'Ver los campos')
+            : _noFields,
         visualDensity: VisualDensity.compact,
         icon: Icon(fields ? Icons.code : Icons.view_agenda_outlined, size: 16),
-        onPressed: () => onChanged(!fields),
+        onPressed: onChanged == null ? null : () => onChanged!(!fields),
       );
     }
     return Container(
@@ -802,19 +828,23 @@ class _ViewToggle extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ViewOption(
-            key: const Key('problem-view-fields'),
-            label: 'Campos',
-            icon: Icons.view_agenda_outlined,
-            selected: fields,
-            onTap: () => onChanged(true),
+          Tooltip(
+            message: hasFields ? 'Enunciado, resultado y solución' : _noFields,
+            child: _ViewOption(
+              key: const Key('problem-view-fields'),
+              label: 'Campos',
+              icon: Icons.view_agenda_outlined,
+              selected: fields,
+              enabled: hasFields,
+              onTap: onChanged == null ? null : () => onChanged!(true),
+            ),
           ),
           _ViewOption(
             key: const Key('problem-view-text'),
             label: 'LaTeX',
             icon: Icons.code,
             selected: !fields,
-            onTap: () => onChanged(false),
+            onTap: onChanged == null ? null : () => onChanged!(false),
           ),
         ],
       ),
@@ -829,16 +859,22 @@ class _ViewOption extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
+    this.enabled = true,
   });
 
   final String label;
   final IconData icon;
   final bool selected;
-  final VoidCallback onTap;
+
+  /// Apagado y no escondido: enseñar la opción que no se puede elegir es lo
+  /// que contesta «¿por qué esta lección no tiene campos?».
+  final bool enabled;
+
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) => Hoverable(
-    onTap: onTap,
+    onTap: enabled ? onTap : null,
     builder: (context, hovering) => AnimatedContainer(
       duration: const Duration(milliseconds: 90),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -851,18 +887,14 @@ class _ViewOption extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 13,
-            color: selected ? didactaAccentDark : didactaMuted,
-          ),
+          Icon(icon, size: 13, color: _colour),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: selected ? didactaAccentDark : didactaMuted,
+              color: _colour,
             ),
           ),
         ],
@@ -871,20 +903,30 @@ class _ViewOption extends StatelessWidget {
   );
 }
 
+extension on _ViewOption {
+  Color get _colour => !enabled
+      ? didactaMuted.withValues(alpha: 0.45)
+      : (selected ? didactaAccentDark : didactaMuted);
+}
+
 class _EditorBar extends StatelessWidget {
   const _EditorBar({
     required this.editor,
     required this.canWrite,
-    this.fields,
+    required this.fields,
+    required this.hasFields,
     this.onFields,
   });
 
   final _LanguageEditor editor;
   final bool canWrite;
 
-  /// Null cuando esta unidad no es un problema: entonces no hay dos vistas
-  /// entre las que elegir.
-  final bool? fields;
+  /// Si se están viendo los campos en lugar del `.tex` entero.
+  final bool fields;
+
+  /// Si esta unidad tiene campos que ver: solo los problemas.
+  final bool hasFields;
+
   final ValueChanged<bool>? onFields;
 
   @override
@@ -931,14 +973,13 @@ class _EditorBar extends StatelessWidget {
               // Campos o texto, para un problema. Un botón y no una pestaña
               // más: es la misma cosa vista de dos maneras, y guardar guarda
               // lo mismo desde las dos.
-              if (fields != null && onFields != null) ...[
-                _ViewToggle(
-                  fields: fields!,
-                  compact: tight,
-                  onChanged: onFields!,
-                ),
-                const SizedBox(width: 10),
-              ],
+              _ViewToggle(
+                fields: fields,
+                hasFields: hasFields,
+                compact: tight,
+                onChanged: onFields,
+              ),
+              const SizedBox(width: 10),
               if (!editor.exists)
                 const _Tag('nuevo', colour: didactaAccentDark)
               else if (dirty && !tight)

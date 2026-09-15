@@ -3,8 +3,8 @@
 Esta carpeta contiene el sistema LaTeX, el modelo de contenido, el motor de
 compilación, la herramienta, el migrador, los índices derivados y la aplicación
 completa: las siete rutas, el editor multilingüe, la edición de `unit.yaml` y el
-constructor de composiciones, con un clon local en escritorio y el Worker en
-web. Las 15 salidas funcionan; 255 tests de Python y 213 de Dart.
+constructor de composiciones, sobre clones locales de varios repositorios a la
+vez, con la identidad de GitHub. Las 15 salidas funcionan; 255 tests de Python y 213 de Dart.
 
 Lo hecho está al principio con lo que se aprendió haciéndolo, y lo que queda
 después, en orden de dependencia.
@@ -86,9 +86,10 @@ composiciones — algo que un navegador no puede hacer.
 
 ## Hecho: la aplicación
 
-`app/`. Flutter, siete rutas con URL propia, y tres formas de llegar al
-repositorio detrás de una interfaz que no sabe cuál está en uso: un clon local
-en escritorio, un token directo a GitHub, o el Worker en web.
+`app/`. Flutter, siete rutas con URL propia, y **varios repositorios de
+contenido a la vez**: se entra en GitHub, se eligen cuáles abrir y cada uno se
+clona en su carpeta. La biblioteca y las asignaturas se ven juntas; cada
+fichero sigue siendo de su repositorio.
 
 Lo que se puede hacer desde ella:
 
@@ -104,11 +105,10 @@ Lo que se puede hacer desde ella:
   escribiendo el `structure:` del `year.yaml`;
 - **ver el diff** de cualquiera de las dos cosas antes de hacer el commit.
 
-Tres reglas que impone en los tres caminos: todo cambio es un commit con autor
-y mensaje; una escritura es compare-and-set contra el `sha` con el que se leyó;
+Tres reglas que impone siempre: todo cambio es un commit con autor y mensaje; una escritura es compare-and-set contra el `sha` con el que se leyó;
 y un conflicto se cuenta y se ofrece recargar, nunca reintentar.
 
-Lo que se aprendió construyéndola, y que está en las decisiones D39–D47:
+Lo que se aprendió construyéndola, y que está en las decisiones D39–D63:
 
 - **editar un YAML reserializándolo borra el fichero.** Los `TODO` de la
   migración son la lista de trabajo de dos mil unidades, y las 905 entradas
@@ -122,11 +122,9 @@ Lo que se aprendió construyéndola, y que está en las decisiones D39–D47:
 
 Lo que falta:
 
-- **compilar desde la interfaz.** En escritorio, con el clon en disco y LaTeX
-  instalado, ya es posible: falta lanzar `didacta build`, mostrar el log con
-  los errores localizados en el fichero y la línea correctos, y abrir el PDF.
-  En web no lo es, y la pantalla del documento no lo finge: dice qué se
-  compilaría y da el comando;
+- **compilar desde la interfaz.** Con el clon en disco y LaTeX instalado ya es
+  posible: falta mostrar el log con los errores localizados en el fichero y la
+  línea correctos;
 - **crear una unidad desde cero.** Hoy se editan las que hay;
 - **regenerar el índice** desde la aplicación, en lugar de `didacta index`;
 - **indicador de qué PDF están desactualizados**, calculado por hashes sin
@@ -150,36 +148,7 @@ Lo que hay que decidir: dónde vive la bibliografía (una por asignatura, una
 compartida, o las dos), y si se usa biblatex — que es lo que el material ya
 supone — o algo más simple.
 
-## 3. Desplegar la API y Firebase
-
-`api/` está **escrito y con tests**: un Worker que verifica la identidad
-(Firebase Auth: alta, inicio de sesión, recuperar contraseña, verificación de
-correo), aplica una política de acceso **versionada en el repositorio** —no en
-la consola del proveedor, para que cada cambio de permisos sea un diff
-revisable—, guarda el token de GitHub que un navegador no puede guardar, y
-cachea los catálogos en el borde.
-
-Roles y ámbito por carpeta, categoría, curso e idioma. La combinación que
-importa es *traductor sin permiso de escritura*: puede crear y editar el
-`va`/`en` de una unidad y no puede tocar el original.
-
-Lo que queda no es código, son credenciales que solo tiene el autor:
-
-```bash
-cd api
-wrangler login
-wrangler secret put GITHUB_TOKEN     # un token fine-grained sobre didacta_db
-wrangler deploy
-```
-
-Y en la consola de Firebase: activar correo/contraseña y Google, y añadir el
-dominio de GitHub Pages a los dominios autorizados. Después, editar
-`access.json` en `didacta_db` con quién puede qué.
-
-Hasta entonces la web funciona en modo lectura, y en escritorio no hace falta:
-el clon local no pasa por el Worker.
-
-## 4. CI
+## 3. CI
 
 Compilar en cada push, publicar los PDF como artefactos, regenerar los índices.
 Los PDF no se versionan: se generan a partir del origen que está al lado.

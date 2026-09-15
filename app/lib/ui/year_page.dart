@@ -25,6 +25,7 @@ import 'commit_dialog.dart';
 import 'course_admin_ui.dart';
 import 'new_document.dart';
 import 'shell.dart';
+import 'sync_bar.dart';
 import 'theme.dart';
 
 class YearPage extends StatelessWidget {
@@ -175,6 +176,14 @@ class _Documents extends StatefulWidget {
   final CourseYear entry;
   final Session session;
 
+  /// El repositorio cuyo `year.yaml` se edita.
+  ///
+  /// Con varios abiertos, un año puede tener temas de más de uno: cada uno
+  /// tiene su `year.yaml` y el orden vive dentro de cada fichero, así que
+  /// reordenar cruzando repositorios no es una operación que exista. Se edita
+  /// el del primero que aporte algo, y los demás se ven con su color.
+  String get repo => entry.documents.isEmpty ? '' : entry.documents.first.repo;
+
   String get path => 'courses/${course.id}/$year/year.yaml';
 
   @override
@@ -182,6 +191,14 @@ class _Documents extends StatefulWidget {
 }
 
 class _DocumentsState extends State<_Documents> {
+  /// Qué `year.yaml` se está editando.
+  ///
+  /// Un año puede tener temas de varios repositorios, y cada uno tiene el
+  /// suyo: el orden vive dentro de cada fichero, así que reordenar cruzando
+  /// repositorios no es una operación que exista. Se edita uno, y se dice
+  /// cuál.
+  late String _repo = widget.repo;
+
   ContentFile? _file;
   bool _loading = true;
   bool _saving = false;
@@ -208,7 +225,7 @@ class _DocumentsState extends State<_Documents> {
       _error = null;
     });
     try {
-      final file = await widget.session.gateway.read(widget.path);
+      final file = await widget.session.gatewayFor(_repo).read(widget.path);
       if (!mounted) return;
       setState(() {
         _file = file;
@@ -254,6 +271,13 @@ class _DocumentsState extends State<_Documents> {
     final moved = next.removeAt(from);
     next.insert(to, moved);
     _edit((file) => file.setDocumentOrder(next));
+  }
+
+  /// Cambia de repositorio: se edita el `year.yaml` del elegido.
+  Future<void> _switchRepo(String repo) async {
+    if (repo == _repo) return;
+    setState(() => _repo = repo);
+    await _load();
   }
 
   Future<void> _add() async {
@@ -315,12 +339,14 @@ class _DocumentsState extends State<_Documents> {
 
     setState(() => _saving = true);
     try {
-      final sha = await widget.session.gateway.commit(
-        path: widget.path,
-        text: _text,
-        sha: _file?.sha ?? '',
-        message: message,
-      );
+      final sha = await widget.session
+          .gatewayFor(_repo)
+          .commit(
+            path: widget.path,
+            text: _text,
+            sha: _file?.sha ?? '',
+            message: message,
+          );
       if (!mounted) return;
       setState(() {
         _loaded = _text;
@@ -374,7 +400,7 @@ class _DocumentsState extends State<_Documents> {
     }
 
     final session = widget.session;
-    final canWrite = session.gateway.canWrite;
+    final canWrite = session.canWriteIn(_repo);
     final size = diffSize(_loaded, _text);
     final byId = {
       for (final document in widget.entry.documents) document.id: document,
@@ -382,6 +408,37 @@ class _DocumentsState extends State<_Documents> {
 
     return Column(
       children: [
+        // Qué composición se está editando, cuando el año se arma con varios
+        // repositorios. Los temas de los demás se siguen viendo en la lista,
+        // con su color; lo que cambia es dónde se escribe.
+        if (widget.entry.repos.length > 1)
+          Container(
+            width: double.infinity,
+            color: didactaPanel,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const Text(
+                  'Editando la composición de',
+                  style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+                for (final repo in widget.entry.repos)
+                  InkWell(
+                    key: Key('year-repo-$repo'),
+                    onTap: () => _switchRepo(repo),
+                    child: Opacity(
+                      opacity: repo == _repo ? 1 : 0.45,
+                      child: RepoChip(
+                        colour: session.colourOf(repo) ?? 0xFF62697A,
+                        label: session.workspace.byId(repo)?.label ?? repo,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         if (_dirty || _saving)
           _SaveBar(
             added: size.added,
@@ -624,12 +681,31 @@ class _DocumentTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    document.title(session.language),
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          document.title(session.language),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      // De qué repositorio es este tema. Solo con varios
+                      // abiertos: con uno, marcar no dice nada.
+                      if (session.colourOf(document.repo) != null) ...[
+                        const SizedBox(width: 8),
+                        RepoChip(
+                          colour: session.colourOf(document.repo)!,
+                          label:
+                              session.workspace.byId(document.repo)?.label ??
+                              document.repo,
+                          compact: true,
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   // A Wrap, not a Row: four pieces of metadata after a

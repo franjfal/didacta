@@ -90,9 +90,15 @@ class _CoursesPageState extends State<CoursesPage> {
         );
     if (answer == null || !mounted) return;
 
+    // Dónde se crea, antes de crearla: con varios repositorios abiertos,
+    // adivinarlo es crear la asignatura en el sitio equivocado.
+    final repo = await pickRepository(context, session);
+    if (repo == null || !mounted) return;
+
     final done = await runAdmin(
       context,
       session,
+      repo: repo,
       (admin) => admin.createCourse(
         id: answer.id,
         title: answer.title,
