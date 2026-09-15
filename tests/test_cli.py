@@ -439,6 +439,47 @@ class BuildInterfaceTests(unittest.TestCase):
     def run_cli(self, *args):
         return self.cli.main(["--root", self.root, *args])
 
+    def without_tex(self):
+        """Un PATH sin latexmk ni pdflatex, como el de una máquina limpia."""
+        import contextlib
+
+        @contextlib.contextmanager
+        def hidden():
+            before = os.environ.get("PATH", "")
+            os.environ["PATH"] = os.pathsep.join(
+                part for part in before.split(os.pathsep)
+                if not os.path.exists(os.path.join(part, "latexmk"))
+                and not os.path.exists(os.path.join(part, "pdflatex"))
+            )
+            try:
+                yield
+            finally:
+                os.environ["PATH"] = before
+
+        return hidden()
+
+    def test_asking_what_exists_does_not_need_a_tex_distribution(self):
+        """Preguntar no es compilar.
+
+        `--profiles` dice qué versiones admite un documento y `--list` dice
+        cuáles saldrían: las dos responden con lo que hay en el repositorio y
+        ninguna toca LaTeX. Estaban las dos detrás de la comprobación del
+        sistema, así que en una máquina sin TeX la aplicación no podía ni
+        enseñar qué versiones existen --información que está en un `year.yaml`
+        y en ningún programa que haya que instalar--.
+        """
+        with self.without_tex():
+            doc = "mates@2024-2025/tema-1"
+            self.assertEqual(self.run_cli("build", doc, "--profiles"), 0)
+            self.assertEqual(self.run_cli("build", doc, "--list"), 0)
+            # Y en JSON, que es como lo pide la aplicación.
+            self.assertEqual(self.run_cli("build", doc, "--list", "--json"), 0)
+
+    def test_but_compiling_without_one_still_refuses(self):
+        """Lo otro sí: compilar sin TeX no se puede, y se dice."""
+        with self.without_tex():
+            self.assertEqual(self.run_cli("build", "mates@2024-2025/tema-1"), 2)
+
     def capture(self, *args):
         import contextlib
         import io
