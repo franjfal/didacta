@@ -143,6 +143,40 @@ class _SyncBarState extends State<SyncBar> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+          // Lo que impide que un repositorio esté al día, si algo lo impide.
+          //
+          // Aquí y no en un diálogo: es una advertencia sobre lo que hay
+          // debajo de lo que se está editando, y el sitio donde se resuelve
+          // --traer y enviar-- son los dos botones de al lado.
+          for (final repo in repos)
+            if (session.driftOf(repo.id) != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Tooltip(
+                  message: '${session.driftOf(repo.id)}',
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.sync_problem_outlined,
+                        size: 15,
+                        color: didactaEx,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        session.workspace.isMultiple
+                            ? repo.label
+                            : 'sin sincronizar',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: didactaEx,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           if (_busy)
             const Padding(
               padding: EdgeInsets.only(right: 8),

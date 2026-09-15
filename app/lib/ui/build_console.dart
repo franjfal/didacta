@@ -1,172 +1,60 @@
-/// El terminal de una compilación, mientras corre.
+/// El terminal de una compilación, en una ventana.
 ///
-/// Compilar es lo único que hace esta aplicación que tarda: una unidad son
-/// tres segundos, un tema con veinte unidades en tres idiomas es un minuto
-/// largo. Hasta ahora eso era un botón que ponía «Compilando…» y nada más, y
-/// un minuto de silencio no se distingue de un cuelgue. Lo que LaTeX escribe
-/// mientras tanto --qué fichero está leyendo, qué paquete está cargando, qué
-/// pasada va-- es exactamente la información que falta, y ya existía: se
-/// estaba tirando.
+/// Lo que el motor va escribiendo, según lo escribe: qué fichero está
+/// leyendo, qué paquete está cargando, qué pasada va. La alternativa que
+/// había era un botón que ponía «Compilando…», y un minuto de eso no se
+/// distingue de un cuelgue.
 ///
-/// Dos decisiones que conviene dejar dichas:
+/// Se enseña entero y sin filtrar. Los diagnósticos ya parseados siguen en
+/// las tarjetas de resultado, que contestan a «¿qué ha fallado?»; esta
+/// ventana contesta a «¿qué está haciendo?», y esa no se contesta con una
+/// selección de líneas.
 ///
-/// **Se enseña entero, no un resumen.** Los diagnósticos parseados siguen
-/// donde estaban, en las tarjetas de resultado, y son la respuesta a «¿qué
-/// ha fallado?». Esto es la respuesta a la otra pregunta --«¿qué está
-/// haciendo?»-- y esa no se contesta con una selección: el aviso que importa
-/// suele ser justo el que un filtro habría tirado.
-///
-/// **El registro sobrevive al modal.** Cerrar la ventana no para la
-/// compilación ni borra lo que dijo; se vuelve a abrir y ahí sigue. Esta es
-/// la razón de que el estado viva en la sesión y no en el widget.
+/// Cerrarla no para nada: el registro vive en la sesión --[BuildConsole]-- y
+/// se puede volver a abrir mientras corre y después.
 library;
 
 import 'dart:async';
-import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../state/build_console.dart';
 import 'theme.dart';
-
-/// Cuántas líneas se guardan.
-///
-/// Una compilación normal escribe unos cientos; un tema entero en tres
-/// idiomas, unos miles. El tope está para que una compilación que se
-/// descontrole --un bucle de avisos de LaTeX, que existen-- no se lleve la
-/// memoria por delante, y es alto de sobra para que nadie llegue a él
-/// compilando de verdad.
-const int _maxLines = 20000;
-
-/// Lo que el motor va diciendo, y en qué estado está.
-class BuildConsole extends ChangeNotifier {
-  final List<String> _lines = [];
-
-  /// Cuántas líneas se han caído por arriba al llegar al tope.
-  int _dropped = 0;
-
-  String _title = '';
-  bool _running = false;
-  DateTime? _startedAt;
-  Duration? _took;
-  Object? _failure;
-
-  bool _disposed = false;
-  Timer? _pulse;
-
-  /// Las líneas, de la primera a la última.
-  List<String> get lines => UnmodifiableListView(_lines);
-
-  int get dropped => _dropped;
-
-  /// Qué se está compilando: «este tema», «Diapositivas · es».
-  String get title => _title;
-
-  bool get running => _running;
-
-  /// Lo que se tardó, una vez terminada.
-  Duration? get took => _took;
-
-  /// Cuánto lleva, o cuánto tardó.
-  Duration get elapsed =>
-      _took ??
-      (_startedAt == null ? Duration.zero : DateTime.now().difference(_startedAt!));
-
-  /// Por qué no se pudo ni lanzar, si pasó eso.
-  ///
-  /// Distinto de que la compilación falle: un error de LaTeX sale por el
-  /// registro como todo lo demás, y esto es que el proceso no arrancó.
-  Object? get failure => _failure;
-
-  bool get isEmpty => _lines.isEmpty;
-
-  /// Empieza una compilación: se tira lo de la anterior.
-  ///
-  /// Se tira a propósito. Lo que interesa es lo que está pasando ahora, y un
-  /// registro acumulado entre compilaciones obliga a buscar dónde empieza la
-  /// que se está mirando.
-  void start(String title) {
-    _lines.clear();
-    _dropped = 0;
-    _title = title;
-    _running = true;
-    _startedAt = DateTime.now();
-    _took = null;
-    _failure = null;
-    _notifyNow();
-  }
-
-  /// Una línea del motor, tal cual la escribió.
-  void add(String line) {
-    if (_disposed) return;
-    _lines.add(line);
-    if (_lines.length > _maxLines) {
-      final excess = _lines.length - _maxLines;
-      _lines.removeRange(0, excess);
-      _dropped += excess;
-    }
-    _schedule();
-  }
-
-  /// Se acabó. [failure] solo cuando no se pudo ni lanzar el motor.
-  void finish({Object? failure}) {
-    _running = false;
-    _took = _startedAt == null
-        ? Duration.zero
-        : DateTime.now().difference(_startedAt!);
-    _failure = failure;
-    if (failure != null) add('--- $failure');
-    _notifyNow();
-  }
-
-  /// Todo el registro en un texto, para el portapapeles.
-  String get text => _lines.join('\n');
-
-  /// Avisar como mucho quince veces por segundo.
-  ///
-  /// LaTeX escribe a ráfagas de cientos de líneas, y reconstruir la ventana
-  /// una vez por línea convierte el visor en el cuello de botella de la
-  /// compilación que está enseñando. A este ritmo se lee igual de seguido y
-  /// no cuesta nada.
-  void _schedule() {
-    if (_pulse != null || _disposed) return;
-    _pulse = Timer(const Duration(milliseconds: 66), () {
-      _pulse = null;
-      if (!_disposed) notifyListeners();
-    });
-  }
-
-  void _notifyNow() {
-    _pulse?.cancel();
-    _pulse = null;
-    if (!_disposed) notifyListeners();
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    _pulse?.cancel();
-    _pulse = null;
-    super.dispose();
-  }
-}
 
 /// Abre el terminal de la compilación.
 ///
 /// No bloquea: la compilación sigue por su cuenta y cerrar esto no la para.
 /// Se puede volver a abrir mientras corre y después, que es lo que permite
 /// quitarlo de en medio sin perder nada.
-Future<void> showBuildConsole(BuildContext context, BuildConsole console) =>
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => BuildConsoleDialog(console: console),
-    );
+///
+/// [autoClose] es para la ventana que acompaña a una compilación recién
+/// lanzada: se quita sola en cuanto esa compilación acaba bien, porque lo que
+/// se quiere entonces es el PDF y no el registro. Se queda si algo falló, que
+/// es cuando el registro es justo lo que hay que leer. Consultando el
+/// registro de una compilación anterior va en falso: ahí cerrar lo decide
+/// quien lo abrió.
+Future<void> showBuildConsole(
+  BuildContext context,
+  BuildConsole console, {
+  bool autoClose = false,
+}) => showDialog<void>(
+  context: context,
+  barrierDismissible: true,
+  builder: (_) => BuildConsoleDialog(console: console, autoClose: autoClose),
+);
 
 class BuildConsoleDialog extends StatefulWidget {
-  const BuildConsoleDialog({super.key, required this.console});
+  const BuildConsoleDialog({
+    super.key,
+    required this.console,
+    this.autoClose = false,
+  });
 
   final BuildConsole console;
+
+  /// Si se cierra sola cuando la compilación acaba bien.
+  final bool autoClose;
 
   @override
   State<BuildConsoleDialog> createState() => _BuildConsoleDialogState();
@@ -193,6 +81,7 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
     _tick = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted && widget.console.running) setState(() {});
     });
+    _closeIfDone();
   }
 
   @override
@@ -206,10 +95,35 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
   void _changed() {
     if (!mounted) return;
     setState(() {});
+    _closeIfDone();
     if (!_follow) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scroll.hasClients) return;
       _scroll.jumpTo(_scroll.position.maxScrollExtent);
+    });
+  }
+
+  /// Se quita de en medio cuando la compilación ha ido bien.
+  ///
+  /// Porque lo que se quiere después de compilar es el PDF, y un modal que
+  /// hay que cerrar cada vez acaba siendo un clic de peaje. Si ha fallado se
+  /// queda: ahí el registro es lo que hay que leer, y buscarlo después sería
+  /// exactamente lo que esto viene a evitar.
+  ///
+  /// Tampoco se cierra si quien mira ha subido a leer algo. Cerrar la
+  /// ventana en mitad de una línea que se estaba leyendo es la misma falta
+  /// de educación que arrastrarla al final.
+  ///
+  /// Se comprueba también al abrir, y no solo cuando el registro avisa: una
+  /// compilación que latexmk resuelve con «todo está al día» termina antes
+  /// de que esta ventana llegue a existir, y entonces el aviso de que
+  /// terminó no lo oye nadie.
+  void _closeIfDone() {
+    if (!widget.autoClose || !_follow) return;
+    final console = widget.console;
+    if (console.running || !console.ok) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).maybePop();
     });
   }
 
@@ -330,7 +244,7 @@ class _ConsoleLine extends StatelessWidget {
     if (line.startsWith('===')) return _terminalMark;
     if (line.startsWith('--- FAIL')) return _terminalBad;
     if (line.startsWith('---')) return _terminalDim;
-    if (line.startsWith('$ ')) return _terminalDim;
+    if (line.startsWith(r'$ ')) return _terminalDim;
     if (line.startsWith('!') || line.contains('Emergency stop')) {
       return _terminalBad;
     }
@@ -369,7 +283,9 @@ class _Header extends StatelessWidget {
                   ? Icons.check_circle_outline
                   : Icons.error_outline,
               size: 17,
-              color: console.failure == null ? didactaAccentDark : didactaTeacher,
+              color: console.failure == null
+                  ? didactaAccentDark
+                  : didactaTeacher,
             ),
           const SizedBox(width: 9),
           Expanded(

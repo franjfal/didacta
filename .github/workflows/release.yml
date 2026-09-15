@@ -1,16 +1,30 @@
 # Publicar una versión de Didacta.
 #
 # Se lanza a mano desde Actions → «Publish Didacta Release» → Run workflow, y
-# no hay nada que rellenar: **la versión la dice `app/pubspec.yaml`**. El
-# procedimiento entero es cambiar esa línea, escribir la sección del CHANGELOG
-# y pulsar el botón.
+# no hay nada que rellenar: **el número lo pone el ciclo**. Cada publicación
+# sube la mediana --1.1.0 → 1.2.0-- y el build de uno en uno. El procedimiento
+# entero es escribir la sección del CHANGELOG y pulsar el botón.
+#
+#     python3 packaging/release.py next     # el número que va a salir
+#
+# El número **no se escribe a mano** en `app/pubspec.yaml`. Esa línea es el
+# registro de lo último que se publicó, y quien la sube es este workflow al
+# publicar. Subirla a mano se salta un número, porque el ciclo la subirá igual
+# la próxima vez.
+#
+# Cómo se reparte ese número sin pasarse un commit entre trabajos: cada
+# trabajo ejecuta `release.py bump` sobre su propia copia nada más
+# descargarla. La función es determinista, así que los cuatro llegan al mismo
+# número, y los binarios llevan dentro el que se publica. El commit con la
+# versión nueva se hace **al final**, en `publicar`, cuando el release ya
+# existe: si algo se rompe antes, el número no se ha gastado.
 #
 # El orden de los trabajos no es casual:
 #
-#   1. `comprobar` mira la versión, las notas y que el tag no exista **antes**
-#      de compilar nada. Descubrir que falta la sección del CHANGELOG después
-#      de tres compilaciones de quince minutos es tirar media hora por algo
-#      que se ve en un segundo;
+#   1. `comprobar` sube el número, mira las notas y que el tag no exista
+#      **antes** de compilar nada. Descubrir que falta la sección del
+#      CHANGELOG después de tres compilaciones de quince minutos es tirar
+#      media hora por algo que se ve en un segundo;
 #   2. `pruebas` corre los tests de los dos lados. Publicar algo que no pasa
 #      sus propios tests no es publicar, es repartir un problema;
 #   3. `construir` compila los tres sistemas **en paralelo y sin fail-fast**,
@@ -70,6 +84,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: el número de esta versión
+        # Sobre esta copia y sin commit: aquí sólo se calcula y se comprueba.
+        # Quien lo escribe en el repositorio es `publicar`, y sólo cuando el
+        # release ya está hecho.
+        run: python3 packaging/release.py bump
+
       - name: la versión, el build y las notas
         id: leer
         run: python3 packaging/release.py check
@@ -77,7 +97,8 @@ jobs:
       - name: y que se lean igual desde la aplicación
         # El mismo número, leído por el otro lado. Si `pubspec.yaml` dijera
         # una cosa y la aplicación otra, el actualizador compararía contra
-        # algo que no es lo instalado.
+        # algo que no es lo instalado. Esto comprueba además que la reescritura
+        # de `bump` deja la línea donde el resto espera encontrarla.
         run: |
           grep -q "^version: ${{ steps.leer.outputs.version }}+" app/pubspec.yaml
 
@@ -174,6 +195,16 @@ jobs:
       WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: el número de esta versión
+        # Antes de compilar nada: es lo que hace que el binario diga de sí
+        # mismo el número con el que se publica. Sin esto, la aplicación
+        # instalada se llamaría como la versión anterior y no se ofrecería
+        # actualizar nunca.
+        #
+        # `shell: bash` para que la misma línea valga también en Windows.
+        shell: bash
+        run: python3 packaging/release.py bump
 
       - uses: subosito/flutter-action@v2
         with:
@@ -360,9 +391,24 @@ jobs:
     if: ${{ !inputs.dry_run && needs.construir.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # para el tag en este repositorio
+      contents: write   # para el tag y para la versión nueva
     steps:
       - uses: actions/checkout@v7
+        with:
+          # La historia entera, y no la descarga superficial de siempre: este
+          # es el único trabajo que escribe en la rama, y ponerse detrás de un
+          # commit que haya llegado mientras se compilaba necesita tenerla.
+          fetch-depth: 0
+
+      - name: el número de esta versión
+        # El mismo que calcularon los otros tres, y por una razón que conviene
+        # dejar dicha: los cuatro trabajos descargan **el mismo commit** --el
+        # que disparó el workflow-- y aplican la misma función determinista.
+        #
+        # Hace falta aquí porque `notes` y `manifest` leen la versión de
+        # `pubspec.yaml`, y porque este es el cambio que se deja escrito al
+        # final.
+        run: python3 packaging/release.py bump
 
       - name: recoger los tres
         uses: actions/download-artifact@v8
@@ -491,14 +537,41 @@ jobs:
           [ -n "$sha" ] && set -- "$@" -f "sha=$sha"
           gh api "$@" --silent
 
-      - name: el tag en el repositorio de código
-        # Para poder volver exactamente al código de una versión publicada.
-        # Va al final: si la publicación falló, el tag no debe existir.
+      - name: la versión nueva y su tag, en el repositorio de código
+        # El número se deja escrito **aquí**, no al empezar. Si algo se
+        # rompiera antes, `main` se queda como estaba y el siguiente intento
+        # vuelve a calcular el mismo número en vez de saltárselo. Un ensayo,
+        # por lo mismo, no gasta ninguno.
+        #
+        # Y el tag va sobre ese commit, para poder volver exactamente al
+        # código de una versión publicada -- incluido el número que lleva
+        # dentro.
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
+          VERSION: ${{ needs.comprobar.outputs.version }}
+          RAMA: ${{ github.ref_name }}
         run: |
-          git tag -a "$TAG" -m "Didacta ${{ needs.comprobar.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/pubspec.yaml
+          git commit -m "Didacta $VERSION"
+
+          # Un reintento y no un `--force`: si alguien ha empujado a la rama
+          # mientras se compilaba, lo que hay que hacer es ponerse detrás.
+          # Este commit toca una línea de un fichero que no toca nadie más,
+          # así que el rebase no tiene con qué chocar.
+          if ! git push origin "HEAD:$RAMA"; then
+            git fetch origin "$RAMA"
+            git rebase "origin/$RAMA"
+            if ! git push origin "HEAD:$RAMA"; then
+              echo "::error::Didacta $VERSION está publicada, pero no he podido escribir la versión en $RAMA. Súbela a mano en app/pubspec.yaml antes de volver a publicar, o la próxima publicación repetirá el número."
+              exit 1
+            fi
+          fi
+
+          git tag -a "$TAG" -m "Didacta $VERSION"
           git push origin "$TAG"
 
       - name: el resumen
@@ -523,6 +596,11 @@ jobs:
       - name: qué habría pasado
         run: |
           echo "## Ensayo de la ${{ needs.comprobar.outputs.version }}" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "El número no se ha gastado: se escribe al publicar, y un" \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo "ensayo no publica. La próxima publicación será esta misma." \
             >> "$GITHUB_STEP_SUMMARY"
           echo >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ needs.construir.result }}" = "success" ]; then

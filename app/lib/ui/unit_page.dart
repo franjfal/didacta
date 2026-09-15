@@ -29,6 +29,7 @@ import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'build_console.dart';
 import 'metadata_editor.dart';
 import 'pdf_tab.dart';
 import 'unit_preview.dart';
@@ -198,12 +199,18 @@ class _UnitPageState extends State<UnitPage> {
 
     setState(() => _open[at] = _open[at].replacing(pane.working()));
 
+    final console = session.buildConsole;
+    console.start('${pane.profile} · $language');
+    unawaited(showBuildConsole(context, console, autoClose: true));
+
     try {
       final results = await compiler.compile(
         unitPath: unit.path,
         profiles: [pane.profile],
         languages: [language],
+        onOutput: console.add,
       );
+      console.finish(ok: results.every((result) => result.ok));
       if (!mounted) return;
       final result = results.firstOrNull;
       // El índice se vuelve a buscar: entre el await y aquí alguien puede
@@ -227,6 +234,7 @@ class _UnitPageState extends State<UnitPage> {
         _say(result.errors.isEmpty ? 'No compiló.' : result.errors.first);
       }
     } catch (error) {
+      console.finish(failure: error);
       if (!mounted) return;
       final now = _open.indexWhere((group) => group.id == groupId);
       if (now >= 0) {

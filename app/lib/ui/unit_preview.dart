@@ -30,6 +30,7 @@ import '../data/compiler.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'build_console.dart';
 import 'pdf_tab.dart';
 import 'missing_translations.dart';
 import 'theme.dart';
@@ -81,6 +82,7 @@ abstract class PreviewTarget {
     required List<String> profiles,
     required List<String> languages,
     bool fast,
+    void Function(String line)? onOutput,
   });
 }
 
@@ -125,11 +127,13 @@ class UnitTarget implements PreviewTarget {
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   }) => compiler.compile(
     unitPath: unit.path,
     profiles: profiles,
     languages: languages,
     fast: fast,
+    onOutput: onOutput,
   );
 }
 
@@ -191,11 +195,13 @@ class DocumentTarget implements PreviewTarget {
     required List<String> profiles,
     required List<String> languages,
     bool fast = false,
+    void Function(String line)? onOutput,
   }) => compiler.compileDocument(
     document: reference,
     profiles: profiles,
     languages: languages,
     fast: fast,
+    onOutput: onOutput,
   );
 }
 
@@ -374,16 +380,21 @@ class PreviewState {
     building = true;
     problem = null;
     onChanged();
+    final console = session.buildConsole;
+    console.start('${output.label} · ${output.language}');
     try {
       results = await target.buildWith(
         compiler,
         profiles: [output.profile],
         languages: [output.language],
+        onOutput: console.add,
       );
+      console.finish(ok: results.every((result) => result.ok));
       onCompiled(results);
       await _loadExisting(compiler);
     } catch (error) {
       problem = error;
+      console.finish(failure: error);
     } finally {
       building = false;
       onChanged();
@@ -401,6 +412,12 @@ class PreviewState {
     problem = null;
     results = const [];
     onChanged();
+    final console = session.buildConsole;
+    console.start(
+      outputCount <= 1
+          ? 'Compilando ${target.what}'
+          : 'Compilando ${target.what}: $outputCount versiones',
+    );
     try {
       results = await target.buildWith(
         compiler,
@@ -415,11 +432,14 @@ class PreviewState {
           for (final code in session.catalogue.languages)
             if (languages.contains(code)) code,
         ],
+        onOutput: console.add,
       );
+      console.finish(ok: results.every((result) => result.ok));
       onCompiled(results);
       await _loadExisting(compiler);
     } catch (error) {
       problem = error;
+      console.finish(failure: error);
     } finally {
       building = false;
       onChanged();
@@ -443,6 +463,20 @@ class UnitPreview extends StatelessWidget {
 
   /// El visor del sistema y el Finder.
   final void Function(String path, {required bool reveal}) onExternal;
+
+  /// Compila, y enseña el terminal mientras lo hace.
+  ///
+  /// En este orden y sin esperar: la compilación marca el registro como
+  /// empezado antes de su primer `await`, así que la ventana abre ya con
+  /// esta compilación dentro y no con los restos de la anterior. Y no se
+  /// espera a que la ventana se cierre porque cerrarla no es cancelar:
+  /// quitarla de en medio y seguir compilando es lo normal.
+  void _watch(BuildContext context, Future<void> Function() compile) {
+    unawaited(compile());
+    unawaited(
+      showBuildConsole(context, state.session.buildConsole, autoClose: true),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -470,7 +504,13 @@ class UnitPreview extends StatelessWidget {
           onCompile:
               state.chosen.isEmpty || state.building || state.blocked.isNotEmpty
               ? null
-              : state.compile,
+              : () => _watch(context, state.compile),
+          // Solo cuando hay algo que enseñar. El registro sobrevive a cerrar
+          // la ventana, y esto es lo que permite volver a ella: se cierra
+          // para ver el PDF, y el aviso que pasó volando sigue estando.
+          onConsole: state.session.buildConsole.isEmpty
+              ? null
+              : () => showBuildConsole(context, state.session.buildConsole),
         ),
         Expanded(
           child: state.problem != null
@@ -484,7 +524,8 @@ class UnitPreview extends StatelessWidget {
                   onView: onOpen,
                   onOpen: (path) => onExternal(path, reveal: false),
                   onReveal: (path) => onExternal(path, reveal: true),
-                  onRecompile: state.compileOne,
+                  onRecompile: (output) =>
+                      _watch(context, () => state.compileOne(output)),
                   onDelete: (output) => state.delete([output]),
                   onDeleteAll: () => state.delete(state.existing),
                 ),
@@ -506,6 +547,7 @@ class _Controls extends StatelessWidget {
     required this.onToggle,
     required this.onLanguage,
     required this.onCompile,
+    required this.onConsole,
   });
 
   /// «esta unidad» o «este tema».
@@ -528,6 +570,10 @@ class _Controls extends StatelessWidget {
   final ValueChanged<String> onToggle;
   final ValueChanged<String> onLanguage;
   final VoidCallback? onCompile;
+
+  /// Volver a abrir el terminal de la última compilación. Null cuando no
+  /// hay ninguna todavía.
+  final VoidCallback? onConsole;
 
   @override
   Widget build(BuildContext context) {
@@ -644,6 +690,17 @@ class _Controls extends StatelessWidget {
                   style: const TextStyle(fontSize: 11.5, color: didactaMuted),
                 ),
               ),
+              if (onConsole != null)
+                TextButton.icon(
+                  key: const Key('show-console'),
+                  icon: const Icon(Icons.terminal, size: 16),
+                  label: Text(building ? 'Ver el terminal' : 'Último registro'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: didactaMuted,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: onConsole,
+                ),
             ],
           ),
         ],

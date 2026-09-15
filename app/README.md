@@ -62,6 +62,9 @@ Dos detalles del clon que no son evidentes:
 - **un commit no necesita token; solo el envío.** Escribir en un clon que está en
   tu propio disco no necesita credencial, y exigirla rompería el camino sin
   conexión. El autor sale de la sesión o de la identidad de git de este equipo.
+  Esto habla de la operación de git, no de quién abre Didacta: **sin sesión de
+  GitHub la aplicación no se abre**, y lo que se exige es haber entrado alguna
+  vez, no tener red ahora.
 - **el token no pasa por `argv` ni por `.git/config`.** Va en el entorno del
   proceso hijo y lo lee de ahí un credential helper de una línea. Meterlo en la
   URL del remoto lo dejaría escrito dentro del clon, y `ps` enseña la línea de

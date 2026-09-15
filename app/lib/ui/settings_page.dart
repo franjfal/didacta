@@ -16,7 +16,6 @@ import 'dart:async';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
@@ -26,6 +25,7 @@ import '../router.dart';
 import '../state/session.dart';
 import '../state/update_service.dart';
 import 'shell.dart';
+import 'sign_in.dart';
 import 'theme.dart';
 import 'update_section.dart';
 
@@ -70,81 +70,18 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-/// Entrar en GitHub, y con qué aplicación de OAuth.
-class _AccountSection extends StatefulWidget {
+/// Quién ha entrado, y cómo salir o cambiar de cuenta.
+///
+/// La ficha de quien **ya** entró: sin sesión no se llega a Ajustes, porque
+/// sin sesión no se llega a ninguna pantalla. El formulario es el mismo de la
+/// puerta --[SignInForm]--, y está aquí para el caso de cambiar de cuenta.
+class _AccountSection extends StatelessWidget {
   const _AccountSection({required this.session});
 
   final Session session;
 
   @override
-  State<_AccountSection> createState() => _AccountSectionState();
-}
-
-class _AccountSectionState extends State<_AccountSection> {
-  late final TextEditingController _clientId = TextEditingController(
-    text: widget.session.githubClientId,
-  );
-  bool _working = false;
-  Object? _problem;
-
-  @override
-  void dispose() {
-    _clientId.dispose();
-    super.dispose();
-  }
-
-  Future<void> _signIn() async {
-    final clientId = _clientId.text.trim();
-    if (clientId.isEmpty) {
-      setState(
-        () => _problem =
-            'Falta el Client ID de la OAuth App. Créala en GitHub '
-            '(Settings → Developer settings → OAuth Apps) con «Enable '
-            'Device Flow» marcado, y pega aquí su Client ID.',
-      );
-      return;
-    }
-    await widget.session.setGithubClientId(clientId);
-
-    setState(() {
-      _working = true;
-      _problem = null;
-    });
-    final auth = GitHubAuth(clientId: clientId);
-    try {
-      final code = await auth.start();
-      if (!mounted) return;
-      // El código, delante y con el enlace: la contraseña se teclea en
-      // github.com y en ningún otro sitio, que es la única forma honesta de
-      // pedirla.
-      final waiting = showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => _DeviceCodeDialog(code: code),
-      );
-      final token = await auth.waitForToken(code);
-      await widget.session.signIn(token);
-      if (!mounted) return;
-      // Y acto seguido, la otra pregunta: si esta cuenta llega al repositorio
-      // de versiones. Son dos cosas distintas y alguien puede pasar la
-      // primera y no la segunda.
-      unawaited(context.read<UpdateService>().checkAuthorisation());
-      Navigator.of(context, rootNavigator: true).pop();
-      await waiting;
-    } catch (thrown) {
-      if (mounted) {
-        Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
-        setState(() => _problem = thrown);
-      }
-    } finally {
-      auth.close();
-      if (mounted) setState(() => _working = false);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final session = widget.session;
     final user = session.user;
 
     return Padding(
@@ -155,14 +92,20 @@ class _AccountSectionState extends State<_AccountSection> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (user != null) ...[
+              if (session.signedIn) ...[
                 Row(
                   children: [
                     const Icon(Icons.verified_user_outlined, size: 18),
                     const SizedBox(width: 8),
                     Expanded(
+                      // Puede no saberse el nombre habiendo sesión: se entró
+                      // en otra máquina que no lo apuntaba, o se abrió sin
+                      // red por primera vez desde entonces. Lo que hay es lo
+                      // que se dice.
                       child: Text(
-                        '${user.authorName} (${user.login})',
+                        user == null
+                            ? 'Sesión iniciada en GitHub'
+                            : '${user.authorName} (${user.login})',
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
@@ -180,101 +123,26 @@ class _AccountSectionState extends State<_AccountSection> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Los commits se firman como ${user.authorEmail}. Los '
-                  'permisos son los de GitHub: se puede escribir donde GitHub '
-                  'deje escribir.',
+                  user == null
+                      ? 'Salir cierra la sesión en esta máquina. Los clones '
+                            'se quedan: son carpetas con el trabajo dentro.'
+                      : 'Los commits se firman como ${user.authorEmail}. Los '
+                            'permisos son los de GitHub: se puede escribir '
+                            'donde GitHub deje escribir.',
                   style: const TextStyle(fontSize: 12, color: didactaMuted),
                 ),
-              ] else ...[
-                const Text(
-                  'Entra en GitHub para traer repositorios, y para que los '
-                  'commits salgan con tu nombre.',
-                  style: TextStyle(fontSize: 12.5, color: didactaMuted),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  key: const Key('github-client-id'),
-                  controller: _clientId,
-                  decoration: const InputDecoration(
-                    labelText: 'Client ID de la OAuth App',
-                    helperText:
-                        'GitHub → Settings → Developer settings → OAuth Apps, '
-                        'con «Enable Device Flow». Es público: no es un '
-                        'secreto que haya que proteger.',
-                    helperMaxLines: 3,
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                FilledButton.icon(
-                  key: const Key('github-sign-in'),
-                  onPressed: _working ? null : _signIn,
-                  icon: _working
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.login, size: 16),
-                  label: Text(_working ? 'Esperando…' : 'Entrar en GitHub'),
-                ),
-              ],
-              if (_problem != null) ...[
-                const SizedBox(height: 10),
-                Note('$_problem', tone: didactaTeacher),
-              ],
+              ] else
+                // No se llega aquí por la puerta, pero sí saliendo desde esta
+                // misma pantalla: el fotograma entre pulsar «Salir» y que la
+                // aplicación vuelva a la puerta se pinta, y una ficha vacía
+                // en ese fotograma sería un parpadeo raro.
+                SignInForm(session: session),
             ],
           ),
         ),
       ),
     );
   }
-}
-
-/// El código del device flow, mientras se espera.
-class _DeviceCodeDialog extends StatelessWidget {
-  const _DeviceCodeDialog({required this.code});
-
-  final DeviceCode code;
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Autoriza Didacta en GitHub'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Abre ${code.verificationUri} y escribe este código:'),
-        const SizedBox(height: 12),
-        SelectableText(
-          code.userCode,
-          style: const TextStyle(
-            fontSize: 26,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w700,
-            letterSpacing: 3,
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Esta ventana se cierra sola en cuanto lo autorices.',
-          style: TextStyle(fontSize: 12, color: didactaMuted),
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Clipboard.setData(ClipboardData(text: code.userCode)),
-        child: const Text('Copiar el código'),
-      ),
-      FilledButton(
-        onPressed: () =>
-            Clipboard.setData(ClipboardData(text: code.verificationUri)),
-        child: const Text('Copiar el enlace'),
-      ),
-    ],
-  );
 }
 
 /// Los repositorios abiertos: su carpeta, su color y cómo están.
@@ -327,19 +195,28 @@ class _ReposSectionState extends State<_ReposSection> {
 
   /// Añadir una carpeta que ya está en el disco.
   ///
-  /// Sin pasar por GitHub: de qué repositorio es lo dice su propio remoto. Es
-  /// lo que hace que un clon que ya tenías siga sirviendo, y lo que deja
-  /// trabajar antes de haber configurado la OAuth App.
+  /// De qué repositorio es lo dice su propio remoto, y si esta cuenta llega a
+  /// él lo dice GitHub. Las dos cosas se comprueban: una carpeta cualquiera
+  /// no sirve --lo que se escriba ahí no tiene a dónde ir-- y un clon de otra
+  /// cuenta tampoco.
   Future<void> _addFolder() async {
+    final session = widget.session;
+    if (!session.signedIn) {
+      setState(() => _problem = 'Entra en GitHub primero.');
+      return;
+    }
     final chosen = await getDirectoryPath();
     if (chosen == null || !mounted) return;
     setState(() {
       _working = true;
       _problem = null;
-      _progress = 'Leyendo $chosen…';
+      _progress = 'Comprobando $chosen en GitHub…';
     });
     try {
-      await widget.session.addExistingRepository(chosen);
+      await session.addExistingRepository(chosen);
+      // Se añadió, pero puede no haber quedado al día: eso no es un fallo de
+      // añadir, y decirlo como si lo fuera haría pensar que no se añadió.
+      if (mounted) setState(() => _problem = session.addProblem);
     } catch (thrown) {
       if (mounted) setState(() => _problem = thrown);
     } finally {
@@ -397,13 +274,15 @@ class _ReposSectionState extends State<_ReposSection> {
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('Añadir desde GitHub'),
                   ),
-                  // Y el camino que no pasa por GitHub: una carpeta que ya
-                  // está clonada en el disco.
+                  // Y el otro camino hacia lo mismo: una carpeta que ya está
+                  // clonada en el disco. Pasa por GitHub igual --se comprueba
+                  // de qué repositorio es y si llegas a él-- porque lo que se
+                  // abre tiene que poder sincronizarse.
                   OutlinedButton.icon(
                     key: const Key('add-repository-folder'),
                     onPressed: _working ? null : _addFolder,
                     icon: const Icon(Icons.folder_open_outlined, size: 16),
-                    label: const Text('Añadir una carpeta del disco'),
+                    label: const Text('Añadir un clon del disco'),
                   ),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 320),

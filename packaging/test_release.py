@@ -77,6 +77,124 @@ class VersionTest(unittest.TestCase):
             release.read_version()
 
 
+class BumpTest(unittest.TestCase):
+    """Lo que sube una publicación.
+
+    Es la parte con más consecuencias de todo esto: el número que salga de
+    aquí queda en un tag, en el nombre de cuatro artefactos y en lo que cada
+    instalación compara para decidir si se actualiza. No hay forma de
+    corregirlo después.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.mkdtemp()
+        self.pubspec = os.path.join(self.temp, "pubspec.yaml")
+        self.original = release.PUBSPEC
+        release.PUBSPEC = self.pubspec
+
+    def tearDown(self):
+        release.PUBSPEC = self.original
+        shutil.rmtree(self.temp, ignore_errors=True)
+
+    def write(self, text):
+        with open(self.pubspec, "w") as handle:
+            handle.write(text)
+
+    def read(self):
+        with open(self.pubspec) as handle:
+            return handle.read()
+
+    def test_publicar_sube_la_mediana(self):
+        # La regla del ciclo, y la razón de que esto exista.
+        self.assertEqual(release.next_version("1.1.0"), "1.2.0")
+        self.assertEqual(release.next_version("1.0.0"), "1.1.0")
+
+    def test_el_parche_vuelve_a_cero(self):
+        # 1.4.2 → 1.5.0 y no 1.5.2: lo que la mediana dice es «otra tanda de
+        # cambios», y arrastrar el parche de la anterior no significa nada.
+        self.assertEqual(release.next_version("1.4.2"), "1.5.0")
+
+    def test_la_mediana_no_arrastra_a_la_mayor(self):
+        # 1.9.0 → 1.10.0, no 2.0.0. Es la comparación que la aplicación hace
+        # semánticamente y no como texto, justo para que esto funcione.
+        self.assertEqual(release.next_version("1.9.0"), "1.10.0")
+        self.assertEqual(release.next_version("1.10.0"), "1.11.0")
+
+    def test_las_otras_dos_partes_siguen_a_mano(self):
+        self.assertEqual(release.next_version("1.4.2", "major"), "2.0.0")
+        self.assertEqual(release.next_version("1.4.2", "patch"), "1.4.3")
+
+    def test_una_preliberacion_publica_como_su_final(self):
+        # El caso sin respuesta obvia, y por eso no se adivina: subir la
+        # mediana de `1.5.0-rc.1` daría `1.6.0` y dejaría un `1.5.0` que
+        # nunca existió.
+        self.assertEqual(release.next_version("1.5.0-rc.1"), "1.5.0")
+        self.assertEqual(release.next_version("1.5.0-rc.1", "major"), "1.5.0")
+
+    def test_una_version_que_no_es_semantica_no_se_sube(self):
+        with self.assertRaises(release.Problem):
+            release.next_version("1.4")
+
+    def test_una_parte_que_no_existe_se_dice(self):
+        with self.assertRaises(release.Problem):
+            release.next_version("1.4.2", "mediana")
+
+    def test_bump_escribe_la_version_y_sube_el_build(self):
+        self.write("name: didacta_app\nversion: 1.1.0+7\n\nenvironment:\n")
+        self.assertEqual(release.bump(), ("1.1.0", "1.2.0", 8))
+        self.assertEqual(release.read_version(), ("1.2.0", 8))
+
+    def test_bump_no_toca_nada_más_del_fichero(self):
+        # `pubspec.yaml` lleva quince líneas de comentarios de Flutter
+        # explicando qué es cada campo. Reescribirlo con un parser de YAML se
+        # las llevaría por delante sin que nadie lo notara hasta leerlo.
+        original = (
+            "name: didacta_app\n"
+            "# A version number is three numbers separated by dots\n"
+            "version: 1.1.0+7\n"
+            "\n"
+            "environment:\n"
+            "  sdk: ^3.12.2\n"
+        )
+        self.write(original)
+        release.bump()
+        self.assertEqual(
+            self.read(), original.replace("1.1.0+7", "1.2.0+8"))
+
+    def test_bump_sin_linea_de_version(self):
+        self.write("name: didacta_app\n")
+        with self.assertRaises(release.Problem):
+            release.bump()
+
+    def test_los_cuatro_trabajos_llegan_al_mismo_numero(self):
+        """La invariante de la que depende el workflow.
+
+        macOS, Windows, Linux y el trabajo que publica ejecutan `bump` cada
+        uno sobre su propia copia del repositorio, sin pasarse nada entre
+        ellos. Si dos llegaran a números distintos, se publicaría un release
+        con artefactos de dos versiones y nadie lo vería hasta instalarlo.
+        """
+        numbers = set()
+        for index in range(4):
+            copy = os.path.join(self.temp, "copia-%d.yaml" % index)
+            with open(copy, "w") as handle:
+                handle.write("name: didacta_app\nversion: 1.1.0+7\n")
+            release.PUBSPEC = copy
+            numbers.add(release.bump())
+        self.assertEqual(numbers, {("1.1.0", "1.2.0", 8)})
+
+    def test_el_ciclo_entero_no_repite_ni_salta_un_numero(self):
+        # Cuatro publicaciones seguidas, como pasaría de verdad: cada una
+        # sobre lo que dejó la anterior.
+        self.write("version: 1.0.0+1\n")
+        seen = []
+        for _ in range(4):
+            _, after, build = release.bump()
+            seen.append((after, build))
+        self.assertEqual(
+            seen, [("1.1.0", 2), ("1.2.0", 3), ("1.3.0", 4), ("1.4.0", 5)])
+
+
 class ChangelogTest(unittest.TestCase):
     """Publicar sin decir qué cambia no se puede."""
 

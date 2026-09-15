@@ -388,7 +388,11 @@ class _ProcessCompiler implements Compiler {
     ];
     // `preview` sale con 1 cuando algo no compila, y eso no es un fallo de
     // la llamada: el JSON con los diagnósticos es justo lo que hace falta.
-    final output = await _run(arguments, allowFailure: true, onOutput: onOutput);
+    final output = await _run(
+      arguments,
+      allowFailure: true,
+      onOutput: onOutput,
+    );
 
     final Map<String, dynamic> decoded;
     try {
@@ -427,15 +431,19 @@ class _ProcessCompiler implements Compiler {
     bool fast = false,
     void Function(String line)? onOutput,
   }) async {
-    final output = await _run([
-      'build',
-      document,
-      '--json',
-      for (final language in languages) ...['-l', language],
-      for (final profile in profiles) ...['-p', profile],
-      if (fast) '--fast',
-      if (onOutput != null) '--progress',
-    ], allowFailure: true, onOutput: onOutput);
+    final output = await _run(
+      [
+        'build',
+        document,
+        '--json',
+        for (final language in languages) ...['-l', language],
+        for (final profile in profiles) ...['-p', profile],
+        if (fast) '--fast',
+        if (onOutput != null) '--progress',
+      ],
+      allowFailure: true,
+      onOutput: onOutput,
+    );
 
     return [
       for (final item in _listIn(output, document))
@@ -619,13 +627,12 @@ class _ProcessCompiler implements Compiler {
     final errors = StringBuffer();
     final reading = <Future<void>>[
       process.stdout.transform(decoder).forEach(out.write),
-      process.stderr
-          .transform(decoder)
-          .transform(const LineSplitter())
-          .forEach((line) {
-            errors.writeln(line);
-            onOutput?.call(line);
-          }),
+      process.stderr.transform(decoder).transform(const LineSplitter()).forEach(
+        (line) {
+          errors.writeln(line);
+          onOutput?.call(line);
+        },
+      ),
     ];
     final code = await process.exitCode;
     // Después del código de salida: las corrientes pueden tener cola

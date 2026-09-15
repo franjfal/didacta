@@ -18,6 +18,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -32,10 +33,33 @@ import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../model/catalogue.dart';
 import '../model/workspace.dart';
+import 'build_console.dart';
 import 'history.dart';
 
 /// Where the app is in bringing itself up.
 enum LoadState { loading, ready, failed }
+
+/// Si hay sesión de GitHub, que es lo que decide si Didacta se abre.
+///
+/// Tres estados y no un booleano, porque el tercero es real y confundirlo con
+/// «no» tiene consecuencias: al arrancar, leer el llavero tarda, y durante ese
+/// rato la respuesta no es «no ha entrado» sino **todavía no se sabe**. Con un
+/// booleano, cada arranque enseñaría la pantalla de entrar durante un
+/// parpadeo antes de abrir la biblioteca.
+enum SignInState {
+  /// Leyendo el llavero. No se sabe.
+  checking,
+
+  /// Hay credencial guardada y GitHub no la ha rechazado.
+  ///
+  /// Sin red también es esto. Lo que se exige es **haber entrado**, no estar
+  /// conectado: un aula sin wifi no puede dejar a nadie sin sus diapositivas,
+  /// y el trabajo está en un clon del disco.
+  signedIn,
+
+  /// No hay credencial, o GitHub ha dicho que ya no vale.
+  signedOut,
+}
 
 /// Lo que un repositorio tiene esperando para enviarse a GitHub.
 class RepoOutbox {
@@ -121,9 +145,28 @@ class Session extends ChangeNotifier {
   GitHubUser? _user;
 
   /// Quién ha entrado en GitHub, si alguien lo ha hecho.
+  ///
+  /// Puede ser null habiendo sesión: es lo que pasa al abrir sin red con un
+  /// token guardado de una versión anterior, que todavía no recordaba el
+  /// nombre. Quien decide si se puede usar Didacta es [signInState], no esto.
   GitHubUser? get user => _user;
 
-  bool get signedIn => _user != null;
+  SignInState _signIn = SignInState.checking;
+
+  /// Si hay sesión de GitHub. Es lo que decide si la aplicación se abre.
+  SignInState get signInState => _signIn;
+
+  bool get signedIn => _signIn == SignInState.signedIn;
+
+  Object? _signInProblem;
+
+  /// Por qué se cerró la sesión sola, si se cerró.
+  ///
+  /// Se enseña en la pantalla de entrar. Que la sesión caduque y la
+  /// aplicación se limite a pedir la contraseña otra vez, sin decir que antes
+  /// había una, es la clase de silencio que hace pensar que algo se ha
+  /// perdido.
+  Object? get signInProblem => _signInProblem;
 
   String? _token;
   bool _pushOnCommit = true;
@@ -213,6 +256,15 @@ class Session extends ChangeNotifier {
   /// Whether compiling is possible on this platform at all. False on the
   /// web, which has no LaTeX and no way to run a process that does.
   bool get canCompile => Compiler.supported;
+
+  /// Lo que el motor va escribiendo mientras compila.
+  ///
+  /// En la sesión y no en la pantalla que compila, por lo mismo que el resto
+  /// de lo que hay aquí: se compila desde tres sitios --la pestaña de una
+  /// unidad, la de un tema, el botón de rehacer un panel-- y el registro
+  /// tiene que sobrevivir a cerrar la ventana que lo enseña y a irse de la
+  /// pantalla. Uno solo, además, porque las compilaciones van de una en una.
+  final BuildConsole buildConsole = BuildConsole();
 
   /// The compiler, or null when there is nothing to compile with -- no
   /// engine, no clone, or a browser.
@@ -441,6 +493,7 @@ class Session extends ChangeNotifier {
     _settleContent?.cancel();
     _watching?.cancel();
     _watchingContent?.cancel();
+    buildConsole.dispose();
     super.dispose();
   }
 
@@ -563,6 +616,10 @@ class Session extends ChangeNotifier {
       author: _cloneAuthor,
       token: _token ?? '',
       pushOnCommit: _pushOnCommit,
+      // Crear o borrar una asignatura es una modificación como cualquier
+      // otra, y de las que más daño hacen si se hacen sobre una copia vieja:
+      // toca la estructura del repositorio entero.
+      beforeWrite: () => ensureFresh(repo),
     );
   }
 
@@ -628,6 +685,16 @@ class Session extends ChangeNotifier {
       _workspace = const Workspace.empty();
       _settingsProblem = error;
     }
+
+    // La sesión, antes que el catálogo y antes de pintar.
+    //
+    // Va aquí y no en `refreshAccess`, que es donde estaba, porque ahora
+    // decide **si hay aplicación**: sin sesión no se abre nada, así que la
+    // primera pantalla depende de esto y no puede pintarse sin ello. Y porque
+    // un catálogo que no carga sale por una rama que nunca llegaba a
+    // `refreshAccess`, y habría dejado la pantalla de carga para siempre.
+    _token = await tokenStore.read();
+    await _resolveSignIn();
 
     try {
       _catalogue = await _source.load();
@@ -721,13 +788,7 @@ class Session extends ChangeNotifier {
     _cloneStatus.clear();
     _repoProblems.clear();
 
-    if (_token != null && _token!.isNotEmpty && _user == null) {
-      try {
-        _user = await GitHubApi(token: _token!).me();
-      } catch (_) {
-        // Un token que ya no vale no puede impedir leer lo que hay en disco.
-      }
-    }
+    await _resolveSignIn();
 
     // El autor de los commits: quien ha entrado en GitHub. Sin sesión, lo que
     // git tenga configurado en la máquina, que es lo que hace que un clon
@@ -754,6 +815,9 @@ class Session extends ChangeNotifier {
           token: _token ?? '',
           author: _cloneAuthor,
           pushOnCommit: _pushOnCommit,
+          // Traer antes de escribir, con la ventana de [freshFor] para no
+          // preguntar a GitHub en cada guardado.
+          beforeWrite: () => ensureFresh(repo.id),
         );
       } catch (thrown) {
         // Uno que no abre no puede llevarse por delante a los demás: quien
@@ -763,6 +827,83 @@ class Session extends ChangeNotifier {
     }
 
     if (compiler() == null) await _findEngine();
+  }
+
+  /// Quién es quien tiene este token, según GitHub.
+  ///
+  /// Un método propio y no la llamada directa porque es **la única parte de
+  /// tener sesión que necesita internet**, y aislarla es lo que permite
+  /// probar todo lo demás --que sin sesión no se abre, que sin red sí, que un
+  /// token rechazado echa-- sin una máquina conectada.
+  @protected
+  @visibleForTesting
+  Future<GitHubUser> whoIs(String token) => GitHubApi(token: token).me();
+
+  /// A qué llega en GitHub la cuenta que ha entrado, para un repositorio.
+  ///
+  /// Null es que no llega. Aparte por lo mismo que [whoIs]: es de las pocas
+  /// cosas que necesitan internet, y aislarla permite probar la regla --qué
+  /// carpetas se dejan añadir y cuáles no-- sin una máquina conectada.
+  @protected
+  @visibleForTesting
+  Future<GitHubRepo?> accessTo(String owner, String name) async {
+    final token = _token ?? await tokenStore.read() ?? '';
+    return GitHubApi(token: token).repository(owner, name);
+  }
+
+  /// Decide si hay sesión, que es lo que decide si Didacta se abre.
+  ///
+  /// La regla, en una línea: **hay sesión si hay credencial guardada y GitHub
+  /// no la ha rechazado.** Los cuatro casos que salen de ahí no son
+  /// intercambiables:
+  ///
+  /// * sin token, no hay sesión. Es la instalación recién puesta;
+  /// * con token y GitHub contestando, hay sesión y además se sabe de quién.
+  ///   Se apunta, para la próxima vez que no haya red;
+  /// * con token y **GitHub diciendo que no vale** --un 401, un token
+  ///   revocado desde github.com-- se cierra la sesión aquí y se dice por
+  ///   qué. Dejar abierta una sesión que GitHub ya no reconoce sería enseñar
+  ///   un candado que no cierra;
+  /// * con token y **sin poder preguntar** --sin red-- hay sesión. Lo que se
+  ///   exige es haber entrado, y eso ya pasó; lo que no hay ahora es forma de
+  ///   confirmarlo, que no es lo mismo. Se usa el nombre apuntado la última
+  ///   vez.
+  Future<void> _resolveSignIn() async {
+    if (_token == null || _token!.isEmpty) {
+      _user = null;
+      _signIn = SignInState.signedOut;
+      return;
+    }
+
+    if (_user == null) {
+      try {
+        // Con tope: sin red, una petición puede tardar lo que tarde el DNS en
+        // rendirse, y eso es tiempo con la aplicación en blanco delante de
+        // alguien que ya entró. Pasado el tope se sigue con lo apuntado, que
+        // es exactamente lo que hay que hacer cuando no se puede preguntar.
+        _user = await whoIs(_token!).timeout(const Duration(seconds: 6));
+        await preferences.setGithubUser(jsonEncode(_user!.toJson()));
+        _signInProblem = null;
+      } on GitHubException catch (rejected) {
+        if (rejected.rejectsCredential) {
+          await tokenStore.clear();
+          await preferences.setGithubUser(null);
+          _token = null;
+          _user = null;
+          _signInProblem = rejected;
+          _signIn = SignInState.signedOut;
+          return;
+        }
+        // GitHub contestó, pero con algo que no habla de la credencial --un
+        // 500 suyo--. No es motivo para echar a nadie.
+        _user = GitHubUser.fromJson(await preferences.githubUser());
+      } catch (_) {
+        // Ni siquiera contestó: sin red. Lo que se sabe es lo de la última
+        // vez, y basta para firmar los commits.
+        _user = GitHubUser.fromJson(await preferences.githubUser());
+      }
+    }
+    _signIn = SignInState.signedIn;
   }
 
   Future<void> storeToken(String token) async {
@@ -816,23 +957,79 @@ class Session extends ChangeNotifier {
   }
 
   /// Guarda el token de GitHub y mira quién es.
+  ///
+  /// Quién es se pregunta **aquí y sin red de seguridad**: entrar es el único
+  /// momento en el que se puede exigir que GitHub conteste, y un token que no
+  /// se ha podido comprobar ni una vez no es una sesión. Lo que se guarda es
+  /// el resultado de esa comprobación, y es lo que permite que los arranques
+  /// siguientes valgan sin red.
   Future<void> signIn(String token) async {
+    final who = await whoIs(token);
     await tokenStore.write(token);
+    await preferences.setGithubUser(jsonEncode(who.toJson()));
     _token = token;
-    try {
-      _user = await GitHubApi(token: token).me();
-    } catch (thrown) {
-      _accessProblem = thrown;
-    }
+    _user = who;
+    _signIn = SignInState.signedIn;
+    _signInProblem = null;
+    _forgetFreshness();
+    await _dropUnreachable();
     await refreshAccess();
+  }
+
+  /// Los repositorios abiertos que esta cuenta no alcanza, fuera.
+  ///
+  /// Se hace al entrar y solo al entrar. Entrar es cuando puede cambiar la
+  /// respuesta --es otra cuenta, o a esta le han quitado el acceso-- y es
+  /// además el único momento en el que se sabe que hay red: comprobarlo en
+  /// cada arranque costaría una llamada por repositorio y dejaría a quien
+  /// abre sin conexión sin sus propias carpetas.
+  ///
+  /// Se quitan del espacio de trabajo, no del disco. La carpeta lleva trabajo
+  /// dentro y perder el acceso a un repositorio no es motivo para borrarlo de
+  /// la máquina de nadie.
+  Future<void> _dropUnreachable() async {
+    final dropped = <String>[];
+    for (final repo in _workspace.repos) {
+      try {
+        if (await accessTo(repo.owner, repo.name) == null) {
+          dropped.add(repo.id);
+        }
+      } catch (_) {
+        // No haber podido preguntar no es un «no»: quitarle a alguien sus
+        // repositorios porque GitHub tuvo un mal momento sería mucho peor
+        // que dejarlos abiertos un rato de más.
+      }
+    }
+    if (dropped.isEmpty) return;
+    for (final id in dropped) {
+      _workspace = _workspace.without(id);
+    }
+    await preferences.setWorkspace(_workspace.toJson());
+    _accessProblem = CloneException(
+      dropped.length == 1
+          ? 'He cerrado ${dropped.single}: esta cuenta no llega a él. La '
+                'carpeta sigue en el disco.'
+          : 'He cerrado ${dropped.length} repositorios a los que esta cuenta '
+                'no llega: ${dropped.join(', ')}. Las carpetas siguen en el '
+                'disco.',
+    );
   }
 
   /// Sale de GitHub. Los clones se quedan: son carpetas de esta máquina con
   /// el trabajo dentro, y borrarlas al salir sería perderlo.
   Future<void> signOut() async {
     await tokenStore.clear();
+    await preferences.setGithubUser(null);
     _token = null;
     _user = null;
+    _signIn = SignInState.signedOut;
+    _signInProblem = null;
+    // Avisando ya, antes de volver a abrir los repositorios: salir tiene que
+    // devolver a la puerta en el acto. Lo que viene después --mirar el estado
+    // de cada clon, buscar el motor-- habla con git y con el disco, y dejar
+    // la biblioteca de alguien que acaba de salir en pantalla mientras tanto
+    // sería enseñar lo que se acaba de cerrar.
+    notifyListeners();
     await refreshAccess();
   }
 
@@ -886,15 +1083,56 @@ class Session extends ChangeNotifier {
   /// el camino de vuelta para quien tenía la aplicación de antes, cuando había
   /// un solo clon configurado en Ajustes.
   Future<ContentRepo> addExistingRepository(String directory) async {
-    final clone = LocalClone(directory: directory);
+    final clone = cloneAt(directory);
+
+    // 1. Que sea un clon de git con un remoto de GitHub.
+    //
+    // Una carpeta cualquiera del disco no sirve, y no por capricho: lo que
+    // se escriba ahí no tiene a dónde ir. Un repositorio de contenido es la
+    // fuente de la verdad de un curso entero, y una copia que solo existe en
+    // un portátil es la copia que se pierde.
     final remote = await clone.remoteUrl();
     final found = repoFromRemote(remote);
     if (found == null) {
       throw CloneException(
-        '$directory no es un clon de git con remoto. Clónalo desde GitHub '
-        'o elige otra carpeta.',
+        '$directory no es un clon de un repositorio de GitHub. Didacta solo '
+        'trabaja sobre clones: lo que se escribe tiene que poder enviarse, y '
+        'una carpeta suelta no tiene a dónde.',
       );
     }
+
+    // 2. Que la cuenta que ha entrado llegue a ese repositorio.
+    //
+    // Que la carpeta esté en este disco no dice nada de quién la puso ahí:
+    // puede ser el clon de otra persona, o el de una cuenta anterior. Quien
+    // decide si esto se puede abrir es GitHub, y se le pregunta.
+    final GitHubRepo? reachable;
+    try {
+      reachable = await accessTo(found.owner, found.name);
+    } on GitHubException catch (thrown) {
+      throw CloneException(
+        'No se ha podido comprobar en GitHub si llegas a '
+        '${found.owner}/${found.name}, así que no lo añado: añadirlo sin '
+        'saberlo sería abrir algo que quizá no se puede sincronizar.',
+        stderr: '$thrown',
+      );
+    } catch (thrown) {
+      throw CloneException(
+        'Sin conexión con GitHub no puedo comprobar si llegas a '
+        '${found.owner}/${found.name}. Añadir un repositorio se hace una vez '
+        'y con red; lo que ya está añadido sigue abriéndose sin ella.',
+        stderr: '$thrown',
+      );
+    }
+    if (reachable == null) {
+      final who = _user?.login;
+      throw CloneException(
+        '${found.owner}/${found.name} no existe o no llegas a él'
+        '${who == null ? '' : ' con la cuenta $who'}. '
+        'Pide acceso en GitHub, o entra con la cuenta que lo tiene.',
+      );
+    }
+
     final repo = ContentRepo(
       owner: found.owner,
       name: found.name,
@@ -904,9 +1142,146 @@ class Session extends ChangeNotifier {
     );
     _workspace = _workspace.with_(repo);
     await preferences.setWorkspace(_workspace.toJson());
+
+    // 3. Y que quede al día.
+    //
+    // Se añade y acto seguido se pone en hora con GitHub, porque una carpeta
+    // que llevaba meses parada abre enseñando material viejo sin decirlo. Lo
+    // que no se puede alinear --commits sin enviar, ficheros sin guardar-- no
+    // se toca ni se esconde: queda dicho y en la barra de sincronización.
+    _addProblem = await _catchUp(repo);
+
     await refreshAccess();
     await reloadCatalogue();
     return repo;
+  }
+
+  Object? _addProblem;
+
+  /// Qué impidió dejar al día el último repositorio añadido, si algo lo hizo.
+  Object? get addProblem => _addProblem;
+
+  /// Cuánto vale una comprobación de que un clon está al día.
+  ///
+  /// Cinco minutos. Editando se guarda muchas veces seguidas --cada campo de
+  /// un problema, cada vuelta a una unidad-- y preguntar a GitHub en cada
+  /// guardado convertiría cada pulsación en una llamada de red: la aplicación
+  /// se pondría lenta justo en lo que más se hace, y GitHub acabaría
+  /// limitando las peticiones. Lo que hace falta es no editar sobre material
+  /// viejo, y para eso una comprobación de hace un momento vale igual que una
+  /// de ahora: en cinco minutos nadie ha empujado y se ha ido.
+  static const Duration freshFor = Duration(minutes: 5);
+
+  /// Cuándo se comprobó por última vez que cada clon estaba al día.
+  final Map<String, DateTime> _verified = {};
+
+  /// Se asegura de que el clon de [repo] está al día antes de escribir en él.
+  ///
+  /// Es la otra mitad de «siempre sincronizados»: traer antes de modificar,
+  /// enviar después. Sin esto, dos personas sobre el mismo tema se pisan sin
+  /// enterarse hasta que una de las dos no puede enviar.
+  ///
+  /// Cuatro cosas que decide, y las cuatro importan:
+  ///
+  /// * **no pregunta si preguntó hace poco** ([freshFor]). Guardar es lo que
+  ///   más se hace, y una llamada de red por guardado se nota;
+  /// * **avanza solo si no hay nada que perder**: con el clon limpio y sin
+  ///   commits propios, ponerse al día es un avance rápido;
+  /// * **si ha divergido, no toca nada y lo dice**. Juntar dos historias es
+  ///   un merge, y eso no lo decide un guardado;
+  /// * **sin red, deja escribir**. Un commit a un clon del propio disco no
+  ///   necesita credencial ni conexión, y bloquear el guardado ahí sería
+  ///   perder trabajo para proteger una sincronización que se hará luego.
+  Future<void> ensureFresh(String? repo) async {
+    final id = repo ?? _workspace.repos.firstOrNull?.id;
+    if (id == null) return;
+    final target = _workspace.repos.where((r) => r.id == id).firstOrNull;
+    if (target == null || !LocalClone.supported) return;
+
+    final last = _verified[id];
+    if (last != null && DateTime.now().difference(last) < freshFor) return;
+
+    final problem = await _catchUp(target);
+    if (problem == null) {
+      _verified[id] = DateTime.now();
+      _driftProblem.remove(id);
+    } else {
+      // No se marca como comprobado: la próxima vez se vuelve a intentar, que
+      // es lo que hace que esto se arregle solo en cuanto vuelva la red o se
+      // resuelva el desfase desde la barra.
+      _driftProblem[id] = problem;
+    }
+    notifyListeners();
+  }
+
+  final Map<String, Object> _driftProblem = {};
+
+  /// Qué impide que un repositorio esté al día con GitHub, si algo lo impide.
+  ///
+  /// Se enseña donde se ve el repositorio. No es un error de guardar --lo
+  /// guardado está guardado-- sino una advertencia sobre lo que hay debajo.
+  Object? driftOf(String repo) => _driftProblem[repo];
+
+  /// Vuelve a exigir una comprobación, aunque se hiciera hace un momento.
+  ///
+  /// Después de traer o de enviar: lo que se acaba de hacer cambia lo que una
+  /// comprobación anterior daba por bueno.
+  void _forgetFreshness() => _verified.clear();
+
+  /// Pone un clon en hora con GitHub, hasta donde se pueda sin pisar nada.
+  ///
+  /// Trae siempre, y **avanza mientras no haya historia propia que juntar**.
+  /// Con commits locales sin enviar no se toca nada: unir dos historias es un
+  /// merge o un rebase, y eso no lo decide ni un guardado ni un botón de
+  /// «añadir carpeta». Se dice lo que hay y se deja para la barra de
+  /// sincronización, que es donde se trae y se envía a propósito.
+  ///
+  /// Quién decide si un fichero suelto sin guardar estorba es **git**, con
+  /// `pull --ff-only`, y no una comprobación propia: un `generated/` recién
+  /// regenerado deja el clon sucio casi siempre, y negarse a avanzar por eso
+  /// habría convertido la garantía en un aviso permanente que nadie lee. Si
+  /// lo que viene pisa algo sin guardar, git se niega y su mensaje es el
+  /// bueno.
+  ///
+  /// Devuelve qué lo impidió, o null si quedó al día.
+  Future<Object?> _catchUp(ContentRepo repo) async {
+    final token = _token ?? await tokenStore.read() ?? '';
+    final clone = cloneAt(repo.directory);
+    try {
+      await clone.fetch(token: token);
+      final status = await clone.status();
+      if (status.behind == 0) {
+        // Al día en lo que importa aquí. Los commits propios sin enviar no
+        // son un desfase con GitHub: son trabajo esperando a salir, y de eso
+        // ya habla la barra de sincronización.
+        return null;
+      }
+      if (status.ahead == 0) {
+        await clone.pull(token: token);
+        return null;
+      }
+      return CloneException(
+        '${repo.id} no está al día con GitHub: ${_describeDrift(status)}. '
+        'Las dos historias han seguido por su lado, así que hay que juntarlas '
+        'desde la barra de sincronización antes de seguir.',
+      );
+    } catch (thrown) {
+      return thrown;
+    }
+  }
+
+  static String _describeDrift(CloneStatus status) {
+    final pieces = [
+      if (status.behind > 0)
+        '${status.behind} ${status.behind == 1 ? 'commit' : 'commits'} por '
+            'traer',
+      if (status.ahead > 0) '${status.ahead} sin enviar',
+      if (status.dirtyPaths.isNotEmpty)
+        '${status.dirtyPaths.length} '
+            '${status.dirtyPaths.length == 1 ? 'fichero' : 'ficheros'} sin '
+            'guardar',
+    ];
+    return pieces.join(', ');
   }
 
   /// Si todavía no hay ningún repositorio con el que trabajar.
@@ -946,6 +1321,7 @@ class Session extends ChangeNotifier {
         result[repo.id] = thrown;
       }
     }
+    _forgetFreshness();
     await refreshAccess();
     if (await refreshIndex()) {
       await reloadCatalogue();
@@ -1005,6 +1381,7 @@ class Session extends ChangeNotifier {
         result[box.repo.id] = thrown;
       }
     }
+    _forgetFreshness();
     await refreshAccess();
     return result;
   }

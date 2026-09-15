@@ -25,6 +25,18 @@ abstract class Preferences {
   Future<String?> githubClientId();
   Future<void> setGithubClientId(String value);
 
+  /// Quién entró en GitHub la última vez, serializado.
+  ///
+  /// Existe para una sola situación, y es la normal: **abrir Didacta sin
+  /// red**. Quien ha entrado tiene el token en el llavero, pero preguntarle a
+  /// GitHub quién es no se puede, y sin esto la aplicación no sabría el
+  /// nombre con el que firmar los commits ni a quién saludar.
+  ///
+  /// No es un secreto --es el nombre público de una cuenta-- así que no va al
+  /// llavero. El token sí, y sigue donde estaba.
+  Future<String?> githubUser();
+  Future<void> setGithubUser(String? value);
+
   /// Dónde se clonan los repositorios nuevos.
   Future<String?> cloneBase();
   Future<void> setCloneBase(String path);
@@ -109,6 +121,7 @@ class StoredPreferences implements Preferences {
 
   static const String _workspace = 'didacta.workspace';
   static const String _clientId = 'didacta.github.clientId';
+  static const String _githubUser = 'didacta.github.user';
   static const String _cloneBase = 'didacta.clone.base';
   static const String _clone = 'didacta.clone.path';
   static const String _push = 'didacta.clone.push';
@@ -145,6 +158,20 @@ class StoredPreferences implements Preferences {
   Future<String?> githubClientId() async =>
       (await SharedPreferences.getInstance()).getString(_clientId) ??
       (defaultClientId.isEmpty ? null : defaultClientId);
+
+  @override
+  Future<String?> githubUser() async =>
+      (await SharedPreferences.getInstance()).getString(_githubUser);
+
+  @override
+  Future<void> setGithubUser(String? value) async {
+    final store = await SharedPreferences.getInstance();
+    if (value == null || value.isEmpty) {
+      await store.remove(_githubUser);
+    } else {
+      await store.setString(_githubUser, value);
+    }
+  }
 
   @override
   Future<void> setGithubClientId(String value) async =>
@@ -292,6 +319,7 @@ class MemoryPreferences implements Preferences {
     this.repos,
     this.clientId,
     this.base,
+    this.githubUserJson,
   });
 
   String? path;
@@ -300,6 +328,7 @@ class MemoryPreferences implements Preferences {
   String? repos;
   String? clientId;
   String? base;
+  String? githubUserJson;
 
   @override
   Future<String?> workspace() async => repos;
@@ -312,6 +341,12 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setGithubClientId(String value) async => clientId = value;
+
+  @override
+  Future<String?> githubUser() async => githubUserJson;
+
+  @override
+  Future<void> setGithubUser(String? value) async => githubUserJson = value;
 
   @override
   Future<String?> cloneBase() async => base;

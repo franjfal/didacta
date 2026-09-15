@@ -54,9 +54,23 @@ class DeviceCode {
 }
 
 class GitHubException implements Exception {
-  const GitHubException(this.message);
+  const GitHubException(this.message, {this.status});
 
   final String message;
+
+  /// El código que devolvió GitHub, cuando la respuesta llegó a llegar.
+  ///
+  /// Null es que no hubo respuesta: sin red, DNS caído, el portal cautivo de
+  /// un hotel. Esa distinción es la que decide si a alguien se le cierra la
+  /// sesión, así que no puede quedarse en el texto del mensaje.
+  final int? status;
+
+  /// Si GitHub ha dicho que esta credencial ya no vale.
+  ///
+  /// 401 es «no te reconozco» y 403 «tú no». Cualquier otra cosa --un 500, o
+  /// no llegar-- no dice nada de la credencial, y tratarlo como si lo dijera
+  /// echaría de la aplicación a quien solo se ha quedado sin red.
+  bool get rejectsCredential => status == 401 || status == 403;
 
   @override
   String toString() => message;
@@ -102,6 +116,35 @@ class GitHubUser {
   String get authorEmail => (email == null || email!.isEmpty)
       ? '$login@users.noreply.github.com'
       : email!;
+
+  /// Para recordar quién entró entre arranques.
+  ///
+  /// No es un secreto --el nombre público de una cuenta-- así que no va al
+  /// llavero: va con el resto de las preferencias. El secreto es el token, y
+  /// ese sigue donde estaba.
+  Map<String, dynamic> toJson() => {
+    'login': login,
+    if (name != null) 'name': name,
+    if (email != null) 'email': email,
+  };
+
+  static GitHubUser? fromJson(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final json = jsonDecode(raw) as Map<String, dynamic>;
+      final login = json['login'] as String? ?? '';
+      if (login.isEmpty) return null;
+      return GitHubUser(
+        login: login,
+        name: json['name'] as String?,
+        email: json['email'] as String?,
+      );
+    } catch (_) {
+      // Lo que no se puede leer es como si no estuviera: se vuelve a
+      // preguntar a GitHub en cuanto haya red.
+      return null;
+    }
+  }
 }
 
 /// El sign in por device flow.
@@ -231,6 +274,7 @@ class GitHubApi {
       throw GitHubException(
         'GitHub no reconoce la sesión (${response.statusCode}). '
         'Vuelve a entrar.',
+        status: response.statusCode,
       );
     }
     final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -278,6 +322,43 @@ class GitHubApi {
       if (list.length < 100) break;
     }
     return found;
+  }
+
+  /// Si esta cuenta llega a este repositorio, y con qué permiso.
+  ///
+  /// Null es que no llega. **GitHub contesta 404 y no 403** a un repositorio
+  /// privado que no puedes ver: no te dice ni que existe, que es lo correcto
+  /// --enterarte de que existe ya sería información-- y lo que significa aquí
+  /// es lo mismo en los dos casos: esa carpeta no se puede añadir.
+  ///
+  /// Se pregunta por el par exacto que dice el remoto del clon y no se busca
+  /// en la lista de repositorios: `user/repos` pagina, tarda, y con doscientos
+  /// repositorios la respuesta a «¿llego a este?» no puede depender de haber
+  /// recorrido todos.
+  Future<GitHubRepo?> repository(String owner, String name) async {
+    final response = await _client.get(
+      Uri.parse('$_base/repos/$owner/$name'),
+      headers: _headers,
+    );
+    if (response.statusCode == 404) return null;
+    if (response.statusCode != 200) {
+      throw GitHubException(
+        'GitHub no contestó sobre $owner/$name (${response.statusCode}).',
+        status: response.statusCode,
+      );
+    }
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    final permissions = (json['permissions'] as Map?) ?? const {};
+    return GitHubRepo(
+      owner: ((json['owner'] as Map?)?['login'] as String?) ?? owner,
+      name: json['name'] as String? ?? name,
+      defaultBranch: json['default_branch'] as String? ?? 'main',
+      private: json['private'] as bool? ?? false,
+      canWrite:
+          (permissions['push'] as bool?) ??
+          (permissions['admin'] as bool?) ??
+          false,
+    );
   }
 
   /// Si un repositorio es de contenido de Didacta.
