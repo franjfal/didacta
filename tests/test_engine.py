@@ -255,8 +255,11 @@ class EngineTests(unittest.TestCase):
         source = os.path.join(DEMO, "courses", "am-iii", "2025-2026", "tema-1.tex")
         with self.assertRaises(build_mod.BuildError):
             self.engine.build(source, "no-such-profile", "es")
+        # `zz` y no `fr`: el francés ya es uno de los idiomas que Didacta
+        # trae, y lo que se comprueba aquí es que un código que no existe se
+        # rechaza antes de llamar a LaTeX, no cuál es la lista de hoy.
         with self.assertRaises(build_mod.BuildError):
-            self.engine.build(source, "notes", "fr")
+            self.engine.build(source, "notes", "zz")
 
     def test_a_missing_source_is_refused(self):
         with self.assertRaises(build_mod.BuildError):

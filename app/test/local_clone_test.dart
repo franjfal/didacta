@@ -424,6 +424,159 @@ void main() {
     });
   });
 
+  group('un repositorio vacío', () {
+    // El caso de un repositorio recién creado en GitHub para empezar un
+    // curso: sin commits, así que sin ninguna rama que clonar.
+    late String empty;
+
+    setUp(() async {
+      empty = '${root.path}/empty.git';
+      await _git(['init', '--bare', '--initial-branch=main', empty], root.path);
+    });
+
+    test('clonarlo se dice como vacío, y no deja carpeta', () async {
+      final into = '${root.path}/vacio';
+      await expectLater(
+        LocalClone.create(
+          directory: into,
+          owner: 'x',
+          repo: 'vacio',
+          branch: 'main',
+          token: '',
+          url: empty,
+        ),
+        throwsA(isA<EmptyRepositoryException>()),
+      );
+      expect(Directory(into).existsSync(), isFalse);
+    });
+
+    test('un clon que falla no deja la carpeta a medias', () async {
+      // La rama no existe: el remoto tiene commits, pero no esa.
+      final into = '${root.path}/sin-rama';
+      await expectLater(
+        LocalClone.create(
+          directory: into,
+          owner: 'x',
+          repo: 'x',
+          branch: 'no-existe',
+          token: '',
+          url: remote,
+        ),
+        throwsA(isA<CloneException>()),
+      );
+      expect(Directory(into).existsSync(), isFalse);
+    });
+
+    test(
+      'prepararlo deja un clon al día, con el commit en el remoto',
+      () async {
+        final into = '${root.path}/curso';
+        final prepared = await LocalClone.initialize(
+          directory: into,
+          owner: 'x',
+          repo: 'curso',
+          branch: 'main',
+          token: '',
+          title: 'Teoría: «Bases de datos» #1',
+          authorName: 'Javier Falcó',
+          authorEmail: 'javier@uv.es',
+          url: empty,
+        );
+
+        // El nombre entre comillas: los dos puntos y la almohadilla romperían
+        // un YAML escrito a pelo.
+        expect(
+          File('$into/didacta.yaml').readAsStringSync(),
+          contains('name: "Teoría: «Bases de datos» #1"'),
+        );
+        expect(
+          File('$into/.gitignore').readAsStringSync(),
+          contains('.didacta-build/'),
+        );
+
+        final status = await prepared.status();
+        expect(status.branch, 'main');
+        expect(status.isClean, isTrue);
+        expect(status.isSynced, isTrue, reason: 'enviado y con seguimiento');
+
+        final log = await Process.run('git', [
+          'log',
+          '-1',
+          '--pretty=%an|%ae',
+          'main',
+        ], workingDirectory: empty);
+        expect((log.stdout as String).trim(), 'Javier Falcó|javier@uv.es');
+      },
+    );
+
+    test('con la rama que dice GitHub, no la de esta máquina', () async {
+      final into = '${root.path}/trunk';
+      final prepared = await LocalClone.initialize(
+        directory: into,
+        owner: 'x',
+        repo: 'trunk',
+        branch: 'trunk',
+        token: '',
+        title: 'Trunk',
+        authorName: 'A',
+        authorEmail: 'a@uv.es',
+        url: empty,
+      );
+      expect((await prepared.status()).branch, 'trunk');
+      final refs = await Process.run('git', [
+        'show-ref',
+        '--heads',
+      ], workingDirectory: empty);
+      expect(refs.stdout as String, contains('refs/heads/trunk'));
+    });
+
+    test('si ya no está vacío no se pisa, y no deja carpeta', () async {
+      final into = '${root.path}/pisar';
+      await expectLater(
+        LocalClone.initialize(
+          directory: into,
+          owner: 'x',
+          repo: 'x',
+          branch: 'main',
+          token: '',
+          title: 'Encima',
+          authorName: 'A',
+          authorEmail: 'a@uv.es',
+          url: remote,
+        ),
+        throwsA(
+          isA<CloneException>().having(
+            (e) => e.message,
+            'motivo',
+            contains('ya no está vacío'),
+          ),
+        ),
+      );
+      expect(Directory(into).existsSync(), isFalse);
+    });
+
+    test('una carpeta con cosas dentro no se usa', () async {
+      final into = '${root.path}/ocupada';
+      await Directory(into).create();
+      File('$into/algo.txt').writeAsStringSync('mío\n');
+      await expectLater(
+        LocalClone.initialize(
+          directory: into,
+          owner: 'x',
+          repo: 'curso',
+          branch: 'main',
+          token: '',
+          title: 'Curso',
+          authorName: 'A',
+          authorEmail: 'a@uv.es',
+          url: empty,
+        ),
+        throwsA(isA<CloneException>()),
+      );
+      expect(File('$into/algo.txt').readAsStringSync(), 'mío\n');
+    });
+  });
+
   group('the gateway on top', () {
     CloneGateway gatewayFor({bool signedIn = true, bool push = true}) =>
         CloneGateway(

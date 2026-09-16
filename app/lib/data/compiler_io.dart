@@ -424,6 +424,61 @@ class _ProcessCompiler implements Compiler {
   }
 
   @override
+  Future<ExportResult> exportCourse({
+    required String where,
+    required String to,
+    List<String> languages = const [],
+    List<String> documents = const [],
+  }) async {
+    final output = await _run([
+      'export',
+      where,
+      '--to',
+      to,
+      for (final code in languages) ...['--language', code],
+      '--json',
+      if (documents.isNotEmpty) ...['--', ...documents],
+    ]);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (error) {
+      throw CompileException(
+        'El motor no dijo qué había exportado.',
+        detail: output.trim(),
+      );
+    }
+    return ExportResult(
+      copied: [for (final name in decoded['copied'] as List? ?? []) '$name'],
+      missing: [for (final name in decoded['missing'] as List? ?? []) '$name'],
+      to: decoded['to'] as String? ?? to,
+    );
+  }
+
+  @override
+  Future<Map<String, List<ExistingOutput>>> documentOutputs(
+    String where,
+  ) async {
+    final output = await _run(['built', where, '--json']);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (error) {
+      throw CompileException(
+        'El motor no devolvió un estado legible.',
+        detail: output.trim(),
+      );
+    }
+    return {
+      for (final item in (decoded['documents'] as List? ?? const []))
+        (item as Map)['document'] as String: [
+          for (final record in (item['outputs'] as List? ?? const []))
+            _existingFrom((record as Map).cast<String, dynamic>()),
+        ],
+    };
+  }
+
+  @override
   Future<List<CompileOutput>> compileDocument({
     required String document,
     required List<String> profiles,

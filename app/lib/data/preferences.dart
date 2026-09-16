@@ -96,6 +96,38 @@ abstract class Preferences {
   /// que tiene una versión que no tiene.
   Future<String?> pendingUpdate();
   Future<void> setPendingUpdate(String? version);
+
+  /// Las preferencias que viajan entre ordenadores, tal como se guardaron.
+  ///
+  /// Aquí también, y no solo en el repositorio: esta copia es la que hace que
+  /// abran plegados los temas que plegaste, sin red y antes de que el
+  /// repositorio conteste. El repositorio es donde se sincronizan; esto es la
+  /// última versión que se vio.
+  Future<String?> syncedPrefs();
+  Future<void> setSyncedPrefs(String value);
+
+  /// Si el servidor MCP está encendido.
+  ///
+  /// Apagado de salida, y eso no es prudencia de más: encendido, un modelo
+  /// puede escribir en los repositorios de quien lo enciende. Es una decisión
+  /// que se toma, no una que se hereda de una instalación.
+  Future<bool> mcpEnabled();
+  Future<void> setMcpEnabled(bool value);
+
+  /// En qué repositorios puede escribir el servidor MCP, por su id.
+  ///
+  /// Vacío quiere decir «en ninguno»: enciende en solo lectura, que es lo que
+  /// hace falta para preguntar y no para estropear nada.
+  Future<List<String>> mcpWritable();
+  Future<void> setMcpWritable(List<String> repos);
+
+  /// En qué repositorio se guardan, si en alguno.
+  ///
+  /// Se elige porque no hay uno evidente: cada persona tiene los suyos y no
+  /// coinciden. Sin elegir ninguno, las preferencias se quedan en esta
+  /// máquina, que es lo que hacían todas hasta ahora.
+  Future<String?> prefsRepo();
+  Future<void> setPrefsRepo(String? repo);
 }
 
 class StoredPreferences implements Preferences {
@@ -132,6 +164,10 @@ class StoredPreferences implements Preferences {
   static const String _split = 'didacta.unit.split';
   static const String _checked = 'didacta.update.lastCheck';
   static const String _pending = 'didacta.update.pending';
+  static const String _synced = 'didacta.synced.prefs';
+  static const String _prefsRepo = 'didacta.synced.repo';
+  static const String _mcp = 'didacta.mcp.enabled';
+  static const String _mcpWritable = 'didacta.mcp.writable';
 
   /// The stored value, then the build-time default. A stored empty string is
   /// a real answer -- "I turned the clone off" -- and must win over the
@@ -145,6 +181,26 @@ class StoredPreferences implements Preferences {
     }
     return defaultClonePath.isEmpty ? null : defaultClonePath;
   }
+
+  @override
+  Future<bool> mcpEnabled() async =>
+      (await SharedPreferences.getInstance()).getBool(_mcp) ?? false;
+
+  @override
+  Future<void> setMcpEnabled(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_mcp, value);
+
+  @override
+  Future<List<String>> mcpWritable() async =>
+      (await SharedPreferences.getInstance()).getStringList(_mcpWritable) ??
+      const [];
+
+  @override
+  Future<void> setMcpWritable(List<String> repos) async =>
+      (await SharedPreferences.getInstance()).setStringList(
+        _mcpWritable,
+        repos,
+      );
 
   @override
   Future<String?> workspace() async =>
@@ -308,6 +364,36 @@ class StoredPreferences implements Preferences {
       await prefs.setString(_pending, version);
     }
   }
+
+  @override
+  Future<String?> syncedPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_synced);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  @override
+  Future<void> setSyncedPrefs(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_synced, value);
+  }
+
+  @override
+  Future<String?> prefsRepo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_prefsRepo);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  @override
+  Future<void> setPrefsRepo(String? repo) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (repo == null || repo.isEmpty) {
+      await prefs.remove(_prefsRepo);
+    } else {
+      await prefs.setString(_prefsRepo, repo);
+    }
+  }
 }
 
 /// For tests, and for a platform where nothing is remembered.
@@ -329,6 +415,21 @@ class MemoryPreferences implements Preferences {
   String? clientId;
   String? base;
   String? githubUserJson;
+
+  bool mcp = false;
+  List<String> mcpWrite = const [];
+
+  @override
+  Future<bool> mcpEnabled() async => mcp;
+
+  @override
+  Future<void> setMcpEnabled(bool value) async => mcp = value;
+
+  @override
+  Future<List<String>> mcpWritable() async => mcpWrite;
+
+  @override
+  Future<void> setMcpWritable(List<String> value) async => mcpWrite = value;
 
   @override
   Future<String?> workspace() async => repos;
@@ -418,4 +519,20 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setPendingUpdate(String? version) async => pending = version;
+
+  String? synced;
+
+  @override
+  Future<String?> syncedPrefs() async => synced;
+
+  @override
+  Future<void> setSyncedPrefs(String value) async => synced = value;
+
+  String? prefsRepoId;
+
+  @override
+  Future<String?> prefsRepo() async => prefsRepoId;
+
+  @override
+  Future<void> setPrefsRepo(String? repo) async => prefsRepoId = repo;
 }

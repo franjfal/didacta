@@ -33,6 +33,28 @@ class TokenStore implements SecretStore {
             // Not synchronised to iCloud: a repository credential should
             // stay on the machine it was authorised for.
             iOptions: IOSOptions(synchronizable: false),
+            mOptions: MacOsOptions(
+              synchronizable: false,
+              // El llavero de siempre, no el «data protection keychain».
+              //
+              // Esto es un fallo que costó una sesión entera de entrar en
+              // GitHub: el llavero moderno **exige el entitlement
+              // `keychain-access-groups`**, y ese entitlement exige a su vez
+              // firmar con un equipo de Apple. Didacta se firma ad hoc
+              // --`CODE_SIGN_IDENTITY = "-"`-- porque se instala a mano y no
+              // va a la Mac App Store (D46), así que no hay prefijo de equipo
+              // que poner. El resultado era que el device flow terminaba
+              // bien, GitHub devolvía el token, y guardarlo fallaba con
+              // `-34018: A required entitlement isn't present`, justo en el
+              // último paso y sin decir de qué entitlement hablaba.
+              //
+              // El llavero de siempre no pide entitlement y guarda en el
+              // llavero de inicio de sesión, que es donde alguien esperaría
+              // encontrar esto si va a mirarlo. Lo que se pierde es compartir
+              // la credencial entre aplicaciones del mismo equipo, que aquí
+              // no se usa: hay una aplicación.
+              usesDataProtectionKeychain: false,
+            ),
           );
 
   static const String _key = 'didacta.github.token';

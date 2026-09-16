@@ -42,6 +42,28 @@ void main() {
     });
   });
 
+  group('el vigilante', () {
+    test('avisa cuando aparece un `generated/` que no existía', () async {
+      // Vigilar una carpeta que no existe no vigila nada, y un clon recién
+      // añadido no tiene `generated/` hasta que alguien pasa el motor: sin
+      // esto, ese repositorio se queda mudo hasta reiniciar.
+      final root = Directory.systemTemp.createTempSync('didacta-vacio-');
+      addTearDown(() => root.deleteSync(recursive: true));
+
+      final avisos = watchIndex(root.path).take(1).first;
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      Directory('${root.path}/generated').createSync();
+      File(
+        '${root.path}/generated/manifest.json',
+      ).writeAsStringSync('{"counts": {"units": 0}}');
+
+      await expectLater(
+        avisos.timeout(const Duration(seconds: 5)),
+        completes,
+      );
+    });
+  });
+
   group('al volver a la ventana', () {
     test('un índice reescrito por fuera se vuelve a leer', () async {
       // El caso exacto: `didacta index` desde el terminal con la aplicación
@@ -124,7 +146,90 @@ void main() {
     });
   });
 
+  group('con dos repositorios abiertos', twoRepoTests);
+
   group('el botón de actualizar', refreshTests);
+}
+
+/// Dos clones a la vez, que es como se trabaja: la biblioteca y la teoría.
+///
+/// Esto existe por un caso real: se añadió un segundo repositorio, se le pasó
+/// `didacta index` desde el terminal, y la aplicación siguió enseñando el
+/// error de que no existía su `manifest.json` --y ninguna de sus asignaturas--
+/// hasta reiniciarla. Lo que se miraba era el índice del **primer** clon.
+void twoRepoTests() {
+  test('el índice del segundo, regenerado por fuera, se vuelve a leer', () async {
+    final uno = seed();
+    final dos = seed();
+    addTearDown(() => uno.deleteSync(recursive: true));
+    addTearDown(() => dos.deleteSync(recursive: true));
+
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: FakeCompiler(),
+    );
+    await session.useClonesForTest([uno.path, dos.path]);
+    await session.checkDisk();
+    final before = session.reloads;
+
+    final later = DateTime.now().add(const Duration(seconds: 5));
+    File('${dos.path}/generated/manifest.json').setLastModifiedSync(later);
+
+    await session.checkDisk();
+    expect(
+      session.reloads,
+      before + 1,
+      reason: 'el índice del segundo clon es otro y nadie lo volvió a leer',
+    );
+  });
+
+  test('un repositorio sin índice se lee en cuanto el índice aparece', () async {
+    // El caso exacto: se añade un clon recién hecho, todavía sin `generated/`,
+    // y se le pasa el motor después. Antes no había nada que comparar, así
+    // que encontrar un índice **es** el cambio.
+    final uno = seed();
+    final dos = Directory.systemTemp.createTempSync('didacta-nuevo-');
+    addTearDown(() => uno.deleteSync(recursive: true));
+    addTearDown(() => dos.deleteSync(recursive: true));
+
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: FakeCompiler(),
+    );
+    await session.useClonesForTest([uno.path, dos.path]);
+    await session.checkDisk();
+    final before = session.reloads;
+
+    Directory('${dos.path}/generated').createSync();
+    File(
+      '${dos.path}/generated/manifest.json',
+    ).writeAsStringSync('{"counts": {"units": 0}}');
+
+    await session.checkDisk();
+    expect(session.reloads, before + 1);
+  });
+
+  test('y sin cambios no se recarga por tener dos', () async {
+    final uno = seed();
+    final dos = seed();
+    addTearDown(() => uno.deleteSync(recursive: true));
+    addTearDown(() => dos.deleteSync(recursive: true));
+
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: FakeCompiler(),
+    );
+    await session.useClonesForTest([uno.path, dos.path]);
+    await session.checkDisk();
+    final before = session.reloads;
+
+    await session.checkDisk();
+    await session.checkDisk();
+    expect(session.reloads, before);
+  });
 }
 
 /// El botón de actualizar, y lo que mira.

@@ -1,0 +1,63 @@
+%%
+%% didacta-lang-gl.def -- Galego.
+%%
+%% Todo lo que Didacta imprime por su cuenta. Nada de esto es decorativo: un
+%% documento que dice "Theorem 2.1" en un curso que se da en
+%% Galego est\'a mal, y el contenido no puede cargar con la traducci\'on.
+%%
+%% ATENCI\'ON: fichero base, escrito con la terminolog\'ia matem\'atica al uso
+%% y **sin revisar por nadie que d\'e clase en Galego**. Sirve para compilar
+%% desde el primer d\'ia; antes de repartir material, que lo lea quien lo
+%% hable. Son treinta y seis palabras, y las que cambian de una tradici\'on a
+%% otra son pocas y conocidas: Demostraci\'on, Correcci\'on, Cap\'itulo.
+%%
+\ProvidesFile{didacta-lang-gl.def}[2026/09/16 Didacta Galician]
+
+%% La opci\'on de babel, para que el arranque no necesite otra tabla.
+\def\didactaBabelName{galician}
+
+%% Los entornos con nombre.
+\def\didactaTheoremName{Teorema}
+\def\didactaDefinitionName{Definici\'on}
+\def\didactaPropositionName{Proposici\'on}
+\def\didactaLemmaName{Lema}
+\def\didactaCorollaryName{Corolario}
+\def\didactaPropertyName{Propiedade}
+\def\didactaExampleName{Exemplo}
+\def\didactaQuestionName{Pregunta}
+\def\didactaRemarkName{Observaci\'on}
+\def\didactaAxiomName{Axioma}
+\def\didactaAlgorithmName{Algoritmo}
+\def\didactaNotationName{Notaci\'on}
+\def\didactaProofName{Demostraci\'on}
+
+%% Ejercicios.
+\def\didactaExerciseName{Exercicio}
+\def\didactaAnswerName{Resposta}
+\def\didactaSolutionName{Soluci\'on}
+\def\didactaHintName{Pista}
+\def\didactaMarkingName{Correcci\'on}
+\def\didactaMarksName{puntos}
+
+%% Estructura y portada.
+\def\didactaContentsName{Contidos}
+\def\didactaChapterName{Cap\'itulo}
+\def\didactaCourseName{Materia}
+\def\didactaTeacherName{Profesor}
+\def\didactaAcademicYearName{Curso}
+\def\didactaBibliographyName{Bibliograf\'ia}
+\def\didactaObjectivesName{Obxectivos}
+\def\didactaPrerequisitesName{Requisitos previos}
+\def\didactaSummaryName{Resumo}
+\def\didactaFurtherReadingName{Lecturas adicionais}
+
+%% Canal del profesor.
+\def\didactaTeachingNoteName{Nota docente}
+\def\didactaTimingName{Tempo estimado}
+\def\didactaCommonMistakeName{Erro frecuente}
+
+%% Evaluaci\'on.
+\def\didactaExamName{Exame}
+\def\didactaDurationName{Duraci\'on}
+\def\didactaTotalMarksName{Puntuaci\'on total}
+\endinput

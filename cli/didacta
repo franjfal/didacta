@@ -36,6 +36,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "engine"))
 from didacta import build as build_mod  # noqa: E402
 from didacta import index as index_mod  # noqa: E402
 from didacta import migrate as migrate_mod  # noqa: E402
+from didacta import mcp as mcp_mod
 from didacta import preview as preview_mod  # noqa: E402
 from didacta import profiles as profiles_mod  # noqa: E402
 from didacta import repo as repo_mod  # noqa: E402
@@ -403,6 +404,10 @@ def collect_jobs(root, settings, args, all_profiles):
         languages = args.language or [document.language or settings.default_language]
 
         content_root = repo_mod.content_root_for(document.source, root)
+        # El .bib, si el repositorio tiene. Se pasa relativo a la raíz y solo
+        # cuando el fichero existe: un documento que no cita no tiene por qué
+        # arrastrar biblatex ni una pasada de biber.
+        bibliography = settings.bibliography if settings.bibliography_path else None
         for profile in chosen:
             for language in languages:
                 jobs.append((
@@ -413,6 +418,7 @@ def collect_jobs(root, settings, args, all_profiles):
                         "document_id": "%s/%s" % (year.id, document.id),
                         "document_title": document.title(language),
                         "content_root": content_root,
+                        "bibliography": bibliography,
                         # From course.yaml and year.yaml, in the language being
                         # built, so the .tex does not repeat it three times.
                         "course_keys": course.latex_course_keys(language, year.year),
@@ -603,6 +609,71 @@ def cmd_build(args):
 # check
 # --------------------------------------------------------------------------
 
+#: `\cite`, `\cites`, `\parencite`... con sus argumentos opcionales delante.
+#: Se queda con el último grupo entre llaves de cada uso, que es donde van las
+#: claves separadas por comas.
+_CITE = re.compile(r"\\[a-zA-Z]*cite[a-zA-Z]*\*?((?:\[[^\]]*\])*\{[^{}]*\})+")
+_CITE_KEYS = re.compile(r"\{([^{}]*)\}")
+
+
+def cited_keys(text):
+    """Las claves que cita un `.tex`, en orden de aparición."""
+    keys = []
+    for match in _CITE.finditer(text):
+        for group in _CITE_KEYS.findall(match.group(0)):
+            for key in group.split(","):
+                key = key.strip()
+                if key and key not in keys:
+                    keys.append(key)
+    return keys
+
+
+def bibliography_entries(path):
+    """Las claves que define un `.bib`."""
+    if not path or not os.path.isfile(path):
+        return set()
+    with open(path, encoding="utf-8", errors="replace") as handle:
+        text = handle.read()
+    return set(re.findall(r"@\w+\s*\{\s*([^,\s]+)\s*,", text))
+
+
+def bibliography_warnings(root, settings, units):
+    """Qué se cita que no está en el .bib, unidad a unidad."""
+    messages = []
+    bib = settings.bibliography_path
+    known = bibliography_entries(bib)
+    for unit in sorted(units.values(), key=lambda u: u.relpath):
+        for language, entry in sorted(unit.languages.items()):
+            if not entry.exists:
+                continue
+            # `entry.path` es relativa a la raíz: `didacta check` se llama
+            # desde cualquier sitio dentro del repositorio.
+            path = os.path.join(root, entry.path.replace("/", os.sep))
+            try:
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    keys = cited_keys(handle.read())
+            except OSError:
+                continue
+            if not keys:
+                continue
+            if bib is None:
+                messages.append(
+                    "%s/%s.tex cita %s, y no hay bibliografía: falta %s"
+                    % (unit.relpath, language, ", ".join("`%s`" % k for k in keys),
+                       settings.bibliography)
+                )
+                continue
+            missing = [key for key in keys if key not in known]
+            if missing:
+                messages.append(
+                    "%s/%s.tex cita %s, que no está en %s"
+                    % (unit.relpath, language,
+                       ", ".join("`%s`" % k for k in missing),
+                       settings.bibliography)
+                )
+    return messages
+
+
 def cmd_check(args):
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
@@ -682,6 +753,12 @@ def cmd_check(args):
                 warnings.append(
                     "%s: prerequisite `%s` does not exist" % (unit.relpath, prerequisite)
                 )
+
+    # Lo que se cita tiene que estar en el .bib. Es el error que solo aparecía
+    # compilando --y que compilando aparece como «Undefined control sequence»,
+    # que no dice qué falta--, así que se busca aquí: una clave sin entrada es
+    # una cita que en el PDF sale como [?] delante de treinta alumnos.
+    warnings.extend(bibliography_warnings(root, settings, units))
 
     for message in errors:
         print(S.bad("error  ") + " " + message)
@@ -858,11 +935,64 @@ def cmd_new_unit(args):
     return 0
 
 
-def cmd_new_year(args):
-    """Duplicate a course year.
+class _YearArgs:
+    """Lo que `_empty_year` necesita, cuando lo llama otro comando."""
 
-    Copies structure, never content: the new year references the same units.
-    That is the whole reason the split exists.
+    def __init__(self, course, year):
+        self.course = course
+        self.year = year
+
+
+def _empty_year(course, args, target, settings, quiet=False):
+    """Un curso académico en blanco.
+
+    Con la forma que tiene que tener --las tres claves y la lista de
+    documentos vacía-- y explicándose, porque el fichero se abre después para
+    componerlo a mano tanto como desde la aplicación.
+    """
+    os.makedirs(target)
+    title = course.title(settings.default_language)
+    with open(os.path.join(target, "year.yaml"), "w", encoding="utf-8") as handle:
+        handle.write(
+            "# %s -- %s\n"
+            "#\n"
+            "# La selección, el orden y la estructura. Sin contenido: cada\n"
+            "# entrada de `documents:` es una referencia a content/, y las\n"
+            "# secciones son títulos dentro del orden, no ficheros.\n"
+            "#\n"
+            "# Vacío a propósito: este curso se compone desde cero. Para\n"
+            "# traerse un tema de otro año, `didacta copy`.\n"
+            "\n"
+            "course: %s\n"
+            "year: %s\n"
+            "language: %s\n"
+            "\n"
+            "documents:\n"
+            % (title, args.year, course.id, args.year,
+               course.language or settings.default_language)
+        )
+
+    if quiet:
+        return 0
+    print(S.ok("created ") + "%s/%s, vacío" % (args.course, args.year))
+    print("  year.yaml")
+    print()
+    print(S.dim("  Sin documentos todavía. Para traerse uno de otro curso:"))
+    print(S.dim("    didacta copy --from %s@<otro> --to %s@%s"
+                % (args.course, args.course, args.year)))
+    return 0
+
+
+def cmd_new_year(args):
+    """Crea un curso académico, vacío o copiando otro.
+
+    Copia estructura, nunca contenido: el curso nuevo referencia las mismas
+    unidades. Esa es la razón de que el modelo esté partido.
+
+    Vacío con `--empty`, y también cuando la asignatura no tiene ningún año
+    del que copiar: el primer curso de una asignatura nueva se empieza en
+    blanco, y pedirle a alguien que copie algo que no existe no es una
+    respuesta.
     """
     root, settings = load_repo(args)
     courses, _ = repo_mod.scan_courses(root, settings)
@@ -878,13 +1008,24 @@ def cmd_new_year(args):
         print(S.bad("%s/%s already exists" % (args.course, args.year)))
         return 1
 
-    source_year = args.From or (sorted(course.years)[-1] if course.years else None)
+    if args.empty and args.From:
+        print(S.bad("--empty y --from se contradicen: o se copia, o no"))
+        return 1
+
+    source_year = None
+    if not args.empty:
+        source_year = args.From or (
+            sorted(course.years)[-1] if course.years else None
+        )
+        if source_year is not None and source_year not in course.years:
+            print(S.bad("no year %r in %s" % (source_year, args.course)))
+            return 1
+        if source_year is None and args.From:
+            print(S.bad("%s has no existing year to copy" % args.course))
+            return 1
+
     if source_year is None:
-        print(S.bad("%s has no existing year to copy" % args.course))
-        return 1
-    if source_year not in course.years:
-        print(S.bad("no year %r in %s" % (source_year, args.course)))
-        return 1
+        return _empty_year(course, args, target, settings)
 
     previous = course.years[source_year]
     os.makedirs(target)
@@ -917,6 +1058,526 @@ def cmd_new_year(args):
     print()
     print(S.dim("  Structure only: every unit is still referenced, not copied."))
     print(S.dim("  Edit year.yaml to change the selection or the order."))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# copy
+# --------------------------------------------------------------------------
+
+
+def parse_where(text):
+    """`am-i@2026-2027` partido en sus dos mitades."""
+    if "@" not in text:
+        raise repo_mod.RepoError(
+            "%r no es un curso: se escribe asignatura@año, por ejemplo "
+            "am-i@2026-2027" % text
+        )
+    course, _, year = text.partition("@")
+    return course.strip(), year.strip()
+
+
+def document_blocks(path):
+    """Los bloques de `documents:` de un `year.yaml`, por id.
+
+    Por líneas y no reserializando: un bloque se lleva consigo sus comentarios
+    --el `# TODO: va` que dice qué falta por traducir, el `# Migrated from` que
+    dice de dónde salió, las entradas comentadas de material que este año no
+    se da-- y todo eso es trabajo de alguien que un volcado de YAML tiraría.
+    """
+    lines = open(path, encoding="utf-8").read().split("\n")
+    blocks, order, name, current = {}, [], None, []
+    for line in lines:
+        match = re.match(r"^  - id:\s*(\S+)\s*$", line)
+        if match:
+            if name:
+                blocks[name] = _trim_block(current)
+            name, current = match.group(1), []
+            order.append(name)
+        elif name is not None and line and not line.startswith(("  ", "\t")):
+            # Una clave de primer nivel después de la lista: se acabó.
+            blocks[name] = _trim_block(current)
+            name, current = None, []
+            continue
+        if name is not None:
+            current.append(line)
+    if name:
+        blocks[name] = _trim_block(current)
+    return blocks, order
+
+
+def _trim_block(lines):
+    while lines and not lines[-1].strip():
+        lines.pop()
+    return lines
+
+
+def insert_documents(path, blocks):
+    """Añade bloques al final de `documents:` de un `year.yaml`.
+
+    Al final y no ordenados: el orden de un curso es el orden en que se da, y
+    lo decide quien lo compone. Lo que se copia se pone detrás, que es donde
+    no estorba.
+    """
+    text = open(path, encoding="utf-8").read()
+    lines = text.split("\n")
+
+    start = None
+    for index, line in enumerate(lines):
+        if re.match(r"^documents:\s*$", line):
+            start = index
+            break
+
+    if start is None:
+        # Un año sin composición todavía. Se le pone la clave.
+        while lines and not lines[-1].strip():
+            lines.pop()
+        lines.extend(["", "documents:"])
+        end = len(lines)
+    else:
+        end = start + 1
+        for index in range(start + 1, len(lines)):
+            line = lines[index]
+            if not line.strip() or line.startswith(("  ", "\t")):
+                continue
+            break
+        else:
+            index = len(lines)
+        end = index
+        while end > start + 1 and not lines[end - 1].strip():
+            end -= 1
+
+    body = []
+    empty = end == (0 if start is None else start + 1)
+    for index, block in enumerate(blocks):
+        # Una línea en blanco entre documentos, pero no colgando de
+        # `documents:` cuando la lista estaba vacía.
+        if index or not empty:
+            body.append("")
+        body.extend(block)
+
+    out = lines[:end] + body + lines[end:]
+    open(path, "w", encoding="utf-8").write("\n".join(out).rstrip("\n") + "\n")
+
+
+def themes_needed(blocks):
+    """Los temas que nombran estos bloques."""
+    wanted = []
+    for block in blocks:
+        for line in block:
+            match = re.match(r"^\s*themes:\s*\[(.*)\]\s*$", line)
+            if not match:
+                continue
+            for name in match.group(1).split(","):
+                name = name.strip()
+                if name and name not in wanted:
+                    wanted.append(name)
+    return wanted
+
+
+def copy_themes(source_dir, target_dir, wanted, settings):
+    """Lleva al destino las declaraciones de tema que le falten.
+
+    Sin esto, copiar el Tema 1 a otro año deja sus documentos sueltos: la
+    etiqueta viaja con el documento y la declaración se queda donde estaba.
+    Un tema que nadie declara no agrupa, así que el material se vería --nunca
+    desaparece-- pero sin el bloque que es justo lo que se quería copiar.
+    """
+    if not wanted:
+        return []
+    source = repo_mod.load_themes(source_dir, settings)
+    if not source:
+        return []
+    have = {theme.id for theme in repo_mod.load_themes(target_dir, settings)}
+    missing = [t for t in source if t.id in wanted and t.id not in have]
+    if not missing:
+        return []
+
+    path = os.path.join(target_dir, repo_mod.THEMES_META)
+    if os.path.isfile(path):
+        text = open(path, encoding="utf-8").read().rstrip("\n")
+    else:
+        text = (
+            "# Los temas en que se agrupa el curso.\n"
+            "#\n"
+            "# Cada documento dice a cuáles pertenece con `themes:` en\n"
+            "# `year.yaml`; aquí van su título y su orden. Un tema que nadie\n"
+            "# declara no agrupa: el documento sale suelto y no desaparece.\n"
+            "\nthemes:"
+        )
+
+    body = []
+    for theme in missing:
+        body.append("  - id: %s" % theme.id)
+        body.append("    title:")
+        for code in settings.languages:
+            if theme.titles.get(code):
+                body.append("      %s: %s" % (code, yamlio._fmt(theme.titles[code])))
+    open(path, "w", encoding="utf-8").write(text + "\n" + "\n".join(body) + "\n")
+    return [theme.id for theme in missing]
+
+
+def cmd_copy(args):
+    """Copia documentos de un curso a otro.
+
+    Composición, nunca contenido: el curso de destino **referencia las mismas
+    unidades**. Es la operación que hace útil que una unidad no sepa en qué
+    asignatura entra -- dar el Tema 1 otro año es copiar su composición, no
+    su material.
+    """
+    root, settings = load_repo(args)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    from_course, from_year = parse_where(args.From)
+    to_course, to_year = parse_where(args.to)
+
+    def find(course_id, year_id, quiet=False):
+        course = courses.get(course_id)
+        if course is None:
+            if not quiet:
+                print(S.bad("no existe la asignatura %r" % course_id))
+                print(S.dim("hay: %s" % ", ".join(sorted(courses))))
+            return None
+        entry = course.years.get(year_id)
+        if entry is None:
+            if not quiet:
+                print(S.bad("%s no tiene el curso %r" % (course_id, year_id)))
+                print(S.dim("hay: %s" % ", ".join(sorted(course.years))))
+            return None
+        return entry
+
+    source = find(from_course, from_year)
+    if source is None:
+        return 1
+
+    # El destino, creándolo aquí si hace falta.
+    #
+    # Un curso puede estar repartido entre repositorios --la teoría en uno,
+    # los problemas en otro-- y este solo ve el suyo. Que el año de destino no
+    # tenga carpeta **aquí** no significa que no exista: significa que este
+    # repositorio todavía no aporta nada a él. Y tiene que ser este, porque un
+    # documento y las unidades que llama viven juntos: copiarlo al repositorio
+    # de al lado dejaría sus referencias fuera de alcance.
+    target = find(to_course, to_year, quiet=True)
+    if target is None and not args.create_year:
+        # Aquí no se adivina. Desde la aplicación el destino se elige de una
+        # lista de cursos que existen, así que pasa `--create-year` y esto no
+        # se ve; a mano, `am-i@1999-200` es un dedazo mucho más probable que
+        # un curso nuevo, y crearlo en silencio dejaría basura.
+        find(to_course, to_year)
+        print(S.dim("  Si el curso existe en otro repositorio y aquí todavía "
+                    "no, --create-year lo crea vacío."))
+        return 1
+    if target is None:
+        course = courses.get(to_course)
+        if course is None:
+            print(S.bad("no existe la asignatura %r" % to_course))
+            print(S.dim("hay: %s" % ", ".join(sorted(courses))))
+            return 1
+        made = _empty_year(
+            course,
+            _YearArgs(course=to_course, year=to_year),
+            os.path.join(course.directory, to_year),
+            settings,
+            quiet=True,
+        )
+        if made != 0:
+            return made
+        courses, _ = repo_mod.scan_courses(root, settings)
+        target = courses[to_course].years[to_year]
+        print(S.dim("  %s no estaba en este repositorio; se ha creado vacío."
+                    % args.to))
+    if source.directory == target.directory:
+        print(S.bad("el origen y el destino son el mismo curso"))
+        return 1
+    blocks, order = document_blocks(os.path.join(source.directory, "year.yaml"))
+    wanted = list(args.documents) if args.documents else list(order)
+
+    unknown = [name for name in wanted if name not in blocks]
+    if unknown:
+        print(S.bad("no están en %s: %s" % (args.From, ", ".join(unknown))))
+        print(S.dim("hay: %s" % ", ".join(order)))
+        return 1
+
+    # Lo que ya está allí no se pisa. Un documento del mismo id en el destino
+    # es otro documento con el mismo nombre, y elegir en silencio cuál se
+    # queda es perder uno de los dos.
+    taken, _ = document_blocks(os.path.join(target.directory, "year.yaml"))
+    clash = [name for name in wanted if name in taken]
+    if clash:
+        print(S.bad("ya están en %s: %s" % (args.to, ", ".join(clash))))
+        print(S.dim("  quítalos allí, o cópialos con otro nombre a mano."))
+        return 1
+
+    chosen = [blocks[name] for name in wanted]
+    insert_documents(os.path.join(target.directory, "year.yaml"), chosen)
+
+    copied = []
+    for name in wanted:
+        source_tex = os.path.join(source.directory, "%s.tex" % name)
+        if not os.path.isfile(source_tex):
+            continue
+        body = open(source_tex, encoding="utf-8").read()
+        # El año, donde se vea. Un documento copiado que sigue diciendo el
+        # año viejo en la portada se reparte con la fecha de otro curso.
+        body = body.replace(from_year, to_year)
+        with open(os.path.join(target.directory, "%s.tex" % name), "w",
+                  encoding="utf-8") as handle:
+            handle.write(body)
+        copied.append(name)
+
+    themes = copy_themes(source.directory, target.directory,
+                         themes_needed(chosen), settings)
+
+    print(S.ok("copiados ") + "%d documento(s) de %s a %s"
+          % (len(wanted), args.From, args.to))
+    for name in wanted:
+        print("  %s%s" % (name, "" if name in copied else "   (sin .tex)"))
+    if themes:
+        print(S.dim("  temas que se han llevado consigo: %s" % ", ".join(themes)))
+    print()
+    print(S.dim("  Solo la composición: las unidades son las mismas, no copias."))
+    return 0
+
+
+def cmd_built(args):
+    """Qué hay compilado de los documentos de un curso.
+
+    Para que una pantalla pueda ofrecer «abrir el PDF» sin compilar, y sin
+    preguntar documento por documento. Del curso entero de una vez, que es
+    como se mira.
+    """
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    course_id, year_id = parse_where(args.where)
+    course = courses.get(course_id)
+    if course is None:
+        print(S.bad("no existe la asignatura %r" % course_id))
+        return 1
+    entry = course.years.get(year_id)
+    if entry is None:
+        print(S.bad("%s no tiene el curso %r" % (course_id, year_id)))
+        return 1
+
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+    )
+    report = preview_mod.document_outputs(
+        engine, course_id, year_id, entry.documents, all_profiles,
+        # Los de la asignatura, no los del documento: lo que se pregunta aquí
+        # es qué se puede abrir, y una traducción compilada que no aparece en
+        # la lista es una traducción que nadie vuelve a mirar.
+        languages=course.taught_in(settings),
+    )
+
+    if args.json:
+        json.dump(report, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+
+    if not report["documents"]:
+        print(S.dim("nada compilado todavía en %s" % args.where))
+        return 0
+    for record in report["documents"]:
+        print(S.bold(record["document"]))
+        for output in record["outputs"]:
+            mark = S.warn("viejo") if output["stale"] else S.ok("al día")
+            print("  %-20s %-3s %s" % (output["profile"],
+                                       output["language"], mark))
+    return 0
+
+
+def cmd_export(args):
+    """Saca los PDF de un curso a una carpeta, ordenados por tema.
+
+    Para repartir: un curso entero en carpetas con nombres que se leen, que es
+    lo que se sube al aula virtual o se copia a un disco. Lo que sale es una
+    copia; el repositorio no se toca.
+
+    La forma que tiene, y por qué:
+
+        <destino>/<idioma>/<tema>/<documento> - <versión>.pdf
+
+    El idioma primero porque un reparto es de un idioma: quien da la clase en
+    valenciano se lleva esa carpeta y ya está. Con un solo idioma la carpeta
+    de idioma se salta, que si no es un nivel vacío que hay que atravesar.
+
+    Los temas y los documentos llevan su nombre, no su id: esto no lo lee el
+    motor, lo lee una persona buscando el Tema 3.
+    """
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    course_id, year_id = parse_where(args.where)
+    course = courses.get(course_id)
+    if course is None:
+        print(S.bad("no existe la asignatura %r" % course_id))
+        return 1
+    entry = course.years.get(year_id)
+    if entry is None:
+        print(S.bad("%s no tiene el curso %r" % (course_id, year_id)))
+        return 1
+
+    languages = args.language or course.taught_in(settings)
+    wanted = set(args.documents) if args.documents else None
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+    )
+
+    themes = {theme.id: theme for theme in entry.themes}
+    destination = os.path.abspath(args.to)
+    copied, missing = [], []
+
+    for language in languages:
+        for document in entry.documents:
+            if wanted is not None and document.id not in wanted:
+                continue
+            profiles = document.profiles or [
+                profile.id for profile in
+                profiles_mod.default_profiles(all_profiles, document.kind)
+            ]
+            folder = os.path.join(
+                destination,
+                *([] if len(languages) == 1 else [language]),
+                _folder_for(document, themes, language),
+            )
+            for name in profiles:
+                profile = all_profiles.get(name)
+                if profile is None:
+                    continue
+                title = document.title(language)
+                pdf = os.path.join(
+                    engine.output_dir(
+                        "%s@%s/%s" % (course_id, year_id, document.id),
+                        name, language,
+                    ),
+                    profile.output_name(title, language) + ".pdf",
+                )
+                if not os.path.isfile(pdf):
+                    missing.append("%s · %s · %s" % (document.id, name, language))
+                    continue
+                os.makedirs(folder, exist_ok=True)
+                target = os.path.join(folder, os.path.basename(pdf))
+                shutil.copy2(pdf, target)
+                copied.append(os.path.relpath(target, destination))
+
+    if args.json:
+        json.dump({"copied": copied, "missing": missing, "to": destination},
+                  sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+
+    print(S.ok("exportados ") + "%d fichero(s) a %s" % (len(copied), destination))
+    for name in copied[:20]:
+        print("  %s" % name)
+    if len(copied) > 20:
+        print(S.dim("  ... y %d más" % (len(copied) - 20)))
+    if missing:
+        print()
+        print(S.warn("%d sin compilar, no se han exportado:" % len(missing)))
+        for name in missing[:10]:
+            print("  %s" % name)
+        if len(missing) > 10:
+            print(S.dim("  ... y %d más" % (len(missing) - 10)))
+    return 0 if copied or not missing else 1
+
+
+def _folder_for(document, themes, language):
+    """La carpeta de un documento: su tema, o los sueltos aparte."""
+    for name in document.themes:
+        theme = themes.get(name)
+        if theme is not None:
+            return _safe_name(theme.title(language))
+    return "Sin tema"
+
+
+def _safe_name(text):
+    """Un nombre de carpeta que aguante en los tres sistemas.
+
+    Los dos puntos se caen en lugar de sustituirse: «Tema 1- el número real»
+    se lee como una errata, y «Tema 1 el número real» no.
+    """
+    cleaned = re.sub(r'[:/\\*?"<>|]', "", str(text)).strip()
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    return cleaned or "Sin nombre"
+
+
+def cmd_new_theme(args):
+    """Declara un tema en un curso.
+
+    El tema es el bloque bajo el que se agrupan los documentos, y se declara
+    aparte de ellos a propósito: sus ficheros pueden estar en repositorios
+    distintos, así que uno declara y los demás nombran. Esto escribe la mitad
+    que declara.
+    """
+    root, settings = load_repo(args)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    course = courses.get(args.course)
+    if course is None:
+        print(S.bad("no existe la asignatura %r" % args.course))
+        print(S.dim("hay: %s" % ", ".join(sorted(courses))))
+        return 1
+    entry = course.years.get(args.year)
+    if entry is None:
+        print(S.bad("%s no tiene el curso %r" % (args.course, args.year)))
+        print(S.dim("hay: %s" % ", ".join(sorted(course.years))))
+        return 1
+
+    # `slugify` nunca devuelve vacío --cae en `untitled`-- así que hay que
+    # mirar la entrada y no su resultado: si no, un tema sin nombre se declara
+    # igual y se llama «untitled».
+    if not (args.id or "").strip() and not (args.title or "").strip():
+        print(S.bad("hace falta un id, o un título del que sacarlo"))
+        return 1
+    identifier = (args.id or "").strip() or repo_mod.slugify(args.title)
+
+    if any(theme.id == identifier for theme in entry.themes):
+        print(S.bad("%s ya declara el tema %r" % (args.year, identifier)))
+        return 1
+
+    path = os.path.join(entry.directory, repo_mod.THEMES_META)
+    if os.path.isfile(path):
+        text = open(path, encoding="utf-8").read().rstrip("\n")
+    else:
+        text = (
+            "# Los temas en que se agrupa el curso.\n"
+            "#\n"
+            "# Un tema es un bloque de la asignatura y lleva todo lo suyo: la\n"
+            "# teoría, los problemas, la bibliografía. Cada documento dice a\n"
+            "# cuáles pertenece con `themes:` en `year.yaml`, y esos documentos\n"
+            "# pueden estar en otro repositorio.\n"
+            "#\n"
+            "# Un tema que nadie declara no agrupa: sus documentos salen\n"
+            "# sueltos y no desaparecen. El orden de la lista es el orden en\n"
+            "# que se dan.\n"
+            "\nthemes:"
+        )
+
+    title = args.title or identifier
+    language = args.lang or entry.language or settings.default_language
+    body = [
+        "  - id: %s" % identifier,
+        "    title:",
+        "      %s: %s" % (language, yamlio._fmt(title)),
+    ]
+    for code in settings.languages:
+        if code != language:
+            body.append("      # TODO: %s" % code)
+
+    open(path, "w", encoding="utf-8").write(text + "\n" + "\n".join(body) + "\n")
+
+    print(S.ok("declarado ") + "«%s» (%s) en %s@%s"
+          % (title, identifier, args.course, args.year))
+    print("  %s" % os.path.relpath(path, root))
+    print()
+    print(S.dim("  Vacío hasta que algún documento lo nombre:"))
+    print(S.dim("    themes: [%s]  en su entrada de year.yaml" % identifier))
     return 0
 
 
@@ -1292,7 +1953,7 @@ def cmd_preview(args):
         for profile in wanted:
             result = preview_mod.build(
                 engine, root, reference, profile, language,
-                title=title, area=unit.area,
+                title=title, area=unit.area, settings=settings,
             )
             results.append(result)
             if not args.json:
@@ -1617,13 +2278,15 @@ _WHERE = re.compile(r"^error\s+(\S+?)(?::(\d+))?\s+(.*)$", re.S)
 
 
 def _failure_section(failures):
-    """The verify failures, grouped by the file at fault.
+    r"""The verify failures, grouped by the file at fault.
 
     Grouped because the same unit breaks several documents: measured on
     2025-2026, 19 documents fail from 11 distinct units, and one of them --
-    the bibliography unit that uses biblatex `\cites` -- accounts for six.
-    Listing documents asks the author to read one error six times; listing
-    units says how much work there is, and which fix buys the most.
+    the bibliography unit that uses biblatex `\cites` -- accounted for six.
+    That one no longer fails: Didacta loads biblatex when the repository has a
+    .bib. The shape of the report is the point that stands: listing documents
+    asks the author to read one error six times; listing units says how much
+    work there is, and which fix buys the most.
     """
     groups = {}
     for name, profile, message in failures:
@@ -1714,6 +2377,9 @@ def _verify(target, verbose=False):
             document_id=document.id,
             document_title=document.title(document.language),
             content_root=repo_mod.content_root_for(document.source, target),
+            bibliography=(
+                settings.bibliography if settings.bibliography_path else None
+            ),
         )
         if result.ok:
             if verbose:
@@ -1897,6 +2563,95 @@ def _migration_report(plan, courses, source, target, failures=()):
 # main
 # --------------------------------------------------------------------------
 
+def cmd_mcp(args):
+    """Levanta el servidor MCP sobre uno o varios repositorios.
+
+    Dos transportes, y cuál se usa depende de quién lo lanza:
+
+      * `--stdio` cuando lo lanza un cliente (Claude Desktop, un editor). El
+        cliente es dueño del proceso y habla por la entrada estándar.
+      * `--http` cuando lo lanza la aplicación de Didacta. Entonces el dueño
+        es ella, puede apagarlo desde Ajustes y lee el diario para enseñar
+        qué está haciendo. Un servidor por stdio no se puede encender desde
+        una pantalla: nadie tendría el otro extremo de la tubería.
+
+    Los repositorios se declaran uno a uno, y **escribir hay que pedirlo**:
+    `--repo ruta` abre en solo lectura y `--write ruta` abre para escribir.
+    Al revés --escribir por defecto y tener que prohibirlo-- un olvido acaba
+    con un modelo editando el material de otra persona.
+    """
+    repositories = []
+    for root in (args.repo or []):
+        repositories.append(mcp_mod.Repository(root, writable=False))
+    for root in (args.write or []):
+        repositories.append(mcp_mod.Repository(root, writable=True))
+    if not repositories:
+        # Sin decir ninguno, el de siempre: el que contenga el directorio
+        # actual, que es como funciona el resto del programa.
+        root, _ = load_repo(args)
+        repositories.append(mcp_mod.Repository(root, writable=args.allow_write))
+
+    seen = {}
+    for repository in repositories:
+        if repository.root in seen:
+            # Declarado dos veces, y una de ellas con escritura: manda la que
+            # da menos permiso. Un `--repo` explícito es una decisión.
+            seen[repository.root].writable = (
+                seen[repository.root].writable and repository.writable)
+            continue
+        seen[repository.root] = repository
+    repositories = list(seen.values())
+
+    # Etiquetas distintas: dos repositorios que se llamen igual no se pueden
+    # nombrar en una herramienta, y el modelo no tiene forma de desempatar.
+    labels = {}
+    for repository in repositories:
+        base = repository.label
+        if base in labels:
+            labels[base] += 1
+            repository.label = "%s-%d" % (base, labels[base])
+        else:
+            labels[base] = 1
+
+    def say(line):
+        sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+
+    journal = mcp_mod.Journal(say)
+    latex_dir = None if args.no_build else LATEX_DIR
+    server = mcp_mod.Server(
+        mcp_mod.Workspace(repositories),
+        latex_dir=latex_dir,
+        journal=journal,
+    )
+
+    journal.record(
+        event="ready",
+        transport="http" if args.http else "stdio",
+        tools=sorted(server.tools),
+        repositories=[
+            {"id": r.id, "root": r.root, "writable": r.writable}
+            for r in repositories
+        ],
+    )
+
+    if not args.http:
+        return mcp_mod.serve_stdio(server, sys.stdin, sys.stdout)
+
+    def ready(port):
+        # Por stdout y en una línea suelta: la aplicación pide el puerto 0
+        # para que lo elija el sistema --dos Didactas abiertos no pueden
+        # pelearse por un número-- y necesita que se le diga cuál tocó.
+        print(json.dumps({"port": port, "url": "http://127.0.0.1:%d/" % port}))
+        sys.stdout.flush()
+        journal.record(event="listening", port=port)
+
+    try:
+        return mcp_mod.serve_http(server, port=args.port, on_ready=ready)
+    except KeyboardInterrupt:
+        journal.record(event="stopped")
+        return 0
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="didacta",
@@ -2052,7 +2807,78 @@ def main(argv=None):
     q.add_argument("year")
     q.add_argument("--from", dest="From", metavar="YEAR",
                    help="year to copy (default: the most recent)")
+    q.add_argument("--empty", action="store_true",
+                   help="crearlo sin documentos, sin copiar ninguno")
     q.set_defaults(func=cmd_new_year)
+
+    q = new_sub.add_parser("theme", help="declarar un tema en un curso")
+    q.add_argument("course")
+    q.add_argument("year")
+    q.add_argument("--id", help="su identificador (por defecto, del título)")
+    q.add_argument("--title")
+    q.add_argument("--lang", choices=profiles_mod.LANGUAGES)
+    q.set_defaults(func=cmd_new_theme)
+
+    p = sub.add_parser(
+        "copy",
+        help="copiar documentos de un curso a otro",
+        description="Copia la composición, nunca el contenido: el curso de "
+                    "destino referencia las mismas unidades.",
+    )
+    p.add_argument("--from", dest="From", required=True, metavar="CURSO@AÑO")
+    p.add_argument("--to", dest="to", required=True, metavar="CURSO@AÑO")
+    p.add_argument("documents", nargs="*", metavar="ID",
+                   help="qué copiar (por defecto, todo)")
+    p.add_argument("--create-year", action="store_true",
+                   help="crear el curso de destino aquí si no está todavía")
+    p.set_defaults(func=cmd_copy)
+
+    p = sub.add_parser(
+        "built",
+        help="qué hay compilado de un curso",
+        description="Los PDF que ya existen de cada documento, y si alguno se "
+                    "ha quedado viejo respecto a su composición.",
+    )
+    p.add_argument("where", metavar="CURSO@AÑO")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_built)
+
+    p = sub.add_parser(
+        "export",
+        help="sacar los PDF de un curso a una carpeta",
+        description="Los PDF ya compilados, ordenados en carpetas por idioma "
+                    "y por tema. El repositorio no se toca.",
+    )
+    p.add_argument("where", metavar="CURSO@AÑO")
+    p.add_argument("--to", required=True, metavar="CARPETA")
+    p.add_argument("-l", "--language", action="append",
+                   choices=profiles_mod.LANGUAGES,
+                   help="repetible; por defecto, los de la asignatura")
+    p.add_argument("documents", nargs="*", metavar="ID",
+                   help="qué exportar (por defecto, todo)")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_export)
+
+    p = sub.add_parser(
+        "mcp",
+        help="servidor MCP para que un LLM trabaje sobre el repositorio",
+        description="Expone el repositorio a un modelo: leer asignaturas y "
+                    "unidades, escribir traducciones, comprobar y compilar. "
+                    "Nunca hace commit.",
+    )
+    p.add_argument("--repo", action="append", metavar="RUTA",
+                   help="repositorio en solo lectura (repetible)")
+    p.add_argument("--write", action="append", metavar="RUTA",
+                   help="repositorio en el que se puede escribir (repetible)")
+    p.add_argument("--allow-write", action="store_true",
+                   help="con el repositorio actual, permitir escribir en él")
+    p.add_argument("--http", action="store_true",
+                   help="servir por HTTP en 127.0.0.1 en vez de por stdio")
+    p.add_argument("--port", type=int, default=0,
+                   help="el puerto; 0 lo elige el sistema y se dice cuál")
+    p.add_argument("--no-build", action="store_true",
+                   help="sin la herramienta de compilar")
+    p.set_defaults(func=cmd_mcp)
 
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

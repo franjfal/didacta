@@ -338,12 +338,13 @@ class Engine:
 
     def build(self, source, profile, language, *, document_id=None,
               document_title=None, content_root=None, keep_aux=False,
-              course_keys=None):
+              course_keys=None, bibliography=None):
         """Compile one source file in one profile and one language.
 
         ``source`` is the path to the document's ``.tex``. ``content_root`` is
         where units live, relative to the source's directory -- passed in so
-        the document does not have to know.
+        the document does not have to know. ``bibliography`` is the .bib
+        relative to the repository root, for the same reason.
 
         ``document_title`` and ``course_keys`` come from the structure files,
         and are written to an injection file in the output directory rather
@@ -378,7 +379,8 @@ class Engine:
         job = profile.output_name(title, language)
         inject = self._write_injection(outdir, title, course_keys)
         command = self._command(
-            source_name, job, outdir, profile, language, content_root, inject
+            source_name, job, outdir, profile, language, content_root, inject,
+            bibliography,
         )
 
         if self.verbose:
@@ -565,8 +567,12 @@ class Engine:
         return path
 
     def _command(self, source_name, job, outdir, profile, language,
-                 content_root, inject=None):
+                 content_root, inject=None, bibliography=None):
         pretex = profile.pretex(language, content_root)
+        if bibliography:
+            # Relativa a la raíz, como las unidades: el paquete la compone con
+            # \DidactaContentRoot, así que el documento no lleva ninguna ruta.
+            pretex += "\\def\\DidactaBibliographyFile{%s}" % bibliography
         if inject:
             # Absolute: the working directory is the source's directory, not
             # the output directory.

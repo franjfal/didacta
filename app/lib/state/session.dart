@@ -32,7 +32,12 @@ import '../data/github.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../model/catalogue.dart';
+import '../model/composition_file.dart';
+import '../model/slug.dart';
+import '../model/synced_prefs.dart';
+import '../model/themes_file.dart';
 import '../model/workspace.dart';
+import '../model/yaml_patch.dart';
 import 'build_console.dart';
 import 'history.dart';
 
@@ -114,8 +119,40 @@ class Session extends ChangeNotifier {
   /// Throws if read before [state] is ready. Callers inside the shell are
   /// past that point by construction, and an optional catalogue would put a
   /// null check in every screen for a state none of them can see.
-  Catalogue get catalogue => _catalogue!;
-  Catalogue? get catalogueOrNull => _catalogue;
+  /// Lo que se está mirando: el catálogo **sin los repositorios apagados**.
+  ///
+  /// El filtro se aplica aquí, en el único sitio por el que pasan todas las
+  /// pantallas, y no en cada una. Esa es la diferencia entre una interfaz con
+  /// dos fuentes y dos interfaces pegadas: ninguna pantalla pregunta de qué
+  /// repositorio es nada para decidir si lo enseña.
+  Catalogue get catalogue => _visible ?? _catalogue!;
+  Catalogue? get catalogueOrNull => _visible ?? _catalogue;
+
+  /// El catálogo entero, apagados incluidos. Lo mira quien tiene que hablar
+  /// de los repositorios en sí: el filtro y los ajustes.
+  Catalogue? get fullCatalogue => _catalogue;
+
+  Catalogue? _visible;
+
+  void _refilter() {
+    _visible = _catalogue?.without(_synced.hiddenRepos);
+  }
+
+  /// Si un repositorio se está mirando ahora mismo.
+  bool isRepoVisible(String repo) => !_synced.hiddenRepos.contains(repo);
+
+  /// Enciende o apaga un repositorio en la interfaz.
+  ///
+  /// Apagar no lo cierra: sigue abierto, sigue clonándose y sigue guardando
+  /// lo que ya tenía. Lo que cambia es qué se está mirando, y por eso esto no
+  /// toca el disco ni vuelve a leer el índice.
+  Future<void> setRepoVisible(String repo, bool visible) async {
+    if (isRepoVisible(repo) == visible) return;
+    _synced = _synced.withRepoHidden(repo, !visible);
+    _refilter();
+    notifyListeners();
+    await _rememberPrefs();
+  }
 
   /// Los repositorios abiertos, en orden.
   Workspace _workspace = const Workspace.empty();
@@ -220,6 +257,178 @@ class Session extends ChangeNotifier {
       ? _primaryPath
       : _workspace.directoryOf(repo);
 
+  // -- las preferencias que viajan entre ordenadores ----------------------
+
+  SyncedPrefs _synced = const SyncedPrefs();
+
+  /// Las preferencias sincronizadas, tal como están ahora mismo.
+  SyncedPrefs get syncedPrefs => _synced;
+
+  String? _prefsRepo;
+
+  /// En qué repositorio se guardan. Null es «en ninguno»: se quedan aquí.
+  String? get prefsRepo => _prefsRepo;
+
+  /// Dónde se escriben dentro de ese repositorio.
+  ///
+  /// Con el login de GitHub en el nombre, que es lo que permite que un
+  /// departamento comparta repositorio sin pisarse: cada uno escribe el suyo
+  /// y nadie lee el de otro.
+  String? get prefsPath {
+    final login = _user?.login ?? '';
+    if (login.isEmpty) return null;
+    return '.didacta/prefs/$login.json';
+  }
+
+  Timer? _prefsWrite;
+
+  // -- lo marcado ---------------------------------------------------------
+
+  bool isFavouriteCourse(String course) => _synced.isFavouriteCourse(course);
+
+  bool isFavouriteYear(String course, String year) =>
+      _synced.isFavouriteYear(course, year);
+
+  Future<void> setFavouriteCourse(String course, bool favourite) async {
+    _synced = _synced.withFavouriteCourse(course, favourite);
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  Future<void> setFavouriteYear(
+    String course,
+    String year,
+    bool favourite,
+  ) async {
+    _synced = _synced.withFavouriteYear(course, year, favourite);
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Las asignaturas en el orden en que se enseñan: las marcadas primero, y
+  /// dentro de cada mitad por título.
+  ///
+  /// Aquí y no en la pantalla porque el orden es una decisión de la
+  /// aplicación, no del sitio donde se dibuja: si una lista lo hiciera por su
+  /// cuenta, acabaría discrepando de la de al lado.
+  List<Course> get sortedCourses {
+    final courses = [...catalogue.courses];
+    courses.sort((a, b) {
+      final mine = isFavouriteCourse(a.id);
+      final theirs = isFavouriteCourse(b.id);
+      if (mine != theirs) return mine ? -1 : 1;
+      return compareTitles(a.title(_language), b.title(_language));
+    });
+    return courses;
+  }
+
+  /// Los cursos de una asignatura: los marcados primero, y el resto del más
+  /// reciente al más antiguo, que es el orden en que se buscan.
+  List<String> sortedYearsOf(Course course) {
+    final years = course.years.keys.toList();
+    years.sort((a, b) {
+      final mine = isFavouriteYear(course.id, a);
+      final theirs = isFavouriteYear(course.id, b);
+      if (mine != theirs) return mine ? -1 : 1;
+      return b.compareTo(a);
+    });
+    return years;
+  }
+
+  /// Los temas plegados de un curso.
+  Set<String> collapsedThemes(String course, String year) =>
+      _synced.collapsedIn(course, year);
+
+  /// Pliega o despliega un tema, y lo apunta donde toque.
+  Future<void> setThemeCollapsed({
+    required String course,
+    required String year,
+    required String theme,
+    required bool collapsed,
+  }) async {
+    _synced = _synced.withThemeCollapsed(
+      course: course,
+      year: year,
+      theme: theme,
+      collapsed: collapsed,
+    );
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Elige el repositorio donde se sincronizan, o quita el que hubiera.
+  Future<void> setPrefsRepo(String? repo) async {
+    if (_prefsRepo == repo) return;
+    _prefsRepo = repo;
+    await preferences.setPrefsRepo(repo);
+    notifyListeners();
+    if (repo != null) await loadSyncedPrefs();
+  }
+
+  /// Guarda en esta máquina ya, y en el repositorio dentro de un rato.
+  ///
+  /// Lo segundo con espera a propósito: plegar tres temas seguidos son tres
+  /// clics y **un** commit. Escribir uno por clic llenaría el historial del
+  /// material de ruido, que es el motivo por el que alguien decidiría no usar
+  /// esto.
+  Future<void> _rememberPrefs() async {
+    await preferences.setSyncedPrefs(_synced.toJson());
+    if (_prefsRepo == null) return;
+    _prefsWrite?.cancel();
+    _prefsWrite = Timer(const Duration(seconds: 5), () {
+      unawaited(pushSyncedPrefs());
+    });
+  }
+
+  /// Lee las preferencias del repositorio elegido, si hay alguno.
+  ///
+  /// Silencioso cuando falla. Es lo correcto aquí: no poder leer unas
+  /// preferencias deja paneles como estaban, y una aplicación que no abre
+  /// porque no encuentra un fichero de ajustes es peor que una que abre con
+  /// los de por defecto.
+  Future<void> loadSyncedPrefs() async {
+    final repo = _prefsRepo;
+    final path = prefsPath;
+    if (repo == null || path == null) return;
+    try {
+      final file = await gatewayFor(repo).read(path);
+      _synced = SyncedPrefs.fromJson(file.text);
+      _refilter();
+      await preferences.setSyncedPrefs(_synced.toJson());
+      notifyListeners();
+    } catch (_) {
+      // Todavía no existe, o no se puede leer. Se queda lo local.
+    }
+  }
+
+  /// Escribe las preferencias en el repositorio elegido, como un commit.
+  Future<void> pushSyncedPrefs() async {
+    final repo = _prefsRepo;
+    final path = prefsPath;
+    if (repo == null || path == null) return;
+    final text = _synced.toJson();
+    try {
+      final gateway = gatewayFor(repo);
+      var sha = '';
+      try {
+        final existing = await gateway.read(path);
+        if (existing.text == text) return;
+        sha = existing.sha;
+      } catch (_) {
+        // No estaba: se crea.
+      }
+      await gateway.commit(
+        path: path,
+        text: text,
+        sha: sha,
+        message: 'Preferencias de ${_user?.login ?? 'quien edita'}',
+      );
+    } catch (_) {
+      // Sin red, sin permiso o con un conflicto: lo local sigue valiendo y
+      // el próximo cambio lo vuelve a intentar.
+    }
+  }
+
   bool _unitPanel = true;
 
   /// Si el panel de la derecha de una unidad está desplegado.
@@ -286,49 +495,71 @@ class Session extends ChangeNotifier {
   /// Dónde está TeX, si se ha tenido que decir a mano.
   String? get texPath => _texPath;
 
-  /// Cuándo se escribió el índice que está cargado.
+  /// Cuándo se escribió el índice que está cargado, por repositorio.
   ///
   /// Es lo que permite saber que el de disco es otro: la comprobación de
   /// arranque compara el índice con el contenido, y eso no ve que el índice
   /// haya cambiado **después** de leerlo --que es lo que pasa cuando alguien
   /// lo regenera desde el terminal con la aplicación abierta--.
-  DateTime? _indexRead;
+  ///
+  /// Uno por clon, y no uno solo: con dos repositorios abiertos, mirar el del
+  /// primero deja al segundo enseñando lo que leyó al abrirse. Que no haya
+  /// entrada para un clon significa que cuando se miró no tenía índice, y por
+  /// eso encontrarlo ahora **es** un cambio.
+  final Map<String, DateTime> _indexRead = {};
 
-  StreamSubscription<void>? _watching;
-  StreamSubscription<void>? _watchingContent;
+  final List<StreamSubscription<void>> _watching = [];
+  final List<StreamSubscription<void>> _watchingContent = [];
   Timer? _settle;
   Timer? _settleContent;
 
-  /// Empieza a vigilar `generated/` del clon.
-  ///
-  /// Idempotente: llamarlo dos veces no deja dos vigilantes.
-  void watchDisk() {
-    final path = _primaryPath;
-    if (path == null) return;
-    _watching?.cancel();
-    // El material. Editar un `.tex` en otro programa, copiar una figura o
-    // traerse cien ficheros con un `git pull` son la misma cosa desde aquí:
-    // el disco ya no es lo que el índice dice. Con más respiro que el índice
-    // --un `pull` son cientos de eventos seguidos-- y sin forzar nada: se
-    // pregunta si hace falta, que cuesta una décima, y solo se regenera si
-    // la respuesta es que sí.
-    _watchingContent?.cancel();
-    _watchingContent = watchContent(path).listen((_) {
-      _settleContent?.cancel();
-      _settleContent = Timer(const Duration(seconds: 2), () {
-        unawaited(_rescan());
-      });
-    });
+  /// Los clones que se vigilan: todos los del espacio de trabajo.
+  List<String> get _watchedPaths => repoPaths;
 
-    _watching = watchIndex(path).listen((_) {
-      // Con un respiro: el motor escribe cuatro ficheros, y recargar el
-      // catálogo cuatro veces por una regeneración es tirar el trabajo tres
-      // veces.
-      _settle?.cancel();
-      _settle = Timer(const Duration(milliseconds: 400), () {
-        unawaited(_reloadIfIndexChanged());
-      });
-    });
+  /// Empieza a vigilar `generated/` de cada clon.
+  ///
+  /// Uno por repositorio abierto: vigilar solo el primero dejaba al segundo
+  /// sin enterarse de nada --ni de un `.tex` editado por fuera, ni de un
+  /// `didacta index` desde el terminal-- hasta reiniciar.
+  ///
+  /// Idempotente: llamarlo dos veces no deja dos vigilantes. Y se vuelve a
+  /// llamar después de cada recarga, porque un clon al que le acaba de
+  /// aparecer `generated/` necesita que se le monte el vigilante de verdad.
+  void watchDisk() {
+    for (final subscription in [..._watching, ..._watchingContent]) {
+      unawaited(subscription.cancel());
+    }
+    _watching.clear();
+    _watchingContent.clear();
+
+    for (final path in _watchedPaths) {
+      // El material. Editar un `.tex` en otro programa, copiar una figura o
+      // traerse cien ficheros con un `git pull` son la misma cosa desde aquí:
+      // el disco ya no es lo que el índice dice. Con más respiro que el
+      // índice --un `pull` son cientos de eventos seguidos-- y sin forzar
+      // nada: se pregunta si hace falta, que cuesta una décima, y solo se
+      // regenera si la respuesta es que sí.
+      _watchingContent.add(
+        watchContent(path).listen((_) {
+          _settleContent?.cancel();
+          _settleContent = Timer(const Duration(seconds: 2), () {
+            unawaited(_rescan());
+          });
+        }),
+      );
+
+      _watching.add(
+        watchIndex(path).listen((_) {
+          // Con un respiro: el motor escribe cuatro ficheros, y recargar el
+          // catálogo cuatro veces por una regeneración es tirar el trabajo
+          // tres veces.
+          _settle?.cancel();
+          _settle = Timer(const Duration(milliseconds: 400), () {
+            unawaited(_reloadIfIndexChanged());
+          });
+        }),
+      );
+    }
   }
 
   /// Vuelve a mirar el disco: si el índice se ha quedado corto, lo regenera.
@@ -336,8 +567,8 @@ class Session extends ChangeNotifier {
     if (await refreshIndex()) {
       await reloadCatalogue();
       await refreshBuilt();
-      final path = _primaryPath;
-      if (path != null) _indexRead = await indexModified(path);
+      await _rememberIndexDates();
+      watchDisk();
     }
   }
 
@@ -347,28 +578,52 @@ class Session extends ChangeNotifier {
   /// regeneración. Es el momento exacto en que alguien vuelve después de
   /// tocar ficheros por fuera.
   Future<void> checkDisk() async {
-    if (await _reloadIfIndexChanged()) return;
-    if (await refreshIndex()) await reloadCatalogue();
+    if (await _reloadIfIndexChanged()) {
+      watchDisk();
+      return;
+    }
+    if (await refreshIndex()) {
+      await reloadCatalogue();
+    } else if (_catalogue?.errors.isNotEmpty ?? false) {
+      // Un repositorio que no cargó deja su queja en el catálogo, y esa queja
+      // se queda en pantalla aunque el motivo desaparezca: el caso de siempre
+      // es un clon recién añadido al que todavía no le habían pasado
+      // `didacta index`. Volver a leer cuesta cuatro ficheros.
+      await reloadCatalogue();
+    }
 
     // Desde aquí, el disco avisa solo.
-    final path = _primaryPath;
-    if (path != null) {
-      _indexRead = await indexModified(path);
+    if (_watchedPaths.isNotEmpty) {
+      await _rememberIndexDates();
       watchDisk();
     }
   }
 
-  /// Relee el catálogo si el índice del disco es más nuevo que el cargado.
+  /// Relee el catálogo si el índice de algún clon es más nuevo que el leído.
   Future<bool> _reloadIfIndexChanged() async {
-    final path = _primaryPath;
-    if (path == null) return false;
-    final when = await indexModified(path);
-    if (when == null) return false;
-    if (_indexRead != null && !when.isAfter(_indexRead!)) return false;
-    _indexRead = when;
+    var changed = false;
+    for (final path in _watchedPaths) {
+      final when = await indexModified(path);
+      if (when == null) continue;
+      final last = _indexRead[path];
+      // Sin entrada: cuando se miró no había índice y ahora sí. Es
+      // exactamente lo que pasa con un repositorio recién añadido.
+      if (last != null && !when.isAfter(last)) continue;
+      _indexRead[path] = when;
+      changed = true;
+    }
+    if (!changed) return false;
     await reloadCatalogue();
     await refreshBuilt();
     return true;
+  }
+
+  /// Apunta la fecha del índice de cada clon, que es contra lo que se compara.
+  Future<void> _rememberIndexDates() async {
+    for (final path in _watchedPaths) {
+      final when = await indexModified(path);
+      if (when != null) _indexRead[path] = when;
+    }
   }
 
   /// Lo que pasó con el índice la última vez que se miró.
@@ -491,8 +746,10 @@ class Session extends ChangeNotifier {
   void dispose() {
     _settle?.cancel();
     _settleContent?.cancel();
-    _watching?.cancel();
-    _watchingContent?.cancel();
+    _prefsWrite?.cancel();
+    for (final subscription in [..._watching, ..._watchingContent]) {
+      unawaited(subscription.cancel());
+    }
     buildConsole.dispose();
     super.dispose();
   }
@@ -505,8 +762,10 @@ class Session extends ChangeNotifier {
     await refreshIndex(force: true);
     await reloadCatalogue();
     await refreshBuilt();
-    final primary = _primaryPath;
-    if (primary != null) _indexRead = await indexModified(primary);
+    await _rememberIndexDates();
+    // Un repositorio al que le acaba de aparecer `generated/` no se estaba
+    // vigilando: ahora sí.
+    watchDisk();
     // Y lo de fuera. Al final y no al principio: lo de este disco es lo que
     // se está mirando ahora mismo, y la red puede tardar.
     await checkRemote();
@@ -560,11 +819,34 @@ class Session extends ChangeNotifier {
   @visibleForTesting
   LocalClone cloneAt(String directory) => LocalClone(directory: directory);
 
+  /// El clon de un repositorio, o null si no hay con qué.
+  ///
+  /// Lo que una pantalla pide cuando necesita hablar con git directamente --el
+  /// historial de un fichero, por ejemplo--. Aparte de `cloneAt`, que es el
+  /// punto de sustitución de los tests y no una puerta de entrada: una
+  /// pantalla no tiene por qué saber en qué carpeta está cada repositorio.
+  LocalClone? cloneFor(String? repo) {
+    if (!LocalClone.supported) return null;
+    final directory = pathOf(repo);
+    if (directory == null) return null;
+    return cloneAt(directory);
+  }
+
   /// Para un test: el clon, sin pasar por Ajustes ni por el disco.
   @visibleForTesting
-  Future<void> useCloneForTest(String path) async {
+  Future<void> useCloneForTest(String path) => useClonesForTest([path]);
+
+  /// Para un test: varios clones, que es donde están los fallos que solo
+  /// aparecen con más de uno abierto.
+  @visibleForTesting
+  Future<void> useClonesForTest(List<String> paths) async {
     _workspace = Workspace([
-      ContentRepo(owner: 'test', name: 'repo', directory: path),
+      for (var index = 0; index < paths.length; index += 1)
+        ContentRepo(
+          owner: 'test',
+          name: 'repo${index == 0 ? '' : index}',
+          directory: paths[index],
+        ),
     ]);
   }
 
@@ -574,6 +856,283 @@ class Session extends ChangeNotifier {
     _built = built;
     _builtKnown = true;
     notifyListeners();
+  }
+
+  // -- metadatos que discrepan entre repositorios -------------------------
+
+  /// Iguala un campo de una asignatura en todos los repositorios.
+  ///
+  /// Escribe [value] en el `course.yaml` de cada repositorio que diga otra
+  /// cosa, y no toca los que ya coinciden ni los que no lo declaran: rellenar
+  /// lo que falta es otra decisión.
+  ///
+  /// Por líneas, con [YamlPatch], como el resto de ediciones de YAML aquí:
+  /// un `course.yaml` lleva comentarios y `# TODO` que dicen qué falta por
+  /// rellenar, y volver a serializarlo se los lleva por delante.
+  ///
+  /// Un commit por repositorio, porque son historiales distintos. Devuelve en
+  /// cuántos se escribió.
+  Future<int> resolveMetadata({
+    required MetadataConflict conflict,
+    required String value,
+  }) async {
+    final path = conflict.path;
+    if (path == null) {
+      throw ArgumentError('no sé dónde se escribe «${conflict.field}»');
+    }
+    final where = 'courses/${conflict.course}/course.yaml';
+    var written = 0;
+
+    for (final entry in conflict.values.entries) {
+      if (entry.value == value) continue;
+      final gateway = gatewayFor(entry.key);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final patch = YamlPatch(file.text);
+      if (conflict.field == 'idiomas') {
+        patch.setFlowList(path, [
+          for (final code in value.split(',')) code.trim(),
+        ]);
+      } else {
+        patch.setScalar(path, value);
+      }
+      if (patch.result == file.text) continue;
+
+      await gateway.commit(
+        path: where,
+        text: patch.result,
+        sha: file.sha,
+        message: 'Igualar ${conflict.field} de ${conflict.course}',
+      );
+      written += 1;
+    }
+    if (written > 0) await reloadCatalogue();
+    return written;
+  }
+
+
+  /// Cambia a qué idiomas se da una asignatura.
+  ///
+  /// En **todos** los repositorios que la declaran, no solo en uno. Una
+  /// asignatura partida tiene un `course.yaml` en cada uno y los dos han de
+  /// decir lo mismo: escribir en uno solo convierte el cambio en una
+  /// discrepancia de metadatos que hay que resolver a mano después, y deja al
+  /// otro repositorio pidiendo traducciones que ya no se quieren.
+  ///
+  /// Un repositorio de solo lectura se salta en silencio. No es un fallo --se
+  /// puede mirar material de otra persona-- pero sí queda la asignatura
+  /// diciendo dos cosas, y de eso ya avisa la sección de discrepancias.
+  ///
+  /// Quitar un idioma no borra nada: los `.tex` que hubiera siguen donde
+  /// estaban, simplemente dejan de pedirse. Volver a activarlo los recupera.
+  ///
+  /// Devuelve en cuántos repositorios se escribió.
+  Future<int> setCourseLanguages({
+    required String course,
+    required List<String> languages,
+  }) async {
+    if (languages.isEmpty) {
+      throw ArgumentError('una asignatura tiene que darse en algún idioma');
+    }
+    final entry = courseById(course);
+    if (entry == null) throw ArgumentError('no existe la asignatura $course');
+
+    final where = 'courses/$course/course.yaml';
+    // El orden es el del catálogo, no el de los clics: así el fichero sale
+    // igual se marque como se marque, y no hay diffs que solo mueven códigos.
+    final options = catalogueOrNull?.languageOptions ?? const <LanguageOption>[];
+    final ordered = <String>[
+      for (final option in options)
+        if (languages.contains(option.code)) option.code,
+      // Lo que se pide y el índice no conoce se escribe igual, al final: con
+      // un índice viejo, ordenar no puede ser motivo para perder un idioma.
+      for (final code in languages)
+        if (!options.any((o) => o.code == code)) code,
+    ];
+    final written = <String>[];
+
+    for (final repo in entry.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final patch = YamlPatch(file.text);
+      patch.setFlowList(const ['languages'], ordered);
+      if (patch.result == file.text) continue;
+
+      await gateway.commit(
+        path: where,
+        text: patch.result,
+        sha: file.sha,
+        message: 'Idiomas de $course: ${ordered.join(', ')}',
+      );
+      written.add(repo);
+    }
+    if (written.isNotEmpty) await reloadCatalogue();
+    return written.length;
+  }
+
+  // -- los títulos, en todos los idiomas ----------------------------------
+
+  /// Cambia el título de una asignatura, en todos los idiomas a la vez.
+  ///
+  /// En todos los repositorios que la declaran, por lo mismo que los idiomas:
+  /// una asignatura partida tiene un `course.yaml` en cada uno y si dicen
+  /// cosas distintas el título que se enseña depende de en qué orden se
+  /// abrieron los repositorios.
+  ///
+  /// Un idioma vacío borra ese título. No se escribe cadena vacía --sería un
+  /// título de verdad, y saldría en el PDF-- sino que se quita la línea.
+  Future<int> setCourseTitles({
+    required String course,
+    required Map<String, String> titles,
+  }) async {
+    final entry = courseById(course);
+    if (entry == null) throw ArgumentError('no existe la asignatura $course');
+    if (titles.values.every((value) => value.trim().isEmpty)) {
+      throw ArgumentError('una asignatura sin título se enseñaría por su id');
+    }
+
+    final where = 'courses/$course/course.yaml';
+    final written = <String>[];
+    for (final repo in entry.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final patch = YamlPatch(file.text);
+      for (final item in titles.entries) {
+        final value = item.value.trim();
+        if (value.isEmpty) {
+          patch.remove(['title', item.key]);
+        } else {
+          patch.setScalar(['title', item.key], value);
+        }
+      }
+      if (patch.result == file.text) continue;
+
+      await gateway.commit(
+        path: where,
+        text: patch.result,
+        sha: file.sha,
+        message: 'Título de $course',
+      );
+      written.add(repo);
+    }
+    if (written.isNotEmpty) await reloadCatalogue();
+    return written.length;
+  }
+
+  /// Cambia el título de un tema, en el repositorio que lo declara.
+  ///
+  /// En ese y en ninguno más: un tema lo declara **uno** --los demás solo lo
+  /// nombran desde sus documentos-- así que aquí no hay nada que hacer
+  /// converger. Esa asimetría es lo que permite que quien no tenga el
+  /// repositorio que declara el tema siga viendo todo su material.
+  Future<void> setThemeTitles({
+    required String repo,
+    required String course,
+    required String year,
+    required String id,
+    required Map<String, String> titles,
+  }) async {
+    final where = 'courses/$course/$year/themes.yaml';
+    final gateway = gatewayFor(repo);
+    final file = await gateway.read(where);
+    final themes = ThemesFile(file.text)..setTitles(id, titles);
+    if (themes.text == file.text) return;
+
+    await gateway.commit(
+      path: where,
+      text: themes.text,
+      sha: file.sha,
+      message: 'Título del tema $id en $course $year',
+    );
+    await reloadCatalogue();
+  }
+
+  /// Cambia el título de un documento, en el `year.yaml` donde vive.
+  ///
+  /// En el suyo y solo el suyo: un documento está en un repositorio, y su
+  /// composición --qué unidades lleva-- también, que es la regla que sostiene
+  /// que esto funcione con varios repositorios abiertos.
+  Future<void> setDocumentTitles({
+    required String repo,
+    required String course,
+    required String year,
+    required String id,
+    required Map<String, String> titles,
+  }) async {
+    final where = 'courses/$course/$year/year.yaml';
+    final gateway = gatewayFor(repo);
+    final file = await gateway.read(where);
+    final composition = CompositionFile(file.text)
+      ..setDocumentTitles(id, titles);
+    if (composition.text == file.text) return;
+
+    await gateway.commit(
+      path: where,
+      text: composition.text,
+      sha: file.sha,
+      message: 'Título de $id en $course $year',
+    );
+    await reloadCatalogue();
+  }
+
+  // -- compilar en lote ---------------------------------------------------
+
+  /// Compila varios documentos, todas sus versiones, contándolo por el
+  /// camino.
+  ///
+  /// Un documento a la vez y no todos de golpe: LaTeX come un núcleo entero y
+  /// lanzar ocho a la vez no acaba antes, solo deja el ordenador inservible
+  /// mientras tanto. El orden es el de la lista, que es el orden en que se
+  /// dan, así que lo primero que se compila es lo primero que se busca.
+  ///
+  /// Devuelve cuántos documentos salieron enteros. No lanza: un documento que
+  /// no compila es un resultado --sale en el registro con su error-- y parar
+  /// el lote por él dejaría los demás sin hacer.
+  /// [languages] son los idiomas en los que compilar. Vacío es «el suyo», que
+  /// es lo que hace el motor por su cuenta y lo que se quiere casi siempre:
+  /// quien compila un tema para la clase del jueves lo quiere en el idioma en
+  /// el que va a darla, no en los tres.
+  Future<int> buildDocuments(
+    List<({String repo, String course, String year, String id, String title})>
+    documents, {
+    required String title,
+    List<String> languages = const [],
+  }) async {
+    buildConsole.start(title, total: documents.length);
+    var ok = 0;
+    for (final document in documents) {
+      final compiler = this.compiler(repo: document.repo);
+      final reference = '${document.course}@${document.year}/${document.id}';
+      buildConsole.startStep(document.title);
+      if (compiler == null) {
+        buildConsole.add('--- sin motor para $reference');
+        buildConsole.finishStep();
+        continue;
+      }
+      try {
+        final profiles = await compiler.documentProfiles(reference);
+        final results = await compiler.compileDocument(
+          document: reference,
+          // Todas las versiones que admite, que es lo que se pide al darle a
+          // compilar sobre un documento entero.
+          profiles: [for (final profile in profiles) profile.id],
+          languages: languages,
+          onOutput: buildConsole.add,
+        );
+        if (results.isNotEmpty && results.every((result) => result.ok)) ok += 1;
+      } catch (error) {
+        buildConsole.add('--- $reference: $error');
+      }
+      buildConsole.finishStep();
+    }
+    buildConsole.finish(ok: ok == documents.length);
+    await refreshBuilt();
+    return ok;
   }
 
   /// Vuelve a preguntar qué hay compilado.
@@ -680,6 +1239,11 @@ class Session extends ChangeNotifier {
       _previewProfile = await preferences.previewProfile() ?? _previewProfile;
       _unitPanel = await preferences.unitPanelVisible();
       _split = await preferences.splitEditors();
+      // La copia local primero: es la que hace que los temas abran plegados
+      // sin esperar al repositorio, y la que vale cuando no hay ninguno.
+      _prefsRepo = await preferences.prefsRepo();
+      _synced = SyncedPrefs.fromJson(await preferences.syncedPrefs() ?? '');
+      _refilter();
     } catch (error) {
       // A setting that cannot be read is a setting that is not set.
       _workspace = const Workspace.empty();
@@ -698,6 +1262,7 @@ class Session extends ChangeNotifier {
 
     try {
       _catalogue = await _source.load();
+      _refilter();
       _language = _catalogue!.defaultLanguage;
       _state = LoadState.ready;
     } catch (error) {
@@ -709,6 +1274,7 @@ class Session extends ChangeNotifier {
       // botón que ya no llevaba a ninguna parte.
       if (_workspace.isEmpty && LocalClone.supported) {
         _catalogue = Catalogue.merge(const []);
+        _refilter();
         _language = _catalogue!.defaultLanguage;
         _state = LoadState.ready;
         notifyListeners();
@@ -778,6 +1344,11 @@ class Session extends ChangeNotifier {
       _accessProblem = error;
     }
     notifyListeners();
+    // Las preferencias sincronizadas, después: hacen falta la pasarela del
+    // repositorio y el login de quien ha entrado, y las dos salen de arriba.
+    // Sin esperar a que terminen: lo local ya está puesto, y esto solo puede
+    // mejorarlo.
+    unawaited(loadSyncedPrefs());
   }
 
   /// Abre cada repositorio del espacio de trabajo: su clon y su pasarela.
@@ -1033,6 +1604,30 @@ class Session extends ChangeNotifier {
     await refreshAccess();
   }
 
+  /// Dónde se clonaría un repositorio, y qué hay ya ahí.
+  ///
+  /// Se consulta **antes** de clonar: es lo que permite decir «ya lo tienes,
+  /// lo uso» o «ahí hay otra cosa, elige otra carpeta» en lugar de escribir
+  /// encima y explicarlo después.
+  Future<({String directory, CloneTarget state})> inspectTarget({
+    required String owner,
+    required String name,
+    String? directory,
+  }) async {
+    final where = directory ?? '$_cloneBase/$name';
+    if (!LocalClone.supported) {
+      return (directory: where, state: CloneTarget.free);
+    }
+    return (
+      directory: where,
+      state: await LocalClone.inspect(
+        directory: where,
+        owner: owner,
+        repo: name,
+      ),
+    );
+  }
+
   /// Añade un repositorio al espacio de trabajo, clonándolo si hace falta.
   ///
   /// Cada uno en su carpeta, con su color. Devuelve el que ha quedado abierto.
@@ -1062,10 +1657,81 @@ class Session extends ChangeNotifier {
       }
     }
 
-    final repo = ContentRepo(
+    return _register(
       owner: owner,
       name: name,
       directory: where,
+      branch: branch,
+      colour: colour,
+    );
+  }
+
+  /// Prepara un repositorio de GitHub vacío como repositorio de contenido, y
+  /// lo añade.
+  ///
+  /// Es lo que se ofrece cuando [addRepository] se encuentra un repositorio
+  /// sin commits ([EmptyRepositoryException]): uno recién creado en GitHub
+  /// para empezar un curso. El primer commit va a nombre de quien ha entrado,
+  /// igual que cualquier otro cambio.
+  Future<ContentRepo> initializeRepository({
+    required String owner,
+    required String name,
+    required String branch,
+    required String title,
+    String? directory,
+    int? colour,
+    void Function(String line)? onProgress,
+  }) async {
+    if (!LocalClone.supported) {
+      throw const CloneException(
+        'Preparar un repositorio necesita clonarlo, y aquí no se puede.',
+      );
+    }
+    final where = directory ?? '$_cloneBase/$name';
+    final token = _token ?? await tokenStore.read() ?? '';
+    final signedIn = _user;
+    final author = signedIn == null
+        ? _cloneAuthor
+        : (name: signedIn.authorName, email: signedIn.authorEmail);
+    if (author == null) {
+      throw const CloneException(
+        'Entra en GitHub primero: el primer commit tiene que ir a nombre de '
+        'alguien.',
+      );
+    }
+
+    await LocalClone.initialize(
+      directory: where,
+      owner: owner,
+      repo: name,
+      branch: branch,
+      token: token,
+      title: title,
+      authorName: author.name,
+      authorEmail: author.email,
+      onProgress: onProgress,
+    );
+    return _register(
+      owner: owner,
+      name: name,
+      directory: where,
+      branch: branch,
+      colour: colour,
+    );
+  }
+
+  /// Apunta un clon ya listo en el espacio de trabajo y lo abre.
+  Future<ContentRepo> _register({
+    required String owner,
+    required String name,
+    required String directory,
+    required String branch,
+    int? colour,
+  }) async {
+    final repo = ContentRepo(
+      owner: owner,
+      name: name,
+      directory: directory,
       branch: branch,
       colour: colour ?? _workspace.nextColour(),
     );
@@ -1393,6 +2059,7 @@ class Session extends ChangeNotifier {
   @visibleForTesting
   Future<void> primeForTest(Catalogue catalogue) async {
     _catalogue = catalogue;
+    _refilter();
     _language = catalogue.defaultLanguage;
     _state = LoadState.ready;
     notifyListeners();
@@ -1425,6 +2092,7 @@ class Session extends ChangeNotifier {
   Future<void> reloadCatalogue() async {
     try {
       _catalogue = await _source.load();
+      _refilter();
       notifyListeners();
     } catch (error) {
       // Deliberately not fatal: the old catalogue is stale, not wrong, and
@@ -1437,7 +2105,7 @@ class Session extends ChangeNotifier {
   // -- lookups the screens need ------------------------------------------
 
   Unit? unitByPath(String path, {String? repo}) =>
-      _catalogue?.unitByPath(path, repo: repo);
+      catalogueOrNull?.unitByPath(path, repo: repo);
 
   /// El color con el que se marca un repositorio, o null si no hay más de uno
   /// --con uno solo, marcar no dice nada--.
@@ -1446,8 +2114,17 @@ class Session extends ChangeNotifier {
     return _workspace.byId(repo)?.colour;
   }
 
+  /// El año tal como está sin filtrar, para poder decir cuánto se está
+  /// escondiendo. Es lo único que mira el catálogo entero desde una pantalla.
+  CourseYear? fullYear(String courseId, String year) {
+    for (final course in fullCatalogue?.courses ?? const <Course>[]) {
+      if (course.id == courseId) return course.years[year];
+    }
+    return null;
+  }
+
   Course? courseById(String id) {
-    for (final course in _catalogue?.courses ?? const <Course>[]) {
+    for (final course in catalogueOrNull?.courses ?? const <Course>[]) {
       if (course.id == id) return course;
     }
     return null;
@@ -1467,7 +2144,7 @@ class Session extends ChangeNotifier {
   /// navigation and the list in the page can never disagree.
   List<Unit> needingTranslation(String language) {
     final units = [
-      for (final unit in _catalogue?.units ?? const <Unit>[])
+      for (final unit in catalogueOrNull?.units ?? const <Unit>[])
         if (unit.statusIn(language).needsWork) unit,
     ];
     units.sort((a, b) {

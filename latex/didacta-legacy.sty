@@ -135,11 +135,10 @@
 %% `\texpath`, `\nohyphens`, `\documentclassname`: these were about how the old
 %% build found and configured its files. There is nothing to point them at.
 %%
-%% `\cites` is biblatex's multi-citation, used 35 times in 5 bibliography
-%% units. Didacta has no bibliography support -- no resource, no style, no
-%% `.bib` in the content model -- and faking the macro would render citations
-%% wrongly while looking as though it worked. Reported instead, and on the
-%% list of what to build next.
+%% `\cites`, biblatex's multi-citation, ya no est\'a aqu\'i: lo trae
+%% didacta-bibliography, que carga biblatex cuando el repositorio tiene un
+%% .bib y, cuando no, define las citas para que impriman [?] y avisen. Era lo
+%% \'ultimo que quedaba de la lista de lo que faltaba por construir.
 %% ---------------------------------------------------------------------------
 
 \endinput

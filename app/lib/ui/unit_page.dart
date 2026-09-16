@@ -30,6 +30,7 @@ import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'build_console.dart';
+import 'history_tab.dart';
 import 'metadata_editor.dart';
 import 'pdf_tab.dart';
 import 'unit_preview.dart';
@@ -65,6 +66,14 @@ const String metadataTab = '\u0000metadata';
 
 /// La pestaña de compilar: «¿cómo queda esto?».
 const String previewTab = '\u0000preview';
+
+/// La pestaña del historial: «¿qué le ha pasado a esto?».
+///
+/// La última de las fijas, y no por descarte: es la que menos se abre y la
+/// única que no se usa para escribir. Las que se usan escribiendo --los
+/// idiomas-- van primero, y compilar va justo detrás porque es lo que se hace
+/// entre una edición y la siguiente.
+const String historyTab = '\u0000history';
 
 /// La pestaña de un PDF abierto. El prefijo la distingue de un idioma sin
 /// necesitar un tipo aparte para el valor de la pestaña activa.
@@ -288,11 +297,26 @@ class _UnitPageState extends State<UnitPage> {
   /// mirar el PDF, lo compilado tiene que seguir estando.
   PreviewState? _preview;
 
+  /// El último idioma que se estuvo mirando.
+  ///
+  /// Lo usa el historial para saber de qué fichero es: una unidad son tres o
+  /// cuatro `.tex` y el historial es de uno. Sin esto, abrir el historial
+  /// desde el valenciano enseñaría el del castellano.
+  String? _lastLanguage;
+
+  /// El historial, creado al abrir su pestaña por primera vez.
+  ///
+  /// Perezoso a propósito: `git log --follow` sobre un repositorio con años
+  /// dentro cuesta, y cobrárselo a quien solo venía a editar el castellano
+  /// sería cobrarlo casi siempre por nada.
+  HistoryState? _history;
+
   @override
   void dispose() {
     for (final editor in _editors.values) {
       editor.dispose();
     }
+    _history?.dispose();
     super.dispose();
   }
 
@@ -362,7 +386,10 @@ class _UnitPageState extends State<UnitPage> {
                 if (entry.value.isDirty) entry.key,
             },
             onSelect: (code) {
-              setState(() => _active = code);
+              setState(() {
+                if (_isLanguage(code, languages)) _lastLanguage = code;
+                _active = code;
+              });
               // Al volver a un PDF o a compilar, se vuelven a mirar las
               // fechas: puede haberse guardado un `.tex` mientras tanto.
               if (code == previewTab || code.startsWith(pdfTabPrefix)) {
@@ -442,6 +469,10 @@ class _UnitPageState extends State<UnitPage> {
         unit: unit,
         session: session,
       ),
+      // La ruta del fichero que se está mirando, no la de la unidad: el
+      // historial contesta «¿qué le ha pasado a **esto**?», y en una unidad
+      // eso es el `.tex` del idioma abierto.
+      historyTab => HistoryTab(state: _historyFor(unit, session)),
       previewTab => UnitPreview(
         onOpen: _openPdf,
         state: _preview ??= PreviewState(
@@ -457,6 +488,38 @@ class _UnitPageState extends State<UnitPage> {
       ),
       final language => _editorFor(unit, language, session),
     };
+  }
+
+  /// El historial del fichero que se está mirando, creándolo si hace falta.
+  ///
+  /// Se rehace cuando cambia el fichero --se estaba en el castellano y se pasa
+  /// al valenciano-- y solo entonces: volver a la pestaña después de mirar el
+  /// PDF no puede costar otro `git log`.
+  HistoryState _historyFor(Unit unit, Session session) {
+    final path = _historyPathFor(unit, session);
+    final current = _history;
+    if (current != null && current.path == path) return current;
+    current?.dispose();
+    return _history = HistoryState(
+      session: session,
+      repo: unit.repo,
+      path: path,
+    );
+  }
+
+  /// De qué fichero se enseña el historial.
+  ///
+  /// El del idioma que estaba abierto, y el de referencia si se llegó aquí
+  /// desde otra pestaña. Una unidad son tres o cuatro ficheros y el historial
+  /// es de uno: enseñar el de `es.tex` estando en el valenciano sería
+  /// contestar a otra pregunta.
+  String _historyPathFor(Unit unit, Session session) {
+    final languages = session.catalogue.languages;
+    final last = _lastLanguage;
+    final language = last != null && languages.contains(last)
+        ? last
+        : unit.reference;
+    return unit.fileFor(language);
   }
 
   Future<void> _external(
@@ -1207,6 +1270,17 @@ class _LanguageTabs extends StatelessWidget {
               onTap: () => onSelect(code),
             ),
           const _Separator(),
+          // Compilar delante de los metadatos: es lo que se hace entre una
+          // edición y la siguiente, y `unit.yaml` se toca una vez cada varios
+          // meses. El orden de una fila de pestañas es una afirmación sobre
+          // con qué frecuencia se usa cada una.
+          DidactaTab(
+            label: 'compilar',
+            icon: Icons.play_circle_outline,
+            selected: active == previewTab,
+            dirty: false,
+            onTap: () => onSelect(previewTab),
+          ),
           DidactaTab(
             label: 'unit.yaml',
             selected: active == metadataTab,
@@ -1214,11 +1288,11 @@ class _LanguageTabs extends StatelessWidget {
             onTap: () => onSelect(metadataTab),
           ),
           DidactaTab(
-            label: 'compilar',
-            icon: Icons.play_circle_outline,
-            selected: active == previewTab,
+            label: 'historial',
+            icon: Icons.history,
+            selected: active == historyTab,
             dirty: false,
-            onTap: () => onSelect(previewTab),
+            onTap: () => onSelect(historyTab),
           ),
           if (open.isNotEmpty) const _Separator(),
           for (final group in open)
@@ -1313,7 +1387,7 @@ class _UnitPanel extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text(
-                '${session.courseById(use.course)?.title() ?? use.course} · '
+                '${session.courseById(use.course)?.title(session.language) ?? use.course} · '
                 '${use.year}',
                 style: const TextStyle(fontSize: 11),
               ),

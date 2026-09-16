@@ -181,3 +181,113 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
     );
   }
 }
+
+/// Pide los datos de un tema.
+///
+/// Un tema es un bloque del curso --el Tema 1, con su teoría, sus problemas y
+/// su bibliografía-- y lo único que hace falta para declararlo es cómo se
+/// llama. El id se deduce del título, como en las asignaturas: nadie quiere
+/// escribir `tema-1-el-numero-real` a mano, y el que se escribe a mano acaba
+/// siendo distinto del que habría salido.
+class NewThemeDialog extends StatefulWidget {
+  const NewThemeDialog({
+    super.key,
+    required this.taken,
+    required this.language,
+  });
+
+  /// Los ids de tema que ya están en este curso.
+  final List<String> taken;
+  final String language;
+
+  @override
+  State<NewThemeDialog> createState() => _NewThemeDialogState();
+}
+
+class NewTheme {
+  const NewTheme({required this.id, required this.title});
+
+  final String id;
+  final String title;
+}
+
+class _NewThemeDialogState extends State<NewThemeDialog> {
+  final TextEditingController _title = TextEditingController();
+  final TextEditingController _id = TextEditingController();
+
+  /// Si el id lo escribió la persona. Mientras no, se deduce del título.
+  bool _idTyped = false;
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _id.dispose();
+    super.dispose();
+  }
+
+  String get _slug => _idTyped ? _id.text.trim() : slugify(_title.text);
+
+  bool get _taken => widget.taken.contains(_slug);
+
+  bool get _valid => _slug.isNotEmpty && !_taken;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Nuevo tema'),
+    content: SizedBox(
+      width: 460,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Un bloque del curso, con todo lo suyo dentro: la teoría, los '
+            'problemas, la bibliografía. Se crea vacío y los documentos se '
+            'añaden desde él.',
+            style: TextStyle(fontSize: 12.5, color: didactaMuted),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            key: const Key('new-theme-title'),
+            controller: _title,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Cómo se llama',
+              hintText: 'Tema 1: el número y la recta real',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            key: const Key('new-theme-id'),
+            controller: _idTyped ? _id : (TextEditingController(text: _slug)),
+            decoration: InputDecoration(
+              labelText: 'Identificador',
+              helperText: 'Lo que escriben los documentos en `themes:`',
+              errorText: _taken ? 'Ya hay un tema con ese identificador' : null,
+            ),
+            onChanged: (value) => setState(() {
+              _idTyped = true;
+              _id.text = value;
+            }),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(
+        key: const Key('confirm-new-theme'),
+        onPressed: _valid
+            ? () => Navigator.of(
+                context,
+              ).pop(NewTheme(id: _slug, title: _title.text.trim()))
+            : null,
+        child: const Text('Crear'),
+      ),
+    ],
+  );
+}

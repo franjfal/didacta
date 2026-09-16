@@ -301,11 +301,36 @@ class _Header extends StatelessWidget {
                 ),
                 const SizedBox(height: 1),
                 Text(
-                  console.running
-                      ? 'En marcha · ${seconds.toStringAsFixed(0)} s'
-                      : 'Terminada en ${seconds.toStringAsFixed(1)} s',
+                  [
+                    // El estado primero: es lo que se mira de reojo mientras
+                    // se hace otra cosa.
+                    console.running
+                        ? 'En marcha · ${seconds.toStringAsFixed(0)} s'
+                        : 'Terminada en ${seconds.toStringAsFixed(1)} s',
+                    if (console.total > 0)
+                      '${console.done} de ${console.total}',
+                    if (console.running && console.step.isNotEmpty)
+                      console.step,
+                  ].join(' · '),
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11.5, color: didactaMuted),
                 ),
+                // La barra solo cuando hay varias piezas que contar. Con una,
+                // un tramo entero que se llena de golpe al acabar no dice
+                // nada que no diga ya el reloj.
+                if (console.total > 1) ...[
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      key: const Key('console-progress'),
+                      minHeight: 4,
+                      value: console.done / console.total,
+                      backgroundColor: didactaRule,
+                      color: console.ok ? didactaAccentDark : didactaTeacher,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

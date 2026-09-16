@@ -30,6 +30,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../data/browser.dart';
 import '../data/github.dart';
 import '../state/session.dart';
 import '../state/update_service.dart';
@@ -86,13 +87,29 @@ class _SignInFormState extends State<SignInForm> {
     try {
       final code = await auth.start();
       if (!mounted) return;
+
+      // El código al portapapeles y el navegador abierto, sin pedir ninguna
+      // de las dos cosas.
+      //
+      // Es lo único que se puede quitar de en medio aquí: el *device flow* no
+      // se puede saltar --hace falta que GitHub vea a una persona autorizando
+      // en github.com, que es justo lo que hace que esta aplicación no toque
+      // nunca una contraseña-- pero «copia esto, abre el navegador, pega
+      // aquello» sí se puede reducir a «pega y autoriza».
+      //
+      // Que el navegador no se abra no rompe nada: la dirección sigue en
+      // pantalla con su botón de copiar.
+      await Clipboard.setData(ClipboardData(text: code.userCode));
+      final opened = await openLink(code.verificationUri);
+      if (!mounted) return;
+
       // El código, delante y con el enlace: la contraseña se teclea en
       // github.com y en ningún otro sitio, que es la única forma honesta de
       // pedirla.
       final waiting = showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => _DeviceCodeDialog(code: code),
+        builder: (context) => _DeviceCodeDialog(code: code, opened: opened),
       );
       final token = await auth.waitForToken(code);
       await widget.session.signIn(token);
@@ -250,9 +267,13 @@ class SignInGate extends StatelessWidget {
 
 /// El código del device flow, mientras se espera.
 class _DeviceCodeDialog extends StatelessWidget {
-  const _DeviceCodeDialog({required this.code});
+  const _DeviceCodeDialog({required this.code, this.opened = false});
 
   final DeviceCode code;
+
+  /// Si el navegador se abrió solo. Cambia lo que hay que decir: con él
+  /// abierto queda pegar, y sin él queda abrir la dirección a mano.
+  final bool opened;
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -261,7 +282,11 @@ class _DeviceCodeDialog extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Abre ${code.verificationUri} y escribe este código:'),
+        Text(
+          opened
+              ? 'Te he abierto github.com y he copiado el código. Pégalo allí:'
+              : 'Abre ${code.verificationUri} y escribe este código:',
+        ),
         const SizedBox(height: 12),
         SelectableText(
           code.userCode,
@@ -284,10 +309,10 @@ class _DeviceCodeDialog extends StatelessWidget {
         onPressed: () => Clipboard.setData(ClipboardData(text: code.userCode)),
         child: const Text('Copiar el código'),
       ),
-      FilledButton(
-        onPressed: () =>
-            Clipboard.setData(ClipboardData(text: code.verificationUri)),
-        child: const Text('Copiar el enlace'),
+      FilledButton.icon(
+        icon: const Icon(Icons.open_in_new, size: 16),
+        onPressed: () => openLink(code.verificationUri),
+        label: Text(opened ? 'Volver a abrir GitHub' : 'Abrir GitHub'),
       ),
     ],
   );

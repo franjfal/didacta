@@ -55,9 +55,18 @@ COURSES = "courses"
 UNIT_META = "unit.yaml"
 COURSE_META = "course.yaml"
 YEAR_META = "year.yaml"
+#: Los temas en que se agrupa un curso. Opcional, y a propósito: un curso sin
+#: este fichero es un curso cuyos documentos salen en una lista, que es lo que
+#: eran todos hasta ahora.
+THEMES_META = "themes.yaml"
 SHARED = "shared"
 SETTINGS = "didacta.yaml"
 TAXONOMY = "taxonomy.yaml"
+
+#: Dónde se buscan las fuentes que el material cita, cuando `didacta.yaml` no
+#: dice otra cosa. En `shared/` porque no son de ninguna unidad: el mismo
+#: libro lo citan el análisis bibliográfico del tema 1 y el del tema 6.
+DEFAULT_BIBLIOGRAPHY = "shared/bibliography.bib"
 
 #: Los dos bloques en que se parte una asignatura. No es lo mismo que el
 #: `kind` de una unidad: el kind dice qué es el fichero --una explicación, un
@@ -228,7 +237,8 @@ class Taxonomy:
         if not isinstance(declared, list):
             raise RepoError("%s: `categories` should be a list" % path)
 
-        languages = settings.languages if settings else list(profiles_mod.LANGUAGES)
+        languages = (settings.languages if settings
+                     else list(profiles_mod.DEFAULT_LANGUAGES))
         categories = []
         seen = set()
         for item in declared:
@@ -299,22 +309,32 @@ class Settings:
     ``didacta.yaml`` still builds.
     """
 
-    __slots__ = ("root", "name", "languages", "default_language", "build_dir", "raw")
+    __slots__ = ("root", "name", "languages", "default_language", "build_dir",
+                 "bibliography", "raw")
 
     def __init__(self, root, name=None, languages=None, default_language="es",
-                 build_dir=".didacta-build", raw=None):
+                 build_dir=".didacta-build", bibliography=None, raw=None):
         self.root = root
         self.name = name or os.path.basename(root)
-        self.languages = languages or list(profiles_mod.LANGUAGES)
+        self.languages = languages or list(profiles_mod.DEFAULT_LANGUAGES)
         self.default_language = default_language
         self.build_dir = build_dir
+        #: El .bib, relativo a la raíz. Declararlo es opcional: la convención
+        #: es `shared/bibliography.bib`, y el paquete la prueba por su cuenta.
+        self.bibliography = bibliography or DEFAULT_BIBLIOGRAPHY
         self.raw = raw or {}
+
+    @property
+    def bibliography_path(self):
+        """Dónde está el .bib, o None si el repositorio no tiene."""
+        path = os.path.join(self.root, self.bibliography.replace("/", os.sep))
+        return path if os.path.isfile(path) else None
 
     @classmethod
     def load(cls, root):
         path = os.path.join(root, SETTINGS)
         data = yamlio.load_file(path) if os.path.isfile(path) else {}
-        languages = data.get("languages") or list(profiles_mod.LANGUAGES)
+        languages = data.get("languages") or list(profiles_mod.DEFAULT_LANGUAGES)
         unknown = [code for code in languages if code not in profiles_mod.LANGUAGES]
         if unknown:
             raise RepoError(
@@ -327,12 +347,19 @@ class Settings:
                 "%s: default_language `%s` is not in languages %s"
                 % (path, default, languages)
             )
+        bibliography = data.get("bibliography") or DEFAULT_BIBLIOGRAPHY
+        if os.path.isabs(bibliography) or bibliography.startswith(".."):
+            raise RepoError(
+                "%s: `bibliography` has to be inside the repository, and `%s` "
+                "is not" % (path, bibliography)
+            )
         return cls(
             root=root,
             name=data.get("name"),
             languages=languages,
             default_language=default,
             build_dir=data.get("build_dir") or ".didacta-build",
+            bibliography=bibliography,
             raw=data,
         )
 
@@ -422,13 +449,13 @@ class Unit:
 
     @property
     def available_languages(self):
-        return [c for c in profiles_mod.LANGUAGES
-                if c in self.languages and self.languages[c].exists]
+        return [c for c, entry in self.languages.items() if entry.exists]
 
     @property
     def missing_languages(self):
-        return [c for c in profiles_mod.LANGUAGES
-                if c not in self.languages or not self.languages[c].exists]
+        # Sobre los idiomas del repositorio, que son los que alguien se ha
+        # comprometido a traducir. Los demás no faltan: no se esperan.
+        return [c for c, entry in self.languages.items() if not entry.exists]
 
     def path_for(self, language):
         entry = self.languages.get(language)
@@ -535,7 +562,7 @@ def load_unit(root, relpath, settings):
         raise RepoError("%s: `languages` should be a mapping" % meta_path)
 
     languages = {}
-    for code in profiles_mod.LANGUAGES:
+    for code in settings.languages:
         entry = declared.get(code) or {}
         if isinstance(entry, str):
             entry = {"status": entry}
@@ -563,9 +590,12 @@ def load_unit(root, relpath, settings):
             bytes=os.path.getsize(absolute) if exists else 0,
         )
 
-    present = [c for c in profiles_mod.LANGUAGES if languages[c].exists]
+    present = [c for c, entry in languages.items() if entry.exists]
     if not present:
-        raise RepoError("%s: no language files (expected es.tex, va.tex or en.tex)" % directory)
+        raise RepoError(
+            "%s: no language files (expected %s)"
+            % (directory, ", ".join("%s.tex" % c for c in settings.languages))
+        )
 
     reference = data.get("reference")
     if reference and reference not in present:
@@ -617,7 +647,8 @@ def scan_units(root, settings, area=None):
         for dirpath, dirnames, filenames in os.walk(base):
             dirnames[:] = [d for d in dirnames if not d.startswith(".")
                            and d not in ("figures", "assets", "img")]
-            if not any("%s.tex" % code in filenames for code in profiles_mod.LANGUAGES):
+            if not any("%s.tex" % code in filenames
+                       for code in settings.languages):
                 continue
             relpath = os.path.relpath(dirpath, root).replace(os.sep, "/")
             try:
@@ -641,11 +672,86 @@ def scan_units(root, settings, area=None):
 # --------------------------------------------------------------------------
 
 
+class Theme:
+    """Un tema del curso: el bloque bajo el que se agrupan sus documentos.
+
+    El Tema 1 lleva su teoría, su práctica, su análisis bibliográfico y su
+    marco histórico, y esos ficheros pueden estar en repositorios distintos
+    --la teoría en uno, los problemas en otro--. Por eso el tema es una cosa
+    aparte y no un campo del documento: **el documento dice a qué temas
+    pertenece y el tema lo declara quien lo tenga.**
+
+    De ahí la propiedad que lo hace útil: es no destructivo. Un documento que
+    nombra un tema que no está declarado en ningún repositorio abierto sale
+    suelto, como salía antes de que existieran los temas. Nadie se queda sin
+    ver su material por no tener el repositorio donde alguien puso un título.
+
+    No es el `topic` de `taxonomy.yaml`, aunque se parezcan: aquel clasifica
+    una unidad por área de conocimiento, y lo comparten varias asignaturas;
+    este ordena un curso concreto, y su orden es el orden en que se da.
+    """
+
+    __slots__ = ("id", "titles", "raw")
+
+    def __init__(self, id, titles=None, raw=None):
+        self.id = id
+        self.titles = titles or {}
+        self.raw = raw or {}
+
+    def title(self, language=None):
+        """El nombre que se enseña, cayendo al id antes que a nada."""
+        if language and self.titles.get(language):
+            return self.titles[language]
+        for value in self.titles.values():
+            if value:
+                return value
+        return self.id
+
+    def as_dict(self):
+        return {"id": self.id, "title": dict(self.titles)}
+
+
+def load_themes(directory, settings):
+    """Los temas declarados junto a un `year.yaml`.
+
+    Lista vacía cuando no hay fichero, que es el caso corriente: agrupar es
+    opcional.
+    """
+    path = os.path.join(directory, THEMES_META)
+    if not os.path.isfile(path):
+        return []
+    data = yamlio.load_file(path) or {}
+    if not isinstance(data, dict):
+        raise RepoError("%s: expected a mapping" % path)
+    declared = data.get("themes") or []
+    if not isinstance(declared, list):
+        raise RepoError("%s: `themes` should be a list" % path)
+
+    themes = []
+    seen = set()
+    for item in declared:
+        if not isinstance(item, dict):
+            raise RepoError("%s: each theme should be a mapping" % path)
+        identifier = item.get("id")
+        if not identifier:
+            raise RepoError("%s: a theme is missing its `id`" % path)
+        if identifier in seen:
+            raise RepoError("%s: duplicate theme `%s`" % (path, identifier))
+        seen.add(identifier)
+        themes.append(Theme(
+            id=identifier,
+            titles=yamlio.localised(item.get("title"), settings.languages,
+                                    path=path, key="title"),
+            raw=item,
+        ))
+    return themes
+
+
 class Document:
     """One compilable document inside a course year."""
 
     __slots__ = ("id", "course", "year", "kind", "titles", "source", "profiles",
-                 "structure", "unit_refs", "language", "raw")
+                 "structure", "unit_refs", "language", "themes", "raw")
 
     def __init__(self, **kwargs):
         for slot in self.__slots__:
@@ -656,6 +762,8 @@ class Document:
             self.unit_refs = []
         if self.profiles is None:
             self.profiles = []
+        if self.themes is None:
+            self.themes = []
 
     def title(self, language=None):
         for code in (language, self.language, "es", "va", "en"):
@@ -675,19 +783,23 @@ class Document:
             "language": self.language,
             "unitRefs": self.unit_refs,
             "structure": self.structure,
+            "themes": list(self.themes),
         }
 
 
 class CourseYear:
     """One academic year of a course."""
 
-    __slots__ = ("course", "year", "group", "language", "directory", "documents", "raw")
+    __slots__ = ("course", "year", "group", "language", "directory", "documents",
+                 "themes", "raw")
 
     def __init__(self, **kwargs):
         for slot in self.__slots__:
             setattr(self, slot, kwargs.get(slot))
         if self.documents is None:
             self.documents = []
+        if self.themes is None:
+            self.themes = []
 
     @property
     def id(self):
@@ -698,6 +810,7 @@ class Course:
     """A subject, across every year it has run."""
 
     __slots__ = ("id", "titles", "code", "degrees", "institution", "departments",
+                 "languages",
                  "teacher", "language", "directory", "years", "raw")
 
     def __init__(self, **kwargs):
@@ -711,6 +824,17 @@ class Course:
             if code and (self.titles or {}).get(code):
                 return self.titles[code]
         return self.id
+
+    def taught_in(self, settings):
+        """Los idiomas de esta asignatura.
+
+        Declarados en `course.yaml` cuando la asignatura no se da en todos los
+        del repositorio, que es lo corriente: el repositorio ofrece castellano,
+        valenciano e inglés, y el doble grado se da solo en castellano. Sin
+        declararlos, los del repositorio, que es como se comportaba esto antes
+        de que se pudiera decir.
+        """
+        return list(self.languages) if self.languages else list(settings.languages)
 
     def latex_course_keys(self, language, year=None):
         r"""The ``\DidactaCourse`` key list for this course.
@@ -738,6 +862,28 @@ class Course:
         return ",\n  ".join("%s = {%s}" % (k, v) for k, v in pairs if v)
 
 
+def _course_languages(data, settings, path):
+    """Los idiomas que declara un `course.yaml`, si los declara.
+
+    Tienen que estar entre los del repositorio: una asignatura no puede darse
+    en un idioma que el repositorio no mantiene, porque no habría dónde poner
+    su `.tex`.
+    """
+    declared = data.get("languages")
+    if declared is None:
+        return []
+    if not isinstance(declared, list):
+        raise RepoError("%s: `languages` should be a list" % path)
+    codes = [str(code) for code in declared]
+    unknown = [code for code in codes if code not in settings.languages]
+    if unknown:
+        raise RepoError(
+            "%s: la asignatura dice darse en %s, y el repositorio solo "
+            "mantiene %s" % (path, unknown, ", ".join(settings.languages))
+        )
+    return codes
+
+
 def load_course(root, course_dir, settings):
     """Read one course directory, including every year in it."""
     directory = os.path.join(root, COURSES, course_dir)
@@ -754,6 +900,7 @@ def load_course(root, course_dir, settings):
         institution=data.get("institution"),
         departments=yamlio.localised(data.get("department"), settings.languages,
                                      path=meta_path, key="department"),
+        languages=_course_languages(data, settings, meta_path),
         teacher=data.get("teacher"),
         language=data.get("language") or settings.default_language,
         directory=directory,
@@ -785,6 +932,10 @@ def load_year(root, course, year, directory, settings):
         language=data.get("language") or course.language,
         directory=directory,
         documents=[],
+        # Los temas los declara `themes.yaml`, al lado y aparte: el fichero es
+        # opcional, y el que lo tiene no tiene por qué ser el mismo que tiene
+        # los documentos.
+        themes=load_themes(directory, settings),
         raw=data,
     )
 
@@ -820,6 +971,11 @@ def load_year(root, course, year, directory, settings):
                 structure=structure,
                 unit_refs=unit_refs,
                 language=item.get("language") or entry.language,
+                # A qué temas pertenece. Una lista porque un documento puede
+                # estar en varios --un apéndice que sirve a dos temas-- y
+                # porque un id que nadie declara no es un error: se ignora, y
+                # el documento sale suelto.
+                themes=[str(t) for t in (item.get("themes") or [])],
                 raw=item,
             )
         )

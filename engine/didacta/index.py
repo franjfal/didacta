@@ -294,6 +294,10 @@ def _course_record(course, settings):
             "year": year,
             "language": entry.language,
             "group": entry.group,
+            # Los temas que **este** repositorio declara para este curso. La
+            # interfaz junta los de todos los que tenga abiertos; un tema que
+            # no declara nadie no agrupa nada, y sus documentos salen sueltos.
+            "themes": [theme.as_dict() for theme in entry.themes],
             "documents": [
                 {
                     "id": document.id,
@@ -302,6 +306,9 @@ def _course_record(course, settings):
                     "title": {code: document.titles[code]
                               for code in sorted(document.titles or {})},
                     "profiles": list(document.profiles or []),
+                    # A qué temas pertenece, por id. Puede ser más de uno, y
+                    # pueden ser ids que este repositorio no declara.
+                    "themes": list(document.themes or []),
                     "unitRefs": list(document.unit_refs or []),
                     # La estructura entera, con los apartados. `unitRefs` es
                     # la lista plana de lo que se compila; esto es cómo está
@@ -314,6 +321,10 @@ def _course_record(course, settings):
         }
     return {
         "id": course.id,
+        # En qué idiomas se da. Declarados o, si no, los del repositorio: la
+        # interfaz necesita saber de cuáles hablar en **esta** asignatura, no
+        # en el repositorio entero.
+        "languages": course.taught_in(settings),
         "title": {code: course.titles[code] for code in sorted(course.titles or {})},
         "code": course.code,
         "degree": {code: course.degrees[code]
@@ -407,6 +418,14 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
         # the content, and that is the hash below.
         "contentHash": content_hash(unit_records, course_records),
         "languages": list(settings.languages),
+        # A cuáles se PUEDE traducir, con el nombre que usa quien los habla.
+        # Lo de arriba es a cuáles se traduce aquí, que es otra cosa: la
+        # aplicación necesita las dos para ofrecer el idioma que todavía no se
+        # usa sin inventarse una lista propia que se quede vieja.
+        "availableLanguages": [
+            {"code": code, "name": name}
+            for code, name, _ in profiles_mod.LANGUAGE_REGISTRY
+        ],
         "defaultLanguage": settings.default_language,
         "counts": {
             "units": len(unit_records),

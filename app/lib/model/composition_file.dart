@@ -213,8 +213,45 @@ class StructureBlock {
   final List<String> trailing;
 }
 
+/// Lo que el fichero sabe de un documento antes de que el índice lo recoja.
+///
+/// El catálogo se genera aparte, así que un documento recién creado existe en
+/// `year.yaml` y todavía no en `generated/`. Esto es lo que permite enseñarlo
+/// entero mientras tanto --con su tipo, su nombre y su tema-- en lugar de una
+/// línea con el identificador.
+class DocumentDraft {
+  const DocumentDraft({
+    required this.id,
+    required this.kind,
+    required this.titles,
+    required this.themes,
+  });
+
+  final String id;
+  final String kind;
+  final Map<String, String> titles;
+  final List<String> themes;
+
+  String title(String language) {
+    final wanted = titles[language];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return id;
+  }
+}
+
 class CompositionFile {
   CompositionFile(String text) : _lines = text.split('\n');
+
+  /// `es: Tema 1`, dentro de un `title:`.
+  static final RegExp _draftTitle = RegExp(r'^([a-z]{2}):(.*)$');
+
+  /// Un idioma pendiente: `# TODO: va`. Escrito por el migrador en dos mil
+  /// unidades y por Didacta desde entonces, así que se reconoce para poder
+  /// sustituirlo sin llevarse por delante los comentarios de al lado.
+  static final RegExp _pendingTitle = RegExp(r'^#\s*TODO:\s*[a-z]{2}\s*$');
 
   final List<String> _lines;
 
@@ -224,6 +261,141 @@ class CompositionFile {
   List<String> documentIds() => [
     for (final document in _documents()) document.id,
   ];
+
+  /// Lo que el fichero dice de cada documento, sin pasar por el índice.
+  ///
+  /// Existe para el rato que va desde crear un documento hasta que
+  /// `didacta index` lo recoge. Durante ese rato el catálogo no sabe que
+  /// existe, y sin esto la pantalla solo podía enseñar su id: ni de qué tipo
+  /// es, ni cómo se llama, ni a qué tema pertenece -- justo lo que se acaba
+  /// de escribir en el formulario.
+  List<DocumentDraft> documentDrafts() => [
+    for (final document in _documents())
+      DocumentDraft(
+        id: document.id,
+        kind: _fieldOf(document, 'kind') ?? 'theory',
+        titles: _titlesOf(document),
+        themes: _listOf(document, 'themes'),
+      ),
+  ];
+
+  /// Un campo de una línea del bloque de un documento.
+  String? _fieldOf(_Document document, String key) {
+    for (var i = document.firstLine; i <= document.lastLine; i += 1) {
+      final line = _lines[i];
+      if (_keyAt(line, document.fieldIndent) != key) continue;
+      return _unquote(line.substring(line.indexOf(':') + 1).trim());
+    }
+    return null;
+  }
+
+  /// Un campo escrito como `[a, b]`.
+  List<String> _listOf(_Document document, String key) {
+    final raw = _fieldOf(document, key);
+    if (raw == null || !raw.startsWith('[')) return const [];
+    final inner = raw.substring(1, raw.length - (raw.endsWith(']') ? 1 : 0));
+    return [
+      for (final piece in inner.split(','))
+        if (piece.trim().isNotEmpty) piece.trim(),
+    ];
+  }
+
+  /// El título por idioma, que se escribe en las líneas de debajo de `title:`.
+  Map<String, String> _titlesOf(_Document document) {
+    final titles = <String, String>{};
+    var inside = false;
+    for (var i = document.firstLine; i <= document.lastLine; i += 1) {
+      final line = _lines[i];
+      if (_keyAt(line, document.fieldIndent) == 'title') {
+        inside = true;
+        continue;
+      }
+      if (!inside) continue;
+      final match = _draftTitle.firstMatch(line.trim());
+      if (match == null) {
+        // Otra clave del documento: el título se acabó.
+        if (_keyAt(line, document.fieldIndent) != null) break;
+        continue;
+      }
+      titles[match.group(1)!] = _unquote(match.group(2)!.trim());
+    }
+    return titles;
+  }
+
+  /// Cambia el título de un documento, en todos los idiomas a la vez.
+  ///
+  /// Lo que no tenga título se escribe **comentado**, `# TODO: va`, y no como
+  /// `va: ""`. La diferencia no es cosmética: una cadena vacía es un título de
+  /// verdad y saldría en la lista de documentos y dentro del PDF compilado en
+  /// valenciano. Comentado es lo que hace el repositorio en sus dos mil
+  /// unidades, y es lo que la pantalla de traducción cuenta como pendiente.
+  ///
+  /// Se reescribe solo el bloque de `title:`; el resto del documento --sus
+  /// perfiles, sus temas, su composición entera y los comentarios que lleve--
+  /// se queda donde está, que es la regla de todo este fichero.
+  void setDocumentTitles(String id, Map<String, String> titles) {
+    final documents = _documents();
+    final document = documents.where((d) => d.id == id).firstOrNull;
+    if (document == null) {
+      throw CompositionException('no existe el documento `$id`');
+    }
+    final kept = <String, String>{
+      for (final entry in titles.entries)
+        if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
+    };
+    if (kept.isEmpty) {
+      throw const CompositionException(
+        'un documento sin título en ningún idioma no se puede listar',
+      );
+    }
+    final pending = [
+      for (final entry in titles.entries)
+        if (entry.value.trim().isEmpty) entry.key,
+    ];
+
+    final field = ' ' * document.fieldIndent;
+    final block = <String>[
+      '${field}title:',
+      for (final entry in kept.entries)
+        '$field  ${entry.key}: ${_quote(entry.value)}',
+      for (final code in pending) '$field  # TODO: $code',
+    ];
+
+    // Dónde empieza y acaba lo que había. El final es la primera línea que
+    // vuelve a ser una clave del documento: lo de en medio son los idiomas y
+    // sus TODO, y se va entero.
+    var start = -1;
+    var end = -1;
+    for (var i = document.firstLine; i <= document.lastLine; i += 1) {
+      if (start < 0) {
+        if (_keyAt(_lines[i], document.fieldIndent) == 'title') start = i;
+        continue;
+      }
+      if (_keyAt(_lines[i], document.fieldIndent) != null) {
+        end = i - 1;
+        break;
+      }
+      final trimmed = _lines[i].trim();
+      // Un comentario suelto que no es un `# TODO: xx` es de alguien: no se
+      // toca, así que el bloque acaba antes de él.
+      if (trimmed.startsWith('#') && !_pendingTitle.hasMatch(trimmed)) {
+        end = i - 1;
+        break;
+      }
+      if (trimmed.isEmpty) {
+        end = i - 1;
+        break;
+      }
+    }
+    if (start < 0) {
+      // Un documento sin `title:`. Pasa con los escritos a mano; se pone
+      // detrás del `id`, que es donde va en todos los demás.
+      _lines.insertAll(document.firstLine + 1, block);
+      return;
+    }
+    if (end < start) end = document.lastLine;
+    _lines.replaceRange(start, end + 1, block);
+  }
 
   /// Reordena los documentos del año.
   ///
@@ -298,6 +470,7 @@ class CompositionFile {
     required Map<String, String> title,
     List<String> pending = const [],
     List<String> profiles = const [],
+    List<String> themes = const [],
   }) {
     final documents = _documents();
     if (documents.any((document) => document.id == id)) {
@@ -323,6 +496,10 @@ class CompositionFile {
         '$field  ${entry.key}: ${_quote(entry.value)}',
       for (final code in pending) '$field  # TODO: $code',
       if (profiles.isNotEmpty) '${field}profiles: [${profiles.join(', ')}]',
+      // A qué tema pertenece, si se crea dentro de uno. Una etiqueta y nada
+      // más: quién es ese tema lo declara `themes.yaml`, que puede estar en
+      // otro repositorio.
+      if (themes.isNotEmpty) '${field}themes: [${themes.join(', ')}]',
       '${field}structure: []',
     ];
 

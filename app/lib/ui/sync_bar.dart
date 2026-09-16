@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../model/commit_message.dart';
+import '../model/workspace.dart';
 import '../state/session.dart';
 import 'theme.dart';
 
@@ -131,7 +132,7 @@ class _SyncBarState extends State<SyncBar> {
                 runSpacing: 4,
                 children: [
                   for (final repo in repos)
-                    RepoChip(colour: repo.colour, label: repo.label),
+                    _RepoFilter(session: session, repo: repo),
                 ],
               ),
             )
@@ -177,6 +178,10 @@ class _SyncBarState extends State<SyncBar> {
                   ),
                 ),
               ),
+          // Antes de traer y enviar: es una preferencia de lectura, no una
+          // operación sobre git, y separarla de los dos botones que sí tocan
+          // el repositorio evita pulsarla queriendo pulsar otra cosa.
+          _LanguagePicker(session: session),
           if (_busy)
             const Padding(
               padding: EdgeInsets.only(right: 8),
@@ -211,22 +216,150 @@ class _SyncBarState extends State<SyncBar> {
   }
 }
 
+/// El idioma en el que se está trabajando, arriba y siempre a la vista.
+///
+/// No es el idioma de la aplicación --sus textos están en castellano-- sino el
+/// del **contenido**: con cuál de las traducciones se está. Manda sobre casi
+/// todo lo que se lee en pantalla, así que estaba mal escondido en la
+/// biblioteca: desde la lista de asignaturas no había forma de cambiarlo, y
+/// los títulos salían siempre en el idioma propio de cada asignatura aunque se
+/// estuviera preparando la versión en valenciano.
+///
+/// Un menú y no una fila de pestañas porque una asignatura puede declarar
+/// diez idiomas, y diez pestañas en la barra superior no caben ni se leen.
+/// Con uno solo no aparece: no hay nada que elegir.
+class _LanguagePicker extends StatelessWidget {
+  const _LanguagePicker({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = session.catalogue.languageOptions;
+    if (options.length < 2) return const SizedBox.shrink();
+    final current = options
+        .where((option) => option.code == session.language)
+        .firstOrNull;
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: PopupMenuButton<String>(
+        key: const Key('language-picker'),
+        tooltip: 'En qué idioma se ve el contenido',
+        position: PopupMenuPosition.under,
+        itemBuilder: (context) => [
+          for (final option in options)
+            PopupMenuItem<String>(
+              key: Key('pick-language-${option.code}'),
+              value: option.code,
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 22,
+                    child: option.code == session.language
+                        ? const Icon(Icons.check, size: 15)
+                        : null,
+                  ),
+                  Text('${option.name}  ·  ${option.code}'),
+                ],
+              ),
+            ),
+        ],
+        onSelected: (code) => session.language = code,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+          decoration: BoxDecoration(
+            border: Border.all(color: didactaRule),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.translate, size: 14, color: didactaMuted),
+              const SizedBox(width: 5),
+              Text(
+                current?.name ?? session.language,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Icon(
+                Icons.arrow_drop_down,
+                size: 16,
+                color: didactaMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// La etiqueta de color de un repositorio.
 ///
 /// La misma en toda la aplicación: en la barra de arriba, en la fila de un
 /// tema y al lado de una unidad. Un color que solo significa algo en una
 /// pantalla no se aprende.
+/// Un repositorio de la barra, que se enciende y se apaga.
+///
+/// Es un botón y no una etiqueta porque con dos repositorios abiertos la
+/// pregunta que se hace todo el rato no es «¿de cuál es esto?» --el color ya
+/// lo dice-- sino «déjame ver solo lo mío». Antes eso obligaba a quitar el
+/// repositorio de Ajustes, que además de ser tres pantallas es otra cosa:
+/// quitarlo lo cierra.
+///
+/// Apagado, el repositorio sigue abierto, sigue trayendo y sigue guardando lo
+/// que ya tenía; lo único que pasa es que su material no se enseña. Y enseña
+/// exactamente lo mismo que vería quien no lo tuviera, que es la razón por la
+/// que este botón sirve para comprobar qué ve un alumno o un compañero.
+class _RepoFilter extends StatelessWidget {
+  const _RepoFilter({required this.session, required this.repo});
+
+  final Session session;
+  final ContentRepo repo;
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = session.isRepoVisible(repo.id);
+    return Tooltip(
+      message: visible
+          ? 'Ocultar ${repo.id} de la biblioteca y las asignaturas'
+          : 'Volver a enseñar ${repo.id}',
+      child: InkWell(
+        key: Key('repo-filter-${repo.id}'),
+        borderRadius: BorderRadius.circular(3),
+        onTap: () => session.setRepoVisible(repo.id, !visible),
+        child: Opacity(
+          opacity: visible ? 1 : 0.4,
+          child: RepoChip(
+            colour: repo.colour,
+            label: repo.label,
+            muted: !visible,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class RepoChip extends StatelessWidget {
   const RepoChip({
     super.key,
     required this.colour,
     required this.label,
     this.compact = false,
+    this.muted = false,
   });
 
   final int colour;
   final String label;
   final bool compact;
+
+  /// Apagado: sin relleno y tachado, para que se vea de un vistazo que ese
+  /// repositorio está ahí y no se está enseñando.
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
@@ -234,9 +367,9 @@ class RepoChip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 5 : 7, vertical: 2),
       decoration: BoxDecoration(
-        color: tint.withValues(alpha: 0.12),
+        color: muted ? Colors.transparent : tint.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(3),
-        border: Border.all(color: tint.withValues(alpha: 0.35)),
+        border: Border.all(color: tint.withValues(alpha: muted ? 0.5 : 0.35)),
       ),
       child: Text(
         label,
@@ -245,6 +378,8 @@ class RepoChip extends StatelessWidget {
           fontWeight: FontWeight.w700,
           color: tint,
           letterSpacing: 0.2,
+          decoration: muted ? TextDecoration.lineThrough : null,
+          decorationColor: tint,
         ),
       ),
     );

@@ -20,6 +20,7 @@ import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/catalogue.dart';
+import 'package:didacta_app/model/file_history.dart';
 import 'package:didacta_app/model/update_manifest.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
@@ -253,11 +254,24 @@ Map<String, dynamic> courseJson() => {
 Catalogue catalogueWith(
   List<Map<String, dynamic>> units, {
   List<Map<String, dynamic>>? courses,
+  String repo = '',
 }) => Catalogue.fromIndex(
   manifest: {
     'schemaVersion': supportedSchemaVersion,
     'name': 'Prueba',
     'languages': const ['es', 'va', 'en'],
+    // Con más de los que el repositorio usa, que es la situación real desde
+    // que Didacta trae diez ficheros de idioma: una pantalla que ofrece
+    // activar idiomas se prueba contra una lista más larga que la de uso, o
+    // no prueba nada.
+    'availableLanguages': const [
+      {'code': 'es', 'name': 'Castellano'},
+      {'code': 'va', 'name': 'Valencià'},
+      {'code': 'ca', 'name': 'Català'},
+      {'code': 'en', 'name': 'English'},
+      {'code': 'fr', 'name': 'Français'},
+      {'code': 'de', 'name': 'Deutsch'},
+    ],
     'defaultLanguage': 'es',
     'contentHash': 'abc',
     // Con las versiones que el motor ofrece de verdad, y con su nombre:
@@ -290,6 +304,7 @@ Catalogue catalogueWith(
     'schemaVersion': supportedSchemaVersion,
     'courses': courses ?? [courseJson()],
   },
+  repo: repo,
 );
 
 /// A gateway that records what it was asked to do.
@@ -562,6 +577,40 @@ class FakeCompiler implements Compiler {
   Future<List<BuildableProfile>> documentProfiles(String document) async =>
       documentProfileList;
 
+  /// Lo que hay compilado de cada documento, para las pantallas que ofrecen
+  /// abrir el PDF sin compilar.
+  Map<String, List<ExistingOutput>> documentOutputList = const {};
+
+  @override
+  Future<Map<String, List<ExistingOutput>>> documentOutputs(String where) async =>
+      documentOutputList;
+
+  /// Lo que se pidió exportar, para poder comprobarlo.
+  final List<({String where, String to, List<String> languages,
+      List<String> documents})> exports = [];
+
+  ExportResult exportResult = const ExportResult(
+    copied: [],
+    missing: [],
+    to: '/tmp/export',
+  );
+
+  @override
+  Future<ExportResult> exportCourse({
+    required String where,
+    required String to,
+    List<String> languages = const [],
+    List<String> documents = const [],
+  }) async {
+    exports.add((
+      where: where,
+      to: to,
+      languages: languages,
+      documents: documents,
+    ));
+    return exportResult;
+  }
+
   @override
   Future<List<CompileOutput>> compileDocument({
     required String document,
@@ -628,6 +677,44 @@ class FakeClone implements LocalClone {
 
   @override
   String get directory => '/clon';
+
+  /// El historial que este clon dice tener, por ruta.
+  final Map<String, List<FileCommit>> log = {};
+
+  /// Lo que cada commit hizo, por `sha`.
+  final Map<String, FileDiff> diffs = {};
+
+  /// El contenido del fichero en cada commit, por `sha`. Es lo que se
+  /// enseña cuando el commit no cambió el contenido y por tanto no hay diff.
+  final Map<String, String> contents = {};
+
+  /// Lo que se preguntó, para comprobar que se preguntó por lo que tocaba.
+  final List<String> historyAsked = [];
+  final List<String> diffAsked = [];
+
+  /// Las líneas de contexto que se pidieron en cada `diffOf`.
+  final List<int> contextAsked = [];
+
+  @override
+  Future<List<FileCommit>> history(String path, {int limit = 60}) async {
+    historyAsked.add(path);
+    return (log[path] ?? const []).take(limit).toList();
+  }
+
+  @override
+  Future<FileDiff> diffOf({
+    required String sha,
+    required String path,
+    int context = 3,
+  }) async {
+    diffAsked.add('$sha:$path');
+    contextAsked.add(context);
+    return diffs[sha] ?? const FileDiff(hunks: []);
+  }
+
+  @override
+  Future<String?> fileAt({required String sha, required String path}) async =>
+      contents[sha];
 
   @override
   Future<bool> commitPaths({
@@ -713,9 +800,11 @@ class FakeSession extends Session {
     this.adminOverride,
     this.cloneOverride,
     this.onReload,
+    Preferences? preferencesOverride,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
          tokenStore: StubStore(),
+         preferences: preferencesOverride,
        );
 
   /// Sin red y sin preguntar: quien monta una pantalla ya ha entrado.
@@ -740,6 +829,15 @@ class FakeSession extends Session {
   LocalClone cloneAt(String directory) =>
       cloneOverride ?? super.cloneAt(directory);
 
+  /// El clon, sin necesitar un espacio de trabajo ni tocar el disco.
+  ///
+  /// Sin esto, una pantalla que pide el clon obliga al test a montar un
+  /// repositorio de verdad: `useClone` acaba buscando el motor en el disco, y
+  /// un `Process.run` dentro de un test de widgets --donde el reloj es falso--
+  /// no termina nunca.
+  @override
+  LocalClone? cloneFor(String? repo) => cloneOverride ?? super.cloneFor(repo);
+
   /// Recargar el catálogo va a la red, que en un test no está. Cuenta las
   /// veces: crear una asignatura y no recargar es el fallo de que la
   /// pantalla no enseñe lo que acaba de crear.
@@ -758,6 +856,16 @@ class FakeSession extends Session {
 
   @override
   ContentGateway get gateway => gatewayOverride;
+
+  /// La misma para todos los repositorios.
+  ///
+  /// Un test que monta una pantalla con documentos de dos repositorios no
+  /// está probando el reparto de pasarelas --eso es `multi_repo_test`, contra
+  /// git de verdad-- sino lo que la pantalla enseña. Sin esto, pedir la de un
+  /// repositorio que no está en el espacio de trabajo devuelve una pasarela
+  /// sin configurar y la pantalla se queda en el error de carga.
+  @override
+  ContentGateway gatewayFor(String? repo) => gatewayOverride;
 
   @override
   Compiler? compiler({String? repo}) => compilerOverride;

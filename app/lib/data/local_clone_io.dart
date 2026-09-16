@@ -10,6 +10,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import '../model/file_history.dart';
 import 'local_clone.dart';
 
 bool get supported => true;
@@ -102,8 +103,10 @@ Future<LocalClone> cloneInto({
   required String repo,
   required String branch,
   required String token,
+  String? url,
   void Function(String line)? onProgress,
 }) async {
+  final remote = url ?? _url(owner, repo);
   final target = Directory(directory);
   if (await target.exists() && target.listSync().isNotEmpty) {
     final existing = _GitClone(directory: directory);
@@ -123,19 +126,164 @@ Future<LocalClone> cloneInto({
       '$owner/$repo. Elige otra carpeta.',
     );
   }
-  await target.create(recursive: true);
 
-  await _run(
-    ['clone', '--branch', branch, _url(owner, repo), '.'],
-    directory: directory,
-    token: token,
-    onProgress: onProgress,
-    what: 'clonar $owner/$repo',
+  // Antes de crear nada. Un repositorio recién creado en GitHub no tiene
+  // ninguna rama, y git lo cuenta como «Remote branch main not found», que
+  // ni dice lo que pasa ni deja ver que tiene arreglo.
+  if (await _remoteIsEmpty(remote, token: token, label: '$owner/$repo')) {
+    throw EmptyRepositoryException(owner: owner, repo: repo);
+  }
+
+  await _intoFresh(
+    target,
+    () => _run(
+      ['clone', '--branch', branch, remote, '.'],
+      directory: directory,
+      token: token,
+      onProgress: onProgress,
+      what: 'clonar $owner/$repo',
+    ),
   );
   return _GitClone(directory: directory);
 }
 
+Future<LocalClone> initializeInto({
+  required String directory,
+  required String owner,
+  required String repo,
+  required String branch,
+  required String token,
+  required String title,
+  required String authorName,
+  required String authorEmail,
+  String? url,
+  void Function(String line)? onProgress,
+}) async {
+  final remote = url ?? _url(owner, repo);
+  final target = Directory(directory);
+  if (await target.exists() && target.listSync().isNotEmpty) {
+    throw CloneException(
+      'La carpeta $directory no está vacía. Vacíala o elige otra antes de '
+      'preparar $owner/$repo.',
+    );
+  }
+
+  // Se vuelve a mirar justo antes: entre que se ofreció prepararlo y se
+  // aceptó, alguien puede haber empujado.
+  if (!await _remoteIsEmpty(remote, token: token, label: '$owner/$repo')) {
+    throw CloneException(
+      '$owner/$repo ya no está vacío: alguien ha subido algo mientras tanto. '
+      'Vuelve a añadirlo desde GitHub.',
+    );
+  }
+
+  Future<String> git(
+    List<String> arguments,
+    String what, {
+    Map<String, String>? environment,
+  }) => _run(
+    arguments,
+    directory: directory,
+    what: what,
+    token: token,
+    onProgress: onProgress,
+    environment: environment,
+  );
+
+  await _intoFresh(target, () async {
+    await git(['clone', remote, '.'], 'clonar $owner/$repo');
+
+    // Un clon vacío apunta HEAD a la rama por defecto de *esta* máquina, que
+    // puede ser `master`. La que manda es la del repositorio en GitHub.
+    await git([
+      'symbolic-ref',
+      'HEAD',
+      'refs/heads/$branch',
+    ], 'elegir la rama $branch');
+
+    File(
+      '$directory/$_marker',
+    ).writeAsStringSync(LocalClone.settingsFor(title));
+    File('$directory/.gitignore').writeAsStringSync(LocalClone.ignoredFiles);
+    await git([
+      'add',
+      '--',
+      _marker,
+      '.gitignore',
+    ], 'preparar el primer commit');
+
+    await git(
+      [
+        '-c',
+        'user.name=$authorName',
+        '-c',
+        'user.email=$authorEmail',
+        'commit',
+        '--message',
+        'Preparar el repositorio de contenido de Didacta',
+      ],
+      'hacer el primer commit',
+      environment: {
+        'GIT_AUTHOR_NAME': authorName,
+        'GIT_AUTHOR_EMAIL': authorEmail,
+        'GIT_COMMITTER_NAME': authorName,
+        'GIT_COMMITTER_EMAIL': authorEmail,
+      },
+    );
+
+    // Con `--set-upstream`: sin rama de seguimiento, traer y enviar después
+    // no sabrían contra qué, y el estado no podría decir si está al día.
+    await git([
+      'push',
+      '--set-upstream',
+      'origin',
+      branch,
+    ], 'enviar el primer commit a GitHub');
+  });
+  return _GitClone(directory: directory);
+}
+
 String _url(String owner, String repo) => 'https://github.com/$owner/$repo.git';
+
+/// Si el remoto no tiene ninguna referencia, que es lo que tiene un
+/// repositorio recién creado en GitHub.
+Future<bool> _remoteIsEmpty(
+  String remote, {
+  required String token,
+  required String label,
+}) async {
+  final refs = await _runIn(
+    ['ls-remote', remote],
+    // En una carpeta que seguro que existe: la de destino todavía no.
+    directory: Directory.systemTemp.path,
+    what: 'consultar $label',
+    token: token,
+  );
+  return refs.trim().isEmpty;
+}
+
+/// Hace [work] en [target], y si falla deja el disco como estaba.
+///
+/// Sin esto, cada intento fallido dejaba una carpeta vacía con el nombre del
+/// repositorio al lado de las buenas. Quien llama ya ha comprobado que
+/// [target] no existía o estaba vacía, así que no se borra nada que no
+/// acabe de crear git.
+Future<void> _intoFresh(Directory target, Future<void> Function() work) async {
+  final existed = await target.exists();
+  await target.create(recursive: true);
+  try {
+    await work();
+  } catch (_) {
+    if (!existed) {
+      if (await target.exists()) await target.delete(recursive: true);
+    } else {
+      for (final entry in target.listSync()) {
+        entry.deleteSync(recursive: true);
+      }
+    }
+    rethrow;
+  }
+}
 
 class _GitClone implements LocalClone {
   _GitClone({required this.directory});
@@ -253,6 +401,92 @@ class _GitClone implements LocalClone {
     }
     final text = await file.readAsString();
     return (text: text, sha: await _hashOf(path));
+  }
+
+  //: El separador de campos de `git log --format`.
+  //:
+  //: Una unidad de separación de ASCII y no una coma o una tubería: es el
+  //: carácter que existe para esto y **no puede aparecer** en el asunto de un
+  //: commit escrito por una persona, que es lo que separa un parseo que
+  //: funciona de uno que se rompe el día que alguien escribe una coma.
+  static const String _fieldSeparator = '\x1f';
+  static const String _recordSeparator = '\x1e';
+
+  @override
+  Future<List<FileCommit>> history(String path, {int limit = 60}) async {
+    final output = await _text([
+      'log',
+      // El historial de antes de moverse. Reorganizar `content/` pasa, y sin
+      // esto una unidad movida abre su historial vacía.
+      '--follow',
+      '--max-count=$limit',
+      '--date=iso-strict',
+      '--format=%H$_fieldSeparator%an$_fieldSeparator%ae$_fieldSeparator'
+          '%aI$_fieldSeparator%s$_fieldSeparator%b$_recordSeparator',
+      // `--` para que git no confunda la ruta con una rama que se llame igual.
+      '--',
+      path,
+    ]);
+
+    final commits = <FileCommit>[];
+    for (final record in output.split(_recordSeparator)) {
+      final trimmed = record.trim();
+      if (trimmed.isEmpty) continue;
+      final fields = trimmed.split(_fieldSeparator);
+      if (fields.length < 5) continue;
+      final when = DateTime.tryParse(fields[3]);
+      if (when == null) continue;
+      commits.add(
+        FileCommit(
+          sha: fields[0],
+          author: fields[1],
+          email: fields[2],
+          when: when,
+          subject: fields[4],
+          body: fields.length > 5 ? fields[5].trim() : '',
+        ),
+      );
+    }
+    return commits;
+  }
+
+  @override
+  Future<FileDiff> diffOf({
+    required String sha,
+    required String path,
+    int context = 3,
+  }) async {
+    final output = await _text([
+      'show',
+      // Sin la cabecera del commit: aquí solo se quiere el diff, y el autor y
+      // la fecha ya vienen del historial.
+      '--format=',
+      // Los renombrados, detectados: un fichero que se movió tiene que
+      // enseñar que se movió y no un borrado más un alta.
+      '--find-renames',
+      '--unified=$context',
+      sha,
+      '--',
+      path,
+    ]);
+    return parseUnifiedDiff(output);
+  }
+
+  @override
+  Future<String?> fileAt({required String sha, required String path}) async {
+    try {
+      // `_run` y no `_text`: recortar los espacios de un fichero sería
+      // enseñar un contenido que no es el que hay. Lo único que se quita es
+      // el salto final, que git escribe siempre y que como línea no existe.
+      final text = await _run(['show', '$sha:$path'], what: 'leer $path');
+      return text.endsWith('\n')
+          ? text.substring(0, text.length - 1)
+          : text;
+    } on CloneException {
+      // En ese commit no había ningún fichero con ese nombre: o todavía no
+      // existía, o se llamaba de otra manera.
+      return null;
+    }
   }
 
   @override
@@ -561,4 +795,20 @@ Future<String> _runIn(
 String _redact(String text, String? token) {
   if (token == null || token.isEmpty) return text;
   return text.replaceAll(token, '«token»');
+}
+
+/// Qué hay en la carpeta donde iría un clon, sin tocarla.
+Future<CloneTarget> inspectTarget({
+  required String directory,
+  required String owner,
+  required String repo,
+}) async {
+  final target = Directory(directory);
+  if (!await target.exists()) return CloneTarget.free;
+  if (target.listSync().isEmpty) return CloneTarget.free;
+  final existing = _GitClone(directory: directory);
+  if (await existing.looksRight(owner: owner, repo: repo)) {
+    return CloneTarget.alreadyCloned;
+  }
+  return CloneTarget.occupied;
 }

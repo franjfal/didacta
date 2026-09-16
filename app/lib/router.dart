@@ -27,6 +27,7 @@ import 'state/session.dart';
 import 'ui/courses_page.dart';
 import 'ui/document_page.dart';
 import 'ui/library_page.dart';
+import 'ui/mcp_page.dart';
 import 'ui/settings_page.dart';
 import 'ui/shell.dart';
 import 'ui/translations_page.dart';
@@ -90,6 +91,11 @@ GoRouter buildRouter(Session session) {
                 const NoTransitionPage(child: TranslationsPage()),
           ),
           GoRoute(
+            path: '/mcp',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: McpPage()),
+          ),
+          GoRoute(
             path: '/settings',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: SettingsPage()),
@@ -124,6 +130,8 @@ class Routes {
       '/courses/$course/$year/$document';
 
   static String translations() => '/translations';
+
+  static String mcp() => '/mcp';
 
   static String settings() => '/settings';
 }

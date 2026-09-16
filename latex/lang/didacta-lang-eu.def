@@ -1,0 +1,63 @@
+%%
+%% didacta-lang-eu.def -- Euskara.
+%%
+%% Todo lo que Didacta imprime por su cuenta. Nada de esto es decorativo: un
+%% documento que dice "Theorem 2.1" en un curso que se da en
+%% Euskara est\'a mal, y el contenido no puede cargar con la traducci\'on.
+%%
+%% ATENCI\'ON: fichero base, escrito con la terminolog\'ia matem\'atica al uso
+%% y **sin revisar por nadie que d\'e clase en Euskara**. Sirve para compilar
+%% desde el primer d\'ia; antes de repartir material, que lo lea quien lo
+%% hable. Son treinta y seis palabras, y las que cambian de una tradici\'on a
+%% otra son pocas y conocidas: Frogapena, Zuzenketa, Kapitulua.
+%%
+\ProvidesFile{didacta-lang-eu.def}[2026/09/16 Didacta Basque]
+
+%% La opci\'on de babel, para que el arranque no necesite otra tabla.
+\def\didactaBabelName{basque}
+
+%% Los entornos con nombre.
+\def\didactaTheoremName{Teorema}
+\def\didactaDefinitionName{Definizioa}
+\def\didactaPropositionName{Proposizioa}
+\def\didactaLemmaName{Lema}
+\def\didactaCorollaryName{Korolarioa}
+\def\didactaPropertyName{Propietatea}
+\def\didactaExampleName{Adibidea}
+\def\didactaQuestionName{Galdera}
+\def\didactaRemarkName{Oharra}
+\def\didactaAxiomName{Axioma}
+\def\didactaAlgorithmName{Algoritmoa}
+\def\didactaNotationName{Notazioa}
+\def\didactaProofName{Frogapena}
+
+%% Ejercicios.
+\def\didactaExerciseName{Ariketa}
+\def\didactaAnswerName{Erantzuna}
+\def\didactaSolutionName{Ebazpena}
+\def\didactaHintName{Laguntza}
+\def\didactaMarkingName{Zuzenketa}
+\def\didactaMarksName{puntu}
+
+%% Estructura y portada.
+\def\didactaContentsName{Edukiak}
+\def\didactaChapterName{Kapitulua}
+\def\didactaCourseName{Irakasgaia}
+\def\didactaTeacherName{Irakaslea}
+\def\didactaAcademicYearName{Ikasturtea}
+\def\didactaBibliographyName{Bibliografia}
+\def\didactaObjectivesName{Helburuak}
+\def\didactaPrerequisitesName{Aurrebaldintzak}
+\def\didactaSummaryName{Laburpena}
+\def\didactaFurtherReadingName{Irakurgai osagarriak}
+
+%% Canal del profesor.
+\def\didactaTeachingNoteName{Irakaskuntza-oharra}
+\def\didactaTimingName{Denbora estimatua}
+\def\didactaCommonMistakeName{Ohiko akatsa}
+
+%% Evaluaci\'on.
+\def\didactaExamName{Azterketa}
+\def\didactaDurationName{Iraupena}
+\def\didactaTotalMarksName{Puntuazio osoa}
+\endinput

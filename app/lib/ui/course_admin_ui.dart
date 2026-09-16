@@ -318,9 +318,16 @@ class _DuplicateYearDialogState extends State<DuplicateYearDialog> {
   late final List<String> _years = widget.course.years.keys.toList()
     ..sort((a, b) => b.compareTo(a));
 
-  late String _from = _years.first;
+  /// De qué curso se copia, o vacío para empezar en blanco.
+  ///
+  /// En blanco por defecto cuando no hay ninguno --una asignatura recién
+  /// creada-- y copiando del más reciente cuando lo hay, que es lo que se
+  /// quiere el 95% de las veces. Pero **se puede elegir no copiar**: un año
+  /// que se compone desde cero no quiere arrastrar lo del anterior para ir
+  /// borrándolo.
+  late String _from = _years.isEmpty ? '' : _years.first;
   late final TextEditingController _year = TextEditingController(
-    text: _nextAfter(_years.first),
+    text: _years.isEmpty ? '' : _nextAfter(_years.first),
   );
 
   /// El año siguiente al más reciente, ya escrito.
@@ -372,10 +379,10 @@ class _DuplicateYearDialogState extends State<DuplicateYearDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Copia la selección y el orden de un curso que ya existe. Las '
-              'unidades no se copian: el curso nuevo referencia las mismas, '
-              'que es la razón de que el material y las asignaturas estén '
-              'separados.',
+              'Se puede empezar en blanco o copiando la selección y el orden '
+              'de un curso que ya existe. Las unidades no se copian nunca: el '
+              'curso nuevo referencia las mismas, que es la razón de que el '
+              'material y las asignaturas estén separados.',
               style: TextStyle(fontSize: 12.5, color: didactaMuted),
             ),
             const SizedBox(height: 14),
@@ -400,7 +407,7 @@ class _DuplicateYearDialogState extends State<DuplicateYearDialog> {
             ],
             const SizedBox(height: 12),
             const Text(
-              'Copiado de',
+              'Qué lleva dentro',
               style: TextStyle(fontSize: 11.5, color: didactaMuted),
             ),
             const SizedBox(height: 5),
@@ -408,10 +415,17 @@ class _DuplicateYearDialogState extends State<DuplicateYearDialog> {
               spacing: 5,
               runSpacing: 5,
               children: [
+                ChoiceChip(
+                  key: const Key('start-empty'),
+                  label: const Text('Nada, empiezo de cero'),
+                  selected: _from.isEmpty,
+                  onSelected: (_) => setState(() => _from = ''),
+                ),
                 for (final year in _years)
                   ChoiceChip(
+                    key: Key('copy-from-$year'),
                     label: Text(
-                      '$year · '
+                      'Lo de $year · '
                       '${widget.course.years[year]!.documents.length} doc.',
                     ),
                     selected: year == _from,
@@ -587,6 +601,181 @@ class _NewCourseDialogState extends State<NewCourseDialog> {
                 ))
               : null,
           child: const Text('Crear'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Copiar documentos de un curso a otro.
+///
+/// Dos preguntas en una pantalla porque son una sola decisión: a qué curso, y
+/// qué de este. Lo segundo con la lista delante y casillas, porque lo normal
+/// no es llevarse el curso entero --eso ya lo hace duplicar un año-- sino el
+/// tema que se vuelve a dar.
+///
+/// Lo que se copia es **la composición**. Las unidades siguen siendo las
+/// mismas, y se dice en la pantalla: es la propiedad por la que este botón
+/// existe, y la que hace que corregir una errata siga siendo corregirla en un
+/// sitio.
+class CopyYearDialog extends StatefulWidget {
+  const CopyYearDialog({
+    super.key,
+    required this.course,
+    required this.year,
+    required this.entry,
+    required this.language,
+  });
+
+  final Course course;
+  final String year;
+  final CourseYear entry;
+  final String language;
+
+  @override
+  State<CopyYearDialog> createState() => _CopyYearDialogState();
+}
+
+/// Lo que la pantalla decide: a dónde, y qué.
+class CopyRequest {
+  const CopyRequest({required this.toYear, required this.documents});
+
+  final String toYear;
+
+  /// Vacía significa «el curso entero».
+  final List<String> documents;
+}
+
+class _CopyYearDialogState extends State<CopyYearDialog> {
+  String? _target;
+  late final Set<String> _chosen = {
+    for (final document in widget.entry.documents) document.id,
+  };
+
+  /// Los cursos a los que se puede copiar: los de la misma asignatura, menos
+  /// este. Copiar a otra asignatura sería otra cosa --las referencias pueden
+  /// no existir allí-- y no se ofrece a medias.
+  List<String> get _targets => [
+    for (final year in widget.course.years.keys)
+      if (year != widget.year) year,
+  ]..sort();
+
+  @override
+  Widget build(BuildContext context) {
+    final targets = _targets;
+    return AlertDialog(
+      title: Text('Copiar de ${widget.year}'),
+      content: SizedBox(
+        width: 540,
+        height: 460,
+        child: targets.isEmpty
+            ? const Note(
+                'Esta asignatura no tiene otro curso al que copiar. Crea uno '
+                'primero, o duplica este año entero.',
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'A qué curso',
+                    style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                  ),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (final year in targets)
+                        ChoiceChip(
+                          key: Key('copy-to-$year'),
+                          label: Text(year),
+                          selected: _target == year,
+                          onSelected: (_) => setState(() => _target = year),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Text(
+                        'Qué se copia',
+                        style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        key: const Key('copy-none'),
+                        onPressed: () => setState(_chosen.clear),
+                        child: const Text('Ninguno'),
+                      ),
+                      TextButton(
+                        key: const Key('copy-all'),
+                        onPressed: () => setState(() {
+                          _chosen.addAll(
+                            widget.entry.documents.map((d) => d.id),
+                          );
+                        }),
+                        child: const Text('Todos'),
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        for (final document in widget.entry.documents)
+                          CheckboxListTile(
+                            key: Key('copy-doc-${document.id}'),
+                            dense: true,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: _chosen.contains(document.id),
+                            onChanged: (on) => setState(() {
+                              if (on ?? false) {
+                                _chosen.add(document.id);
+                              } else {
+                                _chosen.remove(document.id);
+                              }
+                            }),
+                            title: Text(document.title(widget.language)),
+                            subtitle: Text(
+                              [
+                                document.kind,
+                                '${document.unitRefs.length} unidades',
+                              ].join(' · '),
+                              style: const TextStyle(fontSize: 11.5),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Note(
+                    'Se copia la composición: qué unidades lleva y en qué '
+                    'orden. Las unidades no se duplican --siguen siendo las '
+                    'mismas-- así que corregirlas sigue siendo corregirlas '
+                    'una vez.',
+                  ),
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const Key('copy-confirm'),
+          onPressed: _target == null || _chosen.isEmpty
+              ? null
+              : () => Navigator.of(context).pop(
+                  CopyRequest(
+                    toYear: _target!,
+                    documents: [
+                      for (final document in widget.entry.documents)
+                        if (_chosen.contains(document.id)) document.id,
+                    ],
+                  ),
+                ),
+          child: Text(
+            _chosen.length == 1 ? 'Copiar 1' : 'Copiar ${_chosen.length}',
+          ),
         ),
       ],
     );

@@ -285,6 +285,43 @@ class CompositionPart {
       titles.isNotEmpty && (titles[language] ?? '').isEmpty;
 }
 
+/// Un tema del curso: el bloque bajo el que se agrupan sus documentos.
+///
+/// El Tema 1 lleva su teoría, su práctica, su análisis bibliográfico y su
+/// marco histórico, y esos ficheros pueden estar en repositorios distintos.
+/// Por eso el tema se declara aparte del documento: **el documento dice a qué
+/// temas pertenece y el tema lo declara quien lo tenga**.
+///
+/// De ahí lo que lo hace seguro: quien no tenga el repositorio donde alguien
+/// escribió el título ve sus documentos sueltos, como antes de que existieran
+/// los temas. Nunca desaparece material por no tener un repositorio.
+class CourseTheme {
+  const CourseTheme({required this.id, required this.titles, this.repo = ''});
+
+  factory CourseTheme.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
+      CourseTheme(
+        id: json['id'] as String? ?? '',
+        titles: _stringMap(json['title']),
+        repo: repo,
+      );
+
+  final String id;
+  final Map<String, String> titles;
+
+  /// Quién lo declara. Para poder decirlo en la interfaz cuando hay varios
+  /// repositorios abiertos.
+  final String repo;
+
+  String title([String? language]) {
+    final wanted = titles[language ?? 'es'];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return id;
+  }
+}
+
 class Document {
   const Document({
     required this.id,
@@ -295,6 +332,7 @@ class Document {
     required this.profiles,
     required this.unitRefs,
     this.structure = const [],
+    this.themes = const [],
   });
 
   factory Document.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
@@ -307,6 +345,7 @@ class Document {
         profiles: _stringList(json['profiles']),
         unitRefs: _stringList(json['unitRefs']),
         structure: _structure(json['structure']),
+        themes: _stringList(json['themes']),
       );
 
   /// La estructura tal como la escribe el motor: una lista de mapas de una
@@ -352,6 +391,14 @@ class Document {
   /// Cómo está repartido: los apartados y lo que va debajo de cada uno.
   final List<CompositionPart> structure;
 
+  /// Los temas del curso a los que pertenece, por id.
+  ///
+  /// Varios porque un documento puede entrar en más de un tema --un apéndice
+  /// que sirve a dos--, y ids sueltos porque **quién es cada tema lo declara
+  /// otro fichero, que puede estar en otro repositorio**. Un id que nadie
+  /// declara no es un error: el documento sale suelto.
+  final List<String> themes;
+
   String title([String? language]) {
     final wanted = titles[language ?? this.language];
     if (wanted != null && wanted.isNotEmpty) return wanted;
@@ -362,6 +409,20 @@ class Document {
   }
 }
 
+/// Un tema y lo que lleva dentro, o los sueltos cuando no hay tema.
+///
+/// `theme` nulo es «los que no están en ningún tema declarado», que no es lo
+/// mismo que un tema vacío: son los documentos que la interfaz enseña sin
+/// tarjeta, tal como se enseñaban antes.
+class ThemedDocuments {
+  const ThemedDocuments({required this.theme, required this.documents});
+
+  final CourseTheme? theme;
+  final List<Document> documents;
+
+  bool get isLoose => theme == null;
+}
+
 /// One academic year of a course.
 class CourseYear {
   const CourseYear({
@@ -369,6 +430,7 @@ class CourseYear {
     required this.language,
     required this.documents,
     this.group,
+    this.themes = const [],
   });
 
   factory CourseYear.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
@@ -376,6 +438,13 @@ class CourseYear {
         year: json['year'] as String? ?? '',
         language: json['language'] as String? ?? 'es',
         group: json['group'] is String ? json['group'] as String : null,
+        themes: [
+          for (final item in (json['themes'] as List?) ?? const [])
+            CourseTheme.fromJson(
+              (item as Map).cast<String, dynamic>(),
+              repo: repo,
+            ),
+        ],
         documents: [
           for (final item in (json['documents'] as List?) ?? const [])
             Document.fromJson(
@@ -401,10 +470,22 @@ class CourseYear {
       }
       added.add(document);
     }
+    // Los temas se suman, sin conflicto: dos repositorios que declaran el
+    // mismo id están diciendo lo mismo --es un tema del curso, no de ninguno
+    // de los dos-- y el primero se queda con el título. Que uno declare y el
+    // otro no es el caso normal, no una discrepancia.
+    final byTheme = {for (final theme in themes) theme.id: theme};
+    final mergedThemes = [
+      ...themes,
+      for (final theme in other.themes)
+        if (!byTheme.containsKey(theme.id)) theme,
+    ];
+
     return CourseYear(
       year: year,
       language: language,
       group: group ?? other.group,
+      themes: mergedThemes,
       documents: [...documents, ...added],
     );
   }
@@ -413,11 +494,162 @@ class CourseYear {
   final String language;
   final String? group;
 
+  /// Los temas declarados para este curso, en el orden en que se dan.
+  ///
+  /// Juntando los de todos los repositorios abiertos. Vacía es lo corriente:
+  /// un curso sin temas declarados enseña sus documentos en una lista, que es
+  /// lo que hacían todos hasta ahora.
+  final List<CourseTheme> themes;
+
   /// In composition order, which is content: the order units are taught in.
   final List<Document> documents;
 
+  /// El mismo año sin lo que aporten [hidden].
+  ///
+  /// Los temas de un repositorio apagado se van con él: si el que declaraba
+  /// el Tema 1 está apagado, sus documentos vuelven a salir sueltos, que es
+  /// exactamente lo que le pasa a quien no tiene ese repositorio. Apagar y no
+  /// tener enseñan lo mismo, y eso es lo que hace el filtro entendible.
+  CourseYear? without(Set<String> hidden) {
+    if (hidden.isEmpty) return this;
+    final kept = [
+      for (final document in documents)
+        if (!hidden.contains(document.repo)) document,
+    ];
+    // Desaparece solo si **tenía** documentos y todos eran del repositorio
+    // apagado. Un curso que todavía no tiene ninguno --recién creado, o con
+    // sus temas aún vacíos-- no es un curso que no se esté mirando: es uno
+    // que hay que poder abrir para llenarlo.
+    if (documents.isNotEmpty && kept.isEmpty) return null;
+    return CourseYear(
+      year: year,
+      language: language,
+      group: group,
+      themes: [
+        for (final theme in themes)
+          if (!hidden.contains(theme.repo)) theme,
+      ],
+      documents: kept,
+    );
+  }
+
   /// Los repositorios que aportan algo a este año.
   Set<String> get repos => {for (final document in documents) document.repo};
+
+  /// Los documentos repartidos en temas, en el orden en que se dan.
+  ///
+  /// Un documento aparece en cada tema al que pertenece **y que esté
+  /// declarado**; los que no caen en ninguno van al final, en un grupo sin
+  /// título. Es la regla entera, y es la que hace que esto no pueda romper
+  /// nada: sin la declaración no hay agrupación, y sin agrupación queda la
+  /// lista de siempre.
+  List<ThemedDocuments> get byTheme {
+    final declared = {for (final theme in themes) theme.id};
+    // Todos los declarados, también los que todavía no llevan nada. Un tema
+    // vacío es un tema que se acaba de crear, y esconderlo deja sin sitio por
+    // donde meterle el primer documento: se creaba y desaparecía.
+    final groups = [
+      for (final theme in themes)
+        ThemedDocuments(
+          theme: theme,
+          documents: [
+            for (final document in documents)
+              if (document.themes.contains(theme.id)) document,
+          ],
+        ),
+    ];
+
+    final loose = [
+      for (final document in documents)
+        if (!document.themes.any(declared.contains)) document,
+    ];
+    if (loose.isNotEmpty) {
+      groups.add(ThemedDocuments(theme: null, documents: loose));
+    }
+    return groups;
+  }
+}
+
+/// Lo que un repositorio declara de una asignatura, tal cual.
+///
+/// Sin fusionar con lo que digan los demás: es la única forma de saber que
+/// dos repositorios no dicen lo mismo. La fusión elige un valor y las
+/// pantallas enseñan ese; esto guarda los dos.
+class CourseFacts {
+  const CourseFacts({
+    this.titles = const {},
+    this.languages = const [],
+    this.code,
+    this.teacher,
+    this.institution,
+    this.degrees = const {},
+  });
+
+  final Map<String, String> titles;
+  final List<String> languages;
+  final String? code;
+  final String? teacher;
+  final String? institution;
+  final Map<String, String> degrees;
+
+  /// Los campos comparables, con el nombre que se enseña.
+  ///
+  /// En un mapa y no en propiedades sueltas porque comparar, enseñar y
+  /// escribir tienen que recorrer exactamente los mismos, y tres listas
+  /// separadas acaban discrepando.
+  Map<String, String> get comparable => {
+    for (final entry in titles.entries) 'título (${entry.key})': entry.value,
+    for (final entry in degrees.entries) 'titulación (${entry.key})': entry.value,
+    if (languages.isNotEmpty) 'idiomas': languages.join(', '),
+    if ((code ?? '').isNotEmpty) 'código': code!,
+    if ((teacher ?? '').isNotEmpty) 'profesor': teacher!,
+    if ((institution ?? '').isNotEmpty) 'institución': institution!,
+  };
+
+  /// Dónde vive ese campo dentro de `course.yaml`, para poder escribirlo.
+  static List<String>? pathOf(String field) {
+    final localised = RegExp(r'^(título|titulación) \((\w+)\)$').firstMatch(field);
+    if (localised != null) {
+      final key = localised.group(1) == 'título' ? 'title' : 'degree';
+      return [key, localised.group(2)!];
+    }
+    return switch (field) {
+      'código' => const ['code'],
+      'profesor' => const ['teacher'],
+      'institución' => const ['institution'],
+      'idiomas' => const ['languages'],
+      _ => null,
+    };
+  }
+}
+
+/// Un campo de una asignatura en el que dos repositorios no coinciden.
+///
+/// No se resuelve solo. Son ficheros que pueden ser de otra persona, y
+/// propagar el valor «más nuevo» por su cuenta deshace el cambio de quien
+/// todavía no lo ha enviado. Se enseña, y se iguala cuando alguien lo decide.
+class MetadataConflict {
+  const MetadataConflict({
+    required this.course,
+    required this.field,
+    required this.values,
+  });
+
+  final String course;
+
+  /// El campo, con el nombre que se lee: «título (es)», «código».
+  final String field;
+
+  /// Qué dice cada repositorio.
+  final Map<String, String> values;
+
+  /// Dónde se escribe en `course.yaml`, o null si no se sabe.
+  List<String>? get path => CourseFacts.pathOf(field);
+
+  @override
+  String toString() =>
+      '$course · $field: ${values.entries.map((e) => '${e.key} dice '
+          '«${e.value}»').join(' y ')}';
 }
 
 /// A subject, across the years it has run.
@@ -427,10 +659,31 @@ class Course {
     required this.titles,
     required this.language,
     required this.years,
+    this.languages = const [],
     this.code,
     this.teacher,
     this.institution,
+    this.sources = const {},
   });
+
+  /// Lo que declara de esta asignatura cada repositorio, sin fusionar.
+  ///
+  /// La fusión se queda con un valor y eso es lo que las pantallas enseñan;
+  /// esto guarda lo que dijo cada uno, que es lo único que permite darse
+  /// cuenta de que no dicen lo mismo. Sin ello, dos repositorios con el
+  /// título mal escrito de formas distintas se ven bien para siempre.
+  final Map<String, CourseFacts> sources;
+
+  /// En qué idiomas se da **esta** asignatura.
+  ///
+  /// No los del repositorio: un repositorio puede mantener castellano,
+  /// valenciano e inglés y una asignatura del doble grado darse solo en
+  /// castellano. Preguntar por los tres en esa asignatura llena la pantalla
+  /// de traducciones que faltan y que no faltan.
+  ///
+  /// Vacía en un índice viejo, y entonces se cae a los del repositorio, que
+  /// es como se comportaba esto antes.
+  final List<String> languages;
 
   factory Course.fromJson(Map<String, dynamic> json, {String repo = ''}) {
     final years = (json['years'] as Map?) ?? const {};
@@ -438,6 +691,17 @@ class Course {
       id: json['id'] as String? ?? '',
       titles: _stringMap(json['title']),
       language: json['language'] as String? ?? 'es',
+      languages: _stringList(json['languages']),
+      sources: {
+        repo: CourseFacts(
+          titles: _stringMap(json['title']),
+          languages: _stringList(json['languages']),
+          code: json['code'] as String?,
+          teacher: json['teacher'] as String?,
+          institution: json['institution'] as String?,
+          degrees: _stringMap(json['degree']),
+        ),
+      },
       code: json['code'] as String?,
       teacher: json['teacher'] as String?,
       institution: json['institution'] as String?,
@@ -457,6 +721,34 @@ class Course {
   /// dato suelto --el título, el código, quién la da-- se queda con el primero
   /// que lo tenga: son la misma asignatura, y dos `course.yaml` que no
   /// coincidan es algo que hay que arreglar en el repositorio, no aquí.
+  /// El mismo curso sin lo que aporten [hidden].
+  ///
+  /// Null cuando no le queda nada: una asignatura cuyos documentos son todos
+  /// de un repositorio apagado no es una asignatura vacía, es una asignatura
+  /// que no se está mirando.
+  Course? without(Set<String> hidden) {
+    final kept = <String, CourseYear>{};
+    for (final entry in years.entries) {
+      final year = entry.value.without(hidden);
+      if (year != null) kept[entry.key] = year;
+    }
+    if (kept.isEmpty) return null;
+    return Course(
+      id: id,
+      titles: titles,
+      language: language,
+      languages: languages,
+      years: kept,
+      code: code,
+      teacher: teacher,
+      institution: institution,
+      sources: {
+        for (final entry in sources.entries)
+          if (!hidden.contains(entry.key)) entry.key: entry.value,
+      },
+    );
+  }
+
   Course mergedWith(Course other, List<String> conflicts) {
     final merged = <String, CourseYear>{...years};
     for (final entry in other.years.entries) {
@@ -469,10 +761,21 @@ class Course {
       id: id,
       titles: {...other.titles, ...titles},
       language: language,
+      // Unión: que un repositorio no sepa de un idioma no quiere decir que la
+      // asignatura no se dé en él, quiere decir que ese repositorio no tiene
+      // material suyo. Si los dos lo declaran y no coinciden, es una
+      // discrepancia y se dice --ver [Catalogue.metadataConflicts]--, no se
+      // resuelve aquí en silencio.
+      languages: [
+        ...languages,
+        for (final code in other.languages)
+          if (!languages.contains(code)) code,
+      ],
       code: code ?? other.code,
       teacher: teacher ?? other.teacher,
       institution: institution ?? other.institution,
       years: merged,
+      sources: {...sources, ...other.sources},
     );
   }
 
@@ -499,6 +802,33 @@ class Course {
 
   /// Los repositorios que aportan algo a esta asignatura.
   Set<String> get repos => {for (final year in years.values) ...year.repos};
+}
+
+/// Una referencia que sale de su repositorio.
+///
+/// El documento vive en uno y la unidad que llama, en otro. Compila aquí y no
+/// compila en la máquina de quien solo tenga uno de los dos.
+class CrossRepoUse {
+  const CrossRepoUse({
+    required this.course,
+    required this.year,
+    required this.document,
+    required this.documentRepo,
+    required this.reference,
+    required this.unitRepo,
+  });
+
+  final String course;
+  final String year;
+  final String document;
+  final String documentRepo;
+  final String reference;
+  final String unitRepo;
+
+  @override
+  String toString() =>
+      '$course $year · $document (en $documentRepo) llama a $reference, '
+      'que está en $unitRepo';
 }
 
 /// An output profile, so the interface can offer what exists rather than a
@@ -533,11 +863,39 @@ class OutputProfile {
   bool get isSlides => documentClass == 'beamer';
 }
 
+/// Un idioma al que Didacta sabe imprimir.
+///
+/// El nombre es el que usa quien lo habla --«Català», no «Catalan»--, porque
+/// es lo que se lee en una lista de idiomas y lo que permite reconocer el
+/// propio sin traducir la interfaz a diez sitios.
+class LanguageOption {
+  const LanguageOption({required this.code, required this.name});
+
+  final String code;
+  final String name;
+
+  factory LanguageOption.fromJson(Map<String, dynamic> json) => LanguageOption(
+    code: json['code'] as String? ?? '',
+    name: json['name'] as String? ?? json['code'] as String? ?? '',
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is LanguageOption && other.code == code && other.name == name;
+
+  @override
+  int get hashCode => Object.hash(code, name);
+
+  @override
+  String toString() => '$code ($name)';
+}
+
 /// The whole catalogue: what one load gives an interface.
 class Catalogue {
   const Catalogue({
     required this.name,
     required this.languages,
+    this.available = const [],
     required this.defaultLanguage,
     required this.contentHash,
     required this.units,
@@ -579,6 +937,10 @@ class Catalogue {
     return Catalogue(
       name: manifest['name'] as String? ?? 'Didacta',
       languages: _stringList(manifest['languages']),
+      available: [
+        for (final item in (manifest['availableLanguages'] as List?) ?? const [])
+          LanguageOption.fromJson((item as Map).cast<String, dynamic>()),
+      ],
       defaultLanguage: manifest['defaultLanguage'] as String? ?? 'es',
       contentHash: manifest['contentHash'] as String? ?? '',
       units: [
@@ -598,8 +960,26 @@ class Catalogue {
   }
 
   final String name;
+
+  /// A los que este repositorio traduce.
   final List<String> languages;
+
+  /// A los que Didacta sabe imprimir, se usen aquí o no.
+  ///
+  /// Vacío cuando el índice es anterior a que esto existiera; [languageOptions]
+  /// se encarga de que eso no deje la interfaz sin nada que ofrecer.
+  final List<LanguageOption> available;
+
   final String defaultLanguage;
+
+  /// Lo que se ofrece al elegir idioma.
+  ///
+  /// Con un índice viejo son los que ya se usan: no se puede añadir ninguno
+  /// hasta regenerarlo, que es mejor que ofrecer una lista adivinada aquí y
+  /// que el motor rechace la mitad.
+  List<LanguageOption> get languageOptions => available.isNotEmpty
+      ? available
+      : [for (final code in languages) LanguageOption(code: code, name: code)];
 
   /// Identifies the content this catalogue describes, so a stale tab can be
   /// told apart from a current one without comparing every record.
@@ -683,9 +1063,20 @@ class Catalogue {
       }
     }
 
+    // El catálogo de idiomas posibles es del motor, así que los repositorios
+    // dicen lo mismo salvo que uno tenga el índice viejo. Se unen igual, y
+    // gana el orden del primero que lo traiga.
+    final available = <LanguageOption>[];
+    for (final part in parts) {
+      for (final option in part.available) {
+        if (!available.any((o) => o.code == option.code)) available.add(option);
+      }
+    }
+
     return Catalogue(
       name: parts.first.name,
       languages: languages,
+      available: available,
       defaultLanguage: parts.first.defaultLanguage,
       // Uno por repositorio, juntos: sirve para lo de siempre --saber si esto
       // sigue describiendo lo que hay en disco-- y cambia si cambia
@@ -696,6 +1087,45 @@ class Catalogue {
       profiles: parts.first.profiles,
       errors: [for (final part in parts) ...part.errors, ...conflicts],
     );
+  }
+
+  /// El mismo catálogo sin lo que aporten los repositorios apagados.
+  ///
+  /// Una vista, no otra carga: filtrar es de la interfaz --quién quiere mirar
+  /// qué ahora mismo-- y volver al disco por eso significaría esperar medio
+  /// segundo por marcar una casilla, y perder el resto mientras tanto.
+  ///
+  /// Que apagar un repositorio dé exactamente lo mismo que no tenerlo es la
+  /// propiedad que se busca: así el filtro contesta «¿qué vería quien solo
+  /// tiene esto?», que es la pregunta por la que se usa.
+  Catalogue without(Set<String> hidden) {
+    if (hidden.isEmpty) return this;
+    return Catalogue(
+      name: name,
+      languages: languages,
+      available: available,
+      defaultLanguage: defaultLanguage,
+      contentHash: contentHash,
+      units: [
+        for (final unit in units)
+          if (!hidden.contains(unit.repo)) unit,
+      ],
+      courses: [
+        for (final course in courses)
+          ?course.without(hidden),
+      ],
+      profiles: profiles,
+      errors: errors,
+    );
+  }
+
+  /// Los documentos de un curso, de todos los repositorios que aporten algo.
+  List<Document> documentsIn(String courseId, String year) {
+    for (final course in courses) {
+      if (course.id != courseId) continue;
+      return course.years[year]?.documents ?? const [];
+    }
+    return const [];
   }
 
   /// La unidad en esa ruta. Con varios repositorios hay que decir en cuál:
@@ -711,6 +1141,86 @@ class Catalogue {
 
   /// Units a composition reference resolves to, matching the engine's rule:
   /// the reference is a path without its area, so try both trees.
+  /// Campos de una asignatura en los que los repositorios no coinciden.
+  ///
+  /// Una asignatura repartida se declara en los dos sitios, y los dos
+  /// `course.yaml` tienen que decir lo mismo: si uno pone «Análisis
+  /// Matemático I» y el otro «Analisis Matematico I», la que se enseña
+  /// depende de en qué orden se abrieron los repositorios, que es la peor
+  /// clase de comportamiento.
+  ///
+  /// Solo se compara lo que los dos declaran. Que uno tenga el código y el
+  /// otro no, no es una discrepancia: es que uno lo sabe. Rellenarlo es otra
+  /// operación y se ofrece aparte.
+  List<MetadataConflict> get metadataConflicts {
+    final conflicts = <MetadataConflict>[];
+    for (final course in courses) {
+      if (course.sources.length < 2) continue;
+      final fields = <String>{};
+      for (final facts in course.sources.values) {
+        fields.addAll(facts.comparable.keys);
+      }
+      for (final field in fields.toList()..sort()) {
+        final values = <String, String>{};
+        for (final entry in course.sources.entries) {
+          final value = entry.value.comparable[field];
+          if (value != null && value.isNotEmpty) values[entry.key] = value;
+        }
+        if (values.length < 2) continue;
+        if (values.values.toSet().length == 1) continue;
+        conflicts.add(
+          MetadataConflict(course: course.id, field: field, values: values),
+        );
+      }
+    }
+    return conflicts;
+  }
+
+  /// Referencias que salen de su repositorio.
+  ///
+  /// La regla que sostiene que Didacta funcione con varios repositorios:
+  /// **un documento y las unidades que llama viven en el mismo**. LaTeX las
+  /// busca bajo la raíz del suyo, así que una lección tomada del repositorio
+  /// de al lado compila en la máquina que tiene los dos abiertos y no compila
+  /// en la de quien solo tiene uno -- y eso no se descubre editando, se
+  /// descubre cuando otra persona va a dar la clase.
+  ///
+  /// Lo que sí se comparte es la clasificación: las asignaturas, los cursos y
+  /// los temas pueden estar repartidos y se juntan. Lo que no puede repartirse
+  /// es lo que se encadena para compilar.
+  ///
+  /// El motor no puede verlo --`didacta check` mira un repositorio y desde
+  /// allí la unidad simplemente no existe-- así que lo ve quien tiene los dos
+  /// delante, que es esto.
+  List<CrossRepoUse> get crossRepoUses {
+    final uses = <CrossRepoUse>[];
+    for (final course in courses) {
+      for (final entry in course.years.entries) {
+        for (final document in entry.value.documents) {
+          for (final reference in document.unitRefs) {
+            // En el suyo: si está, no hay nada que decir.
+            if (unitByReference(reference, repo: document.repo) != null) {
+              continue;
+            }
+            final elsewhere = unitByReference(reference);
+            if (elsewhere == null) continue; // Rota, que es otra cosa.
+            uses.add(
+              CrossRepoUse(
+                course: course.id,
+                year: entry.key,
+                document: document.id,
+                documentRepo: document.repo,
+                reference: reference,
+                unitRepo: elsewhere.repo,
+              ),
+            );
+          }
+        }
+      }
+    }
+    return uses;
+  }
+
   Unit? unitByReference(String reference, {String? repo}) {
     final trimmed = reference.replaceAll(RegExp(r'^/+|/+$'), '');
     for (final area in const ['content', 'problems']) {

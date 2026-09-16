@@ -179,14 +179,96 @@ class CourseAdmin {
         : 'Añadir la asignatura «$title» ($id), copiada de $from',
   );
 
+  /// Crea un curso académico, copiando otro o en blanco.
+  ///
+  /// [from] vacío es en blanco, y es un caso de verdad: el primer curso de
+  /// una asignatura nueva no tiene de dónde copiar, y el de un año que se
+  /// compone desde cero tampoco quiere arrastrar lo del anterior para ir
+  /// borrándolo.
   Future<void> duplicateYear({
     required String course,
     required String year,
-    required String from,
+    String from = '',
   }) => _change(
-    arguments: ['new', 'year', '--from', from, '--', course, year],
+    arguments: [
+      'new',
+      'year',
+      if (from.isEmpty) '--empty' else ...['--from', from],
+      '--',
+      course,
+      year,
+    ],
     paths: ['courses/$course/$year'],
-    message: 'Añadir el curso $year de $course, copiado de $from',
+    message: from.isEmpty
+        ? 'Añadir el curso $year de $course'
+        : 'Añadir el curso $year de $course, copiado de $from',
+  );
+
+  /// Declara un tema en un curso.
+  ///
+  /// El tema es el bloque bajo el que se agrupan los documentos, y se declara
+  /// aparte de ellos: sus ficheros pueden estar en repositorios distintos,
+  /// así que uno declara y los demás nombran. Esto escribe la mitad que
+  /// declara; la otra la pone cada documento con `themes:`.
+  Future<void> createTheme({
+    required String course,
+    required String year,
+    required String id,
+    required String title,
+    String? language,
+  }) => _change(
+    arguments: [
+      'new',
+      'theme',
+      '--id',
+      id,
+      if (title.isNotEmpty) ...['--title', title],
+      if (language != null && language.isNotEmpty) ...['--lang', language],
+      '--',
+      course,
+      year,
+    ],
+    paths: ['courses/$course/$year'],
+    message: 'Declarar el tema «$title» en $course $year',
+  );
+
+  /// Copia documentos de un curso a otro.
+  ///
+  /// Composición, nunca contenido: el curso de destino **referencia las
+  /// mismas unidades**. Es lo que hace útil que una unidad no sepa en qué
+  /// asignatura entra -- volver a dar el Tema 1 es copiar su composición, no
+  /// su material, y una errata se sigue corrigiendo en un solo sitio.
+  ///
+  /// Con la lista vacía se copia el curso entero.
+  Future<void> copyDocuments({
+    required String fromCourse,
+    required String fromYear,
+    required String toCourse,
+    required String toYear,
+    List<String> documents = const [],
+  }) => _change(
+    arguments: [
+      'copy',
+      '--from',
+      '$fromCourse@$fromYear',
+      '--to',
+      '$toCourse@$toYear',
+      // El curso de destino puede existir y no tener carpeta **aquí**: un
+      // curso repartido entre repositorios es lo normal, y este solo ve el
+      // suyo. La pantalla elige el destino de una lista de cursos que
+      // existen, así que si falta es eso y no un dedazo.
+      '--create-year',
+      // Detrás de `--` porque los ids vienen de una pantalla y `argparse`
+      // tomaría un `-algo` por una opción.
+      '--',
+      ...documents,
+    ],
+    paths: ['courses/$toCourse/$toYear'],
+    message: documents.isEmpty
+        ? 'Copiar $fromCourse $fromYear entero a $toYear'
+        : documents.length == 1
+        ? 'Copiar ${documents.single} de $fromYear a $toYear'
+        : 'Copiar ${documents.length} documentos de $fromYear a $toYear',
   );
 
   /// Lanza el motor, regenera el índice y cierra todo en un commit.
