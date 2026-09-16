@@ -39,6 +39,17 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## 1.2.0 — 2026-09-16
 
+- **Ya se pueden poner las claves de traducción automática.** En Ajustes, una
+  sección para Google Cloud Translation y otra para Azure AI Translator, con un
+  botón de probar: una credencial mal puesta no se nota hasta que mandas
+  cincuenta unidades a traducir y vuelven todas con un 401.
+- Las claves se guardan en el **llavero del sistema**, en tu máquina. No entran
+  en ningún repositorio, ni en git, ni en lo que exportes: son configuración
+  tuya, no contenido. Lo que sí es contenido --a qué idiomas se traduce cada
+  asignatura-- sigue en el repositorio y se comparte.
+- Una vez guardada, la clave no se vuelve a enseñar: se dice que hay una y se
+  ven sus últimos cuatro caracteres, lo justo para reconocer cuál pusiste. Para
+  cambiarla, se escribe otra.
 - **Una asignatura se edita entera desde un sitio.** El lápiz de la lista de
   asignaturas abría un diálogo que solo cambiaba el nombre, y los idiomas
   estaban en Ajustes, en una lista de todas las asignaturas: había que salir de
