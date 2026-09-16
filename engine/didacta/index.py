@@ -64,7 +64,13 @@ def build(root, settings=None, latex_dir=None):
     """
     settings = settings or repo_mod.Settings.load(root)
     units, unit_errors = repo_mod.scan_units(root, settings)
-    courses, course_errors = repo_mod.scan_courses(root, settings)
+    try:
+        degrees = repo_mod.load_degrees(root, settings)
+        degree_errors = []
+    except (repo_mod.RepoError, yamlio.YamlError) as exc:
+        degrees = {}
+        degree_errors = [str(exc)]
+    courses, course_errors = repo_mod.scan_courses(root, settings, degrees)
     try:
         taxonomy = repo_mod.Taxonomy.load(root, settings)
         taxonomy_errors = []
@@ -89,10 +95,19 @@ def build(root, settings=None, latex_dir=None):
     return {
         MANIFEST: _manifest(root, settings, unit_records, course_records,
                             profiles,
-                            unit_errors + course_errors + taxonomy_errors,
+                            unit_errors + course_errors + taxonomy_errors + degree_errors,
                             taxonomy=taxonomy),
         UNITS: {"schemaVersion": SCHEMA_VERSION, "units": unit_records},
-        COURSES: {"schemaVersion": SCHEMA_VERSION, "courses": course_records},
+        COURSES: {
+            "schemaVersion": SCHEMA_VERSION,
+            # Las titulaciones que **este** repositorio declara. La interfaz
+            # junta las de todos los que tenga abiertos; una que no declara
+            # nadie no agrupa nada, y sus asignaturas salen sueltas.
+            "degrees": [degree.as_dict()
+                        for degree in sorted(degrees.values(),
+                                             key=lambda d: d.id)],
+            "courses": course_records,
+        },
         CATEGORIES: {"schemaVersion": SCHEMA_VERSION,
                      "categories": _categories(unit_records)},
     }
@@ -327,6 +342,12 @@ def _course_record(course, settings):
         "languages": course.taught_in(settings),
         "title": {code: course.titles[code] for code in sorted(course.titles or {})},
         "code": course.code,
+        # El id de la titulación, que es lo que agrupa y lo que se filtra.
+        # Null cuando la asignatura no dice a cuál pertenece.
+        "degreeId": course.degree,
+        # Y su título, que es lo que se imprime. Puede venir del registro de
+        # grados o escrito a mano en `course.yaml`, y a quien lee el índice le
+        # da igual: lo que necesita es el texto.
         "degree": {code: course.degrees[code]
                    for code in sorted(course.degrees or {})},
         "institution": course.institution,

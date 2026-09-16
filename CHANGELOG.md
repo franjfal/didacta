@@ -39,6 +39,33 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## 1.2.0 — 2026-09-16
 
+- **Una asignatura se edita entera desde un sitio.** El lápiz de la lista de
+  asignaturas abría un diálogo que solo cambiaba el nombre, y los idiomas
+  estaban en Ajustes, en una lista de todas las asignaturas: había que salir de
+  donde trabajas para cambiar algo de la que tienes delante. Ahora el nombre,
+  los idiomas y la titulación se editan en la misma ficha.
+- **Las asignaturas se agrupan por titulación.** Cada una dice a qué grado
+  pertenece, y la lista se puede filtrar por grado. Los grados se gestionan
+  desde la propia página de asignaturas --declarar uno nuevo, cambiarle el
+  nombre en cada idioma--, porque un grado es una clasificación del material,
+  como un tema, no una preferencia.
+- Un grado lo declara un repositorio y las asignaturas de cualquier otro lo
+  nombran: con que uno lo declare, todos lo ven agrupado. **Un grado que no
+  declara nadie no rompe nada**: sus asignaturas se ven enteras, sin agrupar,
+  igual que antes de que los grados existieran. Y se dice cuáles son, porque
+  casi siempre significa que falta abrir un repositorio.
+- Si dos repositorios llaman distinto al mismo grado --o ponen la misma
+  asignatura en grados distintos--, sale en «Entre repos» y se iguala desde
+  allí, con el mismo gesto que el resto de los metadatos.
+- **Lo que se comprueba entre repositorios tiene su propio sitio.** Estaba en
+  Ajustes, que es donde se pone lo que no tiene sitio; es trabajo pendiente
+  sobre el material, como las traducciones, y en Ajustes no se entra a mirar si
+  algo va mal. Ahora es un apartado del carril, y **solo aparece con más de un
+  repositorio abierto**: con uno no hay nada que cruzar.
+- Además de los metadatos que no coinciden, ese apartado enseña ahora los
+  documentos que llaman a unidades de otro repositorio. Eso compila en tu
+  máquina --que tiene los dos-- y no compila en la de quien solo tenga uno, y
+  hasta ahora solo se veía entrando en el curso concreto.
 - **Didacta puede hablar con un modelo de lenguaje.** Un servidor MCP que se
   enciende en Ajustes: mientras está encendido, un LLM conectado puede leer tus
   asignaturas, buscar en la biblioteca, escribir una traducción y comprobar que

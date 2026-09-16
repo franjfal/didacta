@@ -59,6 +59,10 @@ YEAR_META = "year.yaml"
 #: este fichero es un curso cuyos documentos salen en una lista, que es lo que
 #: eran todos hasta ahora.
 THEMES_META = "themes.yaml"
+
+#: Las titulaciones del repositorio. En la raíz y no dentro de una
+#: asignatura: un grado agrupa asignaturas, así que no puede vivir en una.
+DEGREES_META = "degrees.yaml"
 SHARED = "shared"
 SETTINGS = "didacta.yaml"
 TAXONOMY = "taxonomy.yaml"
@@ -747,6 +751,89 @@ def load_themes(directory, settings):
     return themes
 
 
+class Degree:
+    """Una titulación: el grado o el máster en que se da una asignatura.
+
+    Existe por lo mismo que [Theme] y sigue el mismo patrón, que es el que
+    sostiene todo lo que se comparte entre repositorios: **la asignatura dice a
+    qué grado pertenece y el grado lo declara quien lo tenga**. Así una
+    asignatura repartida entre el repositorio de teoría y el de problemas
+    nombra el mismo grado desde los dos, y basta con que uno de los dos lo
+    declare.
+
+    Y por eso es no destructivo. Una asignatura que nombra un grado que no
+    declara ningún repositorio abierto sale igual que antes de que existieran
+    los grados: sin agrupar, pero entera. Nadie se queda sin ver su material
+    por no tener el repositorio donde alguien puso un título.
+
+    No es lo mismo que el `degree:` que ya había en `course.yaml`. Aquel es el
+    texto que se imprime en la portada --«Grado en Matemáticas»-- y sigue
+    valiendo; esto es una entidad con id, que se puede filtrar y que dos
+    repositorios reconocen como la misma. Una asignatura puede tener los dos:
+    manda el id, y `check` avisa de que el texto sobra.
+    """
+
+    __slots__ = ("id", "titles", "institution", "raw")
+
+    def __init__(self, id, titles=None, institution=None, raw=None):
+        self.id = id
+        self.titles = titles or {}
+        self.institution = institution
+        self.raw = raw or {}
+
+    def title(self, language=None):
+        """El nombre que se enseña, cayendo al id antes que a nada."""
+        if language and self.titles.get(language):
+            return self.titles[language]
+        for value in self.titles.values():
+            if value:
+                return value
+        return self.id
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "title": dict(self.titles),
+            "institution": self.institution,
+        }
+
+
+def load_degrees(root, settings):
+    """Las titulaciones que declara este repositorio.
+
+    Diccionario vacío cuando no hay fichero, que es el caso corriente: agrupar
+    por grado es opcional, y un repositorio que no lo hace funciona igual que
+    antes.
+    """
+    path = os.path.join(root, DEGREES_META)
+    if not os.path.isfile(path):
+        return {}
+    data = yamlio.load_file(path) or {}
+    if not isinstance(data, dict):
+        raise RepoError("%s: expected a mapping" % path)
+    declared = data.get("degrees") or []
+    if not isinstance(declared, list):
+        raise RepoError("%s: `degrees` should be a list" % path)
+
+    degrees = {}
+    for item in declared:
+        if not isinstance(item, dict):
+            raise RepoError("%s: each degree should be a mapping" % path)
+        identifier = item.get("id")
+        if not identifier:
+            raise RepoError("%s: a degree is missing its `id`" % path)
+        if identifier in degrees:
+            raise RepoError("%s: duplicate degree `%s`" % (path, identifier))
+        degrees[identifier] = Degree(
+            id=identifier,
+            titles=yamlio.localised(item.get("title"), settings.languages,
+                                    path=path, key="title"),
+            institution=item.get("institution"),
+            raw=item,
+        )
+    return degrees
+
+
 class Document:
     """One compilable document inside a course year."""
 
@@ -809,8 +896,8 @@ class CourseYear:
 class Course:
     """A subject, across every year it has run."""
 
-    __slots__ = ("id", "titles", "code", "degrees", "institution", "departments",
-                 "languages",
+    __slots__ = ("id", "titles", "code", "degree", "degrees", "institution",
+                 "departments", "languages",
                  "teacher", "language", "directory", "years", "raw")
 
     def __init__(self, **kwargs):
@@ -895,6 +982,13 @@ def load_course(root, course_dir, settings):
         titles=yamlio.localised(data.get("title"), settings.languages,
                                 path=meta_path, key="title"),
         code=data.get("code"),
+        # A qué titulación pertenece, por id. Clave aparte de `degree:` y no
+        # la misma: aquella lleva el texto que se imprime en la portada, y
+        # aceptar ahí un id convertiría un `degree: Grado en Matemáticas` que
+        # ya existe en una referencia a un grado llamado así. Datos reales,
+        # rotos en silencio, por ahorrarse una línea.
+        degree=(str(data["degree_id"]).strip()
+                if data.get("degree_id") else None),
         degrees=yamlio.localised(data.get("degree"), settings.languages,
                                  path=meta_path, key="degree"),
         institution=data.get("institution"),
@@ -982,11 +1076,23 @@ def load_year(root, course, year, directory, settings):
     return entry
 
 
-def scan_courses(root, settings):
-    """Every course in the repository."""
+def scan_courses(root, settings, degrees=None):
+    """Every course in the repository.
+
+    ``degrees`` son las titulaciones declaradas, para poner a cada asignatura
+    el título del grado que nombra. Sin ellas se leen del repositorio; se
+    pasan ya cargadas cuando quien llama las necesita también para otra cosa,
+    que es lo que evita leer el mismo fichero dos veces.
+    """
     base = os.path.join(root, COURSES)
     courses = {}
     errors = []
+    if degrees is None:
+        try:
+            degrees = load_degrees(root, settings)
+        except (RepoError, yamlio.YamlError) as exc:
+            errors.append(str(exc))
+            degrees = {}
     if not os.path.isdir(base):
         return courses, errors
     for name in sorted(os.listdir(base)):
@@ -997,6 +1103,20 @@ def scan_courses(root, settings):
         except (RepoError, yamlio.YamlError) as exc:
             errors.append(str(exc))
             continue
+        # El título del grado, si lo nombra y alguien lo declara.
+        #
+        # El registro manda sobre el `degree:` escrito a mano, que pasa a ser
+        # un resto: con dos títulos para el mismo grado, el que vale es el que
+        # comparten los repositorios. `check` dice cuáles siguen llevando el
+        # texto viejo para poder quitarlo.
+        #
+        # Un grado que no declara nadie **no es un error**: la asignatura sale
+        # sin agrupar, como salía antes de que existieran los grados, y quien
+        # tenga el repositorio donde está declarado la verá agrupada.
+        if course.degree:
+            declared = degrees.get(course.degree)
+            if declared is not None and declared.titles:
+                course.degrees = dict(declared.titles)
         courses[course.id] = course
     return courses, errors
 

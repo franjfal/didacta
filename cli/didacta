@@ -678,10 +678,33 @@ def cmd_check(args):
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
     units, unit_errors = repo_mod.scan_units(root, settings)
-    courses, course_errors = repo_mod.scan_courses(root, settings)
+    try:
+        degrees = repo_mod.load_degrees(root, settings)
+        degree_errors = []
+    except (repo_mod.RepoError, yamlio.YamlError) as exc:
+        degrees, degree_errors = {}, [str(exc)]
+    courses, course_errors = repo_mod.scan_courses(root, settings, degrees)
 
-    errors = list(unit_errors) + list(course_errors)
+    errors = list(unit_errors) + list(course_errors) + degree_errors
     warnings = []
+
+    # Las titulaciones. Nada de esto es un error: un grado que no declara
+    # ningún repositorio abierto no agrupa, y la asignatura sale suelta como
+    # salía antes de que existieran los grados. Pero se dice, porque casi
+    # siempre significa que falta una línea en `degrees.yaml`.
+    for course in courses.values():
+        if course.degree and course.degree not in degrees:
+            warnings.append(
+                "%s: nombra el grado `%s`, que este repositorio no declara; "
+                "si lo declara otro, se agrupa igual"
+                % (course.id, course.degree)
+            )
+        if course.degree and course.degree in degrees and course.raw.get("degree"):
+            warnings.append(
+                "%s: lleva `degree_id` y además `degree:` escrito a mano; "
+                "manda el registro, así que el texto sobra"
+                % course.id
+            )
     for unit in units.values():
         for message in unit.warnings:
             warnings.append("%s: %s" % (unit.relpath, message))

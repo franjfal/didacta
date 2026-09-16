@@ -33,6 +33,7 @@ import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
+import '../model/degrees_file.dart';
 import '../model/slug.dart';
 import '../model/synced_prefs.dart';
 import '../model/themes_file.dart';
@@ -1078,6 +1079,137 @@ class Session extends ChangeNotifier {
       message: 'Título de $id en $course $year',
     );
     await reloadCatalogue();
+  }
+
+  // -- las titulaciones ---------------------------------------------------
+
+  /// Cambia a qué grado pertenece una asignatura.
+  ///
+  /// En todos los repositorios que la declaran, por lo mismo que los idiomas:
+  /// si dicen cosas distintas, la asignatura sale en un grado o en otro según
+  /// en qué orden se abrieron los repositorios.
+  ///
+  /// [degree] vacío la deja sin grado, que es un estado legítimo: no todo lo
+  /// que se da pertenece a una titulación, y obligar a elegir una inventaría
+  /// grados para no dejar huecos.
+  Future<int> setCourseDegree({
+    required String course,
+    required String? degree,
+  }) async {
+    final entry = courseById(course);
+    if (entry == null) throw ArgumentError('no existe la asignatura $course');
+
+    final where = 'courses/$course/course.yaml';
+    final written = <String>[];
+    for (final repo in entry.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final patch = YamlPatch(file.text);
+      if ((degree ?? '').isEmpty) {
+        patch.remove(const ['degree_id']);
+      } else {
+        patch.setScalar(const ['degree_id'], degree!);
+      }
+      if (patch.result == file.text) continue;
+
+      await gateway.commit(
+        path: where,
+        text: patch.result,
+        sha: file.sha,
+        message: (degree ?? '').isEmpty
+            ? 'Quitar el grado de $course'
+            : 'Grado de $course: $degree',
+      );
+      written.add(repo);
+    }
+    if (written.isNotEmpty) await reloadCatalogue();
+    return written.length;
+  }
+
+  /// Declara un grado nuevo en un repositorio.
+  ///
+  /// En **uno**, no en todos: un grado lo declara quien lo tenga y los demás
+  /// lo nombran desde sus asignaturas. Declararlo en los dos no rompe nada
+  /// --se fusionan por id-- pero es lo que hace que luego discrepen.
+  Future<void> createDegree({
+    required String repo,
+    required String id,
+    required Map<String, String> titles,
+    String? institution,
+  }) async {
+    final gateway = gatewayFor(repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en $repo');
+    }
+    const where = 'degrees.yaml';
+
+    String text;
+    // Vacío cuando el fichero no existe todavía: es lo que la pasarela
+    // entiende por «no había nada aquí».
+    var sha = '';
+    try {
+      final file = await gateway.read(where);
+      text = file.text;
+      sha = file.sha;
+    } on ContentException catch (error) {
+      if (error.kind != ContentFailure.missing) rethrow;
+      // Se crea con sus comentarios, que explican por qué un grado que nadie
+      // declara no rompe nada.
+      text = emptyDegreesYaml;
+    }
+
+    final degrees = DegreesFile(text)
+      ..add(
+        id: id,
+        titles: titles,
+        institution: institution,
+        languages: catalogueOrNull?.languages ?? const ['es'],
+      );
+
+    await gateway.commit(
+      path: where,
+      text: degrees.text,
+      sha: sha,
+      message: 'Declarar el grado $id',
+    );
+    await reloadCatalogue();
+  }
+
+  /// Cambia el título de un grado, en todos los idiomas a la vez.
+  ///
+  /// En los repositorios que lo declaran, que pueden ser varios: si lo
+  /// declaran dos y solo se cambia en uno, la discrepancia aparece al momento.
+  Future<int> setDegreeTitles({
+    required String id,
+    required Map<String, String> titles,
+  }) async {
+    final degree = catalogueOrNull?.degrees
+        .where((entry) => entry.id == id)
+        .firstOrNull;
+    if (degree == null) throw ArgumentError('no se declara el grado $id');
+
+    const where = 'degrees.yaml';
+    final written = <String>[];
+    for (final repo in degree.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final degrees = DegreesFile(file.text)..setTitles(id, titles);
+      if (degrees.text == file.text) continue;
+
+      await gateway.commit(
+        path: where,
+        text: degrees.text,
+        sha: file.sha,
+        message: 'Título del grado $id',
+      );
+      written.add(repo);
+    }
+    if (written.isNotEmpty) await reloadCatalogue();
+    return written.length;
   }
 
   // -- compilar en lote ---------------------------------------------------

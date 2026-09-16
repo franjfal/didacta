@@ -23,6 +23,8 @@ import 'course_admin_ui.dart';
 import 'export_year.dart';
 import 'shell.dart';
 import 'build_button.dart';
+import 'edit_course.dart';
+import 'manage_degrees.dart';
 import 'heading_title.dart';
 import 'theme.dart';
 
@@ -34,12 +36,28 @@ class CoursesPage extends StatefulWidget {
 }
 
 class _CoursesPageState extends State<CoursesPage> {
+  /// Qué grado se está mirando. Null es «todos».
+  ///
+  /// De la pantalla y no de las preferencias: es una forma de buscar, no una
+  /// decisión sobre el sitio de trabajo, y volver mañana y no encontrar media
+  /// lista porque quedó un filtro puesto es de las peores sorpresas que puede
+  /// dar una aplicación.
+  String? _degree;
+
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
     // Marcadas primero y el resto por título. El orden lo decide la sesión:
     // si cada lista lo hiciera por su cuenta, acabarían discrepando.
-    final courses = session.sortedCourses;
+    final all = session.sortedCourses;
+    final degrees = session.catalogue.degrees;
+    // Un grado que se filtra y luego deja de existir --se cierra el
+    // repositorio que lo declaraba-- no puede dejar la lista vacía sin
+    // explicación: si ya no está, se mira todo.
+    final filtering = degrees.any((degree) => degree.id == _degree);
+    final courses = filtering
+        ? [for (final course in all) if (course.degreeId == _degree) course]
+        : all;
 
     final years = courses.fold<int>(0, (sum, c) => sum + c.years.length);
     final documents = courses.fold<int>(
@@ -52,10 +70,22 @@ class _CoursesPageState extends State<CoursesPage> {
       children: [
         PageHeader(
           title: 'Asignaturas',
-          subtitle:
-              '${courses.length} asignaturas · $years cursos '
-              'académicos · $documents documentos',
+          subtitle: filtering
+              ? '${courses.length} de ${all.length} asignaturas'
+              : '${courses.length} asignaturas · $years cursos '
+                    'académicos · $documents documentos',
           actions: [
+            // Filtrar por grado. Solo con más de uno declarado: con ninguno o
+            // con uno no filtra nada, y un desplegable de una opción es un
+            // control que enseña que no hay nada que elegir.
+            if (degrees.length > 1)
+              _DegreeFilter(
+                degrees: degrees,
+                chosen: filtering ? _degree : null,
+                language: session.language,
+                total: all.length,
+                onChanged: (value) => setState(() => _degree = value),
+              ),
             if (session.admin() != null)
               FilledButton.icon(
                 key: const Key('new-course'),
@@ -65,6 +95,11 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
           ],
         ),
+        if (degrees.isNotEmpty || session.catalogue.undeclaredDegrees.isNotEmpty)
+          _DegreeStrip(
+            session: session,
+            onManage: () => _manageDegrees(session),
+          ),
         Expanded(
           child: ListView.separated(
             itemCount: courses.length,
@@ -83,7 +118,7 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
               onExport: (year) => _exportYear(session, courses[index], year),
               onRemove: () => _removeCourse(session, courses[index]),
-              onEditTitle: () => _editCourseTitle(session, courses[index]),
+              onEditTitle: () => _editCourse(session, courses[index]),
             ),
           ),
         ),
@@ -165,42 +200,54 @@ class _CoursesPageState extends State<CoursesPage> {
     );
   }
 
-  /// El título de la asignatura, en todos los idiomas a la vez.
+  /// Las titulaciones: verlas, declararlas y renombrarlas.
   ///
-  /// Aquí y no en el editor de cada fichero porque el título de la asignatura
-  /// no está en ningún fichero de contenido: vive en `course.yaml`, que es lo
-  /// único de una asignatura que no se edita desde ninguna pantalla.
-  Future<void> _editCourseTitle(Session session, Course course) async {
-    final languages = course.languages.isNotEmpty
-        ? course.languages
-        : session.catalogue.languages;
-    final titles = await editHeadingTitles(
+  /// Desde aquí y no desde Ajustes porque un grado es una clasificación del
+  /// material, como un tema, y se toca mientras se mira la lista que agrupa.
+  Future<void> _manageDegrees(Session session) =>
+      showDegrees(context, session);
+
+  /// La ficha de la asignatura: nombre, idiomas y titulación.
+  ///
+  /// Las tres en un sitio porque son la misma decisión. Los idiomas estaban en
+  /// Ajustes, en una lista de todas las asignaturas, lo cual obligaba a salir
+  /// de donde se trabaja para cambiar algo de la que se tiene delante.
+  ///
+  /// Todo va a `course.yaml`, y a los de **todos** los repositorios que la
+  /// declaran: una asignatura repartida tiene un fichero en cada uno.
+  Future<void> _editCourse(Session session, Course course) async {
+    final answer = await editCourse(
       context,
-      heading: 'asignatura',
-      article: 'de la',
-      languages: languages,
-      titles: course.titles,
-      reference: course.language,
-      note:
-          'Un idioma en blanco quita ese título. Los demás se quedan, y la '
-          'asignatura se sigue viendo por el que tenga.',
+      course: course,
+      options: session.catalogue.languageOptions,
+      degrees: session.catalogue.degrees,
+      language: session.language,
     );
-    if (titles == null || !mounted) return;
+    if (answer == null || !mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
+    var touched = 0;
     try {
-      final written = await session.setCourseTitles(
+      touched += await session.setCourseTitles(
         course: course.id,
-        titles: titles,
+        titles: answer.titles,
       );
+      if (!_sameLanguages(course.languages, answer.languages)) {
+        touched += await session.setCourseLanguages(
+          course: course.id,
+          languages: answer.languages,
+        );
+      }
+      if (answer.degree != course.degreeId) {
+        touched += await session.setCourseDegree(
+          course: course.id,
+          degree: answer.degree,
+        );
+      }
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            written == 0
-                ? 'No ha cambiado nada.'
-                : written == 1
-                ? 'Título cambiado, como un commit.'
-                : 'Título cambiado en $written repositorios.',
+            touched == 0 ? 'No ha cambiado nada.' : 'Guardado, como un commit.',
           ),
         ),
       );
@@ -208,6 +255,13 @@ class _CoursesPageState extends State<CoursesPage> {
       messenger.showSnackBar(SnackBar(content: Text('$error')));
     }
   }
+
+  /// Si dos listas de idiomas dicen lo mismo, en el orden que sea.
+  ///
+  /// Para no escribir `course.yaml` --ni hacer un commit-- por abrir la ficha
+  /// y cerrarla sin tocar nada.
+  static bool _sameLanguages(List<String> a, List<String> b) =>
+      a.length == b.length && a.toSet().containsAll(b);
 
   /// Saca un curso a una carpeta, para repartirlo.
   Future<void> _exportYear(Session session, Course course, String year) async {
@@ -419,6 +473,147 @@ class _CoursesPageState extends State<CoursesPage> {
       done: 'Asignatura «${course.title(session.language)}» quitada como un commit.',
     );
     if (done) await session.reloadCatalogue();
+  }
+}
+
+/// El desplegable que filtra por titulación.
+class _DegreeFilter extends StatelessWidget {
+  const _DegreeFilter({
+    required this.degrees,
+    required this.chosen,
+    required this.language,
+    required this.total,
+    required this.onChanged,
+  });
+
+  final List<Degree> degrees;
+  final String? chosen;
+  final String language;
+  final int total;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = degrees.where((d) => d.id == chosen).firstOrNull;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: PopupMenuButton<String?>(
+        key: const Key('degree-filter'),
+        tooltip: 'Ver solo las asignaturas de un grado',
+        position: PopupMenuPosition.under,
+        itemBuilder: (context) => [
+          PopupMenuItem<String?>(
+            key: const Key('degree-filter-all'),
+            value: null,
+            child: Text('Todas las asignaturas  ·  $total'),
+          ),
+          const PopupMenuDivider(),
+          for (final degree in degrees)
+            PopupMenuItem<String?>(
+              key: Key('degree-filter-${degree.id}'),
+              value: degree.id,
+              child: Text(degree.title(language)),
+            ),
+        ],
+        onSelected: onChanged,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
+          decoration: BoxDecoration(
+            border: Border.all(color: didactaRule),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.school_outlined, size: 14, color: didactaMuted),
+              const SizedBox(width: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Text(
+                  current?.title(language) ?? 'Todos los grados',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Icon(Icons.arrow_drop_down, size: 16, color: didactaMuted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// La tira de grados, bajo la cabecera.
+///
+/// Dice qué titulaciones hay y da paso a gestionarlas. Aquí y no en Ajustes
+/// porque un grado es una clasificación del material, como un tema, y se
+/// toca mientras se mira la lista que agrupa.
+class _DegreeStrip extends StatelessWidget {
+  const _DegreeStrip({required this.session, required this.onManage});
+
+  final Session session;
+  final VoidCallback onManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final degrees = session.catalogue.degrees;
+    final sinDeclarar = session.catalogue.undeclaredDegrees;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: didactaPanel,
+        border: Border(bottom: BorderSide(color: didactaRule)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              degrees.isEmpty
+                  ? 'Ningún grado declarado todavía.'
+                  : '${degrees.length} grado(s): '
+                        '${degrees.map((d) => d.title(session.language)).join(' · ')}',
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            ),
+          ),
+          // Un grado que alguna asignatura nombra y no declara nadie. No es
+          // un error --la asignatura se ve entera, sin agrupar-- pero casi
+          // siempre es que falta una línea, o que falta abrir un repositorio.
+          if (sinDeclarar.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Tooltip(
+                message:
+                    'Nombrados y sin declarar: ${sinDeclarar.join(', ')}. '
+                    'Sus asignaturas se ven, pero sin agrupar.',
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.info_outline, size: 14, color: didactaEx),
+                    SizedBox(width: 4),
+                    Text(
+                      'sin declarar',
+                      style: TextStyle(fontSize: 11.5, color: didactaEx),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          TextButton.icon(
+            key: const Key('manage-degrees'),
+            icon: const Icon(Icons.school_outlined, size: 15),
+            label: const Text('Grados'),
+            onPressed: onManage,
+          ),
+        ],
+      ),
+    );
   }
 }
 
