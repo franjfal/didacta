@@ -24,6 +24,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'state/session.dart';
+import 'ui/between_repos_page.dart';
 import 'ui/courses_page.dart';
 import 'ui/document_page.dart';
 import 'ui/library_page.dart';
@@ -91,6 +92,11 @@ GoRouter buildRouter(Session session) {
                 const NoTransitionPage(child: TranslationsPage()),
           ),
           GoRoute(
+            path: '/between',
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: BetweenReposPage()),
+          ),
+          GoRoute(
             path: '/mcp',
             pageBuilder: (context, state) =>
                 const NoTransitionPage(child: McpPage()),
@@ -130,6 +136,9 @@ class Routes {
       '/courses/$course/$year/$document';
 
   static String translations() => '/translations';
+
+  /// Las comprobaciones que solo tienen sentido con varios repositorios.
+  static String between() => '/between';
 
   static String mcp() => '/mcp';
 

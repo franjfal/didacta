@@ -15,7 +15,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/app_info.dart';
 import 'package:didacta_app/data/content_gateway.dart';
@@ -24,11 +23,8 @@ import 'package:didacta_app/data/release_channel.dart';
 import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/update_manifest.dart';
 import 'package:didacta_app/model/catalogue.dart';
-import 'package:didacta_app/state/session.dart';
-import 'package:didacta_app/data/mcp_process.dart';
-import 'package:didacta_app/state/mcp_service.dart';
 import 'package:didacta_app/state/update_service.dart';
-import 'package:didacta_app/ui/settings_page.dart';
+import 'package:didacta_app/ui/edit_course.dart';
 import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
@@ -51,11 +47,13 @@ teacher: Javier Falcó
 
 Map<String, dynamic> courseWith({
   List<String> languages = const ['es', 'va'],
+  String? degree,
 }) => {
   'id': 'am-i',
   'title': const {'es': 'Análisis Matemático I'},
   'language': 'es',
   'languages': languages,
+  'degreeId': degree,
   'years': const <String, dynamic>{},
 };
 
@@ -231,135 +229,200 @@ void main() {
     });
   });
 
-  group('el desplegable', () {
-    Future<void> show(WidgetTester tester, Session session) async {
-      // Alto de sobra: los ajustes son una lista larga y perezosa, y la
-      // sección de idiomas queda por debajo del pliegue en una ventana de
-      // prueba del tamaño de un teléfono.
-      tester.view.physicalSize = const Size(1200, 3000);
+  group('la ficha de la asignatura', () {
+    /// Abre la ficha y deja a mano lo que devuelva al cerrarse.
+    ///
+    /// En una caja y no como valor de retorno: cuando `show` acaba el diálogo
+    /// está abierto, no cerrado, así que la respuesta llega después --al
+    /// pulsar Guardar-- y hay que poder leerla entonces.
+    Future<List<CourseEdit?>> show(
+      WidgetTester tester,
+      Course course, {
+      List<Degree> degrees = const [],
+    }) async {
+      tester.view.physicalSize = const Size(900, 1200);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
+
+      final answer = <CourseEdit?>[];
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            ChangeNotifierProvider<Session>.value(value: session),
-            // La página entera lleva abajo la sección de actualizaciones, que
-            // pide su propio servicio. Montarla a trozos escondería que el
-            // desplegable de idiomas convive con todo lo demás, que es donde
-            // se usa.
-            ChangeNotifierProvider<UpdateService>.value(value: updates()),
-            // Y el servidor MCP, que la página ofrece encender. Sin motor
-            // detrás: lo que se prueba aquí son los idiomas, y un servidor de
-            // verdad levantaría un proceso.
-            ChangeNotifierProvider<McpService>(
-              create: (_) => McpService(
-                openRunner: () => const UnavailableRunner('sin motor'),
+        MaterialApp(
+          theme: didactaTheme(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () async => answer.add(
+                  await editCourse(
+                    context,
+                    course: course,
+                    options: const [
+                      LanguageOption(code: 'es', name: 'Castellano'),
+                      LanguageOption(code: 'va', name: 'Valencià'),
+                      LanguageOption(code: 'en', name: 'English'),
+                    ],
+                    degrees: degrees,
+                    language: 'es',
+                  ),
+                ),
+                child: const Text('abrir'),
               ),
             ),
-          ],
-          child: MaterialApp(
-            theme: didactaTheme(),
-            home: const Scaffold(body: SettingsPage()),
           ),
         ),
       );
+      await tester.tap(find.text('abrir'));
       await settle(tester);
+      return answer;
     }
+
+    Course course({
+      List<String> languages = const ['es', 'va'],
+      String? degree,
+    }) => catalogueWith(
+      const [],
+      courses: [courseWith(languages: languages, degree: degree)],
+      repo: 'x/uno',
+    ).courses.single;
 
     testWidgets('ofrece todos los idiomas, marcados los de la asignatura', (
       tester,
     ) async {
-      final session = await sessionWith({'x/uno': repoGateway()});
-      await show(tester, session);
+      await show(tester, course());
 
-      await tester.tap(find.byKey(const Key('languages-am-i')));
-      await settle(tester);
-
-      // Los seis del índice, no los dos que se usan: lo que falta es
+      // Los tres que Didacta trae, no los dos que se usan: lo que falta es
       // justamente lo que se viene a activar.
-      for (final code in ['es', 'va', 'ca', 'en', 'fr', 'de']) {
-        expect(find.byKey(Key('language-am-i-$code')), findsOneWidget);
+      for (final code in ['es', 'va', 'en']) {
+        expect(find.byKey(Key('course-language-$code')), findsOneWidget);
       }
       expect(
         tester
-            .widget<CheckedPopupMenuItem<String>>(
-              find.byKey(const Key('language-am-i-ca')),
-            )
-            .checked,
+            .widget<FilterChip>(find.byKey(const Key('course-language-en')))
+            .selected,
         isFalse,
       );
       expect(
         tester
-            .widget<CheckedPopupMenuItem<String>>(
-              find.byKey(const Key('language-am-i-va')),
-            )
-            .checked,
+            .widget<FilterChip>(find.byKey(const Key('course-language-va')))
+            .selected,
         isTrue,
       );
     });
 
-    testWidgets('marcar uno lo escribe', (tester) async {
-      final gateway = repoGateway();
-      final session = await sessionWith({'x/uno': gateway});
-      await show(tester, session);
+    testWidgets('el nombre se pide solo en los idiomas de la asignatura', (
+      tester,
+    ) async {
+      // No en los diez que Didacta trae: eso es un muro de campos vacíos que
+      // además empuja la titulación fuera de la pantalla, y nueve de ellos
+      // son idiomas a los que esta asignatura no se traduce.
+      await show(tester, course(languages: const ['es', 'va']));
 
-      await tester.tap(find.byKey(const Key('languages-am-i')));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('language-am-i-fr')));
+      expect(find.byKey(const Key('course-title-es')), findsOneWidget);
+      expect(find.byKey(const Key('course-title-va')), findsOneWidget);
+      expect(find.byKey(const Key('course-title-en')), findsNothing);
+    });
+
+    testWidgets('y aparece al marcar uno, sin cerrar y volver a abrir', (
+      tester,
+    ) async {
+      await show(tester, course(languages: const ['es']));
+      expect(find.byKey(const Key('course-title-en')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('course-language-en')));
       await settle(tester);
 
-      expect(gateway.commits.single.text, contains('languages: [es, va, fr]'));
+      expect(find.byKey(const Key('course-title-en')), findsOneWidget);
+    });
+
+    testWidgets('desmarcar uno no borra el título que ya tenía', (
+      tester,
+    ) async {
+      // El título vive en `course.yaml` aparte de `languages:`. No haberlo
+      // visto en el diálogo no es motivo para borrarlo del fichero.
+      final answer = await show(tester, course(languages: const ['es', 'va']));
+
+      await tester.tap(find.byKey(const Key('course-language-va')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('course-save')));
+      await settle(tester);
+
+      expect(answer.single!.titles.keys, ['es']);
+    });
+
+    testWidgets('lo marcado sale en el orden del catálogo, no en el de los clics', (
+      tester,
+    ) async {
+      // Para que `course.yaml` salga igual se marque como se marque, y no
+      // haya diffs que solo mueven códigos de sitio.
+      final answer = await show(tester, course(languages: const ['va']));
+
+      await tester.tap(find.byKey(const Key('course-language-en')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('course-language-es')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('course-save')));
+      await settle(tester);
+
+      expect(answer.single!.languages, ['es', 'va', 'en']);
     });
 
     testWidgets('el último idioma no se puede quitar', (tester) async {
       // Una asignatura sin ningún idioma no se compila, y el motor lo
-      // rechazaría al guardar. Que no se pueda pulsar dice antes lo mismo.
-      final catalogue = catalogueWith(
-        const [],
-        courses: [courseWith(languages: const ['es'])],
-        repo: 'x/uno',
-      );
-      final session = PerRepoSession(
-        gateways: {'x/uno': repoGateway()},
-        catalogue: catalogue,
-      );
-      await session.primeForTest(catalogue);
-      await show(tester, session);
-
-      await tester.tap(find.byKey(const Key('languages-am-i')));
-      await settle(tester);
+      // rechazaría al guardar.
+      await show(tester, course(languages: const ['es']));
 
       expect(
         tester
-            .widget<CheckedPopupMenuItem<String>>(
-              find.byKey(const Key('language-am-i-es')),
-            )
-            .enabled,
-        isFalse,
+            .widget<FilterChip>(find.byKey(const Key('course-language-es')))
+            .onSelected,
+        isNull,
       );
       expect(
         tester
-            .widget<CheckedPopupMenuItem<String>>(
-              find.byKey(const Key('language-am-i-fr')),
-            )
-            .enabled,
-        isTrue,
+            .widget<FilterChip>(find.byKey(const Key('course-language-en')))
+            .onSelected,
+        isNotNull,
       );
     });
 
-    testWidgets('sin poder escribir, se ve pero no se toca', (tester) async {
-      final session = await sessionWith({
-        'x/ajeno': repoGateway(writable: false),
-      });
-      await show(tester, session);
+    testWidgets('el grado se elige de los declarados', (tester) async {
+      final answer = await show(
+        tester,
+        course(degree: 'matematicas'),
+        degrees: const [
+          Degree(id: 'matematicas', titles: {'es': 'Grado en Matemáticas'}),
+          Degree(id: 'fisica', titles: {'es': 'Grado en Física'}),
+        ],
+      );
 
+      expect(find.text('Grado en Matemáticas'), findsWidgets);
+      await tester.tap(find.byKey(const Key('course-save')));
+      await settle(tester);
+      expect(answer.single!.degree, 'matematicas');
+    });
+
+    testWidgets('y se puede dejar sin ninguno', (tester) async {
+      // No todo lo que se da pertenece a una titulación, y obligar a elegir
+      // una inventaría grados para no dejar huecos.
+      final answer = await show(
+        tester,
+        course(),
+        degrees: const [
+          Degree(id: 'matematicas', titles: {'es': 'Grado en Matemáticas'}),
+        ],
+      );
+
+      await tester.tap(find.byKey(const Key('course-save')));
+      await settle(tester);
+      expect(answer.single!.degree, isNull);
+    });
+
+    testWidgets('un grado que no declara nadie se avisa', (tester) async {
+      // No es un error --la asignatura se ve entera, sin agrupar-- pero al
+      // guardar se perdería el id, así que se dice antes.
+      await show(tester, course(degree: 'inventado'));
       expect(
-        tester
-            .widget<PopupMenuButton<String>>(
-              find.byKey(const Key('languages-am-i')),
-            )
-            .enabled,
-        isFalse,
+        find.textContaining('no declara ningún repositorio'),
+        findsOneWidget,
       );
     });
   });

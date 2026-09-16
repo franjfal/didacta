@@ -570,6 +570,83 @@ class CourseYear {
   }
 }
 
+/// Una titulación: el grado o el máster en que se da una asignatura.
+///
+/// Sigue el mismo patrón que un tema, que es el que sostiene todo lo que se
+/// comparte entre repositorios: **la asignatura nombra el grado y el grado lo
+/// declara quien lo tenga**. Así una asignatura repartida entre el repositorio
+/// de teoría y el de problemas lo nombra desde los dos, y basta con que uno de
+/// los dos lo declare.
+///
+/// Y por eso es no destructivo. Una asignatura que nombra un grado que no
+/// declara ningún repositorio abierto sale igual que antes de que existieran
+/// los grados: sin agrupar, pero entera.
+class Degree {
+  const Degree({
+    required this.id,
+    required this.titles,
+    this.institution,
+    this.sources = const {},
+  });
+
+  factory Degree.fromJson(Map<String, dynamic> json, {String repo = ''}) {
+    final titles = _stringMap(json['title']);
+    final institution = json['institution'] as String?;
+    return Degree(
+      id: json['id'] as String? ?? '',
+      titles: titles,
+      institution: institution,
+      sources: {
+        repo: DegreeFacts(titles: titles, institution: institution),
+      },
+    );
+  }
+
+  final String id;
+  final Map<String, String> titles;
+  final String? institution;
+
+  /// Lo que declara cada repositorio, por separado.
+  ///
+  /// Es lo único que permite darse cuenta de que no dicen lo mismo: sin esto,
+  /// la fusión elige un título y el otro desaparece para siempre.
+  final Map<String, DegreeFacts> sources;
+
+  String title([String? language]) {
+    final wanted = titles[language ?? 'es'];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return id;
+  }
+
+  /// Junta lo que dicen dos repositorios del mismo grado.
+  ///
+  /// Gana el primero para lo que se enseña, y se guarda lo que dice cada uno
+  /// para poder señalar la discrepancia. Nada se resuelve solo: son ficheros
+  /// que pueden ser de otra persona.
+  Degree mergedWith(Degree other) => Degree(
+    id: id,
+    titles: {...other.titles, ...titles},
+    institution: institution ?? other.institution,
+    sources: {...sources, ...other.sources},
+  );
+}
+
+/// Lo que un repositorio declara de un grado.
+class DegreeFacts {
+  const DegreeFacts({this.titles = const {}, this.institution});
+
+  final Map<String, String> titles;
+  final String? institution;
+
+  Map<String, String> get comparable => {
+    for (final entry in titles.entries) 'título (${entry.key})': entry.value,
+    if ((institution ?? '').isNotEmpty) 'institución': institution!,
+  };
+}
+
 /// Lo que un repositorio declara de una asignatura, tal cual.
 ///
 /// Sin fusionar con lo que digan los demás: es la única forma de saber que
@@ -583,6 +660,7 @@ class CourseFacts {
     this.teacher,
     this.institution,
     this.degrees = const {},
+    this.degreeId,
   });
 
   final Map<String, String> titles;
@@ -591,6 +669,9 @@ class CourseFacts {
   final String? teacher;
   final String? institution;
   final Map<String, String> degrees;
+
+  /// A qué grado dice este repositorio que pertenece.
+  final String? degreeId;
 
   /// Los campos comparables, con el nombre que se enseña.
   ///
@@ -604,6 +685,10 @@ class CourseFacts {
     if ((code ?? '').isNotEmpty) 'código': code!,
     if ((teacher ?? '').isNotEmpty) 'profesor': teacher!,
     if ((institution ?? '').isNotEmpty) 'institución': institution!,
+    // A qué grado dice cada repositorio que pertenece. Que discrepen no es
+    // cosmético: la asignatura saldría en un grado o en otro según en qué
+    // orden se abrieron los repositorios.
+    if ((degreeId ?? '').isNotEmpty) 'grado': degreeId!,
   };
 
   /// Dónde vive ese campo dentro de `course.yaml`, para poder escribirlo.
@@ -618,6 +703,7 @@ class CourseFacts {
       'profesor' => const ['teacher'],
       'institución' => const ['institution'],
       'idiomas' => const ['languages'],
+      'grado' => const ['degree_id'],
       _ => null,
     };
   }
@@ -628,14 +714,24 @@ class CourseFacts {
 /// No se resuelve solo. Son ficheros que pueden ser de otra persona, y
 /// propagar el valor «más nuevo» por su cuenta deshace el cambio de quien
 /// todavía no lo ha enviado. Se enseña, y se iguala cuando alguien lo decide.
+/// De qué se discrepa: de una asignatura o de una titulación.
+///
+/// Dos ficheros distintos --`course.yaml` y `degrees.yaml`-- y dos formas de
+/// escribirlos, así que quien resuelve la discrepancia necesita saber cuál es.
+enum ConflictAbout { course, degree }
+
 class MetadataConflict {
   const MetadataConflict({
     required this.course,
     required this.field,
     required this.values,
+    this.about = ConflictAbout.course,
   });
 
+  /// El id de lo que discrepa: la asignatura, o el grado.
   final String course;
+
+  final ConflictAbout about;
 
   /// El campo, con el nombre que se lee: «título (es)», «código».
   final String field;
@@ -643,8 +739,22 @@ class MetadataConflict {
   /// Qué dice cada repositorio.
   final Map<String, String> values;
 
-  /// Dónde se escribe en `course.yaml`, o null si no se sabe.
-  List<String>? get path => CourseFacts.pathOf(field);
+  /// Dónde se escribe, o null si no se sabe.
+  ///
+  /// Solo para una asignatura: un grado vive en una lista de `degrees.yaml`,
+  /// y una lista no se direcciona por clave. Lo escribe [DegreesFile], que
+  /// busca el grado por su id.
+  List<String>? get path =>
+      about == ConflictAbout.course ? CourseFacts.pathOf(field) : null;
+
+  /// Si se puede resolver desde la interfaz.
+  bool get fixable =>
+      about == ConflictAbout.degree ? _localised.hasMatch(field) : path != null;
+
+  static final RegExp _localised = RegExp(r'^título \((\w+)\)$');
+
+  /// El idioma del que discrepa, cuando el campo es un título.
+  String? get language => _localised.firstMatch(field)?.group(1);
 
   @override
   String toString() =>
@@ -657,6 +767,7 @@ class Course {
   const Course({
     required this.id,
     required this.titles,
+    this.degreeId,
     required this.language,
     required this.years,
     this.languages = const [],
@@ -692,6 +803,7 @@ class Course {
       titles: _stringMap(json['title']),
       language: json['language'] as String? ?? 'es',
       languages: _stringList(json['languages']),
+      degreeId: json['degreeId'] as String?,
       sources: {
         repo: CourseFacts(
           titles: _stringMap(json['title']),
@@ -700,6 +812,7 @@ class Course {
           teacher: json['teacher'] as String?,
           institution: json['institution'] as String?,
           degrees: _stringMap(json['degree']),
+          degreeId: json['degreeId'] as String?,
         ),
       },
       code: json['code'] as String?,
@@ -742,6 +855,7 @@ class Course {
       code: code,
       teacher: teacher,
       institution: institution,
+      degreeId: degreeId,
       sources: {
         for (final entry in sources.entries)
           if (!hidden.contains(entry.key)) entry.key: entry.value,
@@ -774,6 +888,7 @@ class Course {
       code: code ?? other.code,
       teacher: teacher ?? other.teacher,
       institution: institution ?? other.institution,
+      degreeId: degreeId ?? other.degreeId,
       years: merged,
       sources: {...sources, ...other.sources},
     );
@@ -785,6 +900,14 @@ class Course {
   final String? code;
   final String? teacher;
   final String? institution;
+
+  /// A qué titulación pertenece, por id. Null cuando no lo dice.
+  ///
+  /// El id y no el título: el título puede escribirse distinto en cada
+  /// repositorio, y lo que agrupa y se filtra tiene que ser lo mismo en los
+  /// dos.
+  final String? degreeId;
+
   final Map<String, CourseYear> years;
 
   String title([String? language]) {
@@ -896,6 +1019,7 @@ class Catalogue {
     required this.name,
     required this.languages,
     this.available = const [],
+    this.degrees = const [],
     required this.defaultLanguage,
     required this.contentHash,
     required this.units,
@@ -951,6 +1075,10 @@ class Catalogue {
         for (final item in (courses['courses'] as List?) ?? const [])
           Course.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
       ],
+      degrees: [
+        for (final item in (courses['degrees'] as List?) ?? const [])
+          Degree.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
+      ],
       profiles: [
         for (final item in (manifest['profiles'] as List?) ?? const [])
           OutputProfile.fromJson((item as Map).cast<String, dynamic>()),
@@ -987,6 +1115,13 @@ class Catalogue {
 
   final List<Unit> units;
   final List<Course> courses;
+
+  /// Las titulaciones declaradas, juntas de todos los repositorios abiertos.
+  ///
+  /// Un grado que no declara ninguno no sale aquí, y sus asignaturas salen sin
+  /// agrupar. Eso es lo que hace que esto no pueda romper nada: quien no tenga
+  /// el repositorio donde alguien puso un título ve todo su material igual.
+  final List<Degree> degrees;
   final List<OutputProfile> profiles;
 
   /// What the engine complained about while reading the repository. Surfaced
@@ -1066,6 +1201,14 @@ class Catalogue {
     // El catálogo de idiomas posibles es del motor, así que los repositorios
     // dicen lo mismo salvo que uno tenga el índice viejo. Se unen igual, y
     // gana el orden del primero que lo traiga.
+    final degrees = <String, Degree>{};
+    for (final part in parts) {
+      for (final degree in part.degrees) {
+        final mine = degrees[degree.id];
+        degrees[degree.id] = mine == null ? degree : mine.mergedWith(degree);
+      }
+    }
+
     final available = <LanguageOption>[];
     for (final part in parts) {
       for (final option in part.available) {
@@ -1084,6 +1227,7 @@ class Catalogue {
       contentHash: [for (final part in parts) part.contentHash].join('+'),
       units: [for (final part in parts) ...part.units],
       courses: courses.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
+      degrees: degrees.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
       profiles: parts.first.profiles,
       errors: [for (final part in parts) ...part.errors, ...conflicts],
     );
@@ -1113,6 +1257,11 @@ class Catalogue {
       courses: [
         for (final course in courses)
           ?course.without(hidden),
+      ],
+      degrees: [
+        for (final degree in degrees)
+          if (degree.sources.keys.any((repo) => !hidden.contains(repo)))
+            degree,
       ],
       profiles: profiles,
       errors: errors,
@@ -1173,7 +1322,64 @@ class Catalogue {
         );
       }
     }
+    conflicts.addAll(degreeConflicts);
     return conflicts;
+  }
+
+  /// Lo mismo, para las titulaciones.
+  ///
+  /// Un grado repartido entre repositorios se declara en los dos `degrees.yaml`
+  /// y los dos tienen que decir lo mismo. Si uno pone «Grado en Matemáticas» y
+  /// el otro «Matemáticas», el que se enseña depende de en qué orden se
+  /// abrieron los repositorios, y las asignaturas de un mismo grado se agrupan
+  /// bajo dos nombres distintos según la máquina.
+  List<MetadataConflict> get degreeConflicts {
+    final conflicts = <MetadataConflict>[];
+    for (final degree in degrees) {
+      if (degree.sources.length < 2) continue;
+      final fields = <String>{};
+      for (final facts in degree.sources.values) {
+        fields.addAll(facts.comparable.keys);
+      }
+      for (final field in fields.toList()..sort()) {
+        final values = <String, String>{};
+        for (final entry in degree.sources.entries) {
+          final value = entry.value.comparable[field];
+          if (value != null && value.isNotEmpty) values[entry.key] = value;
+        }
+        if (values.length < 2) continue;
+        if (values.values.toSet().length == 1) continue;
+        conflicts.add(
+          MetadataConflict(
+            course: degree.id,
+            field: field,
+            values: values,
+            about: ConflictAbout.degree,
+          ),
+        );
+      }
+    }
+    return conflicts;
+  }
+
+  /// Las asignaturas de un grado, o las que no dicen a cuál pertenecen.
+  List<Course> coursesIn(String? degree) => [
+    for (final course in courses)
+      if (course.degreeId == degree) course,
+  ];
+
+  /// Los grados que alguna asignatura nombra sin que nadie los declare.
+  ///
+  /// No es un error --la asignatura sale suelta, como antes de que existieran
+  /// los grados-- pero casi siempre significa que falta una línea en un
+  /// `degrees.yaml`, o que falta abrir el repositorio donde está.
+  List<String> get undeclaredDegrees {
+    final declared = {for (final degree in degrees) degree.id};
+    final named = <String>{
+      for (final course in courses)
+        if ((course.degreeId ?? '').isNotEmpty) course.degreeId!,
+    };
+    return (named.difference(declared).toList())..sort();
   }
 
   /// Referencias que salen de su repositorio.

@@ -44,8 +44,22 @@ class DidactaShell extends StatelessWidget {
   /// pantalla vacía es una pestaña que se aprende a ignorar. Encendido sí,
   /// porque entonces hay un programa escribiendo en tus ficheros y tiene que
   /// estar a un clic.
-  static List<_Destination> _destinationsWith({required bool mcp}) => [
+  static List<_Destination> _destinationsWith({
+    required bool between,
+    required bool mcp,
+  }) => [
     ..._always.sublist(0, _always.length - 1),
+    // Solo con varios repositorios abiertos: con uno no hay nada que cruzar,
+    // y las dos comprobaciones que lleva --metadatos que discrepan y
+    // documentos que llaman fuera-- no pueden dar nada. Un apartado que
+    // siempre dice «todo cuadra» es un apartado que se deja de abrir.
+    if (between)
+      const _Destination(
+        '/between',
+        Icons.compare_arrows_outlined,
+        Icons.compare_arrows,
+        'Entre repos',
+      ),
     if (mcp)
       const _Destination(
         '/mcp',
@@ -108,7 +122,10 @@ class DidactaShell extends StatelessWidget {
     // icono sin cambiar de pantalla. Si no está el proveedor --un test que
     // monta el armazón suelto-- el carril es el de siempre.
     final mcp = context.watch<McpService?>();
-    final destinations = _destinationsWith(mcp: mcp?.running ?? false);
+    final destinations = _destinationsWith(
+      between: session.workspace.isMultiple,
+      mcp: mcp?.running ?? false,
+    );
     final index = _indexIn(destinations);
 
     // Anotado después del fotograma: cambiar el historial avisa a quien lo

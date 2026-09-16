@@ -44,6 +44,7 @@ const Map<String, String> routes = {
   'una hoja de problemas': '/courses/am-iii/2025-2026/hoja-1',
   'un documento que no existe': '/courses/am-iii/2025-2026/no-existe',
   'traducciones': '/translations',
+  'entre repositorios': '/between',
   'ajustes': '/settings',
   'una dirección inventada': '/no/existe',
 };
