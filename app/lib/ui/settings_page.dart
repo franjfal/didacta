@@ -30,6 +30,7 @@ import '../state/update_service.dart';
 import 'shell.dart';
 import 'sign_in.dart';
 import 'theme.dart';
+import 'translation_settings.dart';
 import 'update_section.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -59,6 +60,9 @@ class SettingsPage extends StatelessWidget {
                 const SectionLabel('Compilar'),
                 _EngineSection(session: session),
               ],
+
+              const SectionLabel('Traducción automática'),
+              TranslationSection(secrets: session.translationSecrets),
 
               const SectionLabel('Servidor MCP'),
               _McpSection(session: session),

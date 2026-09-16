@@ -24,6 +24,7 @@ import 'package:flutter/foundation.dart';
 
 import '../data/catalogue_source.dart';
 import '../data/secrets.dart';
+import '../data/translation_secrets.dart';
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
 import '../data/course_admin.dart';
@@ -90,8 +91,11 @@ class Session extends ChangeNotifier {
   Session({
     required this.catalogueSource,
     required this.tokenStore,
+    TranslationSecrets? translationSecrets,
     Preferences? preferences,
-  }) : preferences = preferences ?? MemoryPreferences();
+  }) : preferences = preferences ?? MemoryPreferences(),
+       translationSecrets =
+           translationSecrets ?? KeychainTranslationSecrets();
 
   final CatalogueSource catalogueSource;
 
@@ -104,6 +108,17 @@ class Session extends ChangeNotifier {
 
   /// Donde vive el token de GitHub: el llavero del sistema.
   final SecretStore tokenStore;
+
+  /// El llavero de las credenciales de traducción.
+  ///
+  /// Aparte del token de GitHub aunque el mecanismo sea el mismo: salir de
+  /// GitHub no puede llevarse por delante la clave de Azure, y quitar la clave
+  /// de Azure no puede cerrarte la sesión.
+  ///
+  /// En la sesión y no en las preferencias porque **no son una preferencia**:
+  /// `shared_preferences` es un fichero de texto en disco, y ahí no va una
+  /// clave de API.
+  final TranslationSecrets translationSecrets;
 
   /// Where the clone is, and whether a commit is pushed. Not secrets, so not
   /// in the keychain.
