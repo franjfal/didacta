@@ -112,11 +112,25 @@
 }
 
 %% A one-pixel bar whose filled fraction is the position in the deck.
+%%
+%% La barra llena es el caso por defecto **y** la red de seguridad. En la
+%% primera pasada no hay `.aux`, así que beamer todavía no sabe cuántas
+%% diapositivas hay y `\inserttotalframenumber` vale 1: en la diapositiva 150
+%% eso pide un rectángulo de 150 anchos de papel, que no cabe en una
+%% dimensión de TeX y aborta la compilación con «Arithmetic overflow» -- en
+%% una diapositiva cualquiera, sin decir que el problema es el pie. Con el
+%% `.aux` de una compilación anterior no pasaba, así que el fallo iba y venía
+%% según lo que hubiera en el directorio de salida.
+%%
+%% Limitarlo al total es además lo que la barra quiere decir: no hay un 150%
+%% de una presentación.
 \newcommand{\didacta@progressbar}{%
   \begingroup
     \dimen0=\paperwidth
     \ifnum\inserttotalframenumber>0
-      \dimen0=\dimexpr\paperwidth*\insertframenumber/\inserttotalframenumber\relax
+      \ifnum\insertframenumber<\inserttotalframenumber
+        \dimen0=\dimexpr\paperwidth*\insertframenumber/\inserttotalframenumber\relax
+      \fi
     \fi
     \hbox to \paperwidth{%
       \color{didactaAccent}\rule{\dimen0}{1.6pt}%

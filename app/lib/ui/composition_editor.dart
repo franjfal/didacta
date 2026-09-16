@@ -341,7 +341,11 @@ class _CompositionEditorState extends State<CompositionEditor> {
     final chosen = await showDialog<List<Unit>>(
       context: context,
       builder: (context) =>
-          _UnitPicker(session: widget.session, already: already),
+          _UnitPicker(
+            session: widget.session,
+            already: already,
+            repo: widget.repo,
+          ),
     );
     return chosen ?? const [];
   }
@@ -979,10 +983,24 @@ class _AddBar extends StatelessWidget {
 /// buscar y confirmar. Lo elegido se acumula aunque se cambie de carpeta o
 /// se busque otra cosa.
 class _UnitPicker extends StatefulWidget {
-  const _UnitPicker({required this.session, required this.already});
+  const _UnitPicker({
+    required this.session,
+    required this.already,
+    required this.repo,
+  });
 
   final Session session;
   final Set<String> already;
+
+  /// El repositorio del documento que se está componiendo.
+  ///
+  /// Solo se ofrecen unidades suyas, y es una regla dura: **un documento y
+  /// las unidades que llama viven en el mismo repositorio**. LaTeX las busca
+  /// bajo la raíz del suyo, así que una lección de otro repositorio compila
+  /// aquí --donde están los dos abiertos-- y no compila en la máquina de
+  /// quien solo tenga uno. Lo que sí se comparte entre repositorios es la
+  /// clasificación: las asignaturas, los cursos y los temas.
+  final String repo;
 
   @override
   State<_UnitPicker> createState() => _UnitPickerState();
@@ -999,7 +1017,13 @@ class _UnitPickerState extends State<_UnitPicker> {
   /// quien está preparando el tema.
   final List<Unit> _chosen = [];
 
-  late final PathNode _tree = buildPathTree(widget.session.catalogue.units);
+  /// Las que se pueden elegir: las del repositorio del documento.
+  late final List<Unit> _units = [
+    for (final unit in widget.session.catalogue.units)
+      if (unit.repo == widget.repo) unit,
+  ];
+
+  late final PathNode _tree = buildPathTree(_units);
 
   @override
   void dispose() {
@@ -1026,7 +1050,7 @@ class _UnitPickerState extends State<_UnitPicker> {
     final language = widget.session.language;
     final searching = needle.isNotEmpty;
     final matches = [
-      for (final unit in widget.session.catalogue.units)
+      for (final unit in _units)
         if (unit.path.toLowerCase().contains(needle) ||
             unit.title(language).toLowerCase().contains(needle) ||
             unit.tags.any((tag) => tag.toLowerCase().contains(needle)))

@@ -27,6 +27,7 @@ from __future__ import annotations
 import os
 import re
 
+from . import profiles as profiles_mod
 from . import repo as repo_mod
 
 
@@ -174,6 +175,82 @@ def built(engine, units, all_profiles, languages, title_of):
     return {"units": found}
 
 
+def document_outputs(engine, course, year, documents, all_profiles,
+                     languages=None):
+    """Qué hay compilado de cada documento de un curso.
+
+    El equivalente para documentos de [built], y existe por la misma razón:
+    la pantalla de un curso quiere saber, de un vistazo, qué se puede abrir
+    sin compilar nada. Preguntarlo documento por documento serían tantos
+    procesos como documentos.
+
+    Barato igual: un `isdir` por documento, y solo se mira dentro de los que
+    tienen carpeta de salida.
+
+    ``languages`` son los idiomas en los que buscar. Sin darlo, solo el del
+    documento, que es lo que hacía esto cuando se escribió y lo que sigue
+    valiendo para quien pregunte por un documento suelto. Una pantalla que
+    ofrece abrir el PDF necesita los de la asignatura: si solo se mira el del
+    documento, la versión en valenciano existe en el disco y no hay forma de
+    llegar a ella desde la aplicación.
+    """
+    found = []
+    for document in documents:
+        wanted = document.profiles or [
+            profile.id
+            for profile in profiles_mod.default_profiles(
+                all_profiles, document.kind
+            )
+        ]
+        outdir = os.path.dirname(
+            engine.output_dir("%s@%s/%s" % (course, year, document.id), "x", "y")
+        )
+        if not os.path.isdir(outdir):
+            continue
+
+        # Cuándo se tocó la composición por última vez. Un PDF anterior a su
+        # `year.yaml` o a su `.tex` describe un documento que ya no es ese.
+        newest = 0.0
+        for path in (document.source, os.path.join(
+                os.path.dirname(document.source or ""), "year.yaml")):
+            if path and os.path.isfile(path):
+                newest = max(newest, os.path.getmtime(path))
+
+        records = []
+        for name in wanted:
+            profile = all_profiles.get(name)
+            if profile is None:
+                continue
+            for language in (languages or [document.language]):
+                title = document.title(language)
+                path = os.path.join(
+                    engine.output_dir(
+                        "%s@%s/%s" % (course, year, document.id), name, language
+                    ),
+                    profile.output_name(title, language) + ".pdf",
+                )
+                if not os.path.isfile(path):
+                    continue
+                when = os.path.getmtime(path)
+                records.append({
+                    "profile": name,
+                    "label": profile.label,
+                    "family": profile.family,
+                    "language": language,
+                    "pdf": path,
+                    "exists": True,
+                    "stale": bool(newest and when < newest),
+                    "mtime": when,
+                })
+        if records:
+            found.append({
+                "document": document.id,
+                "title": document.title(document.language),
+                "outputs": records,
+            })
+    return {"documents": found}
+
+
 def status(engine, unit, profiles, languages, title):
     """What is already built for this unit, and whether it is still current.
 
@@ -217,17 +294,21 @@ def status(engine, unit, profiles, languages, title):
 
 
 def build(engine, root, reference, profile, language, *, title=None,
-          area=None):
+          area=None, settings=None):
     """Compiles one unit in one profile and one language.
 
     Returns the engine's own `BuildResult`, so a caller gets the same
     diagnostics, the same log parsing and the same PDF path as a document
     build. A preview that reported failures differently would be a second
     thing to learn.
+
+    ``settings`` only to find the repository's .bib: a unit that cites has to
+    look the same on its own as inside the document that includes it.
     """
     source = write_wrapper(
         root, engine.build_dir, reference, title or reference, area=area
     )
+    settings = settings or repo_mod.Settings.load(root)
     return engine.build(
         source,
         profile,
@@ -235,6 +316,9 @@ def build(engine, root, reference, profile, language, *, title=None,
         document_id=document_id_for(reference),
         document_title=title or reference,
         content_root=repo_mod.content_root_for(source, root),
+        bibliography=(
+            settings.bibliography if settings.bibliography_path else None
+        ),
     )
 
 

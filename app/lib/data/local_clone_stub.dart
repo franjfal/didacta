@@ -22,6 +22,20 @@ Future<LocalClone> cloneInto({
   required String repo,
   required String branch,
   required String token,
+  String? url,
+  void Function(String line)? onProgress,
+}) async => makeClone(directory: directory);
+
+Future<LocalClone> initializeInto({
+  required String directory,
+  required String owner,
+  required String repo,
+  required String branch,
+  required String token,
+  required String title,
+  required String authorName,
+  required String authorEmail,
+  String? url,
   void Function(String line)? onProgress,
 }) async => makeClone(directory: directory);
 
@@ -31,3 +45,10 @@ Future<String?> discoverClone({
   String? repo,
   String? enginePath,
 }) async => null;
+
+/// En la web no hay disco donde clonar, así que nunca hay nada que mirar.
+Future<CloneTarget> inspectTarget({
+  required String directory,
+  required String owner,
+  required String repo,
+}) async => CloneTarget.free;

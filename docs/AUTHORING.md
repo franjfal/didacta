@@ -375,6 +375,62 @@ se compilara.
 
 ---
 
+## Bibliografía
+
+Un análisis bibliográfico —el documento que dice dónde está demostrado cada
+resultado del tema, con capítulo y número— se escribe con los comandos de
+biblatex:
+
+```latex
+La irracionalidad de $\sqrt 2$ está en \cite[Theorem 1.1.1]{Abbott}.
+Una introducción a los conjuntos, en
+\cites[Section 1.2]{Abbott}[Chapter 3]{Tao}.
+```
+
+| Comando | Sale como |
+|---|---|
+| `\cite[Theorem 1.1.1]{Abbott}` | `[Abb15, Theorem 1.1.1]` |
+| `\cites[Section 1.2]{Abbott}[Chapter 3]{Tao}` | `[Abb15, Section 1.2; Tao14, Chapter 3]` |
+| `\textcite{Tao}` | `Tao [Tao14]`, para citar dentro de la frase |
+
+La clave —`Abbott`, `Tao`— es la del fichero de fuentes, que vive en la raíz
+del repositorio de contenido:
+
+```
+shared/bibliography.bib
+```
+
+Una sola lista para todo el repositorio, porque el mismo libro lo citan el
+tema 1 y el tema 6, y tenerlo dos veces es tenerlo mal una de las dos. Si se
+llama de otro modo, se dice una vez en `didacta.yaml`:
+
+```yaml
+bibliography: shared/analisis.bib
+```
+
+**La lista de obras se imprime sola**, al final del documento y solo si el
+documento citó algo. Con `\DidactaBibliography` se puede pedir antes, en el
+sitio que se quiera; entonces no se repite al final.
+
+**Un repositorio sin `.bib` no es un error**: casi ningún tema cita, y ahí no
+se carga biblatex ni se ejecuta biber. Lo que sí pasa es que una unidad que
+cite en un repositorio sin fuentes imprime `[?]` —y `didacta check` lo dice
+antes, con el nombre de la unidad:
+
+```
+warning content/.../numbers-bibliography/es.tex cita `Abbott`, `Spivak`, `Tao`,
+        y no hay bibliografía: falta shared/bibliography.bib
+```
+
+El mismo aviso sale cuando se cita una clave que el `.bib` no define, que es
+el error de escribir `{Abott}` por `{Abbott}`.
+
+> Las citas llevan capítulo, sección y número de resultado, y esos números
+> cambian de una edición a otra. El `.bib` tiene que decir **la edición que se
+> usó al escribirlas**.
+
+---
+
 ## Otros
 
 | Comando | Para |
@@ -424,6 +480,11 @@ Esa es también la razón por la que un apartado no va **dentro** de una unidad:
 el encabezado viajaría con ella a cada asignatura que la reutilice, en el
 idioma en que se escribió y en la posición en que se dejó.
 
+Los idiomas que caben ahí son los que Didacta trae: `es`, `va`, `ca`, `gl`,
+`eu`, `en`, `fr`, `de`, `it` y `pt`. No hace falta darlos todos --se dan los
+que la asignatura use--, y el que falte se compila con el de otro y lo dice en
+el log.
+
 | Comando | Incluye |
 |---|---|
 | `\DidactaUnit{cat/tema/unidad}` | de `content/` |
@@ -450,6 +511,30 @@ Una diapositiva sin traducir es mucho más útil que un hueco en la presentació
 Si no existe en ningún idioma, sale un marcador visible en el PDF: mejor
 enterarse al revisar que delante de la clase.
 
+### A qué idiomas se traduce
+
+`settings.yaml` dice a cuáles se traduce el repositorio entero y `course.yaml`
+a cuáles cada asignatura:
+
+```yaml
+languages: [es, va, en]
+```
+
+Sin declararlo son `es`, `va` y `en`. Didacta sabe imprimir sus rótulos en
+diez --los siete restantes son `ca`, `gl`, `eu`, `fr`, `de`, `it` y `pt`--,
+pero **imprimir en un idioma y traducir a él son cosas distintas**: lo que se
+declara aquí es lo que cada unidad tiene que tener, y por tanto lo que sale
+como pendiente. Declararlos todos por si acaso convierte esa lista en ruido.
+
+Desde la aplicación se marca en Ajustes, con un desplegable por asignatura.
+Quitar uno no borra ningún `.tex`: deja de pedirse, y volver a marcarlo lo
+recupera tal cual.
+
+Añadir un idioma que Didacta no traiga es escribir su
+`latex/lang/didacta-lang-XX.def` --treinta y seis palabras-- y anotarlo en el
+registro de `engine/didacta/profiles.py`. Sin las dos mitades no sirve, y hay
+un test que lo comprueba.
+
 ### Metadatos
 
 No los escribas en el `.tex`. Van en `course.yaml` y `year.yaml`, por idioma, y
@@ -458,6 +543,90 @@ respaldo para que compilar a mano desde el editor siga dando un documento con
 título.
 
 Es lo que evita que una cabecera en valenciano acabe en una hoja en castellano.
+
+---
+
+## Temas de un curso
+
+Para que la aplicación enseñe junto lo que se da junto. Se declaran al lado
+del `year.yaml`, en `themes.yaml`:
+
+```yaml
+themes:
+  - id: tema-1
+    title:
+      es: "Tema 1: el número y la recta real"
+```
+
+y cada documento dice a cuáles pertenece:
+
+```yaml
+  - id: practica-1
+    kind: practical
+    themes: [tema-1]
+```
+
+Son dos ficheros a propósito, y **pueden estar en repositorios distintos**: el
+Tema 1 lleva su teoría, su práctica y su bibliografía, y eso puede estar
+repartido. Uno declara el tema; los demás lo nombran.
+
+De ahí la regla que lo hace seguro: **nombrar un tema que nadie declara no es
+un error**. El documento sale suelto, como salía antes. Quien tenga solo uno
+de los repositorios ve todo su material; lo que no ve es la agrupación.
+
+Un documento puede estar en varios temas, y sale en todos los que se conozcan.
+
+---
+
+## Un tema nuevo
+
+```bash
+didacta new theme am-i 2026-2027 --title "Tema 2: sucesiones"
+```
+
+El id sale del título si no se da (`tema-2-sucesiones`). Se crea vacío: los
+documentos se le van añadiendo con `themes: [tema-2-sucesiones]` en su entrada
+de `year.yaml`, o desde la aplicación, con el botón que lleva cada tema
+dentro.
+
+---
+
+## Un curso académico nuevo
+
+```bash
+didacta new year am-i 2027-2028 --empty      # en blanco
+didacta new year am-i 2027-2028              # copiando el más reciente
+didacta new year am-i 2027-2028 --from 2022-2023
+```
+
+Sin `--empty` y sin años de los que copiar --una asignatura recién creada--
+sale vacío igualmente: pedir que se copie algo que no existe no es una
+respuesta.
+
+Copiar un año copia su composición y sus `.tex`, nunca las unidades.
+
+---
+
+## Volver a dar un tema otro año
+
+```bash
+didacta copy --from am-i@2022-2023 --to am-i@2026-2027 tema-1-numeros-reales
+```
+
+Sin ids se copia el curso entero. En la aplicación es el menú de un curso, en
+la lista de la asignatura: «Copiar a otro curso…», que además enseña los
+documentos para marcar cuáles.
+
+**Se copia la composición, nunca el contenido.** El curso de destino
+referencia las mismas unidades: dar el Tema 1 otro año no reparte copias de su
+material, así que corregir una errata sigue siendo corregirla una vez. Es para
+lo que sirve que una unidad no sepa en qué asignatura entra.
+
+Lo que viaja con el documento: su entrada de `year.yaml` con los comentarios
+que lleve --los `# TODO: va`, las unidades comentadas que ese año no se
+dieron--, su `.tex`, y la declaración de los temas que nombre, si el destino
+no los tiene. Lo que ya esté en el destino con el mismo id no se toca: se dice
+y no se copia nada.
 
 ---
 
@@ -489,6 +658,9 @@ didacta build --all
 ## Dependencias
 
 Todo lo que Didacta usa está en CTAN: una TeX Live estándar basta.
+
+Un repositorio con bibliografía necesita además `biber`, que TeX Live trae y
+que ejecuta `latexmk` por su cuenta: no hay ningún paso que dar.
 
 El sistema anterior necesitaba seis `.sty` no-CTAN (`beamerthemeTorino`,
 `beamercolorthemechameleon`, `beamerouterthemedecolines`,

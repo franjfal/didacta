@@ -22,6 +22,7 @@ import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'build_console.dart';
+import 'history_tab.dart';
 import 'composition_editor.dart';
 import 'shell.dart';
 import '../data/compiler.dart';
@@ -52,6 +53,14 @@ const String compositionTab = 'composicion';
 const String sourceTab = 'fuente';
 const String buildTab = 'compilar';
 
+/// La del historial: qué le ha pasado a la composición de este tema.
+///
+/// De `year.yaml` y no del `.tex`: la composición es lo que se edita desde
+/// aquí --qué unidades lleva el tema, en qué orden, cuáles están comentadas--
+/// y por tanto lo que cambia de un curso a otro. La última, como en una
+/// unidad: es la que menos se abre y la única que no escribe.
+const String historyTab = 'historial';
+
 /// Prefijo de las pestañas de PDF. Con un carácter que no puede estar en un
 /// perfil, para que no choque con las otras dos.
 const String documentPdfPrefix = '\u0000pdf:';
@@ -75,6 +84,11 @@ class _DocumentPageState extends State<DocumentPage> {
   /// compilar, y volver a la de compilar enseña una pantalla vacía como si
   /// no hubiera pasado nada.
   PreviewState? _preview;
+
+  /// El historial, creado al abrir su pestaña por primera vez. Perezoso: un
+  /// `git log` sobre un repositorio con años dentro cuesta, y no se le puede
+  /// cobrar a quien solo venía a compilar.
+  HistoryState? _history;
 
   String get courseId => widget.courseId;
   String get year => widget.year;
@@ -234,7 +248,7 @@ class _DocumentPageState extends State<DocumentPage> {
               'idioma $language',
           breadcrumbs: [
             ('Asignaturas', Routes.courses()),
-            (course.title(), Routes.year(courseId, year)),
+            (course.title(language), Routes.year(courseId, year)),
             (year, Routes.year(courseId, year)),
           ],
           actions: [
@@ -307,6 +321,16 @@ class _DocumentPageState extends State<DocumentPage> {
         document: document,
         session: session,
         language: language,
+      );
+    }
+
+    if (_active == historyTab) {
+      return HistoryTab(
+        state: _history ??= HistoryState(
+          session: session,
+          repo: document.repo,
+          path: 'courses/$courseId/$year/year.yaml',
+        ),
       );
     }
 
@@ -448,6 +472,13 @@ class _TabBar extends StatelessWidget {
           selected: active == buildTab,
           dirty: false,
           onTap: () => onSelect(buildTab),
+        ),
+        DidactaTab(
+          label: 'Historial',
+          icon: Icons.history,
+          selected: active == historyTab,
+          dirty: false,
+          onTap: () => onSelect(historyTab),
         ),
         for (final group in open)
           DidactaTab(

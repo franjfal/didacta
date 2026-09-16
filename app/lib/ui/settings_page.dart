@@ -20,11 +20,16 @@ import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
 import '../data/github.dart';
+import '../data/local_clone.dart';
+import '../model/catalogue.dart';
 import '../model/workspace.dart';
 import '../router.dart';
+import '../data/mcp_process.dart';
+import '../state/mcp_service.dart';
 import '../state/session.dart';
 import '../state/update_service.dart';
 import 'shell.dart';
+import 'sync_bar.dart';
 import 'sign_in.dart';
 import 'theme.dart';
 import 'update_section.dart';
@@ -57,6 +62,20 @@ class SettingsPage extends StatelessWidget {
                 _EngineSection(session: session),
               ],
 
+              if (session.workspace.isMultiple) ...[
+                const SectionLabel('Entre repositorios'),
+                _ConflictsSection(session: session),
+              ],
+
+              const SectionLabel('Idiomas de cada asignatura'),
+              _LanguagesSection(session: session),
+
+              const SectionLabel('Servidor MCP'),
+              _McpSection(session: session),
+
+              const SectionLabel('Mis preferencias'),
+              _PrefsSection(session: session),
+
               const SectionLabel('Catálogo'),
               _CatalogueSection(session: session),
 
@@ -66,6 +85,99 @@ class SettingsPage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Dónde se guardan las preferencias que viajan de un ordenador a otro.
+///
+/// Se elige, y no se decide por la persona, porque no hay ninguna elección
+/// evidente: cada uno tiene los repositorios que tiene y no coinciden con los
+/// de nadie. Sin elegir ninguno, todo sigue funcionando en esta máquina; lo
+/// que se gana al elegir es encontrarlo igual en la de casa.
+class _PrefsSection extends StatelessWidget {
+  const _PrefsSection({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final repos = session.workspace.repos;
+    final chosen = session.prefsRepo;
+    final path = session.prefsPath;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Lo que decides sobre el material --qué temas tienes '
+                'plegados-- puede seguirte de un ordenador a otro. Se guarda '
+                'en el repositorio que elijas, en un fichero con tu nombre de '
+                'GitHub, así que podéis compartir repositorio sin pisaros.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              if (repos.isEmpty)
+                const Note(
+                  'Sin repositorios abiertos no hay dónde guardarlas. '
+                  'Se quedan en esta máquina.',
+                )
+              else ...[
+                RadioGroup<String?>(
+                  groupValue: chosen,
+                  onChanged: (value) => session.setPrefsRepo(value),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      RadioListTile<String?>(
+                        key: const Key('prefs-repo-none'),
+                        value: null,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Solo en este ordenador',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                      ),
+                      for (final repo in repos)
+                        RadioListTile<String?>(
+                          key: Key('prefs-repo-\${repo.id}'),
+                          value: repo.id,
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            repo.id,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (chosen != null) ...[
+                  const SizedBox(height: 6),
+                  _Fact('fichero', path ?? 'hace falta haber entrado en GitHub'),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        key: const Key('prefs-sync-now'),
+                        icon: const Icon(Icons.sync, size: 15),
+                        label: const Text('Guardarlas ahora'),
+                        onPressed: session.pushSyncedPrefs,
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -166,30 +278,141 @@ class _ReposSectionState extends State<_ReposSection> {
       setState(() => _problem = 'Entra en GitHub primero.');
       return;
     }
-    final chosen = await showDialog<GitHubRepo>(
+    final chosen = await showDialog<List<GitHubRepo>>(
       context: context,
       builder: (context) => _RepoPicker(session: session),
     );
-    if (chosen == null || !mounted) return;
+    if (chosen == null || chosen.isEmpty || !mounted) return;
+
+    for (final repo in chosen) {
+      if (!mounted) return;
+      if (!await _addOne(repo)) break;
+    }
+    if (mounted) setState(() => _working = false);
+  }
+
+  /// Añade uno, preguntando antes si la carpeta de destino ya tiene algo.
+  ///
+  /// Devuelve si seguir con los demás. Clonar escribe en el disco de alguien,
+  /// y la carpeta puede tener el clon de otra persona o cualquier otra cosa:
+  /// mirarlo antes es lo que permite decirlo a tiempo en vez de explicarlo
+  /// después.
+  Future<bool> _addOne(GitHubRepo chosen) async {
+    final session = widget.session;
+    final target = await session.inspectTarget(
+      owner: chosen.owner,
+      name: chosen.name,
+    );
+    if (!mounted) return false;
+
+    if (target.state == CloneTarget.occupied) {
+      setState(() {
+        _problem =
+            'En ${target.directory} hay algo que no es un clon de '
+            '${chosen.id}. No lo he tocado: vacía esa carpeta o elige otra '
+            'con «Abrir una carpeta».';
+      });
+      return false;
+    }
+
+    if (target.state == CloneTarget.alreadyCloned) {
+      final reuse = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('${chosen.id} ya está clonado'),
+          content: SizedBox(
+            width: 460,
+            child: Text(
+              'Ya hay un clon en ${target.directory}. No se vuelve a clonar: '
+              'encima de él se perdería lo que tenga sin enviar, que puede '
+              'ser el trabajo de otra persona de esta máquina.\n\n'
+              'Puedo abrir ese y ponerlo al día con GitHub.',
+              style: const TextStyle(fontSize: 12.5, height: 1.45),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Dejarlo'),
+            ),
+            FilledButton(
+              key: const Key('reuse-clone'),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Abrir el que hay'),
+            ),
+          ],
+        ),
+      );
+      if (reuse != true || !mounted) return true;
+    }
 
     setState(() {
       _working = true;
       _problem = null;
-      _progress = 'Clonando ${chosen.id}…';
+      _progress = target.state == CloneTarget.alreadyCloned
+          ? 'Abriendo ${chosen.id}…'
+          : 'Clonando ${chosen.id}…';
     });
     try {
       await session.addRepository(
         owner: chosen.owner,
         name: chosen.name,
         branch: chosen.defaultBranch,
-        onProgress: (line) {
-          if (mounted) setState(() => _progress = line);
-        },
+        onProgress: _showProgress,
+      );
+    } on EmptyRepositoryException catch (empty) {
+      // Recién creado en GitHub y sin nada dentro. No es un error que haya
+      // que enseñar tal cual: es un repositorio por empezar, y eso se puede
+      // hacer desde aquí.
+      await _offerToInitialize(chosen, empty);
+    } catch (thrown) {
+      if (mounted) setState(() => _problem = thrown);
+      return false;
+    }
+    return true;
+  }
+
+  void _showProgress(String line) {
+    if (mounted) setState(() => _progress = line);
+  }
+
+  /// Ofrece preparar un repositorio vacío y, si se acepta, lo prepara.
+  ///
+  /// Recoge sus propios errores: se llama desde el `on` de [_add], y lo que
+  /// se lanza dentro de un `catch` no lo recoge el siguiente.
+  Future<void> _offerToInitialize(
+    GitHubRepo chosen,
+    EmptyRepositoryException empty,
+  ) async {
+    if (!chosen.canWrite) {
+      if (mounted) {
+        setState(
+          () => _problem =
+              '${empty.message} Prepararlo es escribir en él, y con esta '
+              'cuenta es de solo lectura: pídeselo a quien lo creó.',
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _progress = '${chosen.id} está vacío.');
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => _InitializeDialog(repo: chosen),
+    );
+    if (title == null || !mounted) return;
+
+    setState(() => _progress = 'Preparando ${chosen.id}…');
+    try {
+      await widget.session.initializeRepository(
+        owner: chosen.owner,
+        name: chosen.name,
+        branch: chosen.defaultBranch,
+        title: title,
+        onProgress: _showProgress,
       );
     } catch (thrown) {
       if (mounted) setState(() => _problem = thrown);
-    } finally {
-      if (mounted) setState(() => _working = false);
     }
   }
 
@@ -471,6 +694,12 @@ class _RepoPickerState extends State<_RepoPicker> {
   late final Future<List<GitHubRepo>> _repos = _load();
   String _filter = '';
 
+  /// Los marcados. Varios a la vez porque una asignatura puede estar repartida
+  /// --la teoría en uno, los problemas en otro-- y quien llega nuevo los
+  /// quiere los dos: pedirlos de uno en uno obliga a saber de antemano que
+  /// hacen falta dos, que es justo lo que no se sabe todavía.
+  final Set<String> _chosen = {};
+
   Future<List<GitHubRepo>> _load() async {
     final token = await widget.session.tokenStore.read() ?? '';
     final api = GitHubApi(token: token);
@@ -490,10 +719,10 @@ class _RepoPickerState extends State<_RepoPicker> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Añadir un repositorio'),
+    title: const Text('Añadir repositorios'),
     content: SizedBox(
       width: 520,
-      height: 420,
+      height: 440,
       child: Column(
         children: [
           TextField(
@@ -534,9 +763,18 @@ class _RepoPickerState extends State<_RepoPicker> {
                   itemCount: shown.length,
                   itemBuilder: (context, index) {
                     final repo = shown[index];
-                    return ListTile(
+                    return CheckboxListTile(
                       key: Key('pick-${repo.id}'),
                       dense: true,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _chosen.contains(repo.id),
+                      onChanged: (on) => setState(() {
+                        if (on ?? false) {
+                          _chosen.add(repo.id);
+                        } else {
+                          _chosen.remove(repo.id);
+                        }
+                      }),
                       title: Text(repo.id),
                       subtitle: Text(
                         [
@@ -546,7 +784,6 @@ class _RepoPickerState extends State<_RepoPicker> {
                         ].join(' · '),
                         style: const TextStyle(fontSize: 11.5),
                       ),
-                      onTap: () => Navigator.of(context).pop(repo),
                     );
                   },
                 );
@@ -560,6 +797,103 @@ class _RepoPickerState extends State<_RepoPicker> {
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
         child: const Text('Cancelar'),
+      ),
+      FutureBuilder<List<GitHubRepo>>(
+        future: _repos,
+        builder: (context, snapshot) => FilledButton(
+          key: const Key('add-chosen-repos'),
+          onPressed: _chosen.isEmpty
+              ? null
+              : () => Navigator.of(context).pop([
+                  for (final repo in snapshot.data ?? const <GitHubRepo>[])
+                    if (_chosen.contains(repo.id)) repo,
+                ]),
+          child: Text(
+            _chosen.length <= 1 ? 'Añadir' : 'Añadir ${_chosen.length}',
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// Preparar un repositorio de GitHub vacío para trabajar con él.
+///
+/// Se pregunta antes y se dice qué se va a hacer, porque escribe en GitHub:
+/// el primer commit se queda en el historial del repositorio. Solo se pide el
+/// nombre; lo demás tiene valores por defecto que luego se cambian en
+/// `didacta.yaml`.
+class _InitializeDialog extends StatefulWidget {
+  const _InitializeDialog({required this.repo});
+
+  final GitHubRepo repo;
+
+  @override
+  State<_InitializeDialog> createState() => _InitializeDialogState();
+}
+
+class _InitializeDialogState extends State<_InitializeDialog> {
+  late final TextEditingController _title = TextEditingController(
+    text: widget.repo.name,
+  );
+
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
+  void _accept() {
+    final title = _title.text.trim();
+    Navigator.of(context).pop(title.isEmpty ? widget.repo.name : title);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Este repositorio está vacío'),
+    content: SizedBox(
+      width: 480,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${widget.repo.id} todavía no tiene ningún commit, así que no hay '
+            'nada que clonar. Didacta puede prepararlo como repositorio de '
+            'contenido:',
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '• didacta.yaml, con el nombre y los idiomas es, va y en\n'
+            '• .gitignore, para que lo compilado no entre en git\n'
+            '• el primer commit en ${widget.repo.defaultBranch}, enviado a '
+            'GitHub',
+            style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            key: const Key('initialize-title'),
+            controller: _title,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del repositorio de contenido',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (_) => _accept(),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(
+        key: const Key('initialize-repository'),
+        onPressed: _accept,
+        child: const Text('Preparar y añadir'),
       ),
     ],
   );
@@ -810,5 +1144,497 @@ class _EngineSectionState extends State<_EngineSection> {
         ),
       ),
     );
+  }
+}
+
+/// Los campos en los que dos repositorios no dicen lo mismo.
+///
+/// En Ajustes y no en un aviso flotante: no es urgente --el material se sigue
+/// pudiendo dar-- pero tampoco se arregla solo, y dejarlo en un mensaje que
+/// se cierra significa no arreglarlo nunca. Aquí está cuando se busca.
+/// El interruptor del servidor MCP, y en qué puede escribir.
+///
+/// Dos decisiones y no una, porque son distintas. Encenderlo es dejar que un
+/// modelo **lea** tu material, que es inocuo y es casi todo el valor: preguntar
+/// qué unidades hay sin traducir, buscar dónde se define algo. Dejarle
+/// **escribir** es otra cosa, y por eso se marca repositorio a repositorio y
+/// empieza sin ninguno marcado.
+///
+/// Nada de esto se enciende solo al abrir Didacta salvo que ya estuviera
+/// encendido: es una decisión de la persona, no algo que se herede de una
+/// instalación.
+class _McpSection extends StatefulWidget {
+  const _McpSection({required this.session});
+
+  final Session session;
+
+  @override
+  State<_McpSection> createState() => _McpSectionState();
+}
+
+class _McpSectionState extends State<_McpSection> {
+  Set<String> _writable = {};
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    scheduleMicrotask(_load);
+  }
+
+  Future<void> _load() async {
+    final stored = await widget.session.preferences.mcpWritable();
+    if (!mounted) return;
+    setState(() {
+      _writable = stored.toSet();
+      _loaded = true;
+    });
+  }
+
+  List<McpRepository> get _repositories => [
+    for (final repo in widget.session.workspace.repos)
+      if ((widget.session.pathOf(repo.id) ?? '').isNotEmpty)
+        McpRepository(
+          id: repo.id,
+          directory: widget.session.pathOf(repo.id)!,
+          writable: _writable.contains(repo.id),
+        ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final service = context.watch<McpService>();
+    final repositories = _repositories;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Deja que un modelo de lenguaje trabaje sobre tu material: '
+                'leer las asignaturas, buscar en la biblioteca, escribir una '
+                'traducción y comprobar que compila. Sirve para lo que se '
+                'hace a mano y no tiene gracia.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 8),
+              SwitchListTile(
+                key: const Key('mcp-switch'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: service.running || service.state == McpState.starting,
+                onChanged: repositories.isEmpty || !_loaded
+                    ? null
+                    : (on) => _toggle(service, on),
+                title: const Text(
+                  'Servidor MCP',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  switch (service.state) {
+                    McpState.running =>
+                      'En marcha en ${service.url}. Se apaga al cerrar '
+                          'Didacta.',
+                    McpState.starting => 'Encendiendo…',
+                    McpState.failed =>
+                      service.problem ?? 'No se pudo encender.',
+                    McpState.off => repositories.isEmpty
+                        ? 'Hace falta algún repositorio abierto.'
+                        : 'Apagado. Escucha solo en esta máquina.',
+                  },
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: service.state == McpState.failed
+                        ? didactaEx
+                        : didactaMuted,
+                  ),
+                ),
+              ),
+              if (service.running)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('mcp-open'),
+                    icon: const Icon(Icons.hub_outlined, size: 15),
+                    label: const Text('Ver qué está haciendo'),
+                    onPressed: () => goTo(context, Routes.mcp()),
+                  ),
+                ),
+              const Divider(height: 18),
+              const Text(
+                'Dónde puede escribir',
+                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                'Sin marcar ninguno solo lee, que ya es casi todo el valor y '
+                'no puede estropear nada. Lo que escriba queda en disco y lo '
+                'envías tú, viendo el diff: no hay ninguna herramienta que '
+                'haga commit.',
+                style: TextStyle(fontSize: 11.5, height: 1.4, color: didactaMuted),
+              ),
+              const SizedBox(height: 4),
+              if (widget.session.workspace.repos.isEmpty)
+                const Note('No hay repositorios abiertos.')
+              else
+                for (final repo in widget.session.workspace.repos)
+                  CheckboxListTile(
+                    key: Key('mcp-writable-${repo.id}'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: _writable.contains(repo.id),
+                    // Con el servidor en marcha no: los repositorios se le
+                    // dan al arrancar, así que marcar aquí no cambiaría nada
+                    // y la casilla estaría mintiendo.
+                    onChanged: service.running || !widget.session.canWriteIn(repo.id)
+                        ? null
+                        : (on) => _setWritable(repo.id, on ?? false),
+                    title: Text(
+                      repo.label,
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                    subtitle: !widget.session.canWriteIn(repo.id)
+                        ? const Text(
+                            'No puedes escribir en él, así que el servidor '
+                            'tampoco',
+                            style: TextStyle(fontSize: 11),
+                          )
+                        : null,
+                  ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _setWritable(String repo, bool on) async {
+    setState(() {
+      if (on) {
+        _writable.add(repo);
+      } else {
+        _writable.remove(repo);
+      }
+    });
+    await widget.session.preferences.setMcpWritable(_writable.toList()..sort());
+  }
+
+  Future<void> _toggle(McpService service, bool on) async {
+    await widget.session.preferences.setMcpEnabled(on);
+    if (on) {
+      await service.start(repositories: _repositories);
+    } else {
+      await service.stop();
+    }
+  }
+}
+
+/// A qué idiomas se da cada asignatura.
+///
+/// Didacta sabe imprimir sus rótulos en diez idiomas --hay un fichero de
+/// idioma por cada uno--, pero eso no quiere decir que una asignatura se dé en
+/// los diez. Lo que se marca aquí es a cuáles se traduce **esta**, y es lo que
+/// decide qué aparece como pendiente: activar un idioma hace que cada unidad
+/// que no lo tenga salga como «falta», que es justo la lista de trabajo que se
+/// quiere. Activarlos todos por si acaso convierte esa lista en ruido.
+///
+/// Nada se borra ni se crea. Quitar un idioma deja los `.tex` donde estaban y
+/// solo deja de pedirlos; volver a marcarlo los recupera tal cual.
+class _LanguagesSection extends StatelessWidget {
+  const _LanguagesSection({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final courses = session.sortedCourses;
+    final options = session.catalogue.languageOptions;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Marca a qué idiomas se traduce cada asignatura. Lo que no '
+                'esté marcado no se pide y no cuenta como pendiente; quitarlo '
+                'no borra ningún fichero.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              if (courses.isEmpty)
+                const Note('Todavía no hay ninguna asignatura.')
+              else
+                for (final course in courses)
+                  _CourseLanguages(
+                    session: session,
+                    course: course,
+                    options: options,
+                  ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CourseLanguages extends StatelessWidget {
+  const _CourseLanguages({
+    required this.session,
+    required this.course,
+    required this.options,
+  });
+
+  final Session session;
+  final Course course;
+  final List<LanguageOption> options;
+
+  /// Si hay algún repositorio suyo en el que se pueda escribir.
+  ///
+  /// Se puede mirar material de otra persona, y entonces esto se ve pero no se
+  /// toca. Decirlo apagando el botón es más honesto que dejar pulsar y fallar
+  /// al guardar.
+  bool get _writable => course.sources.keys.any(session.canWriteIn);
+
+  @override
+  Widget build(BuildContext context) {
+    final chosen = course.languages;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+      decoration: BoxDecoration(
+        color: didactaSurface,
+        border: Border.all(color: didactaRule),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  course.title(session.language),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  chosen.isEmpty
+                      ? 'Sin idiomas declarados'
+                      : [
+                          for (final code in chosen) _nameOf(code),
+                        ].join(' · '),
+                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            key: Key('languages-${course.id}'),
+            enabled: _writable && options.isNotEmpty,
+            tooltip: _writable
+                ? 'Idiomas de esta asignatura'
+                : 'Solo lectura: no hay ningún repositorio suyo en el que '
+                      'puedas escribir',
+            icon: const Icon(Icons.translate, size: 18),
+            itemBuilder: (context) => [
+              for (final option in options)
+                CheckedPopupMenuItem<String>(
+                  key: Key('language-${course.id}-${option.code}'),
+                  value: option.code,
+                  checked: chosen.contains(option.code),
+                  // El último no se puede quitar: una asignatura sin ningún
+                  // idioma no se puede compilar, y el motor lo rechazaría al
+                  // guardar. Mejor que no se pueda pulsar.
+                  enabled:
+                      !chosen.contains(option.code) || chosen.length > 1,
+                  child: Text('${option.name}  ·  ${option.code}'),
+                ),
+            ],
+            onSelected: (code) => _toggle(context, code),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _nameOf(String code) {
+    for (final option in options) {
+      if (option.code == code) return option.name;
+    }
+    return code;
+  }
+
+  Future<void> _toggle(BuildContext context, String code) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = [...course.languages];
+    final adding = !chosen.contains(code);
+    if (adding) {
+      chosen.add(code);
+    } else {
+      chosen.remove(code);
+    }
+
+    try {
+      final written = await session.setCourseLanguages(
+        course: course.id,
+        languages: chosen,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            written == 0
+                ? 'No se ha podido escribir en ningún repositorio.'
+                : adding
+                ? '${_nameOf(code)} activado en ${course.title(session.language)}.'
+                : '${_nameOf(code)} desactivado. Los ficheros siguen ahí.',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+}
+
+class _ConflictsSection extends StatelessWidget {
+  const _ConflictsSection({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final conflicts = session.catalogue.metadataConflicts;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Una asignatura repartida entre repositorios se declara en '
+                'los dos, y los dos tienen que decir lo mismo. Si no, lo que '
+                'se enseña depende de en qué orden se abrieron.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              if (conflicts.isEmpty)
+                const Note('Todo coincide.')
+              else
+                for (final conflict in conflicts)
+                  _ConflictRow(session: session, conflict: conflict),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ConflictRow extends StatelessWidget {
+  const _ConflictRow({required this.session, required this.conflict});
+
+  final Session session;
+  final MetadataConflict conflict;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: didactaSurface,
+      border: Border.all(color: didactaRule),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${conflict.course} · ${conflict.field}',
+          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        // Un botón por valor: el que se pulsa es el que se queda, y se
+        // escribe en los demás. Nada de «el más nuevo gana»: son ficheros que
+        // pueden ser de otra persona.
+        for (final entry in conflict.values.entries)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '«${entry.value}»',
+                    style: const TextStyle(fontSize: 12.5),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                RepoChip(
+                  colour: session.colourOf(entry.key) ?? 0xFF62697A,
+                  label: session.workspace.byId(entry.key)?.label ?? entry.key,
+                  compact: true,
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  key: Key('use-${conflict.course}-${conflict.field}-${entry.key}'),
+                  onPressed: conflict.path == null
+                      ? null
+                      : () => _use(context, entry.value),
+                  child: const Text('Usar este'),
+                ),
+              ],
+            ),
+          ),
+        if (conflict.path == null)
+          const Note(
+            'Este campo hay que igualarlo a mano: Didacta no sabe en qué '
+            'línea de `course.yaml` se escribe.',
+            tone: didactaTeacher,
+          ),
+      ],
+    ),
+  );
+
+  Future<void> _use(BuildContext context, String value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final written = await session.resolveMetadata(
+        conflict: conflict,
+        value: value,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            written == 0
+                ? 'No se ha podido escribir en ningún repositorio.'
+                : written == 1
+                ? 'Igualado en un repositorio, como un commit.'
+                : 'Igualado en $written repositorios.',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('$error'),
+          backgroundColor: didactaTeacher,
+          duration: const Duration(seconds: 7),
+        ),
+      );
+    }
   }
 }

@@ -1,0 +1,63 @@
+%%
+%% didacta-lang-de.def -- Deutsch.
+%%
+%% Todo lo que Didacta imprime por su cuenta. Nada de esto es decorativo: un
+%% documento que dice "Theorem 2.1" en un curso que se da en
+%% Deutsch est\'a mal, y el contenido no puede cargar con la traducci\'on.
+%%
+%% ATENCI\'ON: fichero base, escrito con la terminolog\'ia matem\'atica al uso
+%% y **sin revisar por nadie que d\'e clase en Deutsch**. Sirve para compilar
+%% desde el primer d\'ia; antes de repartir material, que lo lea quien lo
+%% hable. Son treinta y seis palabras, y las que cambian de una tradici\'on a
+%% otra son pocas y conocidas: Beweis, Bewertung, Kapitel.
+%%
+\ProvidesFile{didacta-lang-de.def}[2026/09/16 Didacta German]
+
+%% La opci\'on de babel, para que el arranque no necesite otra tabla.
+\def\didactaBabelName{ngerman}
+
+%% Los entornos con nombre.
+\def\didactaTheoremName{Satz}
+\def\didactaDefinitionName{Definition}
+\def\didactaPropositionName{Proposition}
+\def\didactaLemmaName{Lemma}
+\def\didactaCorollaryName{Korollar}
+\def\didactaPropertyName{Eigenschaft}
+\def\didactaExampleName{Beispiel}
+\def\didactaQuestionName{Frage}
+\def\didactaRemarkName{Bemerkung}
+\def\didactaAxiomName{Axiom}
+\def\didactaAlgorithmName{Algorithmus}
+\def\didactaNotationName{Notation}
+\def\didactaProofName{Beweis}
+
+%% Ejercicios.
+\def\didactaExerciseName{Aufgabe}
+\def\didactaAnswerName{Antwort}
+\def\didactaSolutionName{L\"osung}
+\def\didactaHintName{Hinweis}
+\def\didactaMarkingName{Bewertung}
+\def\didactaMarksName{Punkte}
+
+%% Estructura y portada.
+\def\didactaContentsName{Inhalt}
+\def\didactaChapterName{Kapitel}
+\def\didactaCourseName{Lehrveranstaltung}
+\def\didactaTeacherName{Dozent}
+\def\didactaAcademicYearName{Studienjahr}
+\def\didactaBibliographyName{Literatur}
+\def\didactaObjectivesName{Lernziele}
+\def\didactaPrerequisitesName{Voraussetzungen}
+\def\didactaSummaryName{Zusammenfassung}
+\def\didactaFurtherReadingName{Weiterf\"uhrende Literatur}
+
+%% Canal del profesor.
+\def\didactaTeachingNoteName{Didaktischer Hinweis}
+\def\didactaTimingName{Gesch\"atzte Zeit}
+\def\didactaCommonMistakeName{H\"aufiger Fehler}
+
+%% Evaluaci\'on.
+\def\didactaExamName{Pr\"ufung}
+\def\didactaDurationName{Dauer}
+\def\didactaTotalMarksName{Gesamtpunktzahl}
+\endinput

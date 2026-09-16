@@ -312,6 +312,43 @@ void main() {
       expect(harness.engine.commands, isEmpty);
     });
 
+    testWidgets('se puede crear un curso sin copiar de ninguno', (
+      tester,
+    ) async {
+      // Copiar era obligatorio, y hay dos casos en que no vale: la asignatura
+      // recién creada, que no tiene de dónde, y el año que se compone desde
+      // cero -- arrastrar lo del anterior para ir borrándolo es más trabajo
+      // que empezar vacío.
+      final harness = await pump(tester, const CoursesPage());
+
+      await tester.tap(find.byKey(const Key('add-year-am-iii')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('start-empty')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('confirm-duplicate')));
+      await settle(tester);
+
+      expect(harness.engine.commands, [
+        ['new', 'year', '--empty', '--', 'am-iii', '2026-2027'],
+        ['index'],
+      ]);
+    });
+
+    testWidgets('copiar de un curso sigue siendo lo que se ofrece primero', (
+      tester,
+    ) async {
+      // Lo corriente es repetir el año anterior, así que viene elegido.
+      await pump(tester, const CoursesPage());
+
+      await tester.tap(find.byKey(const Key('add-year-am-iii')));
+      await settle(tester);
+
+      final chip = tester.widget<ChoiceChip>(
+        find.byKey(const Key('copy-from-2025-2026')),
+      );
+      expect(chip.selected, isTrue);
+    });
+
     testWidgets('crear pasa el año y de cuál copiarlo', (tester) async {
       final harness = await pump(tester, const CoursesPage());
 

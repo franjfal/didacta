@@ -49,7 +49,7 @@ Didacta conserva el mecanismo y rehace la infraestructura.
 │    didacta-bootstrap.tex   elige la clase según el perfil    │
 │    didacta-profiles.tex    ← fuente de verdad de las salidas │
 │    didacta.sty  + formats · theorems · problems · theme      │
-│                 · page · colours · lang/{es,va,en}           │
+│                 · page · colours · lang/XX.def (10 idiomas)  │
 └──────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -172,6 +172,15 @@ ficheros sin ninguna).
 
 `es.tex`, `va.tex`, `en.tex`. Una convención, no cuatro.
 
+Didacta trae diez ficheros de idioma --`latex/lang/didacta-lang-XX.def`, con
+las treinta y seis palabras que el paquete imprime por su cuenta-- y el
+registro que los enumera vive en `engine/didacta/profiles.py`. Que un idioma
+esté ahí no quiere decir que se use: **a cuáles se puede imprimir** y **a
+cuáles se traduce aquí** son dos listas distintas. La segunda la declara cada
+repositorio en su `settings.yaml` y cada asignatura en su `course.yaml`, y es
+la que decide qué sale como pendiente. Confundirlas pone ocho «falta el
+fichero» en cada unidad el día que se añade un idioma al registro.
+
 El ordinal que antes llevaba el orden (`03…`) vive ahora en la composición, que
 es donde el orden pertenece. Reordenar un tema ya no implica renombrar
 ficheros — y en el material anterior el orden de los `\import` del maestro ya
@@ -285,6 +294,42 @@ que funcionar en un runner de CI sin un paso de `pip`.
 
 ---
 
+## 6.bis El servidor MCP
+
+`engine/didacta/mcp.py` expone el repositorio a un modelo de lenguaje: leer
+asignaturas y unidades, buscar, escribir traducciones, comprobar y compilar un
+documento. Se levanta con `didacta mcp`, por stdio --cuando lo lanza un
+cliente-- o por HTTP en `127.0.0.1` --cuando lo lanza la aplicación, que es lo
+que permite encenderlo desde Ajustes y enseñar qué hace--.
+
+**Vive en el motor y no en la aplicación** porque el motor ya es la autoridad
+sobre lo que hay en un repositorio, y esas respuestas no pueden depender de
+quién pregunte. Un servidor que se las contestara a sí mismo sería un segundo
+Didacta con sus propias ideas.
+
+Tres reglas, y ninguna es negociable por conveniencia de una herramienta:
+
+1. **Escribir hay que pedirlo**, repositorio por repositorio. `--repo` abre en
+   solo lectura y `--write` para escribir; el defecto es no poder.
+2. **Ninguna ruta sale de la raíz** del repositorio que la nombra. Lo que llega
+   es texto de un modelo, y `../../../.ssh/id_rsa` es una ruta relativa
+   perfectamente válida.
+3. **No se toca git.** No hay herramienta que haga commit, ni que traiga ni que
+   envíe. Lo escrito queda en disco y lo publica la persona viendo el diff. Un
+   modelo que puede publicar es un modelo que puede publicar un error en el
+   material de un curso que se está dando.
+
+Tampoco lee credenciales: no hay token ni clave de traducción en ese proceso, y
+`tests/test_mcp.py` comprueba que el módulo no importe nada por donde pudieran
+entrar. Lo que no está en el proceso no se filtra por una herramienta mal
+escrita.
+
+El diario --una línea de JSON por llamada, por la salida de error-- es lo que
+hace esto aceptable: un servidor que escribe en los ficheros de alguien sin que
+se pueda ver qué toca no es una herramienta en la que haya motivo para confiar.
+
+---
+
 ## 7. Decisiones registradas
 
 | # | Decisión | Motivo |
@@ -345,6 +390,9 @@ que funcionar en un runner de CI sin un paso de `pip`.
 | D54 | La sangría por entornos es de la vista y no se escribe nunca | no es un dato del fichero: la misma unidad está un nivel más adentro leída con su tema —porque cuelga de una diapositiva que abrió la unidad anterior— que leída sola. Guardarla sería escribir en el fichero algo que solo es cierto desde dónde se está mirando, y dos lecturas del mismo fichero pelearían por él en cada commit |
 | D55 | En la vista del fuente no hay modo edición: cada fragmento es una caja de texto desde el principio, y la barra de entornos vive arriba | entrar y salir de un modo recomponía la lista bajo el ratón, así que el sitio que habías pulsado ya no estaba donde lo pulsaste; y la barra dentro del fragmento empujaba el texto al aparecer. El coste es que dentro de una caja no se puede sangrar línea a línea —tiene un solo margen izquierdo— así que el texto va como está en el fichero y la estructura la dicen las columnas del margen y el color del `\begin` y el `\end` |
 | D56 | El LaTeX se pinta dentro de la caja de texto, y el troceador va aparte del color | un `.tex` se lee como código y se editaba como un bloc de notas. Sin modo edición el color no puede pintarse por encima: lo dice el propio controlador de la caja, y así lo tienen los tres sitios donde se escribe —la unidad, los campos de un problema y cada fragmento del tema—. El recorrido que dice qué es cada trozo está en el modelo y probado por su cuenta, porque sus fallos no se ven: un `\%` tomado por comentario apaga media línea y un `$` sin cerrar tiñe el resto del fichero |
+| D58 | El servidor MCP vive en el motor, no en la aplicación | el motor ya decide qué es una unidad y qué cuenta como pendiente; un servidor con sus propias respuestas sería un segundo Didacta, y el día que discreparan nadie sabría cuál manda |
+| D59 | La aplicación es dueña del proceso del servidor, por HTTP local | por stdio el dueño es el cliente, y entonces no hay interruptor en Ajustes ni forma de ver qué hace: nadie tendría el otro extremo de la tubería |
+| D60 | Ninguna herramienta MCP toca git | escribir un fichero se ve en el diff y se deshace; publicar, no. Un modelo que publica puede publicar un error en el material de un curso que se está dando |
 | D57 | El idioma del documento y el de un fragmento son dos cosas distintas | el del documento es el que se compilaría, y cambiarlo vuelve a elegir idioma en todas las unidades con la caída del motor (D13): la que no está traducida se sigue viendo en el suyo y lo dice. El de un fragmento es una excepción para esa unidad, que es lo que permite mirar una traducción sin cambiar de pantalla y lo que hace posible una hoja bilingüe |
 | D58 | La identidad la da GitHub, no un servicio aparte | había tres cosas que cuadrar --quién eres para Firebase, qué permisos te da un `access.json` versionado, y un token pegado a mano para escribir-- y las tres contestaban a una sola pregunta que GitHub ya tenía contestada: quién puede escribir en este repositorio. Se entra con el *device flow*, que es el que usan las herramientas de terminal: sin secreto que guardar --un `client_id` es público y una aplicación de escritorio no puede esconder nada--, sin servidor que atienda una redirección, y con la contraseña tecleada en github.com y en ningún otro sitio |
 | D59 | Varios repositorios a la vez, y un fichero es de uno solo | un profesor tiene el suyo, comparte otro con el departamento y da clase en una asignatura que se arma con los dos. Lo que se mezcla es la **asignatura**: los años y los temas de cada repositorio se juntan en una sola vista. Lo que no se mezcla nunca son los ficheros: un documento se compila contra la raíz del suyo y referencia unidades suyas, así que nada de lo que había --el índice por repositorio, `\DidactaContentRoot`, el motor-- necesita saber que hay más de uno |
@@ -354,6 +402,8 @@ que funcionar en un runner de CI sin un paso de `pip`.
 | D63 | Crear algo pregunta en qué repositorio | crear una asignatura en el equivocado cuesta media tarde de deshacer --hay que mover ficheros y rehacer dos historiales-- y la aplicación no tiene forma de adivinarlo. Con un solo repositorio no pregunta: no hay nada que elegir |
 | D64 | Sin sesión de GitHub no hay aplicación | el material vive en repositorios privados, cada cambio es un commit con el nombre de alguien detrás, y la propia aplicación se reparte a quien tiene acceso al repositorio de versiones: las tres cosas las autoriza GitHub, así que la sesión **es** el permiso y no un paso previo a pedirlo. Antes se abría igual sin entrar, y un clon ya puesto en el disco se podía editar sin que nadie hubiera demostrado ser nadie. Lo que se exige es **haber entrado**, no estar conectado: con la credencial guardada se abre sin red --un aula sin wifi no puede dejar a nadie sin sus diapositivas-- y solo se cierra la sesión cuando GitHub dice que esa credencial ya no vale |
 | D65 | Solo se abren clones de GitHub a los que la cuenta llega, y se traen antes de modificarlos | un repositorio de contenido es la fuente de la verdad de un curso entero, y una copia que solo existe en un portátil es la copia que se pierde. Así que una carpeta cualquiera no se añade --lo que se escriba ahí no tiene a dónde ir-- y un clon del disco tampoco basta: que esté en esta máquina no dice quién lo puso, y se le pregunta a GitHub si esta cuenta llega a él. Al añadirlo se pone en hora, y antes de cada modificación se comprueba que lo sigue estando, con una **ventana de cinco minutos**: guardar es lo que más se hace y una llamada de red por guardado se nota justo ahí, mientras que para no editar sobre material viejo una comprobación de hace un momento vale igual que una de ahora. Quien decide si un fichero sin guardar estorba es git con `pull --ff-only`, no una regla propia: `generated/` deja el clon sucio casi siempre, y negarse a avanzar por eso habría convertido la garantía en un aviso permanente que nadie lee |
+| D66 | El token va al llavero de siempre, no al «data protection keychain» | el moderno exige el entitlement `keychain-access-groups`, y ese exige firmar con un equipo de Apple. Didacta se firma ad hoc porque se instala a mano y no va a la Mac App Store (D46), así que no hay prefijo de equipo que poner: el device flow terminaba bien, GitHub devolvía el token, y guardarlo fallaba con `-34018: A required entitlement isn't present` en el último paso y sin decir de qué entitlement hablaba. El llavero de siempre no pide entitlement y guarda en el de inicio de sesión, que es donde alguien iría a buscarlo. Lo que se pierde --compartir la credencial entre aplicaciones del mismo equipo-- aquí no se usa: hay una aplicación |
+| D67 | El historial de un fichero se lee desde dentro, y el diff lo calcula git | el material vive en git precisamente porque git sabe contestar «¿quién tocó esto, cuándo, y qué cambió?», y esa respuesta obligaba a salir a un terminal con la ruta en la cabeza. Es una **pestaña y no un panel** porque `git log --follow` sobre años de repositorio cuesta, y cobrárselo a quien venía a editar el castellano sería cobrarlo casi siempre por nada. El diff se le pide a git en lugar de comparar dos textos con el comparador propio: un commit puede renombrar, venir de una fusión o tocar un binario, y eso no se deduce de dos cadenas -- lo que se lee son las cabeceras `@@`, de donde salen los números de las dos columnas. Lo que se enseña de cada versión es el **fichero entero** con lo añadido y lo quitado marcado dentro, y no el recorte de tres líneas alrededor del cambio: el recorte contesta «¿qué tocó este commit?», que es la pregunta de quien revisa un cambio ajeno, y editando la pregunta es «¿cómo estaba esto en marzo?». Por eso el commit --autor, fecha exacta, mensaje, hash-- está detrás de un botón y no delante del texto: es información *sobre* el cambio. Y es de **solo lectura**: no hay «restaurar esta versión», porque deshacer tres meses de trabajo con un botón que se pulsa por error es un fallo del que no se vuelve |
 
 ---
 
@@ -441,6 +491,120 @@ estar escrito.
 
 Todas las unidades llegan con estado `draft`. Se han movido, no revisadas en el
 sistema nuevo.
+
+### Bibliografía
+
+Trece unidades citan y cinco usan `\cites`, que es biblatex. Durante la
+migración no había nada a lo que apuntar, así que `\cite` caía en el de LaTeX
+base —que imprime la clave y avisa— y `\cites` no existía: el análisis
+bibliográfico de un tema no compilaba, y el error era «Undefined control
+sequence» en la primera línea de la unidad, que no dice qué falta.
+
+Lo que hay ahora:
+
+* **El `.bib` vive en `shared/`**, uno por repositorio, y por convención se
+  llama `bibliography.bib`. Uno y no uno por tema porque el mismo libro lo
+  citan el tema 1 y el tema 6: dos listas son dos listas que se separan.
+  `didacta.yaml` puede decir otro nombre, y nada más.
+* **Llega a LaTeX como llega el contenido**: relativo a la raíz del
+  repositorio, en `\DidactaBibliographyFile`, que el paquete compone con
+  `\DidactaContentRoot`. Ningún documento contiene una ruta, así que el
+  repositorio se clona donde sea.
+* **biblatex con biber**, que lo ejecuta latexmk al ver el `.bcf`: el motor no
+  sabe que biber existe. Estilo `alphabetic`, porque el material cita en prosa
+  y «[Tao14, Sección 2.1]» se lee donde «[3, Sección 2.1]» obliga a ir al
+  final a ver quién es el 3.
+* **Solo cuando hay `.bib`.** Un repositorio sin fuentes no carga biblatex ni
+  paga la pasada de biber: casi ningún tema cita. Si además cita, las citas
+  salen `[?]` y el paquete avisa —pero `didacta check` lo ha dicho antes, con
+  el nombre de la unidad y la clave, que es donde se arregla.
+* **La lista de obras se imprime sola** al final, y solo si el documento citó.
+  La alternativa era que cada documento la pidiera, y el que se olvidara
+  saldría lleno de `[Abb15]` sin decir en ningún sitio quién es Abb15.
+
+Lo que el sistema no puede saber es **qué edición** se usó al escribir las
+citas, y las citas llevan capítulo y número de resultado. Eso lo dice el
+`.bib`, y es del autor.
+
+### Los temas de un curso
+
+Un curso es una lista de documentos, y con un tema entero dentro --su teoría,
+su práctica, su análisis bibliográfico, su marco histórico-- la lista deja de
+contestar la pregunta que se le hace, que es **qué entra en el Tema 1**. Más
+todavía cuando la mitad de ese tema vive en otro repositorio.
+
+La forma que tiene, y el porqué de cada mitad:
+
+* **El documento nombra** sus temas, en su entrada de `year.yaml`:
+  `themes: [tema-1]`. Una lista, porque un apéndice puede servir a dos.
+* **`themes.yaml` declara** el título y el orden, al lado del `year.yaml`.
+* **Las dos mitades pueden estar en repositorios distintos**, y ese es el
+  punto entero: la teoría declara los temas del curso y los problemas se
+  limitan a nombrarlos.
+
+La regla que lo hace seguro es una sola: **un tema que nadie declara no
+agrupa**. El documento que lo nombra sale suelto, exactamente como salía antes
+de que los temas existieran. Quien tenga solo el repositorio de problemas ve
+todo su material; lo que no ve es la agrupación. No hay ningún caso en el que
+falte un fichero y desaparezca contenido, que es la propiedad sin la cual esto
+no se podría usar entre varias personas.
+
+Por qué no es el `topic` de `taxonomy.yaml`, que se le parece: aquel clasifica
+una unidad por área de conocimiento y lo comparten varias asignaturas; este
+ordena un curso concreto, y su orden es el orden en que se da. Atar el segundo
+al primero haría que renombrar un área reordenase una asignatura.
+
+### Una interfaz, varias fuentes
+
+Con dos repositorios abiertos, Didacta se comportaba como dos aplicaciones
+pegadas: cada pantalla enseñaba lo de uno, y elegir repositorio parecía
+navegar a otro sitio. No lo es. Son **dos fuentes de una misma biblioteca**, y
+la asignatura que se arma con las dos es una asignatura, no dos.
+
+Lo que eso obliga:
+
+* **El filtro se aplica en un solo sitio**, el getter del catálogo de la
+  sesión, por el que pasan todas las pantallas. Ninguna pregunta de qué
+  repositorio es nada para decidir si lo enseña; esa pregunta es justo la que
+  convierte una interfaz en dos.
+* **Filtrar es una vista, no otra carga.** Volver al disco por marcar una
+  casilla costaría medio segundo y perdería el resto mientras tanto.
+* **Apagar enseña exactamente lo mismo que no tener.** Los temas de un
+  repositorio apagado se van con él, así que sus documentos vuelven a salir
+  sueltos. Por eso el filtro contesta «¿qué vería quien solo tiene esto?», que
+  es la pregunta por la que se usa.
+* **La composición se lee entera y se escribe donde toca.** Un año con
+  documentos en dos repositorios abre los dos `year.yaml`: se ven juntos, y
+  mover uno escribe en el fichero del suyo. Un commit por repositorio, porque
+  son historiales distintos. Lo único que no cruza es el orden, que vive
+  dentro de cada fichero.
+
+Apagar no es quitar: el repositorio sigue abierto, sigue trayendo y sigue
+guardando. Quitarlo está en Ajustes y es otra cosa.
+
+### Las preferencias que viajan
+
+Plegar el Tema 3 porque este año no se da es una decisión sobre **el
+material**, no sobre esta máquina: quien la toma en el despacho espera
+encontrarla en casa. La ruta del clon o dónde está TeX son lo contrario, y
+sincronizarlas rompería la máquina de al lado.
+
+Las primeras van a un repositorio de contenido, en
+`.didacta/prefs/<login>.json`. Tres cosas que eso resuelve de golpe:
+
+* **se sincroniza por donde ya se sincroniza todo** --clon, traer, enviar,
+  commits con autor--, sin un servicio nuevo ni un permiso nuevo;
+* **dos personas no se pisan**: el nombre del fichero es el login de GitHub de
+  quien entró, así que un departamento comparte repositorio y cada uno tiene
+  el suyo;
+* **no hay un repositorio impuesto**: cada uno tiene los suyos y no coinciden,
+  así que se elige en Ajustes. Sin elegir ninguno todo funciona en local, que
+  es lo que hacían todas las preferencias hasta ahora.
+
+Se escribe con espera de unos segundos: plegar tres temas seguidos son tres
+clics y un commit. Y el JSON sale siempre con las claves en el mismo orden,
+porque un fichero que cambia de forma en cada guardado da un diff que no dice
+nada y un commit que no cambia nada.
 
 ---
 
@@ -549,8 +713,6 @@ siguiente, en orden:
 1. **Compilar desde la interfaz** — en escritorio, con un clon en disco y
    LaTeX instalado, ya es posible: falta lanzar `didacta build` y mostrar el
    log y el PDF. En web no lo es, y la pantalla del documento no lo finge.
-2. **Bibliografía** — 13 unidades citan y 5 usan `\cites` de biblatex, que hoy
-   no compila. Hay que decidir dónde vive el `.bib` y con qué motor.
 4. **Crear unidades desde la interfaz** — hoy se editan, traducen, reclasifican
    y recomponen las que hay; una nueva pide crear el directorio a mano.
 5. **CI** — compilar en cada push, `didacta index --check`, publicar los PDF

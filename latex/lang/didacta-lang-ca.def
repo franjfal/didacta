@@ -1,0 +1,63 @@
+%%
+%% didacta-lang-ca.def -- Catal\`a.
+%%
+%% Todo lo que Didacta imprime por su cuenta. Nada de esto es decorativo: un
+%% documento que dice "Theorem 2.1" en un curso que se da en
+%% Catal\`a est\'a mal, y el contenido no puede cargar con la traducci\'on.
+%%
+%% ATENCI\'ON: fichero base, escrito con la terminolog\'ia matem\'atica al uso
+%% y **sin revisar por nadie que d\'e clase en Catal\`a**. Sirve para compilar
+%% desde el primer d\'ia; antes de repartir material, que lo lea quien lo
+%% hable. Son treinta y seis palabras, y las que cambian de una tradici\'on a
+%% otra son pocas y conocidas: Demostraci\'o, Correcci\'o, Cap\'itol.
+%%
+\ProvidesFile{didacta-lang-ca.def}[2026/09/16 Didacta Catalan]
+
+%% La opci\'on de babel, para que el arranque no necesite otra tabla.
+\def\didactaBabelName{catalan}
+
+%% Los entornos con nombre.
+\def\didactaTheoremName{Teorema}
+\def\didactaDefinitionName{Definici\'o}
+\def\didactaPropositionName{Proposici\'o}
+\def\didactaLemmaName{Lema}
+\def\didactaCorollaryName{Corol\textperiodcentered lari}
+\def\didactaPropertyName{Propietat}
+\def\didactaExampleName{Exemple}
+\def\didactaQuestionName{Pregunta}
+\def\didactaRemarkName{Observaci\'o}
+\def\didactaAxiomName{Axioma}
+\def\didactaAlgorithmName{Algorisme}
+\def\didactaNotationName{Notaci\'o}
+\def\didactaProofName{Demostraci\'o}
+
+%% Ejercicios.
+\def\didactaExerciseName{Exercici}
+\def\didactaAnswerName{Resposta}
+\def\didactaSolutionName{Soluci\'o}
+\def\didactaHintName{Pista}
+\def\didactaMarkingName{Correcci\'o}
+\def\didactaMarksName{punts}
+
+%% Estructura y portada.
+\def\didactaContentsName{Continguts}
+\def\didactaChapterName{Cap\'itol}
+\def\didactaCourseName{Assignatura}
+\def\didactaTeacherName{Professor}
+\def\didactaAcademicYearName{Curs}
+\def\didactaBibliographyName{Bibliografia}
+\def\didactaObjectivesName{Objectius}
+\def\didactaPrerequisitesName{Prerequisits}
+\def\didactaSummaryName{Resum}
+\def\didactaFurtherReadingName{Lectures addicionals}
+
+%% Canal del profesor.
+\def\didactaTeachingNoteName{Nota docent}
+\def\didactaTimingName{Temps estimat}
+\def\didactaCommonMistakeName{Error freq\"uent}
+
+%% Evaluaci\'on.
+\def\didactaExamName{Examen}
+\def\didactaDurationName{Durada}
+\def\didactaTotalMarksName{Puntuaci\'o total}
+\endinput

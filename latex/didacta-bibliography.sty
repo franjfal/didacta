@@ -1,0 +1,182 @@
+%%
+%% didacta-bibliography.sty -- las fuentes que el material cita.
+%%
+%% Un análisis bibliográfico es material de curso como cualquier otro: dice
+%% dónde está demostrado cada resultado del tema, con capítulo y número. Lo
+%% que escribe quien lo redacta es
+%%
+%%     \cite[Theorem 1.1.1]{Abbott}
+%%     \cites[Section 1.2]{Abbott}[Chapter 3]{Tao}
+%%
+%% y eso es biblatex. Antes no lo era: `\cite` caía en el de LaTeX base --que
+%% sin bibliografía imprime la clave y avisa-- y `\cites` no existía, así que
+%% el documento no compilaba y el fallo aparecía la víspera de repartirlo.
+%%
+%% Dónde está el .bib
+%% ------------------
+%%
+%% En `shared/` del repositorio de contenido, que es donde el modelo pone lo
+%% que no es de ninguna unidad. Por convención `shared/bibliography.bib`, y
+%% si se llama de otro modo lo dice `didacta.yaml`:
+%%
+%%     bibliography: shared/analisis.bib
+%%
+%% El motor lo pasa en \DidactaBibliographyFile, relativo a la raíz del
+%% repositorio, igual que las unidades. Sin motor --alguien abre el .tex en su
+%% editor y pulsa compilar-- se prueba la convención, así que un repositorio
+%% que la siga tiene bibliografía también ahí.
+%%
+%% Un repositorio sin .bib
+%% -----------------------
+%%
+%% No es un error: casi ningún tema cita. biblatex no se carga --no se le
+%% añade una pasada de biber a todo el que no la necesita-- y los comandos de
+%% cita quedan definidos para que impriman `[?]` y avisen. Compila, y se ve
+%% que falta. `didacta check` lo dice antes, con el nombre de la unidad que
+%% cita y el del fichero que no está.
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{didacta-bibliography}[2026/09/15 Didacta bibliography]
+
+\RequirePackage{etoolbox}
+
+\makeatletter
+
+%% La raíz del repositorio, que la pone el motor. Aquí sirve para lo mismo
+%% que en las unidades: que el documento no contenga ninguna ruta.
+\@ifundefined{DidactaContentRoot}{\def\DidactaContentRoot{./}}{}
+
+%% El .bib, relativo a esa raíz. La convención cuando nadie dice otra cosa.
+\@ifundefined{DidactaBibliographyFile}{%
+  \def\DidactaBibliographyFile{shared/bibliography.bib}%
+}{}
+
+\edef\didacta@bib@path{\DidactaContentRoot\DidactaBibliographyFile}
+
+\newtoggle{didacta@bib}
+\togglefalse{didacta@bib}
+
+\IfFileExists{\didacta@bib@path}{\toggletrue{didacta@bib}}{}
+
+%% ---------------------------------------------------------------------------
+%% Con bibliografía
+%% ---------------------------------------------------------------------------
+%%
+%% `alphabetic` y no `numeric` a propósito: el material cita en prosa --«se
+%% encuentra en \cite[Sección 2.1]{Tao}»--, y ahí «[Tao14, Sección 2.1]» se
+%% lee y «[3, Sección 2.1]» obliga a ir al final a ver quién es el 3.
+%%
+%% `backend=biber` porque es el que entiende UTF-8 sin pelear, y latexmk lo
+%% ejecuta solo al ver el .bcf: no hace falta que el motor sepa de biber.
+\iftoggle{didacta@bib}{%
+  \RequirePackage[
+    backend=biber,
+    style=alphabetic,
+    sorting=nyt,
+    maxbibnames=10,
+    giveninits=true,
+  ]{biblatex}%
+  \addbibresource{\didacta@bib@path}%
+}{%
+  %% -------------------------------------------------------------------------
+  %% Sin bibliografía: que se vea que falta, y que compile igual
+  %% -------------------------------------------------------------------------
+  %%
+  %% `\cites` toma una lista de longitud libre --pares de corchetes y llaves,
+  %% tantos como fuentes--, así que se consume recursivamente. No es emular
+  %% biblatex: es no romper el documento y dejar una marca donde iba la cita.
+  %% El aviso lo dispara la primera cita, no la carga del paquete: casi
+  %% ningún tema cita, y un repositorio que no lo hace no tiene ningún
+  %% problema que avisar. Una vez, no una por cita.
+  \newtoggle{didacta@nobib@warned}%
+  \togglefalse{didacta@nobib@warned}%
+  \newcommand{\didacta@nobib@warn}{%
+    \iftoggle{didacta@nobib@warned}{}{%
+      \toggletrue{didacta@nobib@warned}%
+      \PackageWarning{didacta-bibliography}{%
+        Se cita, pero no hay bibliografia: falta \didacta@bib@path.
+        Las citas salen como [?]%
+      }%
+    }%
+  }%
+  \def\didacta@nobib@mark{\didacta@nobib@warn\textbf{[?]}}%
+
+  \renewcommand{\cite}[2][]{\didacta@nobib@mark}%
+  \providecommand{\parencite}[2][]{\didacta@nobib@mark}%
+  \providecommand{\textcite}[2][]{\didacta@nobib@mark}%
+  \providecommand{\autocite}[2][]{\didacta@nobib@mark}%
+
+  \providecommand{\cites}{\didacta@nobib@mark\didacta@cites@next}%
+  \def\didacta@cites@next{%
+    \@ifnextchar[{\didacta@cites@opt}{\didacta@cites@maybe}%
+  }%
+  \def\didacta@cites@opt[#1]{\didacta@cites@next}%
+  \def\didacta@cites@maybe{\@ifnextchar\bgroup{\didacta@cites@key}{}}%
+  \def\didacta@cites@key#1{\didacta@cites@next}%
+  \providecommand{\parencites}{\cites}%
+  \providecommand{\textcites}{\cites}%
+
+  \providecommand{\printbibliography}[1][]{}%
+  \providecommand{\addbibresource}[2][]{}%
+}
+
+%% ---------------------------------------------------------------------------
+%% La lista de fuentes
+%% ---------------------------------------------------------------------------
+%%
+%% \DidactaBibliography imprime lo citado, con su título en el idioma del
+%% documento. Un comando propio y no `\printbibliography` a pelo porque el
+%% título de la sección es texto visible, y el texto visible de Didacta se
+%% traduce: un análisis bibliográfico en valenciano con «Referencias» encima
+%% es media traducción.
+%%
+%% Sin bibliografía no imprime nada, que es lo correcto: una sección
+%% «Referencias» vacía dice que no hay fuentes, y lo que pasa es que no hay
+%% fichero.
+%%
+%% El título sale de `\didactaBibliographyName`, que es el que traen los
+%% ficheros de idioma: «Bibliografía», «Bibliografia», «Bibliography».
+\providecommand{\didactaBibliographyName}{Bibliograf\'\i a}
+
+\newtoggle{didacta@bib@printed}
+\togglefalse{didacta@bib@printed}
+
+\newcommand{\DidactaBibliography}{%
+  \iftoggle{didacta@bib}{%
+    \iftoggle{didacta@bib@printed}{}{%
+      \toggletrue{didacta@bib@printed}%
+      %% En diapositivas, dentro de un frame: `\printbibliography` suelto en
+      %% beamer no tiene dónde caer. Con `allowframebreaks`, porque una lista
+      %% de ocho libros no cabe en una diapositiva.
+      \iftoggle{didacta@slides}{%
+        \begin{frame}[allowframebreaks]{\didactaBibliographyName}%
+          \printbibliography[heading=none]%
+        \end{frame}%
+      }{%
+        \printbibliography[title={\didactaBibliographyName}]%
+      }%
+    }%
+  }{}%
+}
+
+%% Y sola al final, si el documento citó algo.
+%%
+%% Automática porque la alternativa es que cada documento la pida, y entonces
+%% el que se olvide sale con `[Abb15]` por todas partes y sin decir en ningún
+%% sitio quién es Abb15 -- que es una cita inútil. `instcount` es el contador
+%% de citas de biblatex: cero significa que este documento no citó, y ahí una
+%% sección «Bibliografía» vacía sería peor que nada.
+\iftoggle{didacta@bib}{%
+  \AtEndDocument{%
+    \ifnum\value{instcount}>0\relax
+      \DidactaBibliography
+    \fi
+  }%
+}{}
+
+%% Si hay bibliografía o no. Para quien quiera escribir material que se lea
+%% bien en los dos casos.
+\newcommand{\DidactaIfBibliography}[2]{\iftoggle{didacta@bib}{#1}{#2}}
+
+\makeatother
+\endinput

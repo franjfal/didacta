@@ -17,14 +17,53 @@ from __future__ import annotations
 import os
 import re
 
-#: Languages Didacta ships. Adding one means adding a language definition file.
-LANGUAGES = ("es", "va", "en")
+#: Idiomas que Didacta trae, en el orden en que se ofrecen.
+#:
+#: El nombre es el que usa quien lo habla --«Castellano», no «Spanish»--,
+#: porque es lo que se lee en un desplegable de idiomas. La opción de babel va
+#: aquí para que el arranque de LaTeX no necesite otra tabla.
+#:
+#: Añadir un idioma es esta línea más `latex/lang/didacta-lang-XX.def`. Los
+#: dos tienen que ir juntos: sin el `.def`, `didacta.sty` para la compilación
+#: con un error claro, y sin la línea de aquí el motor rechaza el código antes
+#: de llegar a LaTeX. `tests/test_languages.py` comprueba que no se separen.
+#:
+#: Que un idioma esté aquí no quiere decir que se use: cada asignatura declara
+#: los suyos en `course.yaml`, y esto es solo la lista de los posibles.
+LANGUAGE_REGISTRY = (
+    ("es", "Castellano", "spanish"),
+    ("va", "Valencià", "catalan"),
+    ("ca", "Català", "catalan"),
+    ("gl", "Galego", "galician"),
+    ("eu", "Euskara", "basque"),
+    ("en", "English", "english"),
+    ("fr", "Français", "french"),
+    ("de", "Deutsch", "ngerman"),
+    ("it", "Italiano", "italian"),
+    ("pt", "Português", "portuguese"),
+)
 
-LANGUAGE_NAMES = {"es": "Castellano", "va": "Valencià", "en": "English"}
+LANGUAGES = tuple(code for code, _, _ in LANGUAGE_REGISTRY)
 
-#: babel option per language. Valencian uses `catalan`, which is what gives
-#: correct hyphenation; the visible strings are Valencian.
-BABEL = {"es": "spanish", "va": "catalan", "en": "english"}
+#: Los que un repositorio usa cuando su `settings.yaml` no dice nada.
+#:
+#: No son todos, y esa es la diferencia que sostiene lo demás: el registro
+#: dice a qué idiomas Didacta **sabe** imprimir, y esto dice a cuáles se
+#: traduce **aquí**. Suponer que un repositorio quiere los diez pone ocho
+#: «falta el fichero» en cada unidad el día que se añade un idioma al
+#: registro, y convierte una lista de traducciones pendientes en ruido.
+#:
+#: Son los tres con los que Didacta se escribió, para que ampliar el registro
+#: no cambie ni un repositorio existente. Quien quiera otro lo declara:
+#:
+#:     languages: [es, en, fr]   en settings.yaml
+DEFAULT_LANGUAGES = ("es", "va", "en")
+
+LANGUAGE_NAMES = {code: name for code, name, _ in LANGUAGE_REGISTRY}
+
+#: La opción de babel de cada uno. El valenciano usa `catalan`, que es lo que
+#: da la partición de palabras correcta; las cadenas visibles son valencianas.
+BABEL = {code: babel for code, _, babel in LANGUAGE_REGISTRY}
 
 _DECLARE = re.compile(
     r"\\DidactaDeclareProfile\s*"

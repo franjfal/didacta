@@ -207,7 +207,16 @@ class CategoryNode {
 String languageName(String code) => switch (code) {
   'es' => 'castellano',
   'va' => 'valenciano',
+  'ca' => 'catalán',
+  'gl' => 'gallego',
+  'eu' => 'euskera',
   'en' => 'inglés',
+  'fr' => 'francés',
+  'de' => 'alemán',
+  'it' => 'italiano',
+  'pt' => 'portugués',
+  // Lo que Didacta no traiga se dice por su código. Preferible a inventarse
+  // un nombre: el código es exactamente lo que hay en el nombre del fichero.
   _ => code,
 };
 

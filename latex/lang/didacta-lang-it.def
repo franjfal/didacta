@@ -1,0 +1,63 @@
+%%
+%% didacta-lang-it.def -- Italiano.
+%%
+%% Todo lo que Didacta imprime por su cuenta. Nada de esto es decorativo: un
+%% documento que dice "Theorem 2.1" en un curso que se da en
+%% Italiano est\'a mal, y el contenido no puede cargar con la traducci\'on.
+%%
+%% ATENCI\'ON: fichero base, escrito con la terminolog\'ia matem\'atica al uso
+%% y **sin revisar por nadie que d\'e clase en Italiano**. Sirve para compilar
+%% desde el primer d\'ia; antes de repartir material, que lo lea quien lo
+%% hable. Son treinta y seis palabras, y las que cambian de una tradici\'on a
+%% otra son pocas y conocidas: Dimostrazione, Valutazione, Capitolo.
+%%
+\ProvidesFile{didacta-lang-it.def}[2026/09/16 Didacta Italian]
+
+%% La opci\'on de babel, para que el arranque no necesite otra tabla.
+\def\didactaBabelName{italian}
+
+%% Los entornos con nombre.
+\def\didactaTheoremName{Teorema}
+\def\didactaDefinitionName{Definizione}
+\def\didactaPropositionName{Proposizione}
+\def\didactaLemmaName{Lemma}
+\def\didactaCorollaryName{Corollario}
+\def\didactaPropertyName{Propriet\`a}
+\def\didactaExampleName{Esempio}
+\def\didactaQuestionName{Domanda}
+\def\didactaRemarkName{Osservazione}
+\def\didactaAxiomName{Assioma}
+\def\didactaAlgorithmName{Algoritmo}
+\def\didactaNotationName{Notazione}
+\def\didactaProofName{Dimostrazione}
+
+%% Ejercicios.
+\def\didactaExerciseName{Esercizio}
+\def\didactaAnswerName{Risposta}
+\def\didactaSolutionName{Soluzione}
+\def\didactaHintName{Suggerimento}
+\def\didactaMarkingName{Valutazione}
+\def\didactaMarksName{punti}
+
+%% Estructura y portada.
+\def\didactaContentsName{Indice}
+\def\didactaChapterName{Capitolo}
+\def\didactaCourseName{Insegnamento}
+\def\didactaTeacherName{Docente}
+\def\didactaAcademicYearName{Anno accademico}
+\def\didactaBibliographyName{Bibliografia}
+\def\didactaObjectivesName{Obiettivi}
+\def\didactaPrerequisitesName{Prerequisiti}
+\def\didactaSummaryName{Riassunto}
+\def\didactaFurtherReadingName{Letture di approfondimento}
+
+%% Canal del profesor.
+\def\didactaTeachingNoteName{Nota didattica}
+\def\didactaTimingName{Tempo stimato}
+\def\didactaCommonMistakeName{Errore comune}
+
+%% Evaluaci\'on.
+\def\didactaExamName{Esame}
+\def\didactaDurationName{Durata}
+\def\didactaTotalMarksName{Punteggio totale}
+\endinput

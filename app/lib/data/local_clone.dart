@@ -31,6 +31,9 @@
 /// nothing is lost and the state is honest.
 library;
 
+import 'dart:convert';
+
+import '../model/file_history.dart';
 import 'local_clone_stub.dart'
     if (dart.library.io) 'local_clone_io.dart'
     as platform;
@@ -66,6 +69,23 @@ class CloneStatus {
   bool get isSynced => ahead == 0 && behind == 0;
 }
 
+/// Qué hay donde iría un clon.
+///
+/// Tres casos y no un booleano, porque los tres se tratan distinto: uno se
+/// clona, otro se reutiliza y el tercero no se toca.
+enum CloneTarget {
+  /// No existe, o existe y está vacía. Se puede clonar.
+  free,
+
+  /// Ya es un clon de ese mismo repositorio. No hay que volver a clonarlo:
+  /// basta con ponerlo al día, y lo que haya sin enviar se conserva.
+  alreadyCloned,
+
+  /// Tiene otra cosa dentro. Aquí no se escribe: puede ser el trabajo de
+  /// alguien, y «no estaba vacía» es lo único que se puede decir con certeza.
+  occupied,
+}
+
 class CloneException implements Exception {
   const CloneException(this.message, {this.stderr = ''});
 
@@ -77,6 +97,23 @@ class CloneException implements Exception {
 
   @override
   String toString() => stderr.isEmpty ? message : '$message\n\n$stderr';
+}
+
+/// El repositorio de GitHub no tiene ningún commit, así que no hay nada que
+/// clonar: ni `main` ni ninguna otra rama.
+///
+/// Una excepción propia y no el mensaje de git --«Remote branch main not
+/// found»--, porque aquí sí hay algo que hacer, que es prepararlo, y quien
+/// llama tiene que poder distinguirlo de un fallo de red o de permisos.
+class EmptyRepositoryException extends CloneException {
+  EmptyRepositoryException({required this.owner, required this.repo})
+    : super(
+        '$owner/$repo está vacío en GitHub: todavía no tiene ningún commit, '
+        'así que no hay nada que clonar.',
+      );
+
+  final String owner;
+  final String repo;
 }
 
 /// The operations the app needs from a clone. One implementation on the
@@ -115,13 +152,37 @@ abstract class LocalClone {
     enginePath: enginePath,
   );
 
+  /// Qué hay en la carpeta donde iría un clon, **antes de tocarla**.
+  ///
+  /// Existe porque clonar puede escribir encima del trabajo de alguien, y eso
+  /// no se hace sin decirlo: con dos personas usando la misma máquina, o con
+  /// un clon hecho a mano, la carpeta de destino puede estar ocupada. Saber
+  /// cuál de los tres casos es permite preguntar lo que se puede preguntar
+  /// --«ya está clonado, ¿lo uso?»-- y negarse a lo que no --escribir sobre
+  /// otra cosa.
+  static Future<CloneTarget> inspect({
+    required String directory,
+    required String owner,
+    required String repo,
+  }) => platform.inspectTarget(
+    directory: directory,
+    owner: owner,
+    repo: repo,
+  );
+
   /// Clones [owner]/[repo] into [directory], authenticating with [token].
+  ///
+  /// Un repositorio sin commits lanza [EmptyRepositoryException] antes de
+  /// crear la carpeta, y un clon que falla no la deja detrás. [url] sustituye
+  /// a la de GitHub: es para las pruebas, que clonan de un repositorio
+  /// desnudo del disco.
   static Future<LocalClone> create({
     required String directory,
     required String owner,
     required String repo,
     required String branch,
     required String token,
+    String? url,
     void Function(String line)? onProgress,
   }) => platform.cloneInto(
     directory: directory,
@@ -129,8 +190,80 @@ abstract class LocalClone {
     repo: repo,
     branch: branch,
     token: token,
+    url: url,
     onProgress: onProgress,
   );
+
+  /// Prepara un repositorio de GitHub **vacío** como repositorio de contenido
+  /// y lo deja clonado en [directory].
+  ///
+  /// Clona el repositorio vacío, escribe [settingsFor] con [title] y
+  /// [ignoredFiles], hace el primer commit en [branch] a nombre del autor y
+  /// lo envía. Si algo falla por el camino la carpeta se borra: dentro solo
+  /// está lo que se acaba de generar, y dejarla a medias haría que el
+  /// siguiente intento la tomara por un clon bueno.
+  ///
+  /// Si mientras tanto alguien ha empujado algo, no se toca y se dice:
+  /// preparar encima sería competir con la historia de otra persona.
+  static Future<LocalClone> initialize({
+    required String directory,
+    required String owner,
+    required String repo,
+    required String branch,
+    required String token,
+    required String title,
+    required String authorName,
+    required String authorEmail,
+    String? url,
+    void Function(String line)? onProgress,
+  }) => platform.initializeInto(
+    directory: directory,
+    owner: owner,
+    repo: repo,
+    branch: branch,
+    token: token,
+    title: title,
+    authorName: authorName,
+    authorEmail: authorEmail,
+    url: url,
+    onProgress: onProgress,
+  );
+
+  /// El `didacta.yaml` de un repositorio recién preparado.
+  ///
+  /// Los mismos valores que el motor toma por defecto, pero escritos: un
+  /// fichero vacío también valdría, y uno que dice qué se puede ajustar se
+  /// entiende sin ir a buscar la documentación. El nombre va entre comillas
+  /// de JSON, que YAML lee igual, para que unos dos puntos o una almohadilla
+  /// en el título no rompan el fichero.
+  static String settingsFor(String title) =>
+      '''
+# Un repositorio de contenido de Didacta.
+#
+# Todo tiene un valor por defecto que funciona. El fichero existe sobre todo
+# para marcar la raíz del repositorio: el motor sube buscándolo, igual que git
+# busca .git.
+
+name: ${jsonEncode(title)}
+
+# Los idiomas que mantiene este repositorio. Didacta trae es, va y en.
+languages: [es, va, en]
+
+# El idioma que se supone cuando nada dice otra cosa.
+default_language: es
+
+# Dónde van los PDF. Relativo a la raíz del repositorio, y fuera de git: lo
+# compilado no se versiona.
+build_dir: .didacta-build
+''';
+
+  /// El `.gitignore` de un repositorio recién preparado.
+  static const String ignoredFiles = '''
+# Lo compilado. Los PDF salen de las fuentes que tienen al lado, así que
+# guardarlos sería tener la misma información dos veces y dejar que no
+# coincidan.
+.didacta-build/
+''';
 
   String get directory;
 
@@ -163,6 +296,48 @@ abstract class LocalClone {
 
   /// The file's text and its blob hash.
   Future<({String text, String sha})> readFile(String path);
+
+  /// Los commits que tocaron [path], del más reciente al más antiguo.
+  ///
+  /// Con `--follow`, así que un fichero que se movió sigue teniendo el
+  /// historial de antes de moverse. Es lo que hace que reorganizar `content/`
+  /// --que pasa-- no borre de la vista tres años de trabajo.
+  ///
+  /// [limit] porque un historial se lee por arriba: nadie baja hasta el
+  /// commit 400, y pedirlos todos es tiempo de git por nada.
+  Future<List<FileCommit>> history(String path, {int limit});
+
+  /// Qué le hizo [sha] a [path], con [context] líneas alrededor de cada
+  /// cambio.
+  ///
+  /// El diff lo calcula git y aquí se lee: un commit puede renombrar, puede
+  /// venir de una fusión y puede tocar un binario, y eso no se deduce
+  /// comparando dos textos.
+  ///
+  /// [context] es lo que git llama `--unified`. Con [wholeFile] la respuesta
+  /// deja de ser «los alrededores del cambio» y pasa a ser el fichero entero
+  /// con el cambio marcado dentro, que es lo que hace falta para leer una
+  /// versión y no solo su parte.
+  Future<FileDiff> diffOf({
+    required String sha,
+    required String path,
+    int context,
+  });
+
+  /// El [context] que pide el fichero entero en lugar de un recorte.
+  ///
+  /// Un número y no una bandera aparte porque para git es lo mismo: no hay
+  /// ningún fichero de material con un millón de líneas, así que pedir un
+  /// millón de líneas de contexto es pedirlo todo.
+  static const int wholeFile = 1000000;
+
+  /// El contenido de [path] tal y como estaba en [sha], o null si en ese
+  /// commit no había ningún fichero con ese nombre.
+  ///
+  /// Hace falta para los commits que no cambiaron el contenido --un
+  /// renombrado, un cambio de permisos, una fusión-- porque de esos no sale
+  /// diff y aun así hay una versión que enseñar.
+  Future<String?> fileAt({required String sha, required String path});
 
   /// Writes, commits and pushes, in that order.
   ///

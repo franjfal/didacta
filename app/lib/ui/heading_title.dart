@@ -1,4 +1,4 @@
-/// El título de un apartado, en todos los idiomas a la vez.
+/// Un título, en todos los idiomas a la vez.
 ///
 /// Antes se editaba en la fila, y eso significaba editar **solo el idioma que
 /// se estaba mirando**: para poner el título en valenciano había que cambiar
@@ -6,9 +6,13 @@
 /// pestaña por idioma-- y con los títulos de los apartados sí, que es
 /// justamente donde más fácil es dejarse uno.
 ///
-/// Así que un lápiz y un modal con los tres. Los que falten se ven vacíos y
-/// con su marca, que es la lista de lo que queda por traducir de este
-/// documento.
+/// Así que un lápiz y un modal con todos. Los que falten se ven vacíos y con
+/// su marca, que es la lista de lo que queda por traducir.
+///
+/// Lo usan los apartados, para los que se escribió, y desde que el idioma se
+/// elige en la barra de arriba también la asignatura, el tema y el documento:
+/// es el mismo problema en cuatro sitios, y resolverlo cuatro veces daría
+/// cuatro diálogos que se parecen y no se comportan igual.
 library;
 
 import 'package:flutter/material.dart';
@@ -22,6 +26,13 @@ Future<Map<String, String>?> editHeadingTitles(
   required List<String> languages,
   required Map<String, String> titles,
   required String reference,
+  /// «del» o «de la», según el nombre de lo que se titula. Sin esto el
+  /// diálogo dice «Título del asignatura», que es la clase de detalle que
+  /// hace que una pantalla parezca de mentira.
+  String article = 'del',
+  String note =
+      'Un idioma en blanco se queda marcado como pendiente en el fichero, '
+      'no se borra el apartado.',
 }) => showDialog<Map<String, String>>(
   context: context,
   builder: (context) => _HeadingTitles(
@@ -29,6 +40,8 @@ Future<Map<String, String>?> editHeadingTitles(
     languages: languages,
     titles: titles,
     reference: reference,
+    article: article,
+    note: note,
   ),
 );
 
@@ -38,6 +51,8 @@ class _HeadingTitles extends StatefulWidget {
     required this.languages,
     required this.titles,
     required this.reference,
+    required this.article,
+    required this.note,
   });
 
   /// «Apartado» o «Subapartado», para el título del diálogo.
@@ -48,6 +63,12 @@ class _HeadingTitles extends StatefulWidget {
 
   /// El idioma del documento: el que hace de original cuando faltan otros.
   final String reference;
+
+  final String article;
+
+  /// Qué pasa con lo que se deje en blanco. Cambia según qué se esté
+  /// titulando, y decirlo mal es peor que no decirlo.
+  final String note;
 
   @override
   State<_HeadingTitles> createState() => _HeadingTitlesState();
@@ -69,7 +90,7 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Título del ${widget.heading.toLowerCase()}'),
+    title: Text('Título ${widget.article} ${widget.heading.toLowerCase()}'),
     content: SizedBox(
       width: 460,
       child: Column(
@@ -97,10 +118,7 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
             ),
             const SizedBox(height: 10),
           ],
-          const Note(
-            'Un idioma en blanco se queda marcado como pendiente en el '
-            'fichero, no se borra el apartado.',
-          ),
+          Note(widget.note),
         ],
       ),
     ),
@@ -118,5 +136,36 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
         child: const Text('Aceptar'),
       ),
     ],
+  );
+}
+
+/// El lápiz que abre [editHeadingTitles].
+///
+/// El mismo en los cuatro sitios donde se titula algo --asignatura, tema,
+/// documento y apartado--, porque es el mismo gesto: cambiar el título sin
+/// tener que cambiar de idioma toda la pantalla y volver.
+class TitleButton extends StatelessWidget {
+  const TitleButton({
+    super.key,
+    required this.id,
+    required this.what,
+    required this.onPressed,
+  });
+
+  final String id;
+
+  /// Qué se titula, ya con su artículo: «este tema», «esta asignatura». La
+  /// frase entera y no el nombre suelto, porque el género cambia.
+  final String what;
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    key: Key('edit-title-$id'),
+    tooltip: 'Título de $what en todos los idiomas',
+    visualDensity: VisualDensity.compact,
+    icon: const Icon(Icons.edit_outlined, size: 15),
+    onPressed: onPressed,
   );
 }

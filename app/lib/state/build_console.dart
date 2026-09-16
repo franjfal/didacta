@@ -92,7 +92,7 @@ class BuildConsole extends ChangeNotifier {
   /// Se tira a propósito. Lo que interesa es lo que está pasando ahora, y un
   /// registro acumulado entre compilaciones obliga a buscar dónde empieza la
   /// que se está mirando.
-  void start(String title) {
+  void start(String title, {int total = 0}) {
     _lines.clear();
     _dropped = 0;
     _title = title;
@@ -101,6 +101,38 @@ class BuildConsole extends ChangeNotifier {
     _startedAt = DateTime.now();
     _took = null;
     _failure = null;
+    _total = total;
+    _done = 0;
+    _step = '';
+    _notifyNow();
+  }
+
+  /// Cuántas piezas tiene el trabajo, si se sabe.
+  ///
+  /// Cero es «una sola cosa, y no hay nada que contar»: compilar una versión
+  /// tarda diez segundos y una barra de progreso de un solo tramo no dice
+  /// nada. Compilar un curso entero son cuarenta minutos, y ahí saber que van
+  /// nueve de treinta y ocho es la diferencia entre esperar y no saber si se
+  /// ha colgado.
+  int get total => _total;
+  int _total = 0;
+
+  int get done => _done;
+  int _done = 0;
+
+  /// Qué se está compilando ahora mismo.
+  String get step => _step;
+  String _step = '';
+
+  /// Empieza una pieza del trabajo.
+  void startStep(String what) {
+    _step = what;
+    _notifyNow();
+  }
+
+  /// Termina una pieza. Lo que sube la barra.
+  void finishStep() {
+    _done += 1;
     _notifyNow();
   }
 

@@ -92,7 +92,8 @@
 
 \IfFileExists{didacta-lang-\DidactaLanguage.def}{}{%
   \PackageError{didacta}{Unknown language `\DidactaLanguage'}{%
-    Didacta ships es, va and en. Add lang/didacta-lang-XX.def for another.}%
+    Didacta ships es, va, ca, gl, eu, en, fr, de, it and pt.\MessageBreak
+    Add lang/didacta-lang-XX.def for another.}%
 }
 \input{didacta-lang-\DidactaLanguage.def}
 
@@ -161,6 +162,9 @@
 \RequirePackage{didacta-colours}
 \RequirePackage{didacta-theorems}
 \RequirePackage{didacta-problems}
+%% Después de hyperref y de csquotes, que es lo que biblatex pide, y antes de
+%% didacta-legacy, que solo rellena lo que nadie haya definido.
+\RequirePackage{didacta-bibliography}
 %% Last, so anything above wins: this only fills in what the old
 %% templates defined and the migrated material still expects.
 \RequirePackage{didacta-legacy}
@@ -302,23 +306,41 @@
 %% into one -- and says so in the log.
 %% ---------------------------------------------------------------------------
 
-\define@key{didacta@section}{es}{\def\didacta@sec@es{#1}}
-\define@key{didacta@section}{va}{\def\didacta@sec@va{#1}}
-\define@key{didacta@section}{en}{\def\didacta@sec@en{#1}}
+%% Los idiomas a los que se puede dar título de sección. Tiene que decir lo
+%% mismo que `LANGUAGE_REGISTRY` en engine/didacta/profiles.py, y
+%% tests/test_languages.py lo comprueba: una composición que da un título en
+%% un idioma que esto no nombra se compila con el título de otro y nadie lo ve.
+\def\didacta@langs{es,va,ca,gl,eu,en,fr,de,it,pt}
 
+\newcommand{\didacta@sectionkey}[1]{%
+  \define@key{didacta@section}{#1}{\@namedef{didacta@sec@#1}{##1}}%
+}
+\@for\didacta@lang:=\didacta@langs\do{%
+  \expandafter\didacta@sectionkey\expandafter{\didacta@lang}%
+}
+
+%% `\csname` define lo que no existía como `\relax`, no como vacío. Sin esta
+%% línea, pedir un idioma para el que la composición no da título deja
+%% `\didacta@sec@now` valiendo `\relax`, la comprobación de abajo no salta, y
+%% el nombre de la macro --con arroba dentro-- se escribe tal cual en el
+%% `.toc`. La compilación muere al releerlo, hablando de una secuencia no
+%% definida que no aparece en ningún fichero del curso.
 \newcommand{\didacta@sec@use}[1]{%
-  \expandafter\let\expandafter\didacta@sec@now\csname didacta@sec@#1\endcsname}
+  \expandafter\let\expandafter\didacta@sec@now\csname didacta@sec@#1\endcsname
+  \ifx\didacta@sec@now\relax \let\didacta@sec@now\@empty \fi}
 
 \newcommand{\DidactaSection}[1]{%
-  \def\didacta@sec@es{}\def\didacta@sec@va{}\def\didacta@sec@en{}%
+  \@for\didacta@lang:=\didacta@langs\do{%
+    \expandafter\let\csname didacta@sec@\didacta@lang\endcsname\@empty
+  }%
   \setkeys{didacta@section}{#1}%
   \didacta@sec@use{\DidactaLanguage}%
   \ifx\didacta@sec@now\@empty
     \PackageWarning{didacta}{No `\DidactaLanguage' title for this section;
       using another language}%
-    \didacta@sec@use{es}%
-    \ifx\didacta@sec@now\@empty \didacta@sec@use{va}\fi
-    \ifx\didacta@sec@now\@empty \didacta@sec@use{en}\fi
+    \@for\didacta@lang:=\didacta@langs\do{%
+      \ifx\didacta@sec@now\@empty \didacta@sec@use{\didacta@lang}\fi
+    }%
   \fi
   \section{\didacta@sec@now}%
 }

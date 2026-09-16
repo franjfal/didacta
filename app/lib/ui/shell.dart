@@ -13,11 +13,13 @@ library;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../data/content_gateway.dart';
 import '../router.dart';
+import '../state/mcp_service.dart';
 import '../state/session.dart';
 import 'brand.dart';
 import 'sync_bar.dart';
@@ -35,7 +37,26 @@ class DidactaShell extends StatelessWidget {
   /// biblioteca son dos mil unidades ordenadas por materia, que es cómo se
   /// busca material; una asignatura es lo que se está dando este cuatrimestre,
   /// que es lo que se abre cada día.
-  static const List<_Destination> _destinations = [
+  /// El carril, contando si el servidor MCP está encendido.
+  ///
+  /// Condicional y no siempre presente: apagado no hay nada que mirar --ni
+  /// actividad, ni dirección a la que conectarse-- y un icono que lleva a una
+  /// pantalla vacía es una pestaña que se aprende a ignorar. Encendido sí,
+  /// porque entonces hay un programa escribiendo en tus ficheros y tiene que
+  /// estar a un clic.
+  static List<_Destination> _destinationsWith({required bool mcp}) => [
+    ..._always.sublist(0, _always.length - 1),
+    if (mcp)
+      const _Destination(
+        '/mcp',
+        Icons.hub_outlined,
+        Icons.hub,
+        'Servidor',
+      ),
+    _always.last,
+  ];
+
+  static const List<_Destination> _always = [
     _Destination(
       '/courses',
       Icons.school_outlined,
@@ -72,17 +93,23 @@ class DidactaShell extends StatelessWidget {
   /// Por posición en [_destinations] y no con números escritos a mano: eran
   /// cuatro constantes que había que acordarse de cambiar al reordenar el
   /// carril, y olvidarse deja la sección marcada en el sitio equivocado.
-  int get _index {
-    for (final (index, destination) in _destinations.indexed) {
+  int _indexIn(List<_Destination> destinations) {
+    for (final (index, destination) in destinations.indexed) {
       if (destination.path == '/') continue;
       if (location.startsWith(destination.path)) return index;
     }
-    return _destinations.indexWhere((destination) => destination.path == '/');
+    return destinations.indexWhere((destination) => destination.path == '/');
   }
 
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
+    // `watch` y no `read`: encender el servidor tiene que hacer aparecer el
+    // icono sin cambiar de pantalla. Si no está el proveedor --un test que
+    // monta el armazón suelto-- el carril es el de siempre.
+    final mcp = context.watch<McpService?>();
+    final destinations = _destinationsWith(mcp: mcp?.running ?? false);
+    final index = _indexIn(destinations);
 
     // Anotado después del fotograma: cambiar el historial avisa a quien lo
     // escucha, y avisar mientras se construye es un `setState` en mitad de
@@ -114,11 +141,11 @@ class DidactaShell extends StatelessWidget {
                 elevation: 0,
                 height: 58,
                 backgroundColor: didactaPanel,
-                selectedIndex: _index,
-                onDestinationSelected: (index) =>
-                    context.go(_destinations[index].path),
+                selectedIndex: index,
+                onDestinationSelected: (at) =>
+                    context.go(destinations[at].path),
                 destinations: [
-                  for (final destination in _destinations)
+                  for (final destination in destinations)
                     NavigationDestination(
                       icon: Icon(destination.icon, size: 20),
                       selectedIcon: Icon(destination.selectedIcon, size: 20),
@@ -133,9 +160,9 @@ class DidactaShell extends StatelessWidget {
             body: Row(
               children: [
                 NavigationRail(
-                  selectedIndex: _index,
-                  onDestinationSelected: (index) =>
-                      context.go(_destinations[index].path),
+                  selectedIndex: index,
+                  onDestinationSelected: (at) =>
+                      context.go(destinations[at].path),
                   // Un poco más ancho que el mínimo de Material: las etiquetas
                   // («Asignaturas», «Traducción») llegaban al borde y el
                   // carril se leía apretado al lado de una página con aire.
@@ -146,7 +173,7 @@ class DidactaShell extends StatelessWidget {
                     child: _Mark(),
                   ),
                   destinations: [
-                    for (final destination in _destinations)
+                    for (final destination in destinations)
                       NavigationRailDestination(
                         icon: destination.label == 'Traducción' && pending > 0
                             ? Badge(

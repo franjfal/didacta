@@ -1006,21 +1006,6 @@ class _ExistingCard extends StatelessWidget {
   }
 }
 
-/// Una fecha como algo que se lee, en relación a ahora.
-///
-/// Relativo y no absoluto: de un PDF compilado lo que importa es si es de
-/// hace un minuto o de marzo, y una fecha obliga a hacer esa resta.
-String describeWhen(DateTime? when) {
-  if (when == null) return 'en algún momento';
-  final seconds = DateTime.now().difference(when).inSeconds;
-  if (seconds < 90) return 'hace un momento';
-  final minutes = seconds ~/ 60;
-  if (minutes < 90) return 'hace $minutes min';
-  final hours = minutes ~/ 60;
-  if (hours < 36) return 'hace $hours h';
-  return 'hace ${hours ~/ 24} días';
-}
-
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
     required this.result,

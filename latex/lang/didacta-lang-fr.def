@@ -1,0 +1,63 @@
+%%
+%% didacta-lang-fr.def -- Fran\c cais.
+%%
+%% Todo lo que Didacta imprime por su cuenta. Nada de esto es decorativo: un
+%% documento que dice "Theorem 2.1" en un curso que se da en
+%% Fran\c cais est\'a mal, y el contenido no puede cargar con la traducci\'on.
+%%
+%% ATENCI\'ON: fichero base, escrito con la terminolog\'ia matem\'atica al uso
+%% y **sin revisar por nadie que d\'e clase en Fran\c cais**. Sirve para compilar
+%% desde el primer d\'ia; antes de repartir material, que lo lea quien lo
+%% hable. Son treinta y seis palabras, y las que cambian de una tradici\'on a
+%% otra son pocas y conocidas: D\'emonstration, Bar\`eme, Chapitre.
+%%
+\ProvidesFile{didacta-lang-fr.def}[2026/09/16 Didacta French]
+
+%% La opci\'on de babel, para que el arranque no necesite otra tabla.
+\def\didactaBabelName{french}
+
+%% Los entornos con nombre.
+\def\didactaTheoremName{Th\'eor\`eme}
+\def\didactaDefinitionName{D\'efinition}
+\def\didactaPropositionName{Proposition}
+\def\didactaLemmaName{Lemme}
+\def\didactaCorollaryName{Corollaire}
+\def\didactaPropertyName{Propri\'et\'e}
+\def\didactaExampleName{Exemple}
+\def\didactaQuestionName{Question}
+\def\didactaRemarkName{Remarque}
+\def\didactaAxiomName{Axiome}
+\def\didactaAlgorithmName{Algorithme}
+\def\didactaNotationName{Notation}
+\def\didactaProofName{D\'emonstration}
+
+%% Ejercicios.
+\def\didactaExerciseName{Exercice}
+\def\didactaAnswerName{R\'eponse}
+\def\didactaSolutionName{Solution}
+\def\didactaHintName{Indication}
+\def\didactaMarkingName{Bar\`eme}
+\def\didactaMarksName{points}
+
+%% Estructura y portada.
+\def\didactaContentsName{Table des mati\`eres}
+\def\didactaChapterName{Chapitre}
+\def\didactaCourseName{Cours}
+\def\didactaTeacherName{Enseignant}
+\def\didactaAcademicYearName{Ann\'ee universitaire}
+\def\didactaBibliographyName{Bibliographie}
+\def\didactaObjectivesName{Objectifs}
+\def\didactaPrerequisitesName{Pr\'erequis}
+\def\didactaSummaryName{R\'esum\'e}
+\def\didactaFurtherReadingName{Pour aller plus loin}
+
+%% Canal del profesor.
+\def\didactaTeachingNoteName{Note p\'edagogique}
+\def\didactaTimingName{Dur\'ee estim\'ee}
+\def\didactaCommonMistakeName{Erreur fr\'equente}
+
+%% Evaluaci\'on.
+\def\didactaExamName{Examen}
+\def\didactaDurationName{Dur\'ee}
+\def\didactaTotalMarksName{Total des points}
+\endinput

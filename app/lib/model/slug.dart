@@ -10,18 +10,36 @@
 /// daría `anlisis`, que no se lee.
 library;
 
-String slugify(String text) {
-  const from = 'áàäâãéèëêíìïîóòöôõúùüûñçÁÀÄÂÃÉÈËÊÍÌÏÎÓÒÖÔÕÚÙÜÛÑÇ';
-  const to = 'aaaaaeeeeiiiiooooouuuuncAAAAAEEEEIIIIOOOOOUUUUNC';
+const String _accented = 'áàäâãéèëêíìïîóòöôõúùüûñçÁÀÄÂÃÉÈËÊÍÌÏÎÓÒÖÔÕÚÙÜÛÑÇ';
+const String _plain = 'aaaaaeeeeiiiiooooouuuuncAAAAAEEEEIIIIOOOOOUUUUNC';
+
+/// El mismo texto sin tildes.
+String fold(String text) {
   final buffer = StringBuffer();
   for (final rune in text.runes) {
     final char = String.fromCharCode(rune);
-    final at = from.indexOf(char);
-    buffer.write(at >= 0 ? to[at] : char);
+    final at = _accented.indexOf(char);
+    buffer.write(at >= 0 ? _plain[at] : char);
   }
-  return buffer
-      .toString()
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-      .replaceAll(RegExp(r'^-+|-+$'), '');
+  return buffer.toString();
 }
+
+/// Compara dos títulos como los ordenaría una persona.
+///
+/// Plegando las tildes, que es lo que hace que funcione en castellano:
+/// comparando los caracteres a secas, «Álgebra» va **después** de «Zoología»
+/// --la `á` es el carácter 225 y la `z` el 122-- y una lista de asignaturas
+/// con Álgebra al final después de la Z parece rota.
+///
+/// Con el texto original como desempate, para que dos títulos que solo se
+/// distinguen por una tilde no se consideren el mismo y salgan en un orden
+/// que cambia entre ejecuciones.
+int compareTitles(String a, String b) {
+  final folded = fold(a).toLowerCase().compareTo(fold(b).toLowerCase());
+  return folded != 0 ? folded : a.toLowerCase().compareTo(b.toLowerCase());
+}
+
+String slugify(String text) => fold(text)
+    .toLowerCase()
+    .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+    .replaceAll(RegExp(r'^-+|-+$'), '');

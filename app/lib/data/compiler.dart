@@ -147,6 +147,25 @@ class CompileOutput {
   final List<String> warnings;
 }
 
+/// Lo que salió de exportar un curso.
+class ExportResult {
+  const ExportResult({
+    required this.copied,
+    required this.missing,
+    required this.to,
+  });
+
+  /// Los ficheros copiados, con su ruta dentro del destino.
+  final List<String> copied;
+
+  /// Lo que se pidió y no estaba compilado, como «documento · versión ·
+  /// idioma». Se dice: un reparto incompleto que no lo parece es peor que
+  /// uno que falla.
+  final List<String> missing;
+
+  final String to;
+}
+
 /// Por qué no se pudo compilar.
 class CompileException implements Exception {
   const CompileException(this.message, {this.detail = ''});
@@ -272,6 +291,25 @@ abstract class Compiler {
   /// otro, y eso no puede obligar a editar el fichero. Las suyas vienen
   /// marcadas, que es lo que se preselecciona.
   Future<List<BuildableProfile>> documentProfiles(String document);
+
+  /// Saca los PDF de un curso a una carpeta, ordenados por idioma y tema.
+  ///
+  /// Copia, no toca el repositorio: lo que sale es para repartir. Devuelve qué
+  /// se copió y qué faltaba por compilar, porque un reparto al que le faltan
+  /// tres PDF tiene que decirlo y no adivinarse contando ficheros.
+  Future<ExportResult> exportCourse({
+    required String where,
+    required String to,
+    List<String> languages = const [],
+    List<String> documents = const [],
+  });
+
+  /// Qué hay compilado de cada documento de un curso, por id de documento.
+  ///
+  /// Del curso entero de una vez y no documento por documento: es lo que una
+  /// pantalla pregunta al abrirse para saber qué se puede abrir sin compilar,
+  /// y preguntarlo uno a uno serían tantos procesos como documentos.
+  Future<Map<String, List<ExistingOutput>>> documentOutputs(String where);
 
   /// Compila un documento entero. Un resultado por versión y por idioma.
   Future<List<CompileOutput>> compileDocument({

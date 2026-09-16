@@ -31,6 +31,8 @@ import 'data/catalogue_source.dart';
 import 'data/preferences.dart';
 import 'data/repository_access.dart';
 import 'router.dart';
+import 'data/mcp_process.dart';
+import 'state/mcp_service.dart';
 import 'state/session.dart';
 import 'state/update_service.dart';
 import 'ui/platform_menus.dart';
@@ -120,14 +122,34 @@ Future<void> main() async {
     readToken: session.tokenStore.read,
   );
 
-  runApp(DidactaApp(session: session, updates: updates));
+  // El servidor MCP, apagado. Se enciende desde Ajustes: encendido, un
+  // modelo puede escribir en los repositorios de quien lo enciende, y eso es
+  // una decisión que se toma, no una que se hereda de una instalación.
+  final mcp = McpService(
+    openRunner: () => McpRunner.forHost(
+      enginePath: session.enginePath ?? '',
+      texPath: session.texPath,
+    ),
+  );
+
+  runApp(DidactaApp(session: session, updates: updates, mcp: mcp));
 }
 
 class DidactaApp extends StatefulWidget {
-  const DidactaApp({super.key, required this.session, required this.updates});
+  const DidactaApp({
+    super.key,
+    required this.session,
+    required this.updates,
+    this.mcp,
+  });
 
   final Session session;
   final UpdateService updates;
+
+  /// El servidor MCP. Opcional: un test que monta la aplicación para mirar
+  /// otra cosa no tiene por qué traerse un servidor, y sin él lo único que
+  /// pasa es que el interruptor dice que no se puede.
+  final McpService? mcp;
 
   @override
   State<DidactaApp> createState() => _DidactaAppState();
@@ -148,9 +170,13 @@ class _DidactaAppState extends State<DidactaApp> {
   @override
   void initState() {
     super.initState();
-    widget.session.start();
+    final started = widget.session.start();
     // Tocarlo es crearlo: el oyente se suscribe al construirse.
     _lifecycle;
+    // Después de que la sesión levante el espacio de trabajo: los
+    // repositorios son lo que se le da al servidor al arrancar, y arrancarlo
+    // sin ninguno lo dejaría sirviendo la nada hasta el siguiente reinicio.
+    if (widget.mcp != null) unawaited(started.then((_) => _restartMcp()));
 
     // Las actualizaciones, después y sin esperarlas. Ni una petición de red
     // ni una lectura de preferencias pueden retrasar la primera pantalla, y
@@ -165,9 +191,36 @@ class _DidactaAppState extends State<DidactaApp> {
     );
   }
 
+  /// El que venga, o uno que no puede encender nada y lo dice.
+  late final McpService _mcp =
+      widget.mcp ??
+      McpService(
+        openRunner: () => const UnavailableRunner(
+          'Esta copia se ha montado sin servidor MCP.',
+        ),
+      );
+
+  /// Vuelve a encender el servidor MCP si quedó encendido.
+  Future<void> _restartMcp() async {
+    if (!await widget.session.preferences.mcpEnabled()) return;
+    final writable = (await widget.session.preferences.mcpWritable()).toSet();
+    final repositories = [
+      for (final repo in widget.session.workspace.repos)
+        if ((widget.session.pathOf(repo.id) ?? '').isNotEmpty)
+          McpRepository(
+            id: repo.id,
+            directory: widget.session.pathOf(repo.id)!,
+            writable: writable.contains(repo.id),
+          ),
+    ];
+    if (repositories.isEmpty) return;
+    await _mcp.start(repositories: repositories);
+  }
+
   @override
   void dispose() {
     _lifecycle.dispose();
+    if (widget.mcp == null) _mcp.dispose();
     super.dispose();
   }
 
@@ -180,6 +233,7 @@ class _DidactaAppState extends State<DidactaApp> {
         // motivos distintos, y una pantalla que solo mira la versión no
         // tiene por qué repintarse cuando se recarga el catálogo.
         ChangeNotifierProvider.value(value: widget.updates),
+        ChangeNotifierProvider.value(value: _mcp),
       ],
       child: const _Bootstrap(),
     );
