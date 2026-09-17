@@ -51,6 +51,14 @@ import 'package:didacta_app/ui/welcome.dart';
 import 'package:didacta_app/ui/welcome_art.dart';
 
 import '../test/fixture.dart';
+import 'screenshot_material.dart';
+
+/// La unidad que abren las capturas del editor.
+///
+/// Una con contenido de verdad --definición, ejemplo y nota de clase-- y no la
+/// del fixture, que tiene una línea: el editor es la pantalla que dice qué se
+/// escribe con Didacta.
+const String shownUnit = 'content/analysis/normed/espacios-normados';
 
 /// Dónde se escriben. Relativo a `app/`, que es desde donde corre el arnés.
 const String outputDir = '../web/docs/img/app';
@@ -346,11 +354,15 @@ ThemeData shotTheme() {
 
 /// La sesión con la que se pintan: la del fixture de los tests.
 Future<FakeSession> buildSession() async {
-  final catalogue = catalogueWith(defaultUnits());
+  // Un repositorio con el tamaño de uno de verdad, y no las cuatro unidades
+  // del fixture: una captura de una biblioteca con cuatro filas y el resto en
+  // blanco enseña una aplicación vacía, y quien la mira concluye lo que
+  // parece. Está en `screenshot_material.dart`, con el porqué.
+  final catalogue = screenshotCatalogue();
   final clone = FakeClone(behind: 2);
   // Un historial de verdad para la pestaña de historial: sin commits, esa
   // pantalla enseña «todavía no hay versiones», que no es lo que documenta.
-  clone.log['$unitPath/es.tex'] = [
+  clone.log['$shownUnit/es.tex'] = [
     FileCommit(
       sha: '9f2c1ab5d0',
       author: 'Javier Falcó',
@@ -373,10 +385,16 @@ Future<FakeSession> buildSession() async {
       subject: 'Importar del sistema anterior',
     ),
   ];
-  clone.contents['9f2c1ab5d0'] = 'El contenido original en castellano.';
+  clone.contents['9f2c1ab5d0'] = sampleTex;
 
   final session = FakeSession(
-    gatewayOverride: FakeGateway(),
+    gatewayOverride: FakeGateway(
+      files: {
+        '$shownUnit/es.tex': sampleTex,
+        '$shownUnit/unit.yaml': sampleYaml,
+        'courses/am-iii/2025-2026/year.yaml': yearYaml,
+      },
+    ),
     catalogue: catalogue,
     compilerOverride: FakeCompiler(),
     cloneOverride: clone,
@@ -453,10 +471,10 @@ final List<Shot> shots = [
       await settle(tester);
     },
   ),
-  Shot('unidad', '/unit/$unitPath', note: 'una unidad y su editor'),
+  Shot('unidad', '/unit/$shownUnit', note: 'una unidad y su editor'),
   Shot(
     'historial',
-    '/unit/$unitPath',
+    '/unit/$shownUnit',
     note: 'el historial de un fichero',
     prepare: (tester) async {
       final tab = find.text('historial');
@@ -467,19 +485,19 @@ final List<Shot> shots = [
   ),
   Shot(
     'unidad-compilar',
-    '/unit/$unitPath',
+    '/unit/$shownUnit',
     note: 'elegir qué versiones se compilan',
     prepare: (tester) async => _tap(tester, find.text('compilar')),
   ),
   Shot(
     'unidad-yaml',
-    '/unit/$unitPath',
+    '/unit/$shownUnit',
     note: 'los metadatos de una unidad',
     prepare: (tester) async => _tap(tester, find.text('unit.yaml')),
   ),
   const Shot(
     'problema',
-    '/unit/problems/analysis/normed/exercises',
+    '/unit/problems/analysis/normed/ejercicios-de-normas',
     note: 'un problema y sus cuatro campos',
   ),
   Shot(

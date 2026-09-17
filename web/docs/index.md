@@ -76,7 +76,7 @@ Y en cuanto escribes, la lista se aplana y busca: «hilbert» no es un sitio del
 </div>
 <div markdown>
 
-![La biblioteca buscando](img/app/biblioteca-buscar.png)
+![La biblioteca, con el material ordenado por materia](img/app/biblioteca.png)
 
 </div>
 </div>
