@@ -135,7 +135,13 @@ class TexToolbar extends StatelessWidget {
             builder: (context, constraints) {
               // Por debajo de esto los cuatro canales con rótulo no caben, y
               // un panel de un tercio de ventana está justo ahí.
-              final tight = constraints.maxWidth < 620;
+              //
+              // Subió de 620 a 760 al entrar «Sangrar» en el grupo de la
+              // derecha: a 643 px la fila se salía diez píxeles, y una barra
+              // que desborda esconde sus propios botones. Con los cinco
+              // rótulos convertidos en iconos sobra sitio de sobra, y lo que
+              // dice cada uno sigue estando en su tooltip.
+              final tight = constraints.maxWidth < 760;
               return Row(
                 children: [
                   // Los canales ceden el ancho y, si aun así no caben,
@@ -196,9 +202,16 @@ class TexToolbar extends StatelessWidget {
                     compact: tight,
                     onPressed: ready ? _pause : null,
                   ),
+                  // En el grupo fijo y no dentro de lo que rueda: ahí está
+                  // siempre en el mismo sitio, y un botón que hay que buscar
+                  // rodando la barra es un botón que no existe para quien no
+                  // sabe que está.
                   if (onTidy != null)
                     _TidyButton(
                       compact: tight,
+                      // Sobre el fichero entero, así que no necesita cursor:
+                      // el resto de la barra sí --sin saber dónde estás, no
+                      // hay dónde envolver-- pero esto no envuelve nada.
                       onPressed: enabled ? onTidy : null,
                     ),
                 ],
