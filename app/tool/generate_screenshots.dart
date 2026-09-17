@@ -46,6 +46,7 @@ import 'package:didacta_app/state/mcp_service.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
 import 'package:didacta_app/ui/theme.dart';
+import 'package:didacta_app/ui/tour.dart';
 import 'package:didacta_app/ui/welcome.dart';
 import 'package:didacta_app/ui/welcome_art.dart';
 
@@ -219,6 +220,17 @@ Future<void> settle(WidgetTester tester, {int frames = 20}) async {
   }
 }
 
+/// Pulsa lo primero que encaje, si encaja algo.
+///
+/// Sin fallar cuando no está: una captura de una pestaña que se ha renombrado
+/// tiene que salir --enseñando la pantalla sin abrirla-- en lugar de romper la
+/// generación entera y dejar la documentación sin ninguna.
+Future<void> _tap(WidgetTester tester, Finder what) async {
+  if (what.evaluate().isEmpty) return;
+  await tester.tap(what.first);
+  await settle(tester);
+}
+
 Future<void> capture(WidgetTester tester, String name) async {
   final boundary =
       _frame.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -378,6 +390,9 @@ Future<FakeSession> buildSession() async {
   return session;
 }
 
+/// El recorrido guiado, para su captura.
+final TourController tour = TourController();
+
 Future<void> mount(WidgetTester tester, Session session) async {
   tester.view.physicalSize = Size(
     window.width * density,
@@ -407,6 +422,14 @@ Future<void> mount(WidgetTester tester, Session session) async {
           debugShowCheckedModeBanner: false,
           theme: shotTheme(),
           routerConfig: buildRouter(session),
+          // El velo del tour por encima de todo, igual que en `main.dart`:
+          // señala partes del armazón, así que va fuera de las pantallas.
+          builder: (context, child) => Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              TourOverlay(controller: tour),
+            ],
+          ),
         ),
       ),
     ),
@@ -439,6 +462,32 @@ final List<Shot> shots = [
       final tab = find.text('historial');
       if (tab.evaluate().isEmpty) return;
       await tester.tap(tab.first);
+      await settle(tester);
+    },
+  ),
+  Shot(
+    'unidad-compilar',
+    '/unit/$unitPath',
+    note: 'elegir qué versiones se compilan',
+    prepare: (tester) async => _tap(tester, find.text('compilar')),
+  ),
+  Shot(
+    'unidad-yaml',
+    '/unit/$unitPath',
+    note: 'los metadatos de una unidad',
+    prepare: (tester) async => _tap(tester, find.text('unit.yaml')),
+  ),
+  const Shot(
+    'problema',
+    '/unit/problems/analysis/normed/exercises',
+    note: 'un problema y sus cuatro campos',
+  ),
+  Shot(
+    'tour',
+    '/',
+    note: 'el recorrido guiado',
+    prepare: (tester) async {
+      tour.start();
       await settle(tester);
     },
   ),
@@ -486,17 +535,16 @@ void main() {
       // Una sesión por captura: las pantallas dejan estado --una pestaña
       // abierta, un filtro escrito-- y una captura que hereda el de la
       // anterior documenta una combinación que nadie ha visto nunca.
-      stdout.writeln('· ${shot.name}: sesión');
       final session = await buildSession();
-      stdout.writeln('· ${shot.name}: montar');
       await mount(tester, session);
-      stdout.writeln('· ${shot.name}: ir');
       routerFor(tester).go(shot.route);
       await settle(tester);
-      stdout.writeln('· ${shot.name}: preparar');
       await shot.prepare?.call(tester);
-      stdout.writeln('· ${shot.name}: capturar');
       await capture(tester, shot.name);
+      // Apagado antes de la siguiente: el controlador es de este fichero y no
+      // de la aplicación montada, así que sobrevive a cambiar de sesión y se
+      // colaría en la captura de después.
+      if (tour.running) tour.stop();
     }
   });
 

@@ -14,6 +14,15 @@
 
 {% block tabs %}
   {{ super() }}
+
+  {#- Material pone un `<h1>` con el título de la página cuando el contenido
+      no trae ninguno, y en la portada eso es un «Didacta» suelto justo debajo
+      de una cabecera que ya lo dice todo. La regla va aquí y no en la hoja de
+      estilos porque sólo esta plantilla la emite: así no hay forma de que
+      esconda el título de ninguna otra página. -#}
+  <style>
+    .md-content__inner > h1:first-of-type { display: none; }
+  </style>
   <section class="didacta-hero">
     <div class="didacta-hero__inner md-grid">
       <div class="didacta-hero__mark">

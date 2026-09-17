@@ -102,6 +102,16 @@ Didacta abre **todos los que le digas a la vez**, cada uno con su color, y los
 enseña como una sola biblioteca. Cada cambio va al repositorio del que salió
 el fichero.
 
+```mermaid
+flowchart TB
+  subgraph D["Tu Didacta"]
+    L["Una sola biblioteca"]
+  end
+  R1["problemas-analisis<br/>todo el departamento"] --> L
+  R2["apuntes-javier<br/>solo tú"] --> L
+  R3["master-analisis<br/>los tres del máster"] --> L
+```
+
 Eso permite repartir el material según quién debe verlo, que es lo que en la
 práctica hace falta:
 

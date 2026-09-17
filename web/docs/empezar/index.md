@@ -11,6 +11,14 @@ de GitHub en un sitio seguro, y un navegador no tiene ninguno.
 
 --8<-- "descargas.md"
 
+```mermaid
+flowchart LR
+  P["Tu ordenador"] --> D["Didacta"]
+  D --> G["git<br/>guarda y sincroniza"]
+  D --> L["LaTeX<br/>genera los PDF"]
+  D --> H["Tu cuenta de GitHub<br/>dónde vive el material"]
+```
+
 ## Qué más hace falta en la máquina
 
 Didacta no lleva dentro ni LaTeX ni git, y es deliberado. Lo que hace es

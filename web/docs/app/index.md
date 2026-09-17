@@ -8,6 +8,8 @@ description: El armazón: el carril, la barra de sincronización, los atajos.
 Esta sección recorre Didacta pantalla por pantalla. Si es tu primera vez,
 empieza por [los primeros diez minutos](../empezar/primeros-pasos.md).
 
+![El armazón de Didacta: el carril, la barra de arriba y la pantalla](../img/app/biblioteca.png)
+
 ## El carril
 
 Cuatro destinos, en este orden:

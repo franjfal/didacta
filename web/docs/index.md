@@ -6,31 +6,19 @@ hide:
   - toc
 ---
 
-## Qué problema resuelve
+## Todo tu material, en un sitio
 
-Dar una asignatura produce, cada año, el mismo material en cinco formas
-distintas: las diapositivas de clase, los apuntes que se reparten, la hoja de
-problemas, la hoja con las soluciones y el examen. Y si la asignatura se da en
-más de un idioma, otra vez todo.
+La biblioteca es todo lo que has escrito, de todos tus repositorios, ordenado
+por materia. Tres clics hasta cualquier lección, y cada nivel te dice cuánto
+hay y cuánto está traducido.
 
-Lo normal es que esas formas sean **ficheros distintos**. Entonces se corrige
-una errata en las diapositivas y no en los apuntes; se mejora una explicación
-en los apuntes de este año y la del año que viene sale del fichero de hace
-tres; y la versión valenciana se queda diciendo lo que el castellano decía
-antes de la última revisión.
+![La biblioteca de Didacta](img/app/biblioteca.png)
 
-Didacta parte de lo contrario:
+## Escribe una vez, reparte en todos los formatos
 
-```
-EL CONTENIDO SE ESCRIBE UNA VEZ.
-LAS ASIGNATURAS SON COMPOSICIONES.
-LOS IDIOMAS SON VARIANTES DE LA MISMA ENTIDAD.
-LAS SALIDAS SE GENERAN.
-```
-
-## Un fichero, y lo que sale de él
-
-Esto es una unidad --una microlección-- entera:
+Una lección se escribe una sola vez. Lo que decide si sale en diapositivas, en
+apuntes o en la copia del profesor no es el fichero: es el formato con el que
+lo compilas.
 
 ```latex
 \begin{frame}
@@ -50,61 +38,72 @@ Quince minutos. Detente en la homogeneidad.
 \end{frame}
 ```
 
-El fichero **no sabe a qué documento va**. Lo deciden los interruptores:
-`\onlynotes` solo aparece en los apuntes, `teaching` solo en la copia del
-profesor, y la clase del documento --beamer o article-- la elige el perfil con
-el que se compile. De ahí salen, sin tocar nada más:
+De ese fichero salen **quince documentos distintos**, sin tocar nada más:
 
-| | |
-|---|---|
-| `slides` | las diapositivas de clase |
-| `notes` | los apuntes del alumno, con el párrafo de explicación |
-| `notes-teacher` | los apuntes con las notas de ritmo y las soluciones |
-| `book` | el mismo contenido encuadernado como libro |
-| … | [y once salidas más](conceptos/perfiles.md) |
+```mermaid
+flowchart LR
+  U["Una lección<br/>es.tex"] --> S["Diapositivas"]
+  U --> A["Apuntes"]
+  U --> L["Libro"]
+  U --> P["Hoja de problemas"]
+  U --> E["Examen"]
+  U --> T["Copia del profesor"]
+```
 
-Y en cada idioma que la unidad tenga.
+El párrafo de `\onlynotes` solo aparece en los apuntes. La nota de ritmo, solo
+en tu copia. Y todo eso en castellano, valenciano o inglés, según lo que la
+lección tenga escrito.
 
-## Cómo se trabaja
+[Las quince salidas](conceptos/perfiles.md){ .md-button }
 
-<div class="grid cards" markdown>
+## Prepara el curso arrastrando
 
--   :material-file-document-multiple-outline: __Se escriben unidades__
+Un tema es una lista de lecciones en orden. Se reordena arrastrando, se añaden
+desde la biblioteca, y lo que este año no das se queda comentado en lugar de
+borrarse: el año que viene se vuelve a activar con un clic.
 
-    ---
+![La composición de un tema](img/app/composicion.png)
 
-    Un directorio por lección, con un fichero por idioma y sus figuras al
-    lado. Ni el año ni la asignatura entran en el nombre.
+**Dar el mismo tema otro año es duplicar el curso.** Las lecciones siguen
+siendo las mismas: lo que corrijas una vez sale corregido en todas partes, y el
+PDF del año pasado sigue como se dio.
 
-    [:octicons-arrow-right-24: Qué es una unidad](conceptos/unidades.md)
+## Compila y compara sin salir
 
--   :material-format-list-numbered: __Se componen cursos__
+![Elegir qué versiones se compilan](img/app/unidad-compilar.png)
 
-    ---
+Eliges versiones e idiomas, y los PDF se abren **dentro de la ventana**, uno al
+lado del otro: las diapositivas junto a los apuntes, el castellano junto al
+valenciano. Mientras compila ves lo que LaTeX va escribiendo, y cuando algo
+falla te dice el fichero y la línea.
 
-    Un curso académico es una selección y un orden: qué unidades, en qué
-    documentos, en qué idioma. Ningún contenido.
+## Traduce por donde importa
 
-    [:octicons-arrow-right-24: Asignaturas y cursos](app/asignaturas.md)
+![Lo que falta por traducir](img/app/traduccion.png)
 
--   :material-file-pdf-box: __Se compila__
+Lo que falta, ordenado **por cuántos documentos usan cada lección**: traducir
+una que usan seis cursos te compra seis documentos. Y lo que es peor que no
+estar traducido --una traducción cuyo original cambió-- va primero, porque
+compila sin quejarse y dice algo que ya no es cierto.
 
-    ---
+Hay traducción automática para el primer borrador, que protege las fórmulas y
+las órdenes de LaTeX antes de mandar nada.
 
-    Didacta llama a LaTeX y enseña el PDF dentro de la ventana, al lado del
-    original y de las demás versiones.
+## Nada se pierde
 
-    [:octicons-arrow-right-24: Compilar](app/compilar.md)
+![El historial de un fichero](img/app/historial.png)
 
--   :material-source-branch: __Se guarda en GitHub__
+Cada cambio queda con tu nombre y su mensaje, y puedes ver cómo estaba
+cualquier fichero en cualquier momento, sin salir a un terminal.
 
-    ---
+Y como todo vive en repositorios de GitHub, **compartes lo que quieras
+compartir**: la colección de problemas con el departamento, tus apuntes solo
+contigo.
 
-    Cada cambio es un commit. El material se comparte por repositorio: la
-    colección de problemas común, los apuntes de cada uno.
-
-    [:octicons-arrow-right-24: Repositorios](conceptos/repositorios.md)
-
+<div class="didacta-latest" markdown>
+:material-clock-fast: **Se empieza en diez minutos.** Instalar, entrar en
+GitHub y abrir el primer repositorio lo hace la propia aplicación la primera
+vez que la abres.
 </div>
 
 ## Descargar
@@ -120,35 +119,32 @@ Y en cada idioma que la unidad tenga.
     ---
 
     Instalar, entrar en GitHub, abrir el primer repositorio y compilar algo.
-    Media hora.
 
     [:octicons-arrow-right-24: Empezar](empezar/index.md)
 
--   :material-lightbulb-on-outline: __Quiero entender la idea__
+-   :material-application-outline: __Enséñame la aplicación__
 
     ---
 
-    Microlecciones, perfiles, los cuatro niveles de un problema y cómo se
-    tratan los idiomas.
-
-    [:octicons-arrow-right-24: Cómo funciona](conceptos/index.md)
-
--   :material-application-outline: __Ya la tengo abierta__
-
-    ---
-
-    Pantalla por pantalla, con capturas: qué hace cada una y por qué está
-    así.
+    Pantalla por pantalla, con capturas: qué hace cada una y cómo se usa.
 
     [:octicons-arrow-right-24: La aplicación](app/index.md)
 
--   :material-code-tags: __Vengo por el código__
+-   :material-lightbulb-on-outline: __¿Cómo funciona esto?__
 
     ---
 
-    La arquitectura, cómo se publica una versión y cómo contribuir. Todo es
-    software libre bajo la GPL-3.0.
+    Microlecciones, las quince salidas, los idiomas y los repositorios.
 
-    [:octicons-arrow-right-24: El proyecto](proyecto/index.md)
+    [:octicons-arrow-right-24: Cómo funciona](conceptos/index.md)
+
+-   :material-pencil-ruler: __Quiero escribir contenido__
+
+    ---
+
+    Todo lo que se puede poner en una lección: teoremas, problemas, figuras,
+    notas de clase.
+
+    [:octicons-arrow-right-24: Escribir](escribir/index.md)
 
 </div>

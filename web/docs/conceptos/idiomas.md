@@ -29,6 +29,14 @@ Didacta los calcula, no los declara nadie:
 | **outdated** | existe, pero el original ha cambiado desde entonces | ámbar |
 | **missing** | no existe ese fichero | rojo |
 
+```mermaid
+stateDiagram-v2
+  [*] --> missing: la unidad nace en su idioma de referencia
+  missing --> translated: alguien la traduce
+  translated --> outdated: el original cambia
+  outdated --> translated: se revisa la traducción
+```
+
 !!! danger "`outdated` es peor que `missing`"
 
     Y por eso va antes en la cola de traducción.

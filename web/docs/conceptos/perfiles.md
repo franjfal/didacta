@@ -42,6 +42,15 @@ Son cinco ejes independientes, y cada perfil es un preajuste sobre ellos:
 | **soluciones** | cuánto de un problema se revela | nada · resultados · todas |
 | **pausas** | si las apariciones progresivas se respetan | sí · no |
 
+```mermaid
+flowchart LR
+  F["Tu lección"] --> X{"Perfil"}
+  X -->|"medio: diapositivas<br/>audiencia: alumno"| S["slides"]
+  X -->|"medio: documento<br/>audiencia: alumno"| N["notes"]
+  X -->|"medio: documento<br/>audiencia: profesor<br/>soluciones: todas"| T["notes-teacher"]
+  X -->|"medio: documento<br/>soluciones: resultados"| P["problems-answers"]
+```
+
 Eso importa por una razón muy concreta: **añadir una salida nueva es una
 línea** en `latex/didacta-profiles.tex`, y nada más en el sistema necesita
 enterarse. Ni el motor, ni la aplicación, ni las unidades.

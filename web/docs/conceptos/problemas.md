@@ -40,6 +40,15 @@ Estudia la convergencia de $\sum_{n\ge 1} \frac{1}{n^2}$.
 En los dos perfiles de examen **las pistas no salen**, tampoco en el del
 profesor: en un examen no hay pista que dar, y quien corrige no la necesita.
 
+```mermaid
+flowchart LR
+  F["Un problema<br/>enunciado + pista +<br/>resultado + solución + corrección"]
+  F --> A["problems<br/>solo el enunciado"]
+  F --> B["problems-answers<br/>y el resultado"]
+  F --> C["problems-teacher<br/>y la solución y la corrección"]
+  F --> D["exam<br/>ni la pista"]
+```
+
 Qué es cada uno:
 
 `hint`

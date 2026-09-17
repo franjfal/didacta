@@ -26,6 +26,8 @@ estás dando este cuatrimestre tienen que estar arriba.
 
 ## El curso académico
 
+![Un curso académico y sus documentos](../img/app/curso.png)
+
 `year.yaml` guarda **la selección y el orden de este año**: qué documentos hay,
 qué unidades lleva cada uno y en qué orden, con sus apartados.
 

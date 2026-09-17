@@ -12,6 +12,8 @@ la propia aplicación, el **tour guiado** está en
 
 ## El armazón
 
+![El recorrido guiado, señalando el carril](../img/app/tour.png)
+
 A la izquierda, el carril. Cuatro sitios, y el orden dice para qué sirve cada
 uno:
 
