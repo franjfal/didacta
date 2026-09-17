@@ -38,7 +38,7 @@ const String releaseOwner = String.fromEnvironment(
 );
 const String releaseRepo = String.fromEnvironment(
   'DIDACTA_RELEASE_REPO',
-  defaultValue: 'didacta_public',
+  defaultValue: 'didacta',
 );
 
 /// En qué punto está.
@@ -88,19 +88,14 @@ class UpdateService extends ChangeNotifier {
   UpdateService({
     required this.info,
     required this.preferences,
-    required this.readToken,
-    ReleaseChannel Function(String token)? openChannel,
+    ReleaseChannel Function()? openChannel,
     UpdateInstaller? installer,
     DateTime Function()? now,
     this.owner = releaseOwner,
     this.repo = releaseRepo,
   }) : _openChannel =
            openChannel ??
-           ((token) => ReleaseChannel(
-             owner: releaseOwner,
-             repo: releaseRepo,
-             token: token,
-           )),
+           (() => ReleaseChannel(owner: releaseOwner, repo: releaseRepo)),
        installer = installer ?? createInstaller(),
        _now = now ?? DateTime.now;
 
@@ -113,12 +108,7 @@ class UpdateService extends ChangeNotifier {
   final String owner;
   final String repo;
 
-  /// De dónde sale el token de quien ha entrado. Una función y no el token:
-  /// vive en el llavero, y leerlo en cada uso es lo que hace que salir de
-  /// GitHub tenga efecto aquí sin avisar a nadie.
-  final Future<String?> Function() readToken;
-
-  final ReleaseChannel Function(String) _openChannel;
+  final ReleaseChannel Function() _openChannel;
   final DateTime Function() _now;
 
   UpdateStage _stage = UpdateStage.idle;
@@ -141,16 +131,6 @@ class UpdateService extends ChangeNotifier {
 
   DateTime? _lastCheck;
   DateTime? get lastCheck => _lastCheck;
-
-  bool? _authorised;
-
-  /// Si esta cuenta llega al repositorio de versiones.
-  ///
-  /// `null` mientras no se ha podido comprobar --sin red, sin haber entrado--
-  /// y eso es distinto de «no tiene acceso»: decirle a alguien que no está
-  /// autorizado cuando lo que pasa es que no hay wifi es una acusación falsa
-  /// que además le hace perder la tarde.
-  bool? get authorised => _authorised;
 
   /// Cómo fue la actualización anterior, si hubo una.
   ///
@@ -204,41 +184,6 @@ class UpdateService extends ChangeNotifier {
   String? get cannotInstallReason => info.canUpdate
       ? installer.unsupportedReason
       : 'En el navegador no hay nada que actualizar.';
-
-  /// Si esta cuenta de GitHub puede usar Didacta.
-  ///
-  /// Se llama después de entrar. Poder autenticarse contra GitHub no es poder
-  /// usar Didacta: lo segundo es tener acceso al repositorio de versiones, y
-  /// es una pregunta aparte que hay que hacer explícitamente.
-  ///
-  /// No lanza nunca. Un fallo deja [authorised] en `null`, que la interfaz
-  /// lee como «no se ha podido comprobar».
-  Future<void> checkAuthorisation() async {
-    ReleaseChannel? channel;
-    try {
-      final token = await readToken() ?? '';
-      if (token.isEmpty) {
-        _authorised = null;
-        notifyListeners();
-        return;
-      }
-      channel = _openChannel(token);
-      _authorised = await channel.hasAccess();
-    } catch (_) {
-      _authorised = null;
-    } finally {
-      channel?.close();
-      notifyListeners();
-    }
-  }
-
-  /// Olvida lo que se sabía de la cuenta anterior. Se llama al salir.
-  void forgetAccount() {
-    _authorised = null;
-    _manifest = null;
-    _problem = null;
-    _set(UpdateStage.idle);
-  }
 
   /// Lee cuándo se miró por última vez, y cómo fue la última actualización.
   ///
@@ -300,12 +245,8 @@ class UpdateService extends ChangeNotifier {
 
     ReleaseChannel? channel;
     try {
-      final token = await readToken() ?? '';
-      channel = _openChannel(token);
+      channel = _openChannel();
       final published = await channel.latest();
-      // Si se llegó hasta aquí, la cuenta tiene acceso: `latest()` habría
-      // lanzado si no. Se apunta, para no preguntarlo otra vez.
-      _authorised = true;
 
       // Se apunta la fecha aunque no hubiera nada: lo que se está evitando es
       // volver a preguntar mañana, y eso vale igual si la respuesta fue «no
@@ -326,7 +267,6 @@ class UpdateService extends ChangeNotifier {
       _set(UpdateStage.available);
     } on UpdateException catch (thrown) {
       _manifest = null;
-      if (thrown.problem == UpdateProblem.notAuthorised) _authorised = false;
       if (silent) {
         // Sin ruido, pero sin fingir que se comprobó: la fecha no se toca, así
         // que se volverá a intentar en el siguiente arranque.
@@ -390,8 +330,7 @@ class UpdateService extends ChangeNotifier {
 
     ReleaseChannel? channel;
     try {
-      final token = await readToken() ?? '';
-      channel = _openChannel(token);
+      channel = _openChannel();
       final downloaded = await installer.download(
         channel: channel,
         asset: wanted,

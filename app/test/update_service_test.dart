@@ -7,9 +7,12 @@
 /// descarga corrupta, la aplicación tiene que seguir exactamente igual.
 ///
 /// El canal es el de verdad --se le cambia el `http.Client` por uno de
-/// mentira-- así que esto prueba también el manejo de códigos de estado, que
-/// es donde estaba la distinción entre «no tienes acceso» y «no hay
-/// releases»: GitHub responde 404 a las dos cosas.
+/// mentira-- así que esto prueba también el manejo de códigos de estado.
+///
+/// Desde que Didacta se publica en un repositorio público, un 404 aquí
+/// significa una sola cosa --no hay ningún release-- y eso es media docena de
+/// caminos de error menos. Lo que sí se comprueba, y antes no podía
+/// comprobarse, es que **no sale ninguna credencial de aquí**.
 library;
 
 import 'dart:convert';
@@ -128,20 +131,14 @@ class FakeInstaller implements UpdateInstaller {
 UpdateService serviceWith(
   http.Client client, {
   AppInfo info = installed,
-  String token = 'gho_valido',
   UpdateInstaller? installer,
   Preferences? preferences,
   DateTime Function()? now,
 }) => UpdateService(
   info: info,
   preferences: preferences ?? MemoryPreferences(),
-  readToken: () async => token,
-  openChannel: (token) => ReleaseChannel(
-    owner: 'franjfal',
-    repo: 'didacta_public',
-    token: token,
-    client: client,
-  ),
+  openChannel: () =>
+      ReleaseChannel(owner: 'franjfal', repo: 'didacta', client: client),
   installer: installer ?? FakeInstaller(),
   now: now,
 );
@@ -228,114 +225,69 @@ void main() {
     });
   });
 
-  group('autorización', () {
-    test('sin acceso al repositorio se dice claramente', () async {
-      // GitHub responde 404 --no 403-- a un repositorio privado al que no se
-      // llega, para no confirmar que existe. Nosotros sabemos que existe.
+  group('un repositorio público', () {
+    test('sin ningún release todavía no es un error', () async {
+      // Antes esto era ambiguo: GitHub responde 404 igual a «no hay
+      // releases» que a «este repositorio privado no es para ti», y había
+      // que preguntar otra vez para saber cuál de las dos era. Con el
+      // repositorio público solo queda la primera.
       final service = serviceWith(routed({}));
-      await service.checkForUpdates();
-      expect(service.stage, UpdateStage.failed);
-      expect(service.problem!.problem, UpdateProblem.notAuthorised);
-      expect(service.problem!.message, contains('no tiene acceso'));
-      expect(service.problem!.message, contains('franjfal/didacta_public'));
-    });
-
-    test('con acceso pero sin releases no es un error', () async {
-      final service = serviceWith(
-        routed({'repos/franjfal/didacta_public': http.Response('{}', 200)}),
-      );
       await service.checkForUpdates();
       expect(service.stage, UpdateStage.upToDate);
       expect(service.problem, isNull);
     });
 
-    test('la autorización se comprueba aparte del login', () async {
-      // Poder entrar en GitHub no es poder usar Didacta. Son dos preguntas y
-      // alguien puede pasar la primera y no la segunda.
-      final concedido = serviceWith(
-        routed({'repos/franjfal/didacta_public': http.Response('{}', 200)}),
-      );
-      await concedido.checkAuthorisation();
-      expect(concedido.authorised, isTrue);
-
-      final denegado = serviceWith(routed({}));
-      await denegado.checkAuthorisation();
-      expect(denegado.authorised, isFalse);
-    });
-
-    test('sin poder preguntar, no se acusa a nadie', () async {
-      // `null` y no `false`: decirle a alguien que no está autorizado cuando
-      // lo que pasa es que no hay wifi es una acusación falsa.
+    test('no sale ninguna credencial hacia GitHub', () async {
+      // El requisito de fondo de haber abierto el código: buscar una versión
+      // nueva no es una operación autenticada, así que un token de nadie
+      // tiene por qué viajar en ella. Se comprueba mirando lo que se manda,
+      // no leyendo el código.
+      final enviadas = <Map<String, String>>[];
       final service = serviceWith(
-        MockClient((_) async => throw const SocketishError()),
-      );
-      await service.checkAuthorisation();
-      expect(service.authorised, isNull);
-    });
-
-    test('sin haber entrado tampoco', () async {
-      final service = serviceWith(routed({}), token: '');
-      await service.checkAuthorisation();
-      expect(service.authorised, isNull);
-    });
-
-    test('una comprobación que llega al final ya responde que sí', () async {
-      final service = serviceWith(
-        routed({
-          'releases/latest': http.Response(releaseBody(), 200),
-          'releases/assets/5': http.Response(manifestBody(), 200),
-        }),
-      );
-      await service.checkForUpdates();
-      expect(service.authorised, isTrue);
-    });
-
-    test('y una que falla por acceso responde que no', () async {
-      final service = serviceWith(routed({}));
-      await service.checkForUpdates();
-      expect(service.authorised, isFalse);
-    });
-
-    test('al salir se olvida lo de la cuenta anterior', () async {
-      final service = serviceWith(
-        routed({
-          'releases/latest': http.Response(releaseBody(), 200),
-          'releases/assets/5': http.Response(manifestBody(), 200),
+        MockClient((request) async {
+          enviadas.add(request.headers);
+          if (request.url.path.endsWith('releases/latest')) {
+            return http.Response(releaseBody(), 200);
+          }
+          if (request.url.path.endsWith('releases/assets/5')) {
+            return http.Response(manifestBody(), 200);
+          }
+          return http.Response('{}', 404);
         }),
       );
       await service.checkForUpdates();
       expect(service.hasUpdate, isTrue);
-
-      service.forgetAccount();
-      // La siguiente persona puede ser otra con otros permisos: arrastrar lo
-      // que se sabía de la anterior sería enseñarle algo que no es suyo.
-      expect(service.authorised, isNull);
-      expect(service.hasUpdate, isFalse);
-      expect(service.stage, UpdateStage.idle);
+      expect(enviadas, isNotEmpty);
+      for (final headers in enviadas) {
+        final claves = headers.keys.map((key) => key.toLowerCase());
+        expect(claves, isNot(contains('authorization')));
+      }
     });
 
-    test('token revocado o caducado', () async {
+    test('el límite de peticiones se distingue de un fallo', () async {
+      // Sin credencial, la API pública da 60 peticiones por hora y dirección
+      // IP. Quedarse sin ellas tiene arreglo --esperar-- y por eso no puede
+      // salir con el mismo mensaje que un error de verdad.
       final service = serviceWith(
-        routed({'releases/latest': http.Response('{}', 401)}),
+        routed({
+          'releases/latest': http.Response(
+            '{}',
+            403,
+            headers: const {'x-ratelimit-remaining': '0'},
+          ),
+        }),
       );
       await service.checkForUpdates();
-      expect(service.problem!.problem, UpdateProblem.tokenInvalid);
-      expect(service.problem!.message, contains('Vuelve a entrar'));
+      expect(service.problem!.problem, UpdateProblem.rateLimited);
+      expect(service.problem!.message, contains('dentro de un rato'));
     });
 
-    test('autorización de la OAuth App retirada (403)', () async {
+    test('un 429 también', () async {
       final service = serviceWith(
-        routed({'releases/latest': http.Response('{}', 403)}),
+        routed({'releases/latest': http.Response('{}', 429)}),
       );
       await service.checkForUpdates();
-      expect(service.problem!.problem, UpdateProblem.notAuthorised);
-    });
-
-    test('sin haber entrado en GitHub', () async {
-      final service = serviceWith(routed({}), token: '');
-      await service.checkForUpdates();
-      expect(service.problem!.problem, UpdateProblem.tokenInvalid);
-      expect(service.problem!.message, contains('Entra en GitHub'));
+      expect(service.problem!.problem, UpdateProblem.rateLimited);
     });
   });
 
@@ -408,8 +360,10 @@ void main() {
       expect(service.problem, isNull);
     });
 
-    test('sin acceso tampoco, en la automática', () async {
-      final service = serviceWith(routed({}));
+    test('y GitHub caído tampoco', () async {
+      final service = serviceWith(
+        routed({'releases/latest': http.Response('{}', 503)}),
+      );
       await service.checkForUpdates(silent: true);
       expect(service.stage, UpdateStage.idle);
       expect(service.problem, isNull);
@@ -465,7 +419,7 @@ void main() {
       // respuesta fue «no hay ninguno».
       final preferences = MemoryPreferences();
       final service = serviceWith(
-        routed({'repos/franjfal/didacta_public': http.Response('{}', 200)}),
+        routed({}),
         preferences: preferences,
         now: () => DateTime(2026, 9, 15),
       );

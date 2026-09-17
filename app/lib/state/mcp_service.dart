@@ -96,9 +96,7 @@ class McpService extends ChangeNotifier {
   /// que no, y esa separación se hace arriba a propósito: es una decisión de
   /// la persona, no algo que este servicio deba deducir de unos permisos de
   /// fichero.
-  Future<void> start({
-    required List<McpRepository> repositories,
-  }) async {
+  Future<void> start({required List<McpRepository> repositories}) async {
     if (_state == McpState.starting || _state == McpState.running) return;
     if (repositories.isEmpty) {
       _fail('No hay ningún repositorio abierto que servir.');
@@ -181,7 +179,9 @@ class McpService extends ChangeNotifier {
 
   void _note(McpEvent event) {
     _activity.insert(0, event);
-    if (_activity.length > _keep) _activity.removeRange(_keep, _activity.length);
+    if (_activity.length > _keep) {
+      _activity.removeRange(_keep, _activity.length);
+    }
   }
 
   void _fail(String message) {

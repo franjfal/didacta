@@ -23,3 +23,14 @@ app/.flutter-plugins*
 # En el CI viven en el runner y se suben al release; aquí serían 200 MB de
 # binarios que se regeneran con una orden.
 dist/
+
+# La web construida. Se genera; no se versiona.
+web/site/
+web/docs/img/app/
+
+# Repositorios de contenido clonados al lado, y los guiones locales para
+# compilar. Aquí no va material docente: este repositorio es la plataforma, es
+# público, y unos apuntes commiteados por descuido no se desandan.
+didacta_db*/
+/build.command
+/Compilar Didacta.app/

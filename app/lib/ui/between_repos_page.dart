@@ -49,9 +49,7 @@ class BetweenReposPage extends StatelessWidget {
       children: [
         PageHeader(
           title: 'Entre repositorios',
-          subtitle: total == 0
-              ? 'Todo cuadra'
-              : '$total cosa(s) por mirar',
+          subtitle: total == 0 ? 'Todo cuadra' : '$total cosa(s) por mirar',
         ),
         Expanded(
           child: ListView(
@@ -127,7 +125,9 @@ class _CrossingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    key: Key('crossing-${use.course}-${use.year}-${use.document}-${use.reference}'),
+    key: Key(
+      'crossing-${use.course}-${use.year}-${use.document}-${use.reference}',
+    ),
     margin: const EdgeInsets.only(bottom: 8),
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
@@ -175,7 +175,8 @@ class _CrossingRow extends StatelessWidget {
             ),
             RepoChip(
               colour: session.colourOf(use.unitRepo) ?? 0xFF62697A,
-              label: session.workspace.byId(use.unitRepo)?.label ?? use.unitRepo,
+              label:
+                  session.workspace.byId(use.unitRepo)?.label ?? use.unitRepo,
               compact: true,
             ),
             const Text(
@@ -279,7 +280,9 @@ class _ConflictRow extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton(
-                  key: Key('use-${conflict.course}-${conflict.field}-${entry.key}'),
+                  key: Key(
+                    'use-${conflict.course}-${conflict.field}-${entry.key}',
+                  ),
                   onPressed: conflict.fixable
                       ? () => _use(context, entry.value)
                       : null,

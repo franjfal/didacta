@@ -51,8 +51,10 @@ class ProcessRunner implements McpRunner {
         // Cero: lo elige el sistema y lo dice. Un puerto fijo choca con otra
         // copia de Didacta, y con cualquier otra cosa que lo haya cogido.
         '--port', '0',
-        for (final repository in repositories)
-          ...[repository.writable ? '--write' : '--repo', repository.directory],
+        for (final repository in repositories) ...[
+          repository.writable ? '--write' : '--repo',
+          repository.directory,
+        ],
       ],
       environment: {
         'NO_COLOR': '1',
@@ -106,11 +108,7 @@ class ProcessRunner implements McpRunner {
 }
 
 class _Session implements McpSession {
-  _Session({
-    required this.process,
-    required this.url,
-    required this._lines,
-  });
+  _Session({required this.process, required this.url, required this._lines});
 
   final Process process;
 

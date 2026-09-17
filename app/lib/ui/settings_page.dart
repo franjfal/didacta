@@ -18,18 +18,18 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/browser.dart';
 import '../data/compiler.dart';
-import '../data/github.dart';
-import '../data/local_clone.dart';
 import '../model/workspace.dart';
 import '../router.dart';
 import '../data/mcp_process.dart';
 import '../state/mcp_service.dart';
 import '../state/session.dart';
-import '../state/update_service.dart';
 import 'shell.dart';
 import 'sign_in.dart';
+import 'add_repository.dart';
 import 'theme.dart';
+import 'tour.dart';
 import 'translation_settings.dart';
 import 'update_section.dart';
 
@@ -56,6 +56,9 @@ class SettingsPage extends StatelessWidget {
               const SectionLabel('Repositorios'),
               _ReposSection(session: session),
 
+              const SectionLabel('Al guardar'),
+              _SavingSection(session: session),
+
               if (session.canCompile) ...[
                 const SectionLabel('Compilar'),
                 _EngineSection(session: session),
@@ -75,12 +78,75 @@ class SettingsPage extends StatelessWidget {
 
               const SectionLabel('Actualizaciones'),
               const UpdateSection(),
+
+              const SectionLabel('Ayuda'),
+              _HelpSection(session: session),
             ],
           ),
         ),
       ],
     );
   }
+}
+
+/// Volver a ver lo que se enseña la primera vez.
+///
+/// Al final de Ajustes y no arriba: quien lo busca ya sabe lo que busca, y lo
+/// que se abre a diario es la cuenta y los repositorios. Y aquí y no en un
+/// menú de ayuda, porque un menú de ayuda con dos entradas es un menú que
+/// nadie abre.
+class _HelpSection extends StatelessWidget {
+  const _HelpSection({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    child: Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'La presentación explica qué es Didacta y deja la configuración '
+              'hecha. El recorrido señala las partes de la ventana, sobre la '
+              'aplicación y sin cambiar nada.',
+              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 6,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('replay-welcome'),
+                  icon: const Icon(Icons.slideshow_outlined, size: 16),
+                  label: const Text('Volver a ver la presentación'),
+                  onPressed: session.replayWelcome,
+                ),
+                OutlinedButton.icon(
+                  key: const Key('replay-tour'),
+                  icon: const Icon(Icons.explore_outlined, size: 16),
+                  label: const Text('Ver el recorrido guiado'),
+                  // Sin esperar a nada: los objetivos del tour están en el
+                  // armazón, que ya está en pie porque esta pantalla vive
+                  // dentro de él.
+                  onPressed: context.read<TourController>().start,
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.menu_book_outlined, size: 16),
+                  label: const Text('La documentación'),
+                  onPressed: () => openLink(didactaDocs),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Dónde se guardan las preferencias que viajan de un ordenador a otro.
@@ -154,7 +220,10 @@ class _PrefsSection extends StatelessWidget {
                 ),
                 if (chosen != null) ...[
                   const SizedBox(height: 6),
-                  _Fact('fichero', path ?? 'hace falta haber entrado en GitHub'),
+                  _Fact(
+                    'fichero',
+                    path ?? 'hace falta haber entrado en GitHub',
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -217,12 +286,7 @@ class _AccountSection extends StatelessWidget {
                     ),
                     TextButton(
                       key: const Key('github-sign-out'),
-                      onPressed: () {
-                        // Lo que se sabía de esta cuenta deja de valer: la
-                        // siguiente puede ser otra con otros permisos.
-                        context.read<UpdateService>().forgetAccount();
-                        session.signOut();
-                      },
+                      onPressed: session.signOut,
                       child: const Text('Salir'),
                     ),
                   ],
@@ -266,180 +330,21 @@ class _ReposSectionState extends State<_ReposSection> {
   String _progress = '';
   Object? _problem;
 
-  Future<void> _add() async {
-    final session = widget.session;
-    if (!session.signedIn) {
-      setState(() => _problem = 'Entra en GitHub primero.');
-      return;
-    }
-    final chosen = await showDialog<List<GitHubRepo>>(
-      context: context,
-      builder: (context) => _RepoPicker(session: session),
-    );
-    if (chosen == null || chosen.isEmpty || !mounted) return;
-
-    for (final repo in chosen) {
-      if (!mounted) return;
-      if (!await _addOne(repo)) break;
-    }
-    if (mounted) setState(() => _working = false);
-  }
-
-  /// Añade uno, preguntando antes si la carpeta de destino ya tiene algo.
-  ///
-  /// Devuelve si seguir con los demás. Clonar escribe en el disco de alguien,
-  /// y la carpeta puede tener el clon de otra persona o cualquier otra cosa:
-  /// mirarlo antes es lo que permite decirlo a tiempo en vez de explicarlo
-  /// después.
-  Future<bool> _addOne(GitHubRepo chosen) async {
-    final session = widget.session;
-    final target = await session.inspectTarget(
-      owner: chosen.owner,
-      name: chosen.name,
-    );
-    if (!mounted) return false;
-
-    if (target.state == CloneTarget.occupied) {
-      setState(() {
-        _problem =
-            'En ${target.directory} hay algo que no es un clon de '
-            '${chosen.id}. No lo he tocado: vacía esa carpeta o elige otra '
-            'con «Abrir una carpeta».';
-      });
-      return false;
-    }
-
-    if (target.state == CloneTarget.alreadyCloned) {
-      final reuse = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('${chosen.id} ya está clonado'),
-          content: SizedBox(
-            width: 460,
-            child: Text(
-              'Ya hay un clon en ${target.directory}. No se vuelve a clonar: '
-              'encima de él se perdería lo que tenga sin enviar, que puede '
-              'ser el trabajo de otra persona de esta máquina.\n\n'
-              'Puedo abrir ese y ponerlo al día con GitHub.',
-              style: const TextStyle(fontSize: 12.5, height: 1.45),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Dejarlo'),
-            ),
-            FilledButton(
-              key: const Key('reuse-clone'),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Abrir el que hay'),
-            ),
-          ],
-        ),
-      );
-      if (reuse != true || !mounted) return true;
-    }
-
-    setState(() {
-      _working = true;
-      _problem = null;
-      _progress = target.state == CloneTarget.alreadyCloned
-          ? 'Abriendo ${chosen.id}…'
-          : 'Clonando ${chosen.id}…';
-    });
-    try {
-      await session.addRepository(
-        owner: chosen.owner,
-        name: chosen.name,
-        branch: chosen.defaultBranch,
-        onProgress: _showProgress,
-      );
-    } on EmptyRepositoryException catch (empty) {
-      // Recién creado en GitHub y sin nada dentro. No es un error que haya
-      // que enseñar tal cual: es un repositorio por empezar, y eso se puede
-      // hacer desde aquí.
-      await _offerToInitialize(chosen, empty);
-    } catch (thrown) {
-      if (mounted) setState(() => _problem = thrown);
-      return false;
-    }
-    return true;
-  }
-
-  void _showProgress(String line) {
-    if (mounted) setState(() => _progress = line);
-  }
-
-  /// Ofrece preparar un repositorio vacío y, si se acepta, lo prepara.
-  ///
-  /// Recoge sus propios errores: se llama desde el `on` de [_add], y lo que
-  /// se lanza dentro de un `catch` no lo recoge el siguiente.
-  Future<void> _offerToInitialize(
-    GitHubRepo chosen,
-    EmptyRepositoryException empty,
-  ) async {
-    if (!chosen.canWrite) {
-      if (mounted) {
-        setState(
-          () => _problem =
-              '${empty.message} Prepararlo es escribir en él, y con esta '
-              'cuenta es de solo lectura: pídeselo a quien lo creó.',
-        );
-      }
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _progress = '${chosen.id} está vacío.');
-    final title = await showDialog<String>(
-      context: context,
-      builder: (context) => _InitializeDialog(repo: chosen),
-    );
-    if (title == null || !mounted) return;
-
-    setState(() => _progress = 'Preparando ${chosen.id}…');
-    try {
-      await widget.session.initializeRepository(
-        owner: chosen.owner,
-        name: chosen.name,
-        branch: chosen.defaultBranch,
-        title: title,
-        onProgress: _showProgress,
-      );
-    } catch (thrown) {
-      if (mounted) setState(() => _problem = thrown);
-    }
-  }
-
-  /// Añadir una carpeta que ya está en el disco.
-  ///
-  /// De qué repositorio es lo dice su propio remoto, y si esta cuenta llega a
-  /// él lo dice GitHub. Las dos cosas se comprueban: una carpeta cualquiera
-  /// no sirve --lo que se escriba ahí no tiene a dónde ir-- y un clon de otra
-  /// cuenta tampoco.
-  Future<void> _addFolder() async {
-    final session = widget.session;
-    if (!session.signedIn) {
-      setState(() => _problem = 'Entra en GitHub primero.');
-      return;
-    }
-    final chosen = await getDirectoryPath();
-    if (chosen == null || !mounted) return;
-    setState(() {
-      _working = true;
-      _problem = null;
-      _progress = 'Comprobando $chosen en GitHub…';
-    });
-    try {
-      await session.addExistingRepository(chosen);
-      // Se añadió, pero puede no haber quedado al día: eso no es un fallo de
-      // añadir, y decirlo como si lo fuera haría pensar que no se añadió.
-      if (mounted) setState(() => _problem = session.addProblem);
-    } catch (thrown) {
-      if (mounted) setState(() => _problem = thrown);
-    } finally {
-      if (mounted) setState(() => _working = false);
-    }
-  }
+  /// El camino de abrir un repositorio vive en `add_repository.dart`: es el
+  /// mismo que usa el asistente de bienvenida, y tenerlo dos veces sería
+  /// tener dos.
+  late final RepositoryAdder _adder = RepositoryAdder(
+    session: widget.session,
+    onBusy: (working) {
+      if (mounted) setState(() => _working = working);
+    },
+    onProgress: (line) {
+      if (mounted) setState(() => _progress = line);
+    },
+    onProblem: (problem) {
+      if (mounted) setState(() => _problem = problem);
+    },
+  );
 
   Future<void> _chooseBase() async {
     final chosen = await getDirectoryPath();
@@ -487,7 +392,9 @@ class _ReposSectionState extends State<_ReposSection> {
                 children: [
                   FilledButton.icon(
                     key: const Key('add-repository'),
-                    onPressed: _working ? null : _add,
+                    onPressed: _working
+                        ? null
+                        : () => _adder.fromGitHub(context),
                     icon: const Icon(Icons.add, size: 16),
                     label: const Text('Añadir desde GitHub'),
                   ),
@@ -497,7 +404,9 @@ class _ReposSectionState extends State<_ReposSection> {
                   // abre tiene que poder sincronizarse.
                   OutlinedButton.icon(
                     key: const Key('add-repository-folder'),
-                    onPressed: _working ? null : _addFolder,
+                    onPressed: _working
+                        ? null
+                        : () => _adder.fromFolder(context),
                     icon: const Icon(Icons.folder_open_outlined, size: 16),
                     label: const Text('Añadir un clon del disco'),
                   ),
@@ -671,225 +580,6 @@ class _ColourPicker extends StatelessWidget {
         borderRadius: BorderRadius.circular(4),
       ),
     ),
-  );
-}
-
-/// Elegir de entre los repositorios de GitHub de esta persona.
-class _RepoPicker extends StatefulWidget {
-  const _RepoPicker({required this.session});
-
-  final Session session;
-
-  @override
-  State<_RepoPicker> createState() => _RepoPickerState();
-}
-
-class _RepoPickerState extends State<_RepoPicker> {
-  late final Future<List<GitHubRepo>> _repos = _load();
-  String _filter = '';
-
-  /// Los marcados. Varios a la vez porque una asignatura puede estar repartida
-  /// --la teoría en uno, los problemas en otro-- y quien llega nuevo los
-  /// quiere los dos: pedirlos de uno en uno obliga a saber de antemano que
-  /// hacen falta dos, que es justo lo que no se sabe todavía.
-  final Set<String> _chosen = {};
-
-  Future<List<GitHubRepo>> _load() async {
-    final token = await widget.session.tokenStore.read() ?? '';
-    final api = GitHubApi(token: token);
-    try {
-      final all = await api.repositories();
-      final already = {
-        for (final repo in widget.session.workspace.repos) repo.id,
-      };
-      return [
-        for (final repo in all)
-          if (!already.contains(repo.id)) repo,
-      ];
-    } finally {
-      api.close();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Añadir repositorios'),
-    content: SizedBox(
-      width: 520,
-      height: 440,
-      child: Column(
-        children: [
-          TextField(
-            key: const Key('repo-filter'),
-            autofocus: true,
-            decoration: const InputDecoration(
-              prefixIcon: Icon(Icons.search, size: 18),
-              hintText: 'Buscar',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) => setState(() => _filter = value.toLowerCase()),
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: FutureBuilder<List<GitHubRepo>>(
-              future: _repos,
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Note('${snapshot.error}', tone: didactaTeacher);
-                }
-                final repos = snapshot.data;
-                if (repos == null) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final shown = [
-                  for (final repo in repos)
-                    if (_filter.isEmpty ||
-                        repo.id.toLowerCase().contains(_filter))
-                      repo,
-                ];
-                if (shown.isEmpty) {
-                  return const Center(
-                    child: Text('Ninguno que no esté ya abierto.'),
-                  );
-                }
-                return ListView.builder(
-                  itemCount: shown.length,
-                  itemBuilder: (context, index) {
-                    final repo = shown[index];
-                    return CheckboxListTile(
-                      key: Key('pick-${repo.id}'),
-                      dense: true,
-                      controlAffinity: ListTileControlAffinity.leading,
-                      value: _chosen.contains(repo.id),
-                      onChanged: (on) => setState(() {
-                        if (on ?? false) {
-                          _chosen.add(repo.id);
-                        } else {
-                          _chosen.remove(repo.id);
-                        }
-                      }),
-                      title: Text(repo.id),
-                      subtitle: Text(
-                        [
-                          repo.defaultBranch,
-                          if (repo.private) 'privado',
-                          if (!repo.canWrite) 'solo lectura',
-                        ].join(' · '),
-                        style: const TextStyle(fontSize: 11.5),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
-      ),
-      FutureBuilder<List<GitHubRepo>>(
-        future: _repos,
-        builder: (context, snapshot) => FilledButton(
-          key: const Key('add-chosen-repos'),
-          onPressed: _chosen.isEmpty
-              ? null
-              : () => Navigator.of(context).pop([
-                  for (final repo in snapshot.data ?? const <GitHubRepo>[])
-                    if (_chosen.contains(repo.id)) repo,
-                ]),
-          child: Text(
-            _chosen.length <= 1 ? 'Añadir' : 'Añadir ${_chosen.length}',
-          ),
-        ),
-      ),
-    ],
-  );
-}
-
-/// Preparar un repositorio de GitHub vacío para trabajar con él.
-///
-/// Se pregunta antes y se dice qué se va a hacer, porque escribe en GitHub:
-/// el primer commit se queda en el historial del repositorio. Solo se pide el
-/// nombre; lo demás tiene valores por defecto que luego se cambian en
-/// `didacta.yaml`.
-class _InitializeDialog extends StatefulWidget {
-  const _InitializeDialog({required this.repo});
-
-  final GitHubRepo repo;
-
-  @override
-  State<_InitializeDialog> createState() => _InitializeDialogState();
-}
-
-class _InitializeDialogState extends State<_InitializeDialog> {
-  late final TextEditingController _title = TextEditingController(
-    text: widget.repo.name,
-  );
-
-  @override
-  void dispose() {
-    _title.dispose();
-    super.dispose();
-  }
-
-  void _accept() {
-    final title = _title.text.trim();
-    Navigator.of(context).pop(title.isEmpty ? widget.repo.name : title);
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Este repositorio está vacío'),
-    content: SizedBox(
-      width: 480,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${widget.repo.id} todavía no tiene ningún commit, así que no hay '
-            'nada que clonar. Didacta puede prepararlo como repositorio de '
-            'contenido:',
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '• didacta.yaml, con el nombre y los idiomas es, va y en\n'
-            '• .gitignore, para que lo compilado no entre en git\n'
-            '• el primer commit en ${widget.repo.defaultBranch}, enviado a '
-            'GitHub',
-            style: const TextStyle(fontSize: 12.5, color: didactaMuted),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            key: const Key('initialize-title'),
-            controller: _title,
-            autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Nombre del repositorio de contenido',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _accept(),
-          ),
-        ],
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
-      ),
-      FilledButton(
-        key: const Key('initialize-repository'),
-        onPressed: _accept,
-        child: const Text('Preparar y añadir'),
-      ),
-    ],
   );
 }
 
@@ -1146,6 +836,110 @@ class _EngineSectionState extends State<_EngineSection> {
 /// En Ajustes y no en un aviso flotante: no es urgente --el material se sigue
 /// pudiendo dar-- pero tampoco se arregla solo, y dejarlo en un mensaje que
 /// se cierra significa no arreglarlo nunca. Aquí está cuando se busca.
+/// Qué pasa al guardar un fichero.
+///
+/// Dos decisiones, y son distintas. **Confirmar** es dejar el cambio anotado
+/// en el historial con un mensaje; **enviar** es que lo vea el resto. Se
+/// pueden querer por separado: hay quien confirma cada guardado y envía una
+/// vez al terminar la tarde, y quien quiere que todo llegue solo.
+///
+/// Las dos puestas de salida, que es lo que quiere quien no se ha parado a
+/// pensar en esto: escribes, se guarda, está en GitHub. El paso de «ahora
+/// escribe un mensaje de commit» se salta treinta veces al día, y eso es lo
+/// que lo hace transparente.
+class _SavingSection extends StatefulWidget {
+  const _SavingSection({required this.session});
+
+  final Session session;
+
+  @override
+  State<_SavingSection> createState() => _SavingSectionState();
+}
+
+class _SavingSectionState extends State<_SavingSection> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SwitchListTile(
+                key: const Key('commit-on-save'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: session.commitOnSave,
+                onChanged: _busy
+                    ? null
+                    : (on) => _set(() => session.setCommitOnSave(on)),
+                title: const Text(
+                  'Guardar deja el cambio confirmado',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  session.commitOnSave
+                      ? 'Cada guardado es un commit con su mensaje, sin '
+                            'preguntar nada.'
+                      : 'Lo que guardas se queda escrito y sin confirmar. El '
+                            'botón de la barra de arriba lo confirma cuando '
+                            'quieras, con el mensaje que le pongas.',
+                  style: const TextStyle(fontSize: 11.5),
+                ),
+              ),
+              SwitchListTile(
+                key: const Key('push-on-commit'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: session.pushOnCommit,
+                onChanged: _busy
+                    ? null
+                    : (on) => _set(() => session.setPushOnCommit(on)),
+                title: const Text(
+                  'Y se envía a GitHub',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  session.pushOnCommit
+                      ? 'En cuanto se confirma. Nada se queda solo en esta '
+                            'máquina.'
+                      : 'Los commits se quedan aquí hasta que le des a '
+                            'enviar. Lo que no has enviado no lo ve nadie, ni '
+                            'está en otro sitio si se rompe el disco.',
+                  style: const TextStyle(fontSize: 11.5),
+                ),
+              ),
+              if (!session.commitOnSave && !session.pushOnCommit) ...[
+                const SizedBox(height: 6),
+                const Note(
+                  'Con las dos apagadas, lo que escribes está solo en esta '
+                  'carpeta hasta que confirmes y envíes a mano. Es una forma '
+                  'legítima de trabajar, pero conviene saberlo.',
+                  tone: didactaTeacher,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _set(Future<void> Function() change) async {
+    setState(() => _busy = true);
+    try {
+      await change();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+}
+
 /// El interruptor del servidor MCP, y en qué puede escribir.
 ///
 /// Dos decisiones y no una, porque son distintas. Encenderlo es dejar que un
@@ -1236,9 +1030,10 @@ class _McpSectionState extends State<_McpSection> {
                     McpState.starting => 'Encendiendo…',
                     McpState.failed =>
                       service.problem ?? 'No se pudo encender.',
-                    McpState.off => repositories.isEmpty
-                        ? 'Hace falta algún repositorio abierto.'
-                        : 'Apagado. Escucha solo en esta máquina.',
+                    McpState.off =>
+                      repositories.isEmpty
+                          ? 'Hace falta algún repositorio abierto.'
+                          : 'Apagado. Escucha solo en esta máquina.',
                   },
                   style: TextStyle(
                     fontSize: 11.5,
@@ -1269,7 +1064,11 @@ class _McpSectionState extends State<_McpSection> {
                 'no puede estropear nada. Lo que escriba queda en disco y lo '
                 'envías tú, viendo el diff: no hay ninguna herramienta que '
                 'haga commit.',
-                style: TextStyle(fontSize: 11.5, height: 1.4, color: didactaMuted),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.4,
+                  color: didactaMuted,
+                ),
               ),
               const SizedBox(height: 4),
               if (widget.session.workspace.repos.isEmpty)
@@ -1285,7 +1084,8 @@ class _McpSectionState extends State<_McpSection> {
                     // Con el servidor en marcha no: los repositorios se le
                     // dan al arrancar, así que marcar aquí no cambiaría nada
                     // y la casilla estaría mintiendo.
-                    onChanged: service.running || !widget.session.canWriteIn(repo.id)
+                    onChanged:
+                        service.running || !widget.session.canWriteIn(repo.id)
                         ? null
                         : (on) => _setWritable(repo.id, on ?? false),
                     title: Text(
@@ -1327,4 +1127,3 @@ class _McpSectionState extends State<_McpSection> {
     }
   }
 }
-

@@ -82,8 +82,10 @@ Map<String, dynamic> themedCourse() => {
 /// El mismo tema, repartido entre dos repositorios: la teoría lo declara y
 /// los problemas lo nombran, que es la forma que tiene el material real.
 Catalogue splitCatalogue() {
-  Map<String, dynamic> course(List<Map<String, dynamic>> documents,
-      {bool declares = false}) => {
+  Map<String, dynamic> course(
+    List<Map<String, dynamic>> documents, {
+    bool declares = false,
+  }) => {
     'id': 'am-iii',
     'title': const {'es': 'Análisis Matemático III'},
     'language': 'es',
@@ -337,9 +339,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final id = tester.widget<TextField>(
-      find.byKey(const Key('new-theme-id')),
-    );
+    final id = tester.widget<TextField>(find.byKey(const Key('new-theme-id')));
     expect(id.controller!.text, 'tema-3-series-numericas');
   });
 

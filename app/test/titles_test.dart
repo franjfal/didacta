@@ -116,16 +116,18 @@ void main() {
 
     test('sin ningún idioma con título, se rechaza', () {
       expect(
-        () => CompositionFile(yearYaml)
-            .setDocumentTitles('hoja-1', {'es': '', 'va': ''}),
+        () => CompositionFile(
+          yearYaml,
+        ).setDocumentTitles('hoja-1', {'es': '', 'va': ''}),
         throwsA(isA<CompositionException>()),
       );
     });
 
     test('un documento que no existe se dice', () {
       expect(
-        () => CompositionFile(yearYaml)
-            .setDocumentTitles('no-existe', {'es': 'X'}),
+        () => CompositionFile(
+          yearYaml,
+        ).setDocumentTitles('no-existe', {'es': 'X'}),
         throwsA(isA<CompositionException>()),
       );
     });
@@ -153,19 +155,21 @@ void main() {
     });
 
     test('no toca los demás temas', () {
-      final file = ThemesFile(themesYaml)
-        ..setTitles('tema-1', {'es': 'Otro'});
+      final file = ThemesFile(themesYaml)..setTitles('tema-1', {'es': 'Otro'});
       expect(file.text, contains('es: Sucesiones'));
       expect(file.text, contains('va: Successions'));
       expect(file.ids, ['tema-1', 'tema-2']);
     });
 
-    test('ni la cabecera del fichero, que explica por qué esto no rompe nada', () {
-      final file = ThemesFile(themesYaml)
-        ..setTitles('tema-2', {'es': 'Sucesiones y series'});
-      expect(file.text, startsWith('# Los temas en que se agrupa el curso.'));
-      expect(file.text, contains('# Un tema que nadie declara no agrupa.'));
-    });
+    test(
+      'ni la cabecera del fichero, que explica por qué esto no rompe nada',
+      () {
+        final file = ThemesFile(themesYaml)
+          ..setTitles('tema-2', {'es': 'Sucesiones y series'});
+        expect(file.text, startsWith('# Los temas en que se agrupa el curso.'));
+        expect(file.text, contains('# Un tema que nadie declara no agrupa.'));
+      },
+    );
 
     test('lee lo que hay antes de escribirlo', () {
       expect(ThemesFile(themesYaml).titlesOf('tema-2'), {

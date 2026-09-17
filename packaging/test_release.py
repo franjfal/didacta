@@ -23,8 +23,8 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import portal  # noqa: E402
 import release  # noqa: E402
+import web  # noqa: E402
 
 
 HASH = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
@@ -427,8 +427,8 @@ class ChecksumTest(unittest.TestCase):
             shutil.rmtree(temp, ignore_errors=True)
 
 
-class PortalTest(unittest.TestCase):
-    """La página de descarga."""
+class SiteTest(unittest.TestCase):
+    """El bloque de descargas de la web."""
 
     def manifest(self):
         return {
@@ -467,39 +467,65 @@ class PortalTest(unittest.TestCase):
             ],
         }
 
-    def test_enseña_la_version_y_las_novedades(self):
-        page = portal.render(self.manifest())
-        self.assertIn("## Última versión: 1.4.2", page)
-        self.assertIn("Lo nuevo", page)
-        self.assertIn("2026-09-15", page)
+    def render(self):
+        return web.render(self.manifest(), "franjfal/didacta")
+
+    def test_enseña_la_version_y_la_fecha_en_castellano(self):
+        page = self.render()
+        self.assertIn("Didacta 1.4.2", page)
+        self.assertIn("15 de septiembre de 2026", page)
+
+    def test_las_novedades_van_dentro_del_desplegable(self):
+        # Sangradas: fuera de la sangría, el `???` de Material deja de
+        # contenerlas y las notas salen sueltas debajo de un desplegable
+        # vacío.
+        page = self.render()
+        self.assertIn('??? abstract "Qué cambia en la 1.4.2"', page)
+        self.assertIn("    - Lo nuevo", page)
 
     def test_un_enlace_por_instalador_y_ninguno_al_zip(self):
         # El ZIP es del actualizador. Ofrecerlo en la página de descarga sería
         # darle a alguien un fichero que no sabe qué hacer con él.
-        page = portal.render(self.manifest())
+        page = self.render()
         self.assertIn("Didacta-1.4.2-macos-universal.dmg", page)
         self.assertIn("Didacta-1.4.2-windows-x64.exe", page)
         self.assertNotIn("macos-universal.zip", page)
 
-    def test_un_sistema_que_falta_sale_como_que_falta(self):
-        # Y no desaparece de la tabla: «no hay para Linux» es información.
-        page = portal.render(self.manifest())
-        self.assertIn("| Linux | — | — |", page)
+    def test_un_sistema_que_falta_se_dice(self):
+        # Y su tarjeta no desaparece: «no hay para Linux» es información, y
+        # una tarjeta que falta deja a alguien buscando en otra página.
+        page = self.render()
+        self.assertIn("__Linux__", page)
+        self.assertIn("no trae paquete para Linux", page)
 
-    def test_los_enlaces_son_del_repositorio_privado(self):
-        page = portal.render(self.manifest())
+    def test_los_enlaces_son_descargas_directas_del_repositorio(self):
+        page = self.render()
         self.assertIn(
-            "https://github.com/franjfal/didacta_public/releases/download/"
+            "https://github.com/franjfal/didacta/releases/download/"
             "v1.4.2/Didacta-1.4.2-macos-universal.dmg",
             page,
         )
 
-    def test_enseña_los_checksums(self):
-        self.assertIn(HASH, portal.render(self.manifest()))
+    def test_los_enlaces_siguen_al_repositorio_que_se_le_diga(self):
+        # Un fork publica en el suyo, y su web tiene que enlazar al suyo.
+        page = web.render(self.manifest(), "otra/copia")
+        self.assertIn("https://github.com/otra/copia/releases/download/", page)
+        self.assertNotIn("franjfal", page)
 
-    def test_explica_que_la_contraseña_no_se_escribe_en_didacta(self):
-        page = portal.render(self.manifest())
-        self.assertIn("github.com/login/device", page)
+    def test_enseña_los_checksums(self):
+        self.assertIn(HASH, self.render())
+
+    def test_sin_release_lo_dice_en_vez_de_romperse(self):
+        # El primer día de la web, y el de cualquier fork. Una página que se
+        # cae porque todavía no hay binarios es una página que no se estrena.
+        page = web.render_missing("franjfal/didacta")
+        self.assertIn("Todavía no hay ninguna versión publicada", page)
+        self.assertIn("github.com/franjfal/didacta", page)
+
+    def test_una_fecha_que_no_se_entiende_no_tumba_la_pagina(self):
+        self.assertEqual(web.spanish_date(""), "")
+        self.assertEqual(web.spanish_date("no es una fecha"), "")
+        self.assertEqual(web.spanish_date("2026-13-01T00:00:00Z"), "")
 
 
 class WindowsOutputTest(unittest.TestCase):

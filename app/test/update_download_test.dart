@@ -52,8 +52,7 @@ UpdateManifest manifestWith(UpdateAsset asset) => UpdateManifest(
 ReleaseChannel channelServing(List<int> bytes, {int status = 200}) =>
     ReleaseChannel(
       owner: 'franjfal',
-      repo: 'didacta_public',
-      token: 'gho_valido',
+      repo: 'didacta',
       client: MockClient((request) async => http.Response.bytes(bytes, status)),
     );
 

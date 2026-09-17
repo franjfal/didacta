@@ -30,6 +30,7 @@ import '../data/content_gateway.dart';
 import '../data/course_admin.dart';
 import '../data/disk_watch.dart';
 import '../data/github.dart';
+import '../data/indenter.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../model/catalogue.dart';
@@ -38,10 +39,29 @@ import '../model/degrees_file.dart';
 import '../model/slug.dart';
 import '../model/synced_prefs.dart';
 import '../model/themes_file.dart';
+import '../data/translator.dart';
+import '../model/translation_memory.dart';
+import '../model/translation_run.dart';
 import '../model/workspace.dart';
 import '../model/yaml_patch.dart';
+import '../ui/metadata_editor.dart' show declarableStatuses;
+import '../ui/theme.dart' show statusName;
 import 'build_console.dart';
 import 'history.dart';
+
+/// El repositorio del motor: éste mismo.
+///
+/// Es de donde se descarga `cli/didacta`, que es lo que compila. Configurable
+/// al compilar para poder probar contra un fork, con el de verdad por
+/// defecto.
+const String engineOwner = String.fromEnvironment(
+  'DIDACTA_ENGINE_OWNER',
+  defaultValue: 'franjfal',
+);
+const String engineRepo = String.fromEnvironment(
+  'DIDACTA_ENGINE_REPO',
+  defaultValue: 'didacta',
+);
 
 /// Where the app is in bringing itself up.
 enum LoadState { loading, ready, failed }
@@ -94,8 +114,7 @@ class Session extends ChangeNotifier {
     TranslationSecrets? translationSecrets,
     Preferences? preferences,
   }) : preferences = preferences ?? MemoryPreferences(),
-       translationSecrets =
-           translationSecrets ?? KeychainTranslationSecrets();
+       translationSecrets = translationSecrets ?? KeychainTranslationSecrets();
 
   final CatalogueSource catalogueSource;
 
@@ -223,6 +242,16 @@ class Session extends ChangeNotifier {
 
   String? _token;
   bool _pushOnCommit = true;
+  bool _commitOnSave = true;
+
+  /// Si guardar un fichero lo deja confirmado.
+  ///
+  /// La pantalla lo pregunta para saber qué decir al terminar y para enseñar
+  /// el botón de confirmar solo cuando hace falta.
+  bool get commitOnSave => _commitOnSave;
+
+  /// Si lo confirmado se envía solo a GitHub.
+  bool get pushOnCommit => _pushOnCommit;
 
   /// Si hay un token de GitHub guardado en esta máquina.
   bool get hasStoredToken => _token?.isNotEmpty ?? false;
@@ -433,7 +462,7 @@ class Session extends ChangeNotifier {
       } catch (_) {
         // No estaba: se crea.
       }
-      await gateway.commit(
+      await gateway.save(
         path: path,
         text: text,
         sha: sha,
@@ -915,7 +944,7 @@ class Session extends ChangeNotifier {
       }
       if (patch.result == file.text) continue;
 
-      await gateway.commit(
+      await gateway.save(
         path: where,
         text: patch.result,
         sha: file.sha,
@@ -926,7 +955,6 @@ class Session extends ChangeNotifier {
     if (written > 0) await reloadCatalogue();
     return written;
   }
-
 
   /// Cambia a qué idiomas se da una asignatura.
   ///
@@ -957,7 +985,8 @@ class Session extends ChangeNotifier {
     final where = 'courses/$course/course.yaml';
     // El orden es el del catálogo, no el de los clics: así el fichero sale
     // igual se marque como se marque, y no hay diffs que solo mueven códigos.
-    final options = catalogueOrNull?.languageOptions ?? const <LanguageOption>[];
+    final options =
+        catalogueOrNull?.languageOptions ?? const <LanguageOption>[];
     final ordered = <String>[
       for (final option in options)
         if (languages.contains(option.code)) option.code,
@@ -977,7 +1006,7 @@ class Session extends ChangeNotifier {
       patch.setFlowList(const ['languages'], ordered);
       if (patch.result == file.text) continue;
 
-      await gateway.commit(
+      await gateway.save(
         path: where,
         text: patch.result,
         sha: file.sha,
@@ -1028,7 +1057,7 @@ class Session extends ChangeNotifier {
       }
       if (patch.result == file.text) continue;
 
-      await gateway.commit(
+      await gateway.save(
         path: where,
         text: patch.result,
         sha: file.sha,
@@ -1059,7 +1088,7 @@ class Session extends ChangeNotifier {
     final themes = ThemesFile(file.text)..setTitles(id, titles);
     if (themes.text == file.text) return;
 
-    await gateway.commit(
+    await gateway.save(
       path: where,
       text: themes.text,
       sha: file.sha,
@@ -1087,7 +1116,7 @@ class Session extends ChangeNotifier {
       ..setDocumentTitles(id, titles);
     if (composition.text == file.text) return;
 
-    await gateway.commit(
+    await gateway.save(
       path: where,
       text: composition.text,
       sha: file.sha,
@@ -1129,7 +1158,7 @@ class Session extends ChangeNotifier {
       }
       if (patch.result == file.text) continue;
 
-      await gateway.commit(
+      await gateway.save(
         path: where,
         text: patch.result,
         sha: file.sha,
@@ -1183,7 +1212,7 @@ class Session extends ChangeNotifier {
         languages: catalogueOrNull?.languages ?? const ['es'],
       );
 
-    await gateway.commit(
+    await gateway.save(
       path: where,
       text: degrees.text,
       sha: sha,
@@ -1215,7 +1244,7 @@ class Session extends ChangeNotifier {
       final degrees = DegreesFile(file.text)..setTitles(id, titles);
       if (degrees.text == file.text) continue;
 
-      await gateway.commit(
+      await gateway.save(
         path: where,
         text: degrees.text,
         sha: file.sha,
@@ -1225,6 +1254,255 @@ class Session extends ChangeNotifier {
     }
     if (written.isNotEmpty) await reloadCatalogue();
     return written.length;
+  }
+
+  /// Cambia el estado declarado de una unidad en un idioma.
+  ///
+  /// Es lo que cierra el ciclo de traducir: una máquina deja un borrador, una
+  /// persona lo lee, y aquí dice que ya está. Sin esto el borrador se queda
+  /// en la lista para siempre y la lista deja de significar nada.
+  ///
+  /// Solo los declarables. «No existe» y «desactualizada» los calcula el
+  /// motor --el primero de que el fichero esté, el segundo comparando con el
+  /// original-- y escribirlos garantizaría que se queden obsoletos: bastaría
+  /// con volver a tocar el original.
+  /// Enciende o apaga la sangría automática de un idioma de una unidad.
+  ///
+  /// Se guarda en el `unit.yaml`, al lado del estado, porque es una propiedad
+  /// del fichero y no de quien lo edita: si una tabla alineada a mano hay que
+  /// dejarla quieta, hay que dejarla quieta también cuando la abra otra
+  /// persona en otro ordenador.
+  ///
+  /// Por idioma. La versión castellana de una unidad puede ser un bloque
+  /// generado por otra herramienta que no conviene tocar mientras la inglesa
+  /// se escribe a mano y agradece la sangría.
+  /// El `.tex` con la sangría puesta, antes de escribirlo.
+  ///
+  /// Un método y no una llamada suelta a [beautifyLatex] porque **qué
+  /// indentador hay** es cosa del entorno: en escritorio se busca
+  /// `latexindent` en el disco, y una prueba de widgets con el reloj falso no
+  /// puede esperar a un proceso de verdad. Sobrescribiéndolo, una prueba usa
+  /// el indentador propio, que es Dart puro y contesta en el acto.
+  Future<String> tidyLatex(String text) =>
+      beautifyLatex(text, texPath: _texPath);
+
+  Future<void> setUnitIndent({
+    required Unit unit,
+    required String language,
+    required bool on,
+  }) async {
+    final gateway = gatewayFor(unit.repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en ${unit.repo}');
+    }
+
+    final where = '${unit.path}/unit.yaml';
+    String text;
+    var sha = '';
+    try {
+      final file = await gateway.read(where);
+      text = file.text;
+      sha = file.sha;
+    } on ContentException catch (error) {
+      if (error.kind != ContentFailure.missing) rethrow;
+      text = '# Metadatos de la unidad.\nlanguages:\n';
+    }
+
+    // Se escribe también el `true`, aunque sea el valor por defecto: quien
+    // apagó esto y volvió a encenderlo quiere ver en el fichero que está
+    // encendido a propósito, y el motor lee las dos cosas igual.
+    final patch = YamlPatch(text)
+      ..setFlagInFlowMap(['languages', language], 'indent', on);
+    if (patch.result == text) return;
+
+    await gateway.save(
+      path: where,
+      text: patch.result,
+      sha: sha,
+      message:
+          '${on ? 'Activar' : 'Desactivar'} la sangría de $language en '
+          '«${unit.title(unit.reference)}»',
+    );
+    await reloadCatalogue();
+  }
+
+  Future<void> setUnitStatus({
+    required Unit unit,
+    required String language,
+    required String status,
+  }) async {
+    if (!declarableStatuses.contains(status)) {
+      throw ArgumentError(
+        'el estado «$status» lo calcula el motor; no se puede declarar',
+      );
+    }
+    final gateway = gatewayFor(unit.repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en ${unit.repo}');
+    }
+
+    final where = '${unit.path}/unit.yaml';
+    String text;
+    var sha = '';
+    try {
+      final file = await gateway.read(where);
+      text = file.text;
+      sha = file.sha;
+    } on ContentException catch (error) {
+      if (error.kind != ContentFailure.missing) rethrow;
+      // Una unidad migrada puede no tener metadatos todavía. Se crean con lo
+      // único que se está diciendo; lo demás sigue deduciéndose del disco.
+      text = '# Metadatos de la unidad.\nlanguages:\n';
+    }
+
+    final patch = YamlPatch(text)
+      ..setInFlowMap(['languages', language], 'status', status);
+    if (patch.result == text) return;
+
+    await gateway.save(
+      path: where,
+      text: patch.result,
+      sha: sha,
+      message:
+          'Marcar $language de «${unit.title(unit.reference)}» '
+          'como ${statusName(TranslationStatus.parse(status))}',
+    );
+    await reloadCatalogue();
+  }
+
+  // -- traducir -----------------------------------------------------------
+
+  /// La memoria de un par de idiomas, junta de todos los repositorios.
+  ///
+  /// De todos y no solo del que se va a escribir: lo que alguien decidió en
+  /// el repositorio de problemas vale igual para el de teoría, y es lo que
+  /// hace que la misma definición no salga dicha de dos maneras.
+  Future<TranslationMemory> translationMemory({
+    required String from,
+    required String to,
+  }) async {
+    final path = memoryPath(from, to);
+    final parts = <TranslationMemory>[];
+    for (final repo in _workspace.repos) {
+      try {
+        final file = await gatewayFor(repo.id).read(path);
+        parts.add(TranslationMemory.parse(file.text));
+      } catch (_) {
+        // No tenerla es lo normal hasta que alguien traduce algo.
+      }
+    }
+    return TranslationMemory.merge(parts);
+  }
+
+  /// Traduce una unidad y deja el resultado escrito.
+  ///
+  /// El `.tex` del idioma destino y la memoria, en dos commits separados a
+  /// propósito: son dos cosas distintas --el material y lo que se aprendió al
+  /// traducirlo-- y quien revise el historial quiere poder mirar una sin la
+  /// otra. Si la memoria falla al guardarse, la traducción ya está hecha.
+  ///
+  /// Lo que se escribe queda **como borrador**: es una traducción de máquina,
+  /// y marcarla como revisada sería decir que alguien la ha leído.
+  Future<TranslationResult> translateUnit({
+    required Unit unit,
+    required String from,
+    required String to,
+    required Translator translator,
+    List<TermCheck> terms = const [],
+  }) async {
+    final gateway = gatewayFor(unit.repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en ${unit.repo}');
+    }
+    final source = await gateway.read(unit.fileFor(from));
+    final memory = await translationMemory(from: from, to: to);
+
+    final result = await translateLatex(
+      source.text,
+      memory: memory,
+      translate: (pieces) => translator.translate(pieces, from: from, to: to),
+      terms: terms,
+      unit: unit.path,
+      by: _user?.login ?? '',
+      when: DateTime.now(),
+    );
+
+    // Lo que hubiera en el destino, para no pisarlo a ciegas.
+    var sha = '';
+    try {
+      sha = (await gateway.read(unit.fileFor(to))).sha;
+    } catch (_) {
+      // No estaba: se crea.
+    }
+    // Sangrado antes de escribirlo, si este idioma lo tiene puesto. Es donde
+    // más falta hace: un traductor devuelve cada párrafo en una sola línea
+    // --hace lo suyo-- y sin esto la primera versión de cada traducción entra
+    // en el repositorio como un muro, y así se queda.
+    final text = unit.indentsIn(to)
+        ? await tidyLatex(result.text)
+        : result.text;
+    await gateway.save(
+      path: unit.fileFor(to),
+      text: text,
+      sha: sha,
+      message: 'Traducir «${unit.title(from)}» a $to (borrador)',
+    );
+
+    await _rememberTranslations(
+      repo: unit.repo,
+      from: from,
+      to: to,
+      learned: result.learned,
+      memory: memory,
+    );
+    await reloadCatalogue();
+    return result;
+  }
+
+  /// Añade al fichero de memoria lo que se acaba de aprender.
+  ///
+  /// Añadiendo al final y sin reescribir lo que hay: el fichero lo tocan
+  /// varias personas y lo fusiona git, y reescribirlo entero convierte cada
+  /// traducción en un conflicto con todo lo que otra persona haya traducido
+  /// mientras tanto.
+  Future<void> _rememberTranslations({
+    required String repo,
+    required String from,
+    required String to,
+    required List<MemoryEntry> learned,
+    required TranslationMemory memory,
+  }) async {
+    final lines = memory.linesFor(learned);
+    if (lines.isEmpty) return;
+
+    final path = memoryPath(from, to);
+    final gateway = gatewayFor(repo);
+    var text = '';
+    var sha = '';
+    try {
+      final file = await gateway.read(path);
+      text = file.text;
+      sha = file.sha;
+    } catch (_) {
+      // Primera vez.
+    }
+    final body = StringBuffer(text);
+    if (text.isNotEmpty && !text.endsWith('\n')) body.write('\n');
+    for (final line in lines) {
+      body.writeln(line);
+    }
+
+    try {
+      await gateway.save(
+        path: path,
+        text: body.toString(),
+        sha: sha,
+        message: 'Memoria de traducción $from→$to: ${lines.length} segmento(s)',
+      );
+    } catch (_) {
+      // No poder guardarla no puede deshacer la traducción, que ya está
+      // escrita. Se vuelve a aprender la próxima vez.
+    }
   }
 
   // -- compilar en lote ---------------------------------------------------
@@ -1390,6 +1668,7 @@ class Session extends ChangeNotifier {
       // sin esperar al repositorio, y la que vale cuando no hay ninguno.
       _prefsRepo = await preferences.prefsRepo();
       _synced = SyncedPrefs.fromJson(await preferences.syncedPrefs() ?? '');
+      _welcomeDone = await preferences.welcomeDone();
       _refilter();
     } catch (error) {
       // A setting that cannot be read is a setting that is not set.
@@ -1502,6 +1781,7 @@ class Session extends ChangeNotifier {
   Future<void> _openRepositories() async {
     _token = await tokenStore.read();
     _pushOnCommit = await preferences.pushOnCommit();
+    _commitOnSave = await preferences.commitOnSave();
     _gateways.clear();
     _cloneStatus.clear();
     _repoProblems.clear();
@@ -1533,6 +1813,7 @@ class Session extends ChangeNotifier {
           token: _token ?? '',
           author: _cloneAuthor,
           pushOnCommit: _pushOnCommit,
+          commitOnSave: _commitOnSave,
           // Traer antes de escribir, con la ventana de [freshFor] para no
           // preguntar a GitHub en cada guardado.
           beforeWrite: () => ensureFresh(repo.id),
@@ -1644,6 +1925,59 @@ class Session extends ChangeNotifier {
     await preferences.setPushOnCommit(value);
     await refreshAccess();
   }
+
+  Future<void> setCommitOnSave(bool value) async {
+    await preferences.setCommitOnSave(value);
+    await refreshAccess();
+  }
+
+  /// Confirma lo que haya escrito y sin confirmar, con un mensaje.
+  ///
+  /// Solo hace falta con los commits automáticos apagados: con ellos puestos
+  /// no queda nunca nada pendiente. Por eso el botón que llama a esto
+  /// aparece y desaparece con la preferencia, en vez de estar siempre y no
+  /// hacer nada la mitad del tiempo.
+  ///
+  /// Repositorio por repositorio y por rutas, no un `git add -A`: cada uno
+  /// tiene su historial y su mensaje, y barrer el árbol entero se llevaría al
+  /// commit lo que alguien tenga a medias fuera de Didacta.
+  ///
+  /// Devuelve en cuántos repositorios se confirmó algo.
+  Future<int> commitPending(String message) async {
+    if (message.trim().isEmpty) {
+      throw ArgumentError('un commit necesita un mensaje');
+    }
+    final author = _cloneAuthor;
+    if (author == null) {
+      throw ArgumentError(
+        'Un commit necesita un autor. Inicia sesión antes de confirmar.',
+      );
+    }
+
+    var done = 0;
+    for (final entry in pendingChanges.entries) {
+      if (entry.value.isEmpty) continue;
+      final clone = cloneFor(entry.key);
+      if (clone == null) continue;
+      final committed = await clone.commitPaths(
+        paths: entry.value,
+        message: message.trim(),
+        authorName: author.name,
+        authorEmail: author.email,
+        token: _token ?? '',
+        // Enviar o no lo decide la otra preferencia, igual que con los
+        // commits automáticos: son dos decisiones distintas.
+        push: _pushOnCommit && (_token ?? '').isNotEmpty,
+      );
+      if (committed) done += 1;
+    }
+    if (done > 0) await refreshAccess();
+    return done;
+  }
+
+  /// Cuántos ficheros hay escritos y sin confirmar, en todos los repositorios.
+  int get pendingCount =>
+      pendingChanges.values.fold<int>(0, (sum, files) => sum + files.length);
 
   /// Sets who the clone's commits are attributed to, for this clone only.
   Future<void> setCloneAuthor({
@@ -2100,6 +2434,68 @@ class Session extends ChangeNotifier {
   /// Si todavía no hay ningún repositorio con el que trabajar.
   bool get needsRepository => _workspace.isEmpty;
 
+  /// Si la presentación de bienvenida ya se ha visto.
+  ///
+  /// `null` mientras no se ha leído, y eso no es lo mismo que `false`: la
+  /// bienvenida se enseña **en lugar de** la aplicación, así que mientras no
+  /// se sabe lo que toca es la pantalla de carga. Sin esa distinción, cada
+  /// arranque enseñaría la bienvenida durante un parpadeo.
+  bool? _welcomeDone;
+  bool? get welcomeDone => _welcomeDone;
+
+  /// La bienvenida se ha terminado --o se ha saltado--, y no vuelve.
+  Future<void> completeWelcome() async {
+    _welcomeDone = true;
+    await preferences.setWelcomeDone(true);
+    notifyListeners();
+  }
+
+  /// Volver a enseñarla. Es lo que hace el botón de Ajustes.
+  Future<void> replayWelcome() async {
+    _welcomeDone = false;
+    await preferences.setWelcomeDone(false);
+    notifyListeners();
+  }
+
+  /// Clona el motor --este mismo repositorio-- al lado de los de contenido.
+  ///
+  /// Existe porque es el único paso de la configuración que no se puede hacer
+  /// desde la aplicación y que hace falta para compilar: la biblioteca y el
+  /// editor funcionan solo con el clon de contenido, pero sacar un PDF
+  /// necesita `cli/didacta`, que vive en otro repositorio.
+  ///
+  /// Se puede clonar sin haber entrado en GitHub --es público-- y por eso el
+  /// token va vacío si no hay ninguno: pedir una sesión para descargar algo
+  /// que cualquiera puede descargar sería inventarse un requisito.
+  Future<String> installEngine({
+    String owner = engineOwner,
+    String repo = engineRepo,
+    void Function(String line)? onProgress,
+  }) async {
+    if (!LocalClone.supported) {
+      throw const CloneException('Aquí no se puede clonar nada.');
+    }
+    final base = _cloneBase.isEmpty ? '.' : _cloneBase;
+    final where = '$base/$repo';
+
+    final existing = LocalClone(directory: where);
+    if (!await existing.looksRight(owner: owner, repo: repo)) {
+      await LocalClone.create(
+        directory: where,
+        owner: owner,
+        repo: repo,
+        branch: 'main',
+        token: _token ?? await tokenStore.read() ?? '',
+        onProgress: onProgress,
+      );
+    }
+
+    await preferences.setEnginePath(where);
+    _enginePath = where;
+    notifyListeners();
+    return where;
+  }
+
   /// Lo quita del espacio de trabajo. La carpeta se queda donde está: lleva
   /// trabajo dentro y borrarla no es cosa de un botón de esta lista.
   Future<void> removeRepository(String id) async {
@@ -2205,6 +2601,20 @@ class Session extends ChangeNotifier {
   /// to exercise a screen.
   @visibleForTesting
   Future<void> primeForTest(Catalogue catalogue) async {
+    // Las preferencias que deciden cómo se guarda, también: las lee
+    // `refreshAccess`, que se va al disco y a git, y un test de widgets no
+    // puede llamarla --el reloj es falso y el proceso no vuelve--.
+    _commitOnSave = await preferences.commitOnSave();
+    _pushOnCommit = await preferences.pushOnCommit();
+
+    // Y con sesión iniciada si hay token guardado, porque **Didacta no se
+    // abre sin ella**: hay una puerta delante de todas las pantallas, así
+    // que una pantalla montada en un test es siempre la de alguien que
+    // entró. Un test que quiera lo contrario pide un llavero vacío
+    // --`StubStore(token: null)`-- y lo dice.
+    _token = await tokenStore.read();
+    if ((_token ?? '').isNotEmpty) _signIn = SignInState.signedIn;
+
     _catalogue = catalogue;
     _refilter();
     _language = catalogue.defaultLanguage;

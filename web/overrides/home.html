@@ -1,0 +1,76 @@
+{#-
+  La portada.
+
+  Solo la cabecera: lo que va debajo es `docs/index.md`, markdown como el
+  resto. La plantilla se queda con lo único que no se puede escribir en
+  markdown --el degradado, la marca grande y los dos botones-- y no con el
+  contenido, para que cambiar lo que dice la portada no sea tocar HTML.
+
+  Se engancha en `tabs` porque es el bloque que Material pinta justo debajo
+  de la barra superior y por encima del contenido, que es donde va una
+  cabecera de portada.
+-#}
+{% extends "main.html" %}
+
+{% block tabs %}
+  {{ super() }}
+  <section class="didacta-hero">
+    <div class="didacta-hero__inner md-grid">
+      <div class="didacta-hero__mark">
+        <img src="{{ 'img/logo.png' | url }}" alt="">
+        <span>Didacta</span>
+      </div>
+
+      <h1>El material se escribe una vez. Los PDF se generan.</h1>
+
+      <p>
+        Didacta es un gestor de apuntes en LaTeX construido sobre
+        <strong>microlecciones</strong>: trozos pequeños de materia que se
+        escriben una vez, se reutilizan de un curso a otro y de una asignatura
+        a otra, y se componen en documentos que salen como diapositivas, como
+        apuntes, como hojas de problemas o como examen, en los idiomas que
+        haga falta. Todo vive en repositorios de GitHub, con su historial.
+      </p>
+
+      {#- `md-typeset` en el envoltorio de los botones, y no en toda la
+          cabecera: los estilos de `.md-button` viven dentro de esa clase, y
+          fuera de ella los dos botones salen como dos enlaces diminutos.
+          Ponérsela al bloque entero le traería además la tipografía y los
+          márgenes del cuerpo del texto, que es justo lo que la cabecera no
+          quiere. -#}
+      <div class="didacta-hero__buttons md-typeset">
+        <a href="{{ 'descargas/' | url }}" class="md-button md-button--primary">
+          Descargar Didacta
+        </a>
+        <a href="{{ 'empezar/' | url }}" class="md-button">
+          Empezar de cero
+        </a>
+      </div>
+
+      <div class="didacta-claims">
+        <div>
+          <strong>Una fuente</strong>
+          <p>
+            El mismo fichero sale en quince versiones distintas: diapositivas,
+            apuntes, libro, guion de prácticas, hoja de problemas, examen, y
+            la copia del profesor de cada una.
+          </p>
+        </div>
+        <div>
+          <strong>Se reutiliza</strong>
+          <p>
+            Una lección no pertenece a una asignatura. Se escribe una vez y la
+            usan los cursos que la necesiten, este año y los siguientes.
+          </p>
+        </div>
+        <div>
+          <strong>Vive en GitHub</strong>
+          <p>
+            Cada cambio es un commit con su autor y su mensaje. Se comparte lo
+            que se quiera compartir, y lo demás se queda donde está.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}

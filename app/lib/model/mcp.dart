@@ -33,18 +33,19 @@ class McpTool {
       // Del propio servidor, no de una lista escrita aquí: quien sabe si una
       // herramienta escribe es quien la implementa.
       writes: annotations?['readOnlyHint'] == false,
-      arguments: [
-        for (final entry in (properties ?? const {}).entries)
-          McpArgument(
-            name: entry.key,
-            description:
-                ((entry.value as Map?)?['description'] as String?) ?? '',
-            required: required.contains(entry.key),
-          ),
-      ]..sort((a, b) {
-        if (a.required != b.required) return a.required ? -1 : 1;
-        return a.name.compareTo(b.name);
-      }),
+      arguments:
+          [
+            for (final entry in (properties ?? const {}).entries)
+              McpArgument(
+                name: entry.key,
+                description:
+                    ((entry.value as Map?)?['description'] as String?) ?? '',
+                required: required.contains(entry.key),
+              ),
+          ]..sort((a, b) {
+            if (a.required != b.required) return a.required ? -1 : 1;
+            return a.name.compareTo(b.name);
+          }),
     );
   }
 
@@ -126,11 +127,8 @@ class McpEvent {
     );
   }
 
-  factory McpEvent.started(String url) => McpEvent(
-    kind: McpEventKind.started,
-    at: DateTime.now(),
-    detail: url,
-  );
+  factory McpEvent.started(String url) =>
+      McpEvent(kind: McpEventKind.started, at: DateTime.now(), detail: url);
 
   factory McpEvent.stopped() =>
       McpEvent(kind: McpEventKind.stopped, at: DateTime.now());
@@ -153,7 +151,8 @@ class McpEvent {
     McpEventKind.started => 'Servidor en marcha',
     McpEventKind.stopped => 'Servidor detenido',
     McpEventKind.connected => 'Se ha conectado ${client ?? 'un cliente'}',
-    McpEventKind.call => ok ? (tool ?? 'llamada') : '${tool ?? 'llamada'}: falló',
+    McpEventKind.call =>
+      ok ? (tool ?? 'llamada') : '${tool ?? 'llamada'}: falló',
     McpEventKind.other => detail ?? 'suceso',
   };
 

@@ -138,11 +138,32 @@ class ProtectedSegment {
     if (seen.length != expected.length || !seen.toSet().containsAll(expected)) {
       return null;
     }
-    return translated.replaceAllMapped(
+    // El espacio del principio y del final, el del original.
+    //
+    // Los dos proveedores recortan lo que les mandas, y con eso se pierde el
+    // espacio que separaba una orden de su texto: `\item` y `Donats` acaban
+    // pegados y el fichero no compila. Lo de en medio es suyo --reflotar un
+    // párrafo es traducir-- pero los extremos son del fichero.
+    //
+    // Se recorta **lo traducido**, antes de sustituir, y no lo ya
+    // reconstruido: una pieza opaca puede acabar en un salto de línea --se
+    // lleva el que la sigue-- y recortar después se lo comería.
+    // Un trozo que es solo espacio en blanco se devuelve tal cual: no hay
+    // nada que traducir, y separarlo en principio y final lo duplicaría --
+    // los dos extremos serían la cadena entera--.
+    if (text.trim().isEmpty) return text;
+
+    final body = translated.trim().replaceAllMapped(
       _tag,
       (match) => parts[int.parse(match.group(1)!)],
     );
+    return '$_lead$body$_tail';
   }
+
+  /// El espacio en blanco con el que empieza y acaba el trozo original.
+  String get _lead => text.substring(0, text.length - text.trimLeft().length);
+
+  String get _tail => text.substring(text.trimRight().length);
 
   static final RegExp _tag = RegExp(r'<x id="(\d+)"/>');
 
@@ -167,9 +188,67 @@ List<TexPiece> splitLatex(String text) {
     }
   }
 
+  /// Hasta dónde llega el espacio en blanco que sigue a algo opaco.
+  ///
+  /// **Lo pegado a la sintaxis es maquetación, no prosa**, y esta es la
+  /// regla que evita dos estropicios que se ven en el fichero traducido:
+  ///
+  /// * el espacio que separa `\item` de lo que viene detrás es parte de la
+  ///   orden --LaTeX se lo come-- y un traductor que devuelve el trozo sin
+  ///   su espacio inicial deja `\itemDonats`, que no compila;
+  /// * el salto después de `\begin{itemize}` es la forma del fichero, y un
+  ///   traductor devuelve un párrafo en una sola línea, así que el `.tex`
+  ///   traducido sale como un muro.
+  ///
+  /// Se para antes de una línea en blanco: eso separa párrafos, y tragárselo
+  /// juntaría dos en un solo trozo, que es peor para la memoria y para la
+  /// cuota.
+  int afterOpaque(int from, {required bool controlWord}) {
+    var i = from;
+    while (i < text.length && (text[i] == ' ' || text[i] == '\t')) {
+      i += 1;
+    }
+    if (i < text.length && text[i] == '\n') {
+      // El salto y la sangría de la línea siguiente: eso es la forma del
+      // fichero. Salvo que venga otra línea en blanco, que separa párrafos.
+      var j = i + 1;
+      while (j < text.length && (text[j] == ' ' || text[j] == '\t')) {
+        j += 1;
+      }
+      return (j < text.length && text[j] == '\n') ? from : j;
+    }
+    // Sin salto, solo espacios: se los queda la orden si acabó en letra
+    // --`\item`, `\dpause`--, porque ese espacio es lo que cierra su
+    // nombre y LaTeX se lo come. En cualquier otro caso el espacio es
+    // prosa: el de «el conjunto $A$ es abierto» lo coloca quien traduce.
+    return controlWord ? i : from;
+  }
+
   void opaque(int from, int to) {
+    // Y el espacio de **delante**, por lo mismo: el salto que hay antes de
+    // `\end{itemize}` es la forma del fichero, y dejándolo en la prosa el
+    // traductor lo convierte en un espacio y el `\end` se sube a la línea
+    // de arriba. La regla es simétrica porque el motivo lo es.
+    //
+    // Salvo cuando eso separa dos párrafos: ahí manda el separador, que
+    // viaja aparte y tal cual, y llevárselo juntaría los dos párrafos en un
+    // solo trozo.
+    final held = prose.toString();
+    final kept = held.trimRight();
+    final between = held.substring(kept.length);
+    // Solo si lleva un salto: un espacio suelto antes de `$A$` o de `\ref`
+    // es prosa, y llevárselo dejaba la traducción empezando por un espacio.
+    // Un salto antes de `\end{itemize}` es la forma del fichero.
+    final lead = between.contains('\n') && !_blankLine.hasMatch(between)
+        ? between
+        : '';
+    if (lead.isNotEmpty) {
+      prose
+        ..clear()
+        ..write(kept);
+    }
     flush();
-    pieces.add(TexPiece(text.substring(from, to), translatable: false));
+    pieces.add(TexPiece(lead + text.substring(from, to), translatable: false));
   }
 
   while (i < text.length) {
@@ -184,6 +263,10 @@ List<TexPiece> splitLatex(String text) {
 
     final math = _mathAt(text, masked, i);
     if (math != null) {
+      // Las matemáticas no se llevan el espacio de detrás: `$A$ es abierto`
+      // lleva un espacio que **sí** es prosa --lo escribe quien redacta-- y
+      // un traductor lo recoloca con las palabras, que es lo que tiene que
+      // hacer.
       opaque(i, math);
       i = math;
       continue;
@@ -198,10 +281,18 @@ List<TexPiece> splitLatex(String text) {
           final inner = text.substring(command.innerStart, command.innerEnd);
           pieces.addAll(splitLatex(inner));
           opaque(command.innerEnd, command.end);
+          i = command.end;
         } else {
-          opaque(i, command.end);
+          // Si acaba en letra es una palabra de control --`\item`-- y el
+          // espacio de detrás la cierra.
+          final ends = text[command.end - 1];
+          final to = afterOpaque(
+            command.end,
+            controlWord: RegExp('[a-zA-Z]').hasMatch(ends),
+          );
+          opaque(i, to);
+          i = to;
         }
-        i = command.end;
         continue;
       }
     }
@@ -212,6 +303,9 @@ List<TexPiece> splitLatex(String text) {
   flush();
   return pieces;
 }
+
+/// Una línea en blanco: lo que LaTeX entiende por separar dos párrafos.
+final RegExp _blankLine = RegExp(r'\n[ \t]*\n');
 
 /// Dónde acaba el bloque matemático que empieza en [at], o null.
 int? _mathAt(String text, String masked, int at) {
@@ -274,9 +368,7 @@ _Command? _commandAt(String text, String masked, int at) {
     if (name == 'begin' && opaqueEnvironments.contains(environment)) {
       final marker = masked.indexOf('\\end{$environment}', close);
       return _Command(
-        end: marker < 0
-            ? text.length
-            : marker + '\\end{$environment}'.length,
+        end: marker < 0 ? text.length : marker + '\\end{$environment}'.length,
         prose: false,
       );
     }

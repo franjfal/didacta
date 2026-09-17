@@ -57,10 +57,7 @@ void main() {
         '${root.path}/generated/manifest.json',
       ).writeAsStringSync('{"counts": {"units": 0}}');
 
-      await expectLater(
-        avisos.timeout(const Duration(seconds: 5)),
-        completes,
-      );
+      await expectLater(avisos.timeout(const Duration(seconds: 5)), completes);
     });
   });
 
@@ -158,31 +155,34 @@ void main() {
 /// error de que no existía su `manifest.json` --y ninguna de sus asignaturas--
 /// hasta reiniciarla. Lo que se miraba era el índice del **primer** clon.
 void twoRepoTests() {
-  test('el índice del segundo, regenerado por fuera, se vuelve a leer', () async {
-    final uno = seed();
-    final dos = seed();
-    addTearDown(() => uno.deleteSync(recursive: true));
-    addTearDown(() => dos.deleteSync(recursive: true));
+  test(
+    'el índice del segundo, regenerado por fuera, se vuelve a leer',
+    () async {
+      final uno = seed();
+      final dos = seed();
+      addTearDown(() => uno.deleteSync(recursive: true));
+      addTearDown(() => dos.deleteSync(recursive: true));
 
-    final session = FakeSession(
-      gatewayOverride: FakeGateway(),
-      catalogue: catalogueWith(defaultUnits()),
-      compilerOverride: FakeCompiler(),
-    );
-    await session.useClonesForTest([uno.path, dos.path]);
-    await session.checkDisk();
-    final before = session.reloads;
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogueWith(defaultUnits()),
+        compilerOverride: FakeCompiler(),
+      );
+      await session.useClonesForTest([uno.path, dos.path]);
+      await session.checkDisk();
+      final before = session.reloads;
 
-    final later = DateTime.now().add(const Duration(seconds: 5));
-    File('${dos.path}/generated/manifest.json').setLastModifiedSync(later);
+      final later = DateTime.now().add(const Duration(seconds: 5));
+      File('${dos.path}/generated/manifest.json').setLastModifiedSync(later);
 
-    await session.checkDisk();
-    expect(
-      session.reloads,
-      before + 1,
-      reason: 'el índice del segundo clon es otro y nadie lo volvió a leer',
-    );
-  });
+      await session.checkDisk();
+      expect(
+        session.reloads,
+        before + 1,
+        reason: 'el índice del segundo clon es otro y nadie lo volvió a leer',
+      );
+    },
+  );
 
   test('un repositorio sin índice se lee en cuanto el índice aparece', () async {
     // El caso exacto: se añade un clon recién hecho, todavía sin `generated/`,

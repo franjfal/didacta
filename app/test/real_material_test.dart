@@ -59,8 +59,9 @@ void main() {
     // La otra mitad: protegerlo todo también sería «no romper nada».
     var withProse = 0;
     for (final file in files) {
-      final letters = protectLatex(file.readAsStringSync())
-          .fold<int>(0, (sum, s) => sum + s.letters);
+      final letters = protectLatex(
+        file.readAsStringSync(),
+      ).fold<int>(0, (sum, s) => sum + s.letters);
       if (letters > 0) withProse += 1;
     }
     expect(withProse, greaterThan(files.length ~/ 2));

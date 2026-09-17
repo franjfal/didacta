@@ -4,8 +4,11 @@ Plataforma de contenido docente. Se escribe el material una vez y se genera
 cada PDF que haga falta: diapositivas, apuntes, handouts, hojas de problemas,
 copias del profesor y exámenes, en castellano, valenciano e inglés.
 
-Esta carpeta es la plataforma. Se moverá a su propio repositorio; el material
-docente vivirá en repositorios de contenido separados que Didacta compila.
+**[Documentación y descargas](https://franjfal.github.io/didacta/)** ·
+software libre bajo la [GPL-3.0](LICENSE).
+
+Esta carpeta es la plataforma. El material docente vive en repositorios de
+contenido separados que Didacta compila.
 
 ---
 
@@ -141,6 +144,25 @@ didacta new year am-iii 2026-2027
 
 ---
 
+## Compilar la aplicación
+
+Doble clic en **Compilar Didacta.app**, en esta misma carpeta: abre un menú en
+Terminal con lo que se puede compilar y lo hace. El primer objetivo --compilar
+e instalar en `~/Applications`-- es el de todos los días.
+
+También sirve desde la terminal, que es el mismo programa:
+
+```bash
+./build.command                # el menú
+./build.command instalar       # compilar, instalar y abrir
+./build.command todo           # los tests del motor y los de la aplicación
+./build.command --list         # qué objetivos hay
+```
+
+Solo ofrece lo que **esta** máquina puede hacer. Flutter compila para el
+escritorio en el que corre, así que Linux y Windows no salen en un Mac: de
+eso se encarga la integración continua.
+
 ## Empezar
 
 ```bash
@@ -227,10 +249,10 @@ sistema.
 
 ## Instalar Didacta
 
-No hace falta compilarla. Las versiones se publican en
-**[franjfal/didacta_public](https://github.com/franjfal/didacta_public)**, que
-es privado: quien tiene acceso ahí descarga la aplicación y la recibe
-actualizada; quien no, no ve nada.
+No hace falta compilarla: las versiones se publican en
+**[Releases](https://github.com/franjfal/didacta/releases)**, y la página de
+descarga con los checksums está en
+**[la web](https://franjfal.github.io/didacta/descargas/)**.
 
 | Sistema | Qué se descarga |
 |---|---|
@@ -238,18 +260,21 @@ actualizada; quien no, no ve nada.
 | Windows | Un instalador, **sin administrador** |
 | Linux | Un AppImage: `chmod +x` y abrir |
 
-Dentro, **Ajustes → Cuenta de GitHub → Entrar en GitHub**. Da un código corto
-que se escribe en github.com; la contraseña no se teclea nunca dentro de
-Didacta. A partir de ahí se actualiza sola.
+La primera vez, Didacta abre con una presentación que deja la configuración
+hecha: entrar en GitHub, abrir el primer repositorio y descargar el motor. La
+contraseña no se teclea nunca dentro de Didacta -- se autoriza en github.com
+con un código corto. A partir de ahí se actualiza sola, una vez por semana y
+preguntando.
 
 ### Publicar una versión
 
-1. subir el número en `app/pubspec.yaml`;
-2. escribir la sección en [`CHANGELOG.md`](CHANGELOG.md);
+1. `python3 packaging/release.py next`, para saber qué número va a salir;
+2. escribir esa sección en [`CHANGELOG.md`](CHANGELOG.md);
 3. Actions → **Publish Didacta Release** → Run workflow.
 
-Compila macOS, Windows y Linux, calcula los SHA-256, publica el release en
-`didacta_public` y reescribe su página de descarga. El detalle está en
+Compila macOS, Windows y Linux, calcula los SHA-256, publica el release aquí
+mismo y dispara el despliegue de la web, que reescribe su página de descarga
+leyendo lo publicado. El detalle está en
 [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
 
 ## Qué hay aquí
@@ -270,6 +295,8 @@ didacta/
 ├── engine/didacta/         Python: modelo, perfiles, compilación
 ├── cli/didacta             la herramienta
 ├── examples/demo-course/   repositorio de contenido de ejemplo
+├── web/                    la web de documentación (MkDocs Material)
+├── packaging/              publicar una versión
 ├── docs/
 │   ├── AUTHORING.md        ← referencia de escritura
 │   └── ...
@@ -282,6 +309,9 @@ didacta/
 
 ## Documentación
 
+- **[La web](https://franjfal.github.io/didacta/)** — la documentación de uso,
+  con capturas: instalar, empezar, y la aplicación pantalla por pantalla. Se
+  construye desde [`web/`](web).
 - **[docs/AUTHORING.md](docs/AUTHORING.md)** — todo lo que se puede escribir en
   un fichero de contenido. Es la referencia que se usa a diario.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — el diseño y por qué está así.
@@ -299,11 +329,21 @@ didacta/
 |---|---|
 | TeX Live | 2023 o posterior, con `latexmk` |
 | Python | 3.9 o posterior, **sin dependencias** |
+| `latexindent` | opcional |
 
 Todos los paquetes LaTeX que Didacta usa están en CTAN: una TeX Live estándar
 basta, sin instalar nada más. El sistema anterior arrastraba seis `.sty`
 no-CTAN y una fuente empaquetada en el repositorio, lo que hacía imposible
 compilar en una máquina limpia.
+
+`latexindent` es lo único opcional de la lista. Si está y funciona, es quien
+ordena la sangría de un `.tex` al guardarlo; si no, lo hace un indentador
+propio que viene dentro y hace menos. No hace falta instalar nada: viene con
+TeX Live, pero es un script de Perl y **MacTeX no trae sus dependencias**
+(`File::HomeDir`, `Log::Log4perl`, `Log::Dispatch`, `Unicode::GCString`), así
+que en la mayoría de los Mac el fichero está y no arranca. Quien las quiera,
+`cpan File::HomeDir Log::Log4perl Log::Dispatch Unicode::GCString`; quien no,
+no pierde nada que se note.
 
 Sirve cualquiera de las tres, y la aplicación **no obliga a configurar nada**:
 busca `latexmk` donde cada una se instala.
@@ -366,3 +406,17 @@ comprobado con un test que compara cada fichero seguido por git antes y después
 
 Siguiente fase: la bibliografía (5 unidades no compilan sin biblatex) y `api/`,
 que es lo que bloquea editar y compilar desde la interfaz.
+
+---
+
+## Licencia
+
+Didacta es software libre bajo la **[GPL-3.0](LICENSE)**: se puede usar,
+estudiar, modificar y redistribuir, y quien distribuya una versión modificada
+tiene que publicar su código con la misma licencia.
+
+La licencia cubre Didacta --el código, el motor y el sistema LaTeX--. **El
+material que se escriba con ella es de quien lo escriba**, vive en sus
+repositorios y lleva la licencia que le ponga, o ninguna.
+
+Cómo contribuir: [`CONTRIBUTING.md`](CONTRIBUTING.md).

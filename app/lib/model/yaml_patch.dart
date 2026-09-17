@@ -121,6 +121,16 @@ class YamlPatch {
     _insert(path, written);
   }
 
+  /// Escribe un valor ya formateado, sin pasarlo por el entrecomillado.
+  void _setRaw(List<String> path, String? written) {
+    final found = _find(path);
+    if (found != null) {
+      _lines[found.line] = _rewriteValue(_lines[found.line], written ?? 'null');
+      return;
+    }
+    _insert(path, written ?? 'null');
+  }
+
   /// Sets a numeric field, unquoted, so the engine reads a number.
   ///
   /// Separate from [setScalar] on purpose: `duration_minutes: '50'` is a
@@ -142,20 +152,43 @@ class YamlPatch {
   ///
   /// Handles the one-level-deep flow map that `unit.yaml` uses for a
   /// language's status, and the block form too, because both appear.
-  void setInFlowMap(List<String> path, String field, String? value) {
+  void setInFlowMap(List<String> path, String field, String? value) =>
+      _setInFlowMap(
+        path,
+        field,
+        value,
+        value == null ? null : _quoteIfNeeded(value),
+      );
+
+  /// Sets a boolean field inside a flow map, unquoted.
+  ///
+  /// Aparte de [setInFlowMap] por lo mismo que [setNumber] está aparte de
+  /// [setScalar]: `indent: 'false'` es la cadena «false», que el motor
+  /// rechaza, y de lo que se está hablando es de un sí o un no. Que un campo
+  /// sea una cosa u otra lo sabe quien llama, no se adivina del texto.
+  void setFlagInFlowMap(List<String> path, String field, bool value) =>
+      _setInFlowMap(path, field, '$value', '$value');
+
+  void _setInFlowMap(
+    List<String> path,
+    String field,
+    String? value,
+    String? written,
+  ) {
     final found = _find(path);
     if (found == null) {
-      final written = value == null
-          ? '{}'
-          : '{$field: ${_quoteIfNeeded(value)}}';
-      _insert(path, written);
+      _insert(path, written == null ? '{}' : '{$field: $written}');
       return;
     }
 
     final inline = _valueOf(_lines[found.line]);
     if (inline.isEmpty) {
       // A block mapping under the key: treat the field as a nested scalar.
-      setScalar([...path, field], value);
+      if (written != value) {
+        _setRaw([...path, field], written);
+      } else {
+        setScalar([...path, field], value);
+      }
       return;
     }
     if (!inline.startsWith('{') || !inline.endsWith('}')) {
@@ -166,10 +199,10 @@ class YamlPatch {
     }
 
     final entries = _parseFlowMap(inline);
-    if (value == null) {
+    if (written == null) {
       entries.remove(field);
     } else {
-      entries[field] = _quoteIfNeeded(value);
+      entries[field] = written;
     }
     final body = entries.entries.map((e) => '${e.key}: ${e.value}').join(', ');
     _lines[found.line] = _rewriteValue(_lines[found.line], '{$body}');

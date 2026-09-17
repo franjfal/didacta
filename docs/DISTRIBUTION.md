@@ -4,50 +4,46 @@ Cómo llega Didacta a la máquina de alguien, y cómo se mantiene al día.
 
 ---
 
-## 1. El problema
+## 1. Cómo se reparte
 
-Didacta es una aplicación de escritorio que usa un grupo pequeño y conocido de
-personas. Eso descarta las dos respuestas habituales por motivos opuestos:
-
-- **una tienda** (App Store, Microsoft Store) es pública. Cualquiera la
-  descarga, y además impone el sandbox, que esta aplicación no puede aceptar:
-  trabaja sobre clones de git manejados con el `git` del sistema;
-- **compilar cada uno lo suyo** es lo que había hasta ahora, y solo funciona
-  mientras quien la usa es quien la escribe.
-
-Lo que hace falta es distribución **privada**, con una lista de personas que se
-pueda cambiar, y actualización automática que no dependa de que nadie se
-acuerde de nada.
-
-## 2. La idea: el permiso ya existe
-
-GitHub ya sabe quién puede entrar en un repositorio privado. Esa lista es
-exactamente la lista de quién puede usar Didacta, así que no se construye otra.
+Didacta es una aplicación de escritorio para tres sistemas, y **el código es
+abierto**. Eso resuelve de golpe la pregunta que antes era la difícil --quién
+puede instalarla-- y deja solo las dos de verdad: que llegue a la máquina de
+quien la quiera, y que se mantenga al día sin que nadie se acuerde de nada.
 
 ```
-                  franjfal/didacta                franjfal/didacta_public
-                  (privado, el código)            (privado, las versiones)
-                         │                                  ▲
-   «Publish Didacta      │                                  │
-    Release»  ───────────┤   compila macOS/Windows/Linux    │
-                         └──────────────────────────────────┘
-                                   token de una GitHub App
-                                   instalada SOLO allí
-
-                                            │
-                      ┌─────────────────────┼──────────────────────┐
-                      ▼                     ▼                      ▼
-                  descarga              descarga               descarga
-                  (persona)             (persona)            (Didacta, sola)
+                  franjfal/didacta  (público)
+                         │
+   «Publish Didacta      │   compila macOS/Windows/Linux
+    Release»  ───────────┤   publica el release aquí mismo
+                         │   y dispara el despliegue de la web
+                         │
+      ┌──────────────────┼───────────────────┐
+      ▼                  ▼                   ▼
+   la web            Releases            Didacta, sola
+   (descarga)        (descarga)          (actualización)
 ```
 
-Dos repositorios y no uno, por una razón: **el de las versiones no tiene el
-código**. A alguien a quien se le da acceso para que pueda instalar y
-actualizar no se le está dando el código fuente.
+Un solo repositorio, y eso es un cambio respecto a cómo empezó esto. Antes
+había dos: el código en uno privado y las versiones en otro, también privado,
+para poder dar acceso a las segundas sin dar el primero. Con el código abierto
+esa separación no separa nada, así que se fue, y con ella la GitHub App de
+publicación, sus dos secrets y la lista de colaboradores que había que
+mantener.
 
-Dar acceso a alguien es añadirlo como colaborador de `didacta_public`.
-Quitárselo es quitarlo de ahí. No hay ninguna otra lista que mantener, ni un
-servidor de licencias, ni nada que pueda quedar desincronizado con la realidad.
+## 2. Lo que eso simplificó
+
+Conviene dejarlo dicho, porque son cosas que estaban y ya no están:
+
+- **no hay comprobación de autorización.** Antes, después de entrar en GitHub,
+  la aplicación preguntaba si esa cuenta llegaba al repositorio de versiones y
+  se cerraba si no. Ahora cualquiera puede descargarla y usarla; a lo que hay
+  que tener acceso es al material de cada uno, que es otra cosa y la sigue
+  diciendo GitHub;
+- **el actualizador no manda ninguna credencial.** La API pública basta.
+  Está explicado en `app/lib/data/release_channel.dart`;
+- **la página de descarga es una página de verdad**, no el README de un
+  repositorio privado. Ver la sección 7.
 
 ## 3. La versión: una sola fuente, y la sube el ciclo
 
@@ -232,25 +228,38 @@ macOS». Sin este campo el actualizador acabaría intentando montar un DMG.
 
 ## 7. La página de descarga
 
-El **README de `didacta_public`**, escrito por el workflow desde el manifiesto.
+Es **la web**, en `web/`, publicada en GitHub Pages desde este mismo
+repositorio: <https://franjfal.github.io/didacta/descargas/>.
 
-**No se usa GitHub Pages**, y es deliberado. El control de acceso de Pages
---lo que hace que una Page sea privada-- solo existe para **organizaciones con
-GitHub Enterprise Cloud**. `franjfal` es una cuenta personal (la API la
-devuelve como `"type": "User"`), así que ahí no hay ninguna forma de tener una
-Page privada: activarla publicaría en internet la lista de versiones y los
-enlaces de descarga de un repositorio que es privado justamente para que eso
-no pase.
+El bloque de descargas no se escribe a mano ni se guarda en el repositorio: lo
+genera `packaging/web.py` **leyendo el release publicado**, en el momento de
+construir la web.
 
-El README, en cambio, lo ve quien entra al repositorio, y al repositorio entra
-quien tiene acceso: la misma puerta que ya controla quién puede actualizar.
+```bash
+python3 packaging/web.py downloads --repo franjfal/didacta
+```
 
-Si algún día esto se mueve a una organización con Enterprise Cloud, una
-landing page con estilo se puede añadir encima sin tocar nada de lo demás: el
-manifiesto y los releases seguirían siendo la fuente.
+Que lea el release y no un fichero importa el día que haya que volver atrás:
+marcar otra versión como la última es un `gh release edit --latest`, y con
+esto la web se corrige volviendo a desplegarla, sin publicar nada y sin tocar
+ningún fichero.
 
-Menos bonito y correcto. La seguridad va por delante de tener una página con
-estilo.
+Y si no hay ningún release --el primer día, o un fork-- escribe un bloque que
+lo dice y explica cómo compilar. Una web que no se puede estrenar hasta que
+haya binarios es una web que se estrena tarde.
+
+Durante una publicación el manifiesto ya está en el disco del runner, así que
+también se le puede dar directamente:
+
+```bash
+python3 packaging/web.py downloads --manifest latest.json
+```
+
+El despliegue lo hace `.github/workflows/site.yml`, que se lanza al empujar a
+`main`, al terminar una publicación y a mano. Genera además las capturas de
+pantalla ejecutando la propia aplicación (`flutter test
+tool/generate_screenshots.dart`), así que la documentación enseña siempre la
+versión de ahora.
 
 ## 8. Autenticación: OAuth Device Flow
 
@@ -291,19 +300,14 @@ Y no se mezclan nunca:
 Reutilizar la OAuth App como credencial de publicación daría a cada persona que
 entra el permiso de publicar versiones.
 
-## 9. Autorización de verdad
+## 9. Quién puede usar Didacta
 
-Poder entrar en GitHub no es poder usar Didacta. Después del login, la
-aplicación pregunta:
+Cualquiera. Es software libre, y descargarla no pide nada.
 
-```
-GET /repos/franjfal/didacta_public
-```
-
-- **200** → tiene acceso: puede buscar, descargar e instalar;
-- **404** → no lo tiene. GitHub responde 404 y no 403 a un repositorio privado
-  al que no se llega, para no confirmar que existe. Aquí sabemos que existe, así
-  que un 404 significa «esta cuenta no entra», y se dice tal cual.
+Entrar en GitHub sí hace falta, pero por otro motivo: **el material vive en
+repositorios**, y quién puede leer o escribir en cada uno lo dice GitHub. La
+aplicación no mantiene ninguna otra lista, ni tiene cuentas propias, ni
+comprueba ninguna autorización suya.
 
 ## 10. Cómo actualiza
 
@@ -464,61 +468,38 @@ el programa.
 
 En `franjfal/didacta` → Settings → Secrets and variables → Actions.
 
-**Imprescindibles:**
+**Ninguno es imprescindible.** El workflow publica con el `GITHUB_TOKEN` que
+Actions le da a cada ejecución: dura lo que dura el trabajo, solo sirve para
+este repositorio, y no hay nada que crear, que renovar ni que pueda caducar sin
+avisar.
 
-| Secret | Qué es |
-|---|---|
-| `DIDACTA_RELEASE_APP_ID` | El App ID de la GitHub App de publicación |
-| `DIDACTA_RELEASE_APP_PRIVATE_KEY` | Su clave privada (el `.pem` entero) |
+Antes sí hacía falta uno --una GitHub App con `Contents: write` sobre el
+repositorio privado de versiones-- y se fue con él. Es la clase de pieza que
+funciona durante un año y falla el día que hay prisa.
 
-**Opcionales**, los de firma, en las dos tablas de arriba.
+**Opcionales**, los de firma, en las dos tablas de arriba. Sin ellos se publica
+sin firmar, que es lo que pasa hoy.
 
 Nada más. No hay ningún token en el código, ni en ningún fichero del
 repositorio, ni se escribe ninguno en un log.
-
-### La GitHub App de publicación
-
-Se crea una vez, en Settings → Developer settings → GitHub Apps → New:
-
-- **Permisos:** `Contents: Read and write`. **Y nada más**;
-- **Webhook:** desactivado;
-- **Instalación:** solo en `didacta_public`.
-
-El token que `actions/create-github-app-token` genera dura una hora y solo
-sirve para ese repositorio. La App en sí no caduca nunca, y no está ligada a
-ninguna cuenta personal: si quien la creó deja el proyecto, sigue funcionando.
-
-Un PAT de grano fino haría lo mismo, pero caduca (máximo un año), va ligado a
-una persona, y el día que caduque la publicación fallará sin previo aviso.
 
 ## 13. Operaciones
 
 ### Dar acceso a alguien
 
-```
-github.com/franjfal/didacta_public → Settings → Collaborators → Add people
-```
+No hay nada que dar: la aplicación es pública y se descarga de
+[la web](https://franjfal.github.io/didacta/descargas/) o de Releases.
 
-Rol **Read**. Con eso puede descargar, y Didacta se le actualizará sola.
-
-### Quitárselo
-
-El mismo sitio → Remove.
-
-Lo que pasa a partir de ahí: la siguiente comprobación devuelve 404 y Didacta
-le dice que su cuenta ya no tiene acceso. **La copia que tiene instalada sigue
-funcionando** --no es un DRM-- pero no recibe versiones nuevas.
-
-Para cortar también el acceso al contenido, quitarlo además de los repositorios
-de contenido. Y si hace falta invalidar su token ahora mismo, en la OAuth App →
-*Revoke all user tokens*.
+Lo que sí se da o se quita es el acceso **al material**, y eso son los permisos
+de cada repositorio de contenido en GitHub. Si hace falta invalidar el token de
+alguien ahora mismo, en la OAuth App → *Revoke all user tokens*.
 
 ### Rollback
 
 Un release publicado no se borra: se marca otro como el último.
 
 ```bash
-gh release edit v1.4.1 -R franjfal/didacta_public --latest
+gh release edit v1.4.1 -R franjfal/didacta --latest
 ```
 
 A partir de ese momento `releases/latest` devuelve la 1.4.1, y quien tenga la
@@ -529,11 +510,15 @@ recibirá la 1.4.1.
 Para que la 1.4.2 no se pueda instalar a nadie más:
 
 ```bash
-gh release edit v1.4.2 -R franjfal/didacta_public --draft
+gh release edit v1.4.2 -R franjfal/didacta --draft
 ```
 
 Y después publicar una 1.4.3 con lo corregido, que es lo que arregla el
 problema de verdad.
+
+La web se corrige volviéndola a desplegar --Actions → **Publish the
+documentation site** → Run workflow--: lee el release que esté marcado como el
+último, así que no hay que tocar ningún fichero.
 
 ### Si una versión rompe la instalación de quien la tenía
 
@@ -553,10 +538,12 @@ medias.
 
 ```
 .github/workflows/release.yml      El workflow de publicación
+.github/workflows/site.yml         El de la web y las capturas
+web/                               La web de documentación
 CHANGELOG.md                       Las notas, escritas a mano
 packaging/
 ├── release.py                     Versión, notas, checksums, manifiesto
-├── portal.py                      El README de didacta_public
+├── web.py                         El bloque de descargas de la web
 ├── test_release.py                Sus tests
 ├── macos/{package,sign,notarize}.sh
 ├── windows/didacta.iss

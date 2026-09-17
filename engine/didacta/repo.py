@@ -376,16 +376,24 @@ class Settings:
 class LanguageFile:
     """One language of a unit."""
 
-    __slots__ = ("language", "path", "exists", "declared_status", "source_hash", "bytes")
+    __slots__ = ("language", "path", "exists", "declared_status", "source_hash",
+                 "bytes", "indent")
 
     def __init__(self, language, path, exists, declared_status=None,
-                 source_hash=None, bytes=0):
+                 source_hash=None, bytes=0, indent=True):
         self.language = language
         self.path = path
         self.exists = exists
         self.declared_status = declared_status
         self.source_hash = source_hash
         self.bytes = bytes
+        #: Si este fichero se re-sangra al guardarlo.
+        #:
+        #: Por idioma y no por unidad porque el motivo para apagarlo vive en un
+        #: fichero concreto: un `\verbatim` mal cerrado, una tabla alineada a
+        #: mano, un bloque generado por otra herramienta. Que la version
+        #: castellana necesite quedarse quieta no dice nada de la inglesa.
+        self.indent = indent
 
     def status(self, reference_language, reference_hash):
         """The effective state of this language.
@@ -582,6 +590,12 @@ def load_unit(root, relpath, settings):
                 % (code, status)
             )
             status = None
+        indent = entry.get("indent")
+        if indent is not None and not isinstance(indent, bool):
+            raise RepoError(
+                "%s: language `%s` has `indent: %s`; it should be true or false"
+                % (meta_path, code, indent)
+            )
         file_path = os.path.join(relpath, "%s.tex" % code)
         absolute = os.path.join(root, file_path)
         exists = os.path.isfile(absolute)
@@ -592,6 +606,7 @@ def load_unit(root, relpath, settings):
             declared_status=status,
             source_hash=entry.get("source_hash"),
             bytes=os.path.getsize(absolute) if exists else 0,
+            indent=True if indent is None else indent,
         )
 
     present = [c for c, entry in languages.items() if entry.exists]

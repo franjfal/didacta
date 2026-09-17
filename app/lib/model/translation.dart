@@ -116,3 +116,46 @@ class Credentials {
       'Credentials(${isEmpty ? 'sin clave' : hint}'
       '${region.isEmpty ? '' : ', $region'})';
 }
+
+/// Cómo se llama cada idioma de Didacta para cada proveedor.
+///
+/// **No son los mismos códigos**, y descubrirlo cuesta una llamada fallida con
+/// un `400 Invalid Value` que no dice cuál de los cinco campos estaba mal.
+///
+/// El caso que hay: `va`. El valenciano es una variedad del catalán y ningún
+/// traductor automático lo distingue; Google y Azure conocen `ca` y no `va`.
+/// Es la misma decisión que toma la parte de LaTeX, donde el valenciano carga
+/// babel con `catalan` --y es lo que da la partición de palabras correcta--
+/// mientras las cadenas visibles se escriben en valenciano.
+///
+/// Lo que sale de ahí es catalán central: «Qüestió» donde el valenciano dice
+/// «Questió». Es una traducción de máquina, o sea un borrador que alguien va a
+/// leer de todas formas, y tener que ajustar unas formas es muchísimo mejor
+/// que no poder traducir. Pero se avisa antes, porque quien lo revise tiene
+/// que saber qué está revisando.
+const Map<String, String> _asCatalan = {'va': 'ca'};
+
+/// Los idiomas de Didacta que un proveedor **no** conoce de ninguna manera.
+///
+/// Vacío en los dos hoy: con `va` traducido a `ca`, los diez que Didacta trae
+/// están en las dos listas. Existe para poder decirlo el día que se añada uno
+/// que no.
+const Map<TranslationProvider, Set<String>> _unsupported = {
+  TranslationProvider.google: {},
+  TranslationProvider.azure: {},
+};
+
+/// El código que entiende [provider], o null si no conoce este idioma.
+String? providerCodeFor(TranslationProvider provider, String language) {
+  if ((_unsupported[provider] ?? const {}).contains(language)) return null;
+  return _asCatalan[language] ?? language;
+}
+
+/// Si lo que se le va a pedir no es exactamente el idioma que se pidió.
+///
+/// Para poder decirlo antes de traducir en vez de después de revisarlo.
+String? approximationFor(TranslationProvider provider, String language) {
+  final code = providerCodeFor(provider, language);
+  if (code == null || code == language) return null;
+  return code;
+}

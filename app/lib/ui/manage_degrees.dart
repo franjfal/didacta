@@ -523,7 +523,8 @@ class _TitlesDialogState extends State<_TitlesDialog> {
       FilledButton(
         key: const Key('degree-titles-save'),
         onPressed: () => Navigator.of(context).pop({
-          for (final entry in _fields.entries) entry.key: entry.value.text.trim(),
+          for (final entry in _fields.entries)
+            entry.key: entry.value.text.trim(),
         }),
         child: const Text('Aceptar'),
       ),

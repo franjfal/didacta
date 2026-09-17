@@ -31,6 +31,37 @@ class SyncBar extends StatefulWidget {
 class _SyncBarState extends State<SyncBar> {
   bool _busy = false;
 
+  /// Confirma lo pendiente, con el mensaje que se escriba.
+  Future<void> _commit() async {
+    final pending = widget.session.pendingChanges;
+    final message = await showDialog<String>(
+      context: context,
+      builder: (context) => _CommitDialog(pending: pending),
+    );
+    if (message == null || !mounted) return;
+
+    setState(() => _busy = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final done = await widget.session.commitPending(message);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            done == 0
+                ? 'No había nada que confirmar.'
+                : widget.session.pushOnCommit
+                ? 'Confirmado y enviado.'
+                : 'Confirmado. Queda enviarlo.',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _pull() async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -182,6 +213,9 @@ class _SyncBarState extends State<SyncBar> {
           // operación sobre git, y separarla de los dos botones que sí tocan
           // el repositorio evita pulsarla queriendo pulsar otra cosa.
           _LanguagePicker(session: session),
+          // Y confirmar, delante de los dos: es el paso que va antes.
+          if (!session.commitOnSave)
+            _CommitButton(session: session, onPressed: _busy ? null : _commit),
           if (_busy)
             const Padding(
               padding: EdgeInsets.only(right: 8),
@@ -212,6 +246,160 @@ class _SyncBarState extends State<SyncBar> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Confirmar a mano lo que está escrito y sin commit.
+///
+/// **Solo aparece con los commits automáticos apagados.** Con ellos puestos
+/// no queda nunca nada pendiente, así que el botón no tendría nada que hacer
+/// la mitad del tiempo --y un botón que no hace nada se aprende a ignorar
+/// justo antes del día en que sí hacía falta--.
+class _CommitButton extends StatelessWidget {
+  const _CommitButton({required this.session, required this.onPressed});
+
+  final Session session;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = session.pendingCount;
+    return Tooltip(
+      message: pending == 0
+          ? 'No hay nada escrito sin confirmar'
+          : 'Confirmar $pending fichero(s) como un commit',
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconButton(
+            key: const Key('sync-commit'),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.check_circle_outline, size: 18),
+            color: pending > 0 ? didactaAccentDark : didactaMuted,
+            onPressed: pending == 0 ? null : onPressed,
+          ),
+          if (pending > 0)
+            Positioned(
+              right: 2,
+              top: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: didactaAccentDark,
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Text(
+                  pending > 99 ? '99+' : '$pending',
+                  style: const TextStyle(
+                    fontSize: 9,
+                    height: 1,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pide el mensaje del commit manual.
+///
+/// El mismo trato que el de guardar una unidad: un mensaje se escribe, no se
+/// genera. «Cambios» en cuarenta commits seguidos es un historial que no
+/// sirve para nada, y el que lo va a leer eres tú dentro de seis meses.
+class _CommitDialog extends StatefulWidget {
+  const _CommitDialog({required this.pending});
+
+  final Map<String, List<String>> pending;
+
+  @override
+  State<_CommitDialog> createState() => _CommitDialogState();
+}
+
+class _CommitDialogState extends State<_CommitDialog> {
+  final _message = TextEditingController();
+
+  @override
+  void dispose() {
+    _message.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final files = [
+      for (final entry in widget.pending.entries)
+        for (final path in entry.value) (repo: entry.key, path: path),
+    ];
+
+    return AlertDialog(
+      title: const Text('Confirmar los cambios'),
+      content: SizedBox(
+        width: 520,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              key: const Key('commit-pending-message'),
+              controller: _message,
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Qué has cambiado',
+                hintText: 'Corregir la errata del Teorema 2.1',
+                isDense: true,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              files.length == 1 ? 'Un fichero:' : '${files.length} ficheros:',
+              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            ),
+            const SizedBox(height: 4),
+            // Lo que va dentro, a la vista. Un commit que se firma sin ver
+            // qué lleva es como se envía por error media traducción.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (final file in files)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          file.path,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const Key('commit-pending-confirm'),
+          onPressed: _message.text.trim().isEmpty
+              ? null
+              : () => Navigator.of(context).pop(_message.text.trim()),
+          child: const Text('Confirmar'),
+        ),
+      ],
     );
   }
 }
@@ -284,11 +472,7 @@ class _LanguagePicker extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Icon(
-                Icons.arrow_drop_down,
-                size: 16,
-                color: didactaMuted,
-              ),
+              const Icon(Icons.arrow_drop_down, size: 16, color: didactaMuted),
             ],
           ),
         ),

@@ -60,6 +60,15 @@ enum TranslationStatus {
   /// wants to know and the only state that is not a matter of degree.
   bool get exists => this != TranslationStatus.missing;
 
+  /// Si lo decide el motor en vez de declararlo alguien.
+  ///
+  /// «No existe» sale de que el fichero esté o no, y «desactualizada» de
+  /// comparar el contenido con el original. Declarar cualquiera de los dos
+  /// garantiza que se quede obsoleto en cuanto alguien toque el original, así
+  /// que la interfaz no deja ponerlos.
+  bool get computed =>
+      this == TranslationStatus.missing || this == TranslationStatus.outdated;
+
   /// Whether it needs work. `outdated` counts: the original has moved on.
   bool get needsWork =>
       this == TranslationStatus.missing ||
@@ -104,6 +113,7 @@ class Unit {
     required this.titles,
     required this.reference,
     required this.statuses,
+    this.indentOff = const {},
     required this.prerequisites,
     required this.objectives,
     required this.usedBy,
@@ -136,6 +146,10 @@ class Unit {
           entry.key as String: TranslationStatus.parse(
             (entry.value as Map?)?['status'] as String?,
           ),
+      },
+      indentOff: {
+        for (final entry in languages.entries)
+          if ((entry.value as Map?)?['indent'] == false) entry.key as String,
       },
       prerequisites: _stringList(json['prerequisites']),
       objectives: _stringList(json['objectives']),
@@ -186,6 +200,13 @@ class Unit {
   final String reference;
 
   final Map<String, TranslationStatus> statuses;
+
+  /// Los idiomas cuyo `.tex` se guarda tal cual, sin re-sangrar.
+  ///
+  /// Solo los apagados: sangrar es lo normal y lo normal no se declara. Se
+  /// pregunta con [indentsIn], que es lo que lee el editor.
+  final Set<String> indentOff;
+
   final List<String> prerequisites;
   final List<String> objectives;
   final List<UnitUsage> usedBy;
@@ -211,6 +232,12 @@ class Unit {
   /// con la hoja, y no tienen resultado ni solución que rellenar. Ofrecerles
   /// tres campos es inventarles una estructura que no tienen.
   bool get editsAsProblem => kind == 'problem';
+
+  /// Si al guardar [language] se le pone la sangría.
+  ///
+  /// Encendido mientras nadie diga lo contrario: un fichero recién traducido
+  /// llega en un bloque, y dejarlo así es el estado que nadie elige.
+  bool indentsIn(String language) => !indentOff.contains(language);
 
   /// The title in [language], falling back the way the engine does: the
   /// requested language, then the reference, then anything, then the id.
@@ -433,26 +460,22 @@ class CourseYear {
     this.themes = const [],
   });
 
-  factory CourseYear.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
-      CourseYear(
-        year: json['year'] as String? ?? '',
-        language: json['language'] as String? ?? 'es',
-        group: json['group'] is String ? json['group'] as String : null,
-        themes: [
-          for (final item in (json['themes'] as List?) ?? const [])
-            CourseTheme.fromJson(
-              (item as Map).cast<String, dynamic>(),
-              repo: repo,
-            ),
-        ],
-        documents: [
-          for (final item in (json['documents'] as List?) ?? const [])
-            Document.fromJson(
-              (item as Map).cast<String, dynamic>(),
-              repo: repo,
-            ),
-        ],
-      );
+  factory CourseYear.fromJson(
+    Map<String, dynamic> json, {
+    String repo = '',
+  }) => CourseYear(
+    year: json['year'] as String? ?? '',
+    language: json['language'] as String? ?? 'es',
+    group: json['group'] is String ? json['group'] as String : null,
+    themes: [
+      for (final item in (json['themes'] as List?) ?? const [])
+        CourseTheme.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
+    ],
+    documents: [
+      for (final item in (json['documents'] as List?) ?? const [])
+        Document.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
+    ],
+  );
 
   /// El mismo año visto en dos repositorios: los documentos se juntan.
   ///
@@ -596,9 +619,7 @@ class Degree {
       id: json['id'] as String? ?? '',
       titles: titles,
       institution: institution,
-      sources: {
-        repo: DegreeFacts(titles: titles, institution: institution),
-      },
+      sources: {repo: DegreeFacts(titles: titles, institution: institution)},
     );
   }
 
@@ -680,7 +701,8 @@ class CourseFacts {
   /// separadas acaban discrepando.
   Map<String, String> get comparable => {
     for (final entry in titles.entries) 'título (${entry.key})': entry.value,
-    for (final entry in degrees.entries) 'titulación (${entry.key})': entry.value,
+    for (final entry in degrees.entries)
+      'titulación (${entry.key})': entry.value,
     if (languages.isNotEmpty) 'idiomas': languages.join(', '),
     if ((code ?? '').isNotEmpty) 'código': code!,
     if ((teacher ?? '').isNotEmpty) 'profesor': teacher!,
@@ -693,7 +715,9 @@ class CourseFacts {
 
   /// Dónde vive ese campo dentro de `course.yaml`, para poder escribirlo.
   static List<String>? pathOf(String field) {
-    final localised = RegExp(r'^(título|titulación) \((\w+)\)$').firstMatch(field);
+    final localised = RegExp(
+      r'^(título|titulación) \((\w+)\)$',
+    ).firstMatch(field);
     if (localised != null) {
       final key = localised.group(1) == 'título' ? 'title' : 'degree';
       return [key, localised.group(2)!];
@@ -1062,7 +1086,8 @@ class Catalogue {
       name: manifest['name'] as String? ?? 'Didacta',
       languages: _stringList(manifest['languages']),
       available: [
-        for (final item in (manifest['availableLanguages'] as List?) ?? const [])
+        for (final item
+            in (manifest['availableLanguages'] as List?) ?? const [])
           LanguageOption.fromJson((item as Map).cast<String, dynamic>()),
       ],
       defaultLanguage: manifest['defaultLanguage'] as String? ?? 'es',
@@ -1254,14 +1279,10 @@ class Catalogue {
         for (final unit in units)
           if (!hidden.contains(unit.repo)) unit,
       ],
-      courses: [
-        for (final course in courses)
-          ?course.without(hidden),
-      ],
+      courses: [for (final course in courses) ?course.without(hidden)],
       degrees: [
         for (final degree in degrees)
-          if (degree.sources.keys.any((repo) => !hidden.contains(repo)))
-            degree,
+          if (degree.sources.keys.any((repo) => !hidden.contains(repo))) degree,
       ],
       profiles: profiles,
       errors: errors,

@@ -164,11 +164,7 @@ abstract class LocalClone {
     required String directory,
     required String owner,
     required String repo,
-  }) => platform.inspectTarget(
-    directory: directory,
-    owner: owner,
-    repo: repo,
-  );
+  }) => platform.inspectTarget(directory: directory, owner: owner, repo: repo);
 
   /// Clones [owner]/[repo] into [directory], authenticating with [token].
   ///
@@ -344,6 +340,23 @@ build_dir: .didacta-build
   /// [expectedSha] is the hash the caller read the file at; an empty string
   /// means "this file should not exist yet". Either mismatching is a
   /// conflict, and nothing is written.
+  /// Escribe un fichero **sin hacer commit**, con la misma comprobación.
+  ///
+  /// Para cuando los commits no son automáticos: lo escrito se queda en el
+  /// árbol de trabajo, sale en `status()` como pendiente, y alguien lo
+  /// confirma después con el mensaje que quiera. Guardar y decidir qué
+  /// contar son dos cosas distintas, y hay quien prefiere hacer la segunda
+  /// una vez al terminar en vez de treinta veces mientras escribe.
+  ///
+  /// El compare-and-set es el mismo que el de [commitFile] y por lo mismo:
+  /// un `git pull` --o el editor de texto de quien escribe-- puede haber
+  /// movido el fichero desde que se abrió la pantalla.
+  Future<String> writeFile({
+    required String path,
+    required String text,
+    required String expectedSha,
+  });
+
   Future<String> commitFile({
     required String path,
     required String text,

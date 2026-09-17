@@ -35,7 +35,10 @@ Course course() => Course(
     '2022-2023': CourseYear(
       year: '2022-2023',
       language: 'es',
-      documents: [doc('tema-1'), doc('faq', kind: 'handout', units: 0)],
+      documents: [
+        doc('tema-1'),
+        doc('faq', kind: 'handout', units: 0),
+      ],
     ),
     '2026-2027': const CourseYear(
       year: '2026-2027',
@@ -173,9 +176,6 @@ void main() {
     // Es la propiedad por la que esto existe, y la que alguien necesita leer
     // antes de darle: copiar un curso no reparte copias de su material.
     await open(tester);
-    expect(
-      find.textContaining('no se duplican'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('no se duplican'), findsOneWidget);
   });
 }

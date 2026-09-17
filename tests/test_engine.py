@@ -416,6 +416,40 @@ class ContentRepositoryTests(unittest.TestCase):
         finally:
             shutil.rmtree(directory, ignore_errors=True)
 
+    def _unit_with(self, metadata):
+        """Una unidad de usar y tirar con ese `unit.yaml`."""
+        directory = tempfile.mkdtemp(prefix="didacta-unit-")
+        self.addCleanup(shutil.rmtree, directory, ignore_errors=True)
+        with open(os.path.join(directory, "es.tex"), "w") as handle:
+            handle.write("content")
+        with open(os.path.join(directory, "va.tex"), "w") as handle:
+            handle.write("contingut")
+        with open(os.path.join(directory, "unit.yaml"), "w") as handle:
+            handle.write(metadata)
+        parent, name = os.path.split(directory)
+        return repo_mod.load_unit(parent, name, self.settings)
+
+    def test_indentation_is_on_unless_it_is_turned_off(self):
+        # Sangrar es lo normal, y lo normal no se declara: una unidad migrada
+        # sin metadatos no puede quedarse sin formatear por omision.
+        unit = self._unit_with("id: x\n")
+        self.assertTrue(unit.languages["es"].indent)
+        self.assertTrue(unit.languages["va"].indent)
+
+    def test_indentation_is_declared_per_language(self):
+        # Que la version castellana haya que dejarla quieta --una tabla
+        # alineada a mano, un fichero generado-- no dice nada de la valenciana.
+        unit = self._unit_with(
+            "id: x\nlanguages:\n  es: {indent: false}\n  va: {status: draft}\n"
+        )
+        self.assertFalse(unit.languages["es"].indent)
+        self.assertTrue(unit.languages["va"].indent)
+
+    def test_indentation_has_to_be_a_yes_or_a_no(self):
+        # `indent: maybe` seria un fichero que nadie sabe si se reescribe.
+        with self.assertRaises(repo_mod.RepoError):
+            self._unit_with("id: x\nlanguages:\n  es: {indent: quizas}\n")
+
     def test_a_unit_with_no_language_file_is_an_error(self):
         directory = tempfile.mkdtemp(prefix="didacta-empty-")
         try:

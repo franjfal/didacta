@@ -30,6 +30,7 @@ import 'pdf_tab.dart';
 import 'source_view.dart';
 import 'tabs.dart';
 import 'theme.dart';
+import 'translate_tab.dart';
 import 'unit_preview.dart';
 
 class DocumentPage extends StatefulWidget {
@@ -60,6 +61,11 @@ const String buildTab = 'compilar';
 /// y por tanto lo que cambia de un curso a otro. La última, como en una
 /// unidad: es la que menos se abre y la única que no escribe.
 const String historyTab = 'historial';
+
+/// Los huecos de traducción del tema. La pestaña solo existe cuando
+/// falta algo: una que siempre dice «no falta nada» se deja de mirar
+/// justo antes del día en que sí faltaba.
+const String translateTab = 'traducir';
 
 /// Prefijo de las pestañas de PDF. Con un carácter que no puede estar en un
 /// perfil, para que no choque con las otras dos.
@@ -281,6 +287,7 @@ class _DocumentPageState extends State<DocumentPage> {
         _TabBar(
           active: _active,
           units: document.unitRefs.length,
+          gaps: _gaps(session, document).length,
           open: _open,
           onSelect: (code) => setState(() => _active = code),
           onClose: _closePdf,
@@ -291,6 +298,23 @@ class _DocumentPageState extends State<DocumentPage> {
   }
 
   /// Lo que se ve debajo de las pestañas.
+  /// Qué lecciones de este tema tienen algún idioma sin traducir.
+  ///
+  /// Sobre los idiomas de la **asignatura** y no los del espacio de trabajo:
+  /// un tema que solo se da en castellano y valenciano no tiene un hueco en
+  /// inglés, tiene un idioma que no se usa.
+  List<TranslationGap> _gaps(Session session, Document document) {
+    final course = session.courseById(widget.courseId);
+    final languages = (course?.languages.isNotEmpty ?? false)
+        ? course!.languages
+        : session.catalogue.languages;
+    return gapsIn(
+      document: document,
+      catalogue: session.catalogue,
+      languages: languages,
+    );
+  }
+
   Widget _panel(
     Session session,
     Course course,
@@ -320,6 +344,14 @@ class _DocumentPageState extends State<DocumentPage> {
         year: year,
         document: document,
         session: session,
+        language: language,
+      );
+    }
+
+    if (_active == translateTab) {
+      return TranslateTab(
+        session: session,
+        gaps: _gaps(session, document),
         language: language,
       );
     }
@@ -432,6 +464,7 @@ class _TabBar extends StatelessWidget {
   const _TabBar({
     required this.active,
     required this.units,
+    required this.gaps,
     required this.open,
     required this.onSelect,
     required this.onClose,
@@ -439,6 +472,10 @@ class _TabBar extends StatelessWidget {
 
   final String active;
   final int units;
+
+  /// Cuántas lecciones de este tema tienen algún idioma sin traducir. Cero
+  /// quita la pestaña: no hay nada que enseñar en ella.
+  final int gaps;
   final List<PdfGroup> open;
   final ValueChanged<String> onSelect;
   final ValueChanged<String> onClose;
@@ -473,6 +510,14 @@ class _TabBar extends StatelessWidget {
           dirty: false,
           onTap: () => onSelect(buildTab),
         ),
+        if (gaps > 0)
+          DidactaTab(
+            label: 'Traducir ($gaps)',
+            icon: Icons.auto_awesome_outlined,
+            selected: active == translateTab,
+            dirty: false,
+            onTap: () => onSelect(translateTab),
+          ),
         DidactaTab(
           label: 'Historial',
           icon: Icons.history,

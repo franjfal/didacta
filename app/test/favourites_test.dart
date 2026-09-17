@@ -74,11 +74,7 @@ void main() {
       // es el que se busca, y una lista ascendente lo entierra al final.
       final it = await session();
       final course = it.catalogue.courses.firstWhere((c) => c.id == 'am-i');
-      expect(it.sortedYearsOf(course), [
-        '2026-2027',
-        '2024-2025',
-        '2022-2023',
-      ]);
+      expect(it.sortedYearsOf(course), ['2026-2027', '2024-2025', '2022-2023']);
     });
   });
 
@@ -100,11 +96,7 @@ void main() {
       final it = await session();
       await it.setFavouriteYear('am-i', '2022-2023', true);
       final course = it.catalogue.courses.firstWhere((c) => c.id == 'am-i');
-      expect(it.sortedYearsOf(course), [
-        '2022-2023',
-        '2026-2027',
-        '2024-2025',
-      ]);
+      expect(it.sortedYearsOf(course), ['2022-2023', '2026-2027', '2024-2025']);
     });
 
     test('desmarcar lo devuelve a su sitio', () async {
@@ -140,7 +132,9 @@ void main() {
   group('se recuerdan', () {
     test('lo marcado se guarda para el próximo arranque', () async {
       final preferences = MemoryPreferences();
-      final catalogue = withCourses([subject('am-i', 'AM I', const ['2026-2027'])]);
+      final catalogue = withCourses([
+        subject('am-i', 'AM I', const ['2026-2027']),
+      ]);
       final it = FakeSession(
         gatewayOverride: FakeGateway(),
         catalogue: catalogue,

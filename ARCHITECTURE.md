@@ -410,6 +410,8 @@ se pueda ver qué toca no es una herramienta en la que haya motivo para confiar.
 | D65 | Solo se abren clones de GitHub a los que la cuenta llega, y se traen antes de modificarlos | un repositorio de contenido es la fuente de la verdad de un curso entero, y una copia que solo existe en un portátil es la copia que se pierde. Así que una carpeta cualquiera no se añade --lo que se escriba ahí no tiene a dónde ir-- y un clon del disco tampoco basta: que esté en esta máquina no dice quién lo puso, y se le pregunta a GitHub si esta cuenta llega a él. Al añadirlo se pone en hora, y antes de cada modificación se comprueba que lo sigue estando, con una **ventana de cinco minutos**: guardar es lo que más se hace y una llamada de red por guardado se nota justo ahí, mientras que para no editar sobre material viejo una comprobación de hace un momento vale igual que una de ahora. Quien decide si un fichero sin guardar estorba es git con `pull --ff-only`, no una regla propia: `generated/` deja el clon sucio casi siempre, y negarse a avanzar por eso habría convertido la garantía en un aviso permanente que nadie lee |
 | D66 | El token va al llavero de siempre, no al «data protection keychain» | el moderno exige el entitlement `keychain-access-groups`, y ese exige firmar con un equipo de Apple. Didacta se firma ad hoc porque se instala a mano y no va a la Mac App Store (D46), así que no hay prefijo de equipo que poner: el device flow terminaba bien, GitHub devolvía el token, y guardarlo fallaba con `-34018: A required entitlement isn't present` en el último paso y sin decir de qué entitlement hablaba. El llavero de siempre no pide entitlement y guarda en el de inicio de sesión, que es donde alguien iría a buscarlo. Lo que se pierde --compartir la credencial entre aplicaciones del mismo equipo-- aquí no se usa: hay una aplicación |
 | D67 | El historial de un fichero se lee desde dentro, y el diff lo calcula git | el material vive en git precisamente porque git sabe contestar «¿quién tocó esto, cuándo, y qué cambió?», y esa respuesta obligaba a salir a un terminal con la ruta en la cabeza. Es una **pestaña y no un panel** porque `git log --follow` sobre años de repositorio cuesta, y cobrárselo a quien venía a editar el castellano sería cobrarlo casi siempre por nada. El diff se le pide a git en lugar de comparar dos textos con el comparador propio: un commit puede renombrar, venir de una fusión o tocar un binario, y eso no se deduce de dos cadenas -- lo que se lee son las cabeceras `@@`, de donde salen los números de las dos columnas. Lo que se enseña de cada versión es el **fichero entero** con lo añadido y lo quitado marcado dentro, y no el recorte de tres líneas alrededor del cambio: el recorte contesta «¿qué tocó este commit?», que es la pregunta de quien revisa un cambio ajeno, y editando la pregunta es «¿cómo estaba esto en marzo?». Por eso el commit --autor, fecha exacta, mensaje, hash-- está detrás de un botón y no delante del texto: es información *sobre* el cambio. Y es de **solo lectura**: no hay «restaurar esta versión», porque deshacer tres meses de trabajo con un botón que se pulsa por error es un fallo del que no se vuelve |
+| D68 | Se sangra al **guardar**, no al escribir, y con `latexindent` si lo hay | reindentar bajo los dedos de quien está en mitad de una línea le mueve el cursor y le rompe el deshacer; al guardar el fichero ya está cerrado como idea. La herramienta buena es la de CTAN y se prueba primero, pero es un script de Perl con cuatro dependencias que MacTeX no instala --`File::HomeDir`, `Log::Log4perl`, `Log::Dispatch`, `Unicode::GCString`--, así que en una máquina recién montada el fichero está y no arranca: parece disponible y no lo está. Detrás va un indentador propio que hace menos y siempre funciona, y la diferencia no se le cuenta a nadie porque no hay nada que hacer con ella. Lo que decide si se acepta su salida no es el código de salida: es que el texto sin espacios sea **el mismo** que entró, letra por letra. Un `latexindent` con la configuración de saltos de línea puesta pasaría el código de salida y habría reescrito el fichero de alguien |
+| D69 | Sangrar se puede apagar, y se apaga **por idioma**, en el `unit.yaml` | hay ficheros a los que reescribirles el margen les cambia lo que imprimen --un entorno de código propio que la lista de verbatim no conoce-- o les rompe el historial --un `.tex` que genera otra herramienta y se regenera entero--, y material migrado con un `\begin` sin cerrar que LaTeX compila igual pero el contador de niveles no, así que sale todo corrido. Ninguno es frecuente y todos son reales, y en todos la respuesta es dejar el fichero en paz, no arreglar el indentador. Va en el `unit.yaml` y no en las preferencias porque es una propiedad **del fichero**: si hay que dejarlo quieto, hay que dejarlo quieto también cuando lo abra otra persona en otro ordenador. Y por idioma porque el motivo vive en un fichero concreto: que la versión castellana venga generada no dice nada de la inglesa escrita a mano |
 
 ---
 
@@ -646,37 +648,47 @@ app/lib/
 
 ## 8.ter Cómo se reparte y cómo se actualiza
 
-Didacta se distribuye desde un **segundo repositorio privado**,
-`franjfal/didacta_public`, que no tiene el código: solo las versiones
-compiladas. La idea es que el permiso ya existe y no hay que inventar otro.
+Didacta es **software libre bajo la GPL-3.0** y se publica desde este mismo
+repositorio: los releases llevan los instaladores de los tres sistemas, y la
+web de documentación --construida desde `web/` y servida en GitHub Pages-- es
+la página de descarga.
 
 ```
-   franjfal/didacta                 franjfal/didacta_public
-   (privado, el código)             (privado, las versiones)
-          │                                    ▲
-  «Publish Didacta                             │
-   Release» ──── macOS/Windows/Linux ──────────┘
-                              token de una GitHub App
-                              instalada SOLO allí
+   franjfal/didacta  (público)
+          │
+  «Publish Didacta Release»
+          ├── compila macOS / Windows / Linux
+          ├── publica el release aquí mismo
+          └── dispara «Publish the documentation site»
+                        └── capturas + página de descarga → Pages
 ```
 
-**Quién puede usar Didacta es quien tiene acceso a `didacta_public`.** Dar
-acceso es añadir un colaborador; quitarlo es quitarlo de ahí. No hay una lista
-de permitidos que mantener en paralelo, ni un servidor de licencias, ni nada
-que pueda quedar desincronizado con la realidad. Y quien lo tiene puede
-instalar la aplicación sin tener el código.
+Empezó de otra manera, y merece la pena dejar dicho por qué cambió. El código
+era privado, así que las versiones vivían en un **segundo repositorio privado**
+para poder dar la aplicación a quien no se le daba el código; quién podía
+instalarla era quién tenía acceso allí, la publicación necesitaba el token de
+una GitHub App instalada solo en él, y el actualizador descargaba con la
+credencial de cada persona porque un repositorio privado no se lee de otra
+manera.
+
+Al abrir el código, esa separación dejó de separar nada. Se fueron con ella el
+segundo repositorio, la GitHub App, sus dos secrets, la comprobación de
+autorización que la aplicación hacía al entrar y el `Authorization:` de cada
+petición del actualizador. Es la clase de simplificación que conviene apuntar:
+**no se arregló nada; se quitó lo que ya no sujetaba nada.**
 
 Las cuatro decisiones que sostienen lo demás:
 
 1. **La versión la dice `app/pubspec.yaml` y nadie más.** De ahí salen el tag,
    el nombre de los artefactos, lo que la aplicación dice de sí misma y lo que
    declara el manifiesto. La aplicación lee el paquete construido y no una
-   constante, porque una constante puede quedarse atrás de la compilación.
+   constante, porque una constante puede quedarse atrás de la compilación. Y
+   ese número **lo sube el ciclo de publicación**, no una persona.
 
-2. **Todo pasa por la API con un `Authorization:`.** El manifiesto guarda el
-   `assetId` de cada artefacto, no una URL: es lo único compatible con que el
-   repositorio sea privado, y no deja ningún enlace que sobreviva a que a
-   alguien se le retire el acceso.
+2. **El manifiesto guarda el `assetId` de cada artefacto, no una URL.** Ya no
+   hace falta --con el repositorio público, la dirección de descarga es
+   pública-- y se conserva igual: es la forma que funciona en los dos casos, y
+   lo que se comprueba después es el SHA-256 y no de dónde vino.
 
 3. **Un binario cuyo SHA-256 no cuadra no se instala nunca**, y además no se
    queda en el disco. Es la afirmación que sostiene el sistema entero.
@@ -686,19 +698,18 @@ Las cuatro decisiones que sostienen lo demás:
    versión anterior se aparta y solo desaparece cuando la nueva está en su
    sitio y comprobada.
 
-La entrada es el **device flow** de la OAuth App que ya existía (§D63): la
-contraseña se teclea en github.com y el token va al llavero del sistema. La
-credencial con la que publica el CI es **otra distinta** --una GitHub App con
-`Contents: write` solo sobre `didacta_public`--, porque reutilizar la de las
-personas daría permiso de publicar a cualquiera que entre.
+La entrada sigue siendo el **device flow** de la OAuth App (§D63), y sigue
+haciendo falta, pero por lo que siempre fue de verdad: el material vive en
+repositorios de GitHub. Lo que ya no hace es decidir si la aplicación se puede
+usar.
 
-Publicar una versión son cinco pasos y ninguno es una orden en un terminal:
-subir el número en `pubspec.yaml`, escribir la sección del `CHANGELOG.md`,
-Actions → «Publish Didacta Release» → Run workflow.
+Publicar una versión son tres pasos y ninguno es una orden en un terminal:
+mirar qué número sale (`release.py next`), escribir esa sección del
+`CHANGELOG.md`, y Actions → «Publish Didacta Release» → Run workflow.
 
-El detalle entero --artefactos por sistema, el manifiesto, la firma, los
-secrets, cómo revocar un acceso y cómo hacer rollback-- está en
-[`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
+El detalle entero --artefactos por sistema, el manifiesto, la firma, la web y
+cómo hacer rollback-- está en
+[`docs/DISTRIBUTION.md`](https://github.com/franjfal/didacta/blob/main/docs/DISTRIBUTION.md).
 
 ---
 

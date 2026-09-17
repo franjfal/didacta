@@ -19,17 +19,20 @@ import 'package:didacta_app/model/catalogue.dart';
 
 import 'fixture.dart';
 
-Document doc(String id, {List<String> themes = const [], required String repo}) =>
-    Document(
-      id: id,
-      kind: 'theory',
-      repo: repo,
-      language: 'es',
-      titles: {'es': id},
-      profiles: const [],
-      unitRefs: const [],
-      themes: themes,
-    );
+Document doc(
+  String id, {
+  List<String> themes = const [],
+  required String repo,
+}) => Document(
+  id: id,
+  kind: 'theory',
+  repo: repo,
+  language: 'es',
+  titles: {'es': id},
+  profiles: const [],
+  unitRefs: const [],
+  themes: themes,
+);
 
 /// Una asignatura repartida: la teoría declara el tema, los problemas lo
 /// nombran. Es la forma exacta que tiene el material real.
@@ -140,8 +143,10 @@ void main() {
       );
       await session.primeForTest(split());
 
-      expect(session.catalogue.courses.single.years['2026-2027']!.documents,
-          hasLength(2));
+      expect(
+        session.catalogue.courses.single.years['2026-2027']!.documents,
+        hasLength(2),
+      );
 
       await session.setRepoVisible('x/teoria', false);
 
@@ -169,8 +174,10 @@ void main() {
       await session.setRepoVisible('x/teoria', false);
       await session.setRepoVisible('x/teoria', true);
 
-      expect(session.catalogue.courses.single.years['2026-2027']!.documents,
-          hasLength(2));
+      expect(
+        session.catalogue.courses.single.years['2026-2027']!.documents,
+        hasLength(2),
+      );
       expect(
         session.reloads,
         before,

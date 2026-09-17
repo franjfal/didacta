@@ -239,7 +239,7 @@ class _MetadataEditorState extends State<MetadataEditor> {
     try {
       final sha = await widget.session
           .gatewayFor(widget.unit.repo)
-          .commit(
+          .save(
             path: widget.unit.metadataPath,
             text: _text,
             sha: _file?.sha ?? '',

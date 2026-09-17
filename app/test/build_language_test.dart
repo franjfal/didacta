@@ -51,7 +51,10 @@ ExistingOutput output(
 
 Future<void> pump(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
-    MaterialApp(theme: didactaTheme(), home: Scaffold(body: Center(child: child))),
+    MaterialApp(
+      theme: didactaTheme(),
+      home: Scaffold(body: Center(child: child)),
+    ),
   );
   await settle(tester);
 }
@@ -252,9 +255,7 @@ void main() {
 
     testWidgets('si de ese no hay nada, el primero que haya', (tester) async {
       // Respetar la preferencia hasta enseñar un visor vacío no ayuda a nadie.
-      await show(tester, [
-        output('notes', language: 'en'),
-      ], language: 'va');
+      await show(tester, [output('notes', language: 'en')], language: 'va');
 
       expect(find.byKey(const Key('pdf-language-en')), findsNothing);
       expect(find.textContaining('English'), findsWidgets);
@@ -297,7 +298,9 @@ void main() {
 
       expect(
         tester.getTopLeft(find.byKey(const Key('pdf-language-es'))).dx,
-        lessThan(tester.getTopLeft(find.byKey(const Key('pdf-language-en'))).dx),
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('pdf-language-en'))).dx,
+        ),
       );
     });
   });

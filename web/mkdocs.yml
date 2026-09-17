@@ -1,0 +1,183 @@
+# La web de Didacta: documentación y descargas.
+#
+#     cd web && pip install -r requirements.txt && mkdocs serve
+#
+# Dos decisiones que conviene dejar dichas, porque las dos se notan al
+# mantenerla:
+#
+# **Sin plugins.** Solo `mkdocs-material`. Todo lo que aquí parece un plugin
+# --las tarjetas, los desplegables, las pestañas, los iconos-- viene de las
+# extensiones de markdown que Material ya trae. Cada plugin es una cosa más
+# que puede no instalarse el día que haya que publicar una versión con prisa.
+#
+# **Lo que ya está escrito no se copia: se incluye.** `AUTHORING.md`,
+# `ARCHITECTURE.md` y el CHANGELOG viven en el repositorio y los lee quien
+# trabaja en el código; aquí se incluyen con `--8<--` (la extensión
+# `pymdownx.snippets`, con `base_path` apuntando fuera de `docs/`). Duplicar
+# la referencia de escritura sería tener dos, y la de la web sería la vieja.
+site_name: Didacta
+site_description: >-
+  Material docente en LaTeX: se escribe una vez y se generan las diapositivas,
+  los apuntes, las hojas de problemas y los exámenes, en varios idiomas.
+site_author: Javier Falcó
+site_url: https://franjfal.github.io/didacta/
+
+repo_url: https://github.com/franjfal/didacta
+repo_name: franjfal/didacta
+edit_uri: edit/main/web/docs/
+
+copyright: >-
+  Didacta es software libre bajo la
+  <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0</a>.
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  custom_dir: overrides
+  language: es
+  favicon: img/favicon.png
+  logo: img/logo.png
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    # Claro y oscuro, con el mismo verde de la aplicación y de los PDF. El
+    # que manda al abrir es el del sistema: una web de documentación que
+    # deslumbra a las dos de la mañana es una web que se cierra.
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Seguir al sistema
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Cambiar a oscuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Seguir al sistema
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - toc.follow
+
+extra_css:
+  - stylesheets/didacta.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/franjfal/didacta
+      name: El código, en GitHub
+  # Sin analítica y sin cookies. No hay ningún banner que aceptar porque no
+  # hay nada que aceptar, que es la única forma de no tener que pedirlo.
+
+plugins:
+  - search:
+      lang: es
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      permalink_title: Enlace a esta sección
+      toc_depth: 3
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.snippets:
+      # Los trozos generados (`descargas.md`, que escribe `packaging/web.py`)
+      # y los documentos que ya viven en el repositorio y no se duplican.
+      base_path:
+        - docs/_snippets
+        - ../docs
+        - ..
+      check_paths: true
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+not_in_nav: |
+  _snippets/*
+
+nav:
+  - Didacta: index.md
+  - Descargar: descargas.md
+  - Empezar:
+      - empezar/index.md
+      - empezar/latex.md
+      - empezar/primer-repositorio.md
+      - empezar/primeros-pasos.md
+  - Cómo funciona:
+      - conceptos/index.md
+      - conceptos/unidades.md
+      - conceptos/perfiles.md
+      - conceptos/problemas.md
+      - conceptos/idiomas.md
+      - conceptos/repositorios.md
+  - La aplicación:
+      - app/index.md
+      - app/biblioteca.md
+      - app/unidad.md
+      - app/asignaturas.md
+      - app/composicion.md
+      - app/compilar.md
+      - app/traduccion.md
+      - app/historial.md
+      - app/exportar.md
+      - app/entre-repos.md
+      - app/mcp.md
+      - app/ajustes.md
+  - Escribir:
+      - escribir/index.md
+      - escribir/referencia.md
+  - La herramienta:
+      - cli/index.md
+  - El proyecto:
+      - proyecto/index.md
+      - proyecto/arquitectura.md
+      - proyecto/distribucion.md
+      - proyecto/cambios.md

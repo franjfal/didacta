@@ -30,8 +30,7 @@ const String secreta = 'AIzaSyD-clave-larguisima-de-verdad-1234';
 
 Credentials get google => const Credentials(key: secreta);
 
-Credentials get azure =>
-    const Credentials(key: secreta, region: 'westeurope');
+Credentials get azure => const Credentials(key: secreta, region: 'westeurope');
 
 void main() {
   group('la forma de una credencial', () {
@@ -111,11 +110,10 @@ void main() {
     test('ni la excepción al traducir', () async {
       final client = MockClient((_) async => http.Response('nope', 403));
       expect(
-        () => GoogleTranslator(google, client: client).translate(
-          const ['Hola'],
-          from: 'es',
-          to: 'en',
-        ),
+        () => GoogleTranslator(
+          google,
+          client: client,
+        ).translate(const ['Hola'], from: 'es', to: 'en'),
         throwsA(
           isA<TranslationException>().having(
             (e) => '$e',
@@ -208,6 +206,88 @@ void main() {
     });
   });
 
+  group('los códigos de cada proveedor', () {
+    test('el valenciano se pide como catalán', () async {
+      // El fallo que lo destapó: `va` es un código de Didacta y ningún
+      // traductor automático lo conoce. Google contesta `400 Invalid Value`
+      // con un JSON de treinta líneas que no nombra el idioma.
+      Map<String, dynamic>? body;
+      final client = MockClient((request) async {
+        body = (jsonDecode(request.body) as Map).cast<String, dynamic>();
+        return http.Response(
+          jsonEncode({
+            'data': {
+              'translations': [
+                {'translatedText': 'El conjunt.'},
+              ],
+            },
+          }),
+          200,
+        );
+      });
+
+      await GoogleTranslator(
+        google,
+        client: client,
+      ).translate(const ['El conjunto.'], from: 'es', to: 'va');
+
+      expect(body!['target'], 'ca');
+      expect(body!['source'], 'es');
+    });
+
+    test('y en Azure igual', () async {
+      Uri? seen;
+      final client = MockClient((request) async {
+        seen = request.url;
+        return http.Response(
+          jsonEncode([
+            {
+              'translations': [
+                {'text': 'El conjunt.'},
+              ],
+            },
+          ]),
+          200,
+        );
+      });
+
+      await AzureTranslator(
+        azure,
+        client: client,
+      ).translate(const ['El conjunto.'], from: 'es', to: 'va');
+
+      expect('$seen', contains('to=ca'));
+    });
+
+    test('los demás van tal cual', () async {
+      for (final code in [
+        'es',
+        'ca',
+        'gl',
+        'eu',
+        'en',
+        'fr',
+        'de',
+        'it',
+        'pt',
+      ]) {
+        expect(
+          providerCodeFor(TranslationProvider.google, code),
+          code,
+          reason: code,
+        );
+      }
+    });
+
+    test('y se puede preguntar cuál se va a aproximar', () {
+      // Para decirlo **antes** de traducir: quien revise el borrador tiene
+      // que saber qué está revisando.
+      expect(approximationFor(TranslationProvider.google, 'va'), 'ca');
+      expect(approximationFor(TranslationProvider.google, 'ca'), isNull);
+      expect(approximationFor(TranslationProvider.azure, 'es'), isNull);
+    });
+  });
+
   group('traducir', () {
     test('se manda como HTML, que es lo que respeta las etiquetas', () async {
       // Es lo que permite mandar un `.tex` protegido: las fórmulas y los
@@ -254,11 +334,10 @@ void main() {
         );
       });
 
-      final out = await AzureTranslator(azure, client: client).translate(
-        const ['Hola'],
-        from: 'es',
-        to: 'en',
-      );
+      final out = await AzureTranslator(
+        azure,
+        client: client,
+      ).translate(const ['Hola'], from: 'es', to: 'en');
 
       expect('$seen', contains('textType=html'));
       expect(out.single, 'Hello');

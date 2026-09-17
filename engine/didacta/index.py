@@ -271,6 +271,11 @@ def _unit_record(unit, settings, usage):
             "exists": bool(entry.exists),
             "bytes": entry.bytes,
         }
+        # Solo cuando esta apagado. Lo normal no se escribe: el indice lo lee
+        # un navegador y repetir `"indent": true` en cada idioma de cada
+        # unidad es peso por decir lo que ya se sabe.
+        if not entry.indent:
+            languages[code]["indent"] = False
 
     return {
         "id": unit.id,

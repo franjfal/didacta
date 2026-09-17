@@ -13,17 +13,20 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:didacta_app/model/catalogue.dart';
 
-Document doc(String id, {List<String> themes = const [], String repo = 'uno'}) =>
-    Document(
-      id: id,
-      kind: 'theory',
-      repo: repo,
-      language: 'es',
-      titles: {'es': id},
-      profiles: const [],
-      unitRefs: const [],
-      themes: themes,
-    );
+Document doc(
+  String id, {
+  List<String> themes = const [],
+  String repo = 'uno',
+}) => Document(
+  id: id,
+  kind: 'theory',
+  repo: repo,
+  language: 'es',
+  titles: {'es': id},
+  profiles: const [],
+  unitRefs: const [],
+  themes: themes,
+);
 
 CourseYear year({
   List<CourseTheme> themes = const [],
@@ -57,10 +60,10 @@ void main() {
       final groups = entry.byTheme;
       expect(groups.length, 2);
       expect(groups.first.theme?.id, 'tema-1');
-      expect(
-        groups.first.documents.map((d) => d.id),
-        ['practica-1', 'tema-1-teoria'],
-      );
+      expect(groups.first.documents.map((d) => d.id), [
+        'practica-1',
+        'tema-1-teoria',
+      ]);
       expect(groups.last.documents.map((d) => d.id), ['practica-2']);
     });
 
@@ -134,17 +137,20 @@ void main() {
       expect(groups.single.documents.single.id, 'practica-1');
     });
 
-    test('estar en un tema conocido y en otro que no, agrupa por el conocido', () {
-      final entry = year(
-        themes: const [tema1],
-        documents: [
-          doc('a', themes: ['tema-1', 'tema-de-otro-repositorio']),
-        ],
-      );
-      final groups = entry.byTheme;
-      expect(groups.length, 1, reason: 'no puede salir además como suelto');
-      expect(groups.single.theme?.id, 'tema-1');
-    });
+    test(
+      'estar en un tema conocido y en otro que no, agrupa por el conocido',
+      () {
+        final entry = year(
+          themes: const [tema1],
+          documents: [
+            doc('a', themes: ['tema-1', 'tema-de-otro-repositorio']),
+          ],
+        );
+        final groups = entry.byTheme;
+        expect(groups.length, 1, reason: 'no puede salir además como suelto');
+        expect(groups.single.theme?.id, 'tema-1');
+      },
+    );
 
     test('sin temas declarados, todo sale como antes', () {
       final entry = year(documents: [doc('a'), doc('b'), doc('c')]);
@@ -159,11 +165,15 @@ void main() {
       // El caso real: la teoría declara el Tema 1 y los problemas solo lo
       // nombran. Juntos, salen en la misma tarjeta.
       final problemas = year(
-        documents: [doc('practica-1', themes: ['tema-1'], repo: 'problemas')],
+        documents: [
+          doc('practica-1', themes: ['tema-1'], repo: 'problemas'),
+        ],
       );
       final teoria = year(
         themes: const [tema1],
-        documents: [doc('tema-1-teoria', themes: ['tema-1'], repo: 'teoria')],
+        documents: [
+          doc('tema-1-teoria', themes: ['tema-1'], repo: 'teoria'),
+        ],
       );
 
       final conflicts = <String>[];
@@ -172,29 +182,34 @@ void main() {
       expect(conflicts, isEmpty);
       final groups = merged.byTheme;
       expect(groups.single.theme?.id, 'tema-1');
-      expect(
-        groups.single.documents.map((d) => d.id),
-        ['practica-1', 'tema-1-teoria'],
-      );
+      expect(groups.single.documents.map((d) => d.id), [
+        'practica-1',
+        'tema-1-teoria',
+      ]);
     });
 
     test('que los dos declaren el mismo tema no es un conflicto', () {
       // Es un tema del curso, no de ninguno de los dos repositorios: que los
       // dos lo escriban es que los dos saben cómo se llama.
       final conflicts = <String>[];
-      final merged = year(
-        themes: const [tema1],
-        documents: [doc('a', themes: ['tema-1'])],
-      ).mergedWith(
-        year(
-          themes: const [
-            CourseTheme(id: 'tema-1', titles: {'es': 'Otro título'}),
-            tema2,
-          ],
-          documents: [doc('b', themes: ['tema-2'], repo: 'dos')],
-        ),
-        conflicts,
-      );
+      final merged =
+          year(
+            themes: const [tema1],
+            documents: [
+              doc('a', themes: ['tema-1']),
+            ],
+          ).mergedWith(
+            year(
+              themes: const [
+                CourseTheme(id: 'tema-1', titles: {'es': 'Otro título'}),
+                tema2,
+              ],
+              documents: [
+                doc('b', themes: ['tema-2'], repo: 'dos'),
+              ],
+            ),
+            conflicts,
+          );
 
       expect(conflicts, isEmpty);
       expect(merged.themes.map((t) => t.id), ['tema-1', 'tema-2']);
@@ -213,7 +228,11 @@ void main() {
         'year': '2026-2027',
         'language': 'es',
         'documents': [
-          {'id': 'a', 'kind': 'theory', 'title': {'es': 'A'}},
+          {
+            'id': 'a',
+            'kind': 'theory',
+            'title': {'es': 'A'},
+          },
         ],
       }, repo: 'uno');
       expect(entry.themes, isEmpty);

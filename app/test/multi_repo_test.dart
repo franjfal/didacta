@@ -133,7 +133,7 @@ void main() {
 
     await session
         .gatewayFor('x/uno')
-        .commit(
+        .save(
           path: 'content/analysis/normed/def/es.tex',
           text: 'Escrito en uno.\n',
           sha: await _shaOf(
@@ -145,7 +145,7 @@ void main() {
         );
     await session
         .gatewayFor('x/dos')
-        .commit(
+        .save(
           path: 'content/algebra/matrices/rank/es.tex',
           text: 'Escrito en dos.\n',
           sha: await _shaOf(
@@ -442,7 +442,7 @@ void main() {
         'content/analysis/normed/def/es.tex',
       )).sha;
 
-      await gateway.commit(
+      await gateway.save(
         path: 'content/analysis/normed/def/es.tex',
         text: 'Escrito sin poder comprobar.\n',
         sha: sha,

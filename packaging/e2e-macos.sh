@@ -4,10 +4,9 @@
 # Hace de verdad el recorrido entero contra el release publicado:
 #
 #   1. prepara una **copia** de la Didacta instalada, en una carpeta temporal;
-#   2. comprueba el acceso al repositorio privado, y que un token inválido no
-#      pasa;
+#   2. comprueba que el repositorio de versiones se lee **sin credencial**;
 #   3. lee el manifiesto del último release;
-#   4. descarga el artefacto por su `assetId`, con el token;
+#   4. descarga el artefacto por su `assetId`;
 #   5. comprueba el SHA-256 --si no cuadra, aquí se acaba--;
 #   6. extrae, valida el paquete y escribe el script de sustitución;
 #   7. deja que el script sustituya la copia y la relance;
@@ -20,8 +19,7 @@
 # contra el mismo servicio.
 #
 # Uso:
-#   DIDACTA_E2E_TOKEN=$(gh auth token) \
-#     packaging/e2e-macos.sh <Didacta.app que hace de versión instalada>
+#   packaging/e2e-macos.sh <Didacta.app que hace de versión instalada>
 set -eu
 
 [ "$(uname)" = "Darwin" ] || { echo "esto es la prueba de macOS" >&2; exit 1; }
@@ -29,8 +27,6 @@ set -eu
 origen=${1:?falta el .app que hace de versión instalada}
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/.." && pwd)
-
-: "${DIDACTA_E2E_TOKEN:?falta DIDACTA_E2E_TOKEN (prueba: gh auth token)}"
 
 trabajo=$(mktemp -d)
 copia="$trabajo/Didacta.app"
