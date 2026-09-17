@@ -117,7 +117,19 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.inlinehilite
   - pymdownx.keys
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      # Diagramas. Material trae la integración con Mermaid --carga el
+      # script solo cuando una página lleva uno, y lo pinta con los colores
+      # del tema-- así que esto no es un plugin más: es decirle que un bloque
+      # marcado como `mermaid` no es código que haya que colorear.
+      #
+      # Están para lo que una captura no puede enseñar: de dónde sale cada
+      # PDF, qué le pasa a una traducción cuando cambia su original, cómo se
+      # reparte el material entre repositorios. Lo demás son capturas.
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:
@@ -174,9 +186,13 @@ nav:
   - Escribir:
       - escribir/index.md
       - escribir/referencia.md
-  - La herramienta:
+  # Lo de abajo es para quien quiere ir más allá de la ventana: el terminal y
+  # el código. Va al final y separado a propósito -- esta web la lee alguien
+  # que quiere preparar sus clases, y la arquitectura del programa no es lo
+  # que ha venido a buscar.
+  - Desde el terminal:
       - cli/index.md
-  - El proyecto:
+  - Para desarrolladores:
       - proyecto/index.md
       - proyecto/arquitectura.md
       - proyecto/distribucion.md

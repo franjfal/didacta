@@ -18,6 +18,8 @@ contiene y cuánto está traducido al idioma que estás mirando.
 **Buscar** aparece en cuanto escribes, y aplana la lista. «hilbert» no es un
 sitio del árbol: es todo lo que lo menciona, venga de donde venga.
 
+![La biblioteca buscando](../img/app/biblioteca-buscar.png)
+
 ??? note "Por qué no una lista plana con filtros"
 
     Esta pantalla estaba así antes, y merece la pena decir en qué se

@@ -135,6 +135,19 @@ Casi todo es opcional. `title` y `kind` se usan en toda la aplicación;
     Es por idioma porque el motivo vive en un fichero concreto: que el
     castellano venga generado no dice nada del inglés escrito a mano.
 
+## La misma lección, en varios sitios
+
+```mermaid
+flowchart LR
+  U["analysis/normed/definition"]
+  U --> A["Análisis I · 2024-2025<br/>Tema 3"]
+  U --> B["Análisis I · 2025-2026<br/>Tema 1"]
+  U --> C["Máster · 2025-2026<br/>Repaso"]
+```
+
+Corriges una errata en la unidad y queda corregida en los tres. No hay tres
+copias que sincronizar, porque no hay tres copias.
+
 ## Dos preguntas que la biblioteca contesta y el repositorio no
 
 Estas dos exigen recorrer **todas las composiciones a la vez**, así que un

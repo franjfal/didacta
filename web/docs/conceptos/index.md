@@ -15,6 +15,30 @@ LOS IDIOMAS SON VARIANTES DE LA MISMA ENTIDAD.
 LAS SALIDAS SE GENERAN.
 ```
 
+```mermaid
+flowchart TB
+  subgraph B["Tu biblioteca"]
+    U1["Definición de<br/>espacio normado"]
+    U2["Teorema de<br/>Hahn-Banach"]
+    U3["Ejercicios<br/>de normas"]
+  end
+  subgraph C["Un curso académico"]
+    D1["Tema 1"]
+    D2["Hoja 1"]
+  end
+  U1 --> D1
+  U2 --> D1
+  U3 --> D2
+  D1 --> P1["Diapositivas"]
+  D1 --> P2["Apuntes"]
+  D1 --> P3["Apuntes del profesor"]
+  D2 --> P4["Problemas"]
+  D2 --> P5["Problemas con soluciones"]
+```
+
+Las mismas lecciones las usa el curso del año que viene, y la asignatura de al
+lado. Nada se copia.
+
 ## El contenido se escribe una vez
 
 Una lección es un **directorio**, no un fichero dentro de la carpeta de una

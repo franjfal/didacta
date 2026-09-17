@@ -68,6 +68,8 @@ encuentra.
 
 ## `unit.yaml`
 
+![Los metadatos de una unidad](../img/app/unidad-yaml.png)
+
 Se edita con un formulario, no escribiendo YAML. Y por debajo hay algo que
 conviene saber:
 
@@ -98,6 +100,8 @@ y lo dice**, con la opción de recargar. No se reintenta: reintentar es
 sobrescribir a quien llegó antes.
 
 ## Un problema se edita distinto
+
+![El editor de un problema](../img/app/problema.png)
 
 Una unidad de `problems/` tiene los cuatro campos --enunciado, pista,
 resultado, solución y corrección-- y el editor los enseña como campos, no como

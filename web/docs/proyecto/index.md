@@ -1,9 +1,15 @@
 ---
-title: El proyecto
+title: Para desarrolladores
 description: Qué hay en el repositorio, cómo se contribuye y con qué licencia.
 ---
 
-# El proyecto
+# Para desarrolladores
+
+!!! note "Esta sección no hace falta para usar Didacta"
+
+    Es para quien quiera compilarla, cambiarla o entender cómo está hecha por
+    dentro. Si lo que buscas es preparar tus clases, lo tuyo está en
+    [Empezar](../empezar/index.md) y en [La aplicación](../app/index.md).
 
 Didacta es **software libre** bajo la
 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html). El código, el sistema

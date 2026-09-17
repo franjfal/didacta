@@ -13,6 +13,8 @@ camino que se usa desde el terminal. Lo que aporta es elegir, lanzar y enseñar.
     En Windows el resto de la aplicación funciona, pero los PDF hay que
     sacarlos desde el terminal.
 
+![Elegir qué versiones y en qué idiomas](../img/app/unidad-compilar.png)
+
 ## El botón
 
 **Compilar** saca lo que corresponda a lo que estés mirando: una unidad suelta

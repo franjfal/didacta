@@ -32,6 +32,17 @@ como título de la diapositiva, o como encabezado de la sección.
 
 ## Los tres canales
 
+```mermaid
+flowchart LR
+  T["Lo que no dice nada"] --> S["Diapositivas"]
+  T --> N["Apuntes"]
+  T --> P["Copia del profesor"]
+  OS["\\onlyslides"] --> S
+  ON["\\onlynotes"] --> N
+  OT["\\onlyteacher<br/>teaching"] --> P
+```
+
+
 | Orden | Diapositivas | Apuntes | Profesor |
 |---|:---:|:---:|:---:|
 | *(nada)* | ✓ | ✓ | ✓ |
