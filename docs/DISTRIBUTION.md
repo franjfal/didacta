@@ -288,14 +288,39 @@ macOS, Credential Manager en Windows, Secret Service en Linux. Nunca a
 El alcance pedido es `repo` y nada más. Sin `delete_repo`, sin `admin`, sin
 `user`.
 
-### La OAuth App de la gente y la credencial del CI son dos cosas
+### El Client ID va escrito en el código
+
+`Ov23liZqSOY4xMvnXU4Z`, en `app/lib/main.dart`. **No es un descuido y no es un
+secreto filtrado**, y conviene dejarlo dicho porque la pregunta se hace sola al
+ver un identificador dentro de un repositorio público:
+
+- un Client ID **viaja en la URL de cada autorización**, así que ya lo ve en la
+  barra de direcciones cualquiera que entre;
+- el secreto de una aplicación de OAuth es el **client secret**, y el device
+  flow no lo usa. Existe justamente porque una aplicación de escritorio no
+  puede esconder un secreto dentro de un binario que reparte;
+- con el Client ID y nada más, lo único que se puede hacer es pedir un código
+  que **una persona tiene que autorizar en github.com**. No da acceso a nada.
+
+Lo hacen igual `gh`, VS Code y GitHub Desktop, y por el mismo motivo. Lo que se
+gana es lo que decide si alguien llega a usar Didacta: al abrirla por primera
+vez hay **un botón**, y no un campo pidiendo que te crees una aplicación de
+OAuth en GitHub antes de poder empezar. El campo sigue estando, detrás de
+«Entrar con otra aplicación de OAuth», para quien monte su propio despliegue;
+y `--dart-define=DIDACTA_GITHUB_CLIENT=…` lo cambia al compilar.
+
+Lo único que un Client ID ajeno permite es montar una aplicación que enseñe
+«Didacta» en la pantalla de autorización de GitHub. Es así para cualquier
+aplicación de escritorio y no se arregla escondiéndolo.
+
+### La OAuth App de la gente y el token del CI son dos cosas
 
 Y no se mezclan nunca:
 
 | | Quién la usa | Para qué | Dónde vive |
 |---|---|---|---|
-| **OAuth App** | Las personas | Entrar, clonar, descargar | Client ID público, token en el llavero de cada uno |
-| **GitHub App** | El workflow | Crear el release | Secrets de Actions |
+| **OAuth App** | Las personas | Entrar, clonar | Client ID en el código, token en el llavero de cada uno |
+| **`GITHUB_TOKEN`** | El workflow | Crear el release, construir la web | Lo da Actions en cada ejecución |
 
 Reutilizar la OAuth App como credencial de publicación daría a cada persona que
 entra el permiso de publicar versiones.

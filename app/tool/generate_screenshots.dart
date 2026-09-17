@@ -505,10 +505,10 @@ void main() {
     // **en lugar de** la aplicación la primera vez, y montarla con el carril
     // detrás sería documentar algo que no ocurre.
     final session = await buildSession();
-    tester.view.physicalSize = Size(
-      window.width * density,
-      window.height * density,
-    );
+    // Más baja que las demás: la bienvenida es una columna centrada de texto,
+    // y en una ventana de 920 puntos la mitad de la captura es fondo.
+    const alto = 640.0;
+    tester.view.physicalSize = Size(window.width * density, alto * density);
     tester.view.devicePixelRatio = density;
     addTearDown(tester.view.reset);
 
@@ -528,14 +528,16 @@ void main() {
     await settle(tester);
     await capture(tester, 'bienvenida');
 
-    // Y el paso del asistente donde se abre el primer repositorio, que es lo
-    // que hay que enseñar en «el primer repositorio».
-    final next = find.text('Empezar');
-    if (next.evaluate().isNotEmpty) {
+    // Y el paso donde se abre el primer repositorio, que es el que ilustra
+    // «El primer repositorio». Dos pasos: la presentación, la cuenta --que
+    // aquí ya está hecha-- y entonces los repositorios.
+    for (final label in ['Empezar', 'Siguiente']) {
+      final next = find.text(label);
+      if (next.evaluate().isEmpty) return;
       await tester.tap(next.first);
       await settle(tester);
-      await capture(tester, 'bienvenida-repositorio');
     }
+    await capture(tester, 'bienvenida-repositorio');
   });
 }
 
