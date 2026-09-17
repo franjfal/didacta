@@ -74,6 +74,7 @@ class TexToolbar extends StatelessWidget {
     required this.enabled,
     this.focusNode,
     this.without = const {},
+    this.onTidy,
   });
 
   final TextEditingController controller;
@@ -95,6 +96,15 @@ class TexToolbar extends StatelessWidget {
   /// «Respuesta» de un problema, un botón que envuelve en `answer` envolvería
   /// la respuesta dentro de otra respuesta.
   final Set<TexWrapGroup> without;
+
+  /// Ordena la sangría del fichero entero, ahora.
+  ///
+  /// Nulo donde no significa nada --el campo «Respuesta» de un problema, un
+  /// fragmento de un tema-- porque sangrar es una operación sobre un fichero
+  /// completo y ahí no hay uno. Existe porque lo normal es que el fichero ya
+  /// estuviera escrito antes que esto: al guardar se ordena solo, pero nadie
+  /// va a abrir y guardar dos mil unidades para verlas bien puestas.
+  final VoidCallback? onTidy;
 
   @override
   Widget build(BuildContext context) {
@@ -186,6 +196,11 @@ class TexToolbar extends StatelessWidget {
                     compact: tight,
                     onPressed: ready ? _pause : null,
                   ),
+                  if (onTidy != null)
+                    _TidyButton(
+                      compact: tight,
+                      onPressed: enabled ? onTidy : null,
+                    ),
                 ],
               );
             },
@@ -592,6 +607,52 @@ class _EnvironmentMenu extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// «Sangrar»: ordena el fichero ahora, sin esperar a guardarlo.
+///
+/// No pide confirmación porque no hace falta: deja el cambio **sin guardar**,
+/// a la vista, con «Descartar» al lado. Lo que hace es lo mismo que haría el
+/// guardado, hecho antes para poder mirarlo.
+class _TidyButton extends StatelessWidget {
+  const _TidyButton({required this.compact, required this.onPressed});
+
+  final bool compact;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (compact) {
+      return IconButton(
+        key: const Key('tidy-now'),
+        tooltip: 'Ordenar la sangría',
+        visualDensity: VisualDensity.compact,
+        icon: const Icon(Icons.format_indent_increase, size: 15),
+        onPressed: onPressed,
+      );
+    }
+    return TextButton.icon(
+      key: const Key('tidy-now'),
+      icon: const Icon(
+        Icons.format_indent_increase,
+        size: 15,
+        color: didactaMuted,
+      ),
+      label: const Text(
+        'Sangrar',
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w500,
+          color: didactaMuted,
+        ),
+      ),
+      style: TextButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+      onPressed: onPressed,
     );
   }
 }

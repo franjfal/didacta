@@ -119,6 +119,11 @@ Casi todo es opcional. `title` y `kind` se usan en toda la aplicación;
     hace menos y siempre funciona--. Eso cambia **solo** el espacio del
     principio de cada línea, nunca lo de dentro de un `verbatim`.
 
+    Un fichero escrito antes de que esto existiera se queda como está hasta
+    que alguien lo guarde. Para ordenarlo sin tocarlo hay un botón
+    **«Sangrar»** en la barra de formato del editor: deja el cambio sin
+    guardar, para poder mirarlo.
+
     Aun así hay ficheros que hay que dejar quietos, y por eso se puede apagar
     desde la casilla de la barra del editor, en cada idioma por separado:
 
@@ -138,7 +143,7 @@ Casi todo es opcional. `title` y `kind` se usan en toda la aplicación;
 ## La misma lección, en varios sitios
 
 ```mermaid
-flowchart LR
+flowchart TD
   U["analysis/normed/definition"]
   U --> A["Análisis I · 2024-2025<br/>Tema 3"]
   U --> B["Análisis I · 2025-2026<br/>Tema 1"]

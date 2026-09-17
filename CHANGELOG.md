@@ -48,6 +48,11 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 - Sangrar **no cambia una letra**: solo el espacio del principio de cada
   línea, y nunca dentro de un `verbatim` o un `lstlisting`, donde el espacio
   en blanco es el contenido.
+- Y hay un botón **«Sangrar»** en la barra de formato para ordenarlo ahora,
+  sin esperar a guardar. Hace falta porque casi todo el material se escribió
+  antes que esto: al guardar se ordena solo, pero nadie va a abrir y guardar
+  dos mil unidades para verlas bien puestas. Deja el cambio **sin guardar**,
+  a la vista y con «Descartar» al lado, para poder mirarlo antes de escribirlo.
 - **Y se puede apagar, por idioma.** En la barra del editor hay una casilla
   que deja el fichero exactamente como esté. Hace falta poco, pero hace falta:
   un entorno de código propio que el indentador no conoce, un `.tex` que

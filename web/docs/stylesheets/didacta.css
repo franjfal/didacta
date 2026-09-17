@@ -81,38 +81,51 @@
 /* ------------------------------------------------------------ portada --- */
 
 .didacta-hero {
-  padding: 4.5rem 0.8rem 3.5rem;
-  background: linear-gradient(170deg, #f3f7f1 0%, #ffffff 62%);
+  padding: 3.5rem 0.8rem 2.6rem;
+  background:
+    radial-gradient(60rem 26rem at 78% -10%, #55aa5514, transparent 70%),
+    linear-gradient(170deg, #f3f7f1 0%, #ffffff 68%);
   border-bottom: 1px solid var(--didacta-rule);
+  overflow: hidden;
 }
 
 [data-md-color-scheme="slate"] .didacta-hero {
-  background: linear-gradient(170deg, #20242b 0%, var(--md-default-bg-color) 62%);
+  background:
+    radial-gradient(60rem 26rem at 78% -10%, #55aa5518, transparent 70%),
+    linear-gradient(170deg, #20242b 0%, var(--md-default-bg-color) 68%);
   border-bottom-color: #2c3038;
 }
 
+/* Dos columnas: el texto y la aplicación. La segunda es más ancha porque lo
+ * que enseña es una ventana de escritorio, y una ventana en miniatura no
+ * enseña nada. */
 .didacta-hero__inner {
-  max-width: 61rem;
-  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 2.6rem;
+  align-items: center;
+}
+
+.didacta-hero__text {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
   align-items: flex-start;
+  gap: 1rem;
 }
 
 .didacta-hero__mark {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.6rem;
 }
 
 .didacta-hero__mark img {
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 2.1rem;
+  height: 2.1rem;
 }
 
 .didacta-hero__mark span {
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--md-default-fg-color);
@@ -120,19 +133,20 @@
 
 .didacta-hero h1 {
   margin: 0;
-  font-size: 2.35rem;
+  font-size: 2.2rem;
   line-height: 1.12;
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--md-default-fg-color);
-  max-width: 22ch;
+  /* Reparte las líneas en lugar de dejar una suelta con dos palabras. Donde
+   * el navegador no lo entienda, se comporta como siempre. */
+  text-wrap: balance;
 }
 
 .didacta-hero p {
   margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.65;
-  max-width: 62ch;
+  font-size: 0.82rem;
+  line-height: 1.7;
   color: var(--md-default-fg-color--light);
 }
 
@@ -140,29 +154,98 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
-  margin-top: 0.5rem;
+  margin-top: 0.3rem;
 }
 
-/* Las tres afirmaciones de la portada. En una rejilla y no en una lista
- * porque son tres cosas del mismo rango: una debajo de otra las jerarquiza
- * sin que nadie lo haya decidido. */
+.didacta-hero__note {
+  font-size: 0.68rem !important;
+  color: var(--md-default-fg-color--lighter) !important;
+}
+
+/* La ventana de la captura.
+ *
+ * Con barra de título dibujada, y no es adorno: una captura de una aplicación
+ * de escritorio pegada sobre el fondo de una página se lee como un recorte, y
+ * con marco se lee como un programa. Se sale del contenedor por la derecha a
+ * propósito -- da la sensación de que la ventana sigue, que es lo que pasa. */
+.didacta-window {
+  border: 1px solid var(--didacta-rule);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--md-default-bg-color);
+  box-shadow: 0 2px 6px #1c1f2610, 0 18px 50px #1c1f261f;
+  margin-right: -6rem;
+}
+
+[data-md-color-scheme="slate"] .didacta-window {
+  border-color: #343942;
+  box-shadow: 0 2px 6px #0006, 0 18px 50px #0008;
+}
+
+.didacta-window__bar {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.45rem 0.6rem;
+  background: var(--md-default-fg-color--lightest);
+  border-bottom: 1px solid var(--didacta-rule);
+}
+
+[data-md-color-scheme="slate"] .didacta-window__bar {
+  border-bottom-color: #343942;
+}
+
+.didacta-window__bar span {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--md-default-fg-color--lighter);
+  opacity: 0.55;
+}
+
+.didacta-window img {
+  display: block;
+  width: 100%;
+}
+
+/* Las tres afirmaciones. En una rejilla y no en una lista porque son tres
+ * cosas del mismo rango: una debajo de otra las jerarquiza sin que nadie lo
+ * haya decidido. */
 .didacta-claims {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 1.1rem;
-  margin: 1.8rem 0 0;
-  width: 100%;
+  margin-top: 2.8rem;
 }
 
 .didacta-claims > div {
   border: 1px solid var(--didacta-rule);
-  border-radius: 0.3rem;
-  padding: 1rem 1.1rem;
+  border-radius: 0.4rem;
+  padding: 1.1rem 1.2rem;
   background: var(--md-default-bg-color);
 }
 
 [data-md-color-scheme="slate"] .didacta-claims > div {
   border-color: #2c3038;
+  background: #1e2229;
+}
+
+.didacta-claims__icon {
+  display: block;
+  width: 1.3rem;
+  height: 1.3rem;
+  margin-bottom: 0.55rem;
+  color: var(--md-primary-fg-color);
+}
+
+[data-md-color-scheme="slate"] .didacta-claims__icon {
+  color: var(--md-accent-fg-color);
+}
+
+.didacta-claims__icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentcolor;
 }
 
 .didacta-claims strong {
@@ -180,17 +263,71 @@
 
 .didacta-claims p {
   margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.6;
+  font-size: 0.75rem;
+  line-height: 1.65;
   color: var(--md-default-fg-color--light);
+}
+
+/* Debajo de 60em la ventana no cabe al lado del texto sin encogerla hasta
+ * que no se lee. Se pone debajo, y deja de salirse por la derecha. */
+@media screen and (max-width: 59.9em) {
+  .didacta-hero__inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .didacta-window {
+    margin-right: 0;
+  }
 }
 
 @media screen and (max-width: 44.9em) {
   .didacta-hero {
-    padding: 2.6rem 0.8rem 2.2rem;
+    padding: 2.2rem 0.8rem 2rem;
   }
   .didacta-hero h1 {
     font-size: 1.7rem;
+  }
+}
+
+/* ------------------------------------------------- bloques de la portada -- */
+
+/* Una característica: el texto a un lado y la captura al otro, alternando.
+ *
+ * Una columna de párrafos con una imagen debajo de cada uno se lee como un
+ * manual; esto se lee como lo que es, que es una presentación de lo que hace
+ * el programa. Los bloques los marca `index.md` con `md_in_html`, así que el
+ * contenido sigue siendo markdown. */
+.md-typeset .didacta-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 2rem;
+  align-items: center;
+  margin: 3rem 0;
+}
+
+.md-typeset .didacta-feature:nth-of-type(even) .didacta-feature__text {
+  order: 2;
+}
+
+.md-typeset .didacta-feature h2 {
+  margin-top: 0;
+}
+
+.md-typeset .didacta-feature p:last-child {
+  margin-bottom: 0;
+}
+
+.md-typeset .didacta-feature img {
+  margin: 0;
+}
+
+@media screen and (max-width: 59.9em) {
+  .md-typeset .didacta-feature {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .md-typeset .didacta-feature:nth-of-type(even) .didacta-feature__text {
+    order: 0;
   }
 }
 
