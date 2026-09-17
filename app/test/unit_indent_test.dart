@@ -264,8 +264,10 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField).first);
       expect(field.controller!.text, contains('  \\item Uno'));
       expect(gateway.commits, isEmpty);
-      expect(find.text('Sangría ordenada. Guarda para dejarlo así.'),
-          findsOneWidget);
+      expect(
+        find.text('Sangría ordenada. Guarda para dejarlo así.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('pulsarlo dos veces lo dice en lugar de callar', (
