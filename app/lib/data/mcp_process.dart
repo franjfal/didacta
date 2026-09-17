@@ -11,7 +11,8 @@ import 'dart:async';
 import '../model/mcp.dart';
 
 import 'mcp_process_stub.dart'
-    if (dart.library.io) 'mcp_process_io.dart' as host;
+    if (dart.library.io) 'mcp_process_io.dart'
+    as host;
 
 /// Un repositorio que se le ofrece al servidor.
 class McpRepository {
@@ -51,10 +52,8 @@ abstract class McpRunner {
   Future<McpSession> start(List<McpRepository> repositories);
 
   /// El de esta plataforma, o uno que se niega con un motivo.
-  static McpRunner forHost({
-    required String enginePath,
-    String? texPath,
-  }) => host.runnerFor(enginePath: enginePath, texPath: texPath);
+  static McpRunner forHost({required String enginePath, String? texPath}) =>
+      host.runnerFor(enginePath: enginePath, texPath: texPath);
 }
 
 /// El que no puede, allí donde no hay procesos.

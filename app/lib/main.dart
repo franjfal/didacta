@@ -38,7 +38,9 @@ import 'state/update_service.dart';
 import 'ui/platform_menus.dart';
 import 'ui/sign_in.dart';
 import 'ui/theme.dart';
+import 'ui/tour.dart';
 import 'ui/update_section.dart';
+import 'ui/welcome.dart';
 
 /// Where the generated catalogue is served from.
 const String indexBase = String.fromEnvironment(
@@ -114,13 +116,10 @@ Future<void> main() async {
   // Quién es esta copia de Didacta: la versión sale del paquete construido,
   // no de una constante que puede quedarse atrás de la compilación.
   final info = await AppInfo.load();
-  final updates = UpdateService(
-    info: info,
-    preferences: session.preferences,
-    // Una función y no el token: vive en el llavero, y leerlo en cada uso es
-    // lo que hace que salir de GitHub tenga efecto aquí sin avisar a nadie.
-    readToken: session.tokenStore.read,
-  );
+  // Sin credencial: las versiones están en un repositorio público, así que
+  // buscarlas no depende de haber entrado en GitHub ni de seguir teniendo
+  // acceso a nada.
+  final updates = UpdateService(info: info, preferences: session.preferences);
 
   // El servidor MCP, apagado. Se enciende desde Ajustes: encendido, un
   // modelo puede escribir en los repositorios de quien lo enciende, y eso es
@@ -132,7 +131,13 @@ Future<void> main() async {
     ),
   );
 
-  runApp(DidactaApp(session: session, updates: updates, mcp: mcp));
+  // El tour guiado. Se enciende al terminar la bienvenida y desde Ajustes;
+  // terminarlo o salirse lo da por hecho, y por eso lo apunta él mismo.
+  final tour = TourController(
+    onFinished: () => session.preferences.setTourDone(true),
+  );
+
+  runApp(DidactaApp(session: session, updates: updates, mcp: mcp, tour: tour));
 }
 
 class DidactaApp extends StatefulWidget {
@@ -141,10 +146,15 @@ class DidactaApp extends StatefulWidget {
     required this.session,
     required this.updates,
     this.mcp,
+    this.tour,
   });
 
   final Session session;
   final UpdateService updates;
+
+  /// El tour guiado. Opcional: un test que monta la aplicación para mirar
+  /// otra cosa no tiene por qué traerse uno, y sin él no hay recorrido.
+  final TourController? tour;
 
   /// El servidor MCP. Opcional: un test que monta la aplicación para mirar
   /// otra cosa no tiene por qué traerse un servidor, y sin él lo único que
@@ -191,6 +201,8 @@ class _DidactaAppState extends State<DidactaApp> {
     );
   }
 
+  late final TourController _tour = widget.tour ?? TourController();
+
   /// El que venga, o uno que no puede encender nada y lo dice.
   late final McpService _mcp =
       widget.mcp ??
@@ -234,6 +246,7 @@ class _DidactaAppState extends State<DidactaApp> {
         // tiene por qué repintarse cuando se recarga el catálogo.
         ChangeNotifierProvider.value(value: widget.updates),
         ChangeNotifierProvider.value(value: _mcp),
+        ChangeNotifierProvider.value(value: _tour),
       ],
       child: const _Bootstrap(),
     );
@@ -259,6 +272,29 @@ class _BootstrapState extends State<_Bootstrap> {
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
+
+    // La bienvenida, antes incluso que la puerta de GitHub.
+    //
+    // El orden importa y no es simetría: entrar en GitHub es **uno de los
+    // pasos** de la bienvenida, no algo que haya que hacer antes de que nadie
+    // te haya dicho qué es esto. Pedirle a alguien un token antes de
+    // explicarle para qué es el programa es pedirle que confíe a ciegas.
+    //
+    // `null` es «todavía no se ha leído la preferencia», y ahí lo que toca es
+    // la pantalla de carga: con `false` por defecto, cada arranque enseñaría
+    // la bienvenida durante un parpadeo.
+    if (session.welcomeDone == null) return const _Splash();
+    if (session.welcomeDone == false) {
+      return MaterialApp(
+        title: 'Didacta',
+        debugShowCheckedModeBanner: false,
+        theme: didactaTheme(),
+        home: WelcomeScreen(
+          session: session,
+          onFinished: () => _finishWelcome(session),
+        ),
+      );
+    }
 
     // La sesión, antes que nada.
     //
@@ -293,6 +329,22 @@ class _BootstrapState extends State<_Bootstrap> {
     };
   }
 
+  /// Dar la bienvenida por vista y, si es la primera vez, lanzar el tour.
+  ///
+  /// El retraso es lo que no se puede quitar: el tour señala partes del
+  /// armazón, y el armazón no existe hasta que la aplicación se ha construido
+  /// **después** de este cambio de estado. Sin esperar, el tour arranca,
+  /// no encuentra ningún objetivo montado y se da por terminado sin enseñar
+  /// nada -- que es peor que no ofrecerlo.
+  Future<void> _finishWelcome(Session session) async {
+    await session.completeWelcome();
+    if (await session.preferences.tourDone()) return;
+    if (!mounted) return;
+    final tour = context.read<TourController>();
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    if (mounted) tour.start();
+  }
+
   Widget _buildApp(Session session) {
     // Built once and kept: rebuilding a GoRouter throws away the history,
     // which on the web means the back button stops working.
@@ -318,28 +370,37 @@ class _BootstrapState extends State<_Bootstrap> {
         // ilegible. Un color de fondo opaco lo arregla y no cuesta nada.
         child: ColoredBox(
           color: didactaSurface,
-          child: Column(
+          // El tour va en un `Stack` por encima de la aplicación entera, y no
+          // dentro de una pantalla: señala el carril y la barra de arriba,
+          // que están fuera de todas ellas.
+          child: Stack(
             children: [
-              // Sin repositorios la aplicación abre vacía a propósito: no
-              // es un error, es que falta decirle con qué trabajas. Un aviso
-              // con el camino, en lugar de una biblioteca vacía sin
-              // explicación.
-              // Y solo cuando además no hay nada cargado: si la biblioteca
-              // tiene unidades, el aviso sería mentira --hay con qué
-              // trabajar-- y estaría ocupando sitio en cada pantalla.
-              // Lo primero de todo: si hay versión nueva, es lo más útil que
-              // se puede decir en esta franja.
-              const UpdateBanner(),
-              if (session.needsRepository && session.catalogue.units.isEmpty)
-                const _NoRepositoriesBanner(),
-              if (session.catalogue.errors.isNotEmpty)
-                _ErrorBanner(errors: session.catalogue.errors),
-              if (session.indexNote != null)
-                _IndexBanner(
-                  note: session.indexNote!,
-                  onDismiss: session.dismissIndexNote,
-                ),
-              Expanded(child: child ?? const SizedBox.shrink()),
+              Column(
+                children: [
+                  // Sin repositorios la aplicación abre vacía a propósito: no
+                  // es un error, es que falta decirle con qué trabajas. Un aviso
+                  // con el camino, en lugar de una biblioteca vacía sin
+                  // explicación.
+                  // Y solo cuando además no hay nada cargado: si la biblioteca
+                  // tiene unidades, el aviso sería mentira --hay con qué
+                  // trabajar-- y estaría ocupando sitio en cada pantalla.
+                  // Lo primero de todo: si hay versión nueva, es lo más útil que
+                  // se puede decir en esta franja.
+                  const UpdateBanner(),
+                  if (session.needsRepository &&
+                      session.catalogue.units.isEmpty)
+                    const _NoRepositoriesBanner(),
+                  if (session.catalogue.errors.isNotEmpty)
+                    _ErrorBanner(errors: session.catalogue.errors),
+                  if (session.indexNote != null)
+                    _IndexBanner(
+                      note: session.indexNote!,
+                      onDismiss: session.dismissIndexNote,
+                    ),
+                  Expanded(child: child ?? const SizedBox.shrink()),
+                ],
+              ),
+              TourOverlay(controller: context.watch<TourController>()),
             ],
           ),
         ),

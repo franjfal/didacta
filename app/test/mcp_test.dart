@@ -190,17 +190,20 @@ void main() {
       expect(runner.asked.single.map((r) => r.writable), [true, false]);
     });
 
-    test('la configuración que se pega en un cliente lleva la dirección', () async {
-      final service = McpService(
-        openRunner: () => FakeRunner(session: StubSession()),
-      );
-      expect(service.clientConfiguration, isNull);
+    test(
+      'la configuración que se pega en un cliente lleva la dirección',
+      () async {
+        final service = McpService(
+          openRunner: () => FakeRunner(session: StubSession()),
+        );
+        expect(service.clientConfiguration, isNull);
 
-      await service.start(repositories: unRepo);
+        await service.start(repositories: unRepo);
 
-      expect(service.clientConfiguration, contains('127.0.0.1:41234'));
-      expect(service.clientConfiguration, contains('didacta'));
-    });
+        expect(service.clientConfiguration, contains('127.0.0.1:41234'));
+        expect(service.clientConfiguration, contains('didacta'));
+      },
+    );
   });
 
   group('el diario', () {
@@ -216,9 +219,9 @@ void main() {
     test('una llamada se lee y se cuenta', () async {
       final (service, session) = await running();
 
-      session.lines.add(line({
-        'event': 'call', 'tool': 'read_unit', 'ok': true, 'ms': 12,
-      }));
+      session.lines.add(
+        line({'event': 'call', 'tool': 'read_unit', 'ok': true, 'ms': 12}),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(service.calls, 1);
@@ -231,10 +234,17 @@ void main() {
       // estropear nada.
       final (service, session) = await running();
 
-      session.lines.add(line({'event': 'call', 'tool': 'read_unit', 'ok': true}));
-      session.lines.add(line({
-        'event': 'call', 'tool': 'write_unit', 'ok': true, 'writes': true,
-      }));
+      session.lines.add(
+        line({'event': 'call', 'tool': 'read_unit', 'ok': true}),
+      );
+      session.lines.add(
+        line({
+          'event': 'call',
+          'tool': 'write_unit',
+          'ok': true,
+          'writes': true,
+        }),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(service.calls, 2);
@@ -244,10 +254,14 @@ void main() {
     test('una que falla se ve como tal', () async {
       final (service, session) = await running();
 
-      session.lines.add(line({
-        'event': 'call', 'tool': 'read_unit', 'ok': false,
-        'error': 'no existe esa unidad',
-      }));
+      session.lines.add(
+        line({
+          'event': 'call',
+          'tool': 'read_unit',
+          'ok': false,
+          'error': 'no existe esa unidad',
+        }),
+      );
       await Future<void>.delayed(Duration.zero);
 
       expect(service.activity.first.ok, isFalse);
@@ -281,7 +295,9 @@ void main() {
       final (service, session) = await running();
 
       for (var i = 0; i < 700; i += 1) {
-        session.lines.add(line({'event': 'call', 'tool': 'read_unit', 'ok': true}));
+        session.lines.add(
+          line({'event': 'call', 'tool': 'read_unit', 'ok': true}),
+        );
       }
       await Future<void>.delayed(Duration.zero);
 
@@ -322,7 +338,8 @@ void main() {
       // La referencia se lee estando parado: es lo que alguien mira para
       // saber qué puede pedirle a un modelo antes de encenderlo.
       final service = McpService(
-        openRunner: () => FakeRunner(session: StubSession(tools: [tool('check')])),
+        openRunner: () =>
+            FakeRunner(session: StubSession(tools: [tool('check')])),
       );
       await service.start(repositories: unRepo);
       await Future<void>.delayed(Duration.zero);
@@ -355,10 +372,7 @@ void main() {
   });
 
   group('el icono del carril', () {
-    Future<McpService> rail(
-      WidgetTester tester, {
-      required bool on,
-    }) async {
+    Future<McpService> rail(WidgetTester tester, {required bool on}) async {
       tester.view.physicalSize = const Size(1100, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -539,10 +553,15 @@ void main() {
       final session = StubSession();
       await show(tester, session: session);
 
-      session.lines.add(line({
-        'event': 'call', 'tool': 'write_unit', 'ok': true, 'writes': true,
-        'ms': 8,
-      }));
+      session.lines.add(
+        line({
+          'event': 'call',
+          'tool': 'write_unit',
+          'ok': true,
+          'writes': true,
+          'ms': 8,
+        }),
+      );
       await Future<void>.microtask(() {});
       await settle(tester);
 

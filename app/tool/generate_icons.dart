@@ -56,6 +56,13 @@ const String windowsIcon = 'windows/runner/resources/app_icon.ico';
 /// El de Linux, para el AppImage y para el escritorio.
 const String linuxDir = '../packaging/linux';
 
+/// Y los de la web de documentación.
+///
+/// Aquí y no dibujados aparte por lo mismo que el resto: la marca de la web
+/// tiene que ser la marca de la aplicación, y dos ficheros que se parecen no
+/// son la misma marca. Regenerar los iconos regenera también éstos.
+const String webDir = '../web/docs/img';
+
 void main() {
   test('los iconos de la aplicación', () async {
     // La raíz del proyecto: `flutter test` corre desde `app/`.
@@ -123,9 +130,16 @@ void main() {
       );
     }
 
+    // La web de documentación: el logo de la cabecera y el favicon de la
+    // pestaña. Fondo a sangre y sin redondear, porque Material los enseña
+    // pequeños y el cuadrado redondeado a 24 px se convierte en un borrón.
+    await _write('$root/$webDir/logo.png', await _render(256, padding: 0.02));
+    await _write('$root/$webDir/favicon.png', await _render(64, padding: 0.02));
+
     stdout.writeln(
-      'iconos escritos: ${macSizes.length} para macOS, 5 para la web, '
-      'uno para Windows y 2 para Linux',
+      'iconos escritos: ${macSizes.length} para macOS, 5 para la web de la '
+      'aplicación, uno para Windows, 2 para Linux y 2 para la web de '
+      'documentación',
     );
   });
 }

@@ -85,10 +85,7 @@ void main() {
         courseJsonWith(languages: const ['es', 'va']),
         courseJsonWith(languages: const ['es']),
       );
-      expect(
-        catalogue.metadataConflicts.single.field,
-        'idiomas',
-      );
+      expect(catalogue.metadataConflicts.single.field, 'idiomas');
     });
 
     test('con un solo repositorio no hay nada que comparar', () {

@@ -38,7 +38,10 @@ String roundTrip(String tex, {String Function(String)? translate}) {
 void main() {
   group('lo que no sale de aquí', () {
     test('las matemáticas en línea', () {
-      expect(sent(r'La raíz $\sqrt{2}$ es irracional.'), isNot(contains(r'\sqrt')));
+      expect(
+        sent(r'La raíz $\sqrt{2}$ es irracional.'),
+        isNot(contains(r'\sqrt')),
+      );
     });
 
     test('las matemáticas en bloque', () {
@@ -47,7 +50,8 @@ void main() {
     });
 
     test('un entorno matemático entero', () {
-      const tex = 'Antes.\n\\begin{align}\n  a &= b \\\\\n  c &= d\n\\end{align}\nDespués.';
+      const tex =
+          'Antes.\n\\begin{align}\n  a &= b \\\\\n  c &= d\n\\end{align}\nDespués.';
       final out = sent(tex);
       expect(out, isNot(contains('align')));
       expect(out, contains('Antes'));
@@ -80,13 +84,15 @@ void main() {
     });
 
     test('el código y los dibujos', () {
-      const tex = 'Mira:\n\\begin{tikzpicture}\n  \\draw (0,0) -- (1,1);\n\\end{tikzpicture}';
+      const tex =
+          'Mira:\n\\begin{tikzpicture}\n  \\draw (0,0) -- (1,1);\n\\end{tikzpicture}';
       expect(sent(tex), isNot(contains('draw')));
     });
 
     test('los comentarios', () {
       // Prosa tachada a propósito: el material migrado está lleno.
-      const tex = 'Visible.\n% Esto estaba comentado y no se da este año.\nMás.';
+      const tex =
+          'Visible.\n% Esto estaba comentado y no se da este año.\nMás.';
       final out = sent(tex);
       expect(out, contains('Visible'));
       expect(out, isNot(contains('comentado')));
@@ -104,8 +110,10 @@ void main() {
 
   group('lo que sí se traduce', () {
     test('la prosa suelta', () {
-      expect(sent('Toda sucesión de Cauchy es acotada.'),
-          contains('Toda sucesión de Cauchy es acotada.'));
+      expect(
+        sent('Toda sucesión de Cauchy es acotada.'),
+        contains('Toda sucesión de Cauchy es acotada.'),
+      );
     });
 
     test('lo que va dentro de un comando de texto', () {
@@ -116,8 +124,10 @@ void main() {
     });
 
     test('un título de unidad', () {
-      expect(sent(r'\didactatitle{El principio de inducción}'),
-          contains('El principio de inducción'));
+      expect(
+        sent(r'\didactatitle{El principio de inducción}'),
+        contains('El principio de inducción'),
+      );
     });
 
     test('prosa con matemáticas dentro, sin perder ninguna de las dos', () {
@@ -167,43 +177,47 @@ Esta función \textbf{no es continua} en ningún punto \cite[p. 12]{Abbott}.
     test('una traducción que se come una etiqueta no se aplica', () {
       // Es el fallo que hay que atrapar: una etiqueta perdida es un `\ref`
       // que desapareció, y adivinar dónde iba es peor que no traducir.
-      final segment = protectLatex(r'Ver $x$ y $y$ aquí.')
-          .firstWhere((s) => s.letters > 0);
-      final broken = segment.text.replaceFirst(
-        RegExp(r'<x id="\d+"/>'),
-        '',
-      );
+      final segment = protectLatex(
+        r'Ver $x$ y $y$ aquí.',
+      ).firstWhere((s) => s.letters > 0);
+      final broken = segment.text.replaceFirst(RegExp(r'<x id="\d+"/>'), '');
       expect(segment.restore(broken), isNull);
     });
 
     test('una etiqueta inventada tampoco', () {
-      final segment = protectLatex(r'Ver $x$ aquí.')
-          .firstWhere((s) => s.letters > 0);
+      final segment = protectLatex(
+        r'Ver $x$ aquí.',
+      ).firstWhere((s) => s.letters > 0);
       expect(segment.restore('${segment.text}<x id="9"/>'), isNull);
     });
 
-    test('las etiquetas pueden cambiar de orden, que es lo que hace un idioma', () {
-      // «el conjunto $A$» pasa a «set $A$»: el orden de las palabras cambia y
-      // la etiqueta se mueve con ellas. Eso tiene que valer.
-      final segment = protectLatex(r'El conjunto $A$ es abierto.')
-          .firstWhere((s) => s.letters > 0);
-      final tag = RegExp(r'<x id="\d+"/>').firstMatch(segment.text)!.group(0)!;
-      final moved = '$tag is an open set.';
-      expect(segment.restore(moved), r'$A$ is an open set.');
-    });
+    test(
+      'las etiquetas pueden cambiar de orden, que es lo que hace un idioma',
+      () {
+        // «el conjunto $A$» pasa a «set $A$»: el orden de las palabras cambia y
+        // la etiqueta se mueve con ellas. Eso tiene que valer.
+        final segment = protectLatex(
+          r'El conjunto $A$ es abierto.',
+        ).firstWhere((s) => s.letters > 0);
+        final tag = RegExp(
+          r'<x id="\d+"/>',
+        ).firstMatch(segment.text)!.group(0)!;
+        final moved = '$tag is an open set.';
+        expect(segment.restore(moved), r'$A$ is an open set.');
+      },
+    );
   });
 
   group('cuánto se manda', () {
     test('un fichero sin prosa no manda nada', () {
       const tex = r'\includegraphics{figures/x.pdf}';
-      expect(
-        protectLatex(tex).every((s) => s.letters == 0),
-        isTrue,
-      );
+      expect(protectLatex(tex).every((s) => s.letters == 0), isTrue);
     });
 
     test('se cuenta la prosa, no las etiquetas', () {
-      final segment = protectLatex(r'Hola $x$.').firstWhere((s) => s.letters > 0);
+      final segment = protectLatex(
+        r'Hola $x$.',
+      ).firstWhere((s) => s.letters > 0);
       expect(segment.letters, lessThan(segment.text.length));
     });
   });

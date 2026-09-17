@@ -342,7 +342,21 @@ class _GitClone implements LocalClone {
     // Not `_text`: porcelain lines start with the status characters, and the
     // first of them is a space for a change that is not staged. Trimming the
     // whole output eats it, and then the path loses its first letter.
-    final dirty = await _run(['status', '--porcelain'], what: 'ver el estado');
+    //
+    // `--untracked-files=all` porque git, por defecto, **colapsa una carpeta
+    // sin seguir en una sola línea**: crea una lección nueva y el estado dice
+    // `content/analisis/nueva/` en vez de los ficheros que hay dentro. Da
+    // igual mientras todo se confirme al guardar --nunca queda nada sin
+    // seguir-- y deja de dar igual en cuanto los commits son manuales: la
+    // cuenta de pendientes diría uno donde hay tres, y el diálogo de
+    // confirmar enseñaría una carpeta en vez de decir qué ficheros lleva
+    // dentro. Un commit que se firma sin ver qué contiene es como se envía
+    // por error media traducción.
+    final dirty = await _run([
+      'status',
+      '--porcelain',
+      '--untracked-files=all',
+    ], what: 'ver el estado');
     return CloneStatus(
       directory: directory,
       branch: branch,
@@ -479,13 +493,50 @@ class _GitClone implements LocalClone {
       // enseñar un contenido que no es el que hay. Lo único que se quita es
       // el salto final, que git escribe siempre y que como línea no existe.
       final text = await _run(['show', '$sha:$path'], what: 'leer $path');
-      return text.endsWith('\n')
-          ? text.substring(0, text.length - 1)
-          : text;
+      return text.endsWith('\n') ? text.substring(0, text.length - 1) : text;
     } on CloneException {
       // En ese commit no había ningún fichero con ese nombre: o todavía no
       // existía, o se llamaba de otra manera.
       return null;
+    }
+  }
+
+  @override
+  Future<String> writeFile({
+    required String path,
+    required String text,
+    required String expectedSha,
+  }) async {
+    final file = File('$directory/$path');
+    await _guard(file, path, expectedSha);
+    await file.parent.create(recursive: true);
+    await file.writeAsString(text);
+    return _hashOf(path);
+  }
+
+  /// El compare-and-set, antes de escribir nada.
+  ///
+  /// El caso para el que existe es un `git pull` --o el editor de texto de
+  /// quien escribe-- habiendo movido el fichero desde que se cargó la
+  /// pantalla. Escribir encima perdería el otro cambio sin decirlo.
+  Future<void> _guard(File file, String path, String expectedSha) async {
+    final exists = await file.exists();
+    if (expectedSha.isEmpty && exists) {
+      throw CloneException(
+        '$path ya existe en el clon. Vuelve a cargarlo antes de guardar.',
+      );
+    }
+    if (expectedSha.isEmpty) return;
+    if (!exists) {
+      throw CloneException(
+        '$path ha desaparecido del clon desde que lo abriste.',
+      );
+    }
+    if (await _hashOf(path) != expectedSha) {
+      throw CloneException(
+        '$path ha cambiado en el clon desde que lo abriste. Vuelve a '
+        'cargarlo para no perder el otro cambio.',
+      );
     }
   }
 
@@ -501,31 +552,7 @@ class _GitClone implements LocalClone {
     bool push = true,
   }) async {
     final file = File('$directory/$path');
-
-    // Compare-and-set, before anything is written. The case this exists for
-    // is a `git pull` -- or the author's own text editor -- having moved the
-    // file on since the screen loaded.
-    final exists = await file.exists();
-    if (expectedSha.isEmpty && exists) {
-      throw CloneException(
-        '$path ya existe en el clon. Vuelve a cargarlo antes de guardar.',
-      );
-    }
-    if (expectedSha.isNotEmpty) {
-      if (!exists) {
-        throw CloneException(
-          '$path ha desaparecido del clon desde que lo abriste.',
-        );
-      }
-      final current = await _hashOf(path);
-      if (current != expectedSha) {
-        throw CloneException(
-          '$path ha cambiado en el clon desde que lo abriste. Vuelve a '
-          'cargarlo para no perder el otro cambio.',
-        );
-      }
-    }
-
+    await _guard(file, path, expectedSha);
     await file.parent.create(recursive: true);
     await file.writeAsString(text);
 

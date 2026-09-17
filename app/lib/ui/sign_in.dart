@@ -28,12 +28,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 
 import '../data/browser.dart';
 import '../data/github.dart';
 import '../state/session.dart';
-import '../state/update_service.dart';
 import 'theme.dart';
 
 /// El formulario de entrar: el Client ID y el botón.
@@ -88,36 +86,28 @@ class _SignInFormState extends State<SignInForm> {
       final code = await auth.start();
       if (!mounted) return;
 
-      // El código al portapapeles y el navegador abierto, sin pedir ninguna
-      // de las dos cosas.
+      // El código al portapapeles, y **el navegador no se abre solo**.
       //
-      // Es lo único que se puede quitar de en medio aquí: el *device flow* no
-      // se puede saltar --hace falta que GitHub vea a una persona autorizando
-      // en github.com, que es justo lo que hace que esta aplicación no toque
-      // nunca una contraseña-- pero «copia esto, abre el navegador, pega
-      // aquello» sí se puede reducir a «pega y autoriza».
+      // Se abría, y era lo primero que pasaba: te llevaba a github.com antes
+      // de que hubieras visto que hacía falta un código, así que llegabas a
+      // una pantalla pidiéndote algo que no sabías que tenías. El código y el
+      // enlace tienen que estar delante a la vez, y el salto lo das tú.
       //
-      // Que el navegador no se abra no rompe nada: la dirección sigue en
-      // pantalla con su botón de copiar.
+      // El *device flow* no se puede saltar --hace falta que GitHub vea a una
+      // persona autorizando en github.com, que es justo lo que hace que esta
+      // aplicación no toque nunca una contraseña-- pero sí se puede contar en
+      // un solo paso en vez de en dos.
       await Clipboard.setData(ClipboardData(text: code.userCode));
-      final opened = await openLink(code.verificationUri);
       if (!mounted) return;
 
-      // El código, delante y con el enlace: la contraseña se teclea en
-      // github.com y en ningún otro sitio, que es la única forma honesta de
-      // pedirla.
       final waiting = showDialog<void>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => _DeviceCodeDialog(code: code, opened: opened),
+        builder: (context) => _DeviceCodeDialog(code: code),
       );
       final token = await auth.waitForToken(code);
       await widget.session.signIn(token);
       if (!mounted) return;
-      // Y acto seguido, la otra pregunta: si esta cuenta llega al repositorio
-      // de versiones. Son dos cosas distintas y alguien puede pasar la
-      // primera y no la segunda.
-      unawaited(context.read<UpdateService>().checkAuthorisation());
       Navigator.of(context, rootNavigator: true).pop();
       await waiting;
       widget.onSignedIn?.call();
@@ -266,53 +256,79 @@ class SignInGate extends StatelessWidget {
 }
 
 /// El código del device flow, mientras se espera.
+///
+/// **Las dos cosas a la vez**: el código delante y el botón que lleva a
+/// GitHub debajo. Antes el navegador se abría primero y el código salía
+/// después, así que llegabas a github.com sin saber que te iban a pedir algo
+/// y tenías que volver a buscarlo. Un paso, no dos.
 class _DeviceCodeDialog extends StatelessWidget {
-  const _DeviceCodeDialog({required this.code, this.opened = false});
+  const _DeviceCodeDialog({required this.code});
 
   final DeviceCode code;
 
-  /// Si el navegador se abrió solo. Cambia lo que hay que decir: con él
-  /// abierto queda pegar, y sin él queda abrir la dirección a mano.
-  final bool opened;
-
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Autoriza Didacta en GitHub'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          opened
-              ? 'Te he abierto github.com y he copiado el código. Pégalo allí:'
-              : 'Abre ${code.verificationUri} y escribe este código:',
-        ),
-        const SizedBox(height: 12),
-        SelectableText(
-          code.userCode,
-          style: const TextStyle(
-            fontSize: 26,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.w700,
-            letterSpacing: 3,
+    title: const Text('Entra en GitHub con este código'),
+    content: SizedBox(
+      width: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Apunta o copia el código, abre GitHub y pégalo allí. Ya está '
+            'copiado al portapapeles.',
+            style: TextStyle(fontSize: 13, height: 1.45),
           ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Esta ventana se cierra sola en cuanto lo autorices.',
-          style: TextStyle(fontSize: 12, color: didactaMuted),
-        ),
-      ],
+          const SizedBox(height: 14),
+          // El código, en grande y en el centro: es lo que hay que llevarse
+          // a la otra ventana.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: didactaSurface,
+              border: Border.all(color: didactaRule),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Center(
+              child: SelectableText(
+                code.userCode,
+                key: const Key('device-code'),
+                style: const TextStyle(
+                  fontSize: 30,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 4,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Se pega en ${code.verificationUri}',
+            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Esta ventana se cierra sola en cuanto lo autorices. Tu '
+            'contraseña se teclea en github.com y en ningún otro sitio.',
+            style: TextStyle(fontSize: 12, color: didactaMuted, height: 1.4),
+          ),
+        ],
+      ),
     ),
     actions: [
       TextButton(
+        key: const Key('device-copy'),
         onPressed: () => Clipboard.setData(ClipboardData(text: code.userCode)),
-        child: const Text('Copiar el código'),
+        child: const Text('Copiar otra vez'),
       ),
       FilledButton.icon(
+        key: const Key('device-open'),
         icon: const Icon(Icons.open_in_new, size: 16),
         onPressed: () => openLink(code.verificationUri),
-        label: Text(opened ? 'Volver a abrir GitHub' : 'Abrir GitHub'),
+        label: const Text('Abrir GitHub'),
       ),
     ],
   );

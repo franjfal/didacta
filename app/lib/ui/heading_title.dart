@@ -26,6 +26,7 @@ Future<Map<String, String>?> editHeadingTitles(
   required List<String> languages,
   required Map<String, String> titles,
   required String reference,
+
   /// «del» o «de la», según el nombre de lo que se titula. Sin esto el
   /// diálogo dice «Título del asignatura», que es la clase de detalle que
   /// hace que una pantalla parezca de mentira.

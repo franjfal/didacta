@@ -1,0 +1,265 @@
+/* El aspecto de la web, y por qué es éste.
+ *
+ * Los colores son los de `latex/didacta-colours.sty`, que son los mismos que
+ * usan la aplicación y los PDF compilados. No es coquetería: quien llega aquí
+ * desde una diapositiva tiene que reconocer que es lo mismo, y un verde
+ * distinto en cada sitio dice lo contrario.
+ *
+ * Lo demás son cuatro cosas: la portada, las capturas, las tarjetas y las
+ * tablas. Material ya hace bien todo lo que no está aquí. */
+
+:root {
+  --didacta-green: #55aa55;
+  --didacta-green-dark: #346e34;
+  --didacta-ink: #1c1f26;
+  --didacta-rule: #e6e8e4;
+  --didacta-surface: #f6f6f3;
+  /* La paleta de los entornos, para los avisos con color propio. */
+  --didacta-teacher: #aa4b4b;
+  --didacta-thm: #2d5fa0;
+}
+
+/* --------------------------------------------------------------- claro -- */
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--didacta-green-dark);
+  --md-primary-fg-color--light: var(--didacta-green);
+  --md-primary-fg-color--dark: #275227;
+  --md-primary-bg-color: #ffffff;
+  --md-primary-bg-color--light: #ffffffb3;
+  --md-accent-fg-color: var(--didacta-green-dark);
+  --md-accent-fg-color--transparent: #346e341a;
+  --md-default-bg-color: #ffffff;
+  --md-typeset-a-color: var(--didacta-green-dark);
+  --md-footer-bg-color: var(--didacta-ink);
+  --md-footer-bg-color--dark: #14171c;
+}
+
+/* -------------------------------------------------------------- oscuro -- */
+
+/* El mismo verde, y no un gris: `--md-primary-fg-color` no es solo el color
+ * de la cabecera, es también el relleno de los botones. Con un gris oscuro
+ * ahí, «Descargar Didacta» salía en gris sobre negro y el botón de al lado
+ * directamente no se veía.
+ *
+ * Los verdes del texto sí cambian, y por una razón medible: el verde de la
+ * casa sobre el fondo oscuro de Material da 2,7:1, que no se lee. Lo que se
+ * conserva es el tono, no el número hexadecimal. */
+[data-md-color-scheme="slate"] {
+  --md-hue: 222;
+  --md-primary-fg-color: #2c6a2c;
+  --md-primary-fg-color--light: #55aa55;
+  --md-primary-fg-color--dark: #21501f;
+  --md-primary-bg-color: #ffffff;
+  --md-accent-fg-color: #8ccf8c;
+  --md-accent-fg-color--transparent: #8ccf8c1a;
+  --md-typeset-a-color: #8ccf8c;
+  --md-footer-bg-color: #16181d;
+}
+
+/* El botón secundario de la portada, legible en los dos esquemas: el de
+ * Material se dibuja con el color primario, que en oscuro es un verde
+ * profundo y sobre el fondo de la cabecera desaparece. */
+.didacta-hero .md-button {
+  border-color: var(--md-primary-fg-color--light);
+  color: var(--md-primary-fg-color--light);
+}
+
+.didacta-hero .md-button--primary {
+  background-color: var(--md-primary-fg-color);
+  border-color: var(--md-primary-fg-color);
+  color: #ffffff;
+}
+
+.didacta-hero .md-button:focus,
+.didacta-hero .md-button:hover {
+  background-color: var(--md-primary-fg-color--light);
+  border-color: var(--md-primary-fg-color--light);
+  color: #ffffff;
+}
+
+/* ------------------------------------------------------------ portada --- */
+
+.didacta-hero {
+  padding: 4.5rem 0.8rem 3.5rem;
+  background: linear-gradient(170deg, #f3f7f1 0%, #ffffff 62%);
+  border-bottom: 1px solid var(--didacta-rule);
+}
+
+[data-md-color-scheme="slate"] .didacta-hero {
+  background: linear-gradient(170deg, #20242b 0%, var(--md-default-bg-color) 62%);
+  border-bottom-color: #2c3038;
+}
+
+.didacta-hero__inner {
+  max-width: 61rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  align-items: flex-start;
+}
+
+.didacta-hero__mark {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.didacta-hero__mark img {
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+.didacta-hero__mark span {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--md-default-fg-color);
+}
+
+.didacta-hero h1 {
+  margin: 0;
+  font-size: 2.35rem;
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--md-default-fg-color);
+  max-width: 22ch;
+}
+
+.didacta-hero p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  max-width: 62ch;
+  color: var(--md-default-fg-color--light);
+}
+
+.didacta-hero__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+/* Las tres afirmaciones de la portada. En una rejilla y no en una lista
+ * porque son tres cosas del mismo rango: una debajo de otra las jerarquiza
+ * sin que nadie lo haya decidido. */
+.didacta-claims {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 1.1rem;
+  margin: 1.8rem 0 0;
+  width: 100%;
+}
+
+.didacta-claims > div {
+  border: 1px solid var(--didacta-rule);
+  border-radius: 0.3rem;
+  padding: 1rem 1.1rem;
+  background: var(--md-default-bg-color);
+}
+
+[data-md-color-scheme="slate"] .didacta-claims > div {
+  border-color: #2c3038;
+}
+
+.didacta-claims strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--md-primary-fg-color);
+}
+
+[data-md-color-scheme="slate"] .didacta-claims strong {
+  color: var(--md-accent-fg-color);
+}
+
+.didacta-claims p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--md-default-fg-color--light);
+}
+
+@media screen and (max-width: 44.9em) {
+  .didacta-hero {
+    padding: 2.6rem 0.8rem 2.2rem;
+  }
+  .didacta-hero h1 {
+    font-size: 1.7rem;
+  }
+}
+
+/* ------------------------------------------------------------ descargas -- */
+
+/* La versión publicada, delante de los botones. Con fondo propio porque es el
+ * único dato de la página que cambia solo, y quien viene a descargar viene a
+ * mirar justo eso. */
+.didacta-latest {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  margin-bottom: 0.8rem;
+  border-radius: 0.2rem;
+  background: var(--md-accent-fg-color--transparent);
+  font-size: 0.75rem;
+}
+
+.didacta-latest p {
+  margin: 0 !important;
+}
+
+/* ------------------------------------------------------------ capturas -- */
+
+/* Las capturas las genera `app/tool/generate_screenshots.dart` desde la
+ * propia aplicación, así que son grandes y nítidas. El marco es para que una
+ * ventana de fondo claro sobre una página de fondo claro se vea como una
+ * ventana. */
+.md-typeset img[src*="/img/app/"],
+.md-typeset figure img {
+  border: 1px solid var(--didacta-rule);
+  border-radius: 0.35rem;
+  box-shadow: 0 1px 2px #1c1f260d, 0 8px 24px #1c1f2610;
+}
+
+[data-md-color-scheme="slate"] .md-typeset img[src*="/img/app/"],
+[data-md-color-scheme="slate"] .md-typeset figure img {
+  border-color: #2c3038;
+  box-shadow: none;
+}
+
+.md-typeset figure figcaption {
+  font-size: 0.7rem;
+  color: var(--md-default-fg-color--light);
+  margin-top: 0.4rem;
+  max-width: 44rem;
+}
+
+/* -------------------------------------------------------------- tablas -- */
+
+/* Las tablas de esta documentación son de referencia --los quince perfiles,
+ * los cuatro niveles de un problema-- y se leen buscando una fila, no
+ * seguidas. Densas y con la cabecera marcada. */
+.md-typeset table:not([class]) th {
+  background: var(--md-default-fg-color--lightest);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.md-typeset table:not([class]) td,
+.md-typeset table:not([class]) th {
+  padding: 0.5em 0.9em;
+}
+
+/* ------------------------------------------------------------ tarjetas -- */
+
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.35rem;
+}
+
+.md-typeset .grid.cards .md-button {
+  margin-top: 0.4rem;
+}

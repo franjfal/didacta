@@ -24,6 +24,7 @@ import '../state/session.dart';
 import 'brand.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
+import 'tour.dart';
 
 class DidactaShell extends StatelessWidget {
   const DidactaShell({super.key, required this.location, required this.child});
@@ -61,12 +62,7 @@ class DidactaShell extends StatelessWidget {
         'Entre repos',
       ),
     if (mcp)
-      const _Destination(
-        '/mcp',
-        Icons.hub_outlined,
-        Icons.hub,
-        'Servidor',
-      ),
+      const _Destination('/mcp', Icons.hub_outlined, Icons.hub, 'Servidor'),
     _always.last,
   ];
 
@@ -96,6 +92,18 @@ class DidactaShell extends StatelessWidget {
       'Ajustes',
     ),
   ];
+
+  /// Envuelve el icono de un destino si el tour habla de él.
+  ///
+  /// Solo los tres que el recorrido explica: marcar los seis dejaría claves
+  /// registradas que no usa nadie, y una clave global por icono no es gratis.
+  static Widget _tourable(_Destination destination, Widget icon) =>
+      switch (destination.path) {
+        '/' => TourTarget(id: 'rail-library', child: icon),
+        '/translations' => TourTarget(id: 'rail-translations', child: icon),
+        '/settings' => TourTarget(id: 'rail-settings', child: icon),
+        _ => icon,
+      };
 
   /// Which destination the current URL belongs to.
   ///
@@ -176,64 +184,88 @@ class DidactaShell extends StatelessWidget {
           return Scaffold(
             body: Row(
               children: [
-                NavigationRail(
-                  selectedIndex: index,
-                  onDestinationSelected: (at) =>
-                      context.go(destinations[at].path),
-                  // Un poco más ancho que el mínimo de Material: las etiquetas
-                  // («Asignaturas», «Traducción») llegaban al borde y el
-                  // carril se leía apretado al lado de una página con aire.
-                  minWidth: 76,
-                  groupAlignment: -0.92,
-                  leading: const Padding(
-                    padding: EdgeInsets.only(top: 14, bottom: 10),
-                    child: _Mark(),
+                // Marcado para el tour: el carril entero y, dentro, los tres
+                // destinos que el recorrido explica uno a uno. Envolver el
+                // icono y no la `NavigationRailDestination` porque lo que
+                // Material pinta --y lo que hay que rodear con el foco-- es
+                // el icono.
+                TourTarget(
+                  id: 'rail',
+                  child: NavigationRail(
+                    selectedIndex: index,
+                    onDestinationSelected: (at) =>
+                        context.go(destinations[at].path),
+                    // Un poco más ancho que el mínimo de Material: las etiquetas
+                    // («Asignaturas», «Traducción») llegaban al borde y el
+                    // carril se leía apretado al lado de una página con aire.
+                    minWidth: 76,
+                    groupAlignment: -0.92,
+                    leading: const Padding(
+                      padding: EdgeInsets.only(top: 14, bottom: 10),
+                      child: _Mark(),
+                    ),
+                    destinations: [
+                      for (final destination in destinations)
+                        NavigationRailDestination(
+                          icon: _tourable(
+                            destination,
+                            destination.label == 'Traducción' && pending > 0
+                                ? Badge(
+                                    // The number, not a dot: "how much is waiting"
+                                    // is the question, and a dot cannot answer it.
+                                    //
+                                    // Arriba a la derecha y en pequeño: centrado
+                                    // sobre el glifo, un «2147» tapaba el icono y
+                                    // el naranja chillaba más que la navegación
+                                    // entera.
+                                    // Con tope: «2147» es una etiqueta de cuatro
+                                    // cifras encima de un icono de 20 px, y además
+                                    // no dice nada que «+99» no diga. El número
+                                    // exacto está en la pantalla de traducción.
+                                    label: Text(
+                                      pending > 99 ? '+99' : '$pending',
+                                    ),
+                                    alignment: const Alignment(1.9, -1.2),
+                                    // Ámbar apagado y no naranja fuerte: dice
+                                    // «queda trabajo», no «algo ha fallado», y en
+                                    // un carril de cuatro iconos era lo que más
+                                    // llamaba de toda la aplicación.
+                                    backgroundColor: const Color(0xFFC08A3E),
+                                    textStyle: const TextStyle(
+                                      fontSize: 9,
+                                      height: 1.1,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
+                                    child: Icon(destination.icon),
+                                  )
+                                : Icon(destination.icon),
+                          ),
+                          // También el seleccionado, y no es un detalle: el
+                          // carril enseña `selectedIcon` para la sección en
+                          // la que estás, así que sin marcar este el tour no
+                          // puede señalar justamente donde te encuentras
+                          // --que es la mitad de las veces--.
+                          selectedIcon: _tourable(
+                            destination,
+                            Icon(destination.selectedIcon),
+                          ),
+                          label: Text(destination.label),
+                        ),
+                    ],
                   ),
-                  destinations: [
-                    for (final destination in destinations)
-                      NavigationRailDestination(
-                        icon: destination.label == 'Traducción' && pending > 0
-                            ? Badge(
-                                // The number, not a dot: "how much is waiting"
-                                // is the question, and a dot cannot answer it.
-                                //
-                                // Arriba a la derecha y en pequeño: centrado
-                                // sobre el glifo, un «2147» tapaba el icono y
-                                // el naranja chillaba más que la navegación
-                                // entera.
-                                // Con tope: «2147» es una etiqueta de cuatro
-                                // cifras encima de un icono de 20 px, y además
-                                // no dice nada que «+99» no diga. El número
-                                // exacto está en la pantalla de traducción.
-                                label: Text(pending > 99 ? '+99' : '$pending'),
-                                alignment: const Alignment(1.9, -1.2),
-                                // Ámbar apagado y no naranja fuerte: dice
-                                // «queda trabajo», no «algo ha fallado», y en
-                                // un carril de cuatro iconos era lo que más
-                                // llamaba de toda la aplicación.
-                                backgroundColor: const Color(0xFFC08A3E),
-                                textStyle: const TextStyle(
-                                  fontSize: 9,
-                                  height: 1.1,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                ),
-                                child: Icon(destination.icon),
-                              )
-                            : Icon(destination.icon),
-                        selectedIcon: Icon(destination.selectedIcon),
-                        label: Text(destination.label),
-                      ),
-                  ],
                 ),
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: Column(
                     children: [
-                      SyncBar(session: session),
+                      TourTarget(
+                        id: 'sync',
+                        child: SyncBar(session: session),
+                      ),
                       Expanded(child: child),
                       const Divider(height: 1),
                       _GatewayStrip(gateway: session.gateway),

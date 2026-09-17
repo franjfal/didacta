@@ -57,14 +57,22 @@ on:
         type: boolean
         default: false
 
-# Lo mínimo. La escritura en el repositorio de distribución no sale de aquí:
-# va con el token de una GitHub App instalada solo allí.
+# Lo mínimo, y se sube a `write` solo en el trabajo que publica.
+#
+# Antes esto era más complicado: las versiones vivían en un repositorio
+# privado aparte y escribir allí necesitaba el token de una GitHub App
+# instalada solo en él. Al abrir el código, ese repositorio dejó de tener
+# sentido --separaba el código de los binarios para no dar el primero a quien
+# recibía los segundos-- y con él se fue la GitHub App, sus dos secrets y la
+# mitad de las cosas que podían caducar sin avisar.
 permissions:
   contents: read
 
 env:
-  # El repositorio privado donde se publica.
-  RELEASE_REPO: franjfal/didacta_public
+  # Aquí mismo. `github.repository` y no el nombre escrito: así un fork que
+  # lance este workflow publica en su propio repositorio y no intenta escribir
+  # en éste.
+  RELEASE_REPO: ${{ github.repository }}
 
 # Una publicación a la vez. Dos a la vez sobre el mismo tag es cómo se acaba
 # con un release a medias y otro encima.
@@ -102,27 +110,15 @@ jobs:
         run: |
           grep -q "^version: ${{ steps.leer.outputs.version }}+" app/pubspec.yaml
 
-      # En un ensayo no se publica nada, así que no hace falta la credencial
-      # ni importa que el tag exista: se salta, y así el ensayo sirve para
-      # comprobar que los tres sistemas compilan **antes** de tener montada la
-      # GitHub App. Para publicar de verdad, los dos pasos son obligatorios.
-      - name: token de publicación
-        id: token
-        if: ${{ !inputs.dry_run }}
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.DIDACTA_RELEASE_APP_ID }}
-          private-key: ${{ secrets.DIDACTA_RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: didacta_public
-
+      # En un ensayo no importa que el tag exista: se salta, y así el ensayo
+      # sirve para comprobar que los tres sistemas compilan sin mirar nada más.
       - name: que esa versión no esté publicada ya
         if: ${{ !inputs.dry_run }}
         # Republicar un tag es la forma más rápida de que alguien acabe con
         # una 1.4.2 distinta de la 1.4.2 de al lado. Se comprueba antes de
         # compilar; si ya existe, hay que subir la versión.
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "${{ steps.leer.outputs.tag }}" \
                -R "$RELEASE_REPO" >/dev/null 2>&1; then
@@ -384,7 +380,7 @@ jobs:
 
   # -------------------------------------------------------------------------
   publicar:
-    name: publicar en didacta_public
+    name: publicar el release
     needs: [comprobar, construir]
     # `success()` sobre la matriz entera: si a un sistema le falló la
     # compilación, aquí no se llega. No hay release incompleto.
@@ -445,21 +441,12 @@ jobs:
       - name: los SHA-256, juntos
         run: python3 packaging/release.py checksums dist --out dist/SHA256SUMS.txt
 
-      - name: token de publicación
-        id: token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ secrets.DIDACTA_RELEASE_APP_ID }}
-          private-key: ${{ secrets.DIDACTA_RELEASE_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: didacta_public
-
       - name: el release, en borrador
         # En borrador **a propósito**. Mientras se suben 200 MB de binarios,
         # `releases/latest` no puede devolver un release al que todavía le
         # faltan ficheros. Se publica al final, en un solo acto.
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
           VERSION: ${{ needs.comprobar.outputs.version }}
         run: |
@@ -492,7 +479,7 @@ jobs:
         # `Authorization:` en lugar de con una URL pública, que es lo único
         # compatible con que el repositorio sea privado.
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
         run: |
           # Dos cosas que hay que hacer justo así, y las dos se descubrieron
@@ -516,31 +503,20 @@ jobs:
 
       - name: publicarlo
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
         run: |
           gh release edit "$TAG" -R "$RELEASE_REPO" --draft=false --latest
           echo "· Publicado: https://github.com/$RELEASE_REPO/releases/tag/$TAG"
 
-      - name: el portal de descarga
-        # El README del repositorio privado es la página de descarga: quien
-        # tiene acceso lo ve al entrar, y quien no, no ve nada. No hay Pages
-        # de por medio, que en una cuenta sin Enterprise Cloud sería pública.
-        env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
-        run: |
-          python3 packaging/portal.py latest.json > README.md
-
-          # El SHA del README que hay, para poder sustituirlo. Si no hay
-          # ninguno --la primera publicación-- se crea.
-          sha=$(gh api "repos/$RELEASE_REPO/contents/README.md" \
-                  --jq '.sha' 2>/dev/null || true)
-
-          set -- --method PUT "repos/$RELEASE_REPO/contents/README.md" \
-            -f "message=Didacta ${{ needs.comprobar.outputs.version }}" \
-            -f "content=$(base64 -w0 README.md)"
-          [ -n "$sha" ] && set -- "$@" -f "sha=$sha"
-          gh api "$@" --silent
+      # La página de descarga no se escribe aquí.
+      #
+      # La escribe `site.py` al construir la web, leyendo el release que
+      # acaba de quedar publicado, y el despliegue lo dispara este workflow al
+      # terminar (`workflow_run` en `site.yml`). Así la web dice lo que hay
+      # publicado de verdad y no lo que un paso de aquí dejó escrito: si
+      # alguien marca otra versión como la última --un rollback-- basta con
+      # volver a desplegar, sin publicar nada.
 
       - name: la versión nueva y su tag, en el repositorio de código
         # El número se deja escrito **aquí**, no al empezar. Si algo se

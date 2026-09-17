@@ -47,6 +47,15 @@ abstract class Preferences {
   Future<bool> pushOnCommit();
   Future<void> setPushOnCommit(bool value);
 
+  /// Si guardar un fichero lo deja confirmado, sin preguntar.
+  ///
+  /// Puesto de salida. Lo que quiere casi todo el mundo es escribir y
+  /// olvidarse: un commit por guardado da un historial fino pero utilizable,
+  /// y el paso de «ahora escribe un mensaje» se salta treinta veces al día.
+  /// Quien prefiera decidir qué contar lo apaga y confirma a mano.
+  Future<bool> commitOnSave();
+  Future<void> setCommitOnSave(bool value);
+
   /// Si el panel de la derecha de una unidad está desplegado.
   ///
   /// Guardado y no un estado de la pantalla: es una decisión sobre el sitio
@@ -105,6 +114,19 @@ abstract class Preferences {
   /// última versión que se vio.
   Future<String?> syncedPrefs();
   Future<void> setSyncedPrefs(String value);
+
+  /// Si la presentación de bienvenida ya se ha visto.
+  ///
+  /// Separado del tour, y no un solo interruptor, porque son dos cosas que se
+  /// quieren por separado: la presentación se ve una vez y nunca más, y el
+  /// tour se vuelve a lanzar cuando alguien se pierde o cuando llega una
+  /// pantalla nueva.
+  Future<bool> welcomeDone();
+  Future<void> setWelcomeDone(bool value);
+
+  /// Si el tour guiado ya se ha hecho.
+  Future<bool> tourDone();
+  Future<void> setTourDone(bool value);
 
   /// Si el servidor MCP está encendido.
   ///
@@ -166,7 +188,10 @@ class StoredPreferences implements Preferences {
   static const String _pending = 'didacta.update.pending';
   static const String _synced = 'didacta.synced.prefs';
   static const String _prefsRepo = 'didacta.synced.repo';
+  static const String _welcome = 'didacta.welcome.done';
+  static const String _tour = 'didacta.tour.done';
   static const String _mcp = 'didacta.mcp.enabled';
+  static const String _commitOnSave = 'didacta.clone.commitOnSave';
   static const String _mcpWritable = 'didacta.mcp.writable';
 
   /// The stored value, then the build-time default. A stored empty string is
@@ -183,12 +208,36 @@ class StoredPreferences implements Preferences {
   }
 
   @override
+  Future<bool> commitOnSave() async =>
+      (await SharedPreferences.getInstance()).getBool(_commitOnSave) ?? true;
+
+  @override
+  Future<void> setCommitOnSave(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_commitOnSave, value);
+
+  @override
   Future<bool> mcpEnabled() async =>
       (await SharedPreferences.getInstance()).getBool(_mcp) ?? false;
 
   @override
   Future<void> setMcpEnabled(bool value) async =>
       (await SharedPreferences.getInstance()).setBool(_mcp, value);
+
+  @override
+  Future<bool> welcomeDone() async =>
+      (await SharedPreferences.getInstance()).getBool(_welcome) ?? false;
+
+  @override
+  Future<void> setWelcomeDone(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_welcome, value);
+
+  @override
+  Future<bool> tourDone() async =>
+      (await SharedPreferences.getInstance()).getBool(_tour) ?? false;
+
+  @override
+  Future<void> setTourDone(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_tour, value);
 
   @override
   Future<List<String>> mcpWritable() async =>
@@ -416,8 +465,32 @@ class MemoryPreferences implements Preferences {
   String? base;
   String? githubUserJson;
 
+  bool commit = true;
   bool mcp = false;
+
+  @override
+  Future<bool> commitOnSave() async => commit;
+
+  @override
+  Future<void> setCommitOnSave(bool value) async => commit = value;
   List<String> mcpWrite = const [];
+
+  /// Vista, por defecto: casi ningún test va de la bienvenida, y los que sí
+  /// van la ponen a `false` y lo dicen.
+  bool welcome = true;
+  bool tour = true;
+
+  @override
+  Future<bool> welcomeDone() async => welcome;
+
+  @override
+  Future<void> setWelcomeDone(bool value) async => welcome = value;
+
+  @override
+  Future<bool> tourDone() async => tour;
+
+  @override
+  Future<void> setTourDone(bool value) async => tour = value;
 
   @override
   Future<bool> mcpEnabled() async => mcp;

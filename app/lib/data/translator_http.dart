@@ -27,6 +27,22 @@ Translator? translatorFor(
   };
 }
 
+/// El código del proveedor, o un error que dice cuál es el problema.
+///
+/// Antes de gastar la llamada: un idioma que el proveedor no conoce vuelve
+/// como `400 Invalid Value` con un JSON de treinta líneas que no nombra el
+/// idioma por ninguna parte.
+String _codeOr(TranslationProvider provider, String language) {
+  final code = providerCodeFor(provider, language);
+  if (code == null) {
+    throw TranslationException(
+      '${provider.label} no traduce a «$language».',
+      status: 400,
+    );
+  }
+  return code;
+}
+
 /// Lo que se le cuenta a alguien de una respuesta que no es 200.
 ///
 /// El código y lo que dijo el servidor, recortado. **Nunca la URL**: los dos
@@ -34,11 +50,18 @@ Translator? translatorFor(
 /// de error es una clave en un registro que alguien pega en un correo.
 String _explain(int status, String body) {
   final trimmed = body.trim();
-  final detail = trimmed.length > 300 ? '${trimmed.substring(0, 300)}…' : trimmed;
+  final detail = trimmed.length > 300
+      ? '${trimmed.substring(0, 300)}…'
+      : trimmed;
   return switch (status) {
-    400 => 'La petición no le gustó: $detail',
-    401 || 403 =>
-      'No aceptó la credencial. Revisa la clave y, en Azure, la región.',
+    // El 400 más probable con diferencia es un idioma que el proveedor no
+    // conoce. Su JSON no lo nombra --dice «Invalid Value» y ya-- así que se
+    // dice aquí antes de pegar el volcado.
+    400 =>
+      'La petición no le gustó. Suele ser un idioma que no conoce.'
+          '\n\n$detail',
+    401 ||
+    403 => 'No aceptó la credencial. Revisa la clave y, en Azure, la región.',
     404 => 'No encontró el servicio. Revisa el endpoint si has puesto uno.',
     429 => 'Estás llamando más rápido de lo que admite. Prueba en un rato.',
     _ => 'Contestó $status: $detail',
@@ -84,9 +107,8 @@ class GoogleTranslator implements Translator {
           message: _explain(response.statusCode, response.body),
         );
       }
-      final decoded =
-          (jsonDecode(utf8.decode(response.bodyBytes)) as Map)
-              .cast<String, dynamic>();
+      final decoded = (jsonDecode(utf8.decode(response.bodyBytes)) as Map)
+          .cast<String, dynamic>();
       final languages = [
         for (final item
             in ((decoded['data'] as Map?)?['languages'] as List?) ?? const [])
@@ -109,13 +131,18 @@ class GoogleTranslator implements Translator {
     required String to,
   }) async {
     if (pieces.isEmpty) return const [];
+    // Los códigos del proveedor, no los de Didacta: `va` no existe para
+    // Google y la respuesta es un `400 Invalid Value` que no dice cuál de los
+    // cinco campos estaba mal.
+    final source = _codeOr(provider, from);
+    final target = _codeOr(provider, to);
     final response = await _client.post(
       _uri(''),
       headers: _headers,
       body: jsonEncode({
         'q': pieces,
-        'source': from,
-        'target': to,
+        'source': source,
+        'target': target,
         // HTML y no `text`: es lo que hace que respete las etiquetas con las
         // que viajan las fórmulas y los `\label`.
         'format': 'html',
@@ -127,9 +154,8 @@ class GoogleTranslator implements Translator {
         status: response.statusCode,
       );
     }
-    final decoded =
-        (jsonDecode(utf8.decode(response.bodyBytes)) as Map)
-            .cast<String, dynamic>();
+    final decoded = (jsonDecode(utf8.decode(response.bodyBytes)) as Map)
+        .cast<String, dynamic>();
     final translations =
         ((decoded['data'] as Map?)?['translations'] as List?) ?? const [];
     return [
@@ -182,7 +208,10 @@ class AzureTranslator implements Translator {
           message: _explain(response.statusCode, response.body),
         );
       }
-      return const ProviderCheck(ok: true, message: 'Responde y acepta la clave.');
+      return const ProviderCheck(
+        ok: true,
+        message: 'Responde y acepta la clave.',
+      );
     } catch (error) {
       return ProviderCheck(ok: false, message: _reach(error));
     }
@@ -195,9 +224,12 @@ class AzureTranslator implements Translator {
     required String to,
   }) async {
     if (pieces.isEmpty) return const [];
+    final source = _codeOr(provider, from);
+    final target = _codeOr(provider, to);
     final response = await _client.post(
       Uri.parse(
-        '$_base/translate?api-version=3.0&from=$from&to=$to&textType=html',
+        '$_base/translate?api-version=3.0&from=$source&to=$target'
+        '&textType=html',
       ),
       headers: _headers,
       body: jsonEncode([

@@ -143,6 +143,100 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
+  group('guardar sin confirmar', () {
+    // Con los commits automáticos apagados, guardar escribe en el árbol de
+    // trabajo y ya: el cambio queda pendiente y alguien lo confirma después
+    // con el mensaje que quiera. Contra git de verdad, porque lo que se está
+    // probando es precisamente que git lo vea como pendiente.
+
+    test('escribe el fichero y lo deja sucio', () async {
+      final sha = (await clone.readFile(unitFile)).sha;
+      await clone.writeFile(
+        path: unitFile,
+        text: 'Cambiado sin confirmar.\n',
+        expectedSha: sha,
+      );
+
+      expect(
+        (await clone.readFile(unitFile)).text,
+        'Cambiado sin confirmar.\n',
+      );
+      final status = await clone.status();
+      expect(status.dirtyPaths, contains(unitFile));
+      expect(status.ahead, 0, reason: 'no hay commit todavía');
+    });
+
+    test(
+      'devuelve el hash nuevo, para poder volver a guardar encima',
+      () async {
+        final first = (await clone.readFile(unitFile)).sha;
+        final after = await clone.writeFile(
+          path: unitFile,
+          text: 'Una vez.\n',
+          expectedSha: first,
+        );
+        expect(after, isNot(first));
+
+        // Y con ese hash se puede guardar otra vez sin que se queje.
+        await clone.writeFile(
+          path: unitFile,
+          text: 'Dos veces.\n',
+          expectedSha: after,
+        );
+        expect((await clone.readFile(unitFile)).text, 'Dos veces.\n');
+      },
+    );
+
+    test('se niega si el fichero cambió por debajo', () async {
+      // El mismo compare-and-set que el commit, y por lo mismo: un `git pull`
+      // --o el editor de texto de quien escribe-- puede haberlo movido desde
+      // que se abrió la pantalla.
+      final stale = (await clone.readFile(unitFile)).sha;
+      File('${clone.directory}/$unitFile').writeAsStringSync('Otra cosa.\n');
+
+      await expectLater(
+        clone.writeFile(path: unitFile, text: 'Lo mío.\n', expectedSha: stale),
+        throwsA(isA<CloneException>()),
+      );
+      expect((await clone.readFile(unitFile)).text, 'Otra cosa.\n');
+    });
+
+    test('crea uno nuevo, con sus carpetas', () async {
+      const nuevo = 'content/analysis/normed/nueva/es.tex';
+      await clone.writeFile(path: nuevo, text: 'Nueva.\n', expectedSha: '');
+      expect((await clone.readFile(nuevo)).text, 'Nueva.\n');
+      expect((await clone.status()).dirtyPaths, contains(nuevo));
+    });
+
+    test('y después se confirma todo junto, con un mensaje', () async {
+      // Es el flujo entero: escribir varias veces y contar una.
+      final sha = (await clone.readFile(unitFile)).sha;
+      await clone.writeFile(path: unitFile, text: 'Uno.\n', expectedSha: sha);
+      await clone.writeFile(
+        path: 'content/analysis/normed/otra/es.tex',
+        text: 'Dos.\n',
+        expectedSha: '',
+      );
+
+      final pending = (await clone.status()).dirtyPaths;
+      expect(pending.length, 2);
+
+      final done = await clone.commitPaths(
+        paths: pending,
+        message: 'Lo de esta tarde',
+        authorName: 'Javier',
+        authorEmail: 'javier@uv.es',
+        token: '',
+        push: false,
+      );
+
+      expect(done, isTrue);
+      final after = await clone.status();
+      expect(after.dirtyPaths, isEmpty);
+      expect(after.ahead, 1, reason: 'un commit, no dos');
+    });
+  });
+
   group('the clone', () {
     test('reads a file and its blob hash', () async {
       final found = await clone.readFile(unitFile);
@@ -409,7 +503,7 @@ void main() {
       expect(gateway.willPush, isFalse);
 
       final file = await gateway.read(unitFile);
-      await gateway.commit(
+      await gateway.save(
         path: unitFile,
         text: 'Editado sin Firebase.\n',
         sha: file.sha,
@@ -608,7 +702,7 @@ void main() {
       expect(gateway.describe(), contains('falta el token'));
 
       final file = await gateway.read(unitFile);
-      await gateway.commit(
+      await gateway.save(
         path: unitFile,
         text: 'Escrito sin token.\n',
         sha: file.sha,
@@ -626,7 +720,7 @@ void main() {
       final gateway = gatewayFor(signedIn: false);
       expect(gateway.canWrite, isFalse);
       await expectLater(
-        gateway.commit(path: unitFile, text: 'x', sha: 'y', message: 'm'),
+        gateway.save(path: unitFile, text: 'x', sha: 'y', message: 'm'),
         throwsA(
           isA<ContentException>().having(
             (e) => e.kind,
@@ -647,7 +741,7 @@ void main() {
         File('${clone.directory}/$unitFile').writeAsStringSync('otra cosa\n');
 
         await expectLater(
-          gateway.commit(
+          gateway.save(
             path: unitFile,
             text: 'lo mío',
             sha: file.sha,
@@ -680,7 +774,7 @@ void main() {
     test('a read then a commit round-trips through git', () async {
       final gateway = gatewayFor(push: false);
       final file = await gateway.read(unitFile);
-      final sha = await gateway.commit(
+      final sha = await gateway.save(
         path: unitFile,
         text: 'Editado por la aplicación.\n',
         sha: file.sha,

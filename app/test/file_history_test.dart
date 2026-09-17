@@ -267,7 +267,10 @@ index 1234567..89abcde 100644
       );
 
       final lines = diff.hunks.single.lines;
-      expect(lines.map((l) => l.text), ['Primera versión.', 'Y una línea más.']);
+      expect(lines.map((l) => l.text), [
+        'Primera versión.',
+        'Y una línea más.',
+      ]);
       expect(lines.first.kind, ChangeKind.kept);
       expect(lines.last.kind, ChangeKind.added);
       // Y sigue contando solo lo que cambió: el contexto no es un cambio.

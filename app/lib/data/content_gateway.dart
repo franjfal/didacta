@@ -97,13 +97,30 @@ abstract class ContentGateway {
 
   Future<ContentFile> read(String path);
 
-  /// Writes the file as a commit. Returns the new sha.
-  Future<String> commit({
+  /// Guarda el fichero. Devuelve el sha nuevo.
+  ///
+  /// **Si eso es un commit o no, lo decide la configuración.** Con los
+  /// commits automáticos puestos --lo normal-- esto escribe y confirma con
+  /// [message], y envía si además está puesto enviar. Sin ellos, escribe en
+  /// el árbol de trabajo y ya está: el cambio queda pendiente y alguien lo
+  /// confirma cuando quiera, con el mensaje que quiera.
+  ///
+  /// Se llama `save` y no `commit` justamente por eso: un método llamado
+  /// `commit` que a veces no hace commit es una trampa para quien lo lea
+  /// después.
+  Future<String> save({
     required String path,
     required String text,
     required String sha,
     required String message,
   });
+
+  /// Si guardar deja el cambio confirmado o solo escrito.
+  ///
+  /// Lo pregunta la interfaz para saber qué decir al terminar --«guardado
+  /// como un commit» y «guardado, pendiente de confirmar» son dos cosas
+  /// distintas-- y para enseñar el botón de confirmar solo cuando hace falta.
+  bool get commitsOnSave => true;
 }
 
 /// Nothing configured: reads fail with an explanation, writes are impossible.
@@ -128,7 +145,7 @@ class UnconfiguredGateway extends ContentGateway {
   }
 
   @override
-  Future<String> commit({
+  Future<String> save({
     required String path,
     required String text,
     required String sha,
@@ -145,8 +162,18 @@ class CloneGateway extends ContentGateway {
     required this.token,
     required this.author,
     this.pushOnCommit = true,
+    this.commitOnSave = true,
     this.beforeWrite,
   });
+
+  /// Si guardar confirma el cambio, o solo lo escribe.
+  ///
+  /// Puesto por defecto: lo que quiere casi todo el mundo es escribir y
+  /// olvidarse, y un commit por guardado es un historial fino pero
+  /// utilizable. Quien prefiera decidir qué contar --y contarlo una vez al
+  /// terminar en vez de treinta veces mientras escribe-- lo apaga y confirma
+  /// a mano.
+  final bool commitOnSave;
 
   final LocalClone clone;
 
@@ -216,12 +243,30 @@ class CloneGateway extends ContentGateway {
   }
 
   @override
-  Future<String> commit({
+  bool get commitsOnSave => commitOnSave;
+
+  @override
+  Future<String> save({
     required String path,
     required String text,
     required String sha,
     required String message,
   }) async {
+    // Sin commits automáticos: se escribe y ya. No hace falta autor --no hay
+    // nada que firmar-- así que esto funciona incluso sin haber entrado en
+    // GitHub, que es el caso de quien está probando la aplicación.
+    if (!commitOnSave) {
+      try {
+        await beforeWrite?.call();
+      } catch (_) {
+        // Ya lo cuenta quien puso la llamada.
+      }
+      try {
+        return await clone.writeFile(path: path, text: text, expectedSha: sha);
+      } on CloneException catch (thrown) {
+        throw ContentException(thrown.message, kind: _kindOf(thrown));
+      }
+    }
     if (author == null) {
       throw const ContentException(
         'Un commit necesita un autor. Inicia sesión antes de guardar.',
@@ -254,15 +299,18 @@ class CloneGateway extends ContentGateway {
         thrown.stderr.isEmpty
             ? thrown.message
             : '${thrown.message}\n${thrown.stderr}',
-        kind:
-            thrown.message.contains('ha cambiado') ||
-                thrown.message.contains('ya existe') ||
-                thrown.message.contains('desaparecido')
-            ? ContentFailure.conflict
-            : ContentFailure.other,
+        kind: _kindOf(thrown),
       );
     }
   }
+
+  /// Qué clase de fallo es, para que la pantalla sepa si ofrecer recargar.
+  static ContentFailure _kindOf(CloneException thrown) =>
+      thrown.message.contains('ha cambiado') ||
+          thrown.message.contains('ya existe') ||
+          thrown.message.contains('desaparecido')
+      ? ContentFailure.conflict
+      : ContentFailure.other;
 }
 
 /// Dónde vive cada fichero de una unidad.

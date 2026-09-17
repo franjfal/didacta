@@ -43,8 +43,15 @@ void main() {
     File('$seed/didacta.yaml').writeAsStringSync('name: $name\n');
     await git(['init', '--initial-branch=main', '.'], seed);
     await git(['add', '.'], seed);
-    await git(['-c', 'user.email=a@b', '-c', 'user.name=A', 'commit', '-m', 'x'],
-        seed);
+    await git([
+      '-c',
+      'user.email=a@b',
+      '-c',
+      'user.name=A',
+      'commit',
+      '-m',
+      'x',
+    ], seed);
     await git(['remote', 'add', 'origin', remote], seed);
     await git(['push', '-u', 'origin', 'main'], seed);
 
@@ -73,16 +80,18 @@ void main() {
     );
   });
 
-  test('un clon del mismo repositorio se reconoce, y no se vuelve a clonar',
-      () async {
-    // El caso que motiva todo esto: la carpeta ya la clonó alguien. Lo que
-    // hay dentro puede ser trabajo sin enviar, así que no se pisa.
-    final clone = await cloneOf('x', 'uno');
-    expect(
-      await LocalClone.inspect(directory: clone, owner: 'x', repo: 'uno'),
-      CloneTarget.alreadyCloned,
-    );
-  });
+  test(
+    'un clon del mismo repositorio se reconoce, y no se vuelve a clonar',
+    () async {
+      // El caso que motiva todo esto: la carpeta ya la clonó alguien. Lo que
+      // hay dentro puede ser trabajo sin enviar, así que no se pisa.
+      final clone = await cloneOf('x', 'uno');
+      expect(
+        await LocalClone.inspect(directory: clone, owner: 'x', repo: 'uno'),
+        CloneTarget.alreadyCloned,
+      );
+    },
+  );
 
   test('un clon de otro repositorio cuenta como ocupada', () async {
     final clone = await cloneOf('x', 'uno');
@@ -113,27 +122,31 @@ void main() {
 
     await LocalClone.inspect(directory: busy, owner: 'x', repo: 'uno');
 
-    expect(File('$busy/apuntes.tex').readAsStringSync(),
-        'Trabajo de alguien.\n');
-  });
-
-  test('clonar sobre una carpeta ocupada se niega y la deja como estaba',
-      () async {
-    final busy = '${root.path}/mis-cosas';
-    await Directory(busy).create(recursive: true);
-    File('$busy/apuntes.tex').writeAsStringSync('Trabajo de alguien.\n');
-
-    await expectLater(
-      LocalClone.create(
-        directory: busy,
-        owner: 'x',
-        repo: 'uno',
-        branch: 'main',
-        token: '',
-        url: '${root.path}/x/uno.git',
-      ),
-      throwsA(isA<CloneException>()),
+    expect(
+      File('$busy/apuntes.tex').readAsStringSync(),
+      'Trabajo de alguien.\n',
     );
-    expect(File('$busy/apuntes.tex').existsSync(), isTrue);
   });
+
+  test(
+    'clonar sobre una carpeta ocupada se niega y la deja como estaba',
+    () async {
+      final busy = '${root.path}/mis-cosas';
+      await Directory(busy).create(recursive: true);
+      File('$busy/apuntes.tex').writeAsStringSync('Trabajo de alguien.\n');
+
+      await expectLater(
+        LocalClone.create(
+          directory: busy,
+          owner: 'x',
+          repo: 'uno',
+          branch: 'main',
+          token: '',
+          url: '${root.path}/x/uno.git',
+        ),
+        throwsA(isA<CloneException>()),
+      );
+      expect(File('$busy/apuntes.tex').existsSync(), isTrue);
+    },
+  );
 }

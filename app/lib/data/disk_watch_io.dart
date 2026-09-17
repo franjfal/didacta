@@ -32,8 +32,12 @@ Stream<void> watchContent(String directory) => _watch(
 );
 
 /// Avisa cuando el motor reescribe el índice.
-Stream<void> watchIndex(String directory) =>
-    _watch(directory, _index, recursive: false, keep: (p) => p.endsWith('.json'));
+Stream<void> watchIndex(String directory) => _watch(
+  directory,
+  _index,
+  recursive: false,
+  keep: (p) => p.endsWith('.json'),
+);
 
 /// Vigila [names] dentro de [directory], y la raíz mientras alguna no exista.
 ///
@@ -74,13 +78,15 @@ Stream<void> _watch(
   if (missing) {
     try {
       streams.add(
-        Directory(directory).watch(events: FileSystemEvent.all).where(
-          (event) => names.any(
-            (name) =>
-                event.path == '$directory/$name' ||
-                event.path.endsWith('/$name'),
-          ),
-        ),
+        Directory(directory)
+            .watch(events: FileSystemEvent.all)
+            .where(
+              (event) => names.any(
+                (name) =>
+                    event.path == '$directory/$name' ||
+                    event.path.endsWith('/$name'),
+              ),
+            ),
       );
     } on FileSystemException {
       // Ni la raíz se deja vigilar: queda la comprobación al volver a la

@@ -849,7 +849,7 @@ class _DocumentsState extends State<_Documents> {
       try {
         final sha = await widget.session
             .gatewayFor(repo)
-            .commit(
+            .save(
               path: _pathIn(repo),
               text: after,
               sha: _files[repo]?.sha ?? '',

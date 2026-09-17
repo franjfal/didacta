@@ -30,7 +30,9 @@ Future<void> pump(WidgetTester tester, TranslationSecrets secrets) async {
     MaterialApp(
       theme: didactaTheme(),
       home: Scaffold(
-        body: SingleChildScrollView(child: TranslationSection(secrets: secrets)),
+        body: SingleChildScrollView(
+          child: TranslationSection(secrets: secrets),
+        ),
       ),
     ),
   );
@@ -167,6 +169,9 @@ void main() {
   ) async {
     await pump(tester, MemoryTranslationSecrets());
     expect(find.textContaining('llavero del sistema'), findsOneWidget);
-    expect(find.textContaining('No entran en ningún repositorio'), findsOneWidget);
+    expect(
+      find.textContaining('No entran en ningún repositorio'),
+      findsOneWidget,
+    );
   });
 }

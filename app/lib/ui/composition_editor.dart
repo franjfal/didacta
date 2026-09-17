@@ -340,12 +340,11 @@ class _CompositionEditorState extends State<CompositionEditor> {
     };
     final chosen = await showDialog<List<Unit>>(
       context: context,
-      builder: (context) =>
-          _UnitPicker(
-            session: widget.session,
-            already: already,
-            repo: widget.repo,
-          ),
+      builder: (context) => _UnitPicker(
+        session: widget.session,
+        already: already,
+        repo: widget.repo,
+      ),
     );
     return chosen ?? const [];
   }
@@ -391,7 +390,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
     try {
       final sha = await widget.session
           .gatewayFor(widget.repo)
-          .commit(
+          .save(
             path: widget.path,
             text: _text,
             sha: _file?.sha ?? '',

@@ -27,6 +27,7 @@ import 'package:provider/provider.dart';
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
+import '../model/tex_indent.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'build_console.dart';
@@ -41,6 +42,7 @@ import 'tex_field.dart';
 import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
 import 'theme.dart';
+import 'translate_unit.dart';
 
 class UnitPage extends StatefulWidget {
   const UnitPage({super.key, required this.unitPath, this.language});
@@ -575,6 +577,10 @@ class _UnitPageState extends State<UnitPage> {
         onChanged: () => setState(() {}),
       ),
     );
+    // La del catálogo de ahora, no la de cuando se creó el editor: el editor
+    // sobrevive a un cambio de pestaña y a una recarga, y lo que la unidad
+    // dice de sí misma --su estado, su título-- cambia por debajo.
+    editor.unit = unit;
     return _EditorView(editor: editor, unit: unit, language: language);
   }
 }
@@ -599,7 +605,16 @@ class _LanguageEditor {
     scheduleMicrotask(load);
   }
 
-  final Unit unit;
+  /// La unidad, **refrescada en cada `build`** de la página.
+  ///
+  /// No `final`: el editor se cachea por idioma para no perder lo que hay
+  /// escrito al cambiar de pestaña, así que sin esto se queda con la unidad
+  /// de cuando se creó. Y el estado de una unidad cambia --se aprueba una
+  /// traducción, se vuelve a indexar-- de modo que el botón de estado seguía
+  /// diciendo «borrador» después de marcarla como revisada, mientras el punto
+  /// de la pestaña, que lee del catálogo, ya decía otra cosa.
+  Unit unit;
+
   final String language;
   final Session session;
   final VoidCallback onChanged;
@@ -708,20 +723,27 @@ class _LanguageEditor {
     conflicted = false;
     onChanged();
     try {
+      // Se sangra al guardar y no al escribir: reindentar bajo los dedos de
+      // alguien que está en mitad de una línea le mueve el cursor y le borra
+      // el deshacer. Al guardar el fichero ya está cerrado como idea, y lo
+      // que se ve después es lo que se ha guardado.
+      final text = unit.indentsIn(language)
+          ? await session.tidyLatex(controller.text)
+          : controller.text;
       final sha = await session
           .gatewayFor(unit.repo)
-          .commit(
+          .save(
             path: unit.fileFor(language),
-            text: controller.text,
+            text: text,
             sha: file?.sha ?? '',
             message: message,
           );
-      _loadedText = controller.text;
-      file = ContentFile(
-        path: unit.fileFor(language),
-        text: controller.text,
-        sha: sha,
-      );
+      // Lo guardado, en pantalla. Dejar el editor con el texto de antes
+      // mientras el disco tiene otro es la manera de que el siguiente
+      // guardado deshaga la sangría del anterior.
+      if (controller.text != text) controller.text = text;
+      _loadedText = text;
+      file = ContentFile(path: unit.fileFor(language), text: text, sha: sha);
       return null;
     } on ContentException catch (thrown) {
       if (thrown.kind == ContentFailure.conflict) conflicted = true;
@@ -803,14 +825,36 @@ class _EditorView extends StatelessWidget {
         else if (!editor.exists)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Note(
-              'No existe la versión en $language de esta unidad. Lo que se '
-              'escriba aquí la crea, y hasta entonces ningún documento que '
-              'la use se puede compilar en $language.'
-              '${canWrite ? '\n\nPara traducir con el original delante, '
-                        'marca «lado a lado» arriba: así se ve al lado y no '
-                        'se puede guardar por error como si fuera esta.' : ''}',
-              tone: didactaTeacher,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Note(
+                  'No existe la versión en $language de esta unidad. Lo que '
+                  'se escriba aquí la crea, y hasta entonces ningún documento '
+                  'que la use se puede compilar en $language.'
+                  '${canWrite ? '\n\nPara traducir con el original delante, '
+                            'marca «lado a lado» arriba: así se ve al lado y '
+                            'no se puede guardar por error como si fuera '
+                            'esta.' : ''}',
+                  tone: didactaTeacher,
+                ),
+                // Traducir esta pestaña, desde esta pestaña. Aquí y no solo
+                // en la lista de traducciones porque es donde se descubre
+                // que falta: se entra a mirar cómo quedó en valenciano y la
+                // página está vacía.
+                if (canWrite &&
+                    editor.unit.statusIn(editor.unit.reference).exists)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: OutlinedButton.icon(
+                      key: const Key('translate-this-language'),
+                      icon: const Icon(Icons.auto_awesome_outlined, size: 15),
+                      label: Text('Traducirla a $language con la máquina'),
+                      onPressed: () =>
+                          _translateHere(context, editor, language),
+                    ),
+                  ),
+              ],
             ),
           ),
         Expanded(
@@ -980,6 +1024,227 @@ extension on _ViewOption {
       : (selected ? didactaAccentDark : didactaMuted);
 }
 
+/// El estado del idioma que se está editando, y cómo cambiarlo.
+///
+/// Dentro de cada idioma y no en los metadatos de la unidad, aunque ahí
+/// también esté: el estado es de la traducción que tienes delante, y tener
+/// que abrir otra pantalla para decir «esto ya está revisado» es el paso que
+/// hace que nadie lo diga nunca.
+///
+/// Los calculados --«no existe», «desactualizada»-- salen apagados: los
+/// decide el motor, el primero de que el fichero esté y el segundo
+/// comparando con el original, y declararlos garantizaría que se queden
+/// obsoletos en cuanto alguien toque el original.
+class _StatusButton extends StatelessWidget {
+  const _StatusButton({
+    required this.editor,
+    required this.canWrite,
+    this.compact = false,
+  });
+
+  final _LanguageEditor editor;
+  final bool canWrite;
+
+  /// Sin la palabra: solo el punto de color y la flecha.
+  final bool compact;
+
+  static const Map<String, String> _names = {
+    'draft': 'borrador',
+    'translated': 'traducida',
+    'reviewed': 'revisada',
+    'source': 'original',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final status = editor.unit.statusIn(editor.language);
+    final settable = canWrite && !status.computed;
+
+    final tag = compact
+        ? Container(
+            width: 9,
+            height: 9,
+            decoration: BoxDecoration(
+              color: statusColour(status),
+              shape: BoxShape.circle,
+            ),
+          )
+        : _Tag(statusName(status), colour: statusColour(status));
+    if (!settable) {
+      return Tooltip(
+        message: canWrite
+            ? 'Lo calcula el motor: ${statusName(status)}'
+            : 'Solo lectura · ${statusName(status)}',
+        child: tag,
+      );
+    }
+
+    return PopupMenuButton<String>(
+      key: Key('status-${editor.language}'),
+      tooltip:
+          'Estado de la versión en ${editor.language}: '
+          '${statusName(status)}',
+      position: PopupMenuPosition.under,
+      itemBuilder: (context) => [
+        for (final option in declarableStatuses)
+          CheckedPopupMenuItem<String>(
+            key: Key('status-${editor.language}-$option'),
+            value: option,
+            checked: status == TranslationStatus.parse(option),
+            child: Text(_names[option] ?? option),
+          ),
+      ],
+      onSelected: (value) => _set(context, value),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tag,
+          const Icon(Icons.arrow_drop_down, size: 15, color: didactaMuted),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _set(BuildContext context, String status) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await editor.session.setUnitStatus(
+        unit: editor.unit,
+        language: editor.language,
+        status: status,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('${editor.language}: ${_names[status] ?? status}.'),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
+  }
+}
+
+/// Traduce la pestaña que se está mirando, y la recarga al terminar.
+///
+/// Con el mismo diálogo que la lista de traducciones y que un tema entero:
+/// las tres preguntan lo mismo --a qué idiomas y con qué proveedor-- y tres
+/// diálogos que se parecen acabarían comportándose distinto.
+Future<void> _translateHere(
+  BuildContext context,
+  _LanguageEditor editor,
+  String language,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final result = await translateWith(
+    context,
+    session: editor.session,
+    units: [editor.unit],
+    only: [language],
+  );
+  if (result == null) return;
+  // Lo escrito está en disco; el editor tiene la pestaña vacía en memoria.
+  await editor.load();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        result.failed > 0
+            ? 'No se pudo traducir. ${result.warnings.firstOrNull ?? ''}'
+            : 'Traducida como borrador. Revísala antes de darla por buena.',
+      ),
+    ),
+  );
+}
+
+/// La casilla que apaga la sangría automática de un idioma.
+///
+/// **Por qué se puede apagar.** Sangrar es reescribir el fichero, y hay
+/// ficheros que no admiten que se los reescriba:
+///
+///  * Un entorno de código cuyo nombre no está en [verbatimEnvironments]
+///    --uno propio de la asignatura, uno de un paquete que nadie más usa--.
+///    Dentro el espacio en blanco es el contenido, y sangrarlo cambia lo que
+///    sale impreso sin tocar una letra.
+///  * Un `.tex` que genera otra herramienta y se vuelve a generar: sangrarlo
+///    convierte cada regeneración en un diff enorme contra la versión
+///    anterior, y el historial deja de servir para ver qué cambió.
+///  * Una tabla alineada a mano, columna con columna, para poder leerla. Eso
+///    es sangría interior y el indentador solo toca la del principio de cada
+///    línea, así que sobrevive; pero un `latexindent` con la configuración de
+///    alineado de columnas puesta la reordena a su gusto.
+///  * Un fichero con un entorno mal cerrado --material migrado lo tiene--.
+///    Compila porque LaTeX es indulgente, pero el contador de niveles no lo
+///    es, y a partir de ahí el fichero entero sale corrido.
+///
+/// Ninguno es frecuente. Todos son reales, y en todos la respuesta correcta
+/// es dejar el fichero en paz, no arreglar el indentador.
+class _IndentToggle extends StatelessWidget {
+  const _IndentToggle({
+    required this.editor,
+    required this.canWrite,
+    required this.showLabel,
+  });
+
+  final _LanguageEditor editor;
+  final bool canWrite;
+  final bool showLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = editor.unit.indentsIn(editor.language);
+    return Tooltip(
+      message: on
+          ? 'Al guardar se ordena la sangría de ${editor.language}.\n'
+                'Quítalo si este fichero tiene que quedarse tal cual.'
+          : 'La sangría de ${editor.language} se queda como esté.',
+      child: InkWell(
+        onTap: canWrite ? () => _toggle(context, !on) : null,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: Checkbox(
+                  key: const Key('editor-indent'),
+                  value: on,
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  onChanged: canWrite
+                      ? (value) => _toggle(context, value ?? true)
+                      : null,
+                ),
+              ),
+              if (showLabel) ...[
+                const SizedBox(width: 4),
+                const Text(
+                  'Sangrar',
+                  style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _toggle(BuildContext context, bool on) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await sessionOf(
+        context,
+      ).setUnitIndent(unit: editor.unit, language: editor.language, on: on);
+    } catch (thrown) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('$thrown'), backgroundColor: didactaTeacher),
+      );
+    }
+  }
+}
+
 class _EditorBar extends StatelessWidget {
   const _EditorBar({
     required this.editor,
@@ -1023,7 +1288,17 @@ class _EditorBar extends StatelessWidget {
           // del segundo se va también la etiqueta --el estado sin guardar ya
           // está en el punto de la pestaña y en que el botón esté vivo-- y
           // «Descartar» se queda en su icono.
-          final tight = constraints.maxWidth < 620;
+          //
+          // El segundo subió de 620 a 860 al entrar la casilla de sangría: a
+          // 800 px con el fichero tocado la fila se desbordaba 27 píxeles, y
+          // lo que sobra ahí es justo la palabra «sin guardar», que repite lo
+          // que ya dicen el punto de la pestaña y el botón encendido. Una
+          // barra que se desborda esconde su propio botón de guardar.
+          final tight = constraints.maxWidth < 860;
+          // El mismo ancho decide la palabra del estado («borrador»,
+          // «revisada»): por debajo queda el punto de color, que se pulsa
+          // igual y lo dice en el tooltip.
+          final roomForStatus = !tight;
           return Row(
             children: [
               Expanded(
@@ -1053,8 +1328,37 @@ class _EditorBar extends StatelessWidget {
               const SizedBox(width: 10),
               if (!editor.exists)
                 const _Tag('nuevo', colour: didactaAccentDark)
-              else if (dirty && !tight)
-                const _Tag('sin guardar', colour: didactaEx),
+              else ...[
+                // El estado de **este** idioma, y se puede cambiar desde
+                // aquí. Es lo que cierra el ciclo de traducir: una máquina
+                // deja un borrador, alguien lo lee, y aquí dice que ya está.
+                // Sin esto el borrador se quedaba en la lista para siempre y
+                // la lista dejaba de significar nada.
+                //
+                // Compacto en un panel estrecho --el punto de color y la
+                // flecha, sin la palabra-- porque el modo lado a lado deja
+                // tercios de ventana y la barra se desbordaba ochenta y seis
+                // píxeles. Se sigue pudiendo pulsar, que es lo que importa.
+                _StatusButton(
+                  editor: editor,
+                  canWrite: canWrite,
+                  compact: !roomForStatus,
+                ),
+                const SizedBox(width: 4),
+                // Si este idioma se re-sangra al guardar. Aquí y no en las
+                // preferencias porque la decisión es de **este fichero**: se
+                // apaga por lo que tiene dentro, no por cómo le gusta
+                // trabajar a nadie.
+                _IndentToggle(
+                  editor: editor,
+                  canWrite: canWrite,
+                  showLabel: constraints.maxWidth >= 1000,
+                ),
+                if (dirty && !tight) ...[
+                  const SizedBox(width: 6),
+                  const _Tag('sin guardar', colour: didactaEx),
+                ],
+              ],
               if (!narrow) ...[
                 const SizedBox(width: 10),
                 Text(

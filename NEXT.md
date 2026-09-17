@@ -154,6 +154,7 @@ Compilar en cada push, publicar los PDF como artefactos, regenerar los índices.
 Los PDF no se versionan: se generan a partir del origen que está al lado.
 
 Lo que **sí** está hecho es el otro CI, el de la aplicación: «Publish Didacta
-Release» compila macOS, Windows y Linux, calcula los SHA-256 y publica en
-`didacta_public`, desde donde Didacta se actualiza sola. Está en
-[`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
+Release» compila macOS, Windows y Linux, calcula los SHA-256 y publica el
+release aquí mismo, desde donde Didacta se actualiza sola; y «Publish the
+documentation site» construye la web, genera las capturas y reescribe la
+página de descarga. Está en [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).

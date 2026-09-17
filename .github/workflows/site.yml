@@ -1,0 +1,118 @@
+# La web de documentación: se construye y se publica en GitHub Pages.
+#
+# Se lanza sola en tres momentos, y cada uno tiene su motivo:
+#
+#   * **al empujar a `main`** algo que la afecte --la web, la documentación
+#     que incluye, o la interfaz de la aplicación, porque de ahí salen las
+#     capturas--;
+#   * **al terminar una publicación**, para que la página de descarga diga la
+#     versión que acaba de salir. No hace falta pasarle nada: `web.py` lee el
+#     release publicado;
+#   * **a mano**, que es lo que hace falta después de un rollback: marcar otra
+#     versión como la última no dispara nada, y volver a desplegar corrige la
+#     página sin publicar nada.
+#
+# Dos cosas que se hacen aquí y no en el repositorio:
+#
+# **Las capturas se generan.** No están versionadas --serían dieciséis PNG de
+# un mega que cambian con cada retoque de la interfaz-- así que las pinta la
+# propia aplicación en el runner, con `flutter test tool/generate_screenshots`.
+# Así lo publicado enseña siempre la versión de ahora. En macOS, y no en
+# Linux, porque es donde las tipografías del sistema se parecen a las que ve
+# quien usa Didacta.
+#
+# **La página de descarga se escribe.** `packaging/web.py` lee el último
+# release de este mismo repositorio --sin credencial, es público-- y escribe
+# el trozo de markdown que la portada y Descargas incluyen. Si todavía no hay
+# ninguno, escribe un bloque que lo dice; una web que no se puede estrenar
+# hasta que haya binarios es una web que se estrena tarde.
+name: Publish the documentation site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'docs/**'
+      - 'ARCHITECTURE.md'
+      - 'CHANGELOG.md'
+      - 'packaging/web.py'
+      - 'app/lib/**'
+      - '.github/workflows/site.yml'
+  workflow_run:
+    workflows: ['Publish Didacta Release']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un despliegue a la vez, y el último gana: dos builds de la web compitiendo
+# por el mismo sitio no tienen por qué terminar en el orden en que empezaron.
+concurrency:
+  group: didacta-pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    name: construir la web
+    runs-on: macos-latest
+    # Tras una publicación, solo si salió bien: desplegar la web después de
+    # un release fallido la dejaría anunciando una versión que no existe.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .fvmrc
+          cache: true
+
+      - name: las dependencias de la aplicación
+        working-directory: app
+        run: flutter pub get
+
+      - name: las capturas
+        working-directory: app
+        run: flutter test tool/generate_screenshots.dart
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: la página de descarga
+        # Del release publicado, no de un fichero: así un rollback se corrige
+        # volviendo a desplegar. Sin token: el repositorio es público.
+        run: |
+          python3 packaging/web.py downloads --repo "$GITHUB_REPOSITORY"
+
+      - name: mkdocs
+        run: pip install -r web/requirements.txt
+
+      - name: construir
+        # `--strict`: un enlace roto o una captura que falta rompen el
+        # despliegue en lugar de publicarse. Una documentación con enlaces
+        # muertos se deja de creer entera.
+        working-directory: web
+        run: mkdocs build --strict
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: web/site
+
+  publicar:
+    name: publicar en Pages
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -241,8 +241,7 @@ class _ActivityCard extends StatelessWidget {
                       : 'Nada todavía. Enciéndelo en Ajustes.',
                 )
               else
-                for (final event in activity.take(120))
-                  _EventRow(event: event),
+                for (final event in activity.take(120)) _EventRow(event: event),
             ],
           ),
         ),

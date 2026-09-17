@@ -84,10 +84,7 @@ Future<PerRepoSession> sessionWith(Map<String, FakeGateway> gateways) async {
 }
 
 FakeGateway repoGateway({bool writable = true, String yaml = courseYaml}) =>
-    FakeGateway(
-      writable: writable,
-      files: {'courses/am-i/course.yaml': yaml},
-    );
+    FakeGateway(writable: writable, files: {'courses/am-i/course.yaml': yaml});
 
 /// El servicio de actualizaciones, sin red y sin nada que instalar.
 UpdateService updates() => UpdateService(
@@ -99,9 +96,7 @@ UpdateService updates() => UpdateService(
     packageName: 'app.didacta',
   ),
   preferences: MemoryPreferences(),
-  readToken: () async => null,
-  openChannel: (token) =>
-      ReleaseChannel(owner: 'franjfal', repo: 'didacta_public', token: token),
+  openChannel: () => ReleaseChannel(owner: 'franjfal', repo: 'didacta'),
 );
 
 void main() {
@@ -124,7 +119,10 @@ void main() {
 
       expect(written, 2);
       for (final gateway in [teoria, practica]) {
-        expect(gateway.commits.single.text, contains('languages: [es, va, en]'));
+        expect(
+          gateway.commits.single.text,
+          contains('languages: [es, va, en]'),
+        );
       }
     });
 
@@ -208,10 +206,7 @@ void main() {
       );
       final session = await sessionWith({'x/uno': gateway});
 
-      await session.setCourseLanguages(
-        course: 'am-i',
-        languages: const ['es'],
-      );
+      await session.setCourseLanguages(course: 'am-i', languages: const ['es']);
 
       expect(gateway.commits.map((c) => c.path), ['courses/am-i/course.yaml']);
       expect(gateway.files['content/a/b/va.tex'], 'El texto en valenciano.');
@@ -348,22 +343,23 @@ void main() {
       expect(answer.single!.titles.keys, ['es']);
     });
 
-    testWidgets('lo marcado sale en el orden del catálogo, no en el de los clics', (
-      tester,
-    ) async {
-      // Para que `course.yaml` salga igual se marque como se marque, y no
-      // haya diffs que solo mueven códigos de sitio.
-      final answer = await show(tester, course(languages: const ['va']));
+    testWidgets(
+      'lo marcado sale en el orden del catálogo, no en el de los clics',
+      (tester) async {
+        // Para que `course.yaml` salga igual se marque como se marque, y no
+        // haya diffs que solo mueven códigos de sitio.
+        final answer = await show(tester, course(languages: const ['va']));
 
-      await tester.tap(find.byKey(const Key('course-language-en')));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('course-language-es')));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('course-save')));
-      await settle(tester);
+        await tester.tap(find.byKey(const Key('course-language-en')));
+        await settle(tester);
+        await tester.tap(find.byKey(const Key('course-language-es')));
+        await settle(tester);
+        await tester.tap(find.byKey(const Key('course-save')));
+        await settle(tester);
 
-      expect(answer.single!.languages, ['es', 'va', 'en']);
-    });
+        expect(answer.single!.languages, ['es', 'va', 'en']);
+      },
+    );
 
     testWidgets('el último idioma no se puede quitar', (tester) async {
       // Una asignatura sin ningún idioma no se compila, y el motor lo

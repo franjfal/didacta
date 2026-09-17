@@ -1,18 +1,20 @@
 /// La actualización de verdad, contra el repositorio de verdad.
 ///
 /// No es un test unitario y por eso no vive en `test/`: **sale a la red**,
-/// habla con GitHub con un token real, se descarga los 27 MB del release
-/// publicado y prepara la sustitución. Lo que prueba es justo lo que ningún
-/// test con un cliente falso puede probar: que el contrato con la API de
-/// GitHub es el que creemos, que el `assetId` del manifiesto descarga de
-/// verdad, y que lo descargado cuadra con el SHA-256 publicado.
+/// habla con GitHub, se descarga los 27 MB del release publicado y prepara la
+/// sustitución. Lo que prueba es justo lo que ningún test con un cliente
+/// falso puede probar: que el contrato con la API de GitHub es el que
+/// creemos, que el `assetId` del manifiesto descarga de verdad, y que lo
+/// descargado cuadra con el SHA-256 publicado.
+///
+/// Sin token: el repositorio es público, y que se pueda actualizar sin
+/// credencial es parte de lo que hay que comprobar.
 ///
 /// **No toca la Didacta instalada.** Se le pasa la ruta de una copia, y es
 /// esa la que se sustituye. Lo lanza `packaging/e2e-macos.sh`, que prepara la
 /// copia, ejecuta esto y comprueba después que la copia es la versión nueva.
 ///
 ///     DIDACTA_E2E_APP=/tmp/e2e/Didacta.app \
-///     DIDACTA_E2E_TOKEN=$(gh auth token) \
 ///       flutter test tool/e2e_update.dart
 ///
 /// El paso que falta para que sea el flujo entero --pulsar «Actualizar
@@ -29,17 +31,6 @@ import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/update_manifest.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-String get _token {
-  final token = Platform.environment['DIDACTA_E2E_TOKEN'] ?? '';
-  if (token.isEmpty) {
-    throw StateError(
-      'Falta DIDACTA_E2E_TOKEN. Con la CLI de GitHub:\n'
-      '  DIDACTA_E2E_TOKEN=\$(gh auth token) flutter test tool/e2e_update.dart',
-    );
-  }
-  return token;
-}
-
 String get _installed {
   final path = Platform.environment['DIDACTA_E2E_APP'] ?? '';
   if (path.isEmpty) {
@@ -52,8 +43,7 @@ String get _installed {
 }
 
 String get _owner => Platform.environment['DIDACTA_E2E_OWNER'] ?? 'franjfal';
-String get _repo =>
-    Platform.environment['DIDACTA_E2E_REPO'] ?? 'didacta_public';
+String get _repo => Platform.environment['DIDACTA_E2E_REPO'] ?? 'didacta';
 
 /// La versión que la copia dice ser, leída de su `Info.plist`.
 AppVersion? versionOf(String bundle) {
@@ -70,41 +60,20 @@ void main() {
   late ReleaseChannel channel;
 
   setUpAll(() {
-    channel = ReleaseChannel(owner: _owner, repo: _repo, token: _token);
+    channel = ReleaseChannel(owner: _owner, repo: _repo);
   });
 
   tearDownAll(() => channel.close());
 
-  test('1 · la cuenta tiene acceso al repositorio de versiones', () async {
-    // El control de autorización de verdad: no es que se pueda entrar en
-    // GitHub, es que esta cuenta llegue a este repositorio.
-    expect(await channel.hasAccess(), isTrue);
-    stdout.writeln('  acceso a $_owner/$_repo: sí');
+  test('1 · el repositorio se lee sin ninguna credencial', () async {
+    // Lo que se ganó al abrir el código, comprobado contra GitHub y no
+    // leyendo el código: sin `Authorization:`, la API contesta.
+    final publicado = await channel.latest();
+    expect(publicado, isNotNull, reason: 'no hay ningún release publicado');
+    stdout.writeln('  $_owner/$_repo se lee sin token: sí');
   });
 
-  test('2 · un token que no vale no pasa de aquí', () async {
-    // Que el 401 se traduzca a lo que la interfaz enseña, contra GitHub de
-    // verdad y no contra un cliente de mentira.
-    final malo = ReleaseChannel(
-      owner: _owner,
-      repo: _repo,
-      token: 'gho_esto_no_es_un_token',
-    );
-    await expectLater(
-      malo.hasAccess(),
-      throwsA(
-        isA<UpdateException>().having(
-          (each) => each.problem,
-          'problema',
-          anyOf(UpdateProblem.tokenInvalid, UpdateProblem.notAuthorised),
-        ),
-      ),
-    );
-    malo.close();
-    stdout.writeln('  un token inválido se rechaza');
-  });
-
-  test('3 · el release publicado trae un manifiesto que se entiende', () async {
+  test('2 · el release publicado trae un manifiesto que se entiende', () async {
     final manifest = await channel.latest();
     expect(manifest, isNotNull, reason: 'no hay ningún release publicado');
     stdout.writeln(
@@ -119,7 +88,7 @@ void main() {
     }
   });
 
-  test('4 · la copia instalada es más vieja que la publicada', () async {
+  test('3 · la copia instalada es más vieja que la publicada', () async {
     final installed = versionOf(_installed);
     expect(installed, isNotNull, reason: 'no encuentro $_installed');
     final manifest = (await channel.latest())!;

@@ -21,6 +21,13 @@ import 'package:flutter/material.dart';
 
 import '../model/catalogue.dart';
 
+/// La documentación de Didacta.
+///
+/// Aquí y no escrita en cada botón que la abre: es una dirección que puede
+/// cambiar --un dominio propio, una versión por release-- y buscarla por el
+/// código sería encontrar tres y arreglar dos.
+const String didactaDocs = 'https://franjfal.github.io/didacta/';
+
 /// From didacta-colours.sty: the accent the PDFs use.
 const Color didactaAccent = Color(0xFF55AA55);
 const Color didactaAccentDark = Color(0xFF346E34);

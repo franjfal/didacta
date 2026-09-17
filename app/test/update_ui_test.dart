@@ -39,13 +39,8 @@ UpdateService serviceWith(
   preferences: MemoryPreferences()
     ..checked = checked
     ..pending = pending,
-  readToken: () async => 'gho_valido',
-  openChannel: (token) => ReleaseChannel(
-    owner: 'franjfal',
-    repo: 'didacta_public',
-    token: token,
-    client: client,
-  ),
+  openChannel: () =>
+      ReleaseChannel(owner: 'franjfal', repo: 'didacta', client: client),
   installer: FakeInstaller(reason: cannotInstall),
 );
 
@@ -89,12 +84,17 @@ void main() {
   });
 
   testWidgets('al no haber nada nuevo lo dice, y nada más', (tester) async {
+    // Un release publicado con la misma versión que la instalada.
     final service = serviceWith(
-      MockClient(
-        (request) async => request.url.path.endsWith('didacta_public')
-            ? http.Response('{}', 200)
-            : http.Response('{}', 404),
-      ),
+      MockClient((request) async {
+        if (request.url.path.endsWith('releases/latest')) {
+          return http.Response(releaseBody(), 200);
+        }
+        if (request.url.path.endsWith('releases/assets/5')) {
+          return http.Response(manifestBody(version: '1.4.1'), 200);
+        }
+        return http.Response('{}', 404);
+      }),
     );
     await pumpSection(tester, service);
     await tester.tap(find.byKey(const Key('check-for-updates')));
@@ -133,17 +133,27 @@ void main() {
 
   testWidgets('un fallo sale como nota, no como pantalla rota', (tester) async {
     final service = serviceWith(
-      MockClient((_) async => http.Response('{}', 401)),
+      MockClient(
+        (_) async => http.Response(
+          '{}',
+          403,
+          headers: const {'x-ratelimit-remaining': '0'},
+        ),
+      ),
     );
     await pumpSection(tester, service);
     await tester.tap(find.byKey(const Key('check-for-updates')));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Vuelve a entrar'), findsOneWidget);
+    expect(find.textContaining('dentro de un rato'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('sin acceso al repositorio se explica qué pedir', (tester) async {
+  testWidgets('sin ningún release todavía, no se inventa un problema', (
+    tester,
+  ) async {
+    // Es lo que ve quien compila Didacta de un fork que no ha publicado
+    // nada: no hay versión nueva, y eso no es un fallo que enseñar.
     final service = serviceWith(
       MockClient((_) async => http.Response('{}', 404)),
     );
@@ -151,38 +161,7 @@ void main() {
     await tester.tap(find.byKey(const Key('check-for-updates')));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('no tiene acceso'), findsOneWidget);
-    expect(find.textContaining('franjfal/didacta_public'), findsOneWidget);
-  });
-
-  testWidgets('sin acceso, la tarjeta lo dice y explica qué pedir', (
-    tester,
-  ) async {
-    final service = serviceWith(
-      MockClient((_) async => http.Response('{}', 404)),
-    );
-    await service.checkAuthorisation();
-    await pumpSection(tester, service);
-
-    expect(
-      find.textContaining('no tiene acceso a las versiones'),
-      findsOneWidget,
-    );
-    expect(find.textContaining('franjfal/didacta_public'), findsOneWidget);
-  });
-
-  testWidgets('con acceso, lo dice y no molesta más', (tester) async {
-    final service = serviceWith(
-      MockClient(
-        (request) async => request.url.path.endsWith('didacta_public')
-            ? http.Response('{}', 200)
-            : http.Response('{}', 404),
-      ),
-    );
-    await service.checkAuthorisation();
-    await pumpSection(tester, service);
-
-    expect(find.text('Tu cuenta de GitHub está autorizada'), findsOneWidget);
+    expect(find.text('Estás al día.'), findsOneWidget);
     expect(find.textContaining('no tiene acceso'), findsNothing);
   });
 

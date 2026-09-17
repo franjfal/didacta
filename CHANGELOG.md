@@ -37,8 +37,119 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## 1.2.0 — 2026-09-16
+## 0.1.0 — 2026-09-17
 
+- **Al guardar, el `.tex` queda ordenado.** Cada entorno abre y cierra donde
+  se ve, y lo de dentro va sangrado. Usa `latexindent` --la herramienta de
+  CTAN-- cuando está instalada y funciona; si no, un indentador propio que
+  hace menos y no necesita instalar nada. En una traducción recién hecha es
+  donde más se nota: un traductor devuelve cada párrafo en una sola línea, y
+  esa primera versión es la que se queda en el repositorio.
+- Sangrar **no cambia una letra**: solo el espacio del principio de cada
+  línea, y nunca dentro de un `verbatim` o un `lstlisting`, donde el espacio
+  en blanco es el contenido.
+- **Y se puede apagar, por idioma.** En la barra del editor hay una casilla
+  que deja el fichero exactamente como esté. Hace falta poco, pero hace falta:
+  un entorno de código propio que el indentador no conoce, un `.tex` que
+  genera otra herramienta y se regenera entero, un `\begin` sin cerrar de
+  material migrado que compila igual pero descuadra el contador. Se guarda en
+  el `unit.yaml`, así que vale también para quien abra el fichero en otro
+  ordenador.
+- **Una traducción ya no rompe el fichero.** `\item Donats` volvía como
+  `\itemDonats` --el espacio que cierra el nombre de una orden se lo comía el
+  traductor al recortar los extremos del texto-- y eso no compila. Y el `.tex`
+  traducido salía como un muro, con los entornos pegados al contenido y sin
+  una sola línea suelta, porque los saltos de dentro de un párrafo vuelven
+  convertidos en espacios.
+- Ahora **lo que está pegado a la sintaxis viaja con ella**: el salto que hay
+  antes de un `\end{itemize}`, la sangría de una línea, el espacio que cierra
+  un `\item`. El fichero traducido conserva la forma del original. Lo que
+  sigue siendo del traductor es el espacio de dentro de una frase, que es
+  suyo: al traducir «el conjunto $A$ es abierto» las palabras cambian de
+  sitio y los espacios con ellas.
+- **La pantalla de Traducción tiene dos selectores**, con la misma forma y uno
+  al lado del otro: el idioma, y la clase de trabajo --«Desactualizadas», «Sin
+  traducir», «Sin revisar»-- con su cuenta dentro. Los tres salen siempre, con
+  un cero los que no tienen nada: un selector que se esconde cuando solo queda
+  una clase de trabajo deja de decir cuál estás mirando.
+- **El estado de una lección se actualizaba a medias.** Al aprobar una
+  traducción cambiaba el punto de la pestaña del idioma pero no el botón de
+  estado, que seguía diciendo «borrador»: el editor guarda la lección de
+  cuando se abrió, y esa no se entera de nada. Quien entra a despachar
+  traducciones no quiere borradores en medio, y quien entra a revisar no
+  quiere ver lo que no existe. Así además traducir algo **se nota**: la unidad
+  desaparece de una pestaña y aparece en la otra.
+- **Y ya se puede aprobar una traducción.** Dentro de la lección, junto al
+  idioma que estás editando, el estado es un botón: borrador → revisada, con
+  un clic. Antes no había forma de decirlo desde la aplicación, así que el
+  borrador se quedaba en la lista para siempre y la lista dejaba de significar
+  nada. «No existe» y «desactualizada» no se pueden poner a mano: los calcula
+  el motor, y declararlos garantizaría que se queden obsoletos.
+- **La lista de traducción está partida en tres**, porque son tres trabajos
+  distintos: «Desactualizadas» --su original cambió y dicen algo que ya no es
+  cierto--, «Sin traducir» y «Traducidas, sin revisar». Antes iban mezcladas,
+  y traducir algo no lo quitaba de la lista: pasaba de una categoría a otra
+  unas filas más abajo, y desde fuera parecía no haber servido de nada. Cada
+  grupo tiene su «Marcar todas», y las cuentas de la cabecera encienden y
+  apagan cada uno.
+- Al terminar de traducir, el resumen lleva **un enlace por fichero** que lo
+  abre en su idioma para revisarlo y aprobarlo. Antes había que apuntar el
+  nombre e irse a buscarlo a la biblioteca, que es el paso que convierte «lo
+  reviso ahora» en «lo reviso otro día».
+- **Traducir al valenciano ya funciona.** Fallaba con un volcado de JSON que
+  decía «Invalid Value» y nada más: `va` es un código de Didacta y ningún
+  traductor automático lo conoce. Se pide como catalán, que es lo mismo que
+  hace la parte de LaTeX. Sale catalán central --«Qüestió» donde el valenciano
+  dice «Questió»--, así que el diálogo lo avisa antes de traducir: es un
+  borrador que hay que ajustar al revisar.
+- **Traducir ya no ofrece traducir del castellano al castellano.** Cogía el
+  idioma de la barra de arriba, que es el que estás mirando; ahora abre un
+  diálogo con **los idiomas que le faltan** a lo que has marcado, con cuántas
+  lecciones le faltan a cada uno, y marcas los que quieras.
+- **Se pueden traducir muchas de golpe.** Casillas delante de cada lección en
+  la pantalla de Traducción, «todas» y «ninguna», y un botón que las manda
+  todas al mismo diálogo. Una que falle no para las demás: se dice cuál fue.
+- **Dentro de una lección**, una pestaña de idioma vacía ofrece traducirla ahí
+  mismo. Es donde se descubre que falta: entras a ver cómo quedó en valenciano
+  y la página está en blanco.
+- **Y dentro de un tema**, una pestaña «Traducir» con las lecciones a las que
+  les falta algún idioma de esa asignatura, marcadas de entrada. Solo aparece
+  cuando falta algo. Antes había que apuntar cuáles eran, irse a la lista de
+  traducciones y buscarlas entre doscientas.
+- **Guardar ya no te pide un mensaje de commit.** De salida, guardar deja el
+  cambio confirmado y enviado a GitHub sin preguntar nada: escribes, se guarda,
+  está donde tiene que estar. Las dos cosas se apagan por separado en Ajustes →
+  Al guardar, porque confirmar y enviar son decisiones distintas.
+- Con los commits automáticos apagados, lo que guardas se queda escrito y sin
+  confirmar, y aparece un botón en la barra de arriba --delante de traer y
+  enviar-- que los confirma todos juntos con el mensaje que le pongas, y te
+  enseña qué ficheros van dentro antes de firmarlo. Con los automáticos puestos
+  ese botón no sale: no habría nada que hacer con él.
+- **El código de GitHub sale a la vez que el enlace.** Antes se abría el
+  navegador primero y el código después, así que llegabas a github.com sin
+  saber que te iban a pedir algo y tenías que volver a buscarlo.
+- La pantalla de bienvenida lleva dibujos que enseñan de qué se habla: una
+  lección dentro de varios cursos, un fichero del que salen las diapositivas y
+  los apuntes, y un historial con nombres.
+- Y explica mejor qué hacen los dos programas que hacen falta para compilar,
+  que antes iban en la misma frase: **LaTeX** compone las páginas y lo instalas
+  tú; **el motor de Didacta** decide qué páginas componer y se descarga ahí.
+- **Se puede traducir una unidad con la máquina.** En la pantalla de
+  Traducción, cada fila pendiente lleva un botón: elige proveedor, traduce y
+  deja el resultado escrito **como borrador**, así que sigue apareciendo en la
+  lista de lo que hay que revisar. Es una traducción que no ha leído nadie.
+- **Las fórmulas no se traducen.** Las matemáticas, los entornos y sobre todo
+  las claves de `\label`, `\ref` y `\cite` viajan protegidas y vuelven donde
+  estaban: traducir una clave rompe todas las referencias del tema y no se ve
+  hasta que alguien compila la víspera. Si un párrafo vuelve con la sintaxis
+  cambiada, ese párrafo se queda sin traducir y se dice cuál.
+- **Hay memoria de traducción.** Lo que se traduce se guarda en el repositorio,
+  se versiona y se comparte: la decisión de cómo se dice algo en valenciano es
+  del equipo, no de la máquina. Un párrafo ya traducido no se vuelve a pagar ni
+  a decidir, y el mismo texto con otra fórmula dentro también lo reutiliza.
+- Se dice lo que costó: cuántos párrafos había, cuántos salieron de la memoria
+  y cuántos caracteres se mandaron. En el material de teoría, no enviar las
+  matemáticas ahorra cerca de un tercio de lo que se facturaría.
 - **Ya se pueden poner las claves de traducción automática.** En Ajustes, una
   sección para Google Cloud Translation y otra para Azure AI Translator, con un
   botón de probar: una credencial mal puesta no se nota hasta que mandas
@@ -215,6 +326,24 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   al que todavía no se le había generado el índice se quedaba enseñando el
   error para siempre, incluso después de generarlo: ahora lo coge en cuanto
   aparece.
+- **Didacta es software libre.** El código está publicado bajo la GPL-3.0, y
+  con él la documentación: qué es cada pantalla, cómo se escribe una unidad y
+  cómo se publica una versión, con capturas. Está en
+  <https://franjfal.github.io/didacta/>, que es también de donde se descarga.
+- **Actualizarse ya no depende de tener acceso a nada.** Antes las versiones
+  vivían en un repositorio privado y la aplicación comprobaba, después de
+  entrar en GitHub, si tu cuenta llegaba a él. Esa comprobación ya no existe:
+  buscar una versión nueva no manda ninguna credencial. Entrar en GitHub sigue
+  haciendo falta, pero por lo que siempre fue de verdad, que es que tu material
+  vive en tus repositorios.
+- **La primera vez, Didacta se presenta y se configura sola.** Explica qué es
+  en tres pantallas y después deja hecho lo que hace falta para trabajar:
+  entrar en GitHub, abrir el primer repositorio --de GitHub, de una carpeta ya
+  clonada, o preparando uno vacío-- y descargar el motor, que hasta ahora había
+  que clonar a mano desde un terminal. Se puede saltar entera, y no vuelve.
+- **Y un recorrido guiado por la ventana**, que señala el carril, la barra de
+  arriba y la cola de traducción diciendo para qué es cada cosa. Se sale con
+  ++esc++ o pulsando fuera, y desde Ajustes se vuelven a ver las dos cosas.
 
 ---
 

@@ -13,7 +13,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../data/release_channel.dart';
 import '../state/update_service.dart';
 import 'theme.dart';
 
@@ -51,26 +50,6 @@ class UpdateSection extends StatelessWidget {
                 const SizedBox(height: 10),
               ],
 
-              // Entrar en GitHub no es poder usar Didacta: lo segundo es
-              // tener acceso al repositorio de versiones. Se dice aquí, y no
-              // solo cuando alguien intenta actualizar y falla.
-              if (updates.authorised == false) ...[
-                Note(
-                  'Tu cuenta de GitHub no tiene acceso a las versiones de '
-                  'Didacta, así que no se puede actualizar sola. Pídele a '
-                  'quien administre ${updates.owner}/${updates.repo} que te '
-                  'añada como colaborador.',
-                  tone: didactaTeacher,
-                ),
-                const SizedBox(height: 10),
-              ] else if (updates.authorised == true) ...[
-                const _Fact(
-                  label: 'Acceso a las versiones',
-                  value: 'Tu cuenta de GitHub está autorizada',
-                ),
-                const SizedBox(height: 8),
-              ],
-
               if (updates.hasUpdate) ...[
                 Note(
                   'Hay una versión nueva de Didacta: '
@@ -89,11 +68,7 @@ class UpdateSection extends StatelessWidget {
                   ),
                 ),
 
-              // El problema, salvo cuando es el de acceso: de ese ya se ha
-              // hablado arriba, y dos notas seguidas diciendo lo mismo con
-              // otras palabras hacen dudar de si son dos cosas distintas.
-              if (updates.problem != null &&
-                  updates.problem!.problem != UpdateProblem.notAuthorised) ...[
+              if (updates.problem != null) ...[
                 Note('${updates.problem}', tone: didactaTeacher),
                 const SizedBox(height: 10),
               ],

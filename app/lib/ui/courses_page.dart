@@ -56,7 +56,10 @@ class _CoursesPageState extends State<CoursesPage> {
     // explicación: si ya no está, se mira todo.
     final filtering = degrees.any((degree) => degree.id == _degree);
     final courses = filtering
-        ? [for (final course in all) if (course.degreeId == _degree) course]
+        ? [
+            for (final course in all)
+              if (course.degreeId == _degree) course,
+          ]
         : all;
 
     final years = courses.fold<int>(0, (sum, c) => sum + c.years.length);
@@ -95,7 +98,8 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
           ],
         ),
-        if (degrees.isNotEmpty || session.catalogue.undeclaredDegrees.isNotEmpty)
+        if (degrees.isNotEmpty ||
+            session.catalogue.undeclaredDegrees.isNotEmpty)
           _DegreeStrip(
             session: session,
             onManage: () => _manageDegrees(session),
@@ -204,8 +208,7 @@ class _CoursesPageState extends State<CoursesPage> {
   ///
   /// Desde aquí y no desde Ajustes porque un grado es una clasificación del
   /// material, como un tema, y se toca mientras se mira la lista que agrupa.
-  Future<void> _manageDegrees(Session session) =>
-      showDegrees(context, session);
+  Future<void> _manageDegrees(Session session) => showDegrees(context, session);
 
   /// La ficha de la asignatura: nombre, idiomas y titulación.
   ///
@@ -339,7 +342,8 @@ class _CoursesPageState extends State<CoursesPage> {
           languages: answer.languages,
           documents: [
             for (final document in entry.documents)
-              if (document.repo == repo && answer.documents.contains(document.id))
+              if (document.repo == repo &&
+                  answer.documents.contains(document.id))
                 document.id,
           ],
         );
@@ -469,8 +473,10 @@ class _CoursesPageState extends State<CoursesPage> {
     final done = await runAdmin(
       context,
       session,
-      (admin) => admin.removeCourse(course.id, title: course.title(session.language)),
-      done: 'Asignatura «${course.title(session.language)}» quitada como un commit.',
+      (admin) =>
+          admin.removeCourse(course.id, title: course.title(session.language)),
+      done:
+          'Asignatura «${course.title(session.language)}» quitada como un commit.',
     );
     if (done) await session.reloadCatalogue();
   }

@@ -170,24 +170,27 @@ void main() {
       expect(catalogue.metadataConflicts, isNotEmpty);
     });
 
-    test('que dos repositorios pongan la asignatura en grados distintos, también', () {
-      // La asignatura saldría en un grado o en otro según en qué orden se
-      // abrieron los repositorios.
-      final catalogue = Catalogue.merge([
-        repoWith(
-          repo: 'x/teoria',
-          courses: [courseJsonIn('am-i', degree: 'matematicas')],
-        ),
-        repoWith(
-          repo: 'x/problemas',
-          courses: [courseJsonIn('am-i', degree: 'fisica')],
-        ),
-      ]);
-      expect(
-        catalogue.metadataConflicts.map((c) => c.field),
-        contains('grado'),
-      );
-    });
+    test(
+      'que dos repositorios pongan la asignatura en grados distintos, también',
+      () {
+        // La asignatura saldría en un grado o en otro según en qué orden se
+        // abrieron los repositorios.
+        final catalogue = Catalogue.merge([
+          repoWith(
+            repo: 'x/teoria',
+            courses: [courseJsonIn('am-i', degree: 'matematicas')],
+          ),
+          repoWith(
+            repo: 'x/problemas',
+            courses: [courseJsonIn('am-i', degree: 'fisica')],
+          ),
+        ]);
+        expect(
+          catalogue.metadataConflicts.map((c) => c.field),
+          contains('grado'),
+        );
+      },
+    );
 
     test('y se sabe dónde se escribe el de la asignatura', () {
       expect(CourseFacts.pathOf('grado'), ['degree_id']);
@@ -212,7 +215,10 @@ void main() {
     test('y las que no dicen a cuál pertenecen', () {
       final catalogue = repoWith(
         repo: 'x/uno',
-        courses: [courseJsonIn('am-i'), courseJsonIn('am-ii', degree: 'x')],
+        courses: [
+          courseJsonIn('am-i'),
+          courseJsonIn('am-ii', degree: 'x'),
+        ],
       );
       expect(catalogue.coursesIn(null).single.id, 'am-i');
     });
@@ -327,11 +333,9 @@ void main() {
 
     test('declarar dos veces el mismo se rechaza', () {
       expect(
-        () => DegreesFile(degreesYaml).add(
-          id: 'fisica',
-          titles: {'es': 'Otro'},
-          languages: const ['es'],
-        ),
+        () => DegreesFile(
+          degreesYaml,
+        ).add(id: 'fisica', titles: {'es': 'Otro'}, languages: const ['es']),
         throwsA(isA<DegreesException>()),
       );
     });
@@ -350,8 +354,9 @@ void main() {
 
     test('escribir lo mismo no cambia el fichero', () {
       // Un commit que no cambia nada es ruido en el historial de otra persona.
-      final file = DegreesFile(degreesYaml)
-        ..setTitles('fisica', {'es': 'Grado en Física', 'va': 'Grau en Física'});
+      final file = DegreesFile(
+        degreesYaml,
+      )..setTitles('fisica', {'es': 'Grado en Física', 'va': 'Grau en Física'});
       expect(file.text, degreesYaml);
     });
 

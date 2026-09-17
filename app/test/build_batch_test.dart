@@ -30,22 +30,23 @@ class RecordingCompiler extends FakeCompiler {
   final Set<String> failing = {};
 
   @override
-  Future<List<BuildableProfile>> documentProfiles(String document) async => const [
-    BuildableProfile(
-      id: 'notes',
-      label: 'Apuntes',
-      family: 'notes',
-      reveals: 'statements',
-      byDefault: true,
-    ),
-    BuildableProfile(
-      id: 'slides',
-      label: 'Diapositivas',
-      family: 'slides',
-      reveals: 'statements',
-      byDefault: true,
-    ),
-  ];
+  Future<List<BuildableProfile>> documentProfiles(String document) async =>
+      const [
+        BuildableProfile(
+          id: 'notes',
+          label: 'Apuntes',
+          family: 'notes',
+          reveals: 'statements',
+          byDefault: true,
+        ),
+        BuildableProfile(
+          id: 'slides',
+          label: 'Diapositivas',
+          family: 'slides',
+          reveals: 'statements',
+          byDefault: true,
+        ),
+      ];
 
   @override
   Future<List<CompileOutput>> compileDocument({

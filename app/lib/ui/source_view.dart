@@ -407,7 +407,7 @@ class _SourceTabState extends State<SourceTab> {
       }
 
       for (final draft in touched) {
-        final sha = await _gatewayForPath(draft.path).commit(
+        final sha = await _gatewayForPath(draft.path).save(
           path: draft.path,
           text: draft.text,
           sha: draft.sha,
@@ -504,7 +504,7 @@ class _SourceTabState extends State<SourceTab> {
 
       await widget.session
           .gatewayFor(widget.document.repo)
-          .commit(
+          .save(
             path: widget.yearPath,
             text: composition.text,
             sha: file.sha,

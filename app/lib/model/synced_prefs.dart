@@ -184,11 +184,8 @@ class SyncedPrefs {
     final courses = collapsedThemes.keys.toList()..sort();
     return '${const JsonEncoder.withIndent('  ').convert({
       'version': syncedPrefsVersion,
-      'collapsedThemes': {
-        for (final course in courses)
-          if (collapsedThemes[course]!.isNotEmpty)
-            course: (collapsedThemes[course]!.toList()..sort()),
-      },
+      'collapsedThemes': {for (final course in courses)
+        if (collapsedThemes[course]!.isNotEmpty) course: (collapsedThemes[course]!.toList()..sort())},
       'hiddenRepos': hiddenRepos.toList()..sort(),
       'favouriteCourses': favouriteCourses.toList()..sort(),
       'favouriteYears': favouriteYears.toList()..sort(),

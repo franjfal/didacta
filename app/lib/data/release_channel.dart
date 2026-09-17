@@ -1,26 +1,24 @@
-/// De dónde vienen las actualizaciones: los releases de un repositorio
-/// **privado** de GitHub.
+/// De dónde vienen las actualizaciones: los releases del propio repositorio.
 ///
-/// Que sea privado es el punto, no un detalle: quién puede actualizar Didacta
-/// es exactamente quién tiene acceso al repositorio de distribución. Dar
-/// acceso a alguien es añadirlo como colaborador; quitárselo es quitarlo de
-/// ahí. No hay una lista de permitidos que mantener en paralelo, ni un
-/// servidor de licencias, ni nada que se pueda quedar desincronizado con la
-/// realidad.
+/// Didacta se publica en `franjfal/didacta`, que es público, así que este
+/// fichero **no manda ninguna credencial**. Antes sí: las versiones vivían en
+/// un repositorio privado y quién podía actualizar era quién tenía acceso
+/// allí, de modo que cada petición iba con el token de la persona. Al abrir el
+/// código esa lista dejó de existir, y con ella la mitad de este fichero.
 ///
-/// De ahí salen las dos reglas de este fichero:
+/// Lo que queda es más simple y conviene dejar dicho por qué:
 ///
-/// **Todo pasa por la API con un `Authorization:`.** Nada de
-/// `browser_download_url`, que para un repositorio privado ni siquiera
-/// funciona sin sesión, y nada de enlaces firmados que sobrevivan a que a
-/// alguien se le retire el acceso. Un asset se pide por su `id` con
-/// `Accept: application/octet-stream`, y GitHub responde con una redirección
-/// firmada de vida corta que se sigue en el momento.
+/// **Sin `Authorization:`.** La API pública de GitHub permite 60 peticiones
+/// por hora y dirección IP, y Didacta hace una cada siete días. Mandar el
+/// token de alguien subiría ese límite a 5000 y no compraría nada más, así
+/// que no se manda: una credencial que no hace falta es una credencial que no
+/// se arriesga.
 ///
-/// **El token es el de la persona.** El mismo que ya se usa para clonar, con
-/// el mismo `repo` que ya se pidió al entrar. La aplicación no tiene ninguna
-/// credencial propia, así que no hay ningún secreto que pudiera filtrarse
-/// desde un binario que se reparte.
+/// **Se sigue descargando por `assetId` y no por `browser_download_url`.**
+/// La dirección del asset en la API vale para un repositorio público y para
+/// uno privado, así que el manifiesto no tiene que cambiar de forma si algún
+/// día se vuelve a cerrar, y lo que se comprueba --el SHA-256 de lo que llega,
+/// contra lo que el manifiesto dice-- es lo mismo en los dos casos.
 ///
 /// Este fichero **no toca el disco**. Devuelve respuestas en streaming y las
 /// escribe quien sí puede hacerlo, que es la mitad de `dart:io`. Así la
@@ -45,12 +43,6 @@ enum UpdateProblem {
 
   /// GitHub responde, pero mal (5xx). No es culpa de nadie de aquí.
   githubDown,
-
-  /// El token ya no vale: caducado, revocado, o la autorización retirada.
-  tokenInvalid,
-
-  /// El token vale, pero esta cuenta no tiene acceso al repositorio.
-  notAuthorised,
 
   /// Demasiadas peticiones.
   rateLimited,
@@ -100,22 +92,14 @@ class UpdateException implements Exception {
 
 /// Un release del repositorio de distribución.
 class ReleaseChannel {
-  ReleaseChannel({
-    required this.owner,
-    required this.repo,
-    required this.token,
-    http.Client? client,
-  }) : _client = client ?? http.Client();
+  ReleaseChannel({required this.owner, required this.repo, http.Client? client})
+    : _client = client ?? http.Client();
 
   /// `franjfal`.
   final String owner;
 
-  /// `didacta_public`.
+  /// `didacta`.
   final String repo;
-
-  /// El de la persona que ha entrado. Puede estar vacío: entonces no se
-  /// llega a preguntar nada y se dice que hace falta entrar.
-  final String token;
 
   final http.Client _client;
 
@@ -128,52 +112,20 @@ class ReleaseChannel {
     String accept = 'application/vnd.github+json',
   }) => {
     'Accept': accept,
-    'Authorization': 'Bearer $token',
     'X-GitHub-Api-Version': '2022-11-28',
+    // GitHub rechaza una petición sin `User-Agent`, así que no es cortesía:
+    // es lo que hace que la API conteste.
     'User-Agent': 'Didacta',
   };
 
-  /// Si esta cuenta llega al repositorio de distribución.
-  ///
-  /// Es la comprobación de autorización de verdad, y es una sola petición:
-  /// GitHub responde 404 --no 403-- a un repositorio privado al que no se
-  /// tiene acceso, precisamente para no confirmar que existe. Aquí sabemos
-  /// que existe, así que un 404 significa «esta cuenta no entra».
-  Future<bool> hasAccess() async {
-    if (token.isEmpty) {
-      throw const UpdateException(
-        UpdateProblem.tokenInvalid,
-        'Entra en GitHub para poder buscar actualizaciones.',
-      );
-    }
-    final response = await _get('$base/repos/$owner/$repo');
-    if (response.statusCode == 200) return true;
-    if (response.statusCode == 404) return false;
-    throw _problemFor(response);
-  }
-
   /// El manifiesto del último release, o `null` si no hay ninguno.
   Future<UpdateManifest?> latest() async {
-    if (token.isEmpty) {
-      throw const UpdateException(
-        UpdateProblem.tokenInvalid,
-        'Entra en GitHub para poder buscar actualizaciones.',
-      );
-    }
     final response = await _get('$base/repos/$owner/$repo/releases/latest');
-    if (response.statusCode == 404) {
-      // Puede ser que no haya releases, o que esta cuenta no tenga acceso al
-      // repositorio. Son cosas muy distintas para quien lo está leyendo, así
-      // que se distingue con una petición más en vez de adivinar.
-      if (!await hasAccess()) {
-        throw UpdateException(
-          UpdateProblem.notAuthorised,
-          'Tu cuenta de GitHub no tiene acceso a las versiones de Didacta. '
-          'Pídele a quien administre $owner/$repo que te añada.',
-        );
-      }
-      return null;
-    }
+    // Sin release publicado todavía. Con el repositorio público es el único
+    // significado que puede tener un 404 aquí, que es justo lo que se ganó al
+    // abrirlo: antes había que preguntar otra vez para saber si lo que
+    // faltaba era el release o el permiso.
+    if (response.statusCode == 404) return null;
     if (response.statusCode != 200) throw _problemFor(response);
 
     final Map<String, dynamic> release;
@@ -238,8 +190,8 @@ class ReleaseChannel {
     }
     if (response.statusCode != 200) {
       throw UpdateException(
-        response.statusCode == 401 || response.statusCode == 403
-            ? UpdateProblem.tokenInvalid
+        response.statusCode == 403
+            ? UpdateProblem.rateLimited
             : UpdateProblem.brokenRelease,
         'No se pudo descargar ${asset.name} (${response.statusCode}).',
       );
@@ -287,33 +239,26 @@ class ReleaseChannel {
 
   UpdateException _problemFor(http.Response response) {
     final status = response.statusCode;
-    if (status == 401) {
-      return const UpdateException(
-        UpdateProblem.tokenInvalid,
-        'Tu sesión de GitHub ya no vale. Vuelve a entrar desde Ajustes.',
-      );
-    }
-    if (status == 403) {
-      // 403 con `x-ratelimit-remaining: 0` es límite de peticiones; el resto
-      // suele ser una autorización de la OAuth App revocada por la
-      // organización.
-      if (response.headers['x-ratelimit-remaining'] == '0') {
+    // Sin credencial, un 403 de la API pública es casi siempre el límite de
+    // peticiones por dirección IP. Se distingue igualmente por la cabecera,
+    // porque el mensaje que hay que dar es distinto: esperar un rato es algo
+    // que alguien puede hacer, y «GitHub ha dicho que no» no lo es.
+    if (status == 403 || status == 429) {
+      if (response.headers['x-ratelimit-remaining'] == '0' || status == 429) {
         return const UpdateException(
           UpdateProblem.rateLimited,
           'GitHub está limitando las peticiones. Inténtalo dentro de un rato.',
         );
       }
       return const UpdateException(
-        UpdateProblem.notAuthorised,
-        'GitHub ha rechazado la petición. Puede que se haya revocado la '
-        'autorización de Didacta: vuelve a entrar desde Ajustes.',
+        UpdateProblem.githubDown,
+        'GitHub ha rechazado la petición.',
       );
     }
     if (status == 404) {
       return UpdateException(
-        UpdateProblem.notAuthorised,
-        'Tu cuenta de GitHub no tiene acceso a las versiones de Didacta. '
-        'Pídele a quien administre $owner/$repo que te añada.',
+        UpdateProblem.noRelease,
+        'No encuentro las versiones de Didacta en $owner/$repo.',
       );
     }
     if (status >= 500) {

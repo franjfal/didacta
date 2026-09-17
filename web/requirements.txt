@@ -1,0 +1,7 @@
+# Lo que hace falta para construir la web.
+#
+# Una sola dependencia, y con la versión fijada: el tema de una web de
+# documentación no puede cambiar de aspecto porque un día se publique una
+# versión nueva mientras se está publicando la aplicación. Subirla es cambiar
+# esta línea, y entonces el cambio se ve en un diff.
+mkdocs-material==9.7.7

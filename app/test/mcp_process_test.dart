@@ -21,8 +21,7 @@ import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/state/mcp_service.dart';
 
 /// Dónde está Didacta, subiendo desde el test.
-String get enginePath =>
-    Directory.current.path.endsWith('/app')
+String get enginePath => Directory.current.path.endsWith('/app')
     ? Directory.current.parent.path
     : Directory.current.path;
 
@@ -42,75 +41,87 @@ void main() {
 
   tearDown(() async => work.delete(recursive: true));
 
-  test('se levanta, dice dónde escucha y se apaga', () async {
-    final service = McpService(
-      openRunner: () => McpRunner.forHost(enginePath: enginePath),
-    );
+  test(
+    'se levanta, dice dónde escucha y se apaga',
+    () async {
+      final service = McpService(
+        openRunner: () => McpRunner.forHost(enginePath: enginePath),
+      );
 
-    await service.start(
-      repositories: [
-        McpRepository(id: 'pruebas', directory: repository, writable: true),
-      ],
-    );
+      await service.start(
+        repositories: [
+          McpRepository(id: 'pruebas', directory: repository, writable: true),
+        ],
+      );
 
-    expect(service.state, McpState.running, reason: service.problem ?? '');
-    expect(service.url, startsWith('http://127.0.0.1:'));
+      expect(service.state, McpState.running, reason: service.problem ?? '');
+      expect(service.url, startsWith('http://127.0.0.1:'));
 
-    // Las herramientas se le preguntan a él, por el protocolo y por el
-    // puerto que acaba de decir: es el ida y vuelta completo.
-    await _until(() => service.tools.isNotEmpty);
-    expect(service.tools.map((t) => t.name), contains('read_unit'));
-    expect(
-      service.tools.where((t) => t.writes).map((t) => t.name),
-      contains('write_unit'),
-    );
+      // Las herramientas se le preguntan a él, por el protocolo y por el
+      // puerto que acaba de decir: es el ida y vuelta completo.
+      await _until(() => service.tools.isNotEmpty);
+      expect(service.tools.map((t) => t.name), contains('read_unit'));
+      expect(
+        service.tools.where((t) => t.writes).map((t) => t.name),
+        contains('write_unit'),
+      );
 
-    await service.stop();
-    expect(service.state, McpState.off);
-    expect(service.url, isNull);
-  }, timeout: const Timeout(Duration(seconds: 60)));
+      await service.stop();
+      expect(service.state, McpState.off);
+      expect(service.url, isNull);
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
-  test('el diario llega mientras trabaja', () async {
-    final service = McpService(
-      openRunner: () => McpRunner.forHost(enginePath: enginePath),
-    );
-    await service.start(
-      repositories: [
-        McpRepository(id: 'pruebas', directory: repository, writable: false),
-      ],
-    );
-    expect(service.state, McpState.running, reason: service.problem ?? '');
-    await _until(() => service.tools.isNotEmpty);
+  test(
+    'el diario llega mientras trabaja',
+    () async {
+      final service = McpService(
+        openRunner: () => McpRunner.forHost(enginePath: enginePath),
+      );
+      await service.start(
+        repositories: [
+          McpRepository(id: 'pruebas', directory: repository, writable: false),
+        ],
+      );
+      expect(service.state, McpState.running, reason: service.problem ?? '');
+      await _until(() => service.tools.isNotEmpty);
 
-    // Una llamada de verdad, por el puerto que acaba de decir. `tools/list`
-    // no vale: listar no es llamar a una herramienta, y el diario apunta lo
-    // que se hace con el repositorio, no cada mensaje del protocolo.
-    final answer = await _call(service.url!, 'list_courses');
-    expect(answer, contains('am-iii'));
+      // Una llamada de verdad, por el puerto que acaba de decir. `tools/list`
+      // no vale: listar no es llamar a una herramienta, y el diario apunta lo
+      // que se hace con el repositorio, no cada mensaje del protocolo.
+      final answer = await _call(service.url!, 'list_courses');
+      expect(answer, contains('am-iii'));
 
-    await _until(() => service.calls > 0);
-    final call = service.activity.firstWhere((e) => e.isCall);
-    expect(call.tool, 'list_courses');
-    expect(call.ok, isTrue);
-    expect(call.writes, isFalse);
+      await _until(() => service.calls > 0);
+      final call = service.activity.firstWhere((e) => e.isCall);
+      expect(call.tool, 'list_courses');
+      expect(call.ok, isTrue);
+      expect(call.writes, isFalse);
 
-    await service.stop();
-  }, timeout: const Timeout(Duration(seconds: 60)));
+      await service.stop();
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
-  test('sin motor no se enciende, y lo dice en vez de quedarse pensando', () async {
-    final service = McpService(
-      openRunner: () => McpRunner.forHost(enginePath: '/no/existe'),
-    );
+  test(
+    'sin motor no se enciende, y lo dice en vez de quedarse pensando',
+    () async {
+      final service = McpService(
+        openRunner: () => McpRunner.forHost(enginePath: '/no/existe'),
+      );
 
-    await service.start(
-      repositories: [
-        McpRepository(id: 'x', directory: repository, writable: false),
-      ],
-    );
+      await service.start(
+        repositories: [
+          McpRepository(id: 'x', directory: repository, writable: false),
+        ],
+      );
 
-    expect(service.state, McpState.failed);
-    expect(service.problem, isNotNull);
-  }, timeout: const Timeout(Duration(seconds: 30)));
+      expect(service.state, McpState.failed);
+      expect(service.problem, isNotNull);
+    },
+    timeout: const Timeout(Duration(seconds: 30)),
+  );
 }
 
 /// Le pide una herramienta al servidor, por HTTP, como haría un cliente.
@@ -119,12 +130,14 @@ Future<String> _call(String url, String tool) async {
   try {
     final request = await client.postUrl(Uri.parse(url));
     request.headers.contentType = ContentType.json;
-    request.write(jsonEncode({
-      'jsonrpc': '2.0',
-      'id': 1,
-      'method': 'tools/call',
-      'params': {'name': tool, 'arguments': const <String, dynamic>{}},
-    }));
+    request.write(
+      jsonEncode({
+        'jsonrpc': '2.0',
+        'id': 1,
+        'method': 'tools/call',
+        'params': {'name': tool, 'arguments': const <String, dynamic>{}},
+      }),
+    );
     final response = await request.close();
     final body = await response.transform(utf8.decoder).join();
     final decoded = (jsonDecode(body) as Map).cast<String, dynamic>();

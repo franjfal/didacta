@@ -116,7 +116,6 @@ class DegreesFile {
     _lines.replaceRange(start, end + 1, block);
   }
 
-
   /// Declara un grado nuevo al final de la lista.
   ///
   /// Con el fichero entero si no había ninguno: `degrees.yaml` empieza con
@@ -162,7 +161,9 @@ class DegreesFile {
     }
     // `degrees: []` pasa a ser una lista con un elemento.
     final head = _lines[at];
-    if (head.contains('[')) _lines[at] = head.substring(0, head.indexOf(':') + 1);
+    if (head.contains('[')) {
+      _lines[at] = head.substring(0, head.indexOf(':') + 1);
+    }
 
     var end = _lines.length;
     for (var i = at + 1; i < _lines.length; i += 1) {

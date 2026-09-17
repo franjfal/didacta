@@ -19,7 +19,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:didacta_app/model/catalogue.dart';
 
-
 Unit unit(String path, {required String repo}) => Unit(
   id: path.replaceAll('/', '.'),
   path: path,

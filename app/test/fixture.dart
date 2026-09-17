@@ -11,6 +11,7 @@ import 'dart:io';
 
 import 'package:didacta_app/data/app_info.dart';
 import 'package:didacta_app/data/preferences.dart';
+import 'package:didacta_app/data/translation_secrets.dart';
 import 'package:didacta_app/data/secrets.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
@@ -22,6 +23,7 @@ import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/model/file_history.dart';
 import 'package:didacta_app/model/update_manifest.dart';
+import 'package:didacta_app/model/tex_indent.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
 
@@ -42,7 +44,6 @@ UpdateService offlineUpdates() => UpdateService(
     architecture: 'universal',
   ),
   preferences: MemoryPreferences()..checked = DateTime.now(),
-  readToken: () async => '',
 );
 
 const String unitPath = 'content/analysis/normed/definition';
@@ -344,7 +345,7 @@ class FakeGateway extends ContentGateway {
   }
 
   @override
-  Future<String> commit({
+  Future<String> save({
     required String path,
     required String text,
     required String sha,
@@ -355,6 +356,12 @@ class FakeGateway extends ContentGateway {
     files[path] = text;
     return 'nuevo-sha';
   }
+
+  /// Por defecto confirma, que es lo que hace la aplicación de salida.
+  @override
+  bool get commitsOnSave => commitsWhenSaving;
+
+  bool commitsWhenSaving = true;
 }
 
 /// Las tres versiones de cualquier cosa con ejercicios dentro, tal como las
@@ -582,12 +589,15 @@ class FakeCompiler implements Compiler {
   Map<String, List<ExistingOutput>> documentOutputList = const {};
 
   @override
-  Future<Map<String, List<ExistingOutput>>> documentOutputs(String where) async =>
-      documentOutputList;
+  Future<Map<String, List<ExistingOutput>>> documentOutputs(
+    String where,
+  ) async => documentOutputList;
 
   /// Lo que se pidió exportar, para poder comprobarlo.
-  final List<({String where, String to, List<String> languages,
-      List<String> documents})> exports = [];
+  final List<
+    ({String where, String to, List<String> languages, List<String> documents})
+  >
+  exports = [];
 
   ExportResult exportResult = const ExportResult(
     copied: [],
@@ -771,7 +781,27 @@ class FakeClone implements LocalClone {
     required String authorEmail,
     required String token,
     bool push = true,
-  }) async => 'x';
+  }) async {
+    fileCommits.add((path: path, message: message, pushed: push));
+    return 'x';
+  }
+
+  /// Lo que se ha guardado **sin confirmar**, para poder mirarlo en un test.
+  final List<({String path, String text})> writes = [];
+
+  /// Y los commits de un fichero suelto, con si se enviaron. Aparte de
+  /// [commits], que son los de una operación sobre varias rutas.
+  final List<({String path, String message, bool pushed})> fileCommits = [];
+
+  @override
+  Future<String> writeFile({
+    required String path,
+    required String text,
+    required String expectedSha,
+  }) async {
+    writes.add((path: path, text: text));
+    return 'x';
+  }
 
   @override
   Future<void> setAuthor({required String name, required String email}) async {}
@@ -793,6 +823,12 @@ class FakeClone implements LocalClone {
 
 /// A session wired to a fake gateway, with no Firebase anywhere.
 class FakeSession extends Session {
+  /// El indentador propio y nada más: `latexindent` es un proceso de verdad
+  /// y el reloj de una prueba de widgets es falso, así que esperarlo sería
+  /// esperar para siempre.
+  @override
+  Future<String> tidyLatex(String text) async => indentLatex(text);
+
   FakeSession({
     required this.gatewayOverride,
     required Catalogue catalogue,
@@ -801,10 +837,15 @@ class FakeSession extends Session {
     this.cloneOverride,
     this.onReload,
     Preferences? preferencesOverride,
+    TranslationSecrets? translationSecretsOverride,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
          tokenStore: StubStore(),
          preferences: preferencesOverride,
+         // En memoria por defecto: un test que monta una pantalla no puede
+         // ponerse a leer el llavero del sistema.
+         translationSecrets:
+             translationSecretsOverride ?? MemoryTranslationSecrets(),
        );
 
   /// Sin red y sin preguntar: quien monta una pantalla ya ha entrado.
