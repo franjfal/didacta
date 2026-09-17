@@ -253,4 +253,56 @@ void main() {
       'profe',
     );
   });
+
+  testWidgets('la aplicación trae su Client ID: no se pide ninguno', (
+    tester,
+  ) async {
+    // Es lo primero que ve alguien que abre Didacta, y antes era un campo
+    // pidiéndole que se creara una aplicación de OAuth en GitHub. Un Client
+    // ID es público --viaja en la URL de cada autorización-- así que la
+    // aplicación trae el suyo y aquí sólo queda un botón.
+    final session = LocalSession(
+      catalogueSource: StaticCatalogueSource(catalogueWith(defaultUnits())),
+      tokenStore: StubStore(token: null),
+      preferences: MemoryPreferences(clientId: 'Ov23liDePrueba'),
+    );
+    await session.setGithubClientId('Ov23liDePrueba');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SignInForm(session: session)),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('github-sign-in')), findsOneWidget);
+    expect(find.byKey(const Key('github-client-id')), findsNothing);
+
+    // Y quien monte su propio despliegue lo encuentra donde lo buscaría.
+    await tester.tap(find.byKey(const Key('show-client-id')));
+    await tester.pump();
+    expect(find.byKey(const Key('github-client-id')), findsOneWidget);
+  });
+
+  testWidgets('sin ninguno, el campo sale de entrada', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SignInForm(
+            session: LocalSession(
+              catalogueSource: StaticCatalogueSource(
+                catalogueWith(defaultUnits()),
+              ),
+              tokenStore: StubStore(token: null),
+              preferences: MemoryPreferences(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('github-client-id')), findsOneWidget);
+    expect(find.byKey(const Key('show-client-id')), findsNothing);
+  });
 }

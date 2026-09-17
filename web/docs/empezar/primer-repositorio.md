@@ -52,6 +52,8 @@ Un *repositorio de contenido* es un repositorio de GitHub con material de
 Didacta dentro: un `didacta.yaml` en la raíz, y las carpetas `content/`,
 `problems/` y `courses/`.
 
+![El paso del asistente donde se abre el primer repositorio](../img/app/bienvenida-repositorio.png)
+
 Hay tres caminos, y el asistente de bienvenida los ofrece los tres:
 
 === "Ya tengo uno en GitHub"

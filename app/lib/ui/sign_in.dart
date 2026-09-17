@@ -58,6 +58,20 @@ class _SignInFormState extends State<SignInForm> {
   bool _working = false;
   Object? _problem;
 
+  /// Si alguien ha pedido ver el campo del Client ID.
+  ///
+  /// El campo está escondido mientras haya uno --que es siempre, porque la
+  /// aplicación trae el suyo--: lo primero que ve alguien al abrir Didacta no
+  /// puede ser un campo pidiéndole que se cree una aplicación de OAuth en
+  /// GitHub. Queda detrás de un enlace, que es donde lo buscará quien monte
+  /// su propio despliegue.
+  ///
+  /// Un `bool` para «lo ha pedido» y no para «se enseña», porque lo segundo
+  /// se calcula al pintar: el Client ID lo lee la sesión de las preferencias,
+  /// y decidirlo una sola vez al construir dejaría el campo puesto para
+  /// siempre si esta pantalla se monta antes de esa lectura.
+  bool _askedForClientId = false;
+
   @override
   void dispose() {
     _clientId.dispose();
@@ -136,24 +150,29 @@ class _SignInFormState extends State<SignInForm> {
       );
     }
 
+    final showClientId =
+        _askedForClientId || widget.session.githubClientId.isEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
-          key: const Key('github-client-id'),
-          controller: _clientId,
-          decoration: const InputDecoration(
-            labelText: 'Client ID de la OAuth App',
-            helperText:
-                'GitHub → Settings → Developer settings → OAuth Apps, '
-                'con «Enable Device Flow». Es público: no es un '
-                'secreto que haya que proteger.',
-            helperMaxLines: 3,
-            border: OutlineInputBorder(),
-            isDense: true,
+        if (showClientId) ...[
+          TextField(
+            key: const Key('github-client-id'),
+            controller: _clientId,
+            decoration: const InputDecoration(
+              labelText: 'Client ID de la OAuth App',
+              helperText:
+                  'GitHub → Settings → Developer settings → OAuth Apps, '
+                  'con «Enable Device Flow». Es público: no es un '
+                  'secreto que haya que proteger.',
+              helperMaxLines: 3,
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
         FilledButton.icon(
           key: const Key('github-sign-in'),
           onPressed: _working ? null : _signIn,
@@ -166,6 +185,20 @@ class _SignInFormState extends State<SignInForm> {
               : const Icon(Icons.login, size: 16),
           label: Text(_working ? 'Esperando…' : 'Entrar en GitHub'),
         ),
+        if (!showClientId) ...[
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: const Key('show-client-id'),
+              onPressed: () => setState(() => _askedForClientId = true),
+              child: const Text(
+                'Entrar con otra aplicación de OAuth',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
+          ),
+        ],
         if (_problem != null) ...[
           const SizedBox(height: 12),
           Note('$_problem', tone: didactaTeacher),

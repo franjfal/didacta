@@ -50,11 +50,24 @@ const String indexBase = String.fromEnvironment(
 
 /// El Client ID de la OAuth App con la que se entra en GitHub.
 ///
-/// Se puede pasar al compilar, pero no hace falta: se escribe en Ajustes y se
-/// guarda. Es público por definición --una aplicación de escritorio no puede
-/// esconder un secreto-- así que no hay nada que proteger aquí; lo que se
-/// evita es tener que recompilar para cambiar de aplicación de OAuth.
-const String githubClientId = String.fromEnvironment('DIDACTA_GITHUB_CLIENT');
+/// **Va escrito aquí a propósito, y no es un descuido.** Un Client ID es
+/// público por definición: viaja en la URL de cada autorización, así que ya lo
+/// ve en la barra de direcciones cualquiera que entre. El secreto de una
+/// aplicación de OAuth es el *client secret*, y el device flow --que es el que
+/// usa Didacta-- no lo usa; existe justamente porque una aplicación de
+/// escritorio no puede esconder un secreto dentro de un binario que reparte.
+/// Lo hacen igual `gh`, VS Code y GitHub Desktop.
+///
+/// Lo que se gana es lo que decide si alguien llega a usar esto: al abrir
+/// Didacta por primera vez hay **un botón**, y no un campo pidiendo que te
+/// crees una aplicación de OAuth en GitHub antes de poder empezar.
+///
+/// Se puede cambiar sin recompilar --en Ajustes, o con la define-- para
+/// quien monte su propio despliegue.
+const String githubClientId = String.fromEnvironment(
+  'DIDACTA_GITHUB_CLIENT',
+  defaultValue: 'Ov23liZqSOY4xMvnXU4Z',
+);
 
 /// A clone already on disk, for a desktop build handed to someone who has
 /// the repository. Ignored on the web, and overridden by whatever is chosen
