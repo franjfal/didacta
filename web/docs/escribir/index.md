@@ -33,7 +33,7 @@ como título de la diapositiva, o como encabezado de la sección.
 ## Los tres canales
 
 ```mermaid
-flowchart LR
+flowchart TD
   T["Lo que no dice nada"] --> S["Diapositivas"]
   T --> N["Apuntes"]
   T --> P["Copia del profesor"]

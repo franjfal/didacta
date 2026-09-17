@@ -708,6 +708,22 @@ class _LanguageEditor {
     }
   }
 
+  /// Ordena la sangría de lo que hay escrito, ahora.
+  ///
+  /// Devuelve si ha cambiado algo, para poder decir «ya estaba ordenado» en
+  /// lugar de dejar un botón que al pulsarlo no hace nada visible.
+  ///
+  /// Deja el cambio **sin guardar**. Es lo mismo que hará el guardado, hecho
+  /// antes para poder mirarlo y con «Descartar» al lado: reescribir el
+  /// fichero de alguien y hacer el commit en el mismo clic no deja sitio para
+  /// mirar qué se ha reescrito.
+  Future<bool> tidyNow() async {
+    final tidy = await session.tidyLatex(controller.text);
+    if (tidy == controller.text) return false;
+    controller.text = tidy;
+    return true;
+  }
+
   /// The message suggested in the save dialog.
   ///
   /// Says what actually changed, because a log full of "edit file" is a log
@@ -876,6 +892,12 @@ class _EditorView extends StatelessWidget {
                       controller: editor.controller,
                       enabled: canWrite,
                       focusNode: editor.focusNode,
+                      // Solo cuando este idioma se sangra: ofrecerlo en uno
+                      // que está marcado para dejar quieto sería ofrecer
+                      // justo lo que se ha dicho que no se haga.
+                      onTidy: editor.unit.indentsIn(editor.language)
+                          ? () => _tidy(context, editor)
+                          : null,
                     ),
                     Expanded(
                       child: Container(
@@ -1129,6 +1151,30 @@ class _StatusButton extends StatelessWidget {
 /// Con el mismo diálogo que la lista de traducciones y que un tema entero:
 /// las tres preguntan lo mismo --a qué idiomas y con qué proveedor-- y tres
 /// diálogos que se parecen acabarían comportándose distinto.
+/// Ordena la sangría del fichero abierto y lo dice.
+///
+/// Decir «ya estaba ordenado» importa tanto como hacerlo: sin eso, un botón
+/// que no cambia nada se lee como un botón roto, y es justo lo que va a pasar
+/// la segunda vez que se pulse.
+Future<void> _tidy(BuildContext context, _LanguageEditor editor) async {
+  final messenger = ScaffoldMessenger.of(context);
+  final changed = await editor.tidyNow();
+  // Fuera el anterior antes de poner el nuevo: encolados, la respuesta a la
+  // segunda pulsación aparece tres segundos después de darla, que es cuando
+  // ya se ha decidido que el botón no hace nada.
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        changed
+            ? 'Sangría ordenada. Guarda para dejarlo así.'
+            : 'Ya estaba ordenado.',
+      ),
+      duration: const Duration(seconds: 3),
+    ),
+  );
+}
+
 Future<void> _translateHere(
   BuildContext context,
   _LanguageEditor editor,
@@ -1237,6 +1283,12 @@ class _IndentToggle extends StatelessWidget {
       await sessionOf(
         context,
       ).setUnitIndent(unit: editor.unit, language: editor.language, on: on);
+      // Encenderla ordena el fichero en ese momento. Es lo que espera quien
+      // acaba de pulsarla: una casilla que dice «sangrar» y deja el fichero
+      // igual que estaba se lee como que no funciona --y así es como se
+      // descubrió que hacía falta el botón de la barra--. Apagarla no deshace
+      // nada: lo que ya está escrito no se desordena a posta.
+      if (on) await editor.tidyNow();
     } catch (thrown) {
       messenger.showSnackBar(
         SnackBar(content: Text('$thrown'), backgroundColor: didactaTeacher),

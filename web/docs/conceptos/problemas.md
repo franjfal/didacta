@@ -41,7 +41,7 @@ En los dos perfiles de examen **las pistas no salen**, tampoco en el del
 profesor: en un examen no hay pista que dar, y quien corrige no la necesita.
 
 ```mermaid
-flowchart LR
+flowchart TD
   F["Un problema<br/>enunciado + pista +<br/>resultado + solución + corrección"]
   F --> A["problems<br/>solo el enunciado"]
   F --> B["problems-answers<br/>y el resultado"]

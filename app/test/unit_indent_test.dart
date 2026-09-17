@@ -230,6 +230,101 @@ void main() {
       expect(gateway.commits.last.text, raw);
     });
 
+    testWidgets('el botón de la barra ordena sin guardar', (tester) async {
+      // El fallo que trajo este botón: sangrar solo pasaba al guardar, así
+      // que un fichero escrito antes de que esto existiera se veía igual de
+      // desordenado y parecía que la casilla no hacía nada. Nadie va a abrir
+      // y guardar dos mil unidades para verlas bien puestas.
+      tester.view.physicalSize = const Size(1500, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final (session, gateway) = await ready();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(
+              body: UnitPage(unitPath: here, language: 'va'),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      // El fichero está en disco sin sangrar y nadie lo ha tocado.
+      expect(find.text('  \\item Uno'), findsNothing);
+      expect(gateway.commits, isEmpty);
+
+      await tester.tap(find.byKey(const Key('tidy-now')));
+      await settle(tester);
+
+      // Ordenado en pantalla y **sin guardar**: se mira antes de escribirlo.
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.controller!.text, contains('  \\item Uno'));
+      expect(gateway.commits, isEmpty);
+      expect(find.text('Sangría ordenada. Guarda para dejarlo así.'),
+          findsOneWidget);
+    });
+
+    testWidgets('pulsarlo dos veces lo dice en lugar de callar', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1500, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final (session, _) = await ready();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(
+              body: UnitPage(unitPath: here, language: 'va'),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('tidy-now')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('tidy-now')));
+      // Más largo que `settle`: el primer aviso se está retirando y el
+      // segundo tiene que entrar, y las dos animaciones suman más de los 240
+      // milisegundos que pumpea el resto de los tests.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Ya estaba ordenado.'), findsOneWidget);
+    });
+
+    testWidgets('apagada, el botón de ordenar no se ofrece', (tester) async {
+      // Ofrecerlo en un idioma marcado para dejar quieto sería ofrecer justo
+      // lo que se ha dicho que no se haga.
+      tester.view.physicalSize = const Size(1500, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final (session, _) = await ready(indentVa: false);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(
+              body: UnitPage(unitPath: here, language: 'va'),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      expect(find.byKey(const Key('tidy-now')), findsNothing);
+    });
+
     testWidgets('la barra cabe con la casilla dentro', (tester) async {
       // La barra ya iba al límite antes de esto: con el botón de estado se
       // desbordó ochenta y seis píxeles. Un ancho de tableta es donde se ve.

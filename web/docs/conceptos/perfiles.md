@@ -43,7 +43,7 @@ Son cinco ejes independientes, y cada perfil es un preajuste sobre ellos:
 | **pausas** | si las apariciones progresivas se respetan | sí · no |
 
 ```mermaid
-flowchart LR
+flowchart TD
   F["Tu lección"] --> X{"Perfil"}
   X -->|"medio: diapositivas<br/>audiencia: alumno"| S["slides"]
   X -->|"medio: documento<br/>audiencia: alumno"| N["notes"]
