@@ -10,6 +10,16 @@ hace dos comprobaciones que ninguna otra cosa puede hacer: `didacta check`
 mira un repositorio, y desde allí el de al lado sencillamente no existe. Quien
 tiene los dos delante es la aplicación.
 
+```mermaid
+flowchart TB
+  subgraph T["Tu máquina: los dos abiertos"]
+    D1["Tema 1<br/>en apuntes-javier"] --> U1["Una unidad<br/>de problemas-analisis"]
+  end
+  subgraph O["La máquina de quien solo tiene uno"]
+    D2["Tema 1"] -.->|"no compila"| X["✗"]
+  end
+```
+
 ## Los metadatos que no coinciden
 
 Una asignatura repartida se declara en los dos `course.yaml`, y los dos tienen
