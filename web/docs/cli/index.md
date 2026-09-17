@@ -25,6 +25,15 @@ con `.git`.
     poder funcionar en un runner de integración continua sin un paso de
     instalación, y en la máquina de cualquiera sin preparar un entorno.
 
+```mermaid
+flowchart LR
+  T["didacta"] --> R["Tu repositorio<br/>de contenido"]
+  R --> T
+  T --> L["latexmk"]
+  L --> P["Los PDF"]
+  T --> I["generated/<br/>el catálogo que lee la aplicación"]
+```
+
 ## Mirar
 
 ```bash

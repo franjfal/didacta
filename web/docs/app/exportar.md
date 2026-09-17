@@ -10,6 +10,14 @@ en carpetas con nombres que se leen.
 
 **El repositorio no se toca.** Lo que sale es una copia.
 
+```mermaid
+flowchart LR
+  R["Tu repositorio<br/>no se toca"] --> C["Los PDF ya compilados"]
+  C --> E["Una carpeta<br/>por idioma y con<br/>nombres que se leen"]
+  E --> A["El aula virtual"]
+  E --> U["Un USB"]
+```
+
 ## Las tres decisiones
 
 Están en la misma pantalla porque son la misma decisión:
