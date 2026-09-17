@@ -522,6 +522,25 @@ class SiteTest(unittest.TestCase):
         self.assertIn("Todavía no hay ninguna versión publicada", page)
         self.assertIn("github.com/franjfal/didacta", page)
 
+    def test_el_token_del_ci_se_manda_si_está_y_no_si_no(self):
+        # Desde un runner, la API sin autenticar contesta 403: el límite va
+        # por dirección IP y la de un runner compartido está gastada. Con
+        # token no pasa. Y sin token --en la máquina de cualquiera-- no se
+        # inventa ninguna cabecera.
+        con = web.headers_for(environment={"GITHUB_TOKEN": "gho_del_ci"})
+        self.assertEqual(con["Authorization"], "Bearer gho_del_ci")
+
+        sin = web.headers_for(environment={})
+        self.assertNotIn("Authorization", sin)
+
+        # `gh` exporta el suyo con otro nombre.
+        otro = web.headers_for(environment={"GH_TOKEN": "gho_otro"})
+        self.assertEqual(otro["Authorization"], "Bearer gho_otro")
+
+        # Y uno vacío no es un token: una cabecera `Bearer ` vacía es un 401.
+        vacío = web.headers_for(environment={"GITHUB_TOKEN": ""})
+        self.assertNotIn("Authorization", vacío)
+
     def test_una_fecha_que_no_se_entiende_no_tumba_la_pagina(self):
         self.assertEqual(web.spanish_date(""), "")
         self.assertEqual(web.spanish_date("no es una fecha"), "")
