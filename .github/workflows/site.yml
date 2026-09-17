@@ -86,7 +86,16 @@ jobs:
 
       - name: la página de descarga
         # Del release publicado, no de un fichero: así un rollback se corrige
-        # volviendo a desplegar. Sin token: el repositorio es público.
+        # volviendo a desplegar.
+        #
+        # Con el token de la ejecución, y no porque el repositorio lo
+        # necesite --es público-- sino porque el límite de peticiones **sin
+        # autenticar** va por dirección IP, y la de un runner compartido está
+        # gastada antes de empezar: sin esto, GitHub contesta 403 y la web no
+        # se construye. Es la credencial del CI; la aplicación sigue sin
+        # mandar ninguna.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           python3 packaging/web.py downloads --repo "$GITHUB_REPOSITORY"
 

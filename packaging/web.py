@@ -27,10 +27,15 @@ biblioteca estándar que Python ya tiene importado antes de ejecutar nada:
 --«module 'site' has no attribute 'render'»-- no dice en ningún sitio que el
 problema sea el nombre del fichero.
 
-**Sin ninguna credencial.** El repositorio es público y la API pública basta;
-que este programa no necesite un token es lo que permite que la web se
-construya en cualquier sitio, incluida la máquina de quien esté escribiendo
-documentación.
+**Sin credencial propia.** El repositorio es público y la API pública basta,
+así que esto se ejecuta en la máquina de cualquiera sin configurar nada.
+
+Con una excepción que hay que conocer: **desde un runner de GitHub Actions, la
+API pública contesta 403**. El límite de peticiones sin autenticar va por
+dirección IP, y la de un runner compartido está gastada desde antes de que
+empiece tu trabajo. Por eso, si hay un token en el entorno --`GITHUB_TOKEN`,
+que Actions le da a cada ejecución-- se usa. Es la credencial del CI y no la
+de nadie; la aplicación, que es la que se reparte, sigue sin mandar ninguna.
 
 **Y sin release tampoco falla.** Un repositorio recién abierto, o un fork que
 no ha publicado nada, produce un bloque que lo dice y explica cómo compilar
@@ -140,16 +145,27 @@ def download_url(repo, tag, name):
 # ------------------------------------------------------------- el origen ---
 
 
+def headers_for(accept="application/vnd.github+json", environment=None):
+    """Las cabeceras de una petición a GitHub, con token si el entorno lo trae.
+
+    Separado de [_fetch] para poder comprobarlo en un test: que el token se
+    mande cuando está y no se invente cuando no, sin salir a la red.
+    """
+    environment = os.environ if environment is None else environment
+    headers = {
+        "Accept": accept,
+        # GitHub rechaza una petición sin `User-Agent`. No es cortesía.
+        "User-Agent": "didacta-site",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    token = environment.get("GITHUB_TOKEN") or environment.get("GH_TOKEN") or ""
+    if token:
+        headers["Authorization"] = "Bearer %s" % token
+    return headers
+
+
 def _fetch(url, accept="application/vnd.github+json"):
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Accept": accept,
-            # GitHub rechaza una petición sin `User-Agent`. No es cortesía.
-            "User-Agent": "didacta-site",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-    )
+    request = urllib.request.Request(url, headers=headers_for(accept))
     with urllib.request.urlopen(request, timeout=30) as response:
         return response.read()
 
@@ -167,6 +183,14 @@ def manifest_from_github(repo):
     except urllib.error.HTTPError as failure:
         if failure.code == 404:
             return None
+        if failure.code in (403, 429):
+            raise Problem(
+                "GitHub está limitando las peticiones (%s) y no se puede leer\n"
+                "el último release de %s.\n\n"
+                "Desde un runner de Actions esto pasa sin un token: pon\n"
+                "`GITHUB_TOKEN: ${GITHUB_TOKEN}` en el paso que ejecuta esto."
+                % (failure.code, repo)
+            )
         raise Problem(
             "GitHub respondió %s al preguntar por el último release de %s"
             % (failure.code, repo)
