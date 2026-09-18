@@ -625,6 +625,7 @@ class CopyYearDialog extends StatefulWidget {
     required this.year,
     required this.entry,
     required this.language,
+    this.courses = const [],
   });
 
   final Course course;
@@ -632,13 +633,25 @@ class CopyYearDialog extends StatefulWidget {
   final CourseYear entry;
   final String language;
 
+  /// A qué asignaturas se puede copiar. Vacía es «solo esta», que es como se
+  /// comportaba antes de que se pudiera elegir otra.
+  final List<Course> courses;
+
   @override
   State<CopyYearDialog> createState() => _CopyYearDialogState();
 }
 
 /// Lo que la pantalla decide: a dónde, y qué.
 class CopyRequest {
-  const CopyRequest({required this.toYear, required this.documents});
+  const CopyRequest({
+    required this.toYear,
+    required this.documents,
+    this.toCourse = '',
+  });
+
+  /// La asignatura de destino. Vacía es la misma desde la que se copia, que
+  /// es el caso corriente.
+  final String toCourse;
 
   final String toYear;
 
@@ -648,17 +661,74 @@ class CopyRequest {
 
 class _CopyYearDialogState extends State<CopyYearDialog> {
   String? _target;
+  late String _course = widget.course.id;
   late final Set<String> _chosen = {
     for (final document in widget.entry.documents) document.id,
   };
 
-  /// Los cursos a los que se puede copiar: los de la misma asignatura, menos
-  /// este. Copiar a otra asignatura sería otra cosa --las referencias pueden
-  /// no existir allí-- y no se ofrece a medias.
+  /// Las asignaturas a las que se puede copiar, con la actual delante.
+  ///
+  /// La actual por defecto porque es lo que se hace casi siempre --volver a
+  /// dar el mismo tema el curso que viene-- y obligar a elegirla cada vez
+  /// convertiría lo corriente en un formulario.
+  List<Course> get _subjects {
+    final all = widget.courses.isEmpty ? [widget.course] : widget.courses;
+    final here = all.where((c) => c.id == widget.course.id).toList();
+    final rest =
+        [
+          for (final course in all)
+            if (course.id != widget.course.id) course,
+        ]..sort(
+          (a, b) =>
+              a.title(widget.language).compareTo(b.title(widget.language)),
+        );
+    return [...here, ...rest];
+  }
+
+  Course? get _destination =>
+      _subjects.where((course) => course.id == _course).firstOrNull;
+
+  /// Los cursos académicos a los que se puede copiar. Dentro de la misma
+  /// asignatura, todos menos este; en otra, todos los que tenga.
   List<String> get _targets => [
-    for (final year in widget.course.years.keys)
-      if (year != widget.year) year,
+    for (final year in _destination?.years.keys ?? const <String>[])
+      if (!(_course == widget.course.id && year == widget.year)) year,
   ]..sort();
+
+  Widget _subjectPicker() {
+    final subjects = _subjects;
+    if (subjects.length < 2) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'A qué asignatura',
+          style: TextStyle(fontSize: 11.5, color: didactaMuted),
+        ),
+        const SizedBox(height: 4),
+        DropdownButtonFormField<String>(
+          key: const Key('copy-to-course'),
+          initialValue: _course,
+          isDense: true,
+          items: [
+            for (final course in subjects)
+              DropdownMenuItem(
+                value: course.id,
+                child: Text(
+                  course.id == widget.course.id
+                      ? '${course.title(widget.language)}  (esta)'
+                      : course.title(widget.language),
+                ),
+              ),
+          ],
+          onChanged: (value) => setState(() {
+            _course = value ?? _course;
+            _target = null;
+          }),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -669,15 +739,24 @@ class _CopyYearDialogState extends State<CopyYearDialog> {
         width: 540,
         height: 460,
         child: targets.isEmpty
-            ? const Note(
-                'Esta asignatura no tiene otro curso al que copiar. Crea uno '
-                'primero, o duplica este año entero.',
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _subjectPicker(),
+                  const SizedBox(height: Space.medium),
+                  const Note(
+                    'Esa asignatura no tiene ningún curso académico al que '
+                    'copiar. Crea uno primero, o elige otra.',
+                  ),
+                ],
               )
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _subjectPicker(),
+                  const SizedBox(height: Space.medium),
                   const Text(
-                    'A qué curso',
+                    'A qué curso académico',
                     style: TextStyle(fontSize: 11.5, color: didactaMuted),
                   ),
                   const SizedBox(height: 4),
@@ -746,11 +825,17 @@ class _CopyYearDialogState extends State<CopyYearDialog> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Note(
-                    'Se copia la composición: qué unidades lleva y en qué '
-                    'orden. Las unidades no se duplican --siguen siendo las '
-                    'mismas-- así que corregirlas sigue siendo corregirlas '
-                    'una vez.',
+                  Note(
+                    _course == widget.course.id
+                        ? 'Se copia la composición: qué unidades lleva y en '
+                              'qué orden. Las unidades no se duplican '
+                              '--siguen siendo las mismas-- así que '
+                              'corregirlas sigue siendo corregirlas una vez.'
+                        : 'Se copia la composición a otra asignatura. Las '
+                              'unidades siguen siendo las mismas, así que '
+                              'tienen que estar en el mismo repositorio que '
+                              'el curso de destino: un documento y lo que '
+                              'llama viven juntos.',
                   ),
                 ],
               ),
@@ -766,6 +851,7 @@ class _CopyYearDialogState extends State<CopyYearDialog> {
               ? null
               : () => Navigator.of(context).pop(
                   CopyRequest(
+                    toCourse: _course,
                     toYear: _target!,
                     documents: [
                       for (final document in widget.entry.documents)

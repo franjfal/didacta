@@ -39,7 +39,14 @@ import 'ui/year_page.dart';
 /// against a catalogue that does not contain what the URL names.
 GoRouter buildRouter(Session session) {
   return GoRouter(
-    initialLocation: '/',
+    // Se entra por las asignaturas y no por la biblioteca.
+    //
+    // La biblioteca contesta «¿qué tengo de esto?», que es una pregunta que
+    // se hace a ratos; al abrir Didacta lo que se viene a hacer es preparar
+    // una clase, y eso empieza en la asignatura que se da mañana. La
+    // biblioteca sigue en `/`, a un clic del carril: lo que cambia es por
+    // dónde se entra.
+    initialLocation: '/courses',
     refreshListenable: session,
     routes: [
       ShellRoute(

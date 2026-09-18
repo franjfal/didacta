@@ -42,6 +42,7 @@
 %% Estructura y portada.
 \def\didactaContentsName{Continguts}
 \def\didactaChapterName{Cap\'itol}
+\def\didactaSectionName{Apartat}
 \def\didactaCourseName{Assignatura}
 \def\didactaTeacherName{Professor}
 \def\didactaAcademicYearName{Curs}

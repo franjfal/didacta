@@ -253,6 +253,15 @@ void main() {
       expect(chip.selected, isTrue);
     });
 
+    testWidgets('se puede guardar una copia de lo que se está mirando', (
+      tester,
+    ) async {
+      // Mirar un PDF y querer llevárselo es el mismo momento. Antes había que
+      // abrirlo en el visor del sistema y guardarlo desde allí.
+      await show(tester, [output('notes', language: 'es')]);
+      expect(find.byKey(const Key('pdf-save-copy')), findsOneWidget);
+    });
+
     testWidgets('si de ese no hay nada, el primero que haya', (tester) async {
       // Respetar la preferencia hasta enseñar un visor vacío no ayuda a nadie.
       await show(tester, [output('notes', language: 'en')], language: 'va');

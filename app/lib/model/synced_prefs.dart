@@ -41,7 +41,11 @@ class SyncedPrefs {
     this.hiddenRepos = const {},
     this.favouriteCourses = const {},
     this.favouriteYears = const {},
+    this.hiddenCourses = const {},
+    this.hiddenYears = const {},
+    this.collapsedCourses = const {},
     this.enabledLanguages = const {},
+    this.coursesView = 'visible',
   });
 
   /// Lee lo que haya, y ante la duda devuelve vacío.
@@ -79,7 +83,11 @@ class SyncedPrefs {
         hiddenRepos: hidden,
         favouriteCourses: _names(data['favouriteCourses']),
         favouriteYears: _names(data['favouriteYears']),
+        hiddenCourses: _names(data['hiddenCourses']),
+        hiddenYears: _names(data['hiddenYears']),
+        collapsedCourses: _names(data['collapsedCourses']),
         enabledLanguages: _names(data['enabledLanguages']),
+        coursesView: data['coursesView']?.toString() ?? 'visible',
       );
     } catch (_) {
       return const SyncedPrefs();
@@ -90,11 +98,13 @@ class SyncedPrefs {
   /// se nombra un curso en todo lo demás.
   final Map<String, Set<String>> collapsedThemes;
 
-  /// Las asignaturas marcadas. Se ponen arriba, saltándose el orden.
+  /// Las asignaturas marcadas.
   ///
-  /// Arriba y no en una lista aparte: quien da tres asignaturas de veinte no
-  /// quiere dos sitios donde mirar, quiere las tres primero. El resto sigue
-  /// donde estaba y en el mismo orden.
+  /// **No cambian el orden.** Lo hicieron --subían al principio-- y era peor:
+  /// la lista dejaba de estar donde se aprendió que estaba, y marcar una
+  /// asignatura movía otras cuatro de sitio. Una estrella dice «esta me
+  /// importa»; reordenar la lista es otra cosa, y para no ver lo que no se
+  /// da está ocultar.
   final Set<String> favouriteCourses;
 
   /// Los cursos marcados, como `asignatura@año`.
@@ -153,6 +163,42 @@ class SyncedPrefs {
     return _copy(enabledLanguages: next);
   }
 
+  /// Las asignaturas ocultas.
+  ///
+  /// Ocultar no es quitar: la asignatura sigue en el repositorio, sigue
+  /// compilando y sigue estando en la biblioteca. Lo que se decide aquí es
+  /// qué se quiere ver en la lista, que después de veinte años dando clase
+  /// es una lista larga de cosas que ya no se dan.
+  ///
+  /// Y por eso viaja con el resto de preferencias: quien deja de dar una
+  /// asignatura no quiere volver a esconderla mañana en el otro ordenador.
+  final Set<String> hiddenCourses;
+
+  /// Los cursos académicos ocultos, como `asignatura@año`.
+  ///
+  /// Aparte de las asignaturas: la asignatura se sigue dando y lo que sobra
+  /// en la lista son los seis años anteriores.
+  final Set<String> hiddenYears;
+
+  /// Las asignaturas plegadas: se ve su título y no sus cursos.
+  ///
+  /// Distinto de ocultarla. Plegada sigue estando --se ve, se abre de un
+  /// toque-- y lo que se gana es una lista que cabe en la pantalla.
+  final Set<String> collapsedCourses;
+
+  /// Qué se está mirando en la lista de asignaturas: las que se dan, las
+  /// ocultas o todas.
+  ///
+  /// Un texto y no un enumerado porque el enumerado es de la pantalla, y esto
+  /// es un fichero que se lee dentro de un año: un nombre que no se reconozca
+  /// vuelve a «las que doy» en lugar de romper nada.
+  ///
+  /// Se guarda --y viaja-- porque quien esconde quince asignaturas suele
+  /// querer verlas escondidas mañana también, y porque la vista «las ocultas»
+  /// es donde se trabaja mientras se está ordenando la lista. Lo que no se
+  /// guarda es el grado: ese sí es una forma de buscar un rato.
+  final String coursesView;
+
   /// Los repositorios apagados en la interfaz.
   ///
   /// Apagar no es quitar: el repositorio sigue abierto, sigue clonándose y
@@ -182,6 +228,24 @@ class SyncedPrefs {
   bool isFavouriteYear(String course, String year) =>
       favouriteYears.contains(key(course, year));
 
+  SyncedPrefs withCourseHidden(String course, bool hidden) =>
+      _copy(hiddenCourses: _toggled(hiddenCourses, course, hidden));
+
+  SyncedPrefs withYearHidden(String course, String year, bool hidden) =>
+      _copy(hiddenYears: _toggled(hiddenYears, key(course, year), hidden));
+
+  SyncedPrefs withCourseCollapsed(String course, bool collapsed) =>
+      _copy(collapsedCourses: _toggled(collapsedCourses, course, collapsed));
+
+  SyncedPrefs withCoursesView(String view) => _copy(coursesView: view);
+
+  bool isHiddenCourse(String course) => hiddenCourses.contains(course);
+
+  bool isHiddenYear(String course, String year) =>
+      hiddenYears.contains(key(course, year));
+
+  bool isCollapsedCourse(String course) => collapsedCourses.contains(course);
+
   static Set<String> _toggled(Set<String> from, String name, bool on) {
     final next = {...from};
     if (on) {
@@ -201,13 +265,21 @@ class SyncedPrefs {
     Set<String>? hiddenRepos,
     Set<String>? favouriteCourses,
     Set<String>? favouriteYears,
+    Set<String>? hiddenCourses,
+    Set<String>? hiddenYears,
+    Set<String>? collapsedCourses,
     Set<String>? enabledLanguages,
+    String? coursesView,
   }) => SyncedPrefs(
     collapsedThemes: collapsedThemes ?? this.collapsedThemes,
     hiddenRepos: hiddenRepos ?? this.hiddenRepos,
     favouriteCourses: favouriteCourses ?? this.favouriteCourses,
     favouriteYears: favouriteYears ?? this.favouriteYears,
+    hiddenCourses: hiddenCourses ?? this.hiddenCourses,
+    hiddenYears: hiddenYears ?? this.hiddenYears,
+    collapsedCourses: collapsedCourses ?? this.collapsedCourses,
     enabledLanguages: enabledLanguages ?? this.enabledLanguages,
+    coursesView: coursesView ?? this.coursesView,
   );
 
   SyncedPrefs withThemeCollapsed({
@@ -242,7 +314,11 @@ class SyncedPrefs {
       'hiddenRepos': hiddenRepos.toList()..sort(),
       'favouriteCourses': favouriteCourses.toList()..sort(),
       'favouriteYears': favouriteYears.toList()..sort(),
+      'hiddenCourses': hiddenCourses.toList()..sort(),
+      'hiddenYears': hiddenYears.toList()..sort(),
+      'collapsedCourses': collapsedCourses.toList()..sort(),
       'enabledLanguages': enabledLanguages.toList()..sort(),
+      'coursesView': coursesView,
     })}\n';
   }
 
@@ -251,5 +327,9 @@ class SyncedPrefs {
       hiddenRepos.isEmpty &&
       favouriteCourses.isEmpty &&
       favouriteYears.isEmpty &&
-      enabledLanguages.isEmpty;
+      hiddenCourses.isEmpty &&
+      hiddenYears.isEmpty &&
+      collapsedCourses.isEmpty &&
+      enabledLanguages.isEmpty &&
+      coursesView == 'visible';
 }

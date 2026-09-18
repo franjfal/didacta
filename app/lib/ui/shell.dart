@@ -17,11 +17,16 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../data/browser.dart';
 import '../data/content_gateway.dart';
+import '../data/frozen.dart';
+import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/mcp_service.dart';
 import '../state/session.dart';
+import '../state/update_service.dart';
 import 'brand.dart';
+import 'freezes.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
 import 'tour.dart';
@@ -156,6 +161,7 @@ class DidactaShell extends StatelessWidget {
             return Scaffold(
               body: Column(
                 children: [
+                  FrozenBar(session: session),
                   SyncBar(session: session),
                   Expanded(child: child),
                   const Divider(height: 1),
@@ -262,6 +268,7 @@ class DidactaShell extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
+                      FrozenBar(session: session),
                       TourTarget(
                         id: 'sync',
                         child: SyncBar(session: session),
@@ -287,6 +294,116 @@ class DidactaShell extends StatelessWidget {
 /// todo macOS--, Alt+flechas para quien viene de Windows o Linux, y los
 /// botones laterales del ratón, que en una aplicación de escritorio se
 /// prueban sin pensar.
+/// La banda que dice que lo que se está mirando es una versión congelada.
+///
+/// Arriba del todo y en todas las pantallas, no en una sola: abrir una
+/// congelación cambia el catálogo entero, así que la biblioteca, las
+/// asignaturas y el editor enseñan el material de aquel día. Sin una banda
+/// permanente, «¿por qué no está el tema que añadí ayer?» no tiene respuesta
+/// visible.
+///
+/// De un color distinto al resto a propósito. No es un aviso de error --no
+/// hay nada roto-- sino un cambio de contexto, y lo que tiene que hacer es
+/// que sea imposible olvidarlo.
+class FrozenBar extends StatelessWidget {
+  const FrozenBar({super.key, required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final frozen = session.frozen;
+    if (frozen == null) return const SizedBox.shrink();
+    return Material(
+      color: didactaThm.withValues(alpha: 0.12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
+        child: Row(
+          children: [
+            const Icon(Icons.ac_unit, size: 15, color: didactaThm),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Estás viendo «${frozen.freeze.name}»'
+                '${frozen.freeze.year.isEmpty ? '' : ' · ${frozen.freeze.year}'}'
+                ' · ${frozen.freeze.shortCommit}'
+                '${frozen.rebuilt ? ' · catálogo reconstruido' : ''}'
+                '. Es una versión congelada: se mira, no se edita.',
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12.5),
+              ),
+            ),
+            // Lo que se puede hacer desde aquí. Tres cosas y no una:
+            // impedir la edición sin ofrecer salida deja a alguien mirando
+            // una foto sin forma de usarla.
+            MenuAnchor(
+              builder: (context, controller, child) => TextButton.icon(
+                key: const Key('frozen-actions'),
+                icon: const Icon(Icons.more_horiz, size: 15),
+                label: const Text('Qué puedo hacer'),
+                onPressed: () =>
+                    controller.isOpen ? controller.close() : controller.open(),
+              ),
+              menuChildren: [
+                MenuItemButton(
+                  key: const Key('frozen-restore-course'),
+                  leadingIcon: const Icon(Icons.restore, size: 15),
+                  onPressed: () => _restoreCourse(context, session, frozen),
+                  child: const Text('Restaurar este curso desde aquí…'),
+                ),
+                MenuItemButton(
+                  key: const Key('frozen-new-year'),
+                  leadingIcon: const Icon(Icons.add, size: 15),
+                  onPressed: () => _yearFromHere(context, session, frozen),
+                  child: const Text('Crear un curso desde aquí…'),
+                ),
+              ],
+            ),
+            TextButton(
+              key: const Key('leave-freeze'),
+              onPressed: session.leaveFreeze,
+              child: const Text('Volver a la versión actual'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Course? _courseOf(Session session, FrozenView frozen) {
+  for (final course in session.catalogue.courses) {
+    if (course.id == frozen.freeze.course) return course;
+  }
+  return null;
+}
+
+Future<void> _restoreCourse(
+  BuildContext context,
+  Session session,
+  FrozenView frozen,
+) async {
+  final course = _courseOf(session, frozen);
+  if (course == null) return;
+  await showRestore(
+    context,
+    session: session,
+    course: course,
+    year: frozen.freeze.year,
+    freeze: frozen.freeze,
+  );
+}
+
+Future<void> _yearFromHere(
+  BuildContext context,
+  Session session,
+  FrozenView frozen,
+) async {
+  final course = _courseOf(session, frozen);
+  if (course == null) return;
+  await showYearFromFreeze(context, session, course, frozen.freeze);
+}
+
 class _Shortcuts extends StatelessWidget {
   const _Shortcuts({required this.session, required this.child});
 
@@ -495,6 +612,29 @@ class _GatewayStripState extends State<_GatewayStrip> {
     }
   }
 
+  /// La dirección de las incidencias, con la versión ya escrita.
+  ///
+  /// Un informe sin versión ni sistema es un informe que necesita un viaje de
+  /// ida y vuelta antes de poder mirarse, y quien lo escribe no tiene por qué
+  /// saber cuál es. Se rellena el cuerpo y se deja escrito el resto: lo que
+  /// hay que contar es qué pasó.
+  ///
+  /// Si no se puede saber la versión --no hay quien la diga-- se abre la lista
+  /// de incidencias a secas, que es lo que se pidió.
+  String _issueLink(BuildContext context) {
+    final service = context.read<UpdateService?>();
+    final info = service?.info;
+    if (info == null) return didactaIssues;
+    final body = Uri.encodeComponent(
+      '## Qué pasó\n\n\n\n'
+      '## Qué esperabas que pasara\n\n\n\n'
+      '## Cómo repetirlo\n\n\n\n'
+      '---\n'
+      'Didacta ${info.describe}\n',
+    );
+    return '$didactaIssues/new?body=$body';
+  }
+
   Future<void> _pull(Session session) async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
@@ -586,6 +726,24 @@ class _GatewayStripState extends State<_GatewayStrip> {
                           onPressed: () => _refresh(session),
                         ),
                 ),
+              // Contar un problema, al lado de actualizar.
+              //
+              // Aquí y no escondido en Ajustes porque el momento en que se
+              // encuentra un fallo es el momento en que se está usando la
+              // aplicación, y para entonces nadie va a buscar un menú. Es el
+              // mismo sitio donde ya se mira cuando algo no cuadra.
+              SizedBox(
+                width: 26,
+                height: 26,
+                child: IconButton(
+                  key: const Key('report-issue'),
+                  tooltip: 'Contar un problema de Didacta en GitHub',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.bug_report_outlined, size: 15),
+                  onPressed: () => openLink(_issueLink(context)),
+                ),
+              ),
               // Lo que espera en GitHub, en la misma barra que dice de dónde
               // sale el contenido. Un número y no un punto: «hay tres
               // commits» dice si merece la pena pararse ahora.

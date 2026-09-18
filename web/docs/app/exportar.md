@@ -18,6 +18,23 @@ flowchart LR
   E --> U["Un USB"]
 ```
 
+## Desde dónde se pide
+
+Tres sitios, según lo que haya que llevarse:
+
+| Lo que sale | Dónde está el botón |
+| --- | --- |
+| **Un curso entero** | en su fila de la pantalla de asignaturas, al lado de la estrella |
+| **Un documento** | en su fila del listado del curso, si tiene algo compilado |
+| **El PDF que se está mirando** | en el visor, «Guardar una copia» |
+
+El primero pregunta qué idiomas y qué documentos; los otros dos solo preguntan
+dónde, que es lo único que queda por decidir.
+
+**Exportar no pide permiso de escritura.** Copia lo que ya está compilado y no
+toca el repositorio, así que también se lleva material quien solo lo tenga para
+leer.
+
 ## Las tres decisiones
 
 Están en la misma pantalla porque son la misma decisión:
@@ -51,3 +68,6 @@ Análisis Matemático III 2025-2026/
 
 Nombres largos y con espacios a propósito: esto no lo va a leer un programa,
 lo va a leer alguien buscando un fichero en una lista del aula virtual.
+
+El PDF que se guarda desde el visor sale con **ese mismo nombre**: es el que le
+pone el motor, y es el que tendría si se hubiera exportado el curso entero.

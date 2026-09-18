@@ -28,6 +28,12 @@ import '../model/catalogue.dart';
 /// código sería encontrar tres y arreglar dos.
 const String didactaDocs = 'https://franjfal.github.io/didacta/';
 
+/// Donde se cuentan los problemas de Didacta.
+///
+/// Las incidencias del **programa**, no las del material: lo segundo es un
+/// repositorio de contenido de cada uno, y lo primero es esto.
+const String didactaIssues = 'https://github.com/franjfal/didacta/issues';
+
 /// From didacta-colours.sty: the accent the PDFs use.
 const Color didactaAccent = Color(0xFF55AA55);
 const Color didactaAccentDark = Color(0xFF346E34);

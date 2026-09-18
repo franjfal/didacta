@@ -20,14 +20,17 @@ import 'package:provider/provider.dart';
 
 import '../data/browser.dart';
 import '../data/compiler.dart';
+import '../data/template_store.dart';
 import '../data/toolchain.dart';
 import '../model/workspace.dart';
 import '../router.dart';
 import '../data/mcp_process.dart';
 import '../state/mcp_service.dart';
 import '../state/session.dart';
+import 'course_admin_ui.dart';
 import 'language_settings.dart';
 import 'manage_blocks.dart';
+import 'manage_templates.dart';
 import 'shell.dart';
 import 'sign_in.dart';
 import 'add_repository.dart';
@@ -95,8 +98,17 @@ class SettingsPage extends StatelessWidget {
               const SectionLabel('Bloques'),
               _BlocksSection(session: session),
 
+              // Debajo de los bloques porque se leen en ese orden: el bloque
+              // dice **qué** material es y la plantilla **qué sale** de él.
+              const SectionLabel('Plantillas'),
+              _TemplatesSection(session: session),
+
               const SectionLabel('Catálogo'),
               _CatalogueSection(session: session),
+
+              // Solo aparece mientras haya algo que poner al día, así que no
+              // es una sección permanente: es un aviso con un botón.
+              _IdentitySection(session: session),
 
               const SectionLabel('Actualizaciones'),
               const UpdateSection(),
@@ -722,6 +734,184 @@ class _BlockPill extends StatelessWidget {
   );
 }
 
+/// Con qué se compila: las salidas que hay y cuáles están encendidas.
+///
+/// Un resumen y un botón, como los bloques. Lo que hace falta ver de un
+/// vistazo es cuántas se sacan de verdad, porque ese número multiplica cada
+/// compilación: un curso de treinta temas con siete versiones encendidas son
+/// doscientos diez PDF.
+class _TemplatesSection extends StatefulWidget {
+  const _TemplatesSection({required this.session});
+
+  final Session session;
+
+  @override
+  State<_TemplatesSection> createState() => _TemplatesSectionState();
+}
+
+class _TemplatesSectionState extends State<_TemplatesSection> {
+  bool _working = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = widget.session;
+    final catalogue = session.catalogue;
+    final store = session.templateStore;
+    final inProgram = catalogue.templatesInUse
+        .where(
+          (template) => template.sources.containsKey(Session.programTemplates),
+        )
+        .length;
+    final all = catalogue.templatesInUse;
+    final active = catalogue.activeTemplates;
+    final declared = all.where((template) => template.declared).length;
+    final missing = catalogue.undeclaredTemplates;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Una plantilla es una salida: qué PDF sale de una lección o '
+                'de un tema. Trae la clase de documento, sus opciones y --si '
+                'quieres-- tu propia cabecera de LaTeX.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              _Fact('salidas', '${all.length}'),
+              _Fact('encendidas', '${active.length}'),
+              _Fact(
+                'declaradas por tus repositorios',
+                declared == 0
+                    ? 'ninguna: se compila con las que trae Didacta'
+                    : '$declared',
+              ),
+              if (missing.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Note(
+                  'Algo se compila con ${missing.length} plantilla(s) que no '
+                  'declara ningún repositorio abierto: ${missing.join(', ')}. '
+                  'No se sacan, para no pedirle a LaTeX una salida que no '
+                  'existe.',
+                  tone: didactaTeacher,
+                ),
+              ],
+              if (inProgram > 0) ...[
+                const SizedBox(height: 8),
+                Note(
+                  '$inProgram plantilla(s) están guardadas en el programa y '
+                  'no en ningún repositorio: no las protege git, no se '
+                  'sincronizan y se van con este ordenador. Sácate una copia '
+                  'y guárdala donde guardes lo demás.',
+                  tone: didactaTeacher,
+                ),
+              ],
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  OutlinedButton.icon(
+                    key: const Key('open-templates'),
+                    icon: const Icon(Icons.description_outlined, size: 15),
+                    label: const Text('Gestionar las plantillas'),
+                    onPressed: _working
+                        ? null
+                        : () => showTemplates(context, session),
+                  ),
+                  if (store != null) ...[
+                    OutlinedButton.icon(
+                      key: const Key('export-templates'),
+                      icon: const Icon(Icons.save_alt, size: 15),
+                      label: const Text('Copiar a una carpeta'),
+                      onPressed: _working ? null : () => _export(store),
+                    ),
+                    OutlinedButton.icon(
+                      key: const Key('import-templates'),
+                      icon: const Icon(Icons.file_download_outlined, size: 15),
+                      label: const Text('Traer de una carpeta'),
+                      onPressed: _working ? null : () => _import(store),
+                    ),
+                  ],
+                ],
+              ),
+              if (store != null) ...[
+                const SizedBox(height: 8),
+                _Fact('carpeta del programa', store.directory),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Sacar una copia de las plantillas del programa.
+  ///
+  /// La carpeta entera y no un fichero comprimido: lo que sale son un
+  /// `templates.yaml` y unos `.tex` que se leen y se meten en cualquier
+  /// repositorio sin abrir nada.
+  Future<void> _export(TemplateStore store) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final destination = await getDirectoryPath(
+      confirmButtonText: 'Copiar aquí',
+    );
+    if (destination == null) return;
+    setState(() => _working = true);
+    try {
+      final copied = await store.exportTo(destination);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            copied == 0
+                ? 'No había nada guardado en el programa.'
+                : '$copied fichero(s) copiados a $destination.',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+
+  /// Traerlas de una carpeta.
+  ///
+  /// Lo que ya haya con el mismo nombre se conserva: recuperar una copia
+  /// encima de lo que se ha escrito después es la forma más rápida de perder
+  /// el trabajo de una tarde.
+  Future<void> _import(TemplateStore store) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final source = await getDirectoryPath(confirmButtonText: 'Traer de aquí');
+    if (source == null) return;
+    setState(() => _working = true);
+    try {
+      final result = await store.importFrom(source);
+      await widget.session.loadStoredTemplates();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            result.copied.isEmpty
+                ? 'Ya estaba todo: no se ha traído nada.'
+                : '${result.copied.length} fichero(s) traídos'
+                      '${result.kept.isEmpty ? '' : ', '
+                                '${result.kept.length} ya estaban y se han dejado'}.',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    } finally {
+      if (mounted) setState(() => _working = false);
+    }
+  }
+}
+
 class _CatalogueSection extends StatelessWidget {
   const _CatalogueSection({required this.session});
 
@@ -770,6 +960,162 @@ class _CatalogueSection extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Poner al día un repositorio escrito antes de que las lecciones tuvieran
+/// identidad propia.
+///
+/// Es una operación **explícita** y no algo que pase al abrir. Escribe una
+/// línea en cada `unit.yaml`, y aunque no mueva nada ni cambie contenido, es
+/// un cambio en ficheros de alguien: verlo antes y decidirlo es la diferencia
+/// entre una migración y una sorpresa.
+///
+/// Sin nada que poner al día, esta sección no dice «0 pendientes»: no aparece.
+/// Un ajuste que solo sirve una vez y se queda ahí para siempre es ruido en
+/// una pantalla que se abre a diario.
+class _IdentitySection extends StatefulWidget {
+  const _IdentitySection({required this.session});
+
+  final Session session;
+
+  @override
+  State<_IdentitySection> createState() => _IdentitySectionState();
+}
+
+class _IdentitySectionState extends State<_IdentitySection> {
+  /// Cuántas lecciones no declaran id, por repositorio. Null mientras se
+  /// mira, vacío cuando no falta ninguna.
+  Map<String, int>? _pending;
+  Object? _problem;
+
+  @override
+  void initState() {
+    super.initState();
+    _look();
+  }
+
+  Future<void> _look() async {
+    final found = <String, int>{};
+    try {
+      for (final repo in widget.session.workspace.repos) {
+        final admin = widget.session.admin(repo: repo.id);
+        if (admin == null) continue;
+        final output = await admin.previewUnitIds();
+        // El número lo dice el motor, y se lee de ahí en lugar de contar las
+        // líneas otra vez: el motor es el que sabe escanear el repositorio, y
+        // dos recuentos que pueden discrepar son peores que uno.
+        final match = RegExp(r'(\d+)\s+lección\(es\)').firstMatch(output);
+        final count = int.tryParse(match?.group(1) ?? '') ?? 0;
+        if (count > 0) found[repo.id] = count;
+      }
+    } catch (thrown) {
+      if (!mounted) return;
+      setState(() => _problem = thrown);
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _pending = found);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = _pending;
+    if (_problem == null && (pending == null || pending.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_problem != null)
+                Note('$_problem', tone: didactaTeacher)
+              else ...[
+                const Note(
+                  'Estas lecciones se identifican todavía por su ruta. Con un '
+                  'id propio, mover una de carpeta deja de romper quién la '
+                  'usa, y «este material, ¿dónde más está?» tiene respuesta '
+                  'aunque se reorganice `content/`.\n\n'
+                  'Poner los ids escribe una línea `id:` en cada `unit.yaml` '
+                  'que no la tenga. No mueve nada, no renombra nada y no toca '
+                  'el contenido. El id se deriva de la ruta con un hash, así '
+                  'que sale el mismo lo haga quien lo haga: quien lo ponga al '
+                  'día en otro ordenador escribe exactamente esto.',
+                ),
+                const SizedBox(height: 10),
+                for (final entry in (pending ?? const <String, int>{}).entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${entry.key}: ${entry.value} lección(es) sin id',
+                            style: const TextStyle(fontSize: 12.5),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          key: Key('write-ids-${entry.key}'),
+                          icon: const Icon(Icons.tag, size: 15),
+                          label: const Text('Ponerlos'),
+                          onPressed: () => _write(entry.key, entry.value),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _write(String repo, int count) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Poner los ids?'),
+        content: SizedBox(
+          width: 480,
+          child: Note(
+            'Se escribirá una línea `id:` en $count `unit.yaml` de $repo, y '
+            'nada más: ni se mueve una carpeta, ni se renombra un fichero, ni '
+            'se toca una línea de LaTeX.\n\n'
+            'Queda como un commit propio, así que se puede leer y revertir '
+            'de una pieza.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('confirm-write-ids'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Ponerlos'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !mounted) return;
+    final ok = await runAdmin(
+      context,
+      widget.session,
+      (admin) => admin.writeUnitIds(),
+      done: 'Ids puestos en $count lección(es), como un commit.',
+      repo: repo,
+    );
+    if (!ok || !mounted) return;
+    await widget.session.reloadCatalogue();
+    if (!mounted) return;
+    setState(() => _pending = null);
+    await _look();
   }
 }
 

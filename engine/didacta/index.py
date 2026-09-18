@@ -35,8 +35,10 @@ import hashlib
 import json
 import os
 
+from . import identity as identity_mod
 from . import profiles as profiles_mod
 from . import repo as repo_mod
+from . import templates as templates_mod
 from . import yamlio
 
 #: Where the generated files go, relative to the repository root.
@@ -77,6 +79,12 @@ def build(root, settings=None, latex_dir=None):
     except (repo_mod.RepoError, yamlio.YamlError) as exc:
         taxonomy = repo_mod.Taxonomy()
         taxonomy_errors = [str(exc)]
+    try:
+        declared_templates = templates_mod.load(root, settings)
+        template_errors = []
+    except (templates_mod.TemplateError, yamlio.YamlError) as exc:
+        declared_templates = []
+        template_errors = [str(exc)]
 
     profiles = {}
     if latex_dir and os.path.isdir(latex_dir):
@@ -84,6 +92,16 @@ def build(root, settings=None, latex_dir=None):
             profiles = profiles_mod.load(latex_dir)
         except Exception:  # noqa: BLE001 - an index without profiles is still useful
             profiles = {}
+
+    # Un `freezes.yaml` roto no impide abrir el curso, pero tiene que
+    # contarse: sin esto el único síntoma es una lista de congelaciones vacía,
+    # que es indistinguible de un curso que nadie congeló.
+    freeze_errors = [
+        "%s: %s" % (year.id, message)
+        for course in courses.values()
+        for year in course.years.values()
+        for message in year.freeze_errors
+    ]
 
     usage = _usage(courses, units, root)
 
@@ -95,11 +113,19 @@ def build(root, settings=None, latex_dir=None):
     return {
         MANIFEST: _manifest(root, settings, unit_records, course_records,
                             profiles,
-                            unit_errors + course_errors + taxonomy_errors + degree_errors,
-                            taxonomy=taxonomy),
+                            unit_errors + course_errors + taxonomy_errors
+                            + degree_errors + template_errors + freeze_errors,
+                            taxonomy=taxonomy, templates=declared_templates),
         UNITS: {"schemaVersion": SCHEMA_VERSION, "units": unit_records},
         COURSES: {
             "schemaVersion": SCHEMA_VERSION,
+            # Los documentos compartidos que hay en este repositorio, con las
+            # ubicaciones que los dan. Se publica calculado y no se guarda en
+            # ninguna parte: el grupo de sincronización **es** el conjunto de
+            # ubicaciones que nombran el mismo id, y una lista aparte sería
+            # una segunda verdad que puede contradecir a los ficheros --que es
+            # exactamente lo que hay que reconciliar después de un merge.
+            "shared": _shared(root, courses),
             # Las titulaciones que **este** repositorio declara. La interfaz
             # junta las de todos los que tenga abiertos; una que no declara
             # nadie no agrupa nada, y sus asignaturas salen sueltas.
@@ -155,22 +181,30 @@ def survey(root, settings):
     queda no es más nuevo que nada.
 
     Los ficheros de la raíz cuentan también, y no por completitud: lo que hay
-    en `didacta.yaml` y en `taxonomy.yaml` **sale en el índice** --los idiomas
-    del repositorio, las categorías-- y no está debajo de ninguno de los tres
-    directorios. Sin mirarlos, añadir un idioma y regenerar no cambiaba nada,
-    porque el índice no se daba por viejo.
+    en `didacta.yaml`, `taxonomy.yaml`, `degrees.yaml` y `templates.yaml`
+    **sale en el índice** --los idiomas del repositorio, las categorías, los
+    bloques, las titulaciones, las plantillas-- y no está debajo de ninguno de
+    los tres directorios. Sin mirarlos, añadir un idioma y regenerar no
+    cambiaba nada, porque el índice no se daba por viejo.
     """
     newest = 0.0
     units = 0
     years = 0
+    shared = 0
 
-    for name in (repo_mod.SETTINGS, repo_mod.TAXONOMY, repo_mod.DEGREES_META):
+    for name in (repo_mod.SETTINGS, repo_mod.TAXONOMY, repo_mod.DEGREES_META,
+                 templates_mod.TEMPLATES_META):
         try:
             newest = max(newest, os.path.getmtime(os.path.join(root, name)))
         except OSError:
             continue
 
-    for area in (repo_mod.CONTENT, repo_mod.PROBLEMS, repo_mod.COURSES):
+    # Y los temas compartidos, que están fuera de los tres árboles de abajo
+    # y **salen en el índice**: su título, su tipo, sus temas y su composición
+    # son los del tema para todos los cursos que lo dan. Sin mirarlos, editar
+    # uno y regenerar no cambiaba nada, porque el índice no se daba por viejo.
+    for area in (repo_mod.CONTENT, repo_mod.PROBLEMS, repo_mod.COURSES,
+                 identity_mod.SHARED):
         top = os.path.join(root, area)
         if not os.path.isdir(top):
             continue
@@ -188,13 +222,17 @@ def survey(root, settings):
                     units += 1
                 elif name == repo_mod.YEAR_META:
                     years += 1
+                elif (name.endswith(".yaml")
+                      and os.path.basename(directory) == "documents"):
+                    shared += 1
                 try:
                     newest = max(newest, os.path.getmtime(
                         os.path.join(directory, name)))
                 except OSError:
                     continue
 
-    return {"units": units, "years": years, "newest": newest or None}
+    return {"units": units, "years": years, "shared": shared,
+            "newest": newest or None}
 
 
 def staleness(root, settings):
@@ -220,6 +258,7 @@ def staleness(root, settings):
 
     counts = data.get("counts") or {}
     indexed = {"units": counts.get("units"), "years": counts.get("years"),
+               "shared": counts.get("shared"),
                "generated": os.path.getmtime(manifest)}
 
     if found["units"] != indexed["units"]:
@@ -234,6 +273,17 @@ def staleness(root, settings):
             "stale": True,
             "reason": "el disco tiene %d cursos académicos y el índice %s"
                       % (found["years"], indexed["years"]),
+            "disk": found, "indexed": indexed,
+        }
+    # Solo cuando el índice lo dice. Uno escrito antes de que existieran los
+    # temas compartidos no lleva la cuenta, y compararla contra cero diría que
+    # está viejo siempre.
+    if (indexed["shared"] is not None
+            and found["shared"] != indexed["shared"]):
+        return {
+            "stale": True,
+            "reason": "el disco tiene %d tema(s) compartido(s) y el índice %s"
+                      % (found["shared"], indexed["shared"]),
             "disk": found, "indexed": indexed,
         }
     if (found["newest"] or 0) > indexed["generated"]:
@@ -298,6 +348,9 @@ def _unit_record(unit, settings, usage):
         # es el fichero y el bloque, de qué parte forma parte. Una explicación
         # teórica dentro de una práctica de problemas es las dos cosas.
         "block": unit.block,
+        # En qué plantillas se compila esta lección. Vacía quiere decir «las
+        # de su bloque», que es el caso de casi todas.
+        "templates": list(unit.templates),
         "category": str(unit.category),
         "topic": str(unit.topic),
         # Coerced to text: a folder named `15` gives `topic: 15`, which YAML
@@ -330,6 +383,11 @@ def _course_record(course, settings):
             # interfaz junta los de todos los que tenga abiertos; un tema que
             # no declara nadie no agrupa nada, y sus documentos salen sueltos.
             "themes": [theme.as_dict() for theme in entry.themes],
+            # Las versiones congeladas de este curso: un commit con nombre
+            # cada una. Van en el índice porque la lista se enseña al lado del
+            # curso y leer un `freezes.yaml` por año desde la interfaz sería
+            # abrir doscientos ficheros para pintar una pantalla.
+            "freezes": [item.as_dict() for item in entry.freezes],
             "documents": [
                 {
                     "id": document.id,
@@ -341,6 +399,12 @@ def _course_record(course, settings):
                     # A qué temas pertenece, por id. Puede ser más de uno, y
                     # pueden ser ids que este repositorio no declara.
                     "themes": list(document.themes or []),
+                    # De qué entidad de contenido es esta ubicación.
+                    # Vacío en un documento que solo se da aquí: no forma
+                    # grupo, así que no necesita identidad aparte, y eso es lo
+                    # que evita que compartir sea obligatorio para escribir un
+                    # curso.
+                    "content": document.content,
                     "unitRefs": list(document.unit_refs or []),
                     # La estructura entera, con los apartados. `unitRefs` es
                     # la lista plana de lo que se compila; esto es cómo está
@@ -387,7 +451,7 @@ def _usage(courses, units, root):
     for course in courses.values():
         for year, entry in course.years.items():
             for document in entry.documents:
-                for ref in document.unit_refs or []:
+                for position, ref in enumerate(document.unit_refs or []):
                     unit = repo_mod.resolve_unit_ref(ref, units, root)
                     if unit is None:
                         continue
@@ -395,11 +459,47 @@ def _usage(courses, units, root):
                         "course": course.id,
                         "year": year,
                         "document": document.id,
+                        # Qué posición ocupa dentro de la composición. Hace
+                        # falta porque la misma lección puede estar dos veces
+                        # en el mismo tema, y entonces son dos ubicaciones:
+                        # separar una de la otra sin poder nombrarlas sería
+                        # adivinar cuál se tocaba.
+                        "index": position,
+                        # Cómo está escrita la referencia. La ruta y el id
+                        # nombran la misma lección, y quien vaya a reescribir
+                        # la línea necesita saber cuál de las dos hay.
+                        "ref": ref,
                     })
     for entries in usage.values():
         entries.sort(key=lambda item: (item["course"], item["year"],
-                                       item["document"]))
+                                       item["document"], item["index"]))
     return usage
+
+
+def _shared(root, courses):
+    """Los documentos compartidos y dónde se dan."""
+    placements = identity_mod.document_placements(courses)
+    found = []
+    for content_id in sorted(set(identity_mod.list_shared(root))
+                             | set(placements)):
+        data = None
+        try:
+            data = identity_mod.load_shared(root, content_id)
+        except identity_mod.IdentityError:
+            data = None
+        found.append({
+            "id": content_id,
+            # Que el fichero esté **aquí**. Puede estar en el repositorio de
+            # al lado, y entonces esto es False y el documento sale vacío
+            # hasta que se abra el otro: es el mismo trato que un tema que
+            # declara otro repositorio, y nunca desaparece un curso por eso.
+            "declared": data is not None,
+            "title": (data or {}).get("title") or {},
+            "kind": (data or {}).get("kind") or "",
+            "placements": [item.as_dict()
+                           for item in placements.get(content_id, [])],
+        })
+    return found
 
 
 def _categories(unit_records):
@@ -431,7 +531,7 @@ def _categories(unit_records):
 
 
 def _manifest(root, settings, unit_records, course_records, profiles, errors,
-              taxonomy=None):
+              taxonomy=None, templates=()):
     by_kind = {}
     by_status = {}
     for record in unit_records:
@@ -470,6 +570,11 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
             "courses": len(course_records),
             "years": sum(len(course["years"]) for course in course_records),
             "documents": documents,
+            # Los temas compartidos que hay. Se cuenta porque la comprobación
+            # de «¿sigue valiendo el índice?» lo mira: uno nuevo no cambia
+            # ningún `year.yaml` --lo que cambia es una línea `link:`-- pero
+            # sí cambia lo que el índice describe.
+            "shared": len(identity_mod.list_shared(root)),
             "byKind": dict(sorted(by_kind.items())),
             "byLanguageStatus": dict(sorted(by_status.items())),
         },
@@ -494,6 +599,11 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
         # aparte, en una lista de dos que escribía el motor, y por eso no se
         # podían ni renombrar ni añadir.
         "taxonomy": (taxonomy or repo_mod.Taxonomy()).as_dict(),
+        # Las plantillas que **este** repositorio declara. La aplicación junta
+        # las de todos los que tenga abiertos, igual que con los bloques: la
+        # teoría y los problemas están repartidos, y el bloque de uno puede
+        # compilarse con la plantilla que declara el otro.
+        "templates": [template.as_dict() for template in templates],
         "files": sorted([UNITS, COURSES, CATEGORIES]),
         # Whatever `scan_*` complained about, so a reader is not silently
         # served an index built from a repository that does not load cleanly.

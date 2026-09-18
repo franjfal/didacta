@@ -151,13 +151,38 @@ class DeclaredBlockTests(unittest.TestCase):
                 repo_mod.Taxonomy.load(self.root)
             self.assertIn(expected, str(caught.exception), text)
 
+    def test_a_block_declares_the_templates_it_compiles_with(self):
+        """Con qué se compila lo de un bloque, dicho por el bloque.
+
+        Vacía quiere decir «las que haya activas» y no «ninguna»: declarar un
+        bloque no puede dejar su material sin salidas.
+        """
+        self.write(
+            "blocks:\n"
+            "  - id: teoria\n"
+            "    title: {es: Teoría}\n"
+            "    templates: [slides, notes]\n"
+            "  - id: practicas\n"
+            "    title: {es: Prácticas}\n"
+        )
+        taxonomy = repo_mod.Taxonomy.load(self.root)
+        self.assertEqual(taxonomy.block("teoria").templates, ["slides", "notes"])
+        self.assertEqual(taxonomy.block("practicas").templates, [])
+
+    def test_a_template_list_that_is_not_a_list_says_so(self):
+        self.write("blocks:\n  - id: teoria\n    templates: slides\n")
+        with self.assertRaises(repo_mod.RepoError) as caught:
+            repo_mod.Taxonomy.load(self.root)
+        self.assertIn("should be a list", str(caught.exception))
+
     def test_they_travel_in_the_taxonomy_dict(self):
         self.write("blocks:\n  - id: teoria\n    title: {es: Teoría}\n")
         as_dict = repo_mod.Taxonomy.load(self.root).as_dict()
         # Solo los idiomas escritos. Los que faltan faltan, y es la pantalla
         # de traducciones la que los cuenta.
-        self.assertEqual(as_dict["blocks"],
-                         [{"id": "teoria", "title": {"es": "Teoría"}}])
+        self.assertEqual(
+            as_dict["blocks"],
+            [{"id": "teoria", "title": {"es": "Teoría"}, "templates": []}])
 
 
 class BlockTests(unittest.TestCase):

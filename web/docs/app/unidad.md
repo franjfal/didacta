@@ -66,6 +66,28 @@ También están ahí los metadatos en limpio, los prerrequisitos --enlazados-- y
 los avisos que el motor haya dejado sobre esta unidad, como una figura que no
 encuentra.
 
+### El icono de información
+
+Arriba a la derecha, la **ⓘ**. Lleva lo mismo que el panel pero se puede
+abrir con el panel cerrado --y el panel sólo existe a partir de mil píxeles de
+ancho--, y añade lo que antes estaba a dos pantallas de distancia:
+
+- **Se da en**: cada tema que la llama, con su asignatura y su año. Se pulsa y
+  se va. Si no la llama nadie, lo dice: después de una migración eso es
+  material que llegó y no se está dando.
+- **Versiones congeladas**: las de las asignaturas donde se da. Son de un
+  curso académico y no de un fichero, así que una lección que se da en cuatro
+  asignaturas tiene cuatro juegos y salen con el nombre de cada una delante.
+  Crear una sólo se ofrece cuando hay una sola y no hay duda de cuál se
+  congela.
+- **Darla en otro tema…**, para la misma lección también allí.
+- **Gestionar vinculación…**, cuando se da en más de un sitio: separa unas
+  ubicaciones del resto, de modo que unas sigan con la de siempre y las demás
+  pasen a una copia con vida propia.
+
+Mirando una versión congelada, en lugar de eso sale **Restaurar esta
+lección…**, que la trae tal como estaba dejando un cambio pendiente.
+
 ## `unit.yaml`
 
 ![Los metadatos de una unidad](../img/app/unidad-yaml.png)
@@ -84,6 +106,24 @@ conviene saber:
 
     Cuando no reconoce la forma de algo, **se niega en lugar de adivinar**: lo
     dice y ofrece el editor de texto.
+
+## En qué se compila esta lección
+
+En el formulario, debajo de la clasificación. Lo normal es **no elegir**: sale
+lo que diga su bloque, y cambiar el bloque las cambia todas de una vez.
+
+Elegir aquí es apartar **esta**: una lección que no se quiere en diapositivas
+porque no cabe, un ejemplo largo que solo tiene sentido en los apuntes. Se
+guarda en su `unit.yaml`:
+
+```yaml
+templates: [notes]
+```
+
+Volver a «lo que toque» quita la línea, y la lección vuelve a seguir a su
+bloque.
+
+[:octicons-arrow-right-24: Las plantillas](../conceptos/perfiles.md#las-plantillas-tus-propias-salidas)
 
 ## Guardar es un commit
 

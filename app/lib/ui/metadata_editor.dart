@@ -29,6 +29,7 @@ import '../model/catalogue.dart';
 import '../model/line_diff.dart';
 import '../model/yaml_patch.dart';
 import '../state/session.dart';
+import 'manage_templates.dart';
 import 'theme.dart';
 import 'unit_page.dart';
 
@@ -206,6 +207,7 @@ class _MetadataEditorState extends State<MetadataEditor> {
               : _Form(
                   patch: patch,
                   unit: widget.unit,
+                  session: widget.session,
                   languages: languagesOfUnit(widget.session, widget.unit),
                   blocks: widget.session.catalogue.blocksInUse,
                   enabled: canWrite,
@@ -428,6 +430,7 @@ class _Form extends StatelessWidget {
   const _Form({
     required this.patch,
     required this.unit,
+    required this.session,
     required this.languages,
     required this.blocks,
     required this.enabled,
@@ -436,6 +439,12 @@ class _Form extends StatelessWidget {
 
   final YamlPatch patch;
   final Unit unit;
+
+  /// Para el catálogo: qué plantillas hay y qué hereda esta lección de su
+  /// bloque. No se escribe a través de ella --lo que se edita es el parche,
+  /// que es lo que enseña su diff antes de confirmar-- solo se lee.
+  final Session session;
+
   final List<String> languages;
 
   /// Los bloques entre los que se puede elegir. Ver [Catalogue.blocksInUse]:
@@ -554,6 +563,29 @@ class _Form extends StatelessWidget {
           tags: patch.list(['tags']),
           enabled: enabled,
           onChanged: (tags) => onEdit((p) => p.setFlowList(['tags'], tags)),
+        ),
+
+        const SectionLabel('Salidas'),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Note(
+            'En qué plantillas se compila esta lección. Lo normal es no '
+            'elegir: sale lo que diga su bloque, y cambiar el bloque las '
+            'cambia todas de una vez. Elegir aquí es apartar **esta**.',
+          ),
+        ),
+        _TemplatesRow(
+          chosen: patch.list(['templates']),
+          session: session,
+          unit: unit,
+          enabled: enabled,
+          onChanged: (templates) => onEdit((p) {
+            if (templates.isEmpty) {
+              p.remove(['templates']);
+            } else {
+              p.setFlowList(['templates'], templates);
+            }
+          }),
         ),
 
         const SectionLabel('Para planificar una clase'),
@@ -840,6 +872,96 @@ class _ChoiceRow extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Con qué plantillas se compila esta lección.
+///
+/// Se edita el parche, no el fichero: así el cambio entra en el mismo diff
+/// que se enseña antes de confirmar, como el resto del formulario. Vacío
+/// quiere decir «las de su bloque», y es lo que lleva casi todo el material.
+class _TemplatesRow extends StatelessWidget {
+  const _TemplatesRow({
+    required this.chosen,
+    required this.session,
+    required this.unit,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final List<String> chosen;
+  final Session session;
+  final Unit unit;
+  final bool enabled;
+  final ValueChanged<List<String>> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final catalogue = session.catalogue;
+    final inherited = catalogue.templatesOfBlock(unit.block);
+    final showing = chosen.isEmpty ? inherited : chosen;
+    final blockName = catalogue.blockNamed(unit.block).title(session.language);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(
+            width: 92,
+            child: Text(
+              'plantillas',
+              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  showing.isEmpty
+                      ? 'ninguna encendida'
+                      : showing
+                            .map(
+                              (id) => catalogue
+                                  .templateNamed(id)
+                                  .title(session.language),
+                            )
+                            .join(' · '),
+                  style: const TextStyle(fontSize: 12.5),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  chosen.isEmpty
+                      ? 'las de «$blockName»'
+                      : 'elegidas para esta lección',
+                  style: const TextStyle(fontSize: 11, color: didactaMuted),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            key: const Key('unit-templates'),
+            onPressed: enabled
+                ? () async {
+                    final answer = await chooseTemplates(
+                      context,
+                      session,
+                      title: 'Salidas de esta lección',
+                      inherited: inherited.isEmpty
+                          ? 'Las de su bloque. No hay ninguna encendida.'
+                          : 'Las de «$blockName»: ${inherited.length}',
+                      chosen: chosen,
+                      byDefault: inherited,
+                    );
+                    if (answer != null) onChanged(answer);
+                  }
+                : null,
+            child: const Text('Elegir'),
           ),
         ],
       ),

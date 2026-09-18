@@ -179,6 +179,33 @@ class DegreesFile {
     _lines.insertAll(end, ['', ...block]);
   }
 
+  /// Deja de declarar un grado en este repositorio.
+  ///
+  /// Solo la declaración. Las asignaturas que lo nombran siguen nombrándolo, y
+  /// eso es a propósito: **un grado que no declara nadie no agrupa, y sus
+  /// asignaturas salen enteras**, exactamente como antes de que existieran los
+  /// grados. Por eso quitarlo de un sitio no puede perder material.
+  void remove(String id) {
+    final degree = _degrees().where((d) => d.id == id).firstOrNull;
+    if (degree == null) {
+      throw DegreesException('este repositorio no declara el grado `$id`');
+    }
+    var end = degree.lastLine;
+    // Las líneas en blanco de debajo se van con él; si no, cada grado
+    // borrado deja un hueco que no cierra nadie.
+    while (end + 1 < _lines.length && _lines[end + 1].trim().isEmpty) {
+      end += 1;
+    }
+    _lines.removeRange(degree.firstLine, end + 1);
+
+    // Sin ninguno queda `degrees:` colgando, que se lee como null y no como
+    // lista vacía: un error de lectura del repositorio entero.
+    if (ids.isEmpty) {
+      final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'degrees');
+      if (at >= 0) _lines[at] = 'degrees: []';
+    }
+  }
+
   // -- leer la estructura ---------------------------------------------------
 
   List<_Degree> _degrees() {

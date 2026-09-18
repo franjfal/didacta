@@ -29,13 +29,14 @@ Future<FakeCompiler> pumpDocument(
   WidgetTester tester, {
   FakeCompiler? compiler,
   String documentId = 'tema-1',
+  List<Map<String, dynamic>>? profiles,
 }) async {
   tester.view.physicalSize = const Size(1200, 1000);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
   final used = compiler ?? FakeCompiler();
-  final catalogue = catalogueWith(defaultUnits());
+  final catalogue = catalogueWith(defaultUnits(), profiles: profiles);
   final session = FakeSession(
     gatewayOverride: FakeGateway(),
     catalogue: catalogue,
@@ -71,33 +72,18 @@ void main() {
     expect(find.textContaining('Composición'), findsOneWidget);
   });
 
-  testWidgets('ofrece las versiones que el motor dice, no las que se inventa', (
-    tester,
-  ) async {
-    // Las del documento y las demás de su familia: el mismo tema se quiere en
-    // libro un día y en diapositivas otro.
+  testWidgets('ofrece lo que el tema permite, y nada más', (tester) async {
+    // La lista del `year.yaml` es una **restricción**, no una sugerencia: si
+    // alguien decidió que de este tema no salen libros, el menú de compilar
+    // no es el sitio para saltárselo. Dentro de lo que quede sí se elige, que
+    // es para lo que está el diálogo.
     await pumpDocument(tester);
     await tester.tap(find.text('Compilar'));
     await settle(tester);
 
     expect(find.text('Diapositivas'), findsOneWidget);
-    expect(find.text('Libro'), findsOneWidget);
     expect(find.text('Apuntes'), findsOneWidget);
-  });
-
-  testWidgets('compila el documento entero, no sus unidades', (tester) async {
-    final compiler = await pumpDocument(tester);
-    await tester.tap(find.text('Compilar'));
-    await settle(tester);
-
-    await tester.tap(find.byKey(const Key('compile')));
-    await settle(tester);
-
-    // La referencia que usa el motor: `curso@año/documento`. Los ids se
-    // repiten entre asignaturas, así que el nombre a secas no vale.
-    expect(compiler.documentCalls.single.document, 'am-iii@2025-2026/tema-1');
-    // Y ninguna llamada de unidad: son dos cosas distintas.
-    expect(compiler.calls, isEmpty);
+    expect(find.text('Libro'), findsNothing);
   });
 
   testWidgets('lo compilado se abre en pestañas, una por versión', (
@@ -228,9 +214,19 @@ void main() {
     // fuente; lo único que hace falta es poder decir cuál se quiere.
 
     Future<FakeCompiler> pumpProblems(WidgetTester tester) async {
+      // Las mismas tres en las dos capas: el catálogo decide qué se ofrece
+      // --es quien manda desde que hay plantillas-- y el compilador las
+      // recibe ya elegidas.
       final compiler = FakeCompiler(profiles: problemProfiles)
         ..documentProfileList = problemProfiles;
-      await pumpDocument(tester, compiler: compiler);
+      // La hoja de problemas del ejemplo, que no restringe nada: lo que se
+      // ofrece sale de su bloque, y ahí están las tres.
+      await pumpDocument(
+        tester,
+        compiler: compiler,
+        documentId: 'hoja-1',
+        profiles: problemProfilesJson,
+      );
       await tester.tap(find.text('Compilar'));
       await settle(tester);
       return compiler;

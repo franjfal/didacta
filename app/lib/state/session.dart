@@ -28,11 +28,13 @@ import '../data/translation_secrets.dart';
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
 import '../data/course_admin.dart';
+import '../data/frozen.dart';
 import '../data/disk_watch.dart';
 import '../data/github.dart';
 import '../data/indenter.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
+import '../data/template_store.dart';
 import '../data/toolchain.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
@@ -40,6 +42,7 @@ import '../model/degrees_file.dart';
 import '../model/slug.dart';
 import '../model/synced_prefs.dart';
 import '../model/taxonomy_file.dart';
+import '../model/templates_file.dart';
 import '../model/themes_file.dart';
 import '../data/translator.dart';
 import '../model/translation_memory.dart';
@@ -162,8 +165,13 @@ class Session extends ChangeNotifier {
   /// pantallas, y no en cada una. Esa es la diferencia entre una interfaz con
   /// dos fuentes y dos interfaces pegadas: ninguna pantalla pregunta de qué
   /// repositorio es nada para decidir si lo enseña.
-  Catalogue get catalogue => _visible ?? _catalogue!;
-  Catalogue? get catalogueOrNull => _visible ?? _catalogue;
+  ///
+  /// Con una versión congelada abierta, **el de aquel commit**: ese es el
+  /// punto de abrirla. Lo que la aplicación entera enseña pasa por aquí, así
+  /// que ninguna pantalla tiene que preguntar si está mirando el presente.
+  Catalogue get catalogue => _frozen?.catalogue ?? _visible ?? _catalogue!;
+  Catalogue? get catalogueOrNull =>
+      _frozen?.catalogue ?? _visible ?? _catalogue;
 
   /// El catálogo entero, apagados incluidos. Lo mira quien tiene que hablar
   /// de los repositorios en sí: el filtro y los ajustes.
@@ -171,8 +179,63 @@ class Session extends ChangeNotifier {
 
   Catalogue? _visible;
 
+  /// La carpeta de plantillas del programa, cuando la hay.
+  ///
+  /// Null en la web y hasta que se abre. Quien guarde algo ahí no lo tiene en
+  /// ningún repositorio, así que no lo protege git ni lo ve nadie más: ver
+  /// [TemplateStore].
+  TemplateStore? get templateStore => _templateStore;
+  TemplateStore? _templateStore;
+
+  /// Lo que esa carpeta declara, leído por el motor.
+  ///
+  /// Se junta con el catálogo en [_refilter], así que todo lo demás --qué
+  /// ofrece un bloque, qué compila un tema-- las ve como cualquier otra.
+  List<OutputTemplate> _storedTemplates = const [];
+
+  /// Abre la carpeta del programa y lee lo que tenga.
+  ///
+  /// Silencioso si algo va mal: no poder leer las plantillas propias no puede
+  /// impedir abrir la aplicación, y lo que se pierde es una lista, no el
+  /// material.
+  Future<void> loadStoredTemplates() async {
+    try {
+      _templateStore ??= await TemplateStore.open();
+    } catch (_) {
+      // Sin carpeta de datos --una plataforma que no la da, o una prueba sin
+      // canales de plataforma-- no hay plantillas propias, y eso no puede
+      // impedir leer el catálogo.
+      return;
+    }
+    final store = _templateStore;
+    if (store == null || !await store.hasAny) {
+      if (_storedTemplates.isEmpty) return;
+      _storedTemplates = const [];
+      _refilter();
+      notifyListeners();
+      return;
+    }
+    try {
+      final compiler = this.compiler();
+      if (compiler == null) return;
+      _storedTemplates = [
+        for (final template in await compiler.templatesIn(store.directory))
+          template.declaredBy(programTemplates),
+      ];
+    } catch (_) {
+      _storedTemplates = const [];
+    }
+    _refilter();
+    notifyListeners();
+  }
+
   void _refilter() {
-    _visible = _catalogue?.without(_synced.hiddenRepos);
+    // Las del programa se añaden al final y solo si su id no está ya: un
+    // repositorio que declare el mismo id gana, porque lo compartido manda
+    // sobre lo personal.
+    _visible = _catalogue
+        ?.without(_synced.hiddenRepos)
+        .withTemplates(_storedTemplates);
   }
 
   /// Si un repositorio se está mirando ahora mismo.
@@ -208,6 +271,12 @@ class Session extends ChangeNotifier {
   /// tiene en la mano la unidad o el documento que está tocando, y de ahí sale
   /// a qué clon va lo que escriba.
   ContentGateway gatewayFor(String? repo) {
+    // Con una congelación abierta se lee de su árbol y no se escribe. Aquí y
+    // no en cada pantalla: un editor que pareciera editable y fallara al
+    // guardar sería peor que uno que dice desde el principio que esto es una
+    // foto de septiembre.
+    final frozen = _frozen;
+    if (frozen != null) return FrozenGateway(view: frozen);
     if (repo == null || repo.isEmpty) return gateway;
     return _gateways[repo] ??
         UnconfiguredGateway('No está abierto el repositorio $repo.');
@@ -352,33 +421,81 @@ class Session extends ChangeNotifier {
     await _rememberPrefs();
   }
 
-  /// Las asignaturas en el orden en que se enseñan: las marcadas primero, y
-  /// dentro de cada mitad por título.
+  // -- ocultar y plegar ---------------------------------------------------
+
+  bool isHiddenCourse(String course) => _synced.isHiddenCourse(course);
+
+  bool isHiddenYear(String course, String year) =>
+      _synced.isHiddenYear(course, year);
+
+  bool isCollapsedCourse(String course) => _synced.isCollapsedCourse(course);
+
+  /// Oculta una asignatura, o la vuelve a enseñar.
+  ///
+  /// Ocultar no es quitar: la asignatura sigue en el repositorio, sigue
+  /// compilando y sigue en la biblioteca. Lo que cambia es la lista, que
+  /// después de unos años son veinte asignaturas de las que se dan tres.
+  Future<void> setCourseHidden(String course, bool hidden) async {
+    _synced = _synced.withCourseHidden(course, hidden);
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Oculta un curso académico, o lo vuelve a enseñar.
+  Future<void> setYearHidden(String course, String year, bool hidden) async {
+    _synced = _synced.withYearHidden(course, year, hidden);
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Pliega una asignatura: se ve su título y no sus cursos.
+  Future<void> setCourseCollapsed(String course, bool collapsed) async {
+    _synced = _synced.withCourseCollapsed(course, collapsed);
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Qué se está mirando en la lista de asignaturas.
+  ///
+  /// Se guarda con lo demás: quien está ordenando la lista se queda un rato
+  /// en «las ocultas», y volver a «las que doy» cada vez que se entra en otra
+  /// pantalla convierte esa tarde en un baile de clics.
+  String get coursesView => _synced.coursesView;
+
+  Future<void> setCoursesView(String view) async {
+    if (_synced.coursesView == view) return;
+    _synced = _synced.withCoursesView(view);
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Las asignaturas, por título.
+  ///
+  /// Por título y nada más. Las marcadas subían al principio, y era peor: la
+  /// lista dejaba de estar donde se aprendió que estaba, y marcar una
+  /// asignatura movía otras cuatro de sitio. La estrella dice «esta me
+  /// importa» y no «esta va antes»; para no ver lo que no se da está
+  /// ocultarla.
   ///
   /// Aquí y no en la pantalla porque el orden es una decisión de la
   /// aplicación, no del sitio donde se dibuja: si una lista lo hiciera por su
   /// cuenta, acabaría discrepando de la de al lado.
   List<Course> get sortedCourses {
     final courses = [...catalogue.courses];
-    courses.sort((a, b) {
-      final mine = isFavouriteCourse(a.id);
-      final theirs = isFavouriteCourse(b.id);
-      if (mine != theirs) return mine ? -1 : 1;
-      return compareTitles(a.title(_language), b.title(_language));
-    });
+    courses.sort(
+      (a, b) => compareTitles(a.title(_language), b.title(_language)),
+    );
     return courses;
   }
 
-  /// Los cursos de una asignatura: los marcados primero, y el resto del más
-  /// reciente al más antiguo, que es el orden en que se buscan.
+  /// Los cursos de una asignatura, del más reciente al más antiguo.
+  ///
+  /// Que es el orden en que se buscan, y ahora también sin excepciones: un
+  /// curso marcado ya no se cuela delante, así que «el primero» vuelve a
+  /// querer decir «el último que se dio».
   List<String> sortedYearsOf(Course course) {
     final years = course.years.keys.toList();
-    years.sort((a, b) {
-      final mine = isFavouriteYear(course.id, a);
-      final theirs = isFavouriteYear(course.id, b);
-      if (mine != theirs) return mine ? -1 : 1;
-      return b.compareTo(a);
-    });
+    years.sort((a, b) => b.compareTo(a));
     return years;
   }
 
@@ -536,8 +653,24 @@ class Session extends ChangeNotifier {
       enginePath: engine,
       repositoryPath: clone,
       texPath: _texPath,
+      templateDirs: _templateDirsBesides(clone),
     );
   }
+
+  /// Los demás sitios donde buscar plantillas al compilar en [clone].
+  ///
+  /// Los otros repositorios abiertos. El que se compila las lee él solo, así
+  /// que se queda fuera para no pasarlo dos veces.
+  ///
+  /// Sin esto, compilar el repositorio de teoría con una plantilla que
+  /// declara el de problemas da «perfil desconocido», y el material está
+  /// repartido justamente así.
+  List<String> _templateDirsBesides(String clone) => [
+    for (final repo in _workspace.repos)
+      if (pathOf(repo.id) != null && pathOf(repo.id) != clone) pathOf(repo.id)!,
+    // Y la carpeta del programa, que no es un repositorio de nadie.
+    ?_templateStore?.directory,
+  ];
 
   /// Dónde está TeX, si se ha tenido que decir a mano.
   String? get texPath => _texPath;
@@ -1354,6 +1487,34 @@ class Session extends ChangeNotifier {
     await reloadCatalogue();
   }
 
+  /// Deja de declarar un grado en un repositorio.
+  ///
+  /// Las asignaturas que lo nombran siguen nombrándolo: un grado que no
+  /// declara nadie no agrupa, y sus asignaturas salen enteras. Por eso esto
+  /// no puede perder material, y por eso «Grados» las sigue enseñando como
+  /// nombradas y sin declarar.
+  Future<void> undeclareDegree({
+    required String repo,
+    required String id,
+  }) async {
+    final gateway = gatewayFor(repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en $repo');
+    }
+    const where = 'degrees.yaml';
+    final file = await gateway.read(where);
+    final degrees = DegreesFile(file.text)..remove(id);
+    if (degrees.text == file.text) return;
+
+    await gateway.save(
+      path: where,
+      text: degrees.text,
+      sha: file.sha,
+      message: 'Dejar de declarar el grado $id',
+    );
+    await reloadCatalogue();
+  }
+
   /// Cambia el título de un grado, en todos los idiomas a la vez.
   ///
   /// En los repositorios que lo declaran, que pueden ser varios: si lo
@@ -1635,6 +1796,351 @@ class Session extends ChangeNotifier {
       text: patch.result,
       sha: file.sha,
       message: 'Bloque de $path: $block',
+    );
+    await reloadCatalogue();
+  }
+
+  /// Con qué plantillas se compila un bloque, por defecto.
+  ///
+  /// En todos los repositorios que lo declaran, por lo mismo que el nombre:
+  /// si dicen cosas distintas, lo que sale de compilar depende de en qué
+  /// orden se abrieron -- y eso se descubre cuando falta media clase.
+  ///
+  /// Lista vacía es «todas las activas», que es un estado legítimo y el que
+  /// tiene un bloque recién declarado.
+  Future<int> setBlockTemplates({
+    required String id,
+    required List<String> templates,
+  }) async {
+    final block = catalogueOrNull?.blocks
+        .where((entry) => entry.id == id)
+        .firstOrNull;
+    if (block == null) throw ArgumentError('no se declara el bloque $id');
+
+    const where = 'taxonomy.yaml';
+    final written = <String>[];
+    for (final repo in block.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final taxonomy = TaxonomyFile(file.text)
+        ..setBlockTemplates(id, templates);
+      if (taxonomy.text == file.text) continue;
+
+      await gateway.save(
+        path: where,
+        text: taxonomy.text,
+        sha: file.sha,
+        message: 'Plantillas del bloque $id',
+      );
+      written.add(repo);
+    }
+    for (final repo in written) {
+      await _reindexAfterTaxonomy(repo, reload: false);
+    }
+    if (written.isNotEmpty) await reloadCatalogue();
+    return written.length;
+  }
+
+  // -- las plantillas de compilación --------------------------------------
+
+  /// El «repositorio» que es la carpeta del programa.
+  ///
+  /// Un id que ningún repositorio puede tener --lleva una arroba-- para poder
+  /// usar los mismos métodos con las dos cosas. Una plantilla guardada aquí no
+  /// viaja con ningún material y **no la protege nadie**: ver [TemplateStore].
+  static const String programTemplates = '@programa';
+
+  /// Dónde se puede guardar una plantilla: los repositorios en los que se
+  /// puede escribir, y la carpeta del programa si la hay.
+  List<String> get templateHomes => [
+    for (final repo in _workspace.repos)
+      if (canWriteIn(repo.id)) repo.id,
+    if (_templateStore != null) programTemplates,
+  ];
+
+  /// Cómo se llama cada uno de esos sitios, para una lista.
+  String templateHomeLabel(String home) => home == programTemplates
+      ? 'En el programa (sin copia de seguridad)'
+      : (workspace.byId(home)?.label ?? home);
+
+  /// Leer un fichero de plantillas, venga de donde venga.
+  Future<String> _readTemplateFile(String home, String path) async {
+    if (home == programTemplates) {
+      final store = _templateStore;
+      if (store == null) throw ArgumentError('no hay carpeta del programa');
+      return store.read(path);
+    }
+    try {
+      final file = await gatewayFor(home).read(path);
+      return file.text;
+    } on ContentException catch (error) {
+      if (error.kind == ContentFailure.missing) return '';
+      rethrow;
+    }
+  }
+
+  /// Escribirlo. En un repositorio es un commit; en la carpeta del programa,
+  /// un fichero y nada más -- ahí no hay historial que consultar, y por eso
+  /// la pantalla insiste en las copias.
+  Future<void> _writeTemplateFile(
+    String home,
+    String path,
+    String text,
+    String message,
+  ) async {
+    if (home == programTemplates) {
+      final store = _templateStore;
+      if (store == null) throw ArgumentError('no hay carpeta del programa');
+      await store.write(path, text);
+      return;
+    }
+    final gateway = gatewayFor(home);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en $home');
+    }
+    var sha = '';
+    try {
+      final file = await gateway.read(path);
+      if (file.text == text) return;
+      sha = file.sha;
+    } on ContentException catch (error) {
+      if (error.kind != ContentFailure.missing) rethrow;
+    }
+    await gateway.save(path: path, text: text, sha: sha, message: message);
+  }
+
+  /// Volver a mirar después de escribir plantillas.
+  Future<void> _afterTemplates(String home) async {
+    if (home == programTemplates) {
+      await loadStoredTemplates();
+      return;
+    }
+    await _reindexAfterTaxonomy(home);
+  }
+
+  /// Declara una plantilla en un repositorio.
+  ///
+  /// En **uno**: una plantilla es un fichero con su preámbulo, y declararla
+  /// en dos es tener dos versiones de la misma salida que pueden discrepar.
+  /// Los demás repositorios la usan sin declararla, que es lo que permite que
+  /// el bloque de teoría se compile con una plantilla del de problemas.
+  Future<void> declareTemplate({
+    required String repo,
+    required String id,
+    required Map<String, String> titles,
+    required String documentClass,
+    String classOptions = '',
+    Map<String, String> axes = const {},
+    String preamble = '',
+  }) async {
+    const where = 'templates.yaml';
+    final current = await _readTemplateFile(repo, where);
+    final templates =
+        TemplatesFile(current.isEmpty ? emptyTemplatesYaml : current)..add(
+          id: id,
+          titles: titles,
+          documentClass: documentClass,
+          classOptions: classOptions,
+          axes: axes,
+          languages: catalogueOrNull?.languagesOf(repo) ?? const ['es'],
+        );
+
+    await _writeTemplateFile(
+      repo,
+      where,
+      templates.text,
+      'Declarar la plantilla $id',
+    );
+    // El preámbulo va aparte y solo si lo hay: una plantilla sin cabecera
+    // propia se comporta exactamente como la salida de serie, que es el punto
+    // de partida razonable.
+    if (preamble.trim().isNotEmpty) {
+      await setTemplatePreamble(repo: repo, id: id, text: preamble);
+    }
+    await _afterTemplates(repo);
+  }
+
+  /// Cambia el nombre de una plantilla, en todos los idiomas a la vez.
+  Future<int> setTemplateTitles({
+    required String id,
+    required Map<String, String> titles,
+  }) => _writeTemplate(
+    id: id,
+    message: 'Nombre de la plantilla $id',
+    edit: (file) => file.setTitles(id, titles),
+  );
+
+  /// Enciende o apaga una plantilla.
+  ///
+  /// Apagada queda declarada y fuera de lo que se compila. No se borra: lo
+  /// que se quiere guardar de una versión que este curso no se da es
+  /// justamente su preámbulo.
+  Future<int> setTemplateActive({required String id, required bool active}) =>
+      _writeTemplate(
+        id: id,
+        message: active
+            ? 'Encender la plantilla $id'
+            : 'Apagar la plantilla $id',
+        edit: (file) => file.setActive(id, active),
+      );
+
+  /// Cambia qué produce una plantilla: la clase, sus opciones y los ejes.
+  Future<int> setTemplateShape({
+    required String id,
+    required String documentClass,
+    required String classOptions,
+    required Map<String, String> axes,
+  }) => _writeTemplate(
+    id: id,
+    message: 'Salida de la plantilla $id',
+    edit: (file) {
+      file.setField(id, 'class', documentClass.trim());
+      file.setField(
+        id,
+        'options',
+        classOptions.trim().isEmpty ? null : classOptions.trim(),
+      );
+      file.setAxes(id, axes);
+    },
+  );
+
+  /// Quita una plantilla de los repositorios que la declaran.
+  ///
+  /// El `templates/<id>.tex` se queda donde está, y eso es deliberado: es
+  /// LaTeX que alguien escribió, y borrarlo de paso al quitar una línea de
+  /// una lista sería la clase de ayuda que nadie pidió. Volver a declararla
+  /// con el mismo id lo recupera entero.
+  Future<int> removeTemplate({required String id}) => _writeTemplate(
+    id: id,
+    message: 'Quitar la plantilla $id',
+    edit: (file) => file.remove(id),
+  );
+
+  /// Escribe en el `templates.yaml` de cada repositorio que declare [id].
+  Future<int> _writeTemplate({
+    required String id,
+    required String message,
+    required void Function(TemplatesFile file) edit,
+  }) async {
+    final template = catalogueOrNull?.templates
+        .where((entry) => entry.id == id)
+        .firstOrNull;
+    if (template == null) {
+      throw ArgumentError('no se declara la plantilla $id');
+    }
+
+    const where = 'templates.yaml';
+    final written = <String>[];
+    for (final repo in template.sources.keys) {
+      if (repo != programTemplates && !gatewayFor(repo).canWrite) continue;
+
+      final current = await _readTemplateFile(repo, where);
+      if (current.isEmpty) continue;
+      final templates = TemplatesFile(current);
+      edit(templates);
+      if (templates.text == current) continue;
+
+      await _writeTemplateFile(repo, where, templates.text, message);
+      written.add(repo);
+    }
+    for (final repo in written) {
+      if (repo == programTemplates) continue;
+      await _reindexAfterTaxonomy(repo, reload: false);
+    }
+    if (written.isNotEmpty) {
+      await reloadCatalogue();
+      if (written.contains(programTemplates)) await loadStoredTemplates();
+    }
+    return written.length;
+  }
+
+  /// El preámbulo de una plantilla, tal como está escrito.
+  ///
+  /// Cadena vacía cuando no tiene: una plantilla sin cabecera propia no es un
+  /// error, es la que se comporta como la salida de serie.
+  Future<String> templatePreamble({required String repo, required String id}) =>
+      _readTemplateFile(repo, 'templates/$id.tex');
+
+  /// Escribe el preámbulo de una plantilla.
+  ///
+  /// Vacío borra el fichero de hecho --se deja en blanco-- en lugar de
+  /// quitarlo: un fichero que desaparece y vuelve en cada edición llena el
+  /// historial de ruido, y uno vacío es exactamente lo que dice.
+  Future<void> setTemplatePreamble({
+    required String repo,
+    required String id,
+    required String text,
+  }) async {
+    await _writeTemplateFile(
+      repo,
+      'templates/$id.tex',
+      text,
+      'Cabecera de la plantilla $id',
+    );
+    // Sin reindexar: el preámbulo no sale en el índice --lo lee LaTeX al
+    // compilar-- así que regenerarlo costaría tres segundos para no cambiar
+    // una línea de lo que la pantalla enseña.
+    await reloadCatalogue();
+  }
+
+  /// Con qué plantillas se compila una lección.
+  ///
+  /// Lista vacía la devuelve a lo que diga su bloque, que es el estado
+  /// normal: elegir aquí es apartarse, y hay que poder dejar de apartarse.
+  Future<void> setUnitTemplates({
+    required String repo,
+    required String path,
+    required List<String> templates,
+  }) async {
+    final where = '$path/unit.yaml';
+    final gateway = gatewayFor(repo);
+    final file = await gateway.read(where);
+    final patch = YamlPatch(file.text);
+    if (templates.isEmpty) {
+      patch.remove(const ['templates']);
+    } else {
+      patch.setFlowList(const ['templates'], templates);
+    }
+    if (patch.result == file.text) return;
+
+    await gateway.save(
+      path: where,
+      text: patch.result,
+      sha: file.sha,
+      message: templates.isEmpty
+          ? 'Plantillas de $path: las del bloque'
+          : 'Plantillas de $path',
+    );
+    await reloadCatalogue();
+  }
+
+  /// Con qué plantillas se compila un documento.
+  ///
+  /// En su `year.yaml`, que es donde vive el documento. Lista vacía lo
+  /// devuelve a lo que digan los bloques de las lecciones que compone.
+  Future<void> setDocumentTemplates({
+    required String repo,
+    required String course,
+    required String year,
+    required String id,
+    required List<String> templates,
+  }) async {
+    final where = 'courses/$course/$year/year.yaml';
+    final gateway = gatewayFor(repo);
+    final file = await gateway.read(where);
+    final composition = CompositionFile(file.text)
+      ..setDocumentTemplates(id, templates);
+    if (composition.text == file.text) return;
+
+    await gateway.save(
+      path: where,
+      text: composition.text,
+      sha: file.sha,
+      message: templates.isEmpty
+          ? 'Plantillas de $id: las de sus bloques'
+          : 'Plantillas de $id en $course $year',
     );
     await reloadCatalogue();
   }
@@ -1987,6 +2493,147 @@ class Session extends ChangeNotifier {
   /// Null cuando no se puede: hace falta el clon --para escribir y para
   /// hacer el commit-- y el motor, que es el que sabe hacer cada operación.
   /// La pantalla lo dice en lugar de ofrecer botones que no funcionan.
+  // -- Versiones congeladas -------------------------------------------------
+  //
+  // Abrir una congelación cambia **qué se está mirando**, y por eso vive
+  // aquí: es el único sitio por el que pasan todas las pantallas. Ninguna
+  // tiene que preguntar si está en una versión antigua; lo que reciben es el
+  // catálogo de aquel día y una pasarela que no deja escribir, y con eso ya
+  // se comportan bien.
+
+  FrozenView? _frozen;
+
+  /// La congelación que se está mirando, o null si es la versión actual.
+  FrozenView? get frozen => _frozen;
+
+  bool get isFrozen => _frozen != null;
+
+  /// Cómo va la apertura, para poder contarlo mientras dura.
+  FrozenStep? _frozenStep;
+  FrozenStep? get frozenStep => _frozenStep;
+
+  /// Lo que abre, compara y restaura, para un repositorio.
+  Frozen? frozenIn(String? repo) {
+    final clone = cloneFor(repo);
+    if (clone == null) return null;
+    return Frozen(
+      clone: clone,
+      repo: repo ?? _workspace.repos.firstOrNull?.id ?? '',
+      compiler: compiler(repo: repo),
+      token: _token ?? '',
+    );
+  }
+
+  /// Abre una versión congelada. A partir de aquí todo es de solo lectura.
+  ///
+  /// El catálogo que se enseña es el de **ese repositorio** en ese commit. Una
+  /// congelación es un commit de un repositorio, así que si la asignatura está
+  /// repartida entre dos, lo que se ve es la mitad congelada -- y decirlo es
+  /// mejor que mezclar la foto de septiembre de uno con lo de hoy del otro.
+  Future<void> openFreeze(Freeze freeze, {String? repo}) async {
+    final service = frozenIn(repo ?? freeze.repo);
+    if (service == null) {
+      throw const FrozenException(
+        'Para abrir una versión congelada hace falta el clon del repositorio.',
+      );
+    }
+    _frozenStep = FrozenStep.looking;
+    notifyListeners();
+    try {
+      _frozen = await service.open(
+        freeze,
+        onStep: (step) {
+          _frozenStep = step;
+          notifyListeners();
+        },
+      );
+    } finally {
+      _frozenStep = null;
+      notifyListeners();
+    }
+  }
+
+  /// Para un test de pantalla: la congelación ya abierta.
+  ///
+  /// Abrirla de verdad habla con git y lee un árbol del disco, y eso dentro
+  /// de una prueba de widgets --cuyo reloj es falso-- no termina. Que abrirla
+  /// funcione se prueba contra git de verdad en `frozen_repo_test.dart`; lo
+  /// que se prueba desde la pantalla es qué enseña cuando ya está abierta.
+  @visibleForTesting
+  void useFrozenForTest(FrozenView? view) {
+    _frozen = view;
+    notifyListeners();
+  }
+
+  /// Vuelve a la versión actual.
+  ///
+  /// El árbol de la congelación se queda en la caché: volver a abrirla es lo
+  /// que más se hace --se compara, se vuelve, se compara otra vez-- y
+  /// recrearlo cada vez sería pagar la copia que esto existe para no pagar.
+  void leaveFreeze() {
+    if (_frozen == null) return;
+    _frozen = null;
+    notifyListeners();
+  }
+
+  /// Vacía la caché de árboles de congelación. No pierde nada.
+  Future<int> clearFrozenCache() async {
+    var total = 0;
+    for (final repo in _workspace.repos) {
+      final service = frozenIn(repo.id);
+      if (service == null) continue;
+      total += await service.clearCache();
+    }
+    if (_frozen != null) leaveFreeze();
+    return total;
+  }
+
+  /// Cuántos árboles de congelación hay guardados ahora mismo.
+  Future<int> frozenCacheSize() async {
+    var total = 0;
+    for (final repo in _workspace.repos) {
+      final clone = cloneFor(repo.id);
+      if (clone == null) continue;
+      total += (await clone.worktrees()).length;
+    }
+    return total;
+  }
+
+  /// Las congelaciones de un curso, las más nuevas primero.
+  List<Freeze> freezesOf(String courseId, String year) {
+    final entry = fullYear(courseId, year);
+    if (entry == null) return const [];
+    final found = [...entry.freezes];
+    found.sort((a, b) => (b.created).compareTo(a.created));
+    return found;
+  }
+
+  /// El commit que congelaría ahora mismo: el HEAD del repositorio.
+  Future<String> headOf(String? repo) async {
+    final clone = cloneFor(repo);
+    if (clone == null) {
+      throw const FrozenException(
+        'Para congelar hace falta el clon del repositorio.',
+      );
+    }
+    return clone.head();
+  }
+
+  /// Si hay cambios sin guardar en el clon de un repositorio.
+  ///
+  /// Se pregunta antes de congelar y antes de restaurar: una congelación
+  /// apunta a un commit, así que lo que esté sin confirmar **no entra**, y hay
+  /// que decirlo antes y no después.
+  Future<List<String>> pendingIn(String? repo) async {
+    final clone = cloneFor(repo);
+    if (clone == null) return const [];
+    try {
+      return (await clone.status()).dirtyPaths;
+    } catch (_) {
+      return const [];
+    }
+  }
+
   CourseAdmin? admin({String? repo}) {
     final compiler = this.compiler(repo: repo);
     final path = pathOf(repo);
@@ -3161,9 +3808,26 @@ class Session extends ChangeNotifier {
   /// Reloads the catalogue, for after a commit that changed structure.
   Future<void> reloadCatalogue() async {
     try {
+      // Regenerar el índice si hace falta, **antes** de leerlo.
+      //
+      // Lo que la aplicación escribe son ficheros YAML --`degrees.yaml`,
+      // `themes.yaml`, `year.yaml`, `unit.yaml`-- y lo que lee son los
+      // índices que el motor saca de ellos. Sin esto, guardar el título de un
+      // grado escribía el fichero, decía que lo había guardado y la pantalla
+      // seguía enseñando el de antes: el cambio estaba en el disco y el
+      // índice era de hace un minuto.
+      //
+      // Aquí y no en cada método que escribe, que son veinte y basta con
+      // olvidarse de uno para que vuelva el mismo fallo en otro sitio. La
+      // comprobación es barata --contar ficheros y mirar fechas-- y solo
+      // regenera cuando de verdad hace falta.
+      await refreshIndex();
       _catalogue = await _source.load();
       _refilter();
       notifyListeners();
+      // Las del programa, después: son una llamada al motor y no pueden
+      // retrasar lo que la pantalla ya puede enseñar.
+      unawaited(loadStoredTemplates());
     } catch (error) {
       // Deliberately not fatal: the old catalogue is stale, not wrong, and
       // throwing away a working screen because a refresh failed is worse.

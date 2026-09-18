@@ -92,8 +92,23 @@ class BuildTests(unittest.TestCase):
         """
         by_path = {record["path"]: record for record in self.units}
         used = by_path["content/analysis/normed-spaces/definition"]["usedBy"]
-        self.assertEqual(used, [{"course": "am-iii", "year": "2025-2026",
-                                 "document": "tema-1"}])
+        self.assertEqual(
+            [{k: entry[k] for k in ("course", "year", "document")}
+             for entry in used],
+            [{"course": "am-iii", "year": "2025-2026", "document": "tema-1"}],
+        )
+
+    def test_a_usage_says_which_position_of_the_composition_it_is(self):
+        """Una ubicación, no un «aparece por aquí».
+
+        La misma lección puede estar dos veces en el mismo tema, y entonces
+        son dos ubicaciones distintas. Separar una de la otra sin poder
+        nombrarlas sería adivinar cuál se estaba tocando.
+        """
+        by_path = {record["path"]: record for record in self.units}
+        used = by_path["content/analysis/normed-spaces/definition"]["usedBy"]
+        self.assertEqual(used[0]["index"], 0)
+        self.assertEqual(used[0]["ref"], "analysis/normed-spaces/definition")
 
     def test_a_problem_unit_is_credited_to_the_sheet_that_uses_it(self):
         by_path = {record["path"]: record for record in self.units}

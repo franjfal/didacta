@@ -53,11 +53,19 @@
 %%
 %% `axes` is a comma list of `key=value` from the five axes above. Anything
 %% unset falls back to the defaults declared further down.
+%% Un id que ya está declarado se **sustituye**, y no se vuelve a listar. Es
+%% lo que permite que una plantilla del repositorio --que se declara después,
+%% desde el fichero que genera el motor-- reemplace a una de las que trae
+%% Didacta sin que la lista de perfiles conocidos salga con el nombre dos
+%% veces. Sin plantillas esto no cambia nada: ningún id se repite aquí.
 \newcommand{\DidactaDeclareProfile}[4]{%
+  \@ifundefined{didacta@profile@#1@class}{%
+    \expandafter\g@addto@macro\expandafter\didacta@profile@list
+      \expandafter{,#1}%
+  }{}%
   \@namedef{didacta@profile@#1@class}{#2}%
   \@namedef{didacta@profile@#1@options}{#3}%
   \@namedef{didacta@profile@#1@axes}{#4}%
-  \expandafter\g@addto@macro\expandafter\didacta@profile@list\expandafter{,#1}%
 }
 
 \def\didacta@profile@list{}

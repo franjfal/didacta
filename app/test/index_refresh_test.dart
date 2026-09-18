@@ -29,6 +29,43 @@ FakeSession sessionWith(FakeCompiler compiler, {int? reloads}) => FakeSession(
 );
 
 void main() {
+  group('al recargar después de escribir', () {
+    // El fallo que esto arregla, y que pasó de verdad: se cambia el título de
+    // un grado, Didacta escribe `degrees.yaml`, dice que lo ha guardado... y
+    // la pantalla sigue enseñando el de antes. Lo que la aplicación escribe
+    // son ficheros YAML y lo que lee son los índices que el motor saca de
+    // ellos, así que recargar sin regenerar es volver a leer lo de hace un
+    // minuto.
+
+    FakeSession reloading(FakeCompiler compiler) => FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: compiler,
+      reloadsForReal: true,
+    );
+
+    test('el índice se pone al día antes de leerlo', () async {
+      final compiler = FakeCompiler()
+        ..staleIndex = (stale: true, reason: 'se ha editado algo');
+      final session = reloading(compiler);
+      await session.primeForTest(catalogueWith(defaultUnits()));
+
+      await session.reloadCatalogue();
+      expect(compiler.reindexCalls, 1);
+    });
+
+    test('y con el índice al día no se regenera nada', () async {
+      // La comprobación es barata --contar ficheros y mirar fechas-- pero
+      // regenerar no lo es, y recargar ocurre después de cada guardado.
+      final compiler = FakeCompiler();
+      final session = reloading(compiler);
+      await session.primeForTest(catalogueWith(defaultUnits()));
+
+      await session.reloadCatalogue();
+      expect(compiler.reindexCalls, 0);
+    });
+  });
+
   group('al arrancar', () {
     test('con el índice al día no se regenera nada', () async {
       // Arrancar no puede costar tres segundos de más porque sí.
@@ -151,6 +188,37 @@ void main() {
       // Y dice las dos mitades: lo de este disco y lo de GitHub.
       expect(find.textContaining('Actualizado'), findsWidgets);
       expect(find.textContaining('GitHub'), findsWidgets);
+    });
+
+    testWidgets('y al lado, el botón de contar un problema', (tester) async {
+      // En la misma barra y no escondido en Ajustes: el momento en que se
+      // encuentra un fallo es el momento en que se está usando la
+      // aplicación, y para entonces nadie va a buscar un menú.
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        DidactaApp(
+          session: sessionWith(FakeCompiler()),
+          updates: offlineUpdates(),
+        ),
+      );
+      await settle(tester);
+
+      final button = find.byKey(const Key('report-issue'));
+      expect(button, findsOneWidget);
+      expect(
+        tester.widget<IconButton>(button).icon,
+        isA<Icon>().having(
+          (icon) => icon.icon,
+          'icono',
+          Icons.bug_report_outlined,
+        ),
+      );
+      // Y no revienta al pulsarlo aunque aquí no haya navegador que abrir.
+      await tester.tap(button);
+      await settle(tester);
     });
   });
 }

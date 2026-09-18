@@ -8,6 +8,14 @@
 %% nothing outside a standard TeX Live, because a platform that cannot be
 %% compiled on a fresh machine is not a platform.
 %%
+%% Lo que **sí** se ha traído de vuelta del tema heredado, porque la primera
+%% versión de esto salió tan desnuda que las presentaciones parecían un
+%% borrador: la banda de portada a sangre con el título en blanco, las franjas
+%% escalonadas del pie --la firma visual de `decolines`-- y una página de
+%% sección que dice de qué número de apartado se trata. Son adorno, y el
+%% adorno tiene una función: un PDF que se proyecta delante de ciento veinte
+%% personas tiene que parecer acabado.
+%%
 %% Design constraints that come from the room, not from taste:
 %%   · a 4:3 projector in a lecture theatre, so 10pt body and high contrast;
 %%   · the bottom 15% is often blocked by heads, so nothing important goes there;
@@ -73,8 +81,12 @@
 %% ---------------------------------------------------------------------------
 %% Frame title
 %%
-%% A full-width accent band. Reliable to read at distance, and it gives the
-%% slide a firm top edge.
+%% A full-width accent band, with a lighter rule hanging under it. Reliable to
+%% read at distance, and it gives the slide a firm top edge.
+%%
+%% La regla de debajo es la `titleline` del tema heredado. Cuesta 1,4 puntos y
+%% es lo que separa una banda de color de una cabecera: sin ella el título
+%% flota, con ella la diapositiva tiene una cornisa.
 %% ---------------------------------------------------------------------------
 
 \setbeamertemplate{frametitle}{%
@@ -87,6 +99,8 @@
       {\usebeamerfont*{framesubtitle}\small\insertframesubtitle}%
     \fi
   \end{beamercolorbox}%
+  \nointerlineskip
+  \hbox to \paperwidth{\color{didactaAccent}\rule{\paperwidth}{1.4pt}}%
 }
 
 %% ---------------------------------------------------------------------------
@@ -109,6 +123,46 @@
   }%
   \nointerlineskip
   \didacta@progressbar
+  \nointerlineskip
+  \didacta@rules
+}
+
+%% Las mismas franjas, pero dentro del cuerpo de una diapositiva.
+%%
+%% Dentro de una diapositiva el texto vive con márgenes, y una franja que no
+%% llegue al canto no remata nada. Un `beamercolorbox` de ancho \paperwidth se
+%% desborda él solo --beamer lo mete en una caja de ancho \textwidth con cola
+%% encogible de un margen a cada lado--, pero una regla suelta no, así que se
+%% le hace aquí lo mismo que beamer se hace a sí mismo.
+%%
+%% Va en modo vertical a propósito: un `\noindent` abriría párrafo y metería
+%% \parskip entre la banda y las franjas, que es justo lo que no puede haber.
+\newcommand{\didacta@rules@bleed}{%
+  \hbox to\textwidth{%
+    \hskip\z@ minus\beamer@leftmargin\relax
+    \vbox{\hsize=\paperwidth\relax\didacta@rules}%
+    \hskip\z@ minus\beamer@rightmargin\relax}%
+}
+
+%% Las dos franjas escalonadas del borde inferior.
+%%
+%% Es lo que hacía `decolines`: tres líneas de distinto grosor, cada una
+%% sangrada por un lado distinto, de forma que el borde de la diapositiva no
+%% acaba en un canto sino en un remate. La primera de las tres es aquí la
+%% barra de progreso, que además informa; estas dos sólo rematan.
+%%
+%% Sangradas desde la izquierda, como el original, y de más claro a más
+%% oscuro hacia abajo: pesa el borde inferior y la diapositiva se apoya.
+\newcommand{\didacta@rules}{%
+  \hbox to \paperwidth{%
+    \hskip0.18\paperwidth
+    \color{didactaAccent!70}\rule{0.82\paperwidth}{2.2pt}%
+  }%
+  \nointerlineskip
+  \hbox to \paperwidth{%
+    \hskip0.08\paperwidth
+    \color{didactaAccentDark}\rule{0.92\paperwidth}{1.4pt}%
+  }%
 }
 
 %% A one-pixel bar whose filled fraction is the position in the deck.
@@ -144,6 +198,10 @@
 %%
 %% A full-bleed band. Gives the room a beat to reset between topics, which is
 %% the whole point of a section divider.
+%%
+%% Encima del título va el número de apartado en pequeño --«Apartado 2»--, que
+%% es la única información que una página de separación puede dar y no daba:
+%% dónde estamos de las cinco partes que se anunciaron en el índice.
 %% ---------------------------------------------------------------------------
 
 \AtBeginSection[]{%
@@ -151,9 +209,14 @@
   \setbeamertemplate{footline}{}%
   \begin{frame}[plain, noframenumbering]
     \vfill
-    \begin{beamercolorbox}[wd=\paperwidth, ht=6ex, dp=4ex, center]{frametitle}%
-      \usebeamerfont{title}\insertsection%
+    \begin{beamercolorbox}[wd=\paperwidth, ht=7.5ex, dp=5ex, center]{frametitle}%
+      {\usebeamerfont{framesubtitle}\small\color{white!75!didactaAccentDark}%
+        \didactaSectionName~\thesection\par}
+      \vspace{0.6ex}
+      {\usebeamerfont{title}\insertsection\par}%
     \end{beamercolorbox}%
+    \par\nointerlineskip
+    \didacta@rules@bleed
     \vfill
   \end{frame}
   \endgroup
@@ -175,36 +238,63 @@
 
 %% ---------------------------------------------------------------------------
 %% Title page
+%%
+%% Una banda a sangre con el título en blanco, las franjas debajo, y los datos
+%% --quién, dónde, qué curso-- en el tercio inferior junto al logotipo.
+%%
+%% Es la forma de la portada del tema heredado (`alternativetitlepage` de
+%% `fancy`), y se ha recuperado porque la primera diapositiva es la que está
+%% proyectada mientras la gente entra y se sienta: durante cinco minutos es lo
+%% único que se ve de la asignatura. La versión anterior --texto negro
+%% centrado sobre blanco-- se leía igual de bien y no decía nada.
 %% ---------------------------------------------------------------------------
+
+\setbeamercolor{didacta@titleband}{fg=white, bg=didactaAccentDark}
 
 \newcommand{\didacta@titlepage@slides}{%
   \begingroup
   \setbeamertemplate{footline}{}%
   \begin{frame}[plain, noframenumbering]
-    \vspace{0.6cm}
-    \ifdefempty{\didactaCourseLogo}{}{%
-      \begin{center}\includegraphics[height=1.3cm]{\didactaCourseLogo}\end{center}
-      \vspace{0.3cm}}
-    \begin{center}
-      {\usebeamerfont{title}\color{didactaInk}\didactaCourseTitle\par}
+    %% Deshacer el relleno que beamer pone encima y debajo del cuerpo para
+    %% centrarlo verticalmente. La banda tiene que apoyarse en el canto de
+    %% arriba --un dedo de blanco por encima la convierte en un rectángulo
+    %% flotando-- y la firma en el de abajo. Lo que quede por repartir se lo
+    %% llevan entonces los dos \vfill de en medio, que es donde sobra sitio.
+    \vskip-\beamer@frametopskip
+    \begin{beamercolorbox}[wd=\paperwidth, ht=0.2\paperheight, center,
+                           sep=10pt]{didacta@titleband}%
+      {\usebeamerfont{title}\didactaCourseTitle\par}
       \ifdefempty{\didactaCourseSubtitle}{}{%
-        \vspace{0.25cm}
-        {\usebeamerfont{subtitle}\color{didactaMuted}\didactaCourseSubtitle\par}}
-      \vspace{0.5cm}
-      {\color{didactaAccent}\rule{0.45\linewidth}{1.4pt}\par}
-      \vspace{0.5cm}
+        \vspace{0.35em}
+        {\usebeamerfont{subtitle}\color{white!78!didactaAccentDark}%
+          \didactaCourseSubtitle\par}}
+    \end{beamercolorbox}%
+    \par\nointerlineskip
+    \didacta@rules@bleed
+    %% El título del día, algo por encima del centro: mirado de lejos, el
+    %% centro geométrico de una diapositiva parece bajo.
+    \vspace{\stretch{1}}
+    \begin{center}
       \ifdefempty{\didactaDocumentTitle}{}{%
         {\large\color{didactaInk}\didactaDocumentTitle\par}}
       \iftoggle{didacta@teacher}{%
         \vspace{0.4cm}
         {\small\color{didactaTeacher}\bfseries\didactaTeacherName\par}}{}
-      \vfill
+    \end{center}
+    \vspace{\stretch{1.6}}
+    \begin{minipage}[c]{\ifdefempty{\didactaCourseLogo}{0pt}{0.22\textwidth}}
+      \ifdefempty{\didactaCourseLogo}{}{%
+        \includegraphics[height=1.3cm]{\didactaCourseLogo}}%
+    \end{minipage}%
+    \hfill
+    \begin{minipage}[c]{\ifdefempty{\didactaCourseLogo}{\textwidth}{0.74\textwidth}}
+      \raggedleft
       {\footnotesize\color{didactaMuted}
         \didactaCourseTeacher
-        \ifdefempty{\didactaCourseInstitution}{}{\ \textbullet\ \didactaCourseInstitution}%
+        \ifdefempty{\didactaCourseInstitution}{}{\\\didactaCourseInstitution}%
         \ifdefempty{\didactaCourseYear}{}{\ \textbullet\ \didactaCourseYear}\par}
-    \end{center}
-    \vspace{0.3cm}
+    \end{minipage}
+    \par\vspace{0.7cm}\vskip-\beamer@framebottomskip
   \end{frame}
   \endgroup
 }

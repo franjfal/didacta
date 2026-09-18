@@ -16,6 +16,7 @@ Compiler makeCompiler({
   required String enginePath,
   required String repositoryPath,
   String? texPath,
+  List<String> templateDirs = const [],
 }) => throw const CompileException(
   'Un navegador no puede compilar LaTeX. Usa la aplicación de escritorio, o '
   'el comando que da la pantalla del documento.',

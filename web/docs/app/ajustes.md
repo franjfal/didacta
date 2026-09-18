@@ -102,6 +102,17 @@ dos bloques. Por eso cada bloque enseña en qué repositorios está declarado, y
 se marca y se desmarca desde ahí. El precio de declararlo en dos es que pueden
 acabar discrepando, y de eso avisa [Entre repositorios](entre-repos.md).
 
+### Con qué se compila cada bloque
+
+Cada bloque dice en qué plantillas se compila lo suyo, y es el botón de las
+hojas de su fila. Eso es **lo que viene marcado** al compilar una lección o un
+tema de ese bloque; el menú sigue ofreciendo todas las encendidas, porque el
+mismo tema se quiere en libro un día y en diapositivas otro.
+
+Un bloque que no elige compila en todas las encendidas. Vacío nunca quiere
+decir «ninguna»: dejaría su material sin salidas y el botón de compilar no
+haría nada sin decir por qué.
+
 ### Quitar uno
 
 Pregunta antes qué pasa con sus lecciones, y no se puede saltar:
@@ -120,6 +131,68 @@ ninguna parte sin que nadie lo haya decidido.
     sus lecciones salen en la biblioteca, se editan y se compilan igual. Lo
     único que cambia es que el bloque se enseña por su id. Quien no tenga el
     repositorio donde alguien puso el nombre sigue viendo todo su material.
+
+## Plantillas
+
+Una **plantilla** es una salida: qué PDF sale de una lección o de un tema. Trae
+la clase de documento, sus opciones, los cinco ejes y --si quieres-- tu propia
+cabecera de LaTeX.
+
+Las quince que trae Didacta salen aquí desde el primer día. Se pueden apagar,
+renombrar, duplicar y editar, y hay una cosa que conviene entender antes:
+
+!!! warning "Editar una de serie la escribe en tu repositorio"
+
+    Las quince viven en el programa y **no se tocan ahí**. Al editar una,
+    Didacta la declara en el repositorio que elijas con su mismo id, y a partir
+    de ese momento manda la tuya. La de serie se queda intacta, que es lo que
+    mantiene vivo un `pdflatex master.tex` a mano en un editor.
+
+    El formulario lo dice antes de guardar, y el identificador no se puede
+    cambiar: es justamente lo que hace que sustituya a la otra.
+
+### Apagar no es borrar
+
+La casilla de cada plantilla decide si esa versión se compila. Apagarla la deja
+declarada, **con su cabecera**, y fuera de todo lo que se saca: es lo que se
+quiere de una versión que este curso no se da. Borrarla perdería justo lo que
+había que guardar.
+
+Es también la respuesta a tener quince salidas y usar cuatro.
+
+### Dónde se guarda cada una
+
+Al crear o duplicar una plantilla se elige dónde vive:
+
+- **en un repositorio** --lo normal--: viaja con el material, la ve quien lo
+  comparte y la protege el historial de git;
+- **en el programa**: para lo que es tuyo y no de la asignatura --el membrete
+  de tu departamento, tus colores-- o para cuando el material es de otra
+  persona y no puedes escribir en él.
+
+!!! danger "Lo que se guarda en el programa no lo protege nadie"
+
+    No está en git, no se sincroniza y **se va con el ordenador**. Por eso los
+    dos botones de al lado no son un lujo:
+
+    - **Copiar a una carpeta** saca un `templates.yaml` y sus `.tex` donde
+      digas. Es la copia de seguridad, y se puede meter tal cual en cualquier
+      repositorio.
+    - **Traer de una carpeta** los recupera. Lo que ya esté con el mismo
+      nombre se conserva: recuperar una copia encima de lo que se ha escrito
+      después es la forma más rápida de perder el trabajo de una tarde.
+
+    Ajustes dice cuántas plantillas están ahí y en qué carpeta, para que el día
+    que cambies de ordenador sepas qué llevarte.
+
+### La cabecera
+
+El botón **Cabecera** abre el LaTeX de esa plantilla. Se lee **al final del
+preámbulo de Didacta**, así que puede redefinir lo que Didacta acaba de
+definir: los márgenes, los colores, un entorno. No lleva `\documentclass` ni
+`\begin{document}`; de eso se encarga la plantilla.
+
+[:octicons-arrow-right-24: Qué es una plantilla, entero](../conceptos/perfiles.md#las-plantillas-tus-propias-salidas)
 
 ## Herramientas
 
@@ -178,6 +251,30 @@ tienes en un sitio propio.
 mirado**, que es lo que permite arreglarlo.
 
 [:octicons-arrow-right-24: La distribución de TeX](../empezar/latex.md)
+
+## Poner los ids a las lecciones { #poner-los-ids-a-las-lecciones }
+
+Esta sección **solo aparece mientras haya algo que poner al día**, y desaparece
+en cuanto se hace. Un ajuste que sirve una vez y se queda ahí para siempre es
+ruido en una pantalla que se abre a diario.
+
+Un repositorio escrito antes de que las lecciones tuvieran identidad propia las
+identifica por su ruta. Con un id propio, mover una de carpeta deja de romper
+quién la usa, y «este material, ¿dónde más está?» sigue teniendo respuesta
+después de reorganizar `content/`.
+
+Ponerlos escribe una línea `id:` en cada `unit.yaml` que no la tenga. **No
+mueve nada, no renombra nada y no toca el contenido**, y queda como un commit
+propio que se puede leer y revertir de una pieza.
+
+El id se deriva de la ruta con un hash, así que sale el mismo lo haga quien lo
+haga: quien ponga al día el mismo repositorio en otro ordenador escribe
+exactamente esto, y el merge no tiene nada que resolver.
+
+Desde el terminal es `didacta ids` para ver cuántas faltan y
+`didacta ids --apply` para escribirlas.
+
+[:octicons-arrow-right-24: Contenido vinculado](../conceptos/vinculos.md)
 
 ## Traducción
 

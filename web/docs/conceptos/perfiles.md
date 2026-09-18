@@ -30,7 +30,7 @@ didacta profiles
 | `exam` | article | documento | — | alumno | — |
 | `exam-marking` | article | documento | todas | profesor | — |
 
-## No son quince plantillas
+## No son quince cosas distintas
 
 Son cinco ejes independientes, y cada perfil es un preajuste sobre ellos:
 
@@ -52,8 +52,12 @@ flowchart TD
 ```
 
 Eso importa por una razón muy concreta: **añadir una salida nueva es una
-línea** en `latex/didacta-profiles.tex`, y nada más en el sistema necesita
-enterarse. Ni el motor, ni la aplicación, ni las unidades.
+línea**, y nada más en el sistema necesita enterarse. Ni el motor, ni la
+aplicación, ni las unidades.
+
+Esa línea estaba en `latex/didacta-profiles.tex`, que viene con Didacta -- o
+sea, que añadir una salida era editar el programa. Ahora también se puede
+declarar en el repositorio, y entonces se llama **plantilla**.
 
 ??? abstract "Por qué `beamerarticle` es la línea que lo sostiene"
 
@@ -90,6 +94,104 @@ Los perfiles `-teacher` abren un canal que en los demás **no existe**:
 Que no exista, y no que esté oculto, es la diferencia importante: no hay
 ninguna forma de que un descuido reparta la copia del profesor con el texto
 dentro pero invisible.
+
+## Las plantillas: tus propias salidas
+
+Una plantilla es un perfil declarado por quien escribe el material, con una
+cosa más: **su propio preámbulo de LaTeX**. Vive en el repositorio:
+
+```
+templates.yaml          las declaraciones
+templates/<id>.tex      la cabecera de cada una, opcional
+```
+
+```yaml
+templates:
+  - id: apuntes-a5
+    title:
+      es: Apuntes de bolsillo
+    class: article
+    options: "10pt,a5paper"
+    axes: {medium: document, detail: full}
+```
+
+Y `templates/apuntes-a5.tex`, si hace falta:
+
+```latex
+\usepackage{lmodern}
+\geometry{margin=1.5cm}
+```
+
+Ese fichero se lee **al final del preámbulo de Didacta**, y ese orden es la
+razón de que exista: una plantilla puede redefinir lo que Didacta acaba de
+definir --los márgenes, los colores, un entorno-- en lugar de que Didacta la
+pise.
+
+### Cuatro reglas, y ninguna puede romper nada
+
+**Un repositorio que no declara ninguna compila igual que siempre.** Las
+quince de arriba siguen viniendo con el programa. Sin `templates.yaml` no
+cambia absolutamente nada.
+
+**Una plantilla con el id de una de serie la sustituye.** Editar «Apuntes» es
+declarar una plantilla que se llama `notes`. La de serie sigue en el programa,
+que es lo que mantiene vivo un `pdflatex master.tex` a mano, en un editor y
+sin que el motor intervenga.
+
+**`active: false` la apaga sin borrarla.** Deja de compilarse y se queda
+declarada, con su cabecera, para el curso que vuelva a hacer falta. Borrarla
+perdería justamente lo que se quería guardar.
+
+**Se declara en un repositorio y la usan todos.** Como los bloques y las
+titulaciones: la teoría y los problemas están repartidos en dos repositorios y
+el bloque de uno puede compilarse con la plantilla que declara el otro.
+
+## Qué se compila de cada cosa
+
+Tres niveles, y cada uno se aparta del anterior solo si quiere:
+
+```mermaid
+flowchart TD
+  B["El bloque<br/>taxonomy.yaml"] -->|"por defecto"| D["El documento<br/>year.yaml"]
+  B -->|"por defecto"| U["La lección<br/>unit.yaml"]
+  D --> P["Los PDF que salen"]
+  U --> P
+```
+
+**El bloque** dice con qué se compila lo suyo:
+
+```yaml
+blocks:
+  - id: theory
+    title: {es: Teoría}
+    templates: [slides, notes, book]
+```
+
+**El documento** y **la lección** pueden quedarse con menos:
+
+```yaml
+# en year.yaml
+documents:
+  - id: tema-1
+    templates: [notes]
+
+# en unit.yaml
+templates: [slides]
+```
+
+Una lista **vacía o ausente quiere decir «lo que toque»**, nunca «nada»: sin
+lista, el bloque compila en todas las plantillas activas, y el documento y la
+lección en las de su bloque. Si significara «nada», declarar un bloque dejaría
+su material sin salidas y el botón de compilar no haría nada sin decir por
+qué.
+
+Un documento no declara bloque: hereda el de las lecciones que compone, así
+que un tema con su teoría y sus ejercicios sale con las plantillas de los dos.
+
+!!! info "El nombre viejo se sigue leyendo"
+
+    En `year.yaml` esto se llamaba `profiles:` y está escrito en cientos de
+    entradas. Se lee igual; lo que Didacta escribe es `templates:`.
 
 ## Qué perfiles tiene un documento
 

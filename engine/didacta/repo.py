@@ -41,6 +41,8 @@ from __future__ import annotations
 import os
 import re
 
+from . import freeze as freeze_mod
+from . import identity as identity_mod
 from . import profiles as profiles_mod
 from . import yamlio
 
@@ -201,11 +203,18 @@ class Block:
     enseña por su id, y la aplicación lo señala para que alguien lo declare.
     """
 
-    __slots__ = ("id", "titles", "raw")
+    __slots__ = ("id", "titles", "templates", "raw")
 
-    def __init__(self, id, titles=None, raw=None):
+    def __init__(self, id, titles=None, templates=None, raw=None):
         self.id = id
         self.titles = titles or {}
+        #: Las plantillas con las que se compila lo de este bloque, por id.
+        #:
+        #: Vacía quiere decir «las que haya activas», no «ninguna»: un bloque
+        #: recién declarado tiene que compilar sin que nadie elija nada, y una
+        #: lista vacía que significara «nada» convertiría declarar un bloque
+        #: en dejar su material sin salidas.
+        self.templates = list(templates or [])
         self.raw = raw or {}
 
     def title(self, language=None):
@@ -217,7 +226,8 @@ class Block:
         return self.id
 
     def as_dict(self):
-        return {"id": self.id, "title": dict(self.titles)}
+        return {"id": self.id, "title": dict(self.titles),
+                "templates": list(self.templates)}
 
 
 class Category:
@@ -307,10 +317,18 @@ class Taxonomy:
             if identifier in block_ids:
                 raise RepoError("%s: duplicate block `%s`" % (path, identifier))
             block_ids.add(identifier)
+            declared_templates = item.get("templates")
+            if declared_templates is not None and not isinstance(
+                    declared_templates, list):
+                raise RepoError(
+                    "%s: `templates` of block `%s` should be a list"
+                    % (path, identifier)
+                )
             blocks.append(Block(
                 id=identifier,
                 titles=yamlio.localised(item.get("title"), languages,
                                         path=path, key="title"),
+                templates=[str(t) for t in (declared_templates or [])],
                 raw=item,
             ))
         categories = []
@@ -495,8 +513,8 @@ class Unit:
     """One reusable piece of content: a directory with a unit.yaml."""
 
     __slots__ = (
-        "id", "kind", "block", "directory", "relpath", "titles", "category",
-        "topic", "tags", "reference", "languages", "prerequisites",
+        "id", "kind", "block", "templates", "directory", "relpath", "titles",
+        "category", "topic", "tags", "reference", "languages", "prerequisites",
         "objectives", "duration_minutes", "difficulty", "parts", "marks",
         "raw", "warnings",
     )
@@ -504,7 +522,8 @@ class Unit:
     def __init__(self, **kwargs):
         for slot in self.__slots__:
             setattr(self, slot, kwargs.get(slot))
-        for slot in ("tags", "prerequisites", "objectives", "warnings"):
+        for slot in ("tags", "prerequisites", "objectives", "warnings",
+                     "templates"):
             if getattr(self, slot) is None:
                 setattr(self, slot, [])
         if self.languages is None:
@@ -588,6 +607,7 @@ class Unit:
             "id": self.id,
             "kind": self.kind,
             "block": self.block,
+            "templates": list(self.templates),
             "path": self.relpath,
             "title": self.titles,
             "category": self.category,
@@ -642,6 +662,16 @@ def load_unit(root, relpath, settings):
     # lectura. Quien tiene los dos delante es la aplicación, y es ella quien
     # señala los bloques que no declara nadie.
     block = data.get("block") or ("problems" if area == PROBLEMS else "theory")
+
+    # En qué plantillas se compila **esta** lección.
+    #
+    # Vacía es lo corriente y quiere decir «las que diga su bloque»: elegir
+    # aquí es la excepción --esta lección concreta no se quiere en
+    # diapositivas-- y hacer que la lista vacía significara «ninguna» dejaría
+    # sin compilar todo el material que no la declara, que es todo.
+    declared_templates = data.get("templates")
+    if declared_templates is not None and not isinstance(declared_templates, list):
+        raise RepoError("%s: `templates` should be a list" % meta_path)
 
     identifier = data.get("id") or ".".join(
         p for p in parts[1:] if p
@@ -709,6 +739,7 @@ def load_unit(root, relpath, settings):
         id=identifier,
         kind=kind,
         block=block,
+        templates=[str(t) for t in (declared_templates or [])],
         directory=directory,
         relpath=relpath,
         titles=titles,
@@ -934,7 +965,11 @@ class Document:
     """One compilable document inside a course year."""
 
     __slots__ = ("id", "course", "year", "kind", "titles", "source", "profiles",
-                 "structure", "unit_refs", "language", "themes", "raw")
+                 "structure", "unit_refs", "language", "themes", "raw",
+                 # De qué entidad de contenido es esta ubicación, y dónde
+                 # está escrita. Vacíos en un documento que solo se da aquí:
+                 # no forma grupo, así que no necesita identidad aparte.
+                 "content", "content_path")
 
     def __init__(self, **kwargs):
         for slot in self.__slots__:
@@ -967,6 +1002,7 @@ class Document:
             "unitRefs": self.unit_refs,
             "structure": self.structure,
             "themes": list(self.themes),
+            "content": self.content,
         }
 
 
@@ -974,7 +1010,7 @@ class CourseYear:
     """One academic year of a course."""
 
     __slots__ = ("course", "year", "group", "language", "directory", "documents",
-                 "themes", "raw")
+                 "themes", "freezes", "freeze_errors", "raw")
 
     def __init__(self, **kwargs):
         for slot in self.__slots__:
@@ -983,6 +1019,10 @@ class CourseYear:
             self.documents = []
         if self.themes is None:
             self.themes = []
+        if self.freezes is None:
+            self.freezes = []
+        if self.freeze_errors is None:
+            self.freeze_errors = []
 
     @property
     def id(self):
@@ -1129,6 +1169,21 @@ def load_year(root, course, year, directory, settings):
         raw=data,
     )
 
+    # Las versiones congeladas de este curso. Fichero aparte y opcional: un
+    # curso sin congelar no tiene ninguna, y es el caso de todos hasta que
+    # alguien congela el primero.
+    #
+    # Y un `freezes.yaml` roto **no se lleva el curso por delante**. Es
+    # metadatos sobre commits, no el material: un fichero mal escrito a mano
+    # tiene que dejar la asignatura entera sin abrir tan poco como un tema que
+    # declara otro repositorio. Se dice --`check` lo cuenta y el índice lo
+    # publica-- y el curso se lee igual.
+    try:
+        entry.freezes = freeze_mod.load(directory, course.id, year)
+    except (freeze_mod.FreezeError, yamlio.YamlError) as exc:
+        entry.freezes = []
+        entry.freeze_errors = [str(exc)]
+
     declared = data.get("documents") or []
     if declared and not isinstance(declared, list):
         raise RepoError("%s: `documents` should be a list" % meta_path)
@@ -1139,6 +1194,32 @@ def load_year(root, course, year, directory, settings):
         identifier = item.get("id")
         if not identifier:
             raise RepoError("%s: a document is missing its `id`" % meta_path)
+
+        # Un documento vinculado: lo que se da aquí está escrito en
+        # `shared/documents/`, y esta entrada es solo la ubicación. Se lee de
+        # allí y a partir de este punto es un documento como cualquier otro,
+        # que es lo que permite que el índice, la composición y la
+        # compilación no se enteren de que existe la vinculación.
+        content = str(item.get("link")).strip() if item.get("link") else None
+        content_path = None
+        if content:
+            content_path = identity_mod.shared_path(root, content)
+            shared = identity_mod.load_shared(root, content)
+            if shared is None:
+                # No es un error de lectura: el fichero compartido puede
+                # vivir en otro repositorio que esta máquina no tiene abierto,
+                # exactamente como un tema que declara otro. El documento sale
+                # vacío y `check` dice cuál falta; nunca desaparece el curso
+                # entero por un fichero que no está.
+                shared = {}
+            # La ubicación no redefine el contenido: un tema vinculado es el
+            # mismo tema, y dejar que un curso le cambiara el título por su
+            # cuenta sería tener dos títulos para una sola entidad. Lo único
+            # que es de la ubicación es su `id`, que es el nombre del `.tex`.
+            item = dict(shared, id=identifier, link=content)
+            meta_for_item = content_path
+        else:
+            meta_for_item = meta_path
 
         source = os.path.join(directory, "%s.tex" % identifier)
         structure = item.get("structure") or []
@@ -1155,9 +1236,17 @@ def load_year(root, course, year, directory, settings):
                 year=year,
                 kind=item.get("kind") or "theory",
                 titles=yamlio.localised(item.get("title"), settings.languages,
-                                        path=meta_path, key="title"),
+                                        path=meta_for_item, key="title"),
                 source=source if os.path.isfile(source) else None,
-                profiles=[str(p) for p in (item.get("profiles") or [])],
+                content=content,
+                content_path=content_path,
+                # En qué plantillas se compila. `templates:` es el nombre de
+                # ahora; `profiles:` es como se llamaba y sigue leyéndose,
+                # porque está escrito en los `year.yaml` del material que ya
+                # existe y cambiarlo sería reescribir cientos de entradas para
+                # no decir nada nuevo.
+                profiles=[str(p) for p in (item.get("templates")
+                                           or item.get("profiles") or [])],
                 structure=structure,
                 unit_refs=unit_refs,
                 language=item.get("language") or entry.language,

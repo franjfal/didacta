@@ -86,6 +86,53 @@ enum CloneTarget {
   occupied,
 }
 
+/// Un árbol de trabajo aparte, parado en un commit.
+///
+/// Es lo que hace que abrir una congelación no cueste una copia del
+/// repositorio: git ya tiene ese commit, y un worktree es una carpeta con sus
+/// ficheros y nada más -- sin otro `.git`, sin otra historia y sin tocar el
+/// árbol de trabajo de siempre.
+class Worktree {
+  const Worktree({required this.directory, required this.commit});
+
+  final String directory;
+
+  /// El commit entero al que está parado.
+  final String commit;
+}
+
+/// Qué le pasó a un fichero entre dos commits.
+enum TreeChangeKind { added, removed, modified, renamed }
+
+class TreeChange {
+  const TreeChange({required this.kind, required this.path, this.from = ''});
+
+  final TreeChangeKind kind;
+
+  /// La ruta al final. En un renombrado, la nueva.
+  final String path;
+
+  /// De dónde venía, cuando se movió.
+  final String from;
+}
+
+/// Cómo de hondo hay que cavar para traerse un commit que no está.
+///
+/// Un clon shallow no tiene la historia entera, y un commit congelado hace un
+/// año puede no estar en él. Traerlo **entero** funcionaría siempre y es lo
+/// que no se hace: un repositorio de material son cientos de megas y nadie
+/// pidió descargarlos por abrir una versión de septiembre.
+enum FetchDepth {
+  /// El commit y nada más. Es lo que hace GitHub cuando lo permite.
+  justTheCommit,
+
+  /// Unos cuantos commits más de historia. Se repite si hace falta.
+  deeper,
+
+  /// La historia entera. El último recurso, y se dice antes de hacerlo.
+  everything,
+}
+
 class CloneException implements Exception {
   const CloneException(this.message, {this.stderr = ''});
 
@@ -398,4 +445,91 @@ build_dir: .didacta-build
   Future<void> pull({required String token});
 
   Future<void> push({required String token});
+
+  /// El SHA entero de HEAD.
+  ///
+  /// Entero y no corto: una congelación lo guarda durante años, y un prefijo
+  /// que hoy es único deja de serlo cuando el repositorio crece.
+  Future<String> head();
+
+  /// Si este clon tiene ese commit.
+  Future<bool> hasCommit(String sha);
+
+  /// Si este clon se hizo sin la historia entera.
+  Future<bool> isShallow();
+
+  /// Trae un commit que no está, cavando lo menos posible.
+  ///
+  /// Primero pidiéndolo por su SHA, que es lo barato y lo que GitHub permite;
+  /// después profundizando la historia por tramos; y solo si nada de eso vale,
+  /// entera. [onStep] cuenta cada intento para poder decir por qué está
+  /// tardando -- una descarga silenciosa de trescientos megas es indistinguible
+  /// de un cuelgue.
+  Future<void> fetchCommit(
+    String sha, {
+    required String token,
+    void Function(FetchDepth step) onStep,
+  });
+
+  /// Un árbol de trabajo parado en [sha], creándolo o reutilizando el que ya
+  /// hubiera.
+  ///
+  /// Se abre **en solo lectura desde Didacta**: nada de lo que hace la
+  /// aplicación escribe ahí. Y no toca el clon de siempre -- ni su HEAD, ni su
+  /// índice, ni su árbol de trabajo.
+  Future<Worktree> worktreeAt(String sha);
+
+  /// Quita el árbol de trabajo de ese commit, si lo hay.
+  ///
+  /// No borra el commit ni toca la historia: lo único que se va es la carpeta
+  /// de la caché.
+  Future<void> removeWorktree(String sha);
+
+  /// Los árboles de trabajo que tiene la caché.
+  Future<List<Worktree>> worktrees();
+
+  /// Vacía la caché de árboles de trabajo.
+  Future<int> clearWorktrees();
+
+  /// Qué cambió entre dos commits, limitado a [paths] cuando se dan.
+  ///
+  /// Con los renombrados detectados: un fichero que se movió tiene que salir
+  /// como movido y no como un borrado más un alta, que es la diferencia entre
+  /// «reorganizaron la carpeta» y «perdimos treinta lecciones».
+  Future<List<TreeChange>> changesBetween({
+    required String from,
+    required String to,
+    List<String> paths,
+  });
+
+  /// El diff de un fichero entre dos commits.
+  Future<FileDiff> diffBetween({
+    required String from,
+    required String to,
+    required String path,
+    int context,
+  });
+
+  /// Las rutas que existen bajo [under] en ese commit.
+  Future<List<String>> pathsAt({required String sha, String under = ''});
+
+  /// Escribe en el árbol de trabajo el contenido que [sha] tenía bajo
+  /// [paths], y borra lo que en ese commit no existía.
+  ///
+  /// **No hace `reset`, no mueve HEAD y no reescribe nada.** Deja los ficheros
+  /// como estaban entonces y ya está: lo que quede es un cambio pendiente,
+  /// que se confirma como cualquier otro. Devuelve lo que ha tocado.
+  Future<List<TreeChange>> restoreFrom({
+    required String sha,
+    required List<String> paths,
+  });
+
+  /// Lo que haría [restoreFrom], sin tocar nada.
+  ///
+  /// Se enseña antes de restaurar. «Esto va a cambiar catorce ficheros y
+  /// borrar dos» es lo que permite decidir; «¿seguro?» no lo es.
+  Future<List<TreeChange>> previewRestore({
+    required String sha,
+    required List<String> paths,
+  });
 }

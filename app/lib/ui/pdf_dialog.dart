@@ -25,6 +25,9 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../data/compiler.dart';
 import '../model/catalogue.dart';
+import 'export_actions.dart';
+import 'pdf_controls.dart';
+import 'pdf_sidebar.dart';
 import 'theme.dart';
 
 Future<void> showBuiltPdfs(
@@ -106,7 +109,77 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
 
   int _at = 0;
 
+  /// Lo mismo que en la pestaña, y por la misma razón: un visor con
+  /// lateral, zoom y ajustes, y el otro con la rueda del ratón, son dos
+  /// programas distintos para mirar el mismo PDF.
+  final Map<String, PdfViewerController> _controllers = {};
+  final Map<String, PdfDocument> _documents = {};
+  final Map<String, List<PdfOutlineNode>> _outlines = {};
+  final Map<String, int> _pages = {};
+  final Map<String, int> _page = {};
+
+  bool _sidebar = false;
+  int? _zoom;
+
   List<ExistingOutput> get _shown => _byLanguage[_language] ?? const [];
+
+  PdfViewerController _controllerFor(String path) =>
+      _controllers.putIfAbsent(path, () {
+        final controller = PdfViewerController();
+        controller.addListener(() => _noteZoom(path, controller));
+        return controller;
+      });
+
+  void _noteZoom(String path, PdfViewerController controller) {
+    if (!mounted || path != _current?.pdf || !controller.isReady) return;
+    final now = (controller.currentZoom * 100).round();
+    if (now == _zoom) return;
+    setState(() => _zoom = now);
+  }
+
+  ExistingOutput? get _current =>
+      _shown.isEmpty ? null : _shown[_at.clamp(0, _shown.length - 1)];
+
+  PdfViewerController? get _controller {
+    final path = _current?.pdf;
+    return path == null ? null : _controllers[path];
+  }
+
+  bool get _ready => _controller?.isReady ?? false;
+
+  void _noteReady(String path, PdfDocument document) {
+    if (!mounted) return;
+    setState(() {
+      _pages[path] = document.pages.length;
+      _documents[path] = document;
+    });
+    _loadOutline(path, document);
+  }
+
+  Future<void> _loadOutline(String path, PdfDocument document) async {
+    List<PdfOutlineNode> outline;
+    try {
+      outline = await document.loadOutline();
+    } catch (_) {
+      outline = const [];
+    }
+    if (!mounted || _documents[path] != document) return;
+    setState(() => _outlines[path] = outline);
+  }
+
+  void _goTo(int page) {
+    final path = _current?.pdf;
+    if (path == null) return;
+    final total = _pages[path] ?? 1;
+    _controllers[path]?.goToPage(pageNumber: page.clamp(1, total));
+  }
+
+  void _fit(Matrix4? Function(PdfViewerController controller, int page) how) {
+    final controller = _controller;
+    if (controller == null || !controller.isReady) return;
+    final matrix = how(controller, controller.pageNumber ?? 1);
+    if (matrix != null) controller.goTo(matrix);
+  }
 
   String _nameOf(String code) {
     for (final option in widget.languages) {
@@ -123,6 +196,7 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
       );
     }
     final current = _shown[_at.clamp(0, _shown.length - 1)];
+    final page = _page[current.pdf] ?? 1;
 
     return Dialog(
       clipBehavior: Clip.antiAlias,
@@ -134,16 +208,50 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
             _header(context, current),
             if (_codes.length > 1) _languages(),
             if (_shown.length > 1) _tabs(),
+            _controls(current, page),
             Expanded(
-              child: Container(
-                color: didactaSurface,
-                child: PdfViewer.file(
-                  current.pdf,
-                  // Con clave: cambiar de pestaña tiene que cargar el otro
-                  // fichero, y sin esto el visor se queda con el primero.
-                  key: ValueKey(current.pdf),
-                  params: const PdfViewerParams(margin: 10),
-                ),
+              child: Row(
+                children: [
+                  if (_sidebar)
+                    PdfSidebar(
+                      document: _documents[current.pdf],
+                      outline: _outlines[current.pdf] ?? const [],
+                      page: page,
+                      onGoToPage: _goTo,
+                      onGoToDest: (dest) =>
+                          _controllers[current.pdf]?.goToDest(dest),
+                    ),
+                  Expanded(
+                    child: Container(
+                      color: didactaSurface,
+                      child: PdfViewer.file(
+                        current.pdf,
+                        // Con clave: cambiar de pestaña tiene que cargar el
+                        // otro fichero, y sin esto el visor se queda con el
+                        // primero.
+                        key: ValueKey(current.pdf),
+                        controller: _controllerFor(current.pdf),
+                        params: PdfViewerParams(
+                          margin: 10,
+                          viewerOverlayBuilder:
+                              (context, size, handleLinkTap) => [
+                                PdfViewerScrollThumb(
+                                  controller: _controllerFor(current.pdf),
+                                  orientation: ScrollbarOrientation.right,
+                                  thumbSize: const Size(38, 26),
+                                ),
+                              ],
+                          onViewerReady: (document, controller) =>
+                              _noteReady(current.pdf, document),
+                          onPageChanged: (at) {
+                            if (at == null || !mounted) return;
+                            setState(() => _page[current.pdf] = at);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -151,6 +259,30 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
       ),
     );
   }
+
+  /// La barra de mandos, la misma que la de la pestaña.
+  Widget _controls(ExistingOutput current, int page) => PdfViewerBar(
+    page: page,
+    pages: _pages[current.pdf] ?? 1,
+    sidebar: _sidebar,
+    zoom: _ready ? (_zoom ?? 100) / 100 : null,
+    onSidebar: () => setState(() => _sidebar = !_sidebar),
+    onGoToPage: _goTo,
+    onZoomOut: _ready ? () => _controller!.zoomDown() : null,
+    onZoomIn: _ready ? () => _controller!.zoomUp() : null,
+    onActualSize: _ready
+        ? () => _controller!.setZoom(_controller!.centerPosition, 1)
+        : null,
+    onFitWidth: _ready
+        ? () => _fit((c, at) => c.calcMatrixFitWidthForPage(pageNumber: at))
+        : null,
+    onFitHeight: _ready
+        ? () => _fit((c, at) => c.calcMatrixFitHeightForPage(pageNumber: at))
+        : null,
+    onFitPage: _ready
+        ? () => _fit((c, at) => c.calcMatrixForFit(pageNumber: at))
+        : null,
+  );
 
   Widget _header(BuildContext context, ExistingOutput current) => Container(
     decoration: const BoxDecoration(
@@ -185,6 +317,16 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
               ),
             ],
           ),
+        ),
+        // Llevárselo. Antes de abrirlo fuera, porque es lo que se hace con
+        // el PDF que ya está bien: el visor del sistema es para mirarlo más
+        // grande, esto es para que salga de aquí.
+        IconButton(
+          key: const Key('pdf-save-copy'),
+          tooltip: 'Guardar una copia',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.file_download_outlined, size: 18),
+          onPressed: () => savePdfCopy(context, path: current.pdf),
         ),
         if (widget.onOpenExternally != null)
           IconButton(

@@ -80,7 +80,14 @@ abstract class PreviewTarget {
   List<MissingPiece> missingIn(Catalogue catalogue, String language);
 
   /// Las versiones que admite, con las suyas marcadas.
-  Future<List<BuildableProfile>> profilesFrom(Compiler compiler);
+  /// En qué versiones se puede compilar, y cuáles vienen marcadas.
+  ///
+  /// Del **catálogo** y no del motor, y esa es la diferencia que trajeron las
+  /// plantillas: quién decide con qué se compila algo es su bloque, que puede
+  /// estar declarado en el repositorio de al lado. El motor ve uno solo, así
+  /// que preguntarle a él daba la lista de antes -- la que salía del tipo de
+  /// la unidad, en una tabla escondida en Python.
+  List<BuildableProfile> profilesFrom(Catalogue catalogue);
 
   /// Lo que ya está compilado, si se puede saber.
   Future<List<ExistingOutput>> existingFrom(Compiler compiler);
@@ -92,6 +99,31 @@ abstract class PreviewTarget {
     bool fast,
     void Function(String line)? onOutput,
   });
+}
+
+/// Las versiones que se pueden compilar de esto.
+///
+/// **Solo las permitidas**, que son [wanted]: lo que el documento --o la
+/// lección-- tenga marcado en sus propiedades, y si no ha marcado nada, lo
+/// que diga su bloque. Esa lista es una restricción de verdad y no una
+/// sugerencia: si alguien decidió que de este tema no salen diapositivas, el
+/// menú de compilar no es el sitio para saltárselo.
+///
+/// Dentro de ellas sí se elige, que es lo que hace el diálogo: esta
+/// compilación sí y esta no.
+List<BuildableProfile> buildableFrom(Catalogue catalogue, List<String> wanted) {
+  final allowed = wanted.toSet();
+  return [
+    for (final template in catalogue.activeTemplates)
+      if (allowed.contains(template.id))
+        BuildableProfile(
+          id: template.id,
+          label: template.title(catalogue.defaultLanguage),
+          family: template.family,
+          reveals: template.reveals,
+          byDefault: true,
+        ),
+  ];
 }
 
 /// Una unidad suelta: `didacta preview`.
@@ -128,8 +160,8 @@ class UnitTarget implements PreviewTarget {
       const [];
 
   @override
-  Future<List<BuildableProfile>> profilesFrom(Compiler compiler) =>
-      compiler.profilesFor(unit.path);
+  List<BuildableProfile> profilesFrom(Catalogue catalogue) =>
+      buildableFrom(catalogue, catalogue.templatesFor(unit));
 
   @override
   Future<List<ExistingOutput>> existingFrom(Compiler compiler) =>
@@ -196,8 +228,8 @@ class DocumentTarget implements PreviewTarget {
   String get what => 'este tema';
 
   @override
-  Future<List<BuildableProfile>> profilesFrom(Compiler compiler) =>
-      compiler.documentProfiles(reference);
+  List<BuildableProfile> profilesFrom(Catalogue catalogue) =>
+      buildableFrom(catalogue, catalogue.templatesForDocument(document));
 
   /// Todavía no: el motor sabe decir qué hay compilado de una unidad, y para
   /// un documento aún no. Vacío en lugar de inventárselo, que enseñaría un
@@ -285,16 +317,28 @@ class PreviewState {
     try {
       final found = await compiler.status();
       final available = found.ready
-          ? await target.profilesFrom(compiler)
+          ? target.profilesFrom(session.catalogue)
           : const <BuildableProfile>[];
       status = found;
       profiles = available;
       if (found.ready) await _loadExisting(compiler);
-      // Las dos que se pidieron más la prosa por defecto, marcadas de
-      // entrada: son la respuesta casi siempre que alguien abre esto.
+      // Todas las permitidas, marcadas: si alguien ha restringido qué sale de
+      // esto, lo que queda es lo que quiere.
+      //
+      // Salvo que no haya restringido nadie. Ahí lo permitido es **todo** lo
+      // que hay, que en un repositorio con quince salidas son quince PDF por
+      // pulsar un botón, y vuelve a mandar lo de siempre: las dos que se
+      // pidieron más la prosa. Que estén todas es exactamente la forma que
+      // tiene «aquí no se ha decidido nada».
+      final unrestricted =
+          available.length == session.catalogue.activeTemplates.length;
       chosen
         ..clear()
-        ..addAll(available.where((p) => p.isPrimary).map((p) => p.id));
+        ..addAll(
+          available
+              .where((p) => unrestricted ? p.isPrimary : true)
+              .map((p) => p.id),
+        );
       if (chosen.isEmpty && available.isNotEmpty) {
         chosen.add(available.first.id);
       }

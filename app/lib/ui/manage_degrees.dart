@@ -74,8 +74,11 @@ class _DegreesDialogState extends State<DegreesDialog> {
                 _DegreeRow(
                   session: session,
                   degree: degree,
+                  writable: writable,
                   busy: _busy == degree.id,
                   onRename: () => _rename(degree),
+                  onToggle: (repo, declared) =>
+                      _toggle(degree, repo, declared: declared),
                 ),
             if (missing.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -164,6 +167,37 @@ class _DegreesDialogState extends State<DegreesDialog> {
     }
   }
 
+  /// Declarar o dejar de declarar un grado en un repositorio.
+  ///
+  /// Quitarlo del último que lo declara no borra nada: sus asignaturas salen
+  /// enteras, sin agrupar, y el propio diálogo las enseña abajo como
+  /// «nombradas y sin declarar». Por eso no pregunta, a diferencia de un
+  /// bloque: ahí lo que se queda sin sitio es material.
+  Future<void> _toggle(
+    Degree degree,
+    String repo, {
+    required bool declared,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = degree.id);
+    try {
+      if (declared) {
+        await widget.session.undeclareDegree(repo: repo, id: degree.id);
+      } else {
+        await widget.session.createDegree(
+          repo: repo,
+          id: degree.id,
+          titles: degree.titles,
+          institution: degree.institution,
+        );
+      }
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
   Future<void> _rename(Degree degree) async {
     // Los idiomas del material y no los diez del registro, más los que este
     // grado ya tenga escritos: un título en un idioma al que nadie traduce es
@@ -212,14 +246,31 @@ class _DegreeRow extends StatelessWidget {
   const _DegreeRow({
     required this.session,
     required this.degree,
+    required this.writable,
     required this.busy,
     required this.onRename,
+    required this.onToggle,
   });
 
   final Session session;
   final Degree degree;
+
+  /// Los repositorios en los que se puede escribir, que son en los que se
+  /// puede declarar o dejar de declarar.
+  final List<String> writable;
+
   final bool busy;
   final VoidCallback onRename;
+  final void Function(String repo, bool declared) onToggle;
+
+  /// Los que se ofrecen: en los que se puede escribir, más aquellos donde ya
+  /// está declarado aunque sean de solo lectura -- que se vea que está ahí,
+  /// aunque no se pueda quitar.
+  List<String> _reposToShow() => [
+    ...writable,
+    for (final repo in degree.sources.keys)
+      if (!writable.contains(repo) && repo.isNotEmpty) repo,
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -256,18 +307,34 @@ class _DegreeRow extends StatelessWidget {
               ],
             ),
           ),
-          // Quién lo declara. Con varios repositorios abiertos importa: es lo
-          // que dice a quién le llega el cambio si se renombra.
-          for (final repo in degree.sources.keys)
-            if (session.colourOf(repo) != null)
+          // Quién lo declara, y se toca. Con varios repositorios abiertos
+          // importa dos veces: es lo que dice a quién le llega el cambio si
+          // se renombra, y es lo que decide quién ve el grado cuando abre
+          // solo uno.
+          if (writable.length > 1 || degree.sources.length > 1)
+            for (final repo in _reposToShow())
               Padding(
                 padding: const EdgeInsets.only(right: 4),
-                child: RepoChip(
-                  colour: session.colourOf(repo)!,
+                child: _RepoToggle(
+                  id: 'degree-${degree.id}-$repo',
+                  colour: session.colourOf(repo) ?? 0xFF62697A,
                   label: session.workspace.byId(repo)?.label ?? repo,
-                  compact: true,
+                  declared: degree.sources.containsKey(repo),
+                  enabled: !busy && session.canWriteIn(repo),
+                  onTap: () => onToggle(repo, degree.sources.containsKey(repo)),
                 ),
-              ),
+              )
+          else
+            for (final repo in degree.sources.keys)
+              if (session.colourOf(repo) != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: RepoChip(
+                    colour: session.colourOf(repo)!,
+                    label: session.workspace.byId(repo)?.label ?? repo,
+                    compact: true,
+                  ),
+                ),
           if (busy)
             const SizedBox(
               width: 14,
@@ -289,6 +356,51 @@ class _DegreeRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Una ficha de repositorio que se pulsa: lo declara o no lo declara.
+class _RepoToggle extends StatelessWidget {
+  const _RepoToggle({
+    required this.id,
+    required this.colour,
+    required this.label,
+    required this.declared,
+    required this.enabled,
+    required this.onTap,
+  });
+
+  final String id;
+  final int colour;
+  final String label;
+  final bool declared;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Opacity(
+    opacity: enabled ? 1 : 0.55,
+    child: Hoverable(
+      onTap: enabled ? onTap : null,
+      builder: (context, hovering) => Tooltip(
+        message: declared
+            ? 'Lo declara. Púlsalo para dejar de declararlo aquí.'
+            : 'No lo declara. Púlsalo para declararlo aquí también.',
+        child: Row(
+          key: Key(id),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              declared ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 14,
+              color: declared ? Color(colour) : didactaMuted,
+            ),
+            const SizedBox(width: 4),
+            RepoChip(colour: colour, label: label, compact: true),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Lo que hace falta para declarar un grado.

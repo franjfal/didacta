@@ -34,12 +34,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "engine"))
 
 from didacta import build as build_mod  # noqa: E402
+from didacta import compose as compose_mod  # noqa: E402
+from didacta import freeze as freeze_mod  # noqa: E402
+from didacta import identity as identity_mod  # noqa: E402
 from didacta import index as index_mod  # noqa: E402
 from didacta import migrate as migrate_mod  # noqa: E402
 from didacta import mcp as mcp_mod
 from didacta import preview as preview_mod  # noqa: E402
 from didacta import profiles as profiles_mod  # noqa: E402
 from didacta import repo as repo_mod  # noqa: E402
+from didacta import reuse as reuse_mod  # noqa: E402
+from didacta import templates as templates_mod  # noqa: E402
 from didacta import tidy as tidy_mod  # noqa: E402
 from didacta import yamlio  # noqa: E402
 
@@ -201,11 +206,51 @@ def cmd_status(args):
 # profiles
 # --------------------------------------------------------------------------
 
+def templates_here(args):
+    """Las plantillas que se aplicarían aquí, o ninguna.
+
+    El repositorio si se está dentro de uno, más lo que digan los
+    `--templates-from`. Sin repositorio no es un error: `didacta profiles`
+    contesta desde cualquier sitio, y desde fuera lo que hay son las quince
+    que trae el programa.
+    """
+    dirs = []
+    settings = None
+    try:
+        root, settings = load_repo(args)
+        dirs.append(root)
+    except repo_mod.RepoError:
+        pass
+    dirs += [os.path.abspath(path)
+             for path in (getattr(args, "templates_from", None) or [])]
+    if not dirs:
+        return []
+    try:
+        return templates_mod.load_many(dirs, settings)
+    except (templates_mod.TemplateError, yamlio.YamlError) as exc:
+        print(S.bad(str(exc)), file=sys.stderr)
+        return []
+
+
 def cmd_profiles(args):
     all_profiles = profiles_mod.load(LATEX_DIR)
+    # Con las plantillas del repositorio encima: esta orden tiene que decir
+    # lo que se va a compilar de verdad, y una plantilla con el id de una de
+    # serie la sustituye.
+    for template in templates_here(args):
+        all_profiles[template.id] = template
     if args.json:
-        print(json.dumps([p.as_dict() for p in all_profiles.values()],
-                         indent=1, ensure_ascii=False))
+        records = []
+        for profile in all_profiles.values():
+            record = profile.as_dict()
+            # De qué directorio salió, solo aquí. En el índice no: ese fichero
+            # se versiona, y una ruta absoluta de una máquina concreta lo
+            # convertiría en un diff distinto en cada ordenador.
+            source = getattr(profile, "source", None)
+            if source:
+                record["source"] = source
+            records.append(record)
+        print(json.dumps(records, indent=1, ensure_ascii=False))
         return 0
 
     print(S.bold("%d output profiles" % len(all_profiles)))
@@ -223,8 +268,16 @@ def cmd_profiles(args):
             profile.label,
         ))
     print()
-    print(S.dim("  Declared in latex/didacta-profiles.tex. Adding an output is"))
-    print(S.dim("  one \\DidactaDeclareProfile line; nothing else needs to change."))
+    declared = [p for p in all_profiles.values()
+                if isinstance(p, templates_mod.Template)]
+    if declared:
+        print(S.dim("  %d of these are templates declared by the repository"
+                    % len(declared)))
+        off = [p.id for p in declared if not p.active]
+        if off:
+            print(S.dim("  switched off, so not built: %s" % ", ".join(off)))
+    print(S.dim("  The rest come with Didacta, in latex/didacta-profiles.tex."))
+    print(S.dim("  Declare your own in templates.yaml to change or add one."))
     return 0
 
 
@@ -352,7 +405,12 @@ def cmd_translations(args):
 # --------------------------------------------------------------------------
 
 def collect_jobs(root, settings, args, all_profiles):
-    """Work out what to build."""
+    """Work out what to build.
+
+    Devuelve `(trabajos, documentos)`. Los documentos van aparte porque antes
+    de compilar hay que poner su `.tex` al día con la composición, y un
+    trabajo sólo lleva la ruta del fichero.
+    """
     courses, _ = repo_mod.scan_courses(root, settings)
 
     documents = []
@@ -370,12 +428,12 @@ def collect_jobs(root, settings, args, all_profiles):
         if not matched:
             print(S.bad("no document matches %s" % ", ".join(sorted(wanted))))
             print(S.dim("available: %s" % ", ".join(sorted(d.id for _, _, d in documents))))
-            return None
+            return None, None
         documents = matched
     elif not args.all:
         print(S.bad("name a document, or pass --all"))
         print(S.dim("available: %s" % ", ".join(sorted(d.id for _, _, d in documents))))
-        return None
+        return None, None
 
     if args.year:
         documents = [(c, y, d) for c, y, d in documents if y.year == args.year]
@@ -394,7 +452,7 @@ def collect_jobs(root, settings, args, all_profiles):
                 if name not in all_profiles:
                     print(S.bad("unknown profile %r" % name))
                     print(S.dim("known: %s" % ", ".join(sorted(all_profiles))))
-                    return None
+                    return None, None
                 chosen.append(all_profiles[name])
         elif document.profiles:
             chosen = [all_profiles[p] for p in document.profiles if p in all_profiles]
@@ -424,7 +482,43 @@ def collect_jobs(root, settings, args, all_profiles):
                         "course_keys": course.latex_course_keys(language, year.year),
                     },
                 ))
-    return jobs
+    return jobs, documents
+
+
+def compose_documents(documents, *, quiet=False, write=True):
+    """Pone al día el `.tex` de cada documento con su `year.yaml`.
+
+    Devuelve los que han cambiado y los que no se han podido tocar. Escribe
+    en el repositorio de contenido, que es deliberado: el master es un
+    fichero derivado --lo dice él mismo en su cabecera-- y su sitio es el
+    repositorio, no el directorio de compilación, porque `pdflatex master.tex`
+    a mano tiene que seguir dando el documento que dice la composición.
+
+    Lo que cuenta va a la salida de **error** cuando hay un programa
+    escuchando por la estándar, por lo mismo que las negativas de arriba.
+    """
+    changed, refused = [], []
+    for course, year, document in documents or []:
+        if not document.source:
+            continue  # ya lo cuenta quien recoge los trabajos, y `check`
+        result = compose_mod.compose_document(
+            document,
+            os.path.join(year.directory, repo_mod.YEAR_META),
+            write=write,
+        )
+        if result.refused:
+            refused.append(result)
+        elif result.changed:
+            changed.append(result)
+
+    where = sys.stderr if quiet else sys.stdout
+    for result in changed:
+        print(S.dim("  composición -> %s.tex" % result.document), file=where)
+    for result in refused:
+        print(S.warn("  %s.tex: %s" % (result.document, result.refused)), file=where)
+    if changed and not quiet:
+        print()
+    return changed, refused
 
 
 def report_profiles(root, settings, args, all_profiles):
@@ -471,6 +565,19 @@ def report_profiles(root, settings, args, all_profiles):
     return 0
 
 
+def template_dirs(args, root):
+    """Dónde buscar plantillas de compilación.
+
+    El repositorio siempre, y además los que digan `--templates-from`. Los
+    segundos existen porque la teoría y los problemas viven en dos
+    repositorios y el bloque de uno puede compilarse con la plantilla que
+    declara el otro: la aplicación, que los tiene los dos abiertos, los pasa
+    todos. A mano no hace falta ninguno.
+    """
+    extra = getattr(args, "templates_from", None) or []
+    return [root] + [os.path.abspath(path) for path in extra]
+
+
 def cmd_build(args):
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
@@ -481,6 +588,8 @@ def cmd_build(args):
         engine="pdflatex" if args.fast else "latexmk",
         verbose=args.verbose,
         on_output=progress_sink(args),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
     )
 
     if args.profiles:
@@ -493,7 +602,7 @@ def cmd_build(args):
         # de su familia, con las suyas marcadas.
         return report_profiles(root, settings, args, all_profiles)
 
-    jobs = collect_jobs(root, settings, args, all_profiles)
+    jobs, documents = collect_jobs(root, settings, args, all_profiles)
     if jobs is None:
         return 1
     if not jobs:
@@ -552,6 +661,15 @@ def cmd_build(args):
     # antes del JSON es algo que ese programa tiene que aprender a saltarse.
     # El `summary.json` se sigue escribiendo igual.
     quiet = args.json
+
+    # La composición, en el fichero que lee LaTeX.
+    #
+    # `year.yaml` es la autoridad y el `.tex` es lo que compila `pdflatex`
+    # (D29), así que lo primero que hace compilar es ponerlos de acuerdo. Sin
+    # esto, un apartado añadido desde la aplicación se guardaba, se veía en la
+    # pantalla de composición y no salía en el PDF, que es la peor forma de
+    # fallar: lo que se mira para comprobarlo es justo lo que sí lo enseña.
+    compose_documents(documents, quiet=quiet)
 
     if not quiet:
         print(S.bold("building %d output(s)" % len(jobs)))
@@ -674,6 +792,112 @@ def bibliography_warnings(root, settings, units):
     return messages
 
 
+
+def _identity_errors(root, settings, units, courses):
+    """Lo que deja el modelo en un estado que no se sostiene."""
+    found = []
+
+    # Dos lecciones con el mismo id no llegan hasta aquí: `scan_units` no
+    # mete la segunda en el catálogo y lo cuenta como error, que es lo
+    # correcto -- a partir de ahí «esto dónde más está» contestaría cualquier
+    # cosa. Se dice aquí para que se lea junto a lo demás de identidad.
+
+    # Un `freezes.yaml` roto no impide abrir el curso, así que hay que
+    # contarlo: si no, el único síntoma es una lista de congelaciones vacía.
+    for course in courses.values():
+        for year in course.years.values():
+            found.extend("%s: %s" % (year.id, message)
+                         for message in year.freeze_errors)
+            seen = set()
+            for item in year.freezes:
+                if item.id in seen:
+                    found.append("%s: dos congelaciones con el id `%s`"
+                                 % (year.id, item.id))
+                seen.add(item.id)
+
+    placements = identity_mod.document_placements(courses)
+    declared = set(identity_mod.list_shared(root))
+
+    # Una ubicación que nombra un contenido que no existe. No es fatal --el
+    # fichero puede vivir en el repositorio de al lado-- pero desde aquí el
+    # tema sale vacío, y eso hay que decirlo.
+    for content_id, places in sorted(placements.items()):
+        if content_id in declared:
+            continue
+        found.append(
+            "`%s` lo dan %s y no hay ningún `shared/documents/%s.yaml`; si "
+            "está en otro repositorio, ábrelo"
+            % (content_id, ", ".join(place.key for place in places), content_id)
+        )
+
+    # Dos documentos con el mismo id dentro de un año: el `.tex` es uno solo,
+    # así que uno de los dos se compila encima del otro.
+    for course in courses.values():
+        for year in course.years.values():
+            seen = {}
+            for document in year.documents:
+                seen[document.id] = seen.get(document.id, 0) + 1
+            for identifier, count in sorted(seen.items()):
+                if count > 1:
+                    found.append(
+                        "%s: `%s` está declarado %d veces; los dos compilan al "
+                        "mismo `%s.tex`"
+                        % (year.id, identifier, count, identifier)
+                    )
+
+    # Un fichero compartido que se vincula a otro sería una indirección
+    # encadenada, y con ella un ciclo posible. No se escribe nunca; se
+    # comprueba porque un fichero se puede editar a mano.
+    for content_id in sorted(declared):
+        try:
+            data = identity_mod.load_shared(root, content_id) or {}
+        except identity_mod.IdentityError as exc:
+            found.append(str(exc))
+            continue
+        if data.get("link"):
+            found.append(
+                "shared/documents/%s.yaml lleva un `link:`; un tema compartido "
+                "es el final de la cadena, no otro eslabón" % content_id
+            )
+        if data.get("id") and str(data["id"]).strip() != content_id:
+            found.append(
+                "shared/documents/%s.yaml dice llamarse `%s`: el nombre del "
+                "fichero y el id tienen que ser el mismo"
+                % (content_id, data["id"])
+            )
+    return found
+
+
+def _identity_warnings(root, settings, units, courses):
+    """Lo que no rompe nada pero casi siempre es un resto de algo."""
+    found = []
+    placements = identity_mod.document_placements(courses)
+    declared = set(identity_mod.list_shared(root))
+
+    for content_id in sorted(declared - set(placements)):
+        found.append(
+            "shared/documents/%s.yaml no lo da ningún curso de este "
+            "repositorio" % content_id
+        )
+    for content_id, places in sorted(placements.items()):
+        if content_id in declared and len(places) == 1:
+            found.append(
+                "`%s` solo lo da %s: un grupo de uno no es un grupo, y su tema "
+                "podría volver a estar escrito en su curso"
+                % (content_id, places[0].key)
+            )
+
+    without = [unit.relpath for unit in units.values()
+               if not identity_mod.is_id((unit.raw or {}).get("id"))]
+    if without:
+        found.append(
+            "%d lección(es) sin id estable; `didacta ids --apply` las pone al "
+            "día sin mover ni renombrar nada" % len(without)
+        )
+
+    return found
+
+
 def cmd_check(args):
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
@@ -731,6 +955,28 @@ def cmd_check(args):
                             "%s/%s: unknown profile `%s`" % (year.id, document.id, name)
                         )
 
+    # El `.tex` tiene que decir lo que dice la composición. Compilar los pone
+    # de acuerdo, así que esto no es un error: es lo que contesta «¿por qué el
+    # PDF que tengo delante no lleva el apartado que acabo de añadir?» sin
+    # tener que compilar para averiguarlo.
+    for course in courses.values():
+        for year in course.years.values():
+            year_path = os.path.join(year.directory, repo_mod.YEAR_META)
+            for document in year.documents:
+                if not document.source:
+                    continue
+                result = compose_mod.compose_document(
+                    document, year_path, write=False)
+                if result.refused:
+                    warnings.append(
+                        "%s/%s: %s" % (year.id, document.id, result.refused))
+                elif result.changed:
+                    warnings.append(
+                        "%s/%s: %s.tex se ha quedado atrás de la composición; "
+                        "compilar lo pone al día"
+                        % (year.id, document.id, document.id)
+                    )
+
     # A document that builds in a language none of its units have is a hole too.
     for course in courses.values():
         for year in course.years.values():
@@ -776,6 +1022,12 @@ def cmd_check(args):
                 warnings.append(
                     "%s: prerequisite `%s` does not exist" % (unit.relpath, prerequisite)
                 )
+
+    # La integridad del modelo de identidad. Nada de esto se puede deducir
+    # mirando un fichero: son las preguntas que solo tienen respuesta leyendo
+    # el repositorio entero, y son justo las que rompen en silencio.
+    errors.extend(_identity_errors(root, settings, units, courses))
+    warnings.extend(_identity_warnings(root, settings, units, courses))
 
     # Lo que se cita tiene que estar en el .bib. Es el error que solo aparecía
     # compilando --y que compilando aparece como «Undefined control sequence»,
@@ -1033,6 +1285,72 @@ def _empty_year(course, args, target, settings, quiet=False):
     return 0
 
 
+def _year_from_directory(course, args, target, source_dir, settings):
+    """Un curso académico copiado de una carpeta que ya existe.
+
+    La misma copia que `--from`, sobre una carpeta que puede no estar en este
+    repositorio: la de un curso dentro del árbol de una versión congelada.
+    Estructura y nada más, como siempre -- las unidades que se referencian son
+    las de **ahora**, no las de entonces, que es lo que hace que dar el tema
+    otra vez sea copiar su composición y no su material.
+    """
+    year_path = os.path.join(source_dir, repo_mod.YEAR_META)
+    if not os.path.isfile(year_path):
+        print(S.bad("%s no tiene un year.yaml" % source_dir))
+        return 1
+
+    with open(year_path, encoding="utf-8") as handle:
+        text = handle.read()
+    source_year = None
+    match = re.search(r"(?m)^year:\s*(\S+)\s*$", text)
+    if match:
+        source_year = match.group(1).strip().strip("\"'")
+    os.makedirs(target)
+
+    if source_year:
+        text = text.replace("year: %s" % source_year, "year: %s" % args.year)
+    else:
+        text = re.sub(r"(?m)^year:.*$", "year: %s" % args.year, text, count=1)
+    text = re.sub(r"(?m)^course:.*$", "course: %s" % course.id, text, count=1)
+    with open(os.path.join(target, repo_mod.YEAR_META), "w",
+              encoding="utf-8") as handle:
+        handle.write(text)
+
+    copied = []
+    for name in sorted(os.listdir(source_dir)):
+        if not name.endswith(".tex"):
+            continue
+        with open(os.path.join(source_dir, name), encoding="utf-8") as handle:
+            body = handle.read()
+        if source_year:
+            body = body.replace(source_year, args.year)
+            body = body.replace(source_year.replace("-", "--"),
+                                args.year.replace("-", "--"))
+        with open(os.path.join(target, name), "w", encoding="utf-8") as handle:
+            handle.write(body)
+        copied.append(name)
+
+    # Los temas del origen, que son los bloques bajo los que se agrupa. Sin
+    # ellos el curso nuevo llega con los documentos sueltos.
+    themes_path = os.path.join(source_dir, repo_mod.THEMES_META)
+    if os.path.isfile(themes_path):
+        shutil.copyfile(themes_path, os.path.join(target, repo_mod.THEMES_META))
+
+    # Las congelaciones **no** se copian: son de aquel curso, no de este. Un
+    # año nuevo que naciera con las versiones congeladas de otro diría que se
+    # congeló antes de existir.
+
+    print(S.ok("created ") + "%s/%s desde %s"
+          % (args.course, args.year, source_dir))
+    print("  year.yaml")
+    for name in copied:
+        print("  %s" % name)
+    print()
+    print(S.dim("  Solo la composición: las unidades son las de ahora, no "
+                "copias de las de entonces."))
+    return 0
+
+
 def cmd_new_year(args):
     """Crea un curso académico, vacío o copiando otro.
 
@@ -1061,6 +1379,23 @@ def cmd_new_year(args):
     if args.empty and args.From:
         print(S.bad("--empty y --from se contradicen: o se copia, o no"))
         return 1
+
+    # Desde una carpeta cualquiera: el curso tal como estaba en un commit.
+    #
+    # Existe para «crear un año desde esta versión congelada». La aplicación
+    # abre el commit en un árbol aparte y pasa la carpeta del curso que había
+    # allí; aquí se copia igual que se copiaría la de al lado, y así la lógica
+    # de copiar un año --el año sustituido en la portada, los masters que se
+    # llevan-- sigue viviendo en un solo sitio.
+    source_dir = getattr(args, "from_dir", None)
+    if source_dir:
+        if args.empty or args.From:
+            print(S.bad("--from-dir no se combina con --from ni con --empty"))
+            return 1
+        if not os.path.isdir(source_dir):
+            print(S.bad("no existe la carpeta %r" % source_dir))
+            return 1
+        return _year_from_directory(course, args, target, source_dir, settings)
 
     source_year = None
     if not args.empty:
@@ -1127,87 +1462,14 @@ def parse_where(text):
     return course.strip(), year.strip()
 
 
-def document_blocks(path):
-    """Los bloques de `documents:` de un `year.yaml`, por id.
-
-    Por líneas y no reserializando: un bloque se lleva consigo sus comentarios
-    --el `# TODO: va` que dice qué falta por traducir, el `# Migrated from` que
-    dice de dónde salió, las entradas comentadas de material que este año no
-    se da-- y todo eso es trabajo de alguien que un volcado de YAML tiraría.
-    """
-    lines = open(path, encoding="utf-8").read().split("\n")
-    blocks, order, name, current = {}, [], None, []
-    for line in lines:
-        match = re.match(r"^  - id:\s*(\S+)\s*$", line)
-        if match:
-            if name:
-                blocks[name] = _trim_block(current)
-            name, current = match.group(1), []
-            order.append(name)
-        elif name is not None and line and not line.startswith(("  ", "\t")):
-            # Una clave de primer nivel después de la lista: se acabó.
-            blocks[name] = _trim_block(current)
-            name, current = None, []
-            continue
-        if name is not None:
-            current.append(line)
-    if name:
-        blocks[name] = _trim_block(current)
-    return blocks, order
+#: Los bloques de `documents:` de un `year.yaml`, leídos y escritos por
+#: líneas. Vive en el motor desde que lo usan tres operaciones distintas;
+#: aquí quedan los nombres con los que se llamaba, que es lo que sigue
+#: leyéndose en `cmd_copy`.
+document_blocks = identity_mod.document_blocks
 
 
-def _trim_block(lines):
-    while lines and not lines[-1].strip():
-        lines.pop()
-    return lines
-
-
-def insert_documents(path, blocks):
-    """Añade bloques al final de `documents:` de un `year.yaml`.
-
-    Al final y no ordenados: el orden de un curso es el orden en que se da, y
-    lo decide quien lo compone. Lo que se copia se pone detrás, que es donde
-    no estorba.
-    """
-    text = open(path, encoding="utf-8").read()
-    lines = text.split("\n")
-
-    start = None
-    for index, line in enumerate(lines):
-        if re.match(r"^documents:\s*$", line):
-            start = index
-            break
-
-    if start is None:
-        # Un año sin composición todavía. Se le pone la clave.
-        while lines and not lines[-1].strip():
-            lines.pop()
-        lines.extend(["", "documents:"])
-        end = len(lines)
-    else:
-        end = start + 1
-        for index in range(start + 1, len(lines)):
-            line = lines[index]
-            if not line.strip() or line.startswith(("  ", "\t")):
-                continue
-            break
-        else:
-            index = len(lines)
-        end = index
-        while end > start + 1 and not lines[end - 1].strip():
-            end -= 1
-
-    body = []
-    empty = end == (0 if start is None else start + 1)
-    for index, block in enumerate(blocks):
-        # Una línea en blanco entre documentos, pero no colgando de
-        # `documents:` cuando la lista estaba vacía.
-        if index or not empty:
-            body.append("")
-        body.extend(block)
-
-    out = lines[:end] + body + lines[end:]
-    open(path, "w", encoding="utf-8").write("\n".join(out).rstrip("\n") + "\n")
+insert_documents = identity_mod.insert_documents
 
 
 def themes_needed(blocks):
@@ -1390,6 +1652,358 @@ def cmd_copy(args):
     return 0
 
 
+
+# --------------------------------------------------------------------------
+# Contenido vinculado: vincular, mover, dividir, y ver dónde está
+# --------------------------------------------------------------------------
+
+
+def _recompose(root, settings, quiet=False):
+    """Pone al día el master de cada documento del repositorio.
+
+    Después de una operación de estructura y no al compilar: el `.tex` es un
+    fichero derivado, y dejarlo viejo hasta la siguiente compilación deja el
+    repositorio diciendo dos cosas distintas en el commit que se acaba de
+    hacer. Que es justo lo que no se puede permitir cuando el commit es el que
+    alguien va a congelar.
+    """
+    courses, _ = repo_mod.scan_courses(root, settings)
+    changed, refused = [], []
+    for course in courses.values():
+        for year in course.years.values():
+            year_path = os.path.join(year.directory, repo_mod.YEAR_META)
+            for document in year.documents:
+                if not document.source:
+                    continue
+                result = compose_mod.compose_document(document, year_path)
+                if result.refused:
+                    refused.append(result)
+                elif result.changed:
+                    changed.append(result)
+    if not quiet:
+        for result in changed:
+            print(S.dim("  composición -> %s.tex" % result.document))
+    for result in refused:
+        print(S.warn("  %s.tex: %s" % (result.document, result.refused)))
+    return changed, refused
+
+
+def _report(plan, root):
+    """Lo que ha pasado, en ficheros."""
+    for path in plan.created:
+        print(S.ok("nuevo   ") + os.path.relpath(path, root))
+    for path in plan.touched:
+        if path in plan.created:
+            continue
+        print("  " + os.path.relpath(path, root))
+    for note in plan.notes:
+        print(S.dim("  " + note))
+
+
+def cmd_link(args):
+    """Añade otra ubicación al mismo documento.
+
+    Después de esto los dos cursos dan **el mismo tema**: editarlo desde
+    cualquiera de ellos lo cambia en los dos, porque es un solo fichero.
+    """
+    root, settings = load_repo(args)
+    try:
+        plan = reuse_mod.link_document(root, settings, args.From, args.to,
+                                       as_id=args.As)
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("vinculado ") + "%s en %s  (%s)" % (args.From, args.to, plan.content))
+    _report(plan, root)
+    _recompose(root, settings, quiet=True)
+    print()
+    print(S.dim("  Es el mismo tema, no una copia: lo que se edite desde "
+                "cualquiera de los cursos se ve desde los dos."))
+    return 0
+
+
+def cmd_move(args):
+    """Cambia de sitio una ubicación, sin tocar la identidad del contenido."""
+    root, settings = load_repo(args)
+    try:
+        plan = reuse_mod.move_document(root, settings, args.From, args.to,
+                                       as_id=args.As)
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("movido  ") + "%s a %s" % (args.From, args.to))
+    _report(plan, root)
+    _recompose(root, settings, quiet=True)
+    return 0
+
+
+def cmd_split(args):
+    """Parte un grupo de ubicaciones sincronizadas en varios."""
+    root, settings = load_repo(args)
+    groups = [reuse_mod.parse_places(group) for group in (args.group or [])]
+    if not groups:
+        print(S.bad("hace falta al menos un --group con las ubicaciones que "
+                    "se separan"))
+        return 1
+    try:
+        if args.unit:
+            plan = reuse_mod.split_unit(root, settings, args.unit, groups)
+        elif args.content:
+            plan = reuse_mod.split_document(root, settings, args.content,
+                                            groups, deep=args.deep)
+        else:
+            print(S.bad("hace falta --content (un tema) o --unit (una lección)"))
+            return 1
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("dividido ") + str(plan.content))
+    _report(plan, root)
+    _recompose(root, settings, quiet=True)
+    return 0
+
+
+def cmd_unlink(args):
+    """Hace independiente una ubicación: copia propia, identidad propia."""
+    root, settings = load_repo(args)
+    try:
+        plan = reuse_mod.unlink_document(root, settings, args.at)
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("separado ") + args.at)
+    _report(plan, root)
+    _recompose(root, settings, quiet=True)
+    return 0
+
+
+
+def cmd_use(args):
+    """Añade una lección a la composición de otro tema."""
+    root, settings = load_repo(args)
+    try:
+        plan = reuse_mod.use_unit(root, settings, args.unit, args.In,
+                                  duplicate=args.duplicate)
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("añadida ") + "%s en %s" % (args.unit, args.In))
+    _report(plan, root)
+    _recompose(root, settings, quiet=True)
+    if not args.duplicate:
+        print()
+        print(S.dim("  Es la misma lección, no una copia: corregirla sigue "
+                    "siendo corregirla una vez."))
+    return 0
+
+
+def cmd_places(args):
+    """Dónde se usa un contenido.
+
+    La pregunta que un repositorio no contesta barato: «¿esto dónde más
+    está?». Sin ella, cambiar algo es apostar.
+    """
+    root, settings = load_repo(args)
+    units, _ = repo_mod.scan_units(root, settings)
+    courses, _ = repo_mod.scan_courses(root, settings)
+
+    if args.document:
+        try:
+            place = reuse_mod.parse_place(args.document)
+            _, _, document = reuse_mod._document_of(courses, place)
+        except reuse_mod.ReuseError as exc:
+            print(S.bad(str(exc)))
+            return 1
+        if not document.content:
+            found, content, what = [], None, "el tema"
+        else:
+            content = document.content
+            found = reuse_mod.document_places(courses, content)
+            what = "el tema"
+        if not found:
+            found = [identity_mod.Placement("document", None, place.course,
+                                            place.year, place.document)]
+    elif args.content:
+        content, what = args.content, "el tema"
+        found = reuse_mod.document_places(courses, content)
+    elif args.unit:
+        try:
+            unit = reuse_mod.find_unit(root, units, args.unit)
+        except reuse_mod.ReuseError as exc:
+            print(S.bad(str(exc)))
+            return 1
+        content, what = unit.id, "la lección"
+        found = reuse_mod.unit_places(courses, units, root, unit.id)
+    else:
+        print(S.bad("hace falta --content, --unit o --document"))
+        return 1
+
+    if args.json:
+        print(json.dumps({"content": content,
+                          "places": [place.as_dict() for place in found]},
+                         ensure_ascii=False, indent=2))
+        return 0
+
+    if len(found) <= 1:
+        print("%s se usa en un solo sitio." % what.capitalize())
+    else:
+        print("%s se usa en %d ubicaciones:" % (what.capitalize(), len(found)))
+    for place in found:
+        line = "  %s  %s" % (pad(place.course, 12), place.year)
+        line += "  %s" % place.document
+        if place.index is not None:
+            line += S.dim("  posición %d" % (place.index + 1))
+        print(line)
+    return 0
+
+
+def cmd_ids(args):
+    """Pone un `id:` en cada lección que no lo declare.
+
+    Derivado de la ruta con un hash: dos personas que pongan al día el mismo
+    repositorio por su cuenta escriben los mismos ids, así que el merge no
+    tiene nada que resolver. Después manda el id y no la ruta.
+    """
+    root, settings = load_repo(args)
+    pending = reuse_mod.unit_ids(root, settings, apply=args.apply)
+    if not pending:
+        print(S.ok("al día  ") + "todas las lecciones tienen id")
+        return 0
+    verb = "puesto" if args.apply else "falta"
+    for relpath, identifier in pending:
+        print("  %s  %s" % (pad(relpath, 52), identifier))
+    print()
+    print(S.ok("%s  " % verb) + "%d lección(es)" % len(pending))
+    if not args.apply:
+        print(S.dim("  Nada escrito todavía. Con --apply se escriben."))
+        print(S.dim("  No mueve nada ni renombra nada: solo añade el `id:`."))
+    return 0
+
+
+# --------------------------------------------------------------------------
+# Versiones congeladas
+# --------------------------------------------------------------------------
+
+
+def _year_directory(args, root, settings):
+    courses, _ = repo_mod.scan_courses(root, settings)
+    place = reuse_mod.parse_place(args.where)
+    course = courses.get(place.course)
+    if course is None:
+        raise reuse_mod.ReuseError("no existe la asignatura `%s`" % place.course)
+    entry = course.years.get(place.year)
+    if entry is None:
+        raise reuse_mod.ReuseError(
+            "`%s` no tiene el curso `%s`" % (place.course, place.year))
+    return entry.directory, place
+
+
+def cmd_freeze_add(args):
+    """Registra una versión congelada: un commit con nombre."""
+    root, settings = load_repo(args)
+    try:
+        directory, place = _year_directory(args, root, settings)
+        entry = freeze_mod.add(directory, name=args.name, commit=args.commit,
+                               description=args.description or "",
+                               course=place.course, year=place.year)
+    except (reuse_mod.ReuseError, freeze_mod.FreezeError) as exc:
+        print(S.bad(str(exc)))
+        return 1
+    if args.json:
+        print(json.dumps(entry.as_dict(), ensure_ascii=False, indent=2))
+        return 0
+    print(S.ok("congelado ") + "«%s» en %s  (%s)"
+          % (entry.name, args.where, entry.short))
+    print("  %s" % os.path.relpath(freeze_mod.path_for(directory), root))
+    print()
+    print(S.dim("  No se ha copiado nada: es el commit el que guarda el "
+                "estado, y esto le pone nombre."))
+    return 0
+
+
+def cmd_freeze_list(args):
+    root, settings = load_repo(args)
+    try:
+        directory, place = _year_directory(args, root, settings)
+        found = freeze_mod.load(directory, place.course, place.year)
+    except (reuse_mod.ReuseError, freeze_mod.FreezeError) as exc:
+        print(S.bad(str(exc)))
+        return 1
+    if args.json:
+        print(json.dumps([item.as_dict() for item in found],
+                         ensure_ascii=False, indent=2))
+        return 0
+    if not found:
+        print("Este curso no tiene ninguna versión congelada.")
+        return 0
+    for item in found:
+        print("  %s  %s  %s" % (pad(item.short, 8), pad(item.name, 32),
+                                S.dim(item.created or "")))
+        if item.description:
+            print(S.dim("            %s" % item.description))
+    return 0
+
+
+def cmd_freeze_remove(args):
+    root, settings = load_repo(args)
+    try:
+        directory, place = _year_directory(args, root, settings)
+        gone = freeze_mod.remove(directory, args.id, place.course, place.year)
+    except (reuse_mod.ReuseError, freeze_mod.FreezeError) as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("quitada ") + "«%s»" % gone.name)
+    print()
+    print(S.dim("  El commit %s sigue donde estaba: esto solo ha quitado su "
+                "nombre." % gone.short))
+    return 0
+
+
+def cmd_freeze_rename(args):
+    root, settings = load_repo(args)
+    try:
+        directory, place = _year_directory(args, root, settings)
+        entry = freeze_mod.rename(directory, args.id, name=args.name,
+                                  description=args.description,
+                                  course=place.course, year=place.year)
+    except (reuse_mod.ReuseError, freeze_mod.FreezeError) as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("renombrada ") + "«%s»" % entry.name)
+    return 0
+
+
+
+def cmd_restore(args):
+    """Devuelve un tema al estado que tiene en otra versión del repositorio.
+
+    El curso entero y una lección se restauran copiando ficheros, y eso lo
+    hace quien tenga el árbol delante. Un tema no: su composición vive dentro
+    del `year.yaml`, entre las de los demás, así que hay que sustituir su
+    bloque y dejar los otros donde están.
+    """
+    root, settings = load_repo(args)
+    try:
+        place = reuse_mod.parse_place(args.where)
+        if not place.document:
+            print(S.bad("hace falta decir qué tema: asignatura@año/documento"))
+            return 1
+        plan = reuse_mod.restore_document(
+            root, settings, args.From, place.course, place.year,
+            place.document,
+        )
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("restaurado ") + args.where)
+    _report(plan, root)
+    _recompose(root, settings, quiet=True)
+    print()
+    print(S.dim("  Queda como un cambio sin confirmar: ni se ha reescrito la "
+                "historia ni se ha borrado ningún commit."))
+    return 0
+
+
 def cmd_built(args):
     """Qué hay compilado de los documentos de un curso.
 
@@ -1414,6 +2028,8 @@ def cmd_built(args):
     engine = build_mod.Engine(
         latex_dir=LATEX_DIR,
         build_dir=os.path.join(root, settings.build_dir),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
     )
     report = preview_mod.document_outputs(
         engine, course_id, year_id, entry.documents, all_profiles,
@@ -1477,6 +2093,8 @@ def cmd_export(args):
     engine = build_mod.Engine(
         latex_dir=LATEX_DIR,
         build_dir=os.path.join(root, settings.build_dir),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
     )
 
     themes = {theme.id: theme for theme in entry.themes}
@@ -1883,6 +2501,8 @@ def cmd_preview(args):
         engine = build_mod.Engine(
             latex_dir=LATEX_DIR,
             build_dir=os.path.join(root, settings.build_dir),
+            template_dirs=template_dirs(args, root),
+            settings=settings,
         )
         report = preview_mod.built(
             engine, units.values(), all_profiles,
@@ -1930,6 +2550,8 @@ def cmd_preview(args):
         engine="pdflatex" if args.fast else "latexmk",
         verbose=args.verbose,
         on_output=progress_sink(args),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
     )
 
     reference = unit.reference_path
@@ -2709,6 +3331,11 @@ def main(argv=None):
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--root", help="content repository root (default: auto-detect)")
+    parser.add_argument(
+        "--templates-from", action="append", metavar="DIR",
+        help="another directory with a templates.yaml to read templates from "
+             "(repeatable); the repository's own are always read",
+    )
     sub = parser.add_subparsers(dest="command")
 
     p = sub.add_parser("status", help="what is in this repository")
@@ -2861,6 +3488,9 @@ def main(argv=None):
                    help="year to copy (default: the most recent)")
     q.add_argument("--empty", action="store_true",
                    help="crearlo sin documentos, sin copiar ninguno")
+    q.add_argument("--from-dir", dest="from_dir", metavar="CARPETA",
+                   help="copiar de la carpeta de un curso que puede no estar "
+                        "en este repositorio: la de una versión congelada")
     q.set_defaults(func=cmd_new_year)
 
     q = new_sub.add_parser("theme", help="declarar un tema en un curso")
@@ -2884,6 +3514,141 @@ def main(argv=None):
     p.add_argument("--create-year", action="store_true",
                    help="crear el curso de destino aquí si no está todavía")
     p.set_defaults(func=cmd_copy)
+
+    p = sub.add_parser(
+        "link",
+        help="dar el mismo tema en otro curso, vinculado",
+        description="Añade otra ubicación al mismo documento. Los dos cursos "
+                    "dan el mismo tema: editarlo desde cualquiera de ellos lo "
+                    "cambia en los dos, porque es un solo fichero.",
+    )
+    p.add_argument("--from", dest="From", required=True,
+                   metavar="CURSO@AÑO/DOC")
+    p.add_argument("--to", dest="to", required=True, metavar="CURSO@AÑO")
+    p.add_argument("--as", dest="As", metavar="ID",
+                   help="con otro nombre en el curso de destino")
+    p.set_defaults(func=cmd_link)
+
+    p = sub.add_parser(
+        "move",
+        help="cambiar de sitio un tema, sin copiarlo ni vincularlo",
+        description="Al acabar hay las mismas ubicaciones que había, una de "
+                    "ellas en otro sitio. Lo que estaba vinculado sigue "
+                    "vinculado.",
+    )
+    p.add_argument("--from", dest="From", required=True,
+                   metavar="CURSO@AÑO/DOC")
+    p.add_argument("--to", dest="to", required=True, metavar="CURSO@AÑO")
+    p.add_argument("--as", dest="As", metavar="ID")
+    p.set_defaults(func=cmd_move)
+
+    p = sub.add_parser(
+        "split",
+        help="partir un grupo de ubicaciones sincronizadas",
+        description="Las ubicaciones que se nombren pasan a una entidad "
+                    "nueva; las demás se quedan con la de siempre. Los dos "
+                    "grupos siguen sincronizados por dentro y ya no entre sí.",
+    )
+    p.add_argument("--content", metavar="ID", help="el id de un tema compartido")
+    p.add_argument("--unit", metavar="REF", help="la ruta o el id de una lección")
+    p.add_argument("--group", action="append", metavar="LISTA",
+                   help="ubicaciones separadas por comas (repetible)")
+    p.add_argument("--deep", action="store_true",
+                   help="duplicar también las lecciones del tema")
+    p.set_defaults(func=cmd_split)
+
+    p = sub.add_parser(
+        "unlink",
+        help="hacer independiente una ubicación de un tema vinculado",
+        description="Copia propia e identidad propia: a partir de ahí ya no "
+                    "se sincroniza con las demás.",
+    )
+    p.add_argument("--at", required=True, metavar="CURSO@AÑO/DOC")
+    p.set_defaults(func=cmd_unlink)
+
+    p = sub.add_parser(
+        "use",
+        help="dar una lección en otro tema",
+        description="La añade al final de su composición. Vinculada por "
+                    "defecto: es la misma lección, no una copia.",
+    )
+    p.add_argument("--unit", required=True, metavar="REF",
+                   help="la ruta o el id de la lección")
+    p.add_argument("--in", dest="In", required=True, metavar="CURSO@AÑO/DOC")
+    p.add_argument("--duplicate", action="store_true",
+                   help="una copia con identidad propia en vez de la misma")
+    p.set_defaults(func=cmd_use)
+
+    p = sub.add_parser(
+        "places",
+        help="dónde se usa un tema o una lección",
+        description="La pregunta que un repositorio no contesta barato: "
+                    "«¿esto dónde más está?».",
+    )
+    p.add_argument("--content", metavar="ID")
+    p.add_argument("--unit", metavar="REF")
+    p.add_argument("--document", metavar="CURSO@AÑO/DOC")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_places)
+
+    p = sub.add_parser(
+        "ids",
+        help="poner un id estable a cada lección que no lo tenga",
+        description="Derivado de la ruta con un hash, así que dos personas "
+                    "que lo hagan por su cuenta escriben los mismos. No mueve "
+                    "nada ni renombra nada.",
+    )
+    p.add_argument("--apply", action="store_true",
+                   help="escribirlos (sin esto solo dice cuáles faltan)")
+    p.set_defaults(func=cmd_ids)
+
+    p = sub.add_parser(
+        "freeze",
+        help="versiones congeladas de un curso",
+        description="Una congelación es un commit con nombre. No copia nada: "
+                    "el contenido ya está en git, y esto guarda lo que git no "
+                    "sabe -- cómo se llama ese momento.",
+    )
+    freeze_sub = p.add_subparsers(dest="freeze_command")
+
+    q = freeze_sub.add_parser("add", help="registrar una versión congelada")
+    q.add_argument("where", metavar="CURSO@AÑO")
+    q.add_argument("--name", required=True)
+    q.add_argument("--commit", required=True, metavar="SHA",
+                   help="el commit entero, 40 caracteres")
+    q.add_argument("--description", default="")
+    q.add_argument("--json", action="store_true")
+    q.set_defaults(func=cmd_freeze_add)
+
+    q = freeze_sub.add_parser("list", help="las que tiene un curso")
+    q.add_argument("where", metavar="CURSO@AÑO")
+    q.add_argument("--json", action="store_true")
+    q.set_defaults(func=cmd_freeze_list)
+
+    q = freeze_sub.add_parser("remove", help="quitar una, sin tocar git")
+    q.add_argument("where", metavar="CURSO@AÑO")
+    q.add_argument("id")
+    q.set_defaults(func=cmd_freeze_remove)
+
+    q = freeze_sub.add_parser("rename", help="cambiarle el nombre")
+    q.add_argument("where", metavar="CURSO@AÑO")
+    q.add_argument("id")
+    q.add_argument("--name")
+    q.add_argument("--description")
+    q.set_defaults(func=cmd_freeze_rename)
+
+    p = sub.add_parser(
+        "restore",
+        help="devolver un tema al estado de otra versión",
+        description="Sustituye su entrada en `year.yaml`, su master y --si "
+                    "estaba vinculado-- el fichero compartido que daba. Los "
+                    "demás temas del curso se quedan como están.",
+    )
+    p.add_argument("where", metavar="CURSO@AÑO/DOC")
+    p.add_argument("--from", dest="From", required=True, metavar="CARPETA",
+                   help="la raíz del repositorio en la otra versión: el árbol "
+                        "de una congelación")
+    p.set_defaults(func=cmd_restore)
 
     p = sub.add_parser(
         "built",

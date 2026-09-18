@@ -421,14 +421,17 @@ void main() {
       // dejaría a alguien editando sin saberlo.
       await pumpWide(tester);
       expect(find.text('QUÉ ES'), findsOneWidget);
-      expect(find.textContaining('SE USA EN 1 DOCUMENTO'), findsOneWidget);
+      // «Ubicaciones» y no «documentos»: la misma lección puede estar dos
+      // veces en el mismo tema, y entonces son dos sitios que se pueden
+      // separar por su cuenta.
+      expect(find.textContaining('SE USA EN 1 UBICACIÓN'), findsOneWidget);
     });
 
     testWidgets('se colapsa, y el texto se queda con el ancho', (tester) async {
       final session = await pumpWide(tester);
       final wide = tester.getSize(find.byType(TextField)).width;
 
-      await tester.tap(find.byIcon(Icons.info));
+      await tester.tap(find.byIcon(Icons.view_sidebar));
       await settle(tester);
 
       expect(session.unitPanelVisible, isFalse);
@@ -441,7 +444,7 @@ void main() {
       await pumpWide(tester, panel: false);
       expect(find.text('QUÉ ES'), findsNothing);
 
-      await tester.tap(find.byIcon(Icons.info_outline));
+      await tester.tap(find.byIcon(Icons.view_sidebar_outlined));
       await settle(tester);
       expect(find.text('QUÉ ES'), findsOneWidget);
     });
