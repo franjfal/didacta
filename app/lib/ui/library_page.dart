@@ -45,6 +45,18 @@ import 'quick_look.dart';
 import 'shell.dart';
 import 'theme.dart';
 
+/// El nombre de un bloque, de los que el catálogo ofrece.
+///
+/// Con caída a [blockLabel] por si llega un id que ya no está en la lista:
+/// vale más enseñar «practicas» que dejar el hueco donde alguien espera leer
+/// qué está filtrando.
+String _blockName(List<CourseBlock> blocks, String id, String language) {
+  for (final block in blocks) {
+    if (block.id == id) return block.title(language);
+  }
+  return blockLabel(id, language);
+}
+
 /// Dónde está puesto el navegador. Un valor, no dos campos sueltos, para que
 /// no se pueda estar en un tema de una categoría que no está abierta.
 ///
@@ -180,6 +192,7 @@ class _LibraryPageState extends State<LibraryPage> {
             tree: tree,
             session: session,
             filter: filter,
+            blocks: catalogue.blocksInUse,
             search: _search,
             searchFocus: _searchFocus,
             searching: _searching,
@@ -193,6 +206,7 @@ class _LibraryPageState extends State<LibraryPage> {
                 ? _SearchResults(
                     filter: filter,
                     units: catalogue.units,
+                    blocks: catalogue.blocksInUse,
                     onFilter: (next) => setState(() => _filter = next),
                   )
                 : _Browser(
@@ -200,6 +214,7 @@ class _LibraryPageState extends State<LibraryPage> {
                     path: _path,
                     language: session.language,
                     filter: filter,
+                    blocks: catalogue.blocksInUse,
                     onPath: (next) => setState(() => _path = next),
                     onFilter: (next) => setState(() {
                       _filter = next;
@@ -224,6 +239,7 @@ class _Header extends StatelessWidget {
     required this.tree,
     required this.session,
     required this.filter,
+    required this.blocks,
     required this.search,
     required this.searchFocus,
     required this.searching,
@@ -236,6 +252,7 @@ class _Header extends StatelessWidget {
   final LibraryTree tree;
   final Session session;
   final LibraryFilter filter;
+  final List<CourseBlock> blocks;
   final TextEditingController search;
   final FocusNode searchFocus;
   final bool searching;
@@ -322,7 +339,11 @@ class _Header extends StatelessWidget {
               Row(
                 children: [
                   if (!narrow) ...[
-                    _LibraryMenus(filter: filter, onFilter: onFilter),
+                    _LibraryMenus(
+                      filter: filter,
+                      onFilter: onFilter,
+                      blocks: blocks,
+                    ),
                     const SizedBox(width: 10),
                   ],
                   Expanded(
@@ -337,6 +358,7 @@ class _Header extends StatelessWidget {
                     _LibraryMenus(
                       filter: filter,
                       onFilter: onFilter,
+                      blocks: blocks,
                       compact: true,
                     ),
                   ],
@@ -348,7 +370,11 @@ class _Header extends StatelessWidget {
               ],
               if (filter.hasFacets) ...[
                 const SizedBox(height: 9),
-                _ActiveFilters(filter: filter, onFilter: onFilter),
+                _ActiveFilters(
+                  filter: filter,
+                  onFilter: onFilter,
+                  blocks: blocks,
+                ),
               ],
             ],
           );
@@ -363,11 +389,15 @@ class _LibraryMenus extends StatelessWidget {
   const _LibraryMenus({
     required this.filter,
     required this.onFilter,
+    required this.blocks,
     this.compact = false,
   });
 
   final LibraryFilter filter;
   final ValueChanged<LibraryFilter> onFilter;
+
+  /// Los bloques que hay, declarados o nombrados. Ver [Catalogue.blocksInUse].
+  final List<CourseBlock> blocks;
   final bool compact;
 
   @override
@@ -384,8 +414,12 @@ class _LibraryMenus extends StatelessWidget {
               controller.isOpen ? controller.close() : controller.open(),
         ),
         menuChildren: [
-          ..._blockItems(),
-          const Divider(height: 1),
+          // Con uno solo no hay nada que elegir: un filtro cuyo único valor
+          // es «todo» ocupa sitio y no contesta ninguna pregunta.
+          if (blocks.length > 1) ...[
+            ..._blockItems(),
+            const Divider(height: 1),
+          ],
           ..._statusItems(),
           const Divider(height: 1),
           ..._kindItems(),
@@ -428,16 +462,12 @@ class _LibraryMenus extends StatelessWidget {
       filter.block == null,
       () => onFilter(filter.copyWith(clearBlock: true)),
     ),
-    _check(
-      'Teoría',
-      filter.block == 'theory',
-      () => onFilter(filter.copyWith(block: 'theory')),
-    ),
-    _check(
-      'Problemas',
-      filter.block == 'problems',
-      () => onFilter(filter.copyWith(block: 'problems')),
-    ),
+    for (final block in blocks)
+      _check(
+        block.title(filter.language),
+        filter.block == block.id,
+        () => onFilter(filter.copyWith(block: block.id)),
+      ),
   ];
 
   List<Widget> _statusItems() => [
@@ -664,7 +694,13 @@ class _LanguagePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final languages = session.catalogue.languages;
+    // Los mismos que ofrece la barra de arriba, y por la misma razón: dos
+    // sitios donde se elige el idioma del contenido tienen que ofrecer lo
+    // mismo, o el que se elige depende de por dónde se pasó.
+    final languages = [
+      for (final option in session.languageChoices) option.code,
+    ];
+    if (languages.isEmpty) return const SizedBox.shrink();
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: didactaRule),
@@ -836,17 +872,25 @@ class _Crumb extends StatelessWidget {
 /// Un filtro activo que no se ve es la forma más rápida de que alguien crea
 /// que le falta material.
 class _ActiveFilters extends StatelessWidget {
-  const _ActiveFilters({required this.filter, required this.onFilter});
+  const _ActiveFilters({
+    required this.filter,
+    required this.onFilter,
+    required this.blocks,
+  });
 
   final LibraryFilter filter;
   final ValueChanged<LibraryFilter> onFilter;
+  final List<CourseBlock> blocks;
 
   @override
   Widget build(BuildContext context) {
     final chips = <Widget>[
       if (filter.block != null)
         _Chip(
-          label: filter.block == 'problems' ? 'problemas' : 'teoría',
+          // Con clave porque el nombre del bloque ya está en pantalla --en su
+          // pestaña-- y una prueba que busque el texto encontraría los dos.
+          key: const Key('filter-chip-block'),
+          label: _blockName(blocks, filter.block!, filter.language),
           onRemove: () => onFilter(filter.copyWith(clearBlock: true)),
         ),
       if (filter.kind != null)
@@ -887,7 +931,12 @@ class _ActiveFilters extends StatelessWidget {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.onRemove, this.colour});
+  const _Chip({
+    super.key,
+    required this.label,
+    required this.onRemove,
+    this.colour,
+  });
 
   final String label;
   final VoidCallback onRemove;
@@ -936,6 +985,7 @@ class _Browser extends StatelessWidget {
     required this.path,
     required this.language,
     required this.filter,
+    required this.blocks,
     required this.onPath,
     required this.onFilter,
   });
@@ -944,6 +994,7 @@ class _Browser extends StatelessWidget {
   final BrowsePath path;
   final String language;
   final LibraryFilter filter;
+  final List<CourseBlock> blocks;
   final ValueChanged<BrowsePath> onPath;
   final ValueChanged<LibraryFilter> onFilter;
 
@@ -964,6 +1015,7 @@ class _Browser extends StatelessWidget {
               path: path,
               language: language,
               filter: filter,
+              blocks: blocks,
               onPath: onPath,
               onFilter: onFilter,
             );
@@ -993,6 +1045,7 @@ class _Browser extends StatelessWidget {
                 path: path,
                 language: language,
                 filter: filter,
+                blocks: blocks,
                 onPath: onPath,
                 onFilter: onFilter,
               ),
@@ -1033,13 +1086,14 @@ class _Browser extends StatelessWidget {
   }
 }
 
-/// La primera columna: el filtro de área y las categorías.
+/// La primera columna: el filtro de bloque y las categorías.
 class _CategoryColumn extends StatelessWidget {
   const _CategoryColumn({
     required this.tree,
     required this.path,
     required this.language,
     required this.filter,
+    required this.blocks,
     required this.onPath,
     required this.onFilter,
   });
@@ -1048,6 +1102,7 @@ class _CategoryColumn extends StatelessWidget {
   final BrowsePath path;
   final String language;
   final LibraryFilter filter;
+  final List<CourseBlock> blocks;
   final ValueChanged<BrowsePath> onPath;
   final ValueChanged<LibraryFilter> onFilter;
 
@@ -1057,7 +1112,7 @@ class _CategoryColumn extends StatelessWidget {
       color: didactaPanel,
       child: Column(
         children: [
-          _AreaFilter(filter: filter, onFilter: onFilter),
+          _BlockFilter(filter: filter, onFilter: onFilter, blocks: blocks),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.only(bottom: 24),
@@ -1085,20 +1140,33 @@ class _CategoryColumn extends StatelessWidget {
   }
 }
 
-/// Teoría, problemas o las dos.
+/// Los bloques de la asignatura, o todos.
 ///
 /// Un filtro y no un nivel del árbol: la teoría de espacios normados y sus
 /// ejercicios son la misma asignatura, y separarlos obliga a mirar en dos
 /// sitios lo que se prepara junto. Pero seguir queriendo ver solo las hojas
 /// de problemas es razonable, y para eso está aquí.
-class _AreaFilter extends StatelessWidget {
-  const _AreaFilter({required this.filter, required this.onFilter});
+///
+/// Eran dos y estaban escritos aquí. Ahora son los que el repositorio
+/// declare, así que quien parta su asignatura en teoría, problemas y
+/// prácticas de ordenador ve tres pestañas sin que nadie toque este fichero.
+///
+/// **Con uno solo no aparece.** Un filtro cuyo único valor es «todo» ocupa el
+/// alto de la columna para no contestar ninguna pregunta.
+class _BlockFilter extends StatelessWidget {
+  const _BlockFilter({
+    required this.filter,
+    required this.onFilter,
+    required this.blocks,
+  });
 
   final LibraryFilter filter;
   final ValueChanged<LibraryFilter> onFilter;
+  final List<CourseBlock> blocks;
 
   @override
   Widget build(BuildContext context) {
+    if (blocks.length < 2) return const SizedBox.shrink();
     return Container(
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: didactaRule)),
@@ -1128,26 +1196,20 @@ class _AreaFilter extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Flexible(
-                child: _AreaTab(
+                child: _BlockTab(
                   label: 'Todo',
                   selected: filter.block == null,
                   onTap: () => onFilter(filter.copyWith(clearBlock: true)),
                 ),
               ),
-              Flexible(
-                child: _AreaTab(
-                  label: 'Teoría',
-                  selected: filter.block == 'theory',
-                  onTap: () => onFilter(filter.copyWith(block: 'theory')),
+              for (final block in blocks)
+                Flexible(
+                  child: _BlockTab(
+                    label: block.title(filter.language),
+                    selected: filter.block == block.id,
+                    onTap: () => onFilter(filter.copyWith(block: block.id)),
+                  ),
                 ),
-              ),
-              Flexible(
-                child: _AreaTab(
-                  label: 'Problemas',
-                  selected: filter.block == 'problems',
-                  onTap: () => onFilter(filter.copyWith(block: 'problems')),
-                ),
-              ),
             ],
           ),
         ),
@@ -1156,8 +1218,8 @@ class _AreaFilter extends StatelessWidget {
   }
 }
 
-class _AreaTab extends StatelessWidget {
-  const _AreaTab({
+class _BlockTab extends StatelessWidget {
+  const _BlockTab({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -1960,11 +2022,13 @@ class _SearchResults extends StatelessWidget {
   const _SearchResults({
     required this.filter,
     required this.units,
+    required this.blocks,
     required this.onFilter,
   });
 
   final LibraryFilter filter;
   final List<Unit> units;
+  final List<CourseBlock> blocks;
   final ValueChanged<LibraryFilter> onFilter;
 
   @override
@@ -2003,6 +2067,7 @@ class _SearchResults extends StatelessWidget {
                       child: FilterPanel(
                         facets: facets,
                         filter: filter,
+                        blocks: blocks,
                         onChanged: onFilter,
                       ),
                     ),

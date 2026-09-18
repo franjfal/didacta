@@ -10,6 +10,14 @@
 /// depende de en qué orden se abrieron los repositorios: el mismo material se
 /// ve distinto en dos máquinas y nadie sabe cuál es el bueno.
 ///
+/// **Las lecciones sin bloque.** Una lección dice a qué parte de la
+/// asignatura pertenece --la teoría, los problemas-- y quién es cada bloque lo
+/// declara un `taxonomy.yaml`, que puede ser el del repositorio de al lado.
+/// Una lección que nombra un bloque que no declara ninguno de los abiertos se
+/// ve entera, y eso es a propósito; pero el bloque sale por su id, y casi
+/// siempre significa que falta abrir un repositorio o que alguien quitó el
+/// bloque y dejó atrás sus lecciones.
+///
 /// **Los documentos que llaman fuera de su repositorio.** Un documento y las
 /// unidades que compone tienen que vivir en el mismo: LaTeX resuelve las rutas
 /// bajo una sola raíz, así que un documento que llama al de al lado compila en
@@ -31,6 +39,7 @@ import 'package:flutter/material.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'manage_blocks.dart';
 import 'shell.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
@@ -43,7 +52,8 @@ class BetweenReposPage extends StatelessWidget {
     final session = watchSession(context);
     final conflicts = session.catalogue.metadataConflicts;
     final crossing = session.catalogue.crossRepoUses;
-    final total = conflicts.length + crossing.length;
+    final orphans = session.catalogue.undeclaredBlocks;
+    final total = conflicts.length + crossing.length + orphans.length;
 
     return Column(
       children: [
@@ -58,12 +68,155 @@ class BetweenReposPage extends StatelessWidget {
               const SectionLabel('Metadatos que no coinciden'),
               _ConflictsSection(session: session),
 
+              const SectionLabel('Lecciones sin bloque'),
+              _OrphanBlocksSection(session: session, blocks: orphans),
+
               const SectionLabel('Documentos que llaman fuera'),
               _CrossingSection(session: session, uses: crossing),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Las lecciones que nombran un bloque que no declara nadie.
+///
+/// No es un error y no esconde nada: las lecciones se ven enteras, y el
+/// bloque se enseña por su id. Eso es a propósito --quien no tenga el
+/// repositorio donde alguien puso el nombre tiene que seguir viendo todo su
+/// material-- pero casi siempre significa una de dos cosas, y las dos se
+/// arreglan: falta abrir el repositorio que lo declara, o alguien quitó el
+/// bloque y dejó atrás sus lecciones.
+///
+/// Las dos salidas están aquí: declararlo, o mandar sus lecciones a un bloque
+/// que sí exista.
+class _OrphanBlocksSection extends StatelessWidget {
+  const _OrphanBlocksSection({required this.session, required this.blocks});
+
+  final Session session;
+  final List<String> blocks;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    child: Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Cada lección dice a qué parte de la asignatura pertenece, y '
+              'quién es cada bloque lo declara un `taxonomy.yaml` que puede '
+              'estar en otro repositorio. Estas nombran uno que no declara '
+              'ninguno de los abiertos: se ven enteras, pero el bloque sale '
+              'por su id.',
+              style: TextStyle(fontSize: 12.5, height: 1.45),
+            ),
+            const SizedBox(height: 10),
+            if (blocks.isEmpty)
+              const Note('Todas las lecciones tienen su bloque declarado.')
+            else ...[
+              for (final id in blocks)
+                _OrphanBlockRow(session: session, id: id),
+              const SizedBox(height: 6),
+              const Note(
+                'Si el bloque es de otra persona, lo que falta es abrir su '
+                'repositorio: declararlo aquí crea un segundo sitio donde '
+                'vive el mismo nombre, y entonces pueden discrepar.',
+                tone: didactaTeacher,
+              ),
+            ],
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _OrphanBlockRow extends StatelessWidget {
+  const _OrphanBlockRow({required this.session, required this.id});
+
+  final Session session;
+  final String id;
+
+  @override
+  Widget build(BuildContext context) {
+    final units = session.catalogue.unitsInBlock(id);
+    final repos = {
+      for (final unit in units)
+        if (unit.repo.isNotEmpty) unit.repo,
+    };
+    final canWrite = session.workspace.repos.any(
+      (repo) => session.canWriteIn(repo.id),
+    );
+    return Container(
+      key: Key('orphan-block-$id'),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: didactaSurface,
+        border: Border.all(color: didactaRule),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  id,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              if (canWrite) ...[
+                TextButton(
+                  key: Key('declare-orphan-$id'),
+                  onPressed: () => declareNamedBlock(context, session, id),
+                  child: const Text('Declararlo'),
+                ),
+                if (session.catalogue.blocks.isNotEmpty)
+                  TextButton(
+                    key: Key('move-orphan-$id'),
+                    onPressed: () => moveBlockLessons(context, session, id),
+                    child: const Text('Mover sus lecciones'),
+                  ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              Text(
+                units.length == 1
+                    ? 'lo nombra 1 lección'
+                    : 'lo nombran ${units.length} lecciones',
+                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              ),
+              const Text(
+                'en',
+                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              ),
+              for (final repo in repos)
+                RepoChip(
+                  colour: session.colourOf(repo) ?? 0xFF62697A,
+                  label: session.workspace.byId(repo)?.label ?? repo,
+                  compact: true,
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -214,9 +367,9 @@ class _ConflictsSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Una asignatura --o un grado-- declarada en dos repositorios '
-                'tiene que decir lo mismo en los dos. Si no, lo que se enseña '
-                'depende de en qué orden se abrieron.',
+                'Una asignatura --o un grado, o un bloque-- declarada en dos '
+                'repositorios tiene que decir lo mismo en los dos. Si no, lo '
+                'que se enseña depende de en qué orden se abrieron.',
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
               const SizedBox(height: 10),
@@ -251,12 +404,15 @@ class _ConflictRow extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          conflict.about == ConflictAbout.degree
-              ? 'Grado ${conflict.course} · ${conflict.field}'
-              : '${conflict.course} · ${conflict.field}',
-          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-        ),
+        Text(switch (conflict.about) {
+          ConflictAbout.degree =>
+            'Grado ${conflict.course} · '
+                '${conflict.field}',
+          ConflictAbout.block =>
+            'Bloque ${conflict.course} · '
+                '${conflict.field}',
+          ConflictAbout.course => '${conflict.course} · ${conflict.field}',
+        }, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         // Un botón por valor: el que se pulsa es el que se queda, y se
         // escribe en los demás. Nada de «el más nuevo gana»: son ficheros que
@@ -292,14 +448,17 @@ class _ConflictRow extends StatelessWidget {
             ),
           ),
         if (!conflict.fixable)
-          Note(
-            conflict.about == ConflictAbout.degree
-                ? 'De un grado solo se puede igualar el título desde aquí. '
-                      'Lo demás, a mano en `degrees.yaml`.'
-                : 'Este campo hay que igualarlo a mano: Didacta no sabe en '
-                      'qué línea de `course.yaml` se escribe.',
-            tone: didactaTeacher,
-          ),
+          Note(switch (conflict.about) {
+            ConflictAbout.degree =>
+              'De un grado solo se puede igualar el título desde aquí. '
+                  'Lo demás, a mano en `degrees.yaml`.',
+            ConflictAbout.block =>
+              'De un bloque solo se puede igualar el nombre desde aquí. '
+                  'Lo demás, a mano en `taxonomy.yaml`.',
+            ConflictAbout.course =>
+              'Este campo hay que igualarlo a mano: Didacta no sabe en '
+                  'qué línea de `course.yaml` se escribe.',
+          }, tone: didactaTeacher),
       ],
     ),
   );
@@ -310,12 +469,23 @@ class _ConflictRow extends StatelessWidget {
       // Una asignatura y un grado se escriben en ficheros distintos, y el de
       // los grados es una lista: no se direcciona por clave, así que lo lleva
       // su propio escritor.
-      final written = conflict.about == ConflictAbout.degree
-          ? await session.setDegreeTitles(
-              id: conflict.course,
-              titles: {conflict.language!: value},
-            )
-          : await session.resolveMetadata(conflict: conflict, value: value);
+      final written = switch (conflict.about) {
+        ConflictAbout.degree => await session.setDegreeTitles(
+          id: conflict.course,
+          titles: {conflict.language!: value},
+        ),
+        // Un bloque vive en la lista de `taxonomy.yaml`, que tampoco se
+        // direcciona por clave: lo escribe [TaxonomyFile], que lo busca por
+        // su id.
+        ConflictAbout.block => await session.setBlockTitles(
+          id: conflict.course,
+          titles: {conflict.language!: value},
+        ),
+        ConflictAbout.course => await session.resolveMetadata(
+          conflict: conflict,
+          value: value,
+        ),
+      };
       messenger.showSnackBar(
         SnackBar(
           content: Text(

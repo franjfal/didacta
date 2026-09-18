@@ -160,7 +160,7 @@ class GoogleTranslator implements Translator {
         ((decoded['data'] as Map?)?['translations'] as List?) ?? const [];
     return [
       for (final item in translations)
-        '${(item as Map)['translatedText'] ?? ''}',
+        unescapeHtml('${(item as Map)['translatedText'] ?? ''}'),
     ];
   }
 }
@@ -245,7 +245,9 @@ class AzureTranslator implements Translator {
     final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as List;
     return [
       for (final item in decoded)
-        '${((item as Map)['translations'] as List).first['text'] ?? ''}',
+        unescapeHtml(
+          '${((item as Map)['translations'] as List).first['text'] ?? ''}',
+        ),
     ];
   }
 }
@@ -259,3 +261,50 @@ String _reach(Object error) {
   final clean = text.contains('uri=') ? text.split('uri=').first.trim() : text;
   return 'No se pudo hablar con el proveedor: $clean';
 }
+
+/// Deshace el escapado HTML de lo que devuelve un traductor.
+///
+/// Se pide la traducción en formato HTML --es la única manera de que los dos
+/// proveedores respeten las etiquetas `<x id="N"/>` con las que viaja
+/// protegido el LaTeX-- y en HTML lo que vuelve viene escapado. Un apóstrofo,
+/// que en valenciano y en catalán está en una palabra de cada cinco, vuelve
+/// como `&#39;`.
+///
+/// Sin deshacerlo, `l'operació` se guardaba en el `.tex` como
+/// `l&#39;operació`, y eso **no compila**: en LaTeX `&` es el separador de
+/// columnas de una tabla, así que fuera de una da un error y dentro de una
+/// parte la fila en dos.
+///
+/// De una pasada y no entidad por entidad: encadenando sustituciones,
+/// `&amp;lt;` --que es el texto literal «&lt;»-- acabaría convertido en `<`,
+/// porque la segunda pasada vería el `&lt;` que acaba de crear la primera.
+String unescapeHtml(String text) {
+  if (!text.contains('&')) return text;
+  return text.replaceAllMapped(_entity, (match) {
+    final named = match.group(1);
+    if (named != null) return _named[named] ?? match.group(0)!;
+    final digits = match.group(2);
+    if (digits != null) {
+      final code = int.tryParse(digits);
+      return code == null ? match.group(0)! : String.fromCharCode(code);
+    }
+    final hex = match.group(3);
+    final code = int.tryParse(hex!, radix: 16);
+    return code == null ? match.group(0)! : String.fromCharCode(code);
+  });
+}
+
+final RegExp _entity = RegExp(
+  r'&(?:([a-zA-Z][a-zA-Z0-9]{1,9})|#([0-9]{1,7})|#[xX]([0-9a-fA-F]{1,6}));',
+);
+
+/// Las que usan los dos proveedores. Una que no esté aquí se queda como está,
+/// que es mejor que convertirla en el carácter equivocado.
+const Map<String, String> _named = {
+  'amp': '&',
+  'lt': '<',
+  'gt': '>',
+  'quot': '"',
+  'apos': "'",
+  'nbsp': ' ',
+};

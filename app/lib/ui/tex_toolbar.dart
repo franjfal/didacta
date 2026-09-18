@@ -624,7 +624,7 @@ class _EnvironmentMenu extends StatelessWidget {
   }
 }
 
-/// «Sangrar»: ordena el fichero ahora, sin esperar a guardarlo.
+/// «Beautify»: ordena el fichero ahora, sin esperar a guardarlo.
 ///
 /// No pide confirmación porque no hace falta: deja el cambio **sin guardar**,
 /// a la vista, con «Descartar» al lado. Lo que hace es lo mismo que haría el
@@ -640,7 +640,7 @@ class _TidyButton extends StatelessWidget {
     if (compact) {
       return IconButton(
         key: const Key('tidy-now'),
-        tooltip: 'Ordenar la sangría',
+        tooltip: 'Beautify: ordena este fichero ahora',
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.format_indent_increase, size: 15),
         onPressed: onPressed,
@@ -654,7 +654,7 @@ class _TidyButton extends StatelessWidget {
         color: didactaMuted,
       ),
       label: const Text(
-        'Sangrar',
+        'Beautify',
         style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w500,

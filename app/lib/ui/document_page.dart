@@ -304,10 +304,7 @@ class _DocumentPageState extends State<DocumentPage> {
   /// un tema que solo se da en castellano y valenciano no tiene un hueco en
   /// inglés, tiene un idioma que no se usa.
   List<TranslationGap> _gaps(Session session, Document document) {
-    final course = session.courseById(widget.courseId);
-    final languages = (course?.languages.isNotEmpty ?? false)
-        ? course!.languages
-        : session.catalogue.languages;
+    final languages = session.languagesIn(widget.courseId);
     return gapsIn(
       document: document,
       catalogue: session.catalogue,

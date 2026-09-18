@@ -149,25 +149,112 @@ void main() {
 
       await session.setCourseLanguages(
         course: 'am-i',
-        languages: const ['fr', 'es', 'ca'],
+        languages: const ['en', 'es', 'va'],
       );
 
-      expect(gateway.commits.single.text, contains('languages: [es, ca, fr]'));
+      expect(gateway.commits.single.text, contains('languages: [es, va, en]'));
     });
 
-    test('un idioma que el índice no conoce se escribe igual', () async {
-      // Con un índice viejo, ordenar no puede ser motivo para perder lo que
-      // se ha pedido: el motor lo rechazará si de verdad no existe, y ese
-      // error dice lo que pasa.
+    test('un idioma que el repositorio no mantiene no se escribe', () async {
+      // Esto se hacía al revés: se escribía lo que se pidiera y se dejaba que
+      // el motor se quejara. El problema es **cómo** se queja: rechaza el
+      // `course.yaml` entero, así que la asignatura desaparece de la
+      // biblioteca y el motivo queda en una lista de errores que nadie mira.
+      // Un idioma que no se puede escribir se deja fuera aquí.
       final gateway = repoGateway();
       final session = await sessionWith({'x/uno': gateway});
 
       await session.setCourseLanguages(
         course: 'am-i',
-        languages: const ['es', 'zz'],
+        languages: const ['es', 'fr'],
       );
 
-      expect(gateway.commits.single.text, contains('languages: [es, zz]'));
+      expect(gateway.commits.single.text, contains('languages: [es]'));
+      expect(gateway.commits.single.text, isNot(contains('fr')));
+    });
+
+    test('cada repositorio recibe lo suyo, no la lista entera', () async {
+      // Una asignatura repartida entre un repositorio que mantiene castellano
+      // y valenciano y otro que mantiene castellano e inglés se da en los
+      // tres, cada uno con el material que tiene. Escribir los tres en los dos
+      // ficheros --que es lo que se hacía-- deja los dos inválidos.
+      // Los dos ficheros empiezan diciendo solo castellano, para que los dos
+      // tengan algo que cambiar y se vea qué recibe cada uno.
+      final soloEs = courseYaml.replaceAll(
+        'languages: [es, va]',
+        'languages: [es]',
+      );
+      final teoria = repoGateway(yaml: soloEs);
+      final practica = repoGateway(yaml: soloEs);
+      final catalogue = Catalogue.merge([
+        // Cada índice dice lo que dice su fichero: solo castellano. Un
+        // `course.yaml` que declarara un idioma que su repositorio no
+        // mantiene no existe, porque el motor lo rechaza al indexar.
+        catalogueWith(
+          const [],
+          courses: [
+            courseWith(languages: const ['es']),
+          ],
+          repo: 'x/teoria',
+          languages: const ['es', 'va'],
+        ),
+        catalogueWith(
+          const [],
+          courses: [
+            courseWith(languages: const ['es']),
+          ],
+          repo: 'x/practica',
+          languages: const ['es', 'en'],
+        ),
+      ]);
+      final session = PerRepoSession(
+        gateways: {'x/teoria': teoria, 'x/practica': practica},
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+
+      final written = await session.setCourseLanguages(
+        course: 'am-i',
+        languages: const ['es', 'va', 'en'],
+      );
+
+      expect(written, 2);
+      expect(teoria.commits.single.text, contains('languages: [es, va]'));
+      expect(practica.commits.single.text, contains('languages: [es, en]'));
+    });
+
+    test('lo que el fichero ya dice no se poda al guardar', () async {
+      // Un `course.yaml` con un idioma que el índice no conoce --porque está
+      // viejo-- no es motivo para quitárselo: esta pantalla venía a cambiar
+      // otra cosa, y podar en silencio lo que no se entiende es cómo se
+      // pierde el trabajo de otra persona.
+      final gateway = repoGateway(
+        yaml: courseYaml.replaceAll(
+          'languages: [es, va]',
+          'languages: [es, zz]',
+        ),
+      );
+      final catalogue = Catalogue.merge([
+        catalogueWith(
+          const [],
+          courses: [
+            courseWith(languages: const ['es', 'zz']),
+          ],
+          repo: 'x/uno',
+        ),
+      ]);
+      final session = PerRepoSession(
+        gateways: {'x/uno': gateway},
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+
+      await session.setCourseLanguages(
+        course: 'am-i',
+        languages: const ['es', 'va', 'zz'],
+      );
+
+      expect(gateway.commits.single.text, contains('zz'));
     });
 
     test('quedarse sin ningún idioma se rechaza', () async {

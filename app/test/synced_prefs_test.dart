@@ -160,4 +160,77 @@ void main() {
       expect(session.prefsPath, isNull);
     });
   });
+
+  group('los idiomas con los que se trabaja', () {
+    const all = ['es', 'va', 'en'];
+
+    test('sin elegir ninguno se ofrecen todos', () {
+      // Vacío es «todos» y no «ninguno». Es lo que permite añadir esto sin
+      // cambiar nada para quien no lo toque.
+      const prefs = SyncedPrefs();
+      for (final code in all) {
+        expect(prefs.isLanguageEnabled(code), isTrue);
+      }
+    });
+
+    test('apagar uno deja los demás', () {
+      final prefs = const SyncedPrefs().withLanguageEnabled(
+        'en',
+        false,
+        all: all,
+      );
+
+      expect(prefs.isLanguageEnabled('en'), isFalse);
+      expect(prefs.isLanguageEnabled('es'), isTrue);
+      expect(prefs.isLanguageEnabled('va'), isTrue);
+    });
+
+    test('un ida y vuelta lo conserva', () {
+      final prefs = const SyncedPrefs().withLanguageEnabled(
+        'en',
+        false,
+        all: all,
+      );
+
+      expect(SyncedPrefs.fromJson(prefs.toJson()).enabledLanguages, {
+        'es',
+        'va',
+      });
+    });
+
+    test('volver a marcarlos todos no deja una lista que mantener', () {
+      // Si se guardara la lista entera, añadir un idioma al repositorio
+      // mañana lo dejaría apagado sin que nadie lo apagara.
+      final prefs = const SyncedPrefs()
+          .withLanguageEnabled('en', false, all: all)
+          .withLanguageEnabled('en', true, all: all);
+
+      expect(prefs.enabledLanguages, isEmpty);
+      expect(prefs.isEmpty, isTrue);
+    });
+
+    test('apagarlos todos es no filtrar', () {
+      var prefs = const SyncedPrefs();
+      for (final code in all) {
+        prefs = prefs.withLanguageEnabled(code, false, all: all);
+      }
+
+      expect(prefs.enabledLanguages, isEmpty);
+      for (final code in all) {
+        expect(prefs.isLanguageEnabled(code), isTrue);
+      }
+    });
+
+    test('un fichero de antes de que esto existiera se lee igual', () {
+      // No se sube la versión por añadir un campo: un fichero escrito por una
+      // versión anterior no está mal, solo es anterior.
+      const older =
+          '{"version": 1, "hiddenRepos": [], "favouriteCourses": ["am-i"]}';
+
+      final prefs = SyncedPrefs.fromJson(older);
+      expect(prefs.isFavouriteCourse('am-i'), isTrue);
+      expect(prefs.enabledLanguages, isEmpty);
+      expect(prefs.isLanguageEnabled('en'), isTrue);
+    });
+  });
 }

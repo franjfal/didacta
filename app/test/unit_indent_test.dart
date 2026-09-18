@@ -264,10 +264,7 @@ void main() {
       final field = tester.widget<TextField>(find.byType(TextField).first);
       expect(field.controller!.text, contains('  \\item Uno'));
       expect(gateway.commits, isEmpty);
-      expect(
-        find.text('Sangría ordenada. Guarda para dejarlo así.'),
-        findsOneWidget,
-      );
+      expect(find.text('Ordenado. Guarda para dejarlo así.'), findsOneWidget);
     });
 
     testWidgets('pulsarlo dos veces lo dice en lugar de callar', (
@@ -324,6 +321,68 @@ void main() {
       );
       await settle(tester);
 
+      expect(find.byKey(const Key('tidy-now')), findsNothing);
+    });
+
+    testWidgets('pulsar la palabra ordena el fichero, sin tocar el ajuste', (
+      tester,
+    ) async {
+      // La casilla dice si se ordena solo al guardar; la palabra lo ordena
+      // ahora. Quien acaba de leer «Beautify» y quiere ver qué hace, pulsa la
+      // palabra, y lo que **no** puede pasar es que eso apague el ajuste.
+      tester.view.physicalSize = const Size(1500, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final (session, gateway) = await ready();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(
+              body: UnitPage(unitPath: here, language: 'va'),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('editor-beautify')));
+      await settle(tester);
+
+      final field = tester.widget<TextField>(find.byType(TextField).first);
+      expect(field.controller!.text, contains('  \\item Uno'));
+      // Ni ha guardado nada ni ha tocado el `unit.yaml`.
+      expect(gateway.commits, isEmpty);
+      expect(
+        tester.widget<Checkbox>(find.byKey(const Key('editor-indent'))).value,
+        isTrue,
+      );
+    });
+
+    testWidgets('apagada, la palabra no ofrece ordenar', (tester) async {
+      tester.view.physicalSize = const Size(1500, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final (session, _) = await ready(indentVa: false);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(
+              body: UnitPage(unitPath: here, language: 'va'),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      // La casilla sigue estando --es como se vuelve a encender-- pero el
+      // botón de la barra de formato no.
+      expect(find.byKey(const Key('editor-indent')), findsOneWidget);
       expect(find.byKey(const Key('tidy-now')), findsNothing);
     });
 

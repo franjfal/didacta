@@ -44,12 +44,135 @@ Se **elige** cuál, y no se decide por ti, porque no hay ninguna elección
 evidente: cada uno tiene los repositorios que tiene. Sin elegir ninguno, todo
 sigue funcionando en esta máquina.
 
+## Idiomas
+
+Dos cosas distintas, en la misma tarjeta para que se distingan de un vistazo.
+
+**Con los que trabajas.** De los que hay en el material, cuáles quieres que
+Didacta te ofrezca: la barra de arriba, los menús de compilar, la ficha de una
+asignatura. Es solo para ti, viaja con las preferencias de arriba y no cambia
+ningún fichero. Un repositorio del departamento que mantiene cinco idiomas y
+una persona que da clase en dos no tienen por qué estorbarse.
+
+Un idioma apagado **sigue apareciendo donde algo ya lo declara** — en la ficha
+de una asignatura que se da en él, en las pestañas de una unidad que ya tiene
+ese fichero — porque si no, guardar se lo llevaría por delante.
+
+**A los que traduce cada repositorio.** Esto sí es del material: está en su
+`didacta.yaml`, se ve en el diff y lo lee todo el mundo. Marca lo que ese
+repositorio mantiene de verdad; uno marcado de más convierte la lista de
+traducciones pendientes --que es la lista de trabajo-- en ruido.
+
+!!! warning "Un idioma en uso no se puede quitar"
+
+    Si una asignatura se da en él, Didacta se niega y te dice cuáles. No es
+    una formalidad: una asignatura declarada en un idioma que su repositorio
+    ya no mantiene es un `course.yaml` que el motor rechaza, y entonces la
+    asignatura **desaparece de la biblioteca**. Se quita antes de sus fichas.
+
+Quitar un idioma no borra ningún `.tex`: dejan de pedirse. Volver a añadirlo
+los recupera.
+
+[:octicons-arrow-right-24: Las cuatro listas de idiomas](../conceptos/idiomas.md#que-idiomas-hay)
+
+## Bloques
+
+Las partes en que se divide una asignatura: la teoría, los problemas, las
+prácticas de ordenador. **Cada lección dice a cuál pertenece**, con `block:`
+en su `unit.yaml`.
+
+Eran dos y estaban escritas en el código, así que no se podían ni renombrar ni
+añadir. Ahora se declaran en el `taxonomy.yaml` de cada repositorio, con un
+**id** --lo que guarda la lección-- y un **nombre por idioma** --lo que se
+lee--. Renombrar un bloque es cambiar una línea: no se mueve ningún fichero y
+no se rompe ninguna referencia.
+
+La tarjeta resume cuántos hay y cuánto lleva cada uno; el botón abre la
+pantalla donde se tocan.
+
+### Quién declara qué
+
+Igual que un tema o una titulación: **la lección nombra el bloque y el bloque
+lo declara quien lo tenga**. Con que un repositorio lo declare, todos lo ven
+con su nombre.
+
+Aquí es corriente declararlo en varios, a diferencia de los grados: la teoría
+y los problemas están repartidos en dos repositorios y los dos necesitan los
+dos bloques. Por eso cada bloque enseña en qué repositorios está declarado, y
+se marca y se desmarca desde ahí. El precio de declararlo en dos es que pueden
+acabar discrepando, y de eso avisa [Entre repositorios](entre-repos.md).
+
+### Quitar uno
+
+Pregunta antes qué pasa con sus lecciones, y no se puede saltar:
+
+- **moverlas a otro bloque** — reescribe el `block:` de cada `unit.yaml`, en
+  un solo commit por repositorio;
+- **dejarlas sin bloque declarado** — se ven igual, con el bloque por su id, y
+  salen en Entre repositorios para arreglarlas cuando toque.
+
+Lo que no puede pasar es que noventa lecciones se queden clasificadas en
+ninguna parte sin que nadie lo haya decidido.
+
+!!! info "No romperle el material a nadie"
+
+    Un bloque que no declara ningún repositorio abierto **no esconde nada**:
+    sus lecciones salen en la biblioteca, se editan y se compilan igual. Lo
+    único que cambia es que el bloque se enseña por su id. Quien no tenga el
+    repositorio donde alguien puso el nombre sigue viendo todo su material.
+
+## Herramientas
+
+Didacta no trabaja sola: pide prestado a cuatro programas.
+
+| | Para qué | Sin ella |
+|---|---|---|
+| **Git** | traer el material de GitHub y guardar cada cambio | no hay nada que abrir |
+| **Python 3** | ejecutar el motor | no hay PDF |
+| **LaTeX** (`latexmk`) | componer las páginas | no hay PDF |
+| **El motor de Didacta** | saber qué componer | no hay PDF |
+
+De cada una la lista dice **si está, dónde y qué versión**. La ruta no es un
+adorno: es lo que contesta «¿cuál de los dos gits está usando?», que es la
+pregunta del día que algo va raro.
+
+La que falte tiene un botón al lado, y lo que el botón pone es lo que va a
+hacer --«Instalar con Homebrew», «Descargar MacTeX (~6 GB)»-- en lugar de un
+«Instalar» a secas que se pone a bajar seis gigas por la conexión de casa.
+
+!!! tip "Instalar no es terminar"
+
+    Después de cada instalación Didacta **vuelve a buscar** la herramienta, y
+    solo entonces la da por puesta. Si el instalador ha dejado el programa en
+    una carpeta que no es ninguna de las de siempre, lo dice en lugar de poner
+    un tick verde que miente.
+
+    Y lo que termina fuera de Didacta --el instalador de Apple, el `.pkg` de
+    macOS, el de MiKTeX-- se anuncia como tal: la fila queda esperando y hay
+    un **Volver a comprobar** para cuando la otra ventana haya acabado.
+
+### Cuando no se puede
+
+Pasa, y más de lo que parece: hace falta la contraseña de administrador, no
+hay gestor de paquetes, la máquina es del departamento. Entonces sale un
+aviso con las tres cosas que permiten salir del paso:
+
+- **qué se intentó** y **qué contestó** el programa, con un botón para copiar
+  el detalle y pegarlo en una búsqueda o en una incidencia;
+- **cómo hacerlo a mano**, con las órdenes de este sistema;
+- **la guía oficial** de esa herramienta.
+
+Y, abajo, la lista de **dónde ha mirado Didacta**. Si ya la tenías instalada,
+esa lista es la única pista que sirve.
+
 ## Compilación
 
-Dos rutas, y Didacta busca las dos sola:
+Las dos rutas que la lista de arriba comprueba, para cuando hay que decirlas a
+mano:
 
 **El motor** --el repositorio de Didacta, el que lleva `cli/didacta`. Hay un
-botón para descargarlo si no lo tienes.
+botón para descargarlo si no lo tienes, y otro para señalar dónde está si lo
+tienes en un sitio propio.
 
 **La distribución de TeX.** Si no la encuentra, la pantalla dice **dónde ha
 mirado**, que es lo que permite arreglarlo.

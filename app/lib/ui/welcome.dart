@@ -17,8 +17,8 @@
 ///
 /// **La configuración se hace aquí, no se explica.** El paso del repositorio
 /// abre el mismo diálogo que Ajustes --[RepositoryAdder], que es de los dos--
-/// y el del motor lo clona. Un asistente que dice «ahora ve a Ajustes y…» es
-/// una página de documentación con botones.
+/// y el de las herramientas las instala. Un asistente que dice «ahora ve a
+/// Ajustes y…» es una página de documentación con botones.
 ///
 /// **Se puede saltar todo.** Cada paso tiene su «ahora no», y saltárselo no
 /// deja la aplicación rota: lo que falte lo volverá a decir la pantalla que
@@ -30,11 +30,13 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../data/toolchain.dart';
 import '../state/session.dart';
 import 'add_repository.dart';
 import 'brand.dart';
 import 'sign_in.dart';
 import 'theme.dart';
+import 'toolchain_check.dart';
 import 'welcome_art.dart';
 
 /// Qué pasos tiene la bienvenida.
@@ -45,20 +47,37 @@ enum WelcomeStep {
   /// Entrar en GitHub.
   account,
 
+  /// Las herramientas que tienen que estar en la máquina.
+  ///
+  /// **Antes que el repositorio, y no después como estaba el motor.** Clonar
+  /// el primer repositorio se hace con git, así que un asistente que pide el
+  /// repositorio primero manda a alguien a un paso que no puede terminar y le
+  /// enseña el fallo de git en el peor sitio: dentro del diálogo de elegir
+  /// repositorio, dicho en el idioma de git.
+  tools,
+
   /// Abrir el primer repositorio de contenido.
   repository,
-
-  /// El motor, que es lo que hace falta para compilar.
-  engine,
 
   /// Listo.
   done,
 }
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key, required this.session, this.onFinished});
+  const WelcomeScreen({
+    super.key,
+    required this.session,
+    this.onFinished,
+    this.toolchain,
+  });
 
   final Session session;
+
+  /// Con qué se comprueban las herramientas. Null es la de verdad.
+  ///
+  /// Se inyecta por lo mismo que en [ToolchainCheck]: comprobar lanza
+  /// procesos, y un test de widgets no puede esperar a un proceso de verdad.
+  final Toolchain? toolchain;
 
   /// Qué hacer al terminar. Por defecto, darla por vista.
   ///
@@ -92,14 +111,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   /// Los pasos que tocan en esta copia.
   ///
-  /// El del motor no sale donde no se puede compilar --la web-- porque
-  /// enseñar un paso que solo puede decir «aquí no» es alargar la bienvenida
-  /// para no decir nada.
+  /// El de las herramientas no sale donde no se puede compilar --la web--
+  /// porque enseñar un paso que solo puede decir «aquí no» es alargar la
+  /// bienvenida para no decir nada.
   List<WelcomeStep> get _steps => [
     WelcomeStep.what,
     WelcomeStep.account,
+    if (widget.session.canCompile) WelcomeStep.tools,
     WelcomeStep.repository,
-    if (widget.session.canCompile) WelcomeStep.engine,
     WelcomeStep.done,
   ];
 
@@ -122,26 +141,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _finish() {
     widget.onFinished?.call();
     if (widget.onFinished == null) widget.session.completeWelcome();
-  }
-
-  Future<void> _installEngine() async {
-    setState(() {
-      _working = true;
-      _problem = null;
-      _progress = 'Descargando el motor…';
-    });
-    try {
-      final where = await widget.session.installEngine(
-        onProgress: (line) {
-          if (mounted) setState(() => _progress = line);
-        },
-      );
-      if (mounted) setState(() => _progress = 'Listo, en $where');
-    } catch (thrown) {
-      if (mounted) setState(() => _problem = thrown);
-    } finally {
-      if (mounted) setState(() => _working = false);
-    }
   }
 
   @override
@@ -249,10 +248,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       adder: _adder,
       working: _working,
     ),
-    WelcomeStep.engine => _Engine(
+    WelcomeStep.tools => _Tools(
       session: widget.session,
-      working: _working,
-      onInstall: _installEngine,
+      toolchain: widget.toolchain,
     ),
     WelcomeStep.done => _Done(session: widget.session),
   };
@@ -477,79 +475,32 @@ class _Repository extends StatelessWidget {
   }
 }
 
-class _Engine extends StatelessWidget {
-  const _Engine({
-    required this.session,
-    required this.working,
-    required this.onInstall,
-  });
+/// El paso de las herramientas.
+///
+/// Era «el motor», y contaba dos de las cuatro piezas --LaTeX y el motor-- en
+/// prosa, con un solo botón que descargaba una de ellas. Las otras dos --git y
+/// Python-- no se mencionaban, y faltando cualquiera de ellas la aplicación
+/// fallaba más tarde y en otro sitio: al clonar el primer repositorio, o al
+/// pulsar compilar.
+///
+/// Ahora las cuatro están en la misma lista, con lo que cada una hace, si está
+/// y dónde. La prosa sobra: una fila que dice «Git 2.39.5, /usr/bin/git»
+/// explica más que un párrafo sobre control de versiones.
+class _Tools extends StatelessWidget {
+  const _Tools({required this.session, this.toolchain});
 
   final Session session;
-  final bool working;
-  final VoidCallback onInstall;
+  final Toolchain? toolchain;
 
   @override
-  Widget build(BuildContext context) {
-    final engine = session.enginePath ?? '';
-    final tex = session.texPath;
-    return _Step(
-      title: 'Para sacar los PDF',
-      body:
-          'Escribir y organizar el material funciona ya. Convertirlo en PDF '
-          'hace falta dos programas más, y son cosas distintas: uno compone '
-          'páginas y el otro sabe qué páginas componer.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Dos piezas, dichas por separado. Antes iban en una frase --«el
-          // motor de Didacta y una distribución de LaTeX»-- y eso deja a
-          // quien lee sin saber qué hace cada una, por qué hacen falta las
-          // dos, ni cuál está descargando al pulsar el botón.
-          const _Piece(
-            icon: Icons.picture_as_pdf_outlined,
-            title: 'LaTeX: el que compone las páginas',
-            body:
-                'El programa que convierte texto en un PDF con sus fórmulas '
-                'bien puestas. Es de terceros y lo usa medio mundo académico. '
-                'Didacta no lo instala: son varios gigas y la versión de cada '
-                'paquete la elige quien compila. Vale MacTeX, TeX Live, '
-                'MiKTeX o TinyTeX.',
-          ),
-          if (tex != null && tex.isNotEmpty)
-            _Tick('LaTeX está en $tex')
-          else
-            const _Hint(
-              'Didacta lo busca solo en los sitios de siempre al arrancar. '
-              'Si no aparece aquí, instálalo y dilo en Ajustes, donde también '
-              'se ve dónde ha mirado.',
-            ),
-
-          const SizedBox(height: 18),
-          const _Piece(
-            icon: Icons.settings_suggest_outlined,
-            title: 'El motor de Didacta: el que sabe qué componer',
-            body:
-                'Un programa pequeño, nuestro, que lee tus repositorios y le '
-                'da a LaTeX las órdenes: qué lecciones lleva cada documento, '
-                'en qué orden, en qué idioma y con qué plantilla. Sin él, '
-                'LaTeX no sabría por dónde empezar.',
-          ),
-          if (engine.isNotEmpty)
-            _Tick('El motor está en $engine')
-          else ...[
-            FilledButton.icon(
-              key: const Key('welcome-install-engine'),
-              onPressed: working ? null : onInstall,
-              icon: const Icon(Icons.download_outlined, size: 16),
-              label: const Text('Descargar el motor'),
-            ),
-            const SizedBox(height: 6),
-            const _Hint('Son unos megas. Se descarga y ya está.'),
-          ],
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => _Step(
+    title: 'Lo que hace falta en tu ordenador',
+    body:
+        'Didacta no trabaja sola: pide prestado a cuatro programas. Escribir y '
+        'organizar el material necesita el primero; sacar los PDF, los otros '
+        'tres. Los que falten se instalan desde aquí.',
+    child: ToolchainCheck(session: session, toolchain: toolchain),
+  );
 }
 
 class _Done extends StatelessWidget {
@@ -580,68 +531,6 @@ class _Done extends StatelessWidget {
 }
 
 // ------------------------------------------------------------- las piezas ---
-
-/// Una de las dos piezas que hacen falta para compilar, con su icono.
-class _Piece extends StatelessWidget {
-  const _Piece({required this.icon, required this.title, required this.body});
-
-  final IconData icon;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(top: 2, right: 10),
-          child: Icon(icon, size: 18, color: didactaAccentDark),
-        ),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                body,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  height: 1.5,
-                  color: didactaMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-/// Una nota al pie de un paso.
-class _Hint extends StatelessWidget {
-  const _Hint(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(left: 28),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 11.5, height: 1.45, color: didactaMuted),
-    ),
-  );
-}
 
 class _Step extends StatelessWidget {
   const _Step({required this.title, required this.body, required this.child});

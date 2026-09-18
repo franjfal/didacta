@@ -416,6 +416,12 @@ class _CommitDialogState extends State<_CommitDialog> {
 /// Un menú y no una fila de pestañas porque una asignatura puede declarar
 /// diez idiomas, y diez pestañas en la barra superior no caben ni se leen.
 /// Con uno solo no aparece: no hay nada que elegir.
+///
+/// Lo que ofrece son los idiomas **del material abierto**, filtrados por los
+/// que se hayan encendido en Ajustes. Antes ofrecía los diez a los que Didacta
+/// sabe imprimir, que es otra lista: elegir uno al que ningún repositorio
+/// traduce deja toda la pantalla enseñando el texto de reserva, y no hay nada
+/// que hacer desde ahí.
 class _LanguagePicker extends StatelessWidget {
   const _LanguagePicker({required this.session});
 
@@ -423,7 +429,7 @@ class _LanguagePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final options = session.catalogue.languageOptions;
+    final options = session.languageChoices;
     if (options.length < 2) return const SizedBox.shrink();
     final current = options
         .where((option) => option.code == session.language)

@@ -55,20 +55,74 @@ tiene que poder darse. Lo que no puede pasar es que nadie se entere.
 
 ## Qué idiomas hay
 
-Los de cada repositorio los declara su `didacta.yaml`:
+Hay **cuatro listas**, y no son la misma. Confundirlas es cómo acaba una
+asignatura declarada en un idioma que no tiene dónde vivir.
+
+| | Dónde se dice | Qué significa |
+|---|---|---|
+| **El registro** | Didacta | a cuáles sabe **imprimir**: diez |
+| **El repositorio** | `didacta.yaml` | a cuáles se **traduce aquí** |
+| **La asignatura** | `course.yaml` | en cuáles se **da** |
+| **Tú** | Ajustes → Idiomas | con cuáles **trabajas** |
+
+Las tres primeras son del material: están en ficheros, se ven en el diff y las
+lee todo el mundo. La cuarta es tuya, viaja con tus preferencias y no cambia
+ningún fichero.
+
+### Cada una vive dentro de la anterior
+
+Un repositorio declara los suyos:
 
 ```yaml
+# didacta.yaml
 languages: [es, va, en]
-default: es
+default_language: es
 ```
 
-Didacta trae los ficheros de idioma de LaTeX --nombres de entornos, cadenas
-fijas, partición de palabras-- para más de los que un repositorio suele usar,
-así que añadir uno es añadirlo a esa lista.
+Y una asignatura, los suyos **de entre esos**:
 
-Y a qué idiomas se traduce **cada asignatura** puede ser distinto: una
-optativa en inglés y el resto en castellano y valenciano es lo normal. Se dice
-en `course.yaml`.
+```yaml
+# course.yaml
+languages: [es, va]
+```
+
+Eso último es una regla, no una costumbre: una asignatura no puede darse en un
+idioma que su repositorio no mantiene, porque no habría dónde poner su `.tex`.
+Si lo dice, Didacta **rechaza ese `course.yaml`** — y una asignatura rechazada
+no sale en la biblioteca. Por eso la ficha de una asignatura solo ofrece los
+del repositorio: para añadir otro, se añade antes en Ajustes.
+
+Con dos repositorios abiertos la cuenta es por repositorio. Una asignatura
+repartida entre el de teoría --castellano y valenciano-- y el de problemas
+--castellano e inglés-- se da en los tres, y cada `course.yaml` declara lo que
+su repositorio puede sostener.
+
+### Y luego estás tú
+
+En **Ajustes → Idiomas** eliges con cuáles quieres que te ofrezca trabajar. Es
+un filtro: la barra de arriba, los menús de compilar, la ficha de una
+asignatura. Un repositorio que mantiene cinco y una persona que da clase en
+dos no tienen por qué estorbarse.
+
+!!! tip "Apagar no es quitar"
+
+    Un idioma apagado sigue apareciendo donde algo **ya lo declara**: en la
+    ficha de una asignatura que se da en él, en las pestañas de una unidad que
+    ya tiene ese fichero. Si no, guardar se lo llevaría por delante sin que
+    nadie lo hubiera pedido.
+
+### Quitar un idioma de un repositorio
+
+Solo se puede si ninguna asignatura se da en él. Didacta se niega y dice
+cuáles lo usan; se quita antes de sus fichas, y luego del repositorio.
+
+No es una formalidad: quitarlo con una asignatura declarada en él la haría
+desaparecer de la biblioteca, y el motivo quedaría en una lista de errores que
+nadie mira.
+
+Quitarlo **no borra ningún fichero**. Los `.tex` que hubiera siguen donde
+estaban; simplemente dejan de pedirse, y dejan de contar como pendientes.
+Volver a añadirlo los recupera.
 
 ## La cola de traducción
 

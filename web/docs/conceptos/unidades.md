@@ -80,6 +80,7 @@ existe.
 ```yaml
 id: analysis.normed.definition
 kind: theory
+block: theory        # de qué parte de la asignatura forma parte
 
 title:
   es: Espacios normados
@@ -105,6 +106,35 @@ duration_minutes: 15
 Casi todo es opcional. `title` y `kind` se usan en toda la aplicación;
 `prerequisites` y `objectives` son para quien los quiera.
 
+!!! info "`kind` y `block` no son lo mismo"
+
+    Confundirlos fue un error de verdad, y merece la pena decir en qué se
+    diferencian. **El `kind` dice qué *es* el fichero** --una explicación, un
+    ejemplo, un ejercicio-- y **el `block` de qué parte de la asignatura forma
+    parte** --la teoría, los problemas, las prácticas--.
+
+    Una explicación teórica dentro de una práctica de problemas es
+    `kind: theory` y `block: problems`, y las dos cosas son ciertas: va con la
+    hoja, y no tiene resultado ni solución que rellenar.
+
+    Los bloques los declara cada repositorio en su `taxonomy.yaml`, con un id
+    y un nombre por idioma:
+
+    ```yaml
+    blocks:
+      - id: theory
+        title: {es: Teoría, va: Teoria, en: Theory}
+      - id: practicas
+        title: {es: Prácticas de ordenador}
+    ```
+
+    Sin declarar ninguno valen los dos de siempre --`theory` y `problems`--,
+    que es lo que hace que un repositorio de antes de que esto existiera se
+    vea exactamente igual. Y una lección que nombra un bloque que nadie
+    declara **no desaparece**: se ve entera, con el bloque por su id.
+
+    [:octicons-arrow-right-24: Gestionarlos desde la aplicación](../app/ajustes.md#bloques)
+
 !!! info "`status` se calcula, no se declara"
 
     Que una traducción esté al día no lo dice nadie escribiéndolo: se deduce
@@ -114,15 +144,19 @@ Casi todo es opcional. `title` y `kind` se usan en toda la aplicación;
 
 !!! tip "`indent: false`, y cuándo hace falta"
 
-    Al guardar un `.tex` desde la aplicación se le ordena la sangría --con
+    Al guardar un `.tex` desde la aplicación se le pasa el *beautify* --con
     `latexindent` si está instalado, y si no con el indentador propio, que
-    hace menos y siempre funciona--. Eso cambia **solo** el espacio del
-    principio de cada línea, nunca lo de dentro de un `verbatim`.
+    hace menos y siempre funciona--. Hace tres cosas: pone cada `\\begin`,
+    `\\end` e `\\item` en su línea, sangra por niveles, y junta cada párrafo
+    para volver a cortarlo a 80 columnas.
+
+    Lo único que cambia es el espacio en blanco, nunca dentro de un
+    `verbatim`, y nunca por dentro de una fórmula o de unas llaves.
 
     Un fichero escrito antes de que esto existiera se queda como está hasta
-    que alguien lo guarde. Para ordenarlo sin tocarlo hay un botón
-    **«Sangrar»** en la barra de formato del editor: deja el cambio sin
-    guardar, para poder mirarlo.
+    que alguien lo guarde. Para ordenarlo sin tocarlo, pulsa la palabra
+    **«Beautify»** de la barra del editor --o su botón en la barra de
+    formato--: deja el cambio sin guardar, para poder mirarlo.
 
     Aun así hay ficheros que hay que dejar quietos, y por eso se puede apagar
     desde la casilla de la barra del editor, en cada idioma por separado:

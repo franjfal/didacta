@@ -33,11 +33,13 @@ import '../data/github.dart';
 import '../data/indenter.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
+import '../data/toolchain.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
 import '../model/degrees_file.dart';
 import '../model/slug.dart';
 import '../model/synced_prefs.dart';
+import '../model/taxonomy_file.dart';
 import '../model/themes_file.dart';
 import '../data/translator.dart';
 import '../model/translation_memory.dart';
@@ -540,6 +542,20 @@ class Session extends ChangeNotifier {
   /// Dónde está TeX, si se ha tenido que decir a mano.
   String? get texPath => _texPath;
 
+  /// Con qué se comprueba qué hay instalado en la máquina, y se instala.
+  ///
+  /// Sale de la sesión y no se construye en la pantalla por lo mismo que el
+  /// compilador: es lo que permite que un test de widgets monte Ajustes sin
+  /// lanzar `git --version` de verdad. Un proceso dentro de un test cuyo
+  /// reloj es falso no termina nunca, y deja al banco de pruebas quejándose
+  /// de un temporizador pendiente en una pantalla que no iba de esto.
+  ///
+  /// Se construye cada vez, como el compilador: es una envoltura fina sobre
+  /// unos procesos, y guardarla sería guardar la ruta del motor de hace un
+  /// rato.
+  Toolchain toolchain() =>
+      Toolchain(texPath: _texPath, enginePath: _enginePath);
+
   /// Cuándo se escribió el índice que está cargado, por repositorio.
   ///
   /// Es lo que permite saber que el de disco es otro: la comprobación de
@@ -690,10 +706,15 @@ class Session extends ChangeNotifier {
   /// [force] lo regenera igual, que es lo que hace el botón de actualizar:
   /// pedirlo a mano significa «ponlo como está el disco», no «mira a ver».
   ///
+  /// [only] lo limita a un repositorio, que es lo que hace falta después de
+  /// tocar su `didacta.yaml`: regenerar los de al lado cuesta segundos y no
+  /// cambia nada de ellos.
+  ///
   /// Devuelve si lo regeneró, que es cuando hay que volver a leerlo.
-  Future<bool> refreshIndex({bool force = false}) async {
+  Future<bool> refreshIndex({bool force = false, String? only}) async {
     var any = false;
     for (final repo in _workspace.repos) {
+      if (only != null && repo.id != only) continue;
       if (await _refreshIndexOf(repo.id, force: force)) any = true;
     }
     if (_workspace.isEmpty) return _refreshIndexOf(null, force: force);
@@ -1001,21 +1022,133 @@ class Session extends ChangeNotifier {
       final gateway = gatewayFor(repo);
       if (!gateway.canWrite) continue;
 
+      // Lo que se pide, cruzado con lo que **este** repositorio mantiene.
+      //
+      // Escribir la lista entera en todos era lo que se hacía, y produce un
+      // `course.yaml` que el motor rechaza: una asignatura no puede darse en
+      // un idioma que su repositorio no traduce, porque no habría dónde poner
+      // su `.tex`. Rechazada, la asignatura desaparece del catálogo con un
+      // error, así que el fallo no se veía al guardar sino al volver a
+      // indexar. Repartida entre dos repositorios, cada uno declara lo suyo y
+      // la unión de los dos es en lo que se da --que es como la lee el
+      // catálogo--.
+      final keeps = catalogueOrNull?.languagesOf(repo) ?? ordered;
+      // Lo que este `course.yaml` ya dice pasa igual, lo entienda el índice o
+      // no: puede estar viejo, y una lista que no se reconoce se conserva en
+      // lugar de podarse. Quitar un idioma es una decisión, y esta pantalla
+      // no la ha tomado.
+      final already = entry.sources[repo]?.languages ?? const <String>[];
+      final mine = [
+        for (final code in ordered)
+          if (keeps.contains(code) || already.contains(code)) code,
+      ];
+      // Ninguno: este repositorio no mantiene nada de lo que se ha pedido.
+      // Escribir una lista vacía sería peor que no escribir --el motor la lee
+      // como «los del repositorio», o sea justo lo contrario-- así que se
+      // deja como está y lo dice quien llama contando los que se tocaron.
+      if (mine.isEmpty) continue;
+
       final file = await gateway.read(where);
       final patch = YamlPatch(file.text);
-      patch.setFlowList(const ['languages'], ordered);
+      patch.setFlowList(const ['languages'], mine);
       if (patch.result == file.text) continue;
 
       await gateway.save(
         path: where,
         text: patch.result,
         sha: file.sha,
-        message: 'Idiomas de $course: ${ordered.join(', ')}',
+        message: 'Idiomas de $course: ${mine.join(', ')}',
       );
       written.add(repo);
     }
     if (written.isNotEmpty) await reloadCatalogue();
     return written.length;
+  }
+
+  // -- los idiomas de un repositorio --------------------------------------
+
+  /// Las asignaturas de [repo] que se dan en [code].
+  ///
+  /// Lo que hay que mirar antes de quitar un idioma del repositorio: el motor
+  /// rechaza un `course.yaml` que declare uno que su repositorio no mantiene,
+  /// y una asignatura rechazada no sale en el catálogo. Quitarlo sin mirar es
+  /// hacer desaparecer material de la biblioteca.
+  List<Course> coursesUsing(String repo, String code) => [
+    for (final course in catalogueOrNull?.courses ?? const <Course>[])
+      if (course.sources[repo]?.languages.contains(code) ?? false) course,
+  ];
+
+  /// Cambia a qué idiomas traduce un repositorio, en su `didacta.yaml`.
+  ///
+  /// Es la lista de la que cuelga todo lo demás: una asignatura solo puede
+  /// declararse en uno de estos, y una unidad solo tiene hueco de traducción
+  /// en uno de estos. Por eso quitar uno que está en uso **no se hace**: se
+  /// lanza diciendo qué asignaturas lo usan, y se quita antes de ellas.
+  ///
+  /// El idioma de referencia sigue a la lista: si se queda fuera, pasa a ser
+  /// el primero de los que quedan. Dejarlo apuntando a un idioma que ya no
+  /// está hace que el motor no pueda ni leer el fichero.
+  ///
+  /// Al terminar se regenera el índice de ese repositorio, a la fuerza y sin
+  /// esperar a que el disco avise. La lista de idiomas sale en el índice, así
+  /// que hasta regenerarlo la interfaz seguiría ofreciendo la de antes; y a la
+  /// fuerza porque quien acaba de marcar una casilla espera verla aplicada, no
+  /// que se compruebe si hacía falta.
+  ///
+  /// Solo el suyo: regenerar los de al lado son segundos por nada.
+  Future<void> setRepoLanguages({
+    required String repo,
+    required List<String> languages,
+  }) async {
+    if (languages.isEmpty) {
+      throw ArgumentError('un repositorio tiene que traducir a algún idioma');
+    }
+    final gateway = gatewayFor(repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en $repo');
+    }
+
+    final before = catalogueOrNull?.languagesOf(repo) ?? const <String>[];
+    for (final code in before) {
+      if (languages.contains(code)) continue;
+      final using = coursesUsing(repo, code);
+      if (using.isEmpty) continue;
+      throw ArgumentError(
+        'no se puede quitar $code de $repo: se dan en ese idioma '
+        '${using.map((course) => course.title(_language)).join(', ')}',
+      );
+    }
+
+    // En el orden del registro, por lo mismo que en una asignatura: el
+    // fichero sale igual se marque como se marque.
+    final ordered = [
+      for (final option in namedLanguages(languages)) option.code,
+    ];
+
+    const where = 'didacta.yaml';
+    final file = await gateway.read(where);
+    final patch = YamlPatch(file.text)
+      ..setFlowList(const ['languages'], ordered);
+
+    // El de referencia, si se ha quedado fuera. Se escribe aunque no estuviera
+    // declarado: el motor lo deduce del primero de la lista, así que callarse
+    // aquí cambiaría el idioma de referencia del repositorio de rebote.
+    final reference = patch.scalar(const ['default_language']);
+    if (reference != null && !ordered.contains(reference)) {
+      patch.setScalar(const ['default_language'], ordered.first);
+    }
+
+    if (patch.result != file.text) {
+      await gateway.save(
+        path: where,
+        text: patch.result,
+        sha: file.sha,
+        message: 'Idiomas de $repo: ${ordered.join(', ')}',
+      );
+    }
+
+    await refreshIndex(force: true, only: repo);
+    await reloadCatalogue();
   }
 
   // -- los títulos, en todos los idiomas ----------------------------------
@@ -1254,6 +1387,270 @@ class Session extends ChangeNotifier {
     }
     if (written.isNotEmpty) await reloadCatalogue();
     return written.length;
+  }
+
+  // -- los bloques --------------------------------------------------------
+
+  /// Declara un bloque en un repositorio.
+  ///
+  /// En **uno**. Declararlo en varios es corriente aquí, a diferencia de los
+  /// grados --la teoría y los problemas repartidos necesitan los dos
+  /// bloques-- pero se hace llamando a esto una vez por repositorio, para que
+  /// cada uno sea su propio commit en su propio historial.
+  ///
+  /// El fichero se crea si no existía, con sus comentarios: son la única
+  /// explicación de por qué un bloque que nadie declara no esconde nada.
+  Future<void> declareBlock({
+    required String repo,
+    required String id,
+    required Map<String, String> titles,
+  }) async {
+    final gateway = gatewayFor(repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en $repo');
+    }
+    const where = 'taxonomy.yaml';
+
+    String text;
+    // Vacío cuando el fichero no existe todavía: es lo que la pasarela
+    // entiende por «no había nada aquí».
+    var sha = '';
+    try {
+      final file = await gateway.read(where);
+      text = file.text;
+      sha = file.sha;
+    } on ContentException catch (error) {
+      if (error.kind != ContentFailure.missing) rethrow;
+      text = emptyTaxonomyYaml;
+    }
+
+    final taxonomy = TaxonomyFile(text)
+      ..addBlock(
+        id: id,
+        titles: titles,
+        languages: catalogueOrNull?.languagesOf(repo) ?? const ['es'],
+      );
+
+    await gateway.save(
+      path: where,
+      text: taxonomy.text,
+      sha: sha,
+      message: 'Declarar el bloque $id',
+    );
+    await _reindexAfterTaxonomy(repo);
+  }
+
+  /// Deja de declarar un bloque en un repositorio.
+  ///
+  /// Solo la declaración de ese repositorio: las lecciones que lo nombran
+  /// siguen nombrándolo, y si no queda nadie que lo declare salen como
+  /// huérfanas en «Entre repositorios». Quitarlo de todas partes y decidir
+  /// qué pasa con sus lecciones es [removeBlock].
+  Future<void> undeclareBlock({
+    required String repo,
+    required String id,
+  }) async {
+    final gateway = gatewayFor(repo);
+    if (!gateway.canWrite) {
+      throw ArgumentError('no se puede escribir en $repo');
+    }
+    const where = 'taxonomy.yaml';
+    final file = await gateway.read(where);
+    final taxonomy = TaxonomyFile(file.text)..removeBlock(id);
+    if (taxonomy.text == file.text) return;
+
+    await gateway.save(
+      path: where,
+      text: taxonomy.text,
+      sha: file.sha,
+      message: 'Dejar de declarar el bloque $id',
+    );
+    await _reindexAfterTaxonomy(repo);
+  }
+
+  /// Cambia el nombre de un bloque, en todos los idiomas a la vez.
+  ///
+  /// En los repositorios que lo declaran, que aquí suelen ser varios: si lo
+  /// declaran dos y solo se cambia en uno, la discrepancia aparece al momento
+  /// y la misma lección se ve bajo un nombre u otro según la máquina.
+  ///
+  /// Devuelve en cuántos se escribió.
+  Future<int> setBlockTitles({
+    required String id,
+    required Map<String, String> titles,
+  }) async {
+    final block = catalogueOrNull?.blocks
+        .where((entry) => entry.id == id)
+        .firstOrNull;
+    if (block == null) throw ArgumentError('no se declara el bloque $id');
+
+    const where = 'taxonomy.yaml';
+    final written = <String>[];
+    for (final repo in block.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final taxonomy = TaxonomyFile(file.text)..setBlockTitles(id, titles);
+      if (taxonomy.text == file.text) continue;
+
+      await gateway.save(
+        path: where,
+        text: taxonomy.text,
+        sha: file.sha,
+        message: 'Nombre del bloque $id',
+      );
+      written.add(repo);
+    }
+    for (final repo in written) {
+      await _reindexAfterTaxonomy(repo, reload: false);
+    }
+    if (written.isNotEmpty) await reloadCatalogue();
+    return written.length;
+  }
+
+  /// Quita un bloque de todos los repositorios que lo declaren.
+  ///
+  /// Con [moveTo], sus lecciones se mueven antes a ese otro bloque; sin él,
+  /// se quedan nombrándolo y salen como huérfanas. Las dos cosas son
+  /// legítimas y por eso se pregunta: lo que no puede pasar es que noventa
+  /// lecciones se queden clasificadas en ninguna parte sin que nadie lo haya
+  /// decidido.
+  ///
+  /// **Primero se mueven y después se quita la declaración.** Al revés, entre
+  /// una cosa y la otra el repositorio queda un momento con lecciones
+  /// huérfanas, y si algo falla a mitad se queda así.
+  ///
+  /// Un repositorio de solo lectura se salta en silencio, y entonces el
+  /// bloque sigue existiendo por él. No es un fallo --se puede mirar material
+  /// de otra persona-- y la pantalla lo dice antes de pulsar.
+  ///
+  /// Devuelve cuántas lecciones se movieron.
+  Future<int> removeBlock({required String id, String? moveTo}) async {
+    final block = catalogueOrNull?.blocks
+        .where((entry) => entry.id == id)
+        .firstOrNull;
+    if (block == null) throw ArgumentError('no se declara el bloque $id');
+    if (moveTo == id) {
+      throw ArgumentError('un bloque no se puede mover a sí mismo');
+    }
+
+    var moved = 0;
+    if (moveTo != null) {
+      moved = await moveUnitsBetweenBlocks(from: id, to: moveTo);
+    }
+
+    const where = 'taxonomy.yaml';
+    final written = <String>[];
+    for (final repo in block.sources.keys) {
+      final gateway = gatewayFor(repo);
+      if (!gateway.canWrite) continue;
+
+      final file = await gateway.read(where);
+      final taxonomy = TaxonomyFile(file.text);
+      if (!taxonomy.blockIds.contains(id)) continue;
+      taxonomy.removeBlock(id);
+
+      await gateway.save(
+        path: where,
+        text: taxonomy.text,
+        sha: file.sha,
+        message: moveTo == null
+            ? 'Quitar el bloque $id'
+            : 'Quitar el bloque $id, con sus lecciones a $moveTo',
+      );
+      written.add(repo);
+    }
+    for (final repo in written) {
+      await _reindexAfterTaxonomy(repo, reload: false);
+    }
+    await reloadCatalogue();
+    return moved;
+  }
+
+  /// Mueve de bloque todas las lecciones que nombren [from].
+  ///
+  /// Un commit por repositorio y no uno por lección: mover noventa lecciones
+  /// es **un** cambio --una decisión, una frase que la explica-- y noventa
+  /// commits seguidos que dicen lo mismo dejan el historial sin servir para
+  /// ver qué cambió de verdad.
+  ///
+  /// Devuelve cuántas se movieron.
+  Future<int> moveUnitsBetweenBlocks({
+    required String from,
+    required String to,
+  }) async {
+    final units = catalogueOrNull?.unitsInBlock(from) ?? const <Unit>[];
+    if (units.isEmpty) return 0;
+
+    final byRepo = <String, List<Unit>>{};
+    for (final unit in units) {
+      byRepo.putIfAbsent(unit.repo, () => []).add(unit);
+    }
+
+    var moved = 0;
+    for (final entry in byRepo.entries) {
+      final gateway = gatewayFor(entry.key);
+      if (!gateway.canWrite) continue;
+
+      final files = <({String path, String text, String sha})>[];
+      for (final unit in entry.value) {
+        final where = unit.metadataPath;
+        final file = await gateway.read(where);
+        final patch = YamlPatch(file.text)..setScalar(const ['block'], to);
+        if (patch.result == file.text) continue;
+        files.add((path: where, text: patch.result, sha: file.sha));
+      }
+      if (files.isEmpty) continue;
+
+      await gateway.saveAll(
+        files: files,
+        message: files.length == 1
+            ? 'Mover una lección de $from a $to'
+            : 'Mover ${files.length} lecciones de $from a $to',
+      );
+      moved += files.length;
+    }
+    if (moved > 0) await reloadCatalogue();
+    return moved;
+  }
+
+  /// Cambia el bloque de una lección, en su `unit.yaml`.
+  ///
+  /// En el suyo y solo el suyo: una lección vive en un repositorio, y a qué
+  /// parte de la asignatura pertenece lo dice ella.
+  Future<void> setUnitBlock({
+    required String repo,
+    required String path,
+    required String block,
+  }) async {
+    final where = '$path/unit.yaml';
+    final gateway = gatewayFor(repo);
+    final file = await gateway.read(where);
+    final patch = YamlPatch(file.text)..setScalar(const ['block'], block);
+    if (patch.result == file.text) return;
+
+    await gateway.save(
+      path: where,
+      text: patch.result,
+      sha: file.sha,
+      message: 'Bloque de $path: $block',
+    );
+    await reloadCatalogue();
+  }
+
+  /// Regenerar el índice después de tocar `taxonomy.yaml`.
+  ///
+  /// Hace falta y no basta con releer: los bloques declarados salen en el
+  /// **manifiesto**, no en los ficheros de unidades, así que hasta que el
+  /// motor no lo vuelve a escribir la aplicación sigue leyendo los de antes
+  /// -- y quien acaba de crear un bloque no lo vería hasta reiniciar.
+  ///
+  /// A la fuerza, porque la comprobación de si el índice está viejo mira
+  /// fechas y recuentos, y aquí ya sabemos que lo está.
+  Future<void> _reindexAfterTaxonomy(String repo, {bool reload = true}) async {
+    await refreshIndex(force: true, only: repo);
+    if (reload) await reloadCatalogue();
   }
 
   /// Cambia el estado declarado de una unidad en un idioma.
@@ -1637,6 +2034,122 @@ class Session extends ChangeNotifier {
     if (_language == code) return;
     _language = code;
     notifyListeners();
+  }
+
+  // -- qué idiomas se ofrecen ---------------------------------------------
+
+  /// Si un idioma está encendido en esta aplicación. Ver
+  /// [SyncedPrefs.enabledLanguages] para qué es y qué no es.
+  bool isLanguageEnabled(String code) => _synced.isLanguageEnabled(code);
+
+  /// Enciende o apaga un idioma, y lo apunta donde toque.
+  ///
+  /// Si se apaga el que se estaba mirando, se pasa al primero que quede: la
+  /// alternativa es una barra que enseña un idioma que ya no ofrece y una
+  /// biblioteca con la pestaña marcada fuera de la fila.
+  Future<void> setLanguageEnabled(String code, bool on) async {
+    _synced = _synced.withLanguageEnabled(
+      code,
+      on,
+      all: catalogueOrNull?.languages ?? const [],
+    );
+    final offered = languageChoices;
+    if (offered.isNotEmpty &&
+        offered.every((option) => option.code != _language)) {
+      _language = offered.first.code;
+    }
+    notifyListeners();
+    await _rememberPrefs();
+  }
+
+  /// Los idiomas que ofrece cualquier selector: los del material ∩ los
+  /// encendidos, con su nombre y en el orden del registro.
+  ///
+  /// Nunca vacío. Si el filtro se quedara sin nada --se apagó un repositorio
+  /// y con él el único idioma encendido-- valen los del material: un selector
+  /// sin ninguna opción no es un filtro, es una pantalla rota.
+  List<LanguageOption> get languageChoices {
+    final catalogue = catalogueOrNull;
+    if (catalogue == null) return const [];
+    return namedLanguages([
+      for (final code in catalogue.languages)
+        if (_synced.isLanguageEnabled(code)) code,
+    ], or: catalogue.languages);
+  }
+
+  /// Los idiomas que se ofrecen para una asignatura.
+  ///
+  /// Los suyos --ya cruzados con lo que mantienen sus repositorios-- y luego
+  /// el filtro. Lo que la asignatura declara y está apagado **no se pierde**:
+  /// las pantallas que escriben lo añaden con [languagesToEdit].
+  List<LanguageOption> languageChoicesFor(Course course) {
+    final catalogue = catalogueOrNull;
+    if (catalogue == null) return const [];
+    final hers = catalogue.languagesForCourse(course);
+    return namedLanguages([
+      for (final code in hers)
+        if (_synced.isLanguageEnabled(code)) code,
+    ], or: hers);
+  }
+
+  /// Los idiomas de una asignatura por su id, o los del material cuando no se
+  /// sabe de cuál se habla.
+  ///
+  /// Lo que usa una pantalla que ya está dentro de una asignatura --una
+  /// composición, el fuente de un documento-- y solo tiene el id a mano.
+  List<String> languagesIn(String? courseId) {
+    final course = courseId == null ? null : courseById(courseId);
+    final options = course == null
+        ? languageChoices
+        : languageChoicesFor(course);
+    return [for (final option in options) option.code];
+  }
+
+  /// Lo que ofrece una pantalla que **escribe** un idioma en un fichero.
+  ///
+  /// Lo que se puede elegir, más lo que ese fichero ya dice. Apagar un idioma
+  /// en Ajustes es dejar de mirarlo, no borrarlo del material: sin esta unión,
+  /// abrir la ficha de una asignatura que se da en inglés con el inglés
+  /// apagado y darle a guardar se lo quitaría, sin que nadie lo pidiera y sin
+  /// que se viera.
+  List<LanguageOption> languagesToEdit({
+    required List<String> allowed,
+    required List<String> declared,
+  }) => namedLanguages([
+    for (final code in allowed)
+      if (_synced.isLanguageEnabled(code) || declared.contains(code)) code,
+  ], or: allowed);
+
+  /// Lo mismo, en códigos, para quien no necesite los nombres.
+  List<String> languagesToEditCodes({
+    required List<String> allowed,
+    required List<String> declared,
+  }) => [
+    for (final option in languagesToEdit(allowed: allowed, declared: declared))
+      option.code,
+  ];
+
+  /// Los códigos con su nombre, en el orden del registro, o [or] si no queda
+  /// ninguno.
+  List<LanguageOption> namedLanguages(
+    List<String> codes, {
+    List<String> or = const [],
+  }) {
+    final wanted = codes.isEmpty ? or : codes;
+    final known = catalogueOrNull?.languageOptions ?? const <LanguageOption>[];
+    // El orden del registro y no el de la lista: así la barra de arriba, el
+    // menú de compilar y la ficha de la asignatura enseñan los mismos idiomas
+    // en el mismo sitio, que es lo que permite ir a ciegas.
+    final ordered = [
+      for (final option in known)
+        if (wanted.contains(option.code)) option,
+    ];
+    final rest = [
+      for (final code in wanted)
+        if (!known.any((option) => option.code == code))
+          LanguageOption(code: code, name: code),
+    ];
+    return [...ordered, ...rest];
   }
 
   /// Brings up the catalogue and works out how content can be reached.

@@ -179,9 +179,17 @@ void main() {
     await settle(tester);
 
     // La ficha: un filtro activo que no se ve es la forma más rápida de que
-    // alguien crea que le falta material.
-    expect(find.text('problemas'), findsOneWidget);
-    await tester.tap(find.text('problemas'));
+    // alguien crea que le falta material. Lleva el nombre del bloque, que
+    // ahora sale de lo que el repositorio declare y no de una cadena escrita
+    // aquí; por eso se busca por clave y no por texto, que está dos veces en
+    // pantalla --en la pestaña y en la ficha--.
+    final chip = find.byKey(const Key('filter-chip-block'));
+    expect(chip, findsOneWidget);
+    expect(
+      find.descendant(of: chip, matching: find.text('Problemas')),
+      findsOneWidget,
+    );
+    await tester.tap(chip);
     await settle(tester);
     expect(find.textContaining('4 unidades'), findsOneWidget);
   });

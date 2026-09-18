@@ -182,6 +182,14 @@ class _CompositionEditorState extends State<CompositionEditor> {
                     index: index,
                     entry: _entries[index],
                     session: session,
+                    // Los de la asignatura, y los que este apartado ya tiene
+                    // escritos aunque estén apagados: el título en un idioma
+                    // que no se está mirando sigue estando en el fichero, y
+                    // esconderlo aquí es perderlo al guardar.
+                    languages: session.languagesToEditCodes(
+                      allowed: session.languagesIn(widget.courseId),
+                      declared: _entries[index].titles.keys.toList(),
+                    ),
                     enabled: canWrite,
                     position: _positionOf(index),
                     // Dónde está la fila dentro de su apartado, para que la
@@ -309,7 +317,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
     // repositorio y lo que permite rellenar los demás después.
     titleLines: [
       '${widget.session.language}: Título nuevo',
-      for (final code in widget.session.catalogue.languages)
+      for (final code in widget.session.languagesIn(widget.courseId))
         if (code != widget.session.language) '# TODO: $code',
     ],
   );
@@ -364,7 +372,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
   /// pantalla de traducción lo cuente.
   StructureEntry _retitle(StructureEntry entry, Map<String, String> titles) {
     var updated = entry;
-    for (final language in widget.session.catalogue.languages) {
+    for (final language in widget.session.languagesIn(widget.courseId)) {
       final text = titles[language] ?? '';
       if (text.isEmpty) continue;
       updated = updated.withTitle(language, text);
@@ -583,6 +591,7 @@ class _EntryRow extends StatelessWidget {
     required this.index,
     required this.entry,
     required this.session,
+    required this.languages,
     required this.enabled,
     required this.position,
     required this.place,
@@ -596,6 +605,10 @@ class _EntryRow extends StatelessWidget {
   final int index;
   final StructureEntry entry;
   final Session session;
+
+  /// En qué idiomas se pide el título de un apartado.
+  final List<String> languages;
+
   final bool enabled;
   final int? position;
   final _Place place;
@@ -688,7 +701,7 @@ class _EntryRow extends StatelessWidget {
                   : _Heading(
                       entry: entry,
                       language: session.language,
-                      languages: session.catalogue.languages,
+                      languages: languages,
                       enabled: enabled,
                       onTitles: onTitles,
                     ),

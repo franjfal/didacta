@@ -38,6 +38,7 @@ class TexField extends StatelessWidget {
     this.hintText,
     this.onChanged,
     this.padding = EdgeInsets.zero,
+    this.lineNumbers = false,
   });
 
   final TexEditingController controller;
@@ -49,6 +50,18 @@ class TexField extends StatelessWidget {
 
   /// Lo que se deja alrededor del conjunto de columnas y texto.
   final EdgeInsets padding;
+
+  /// Si lleva la regleta de números a la izquierda.
+  ///
+  /// Solo en el fichero entero. En los tres campos de un problema y en un
+  /// fragmento de un tema no: ahí lo que se edita son cuatro líneas sueltas
+  /// que no son «la línea 37» de nada, y una columna de números al lado de un
+  /// campo de dos renglones es ruido con aspecto de herramienta.
+  ///
+  /// El número va en la **primera fila visual** de cada línea del fichero. Una
+  /// línea larga ocupa cuatro renglones en pantalla y sigue siendo una línea:
+  /// numerar los renglones sería numerar el ancho de la ventana.
+  final bool lineNumbers;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +76,14 @@ class TexField extends StatelessWidget {
       child: ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
         builder: (context, value, _) {
-          final gutter = controller.indent * indentStep;
+          final numbers = lineNumbers
+              ? _numbersWidth(
+                  value.text,
+                  style,
+                  MediaQuery.textScalerOf(context),
+                )
+              : 0.0;
+          final gutter = numbers + controller.indent * indentStep;
           return Stack(
             children: [
               Positioned.fill(
@@ -72,6 +92,7 @@ class TexField extends StatelessWidget {
                     text: value.text,
                     style: style,
                     gutter: gutter,
+                    numbers: numbers,
                     guidesAt: controller.guidesAt,
                     scaler: MediaQuery.textScalerOf(context),
                   ),
@@ -113,6 +134,31 @@ class TexField extends StatelessWidget {
   }
 }
 
+/// Lo que ocupa la regleta de números, medido con el tipo de la caja.
+///
+/// Se mide en lugar de estimarse porque de eso depende dónde empieza el
+/// texto, y el texto tiene que empezar en el mismo sitio en las dos capas: la
+/// que pinta y la que se escribe. Un fichero de 1000 líneas necesita una
+/// columna más que uno de 999, y el día que cruza esa frontera todo lo demás
+/// se mueve con él.
+double _numbersWidth(String text, TextStyle style, TextScaler scaler) {
+  var lines = 1;
+  for (var i = 0; i < text.length; i += 1) {
+    if (text[i] == '\n') lines += 1;
+  }
+  final painter = TextPainter(
+    text: TextSpan(text: '0' * '$lines'.length, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width + numbersPad * 2;
+}
+
+/// El aire a cada lado de la regleta.
+const double numbersPad = 8;
+
 /// Las columnas de colores del fragmento que se está editando.
 ///
 /// Mide el texto por su cuenta con los mismos parámetros que la caja —tipo,
@@ -125,6 +171,7 @@ class _GuidePainter extends CustomPainter {
     required this.text,
     required this.style,
     required this.gutter,
+    required this.numbers,
     required this.guidesAt,
     required this.scaler,
   });
@@ -136,6 +183,11 @@ class _GuidePainter extends CustomPainter {
   final TextStyle style;
 
   final double gutter;
+
+  /// Lo que ocupa la regleta de números; cero cuando no la lleva. Las
+  /// columnas de colores empiezan después.
+  final double numbers;
+
   final List<TexBlock> Function(int line) guidesAt;
   final TextScaler scaler;
 
@@ -159,22 +211,62 @@ class _GuidePainter extends CustomPainter {
     }
 
     var top = 0.0;
+    var previous = -1;
     for (final metric in painter.computeLineMetrics()) {
       final at = painter
           .getPositionForOffset(Offset(0, top + metric.height / 2))
           .offset;
-      for (final (index, block) in guidesAt(_lineOf(starts, at)).indexed) {
+      final line = _lineOf(starts, at);
+      for (final (index, block) in guidesAt(line).indexed) {
         canvas.drawRect(
-          Rect.fromLTWH(index * indentStep, top, guideBar, metric.height),
+          Rect.fromLTWH(
+            numbers + index * indentStep,
+            top,
+            guideBar,
+            metric.height,
+          ),
           Paint()
             ..color = didactaBlockColour(
               block,
             ).withValues(alpha: block.closed ? 0.55 : 1.0),
         );
       }
+      // Solo en el primer renglón de cada línea del fichero: los demás son
+      // la misma línea partida por el ancho de la ventana.
+      if (numbers > 0 && line != previous) {
+        _number(canvas, line + 1, top, metric.height);
+        previous = line;
+      }
       top += metric.height;
     }
     painter.dispose();
+  }
+
+  /// Pinta un número, alineado a la derecha contra el texto.
+  ///
+  /// A la derecha porque así las unidades quedan en columna y el salto de 9 a
+  /// 10 no mueve nada de sitio, que es lo que hace que una regleta se pueda
+  /// leer de un vistazo en lugar de tener que buscar el número.
+  void _number(Canvas canvas, int line, double top, double height) {
+    final label = TextPainter(
+      text: TextSpan(
+        text: '$line',
+        style: style.copyWith(
+          color: didactaMuted.withValues(alpha: 0.55),
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout();
+    label.paint(
+      canvas,
+      Offset(
+        numbers - numbersPad - label.width,
+        top + (height - label.height) / 2,
+      ),
+    );
+    label.dispose();
   }
 
   static int _lineOf(List<int> starts, int offset) {
@@ -195,6 +287,7 @@ class _GuidePainter extends CustomPainter {
   bool shouldRepaint(covariant _GuidePainter old) =>
       old.text != text ||
       old.gutter != gutter ||
+      old.numbers != numbers ||
       old.guidesAt != guidesAt ||
       old.style != style;
 }

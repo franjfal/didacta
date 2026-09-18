@@ -841,6 +841,11 @@ UNIT_META_TEMPLATE = """# {title}
 id: {identifier}
 kind: {kind}
 
+# De qué parte de la asignatura es esto. No es el kind: el kind dice qué es el
+# fichero, y el bloque, de qué parte de la asignatura forma parte. Los bloques
+# que hay se declaran en `taxonomy.yaml`.
+block: {block}
+
 title:
   {language}: {title}
 
@@ -923,6 +928,26 @@ DOCUMENT_TEMPLATE = """%% {title}
 """
 
 
+def _default_block(root, settings, area):
+    """El bloque de una unidad recién creada.
+
+    El primero que el repositorio declare, y si no declara ninguno, el que
+    salía del árbol antes de que los bloques se pudieran declarar. Así una
+    unidad nueva nunca nace en un bloque que nadie declara, que es la única
+    forma de quedarse sin sitio donde verla.
+    """
+    try:
+        taxonomy = repo_mod.Taxonomy.load(root, settings)
+    except (repo_mod.RepoError, yamlio.YamlError):
+        taxonomy = repo_mod.Taxonomy()
+    if taxonomy.blocks:
+        wanted = "problems" if area == repo_mod.PROBLEMS else "theory"
+        if taxonomy.block(wanted):
+            return wanted
+        return taxonomy.blocks[0].id
+    return "problems" if area == repo_mod.PROBLEMS else "theory"
+
+
 def cmd_new_unit(args):
     root, settings = load_repo(args)
     area = repo_mod.PROBLEMS if args.kind == "problem" else repo_mod.CONTENT
@@ -936,6 +961,7 @@ def cmd_new_unit(args):
     parts = args.path.strip("/").split("/")
     language = args.lang or settings.default_language
     title = args.title or parts[-1].replace("-", " ").capitalize()
+    block = args.block or _default_block(root, settings, area)
 
     os.makedirs(directory, exist_ok=True)
     template = PROBLEM_TEMPLATE if args.kind == "problem" else UNIT_TEMPLATE
@@ -947,6 +973,7 @@ def cmd_new_unit(args):
             identifier=".".join(parts) if area == repo_mod.CONTENT
                        else "problems." + ".".join(parts),
             kind=args.kind,
+            block=block,
             language=language,
             category=parts[0] if len(parts) > 1 else "",
             topic=parts[1] if len(parts) > 2 else "",
@@ -2813,6 +2840,8 @@ def main(argv=None):
     q = new_sub.add_parser("unit", help="a new unit")
     q.add_argument("path", help="category/topic/unit")
     q.add_argument("--kind", default="theory", choices=repo_mod.UNIT_KINDS)
+    q.add_argument("--block", help="the part of the subject, as declared in "
+                                   "taxonomy.yaml")
     q.add_argument("--lang", choices=profiles_mod.LANGUAGES)
     q.add_argument("--title")
     q.set_defaults(func=cmd_new_unit)

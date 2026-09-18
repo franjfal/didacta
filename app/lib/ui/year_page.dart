@@ -240,6 +240,14 @@ class _DocumentsState extends State<_Documents> {
   bool _saving = false;
   Object? _error;
 
+  /// El bloque que se está mirando, o null para todos.
+  ///
+  /// De la pantalla y no del sitio de trabajo: es una forma de mirar un rato
+  /// --«enséñame solo las hojas de problemas»--, no una preferencia. Volver
+  /// al curso lo enseña entero, que es lo que nadie se puede dejar puesto sin
+  /// darse cuenta.
+  String? _block;
+
   /// Los repositorios que aportan algo a este año, en el orden del espacio de
   /// trabajo: es el que da el mismo resultado en todas las pantallas.
   ///
@@ -423,6 +431,36 @@ class _DocumentsState extends State<_Documents> {
   /// que está en el fichero y todavía no en el índice --recién creado-- sale
   /// suelto hasta el próximo `didacta index`, porque quién lo agrupa lo dice
   /// el índice.
+  /// Los bloques que aparecen en este curso, en el orden del catálogo.
+  ///
+  /// Los que **se usan**, no los declarados: un curso de solo teoría no
+  /// necesita una pestaña de problemas vacía. Y de los documentos de este
+  /// año, que es lo que se está mirando.
+  List<CourseBlock> get _blocksHere {
+    final catalogue = widget.session.catalogue;
+    final present = <String>{};
+    for (final document in widget.entry.documents) {
+      present.addAll(catalogue.blocksOf(document));
+    }
+    return [
+      for (final block in catalogue.blocksInUse)
+        if (present.contains(block.id)) block,
+    ];
+  }
+
+  /// Si un documento entra en el filtro puesto.
+  ///
+  /// Un documento pertenece a los bloques de las lecciones que compone: un
+  /// tema con su teoría y sus ejercicios está en los dos, y sale con
+  /// cualquiera de los dos filtros. Uno todavía sin lecciones no se esconde
+  /// nunca: es el que se acaba de crear, y esconderlo sería esconder el
+  /// trabajo a medias de quien está mirando.
+  bool _passes(Document? document) {
+    if (_block == null || document == null) return true;
+    final blocks = widget.session.catalogue.blocksOf(document);
+    return blocks.isEmpty || blocks.contains(_block);
+  }
+
   List<_CardGroup> _groups(Map<String, Document> byId) {
     final groups = [
       for (final group in widget.entry.byTheme) _CardGroup.from(group, _repos),
@@ -451,6 +489,25 @@ class _DocumentsState extends State<_Documents> {
         }
         target.pending.putIfAbsent(entry.key, () => []).add(draft.id);
       }
+    }
+
+    // El filtro de bloque, después de armarlos y antes de ordenarlos: así lo
+    // que se esconde son documentos, y el orden de los que quedan sigue
+    // siendo el del fichero.
+    if (_block != null) {
+      for (final group in groups) {
+        // `byRepo` es constante y vacío en un grupo que solo lleva borradores
+        // --los recién creados--, y un mapa constante no se deja tocar.
+        if (group.byRepo.isEmpty) continue;
+        for (final entry in group.byRepo.entries) {
+          entry.value.removeWhere((id) => !_passes(byId[id]));
+        }
+        group.byRepo.removeWhere((_, ids) => ids.isEmpty);
+      }
+      // Un tema que se queda sin nada se va con ellos. Vacío es normal
+      // --acaba de crearse-- pero vacío **por el filtro** es una tarjeta que
+      // dice «Tema 3» encima de nada, y parece que el tema se haya perdido.
+      groups.removeWhere((group) => group.length == 0);
     }
 
     // El orden en vivo de cada fichero, que es lo que hace que arrastrar se
@@ -544,7 +601,7 @@ class _DocumentsState extends State<_Documents> {
       builder: (context) => NewDocumentDialog(
         taken: [for (final ids in _order.values) ...ids],
         language: widget.session.language,
-        languages: widget.session.catalogue.languages,
+        languages: widget.session.languagesIn(widget.course.id),
       ),
     );
     if (draft == null || !mounted) return;
@@ -610,7 +667,10 @@ class _DocumentsState extends State<_Documents> {
   /// compilar sobre un bloque, y elegir cuáles sería otra pantalla.
   /// Los idiomas de esta asignatura, con su nombre, para el menú de compilar.
   List<LanguageOption> get _buildLanguages => buildLanguagesOf(
-    declared: widget.course.languages,
+    declared: [
+      for (final option in widget.session.languageChoicesFor(widget.course))
+        option.code,
+    ],
     known: widget.session.catalogue.languageOptions,
     fallback: widget.session.language,
   );
@@ -935,8 +995,21 @@ class _DocumentsState extends State<_Documents> {
         for (final draft in list) draft.id: draft,
     };
 
+    final blocks = _blocksHere;
+
     return Column(
       children: [
+        // Discreto y arriba del todo: es una forma de mirar, no una acción.
+        // Solo con más de uno -- con uno, la única respuesta posible es «todo
+        // lo que hay», y una barra que no puede cambiar nada es una barra que
+        // solo quita alto a la lista.
+        if (blocks.length > 1)
+          _BlockBar(
+            blocks: blocks,
+            chosen: _block,
+            language: session.language,
+            onChanged: (value) => setState(() => _block = value),
+          ),
         if (_dirty || _saving)
           _SaveBar(
             added: added,
@@ -1065,6 +1138,105 @@ class _DocumentsState extends State<_Documents> {
 /// Repartidos por repositorio y no en una lista porque el orden no es global.
 /// Cada `year.yaml` guarda el suyo, así que arrastrar ordena entre los del
 /// mismo fichero; lo que sí es común es el tema, que es de lo que trata esto.
+/// El filtro de bloque de un curso: teoría, problemas, prácticas.
+///
+/// Una tira de texto y no unas pestañas: lo que se está mirando es el curso,
+/// y esto es una forma de estrecharlo. Unas pestañas de verdad dirían que hay
+/// tres sitios donde estar, y no los hay: hay un curso.
+///
+/// Los documentos no declaran bloque -- lo heredan de las lecciones que
+/// componen, ver [Catalogue.blocksOf] --, así que un tema con su teoría y sus
+/// ejercicios sale con los dos filtros. Es lo correcto: está en los dos.
+class _BlockBar extends StatelessWidget {
+  const _BlockBar({
+    required this.blocks,
+    required this.chosen,
+    required this.language,
+    required this.onChanged,
+  });
+
+  final List<CourseBlock> blocks;
+  final String? chosen;
+  final String language;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: didactaRule)),
+    ),
+    padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+    child: Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(right: 4),
+          child: Text(
+            'Bloque',
+            style: TextStyle(fontSize: 11, color: didactaMuted),
+          ),
+        ),
+        _BlockChoice(
+          label: 'todos',
+          selected: chosen == null,
+          onTap: () => onChanged(null),
+        ),
+        for (final block in blocks)
+          _BlockChoice(
+            id: block.id,
+            label: block.title(language),
+            selected: chosen == block.id,
+            // Volver a pulsar el puesto lo quita: es el gesto que todo el
+            // mundo prueba, y sin él hay que ir a buscar «todos».
+            onTap: () => onChanged(chosen == block.id ? null : block.id),
+          ),
+      ],
+    ),
+  );
+}
+
+class _BlockChoice extends StatelessWidget {
+  const _BlockChoice({
+    this.id,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String? id;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Hoverable(
+    onTap: onTap,
+    builder: (context, hovering) => AnimatedContainer(
+      key: Key('year-block-${id ?? 'all'}'),
+      duration: const Duration(milliseconds: 90),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: selected
+            ? didactaAccent.withValues(alpha: 0.12)
+            : (hovering ? didactaPanel : Colors.transparent),
+        border: Border.all(color: selected ? didactaAccent : didactaRule),
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.5,
+          color: selected ? didactaAccentDark : didactaInk,
+          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+        ),
+      ),
+    ),
+  );
+}
+
 class _CardGroup {
   _CardGroup({
     this.theme,
@@ -1676,7 +1848,7 @@ class _DocumentTile extends StatelessWidget {
                     for (final pair in resolved)
                       if (pair.$2 != null) pair.$2!,
                   ],
-                  languages: session.catalogue.languages,
+                  languages: session.languagesIn(course.id),
                 ),
               // Ver lo compilado, si hay algo. Antes que compilar a propósito:
               // mirar cómo quedó es lo que más se hace, y compilar es lo que se

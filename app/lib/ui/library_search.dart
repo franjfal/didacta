@@ -71,6 +71,7 @@ class FilterPanel extends StatelessWidget {
     required this.facets,
     required this.filter,
     required this.onChanged,
+    this.blocks = const <CourseBlock>[],
     this.withLanguageAndSort = false,
     this.languages = const <String>[],
     this.onLanguage,
@@ -79,6 +80,10 @@ class FilterPanel extends StatelessWidget {
   final LibraryFacets facets;
   final LibraryFilter filter;
   final ValueChanged<LibraryFilter> onChanged;
+
+  /// Los bloques que hay, declarados o nombrados. Ver
+  /// [Catalogue.blocksInUse].
+  final List<CourseBlock> blocks;
 
   /// Set when the header had no room for these two, which is the phone.
   final bool withLanguageAndSort;
@@ -128,18 +133,22 @@ class FilterPanel extends StatelessWidget {
               ),
             ),
           ],
-          const SectionLabel('Bloque'),
-          for (final block in const ['theory', 'problems'])
-            _Facet(
-              label: block == 'theory' ? 'teoría' : 'problemas',
-              count: facets.byBlock[block] ?? 0,
-              selected: filter.block == block,
-              onTap: () => onChanged(
-                filter.block == block
-                    ? filter.copyWith(clearBlock: true)
-                    : filter.copyWith(block: block),
+          // Con uno solo no aparece: un filtro cuyo único valor es todo lo
+          // que hay no contesta ninguna pregunta.
+          if (blocks.length > 1) ...[
+            const SectionLabel('Bloque'),
+            for (final block in blocks)
+              _Facet(
+                label: block.title(filter.language),
+                count: facets.byBlock[block.id] ?? 0,
+                selected: filter.block == block.id,
+                onTap: () => onChanged(
+                  filter.block == block.id
+                      ? filter.copyWith(clearBlock: true)
+                      : filter.copyWith(block: block.id),
+                ),
               ),
-            ),
+          ],
 
           SectionLabel('Traducción · ${filter.language}'),
           for (final (status, label) in const [

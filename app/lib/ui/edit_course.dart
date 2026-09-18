@@ -62,7 +62,16 @@ class EditCourseDialog extends StatefulWidget {
 
   final Course course;
 
-  /// Los idiomas a los que Didacta sabe imprimir.
+  /// Los que se pueden marcar: los que mantienen los repositorios de esta
+  /// asignatura --no los diez a los que Didacta sabe imprimir-- filtrados por
+  /// los que se hayan encendido en Ajustes, más los que la asignatura ya
+  /// declara.
+  ///
+  /// Lo primero porque el motor rechaza un `course.yaml` que se declare en un
+  /// idioma que su repositorio no mantiene, y una asignatura rechazada
+  /// desaparece de la biblioteca: ofrecerlo aquí es ofrecer un fichero roto.
+  /// Lo último porque guardar no puede quitar en silencio un idioma que está
+  /// apagado solo para quien mira.
   final List<LanguageOption> options;
 
   /// Las titulaciones declaradas, de todos los repositorios abiertos.
@@ -136,7 +145,9 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
             const _Label('Idiomas'),
             const Text(
               'A cuáles se traduce. Lo que no esté marcado no se pide y no '
-              'cuenta como pendiente; quitarlo no borra ningún fichero.',
+              'cuenta como pendiente; quitarlo no borra ningún fichero. '
+              'Solo salen los que mantiene su repositorio: para ofrecer otro, '
+              'añádelo antes en Ajustes.',
               style: TextStyle(fontSize: 11.5, color: didactaMuted),
             ),
             const SizedBox(height: 6),

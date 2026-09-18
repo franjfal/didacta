@@ -123,7 +123,7 @@ class _TranslateDialogState extends State<TranslateDialog> {
     };
     final wanted = widget.only;
     final found = <({String code, String name, int pending})>[];
-    for (final code in widget.session.catalogue.languages) {
+    for (final code in widget.session.languagesIn(null)) {
       if (wanted != null && !wanted.contains(code)) continue;
       final pending = _pendingIn(code).length;
       if (pending == 0) continue;

@@ -94,6 +94,72 @@ class TaxonomyTests(unittest.TestCase):
             self.assertIn(expected, str(caught.exception), text)
 
 
+class DeclaredBlockTests(unittest.TestCase):
+    """Los bloques, declarados en `taxonomy.yaml` como los temas.
+
+    Teoría y problemas estaban escritos en el código, y por eso no se podían
+    ni renombrar ni añadir. Ahora tienen id y nombre por idioma, igual que una
+    categoría: el id es lo que guarda cada `unit.yaml` y el nombre es lo que
+    se lee.
+    """
+
+    def setUp(self):
+        self.root = tempfile.mkdtemp(prefix="didacta-blocks-")
+        self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
+        with open(os.path.join(self.root, "didacta.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write("languages: [es, va, en]\ndefault_language: es\n")
+
+    def write(self, text):
+        with open(os.path.join(self.root, "taxonomy.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(text)
+
+    def test_a_repository_that_declares_none_has_none(self):
+        """Y sigue funcionando: los dos de siempre no se declaran."""
+        self.write("categories:\n  - id: uno\n")
+        self.assertEqual(repo_mod.Taxonomy.load(self.root).blocks, [])
+
+    def test_they_have_an_id_and_a_name_per_language(self):
+        self.write(
+            "blocks:\n"
+            "  - id: teoria\n"
+            "    title:\n"
+            "      es: Teoría\n"
+            "      va: Teoria\n"
+            "  - id: practicas\n"
+            "    title:\n"
+            "      es: Prácticas de ordenador\n"
+        )
+        taxonomy = repo_mod.Taxonomy.load(self.root)
+        self.assertEqual([b.id for b in taxonomy.blocks],
+                         ["teoria", "practicas"])
+        self.assertEqual(taxonomy.block("teoria").title("va"), "Teoria")
+        # Un idioma sin nombre cae a otro en lugar de dejar un hueco.
+        self.assertEqual(taxonomy.block("practicas").title("en"),
+                         "Prácticas de ordenador")
+        self.assertIsNone(taxonomy.block("no-existe"))
+
+    def test_a_malformed_block_says_what_is_wrong(self):
+        for text, expected in [
+            ("blocks:\n  - title: {es: Sin id}\n", "missing its `id`"),
+            ("blocks:\n  - id: uno\n  - id: uno\n", "duplicate block"),
+            ("blocks:\n  - 7\n", "should be a mapping"),
+        ]:
+            self.write(text)
+            with self.assertRaises(repo_mod.RepoError) as caught:
+                repo_mod.Taxonomy.load(self.root)
+            self.assertIn(expected, str(caught.exception), text)
+
+    def test_they_travel_in_the_taxonomy_dict(self):
+        self.write("blocks:\n  - id: teoria\n    title: {es: Teoría}\n")
+        as_dict = repo_mod.Taxonomy.load(self.root).as_dict()
+        # Solo los idiomas escritos. Los que faltan faltan, y es la pantalla
+        # de traducciones la que los cuenta.
+        self.assertEqual(as_dict["blocks"],
+                         [{"id": "teoria", "title": {"es": "Teoría"}}])
+
+
 class BlockTests(unittest.TestCase):
     """De qué parte de la asignatura es una unidad.
 
@@ -134,10 +200,18 @@ class BlockTests(unittest.TestCase):
             self.unit("problems/cat/tema/dos", "kind: problem\n").block,
             "problems")
 
-    def test_an_unknown_block_is_an_error(self):
-        with self.assertRaises(repo_mod.RepoError) as caught:
-            self.unit("content/cat/tema/tres", "block: apuntes\n")
-        self.assertIn("unknown block", str(caught.exception))
+    def test_a_block_this_repository_does_not_declare_is_not_an_error(self):
+        """Porque puede declararlo el repositorio de al lado.
+
+        La teoría y los problemas se reparten en dos repositorios, y desde uno
+        de ellos el otro no existe. Rechazar aquí un bloque que aquí no se
+        declara convertiría abrir medio material en un error de lectura.
+        Quien tiene los dos delante es la aplicación, y es ella la que señala
+        los bloques que no declara nadie.
+        """
+        self.assertEqual(
+            self.unit("content/cat/tema/tres", "block: apuntes\n").block,
+            "apuntes")
 
     def test_it_reaches_the_index_record(self):
         unit = self.unit("content/cat/tema/cuatro",

@@ -39,12 +39,110 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## 0.1.0 — 2026-09-17
 
+- **Teoría y problemas ya no están escritos en el código.** Eran los dos
+  bloques que había y no se podían ni renombrar ni añadir. Ahora los declara
+  cada repositorio, con un nombre por idioma, así que quien parta su
+  asignatura en teoría, problemas y prácticas de ordenador ve tres en la
+  biblioteca, en el filtro y al clasificar una lección. Se gestionan desde
+  Ajustes → Bloques: crear, renombrar y decir en qué repositorios se declara
+  cada uno.
+- Renombrar un bloque es cambiar una línea: **no mueve ningún fichero y no
+  rompe ninguna referencia**, porque lo que guarda cada lección es el id y lo
+  que se lee es el nombre. Es lo mismo que ya pasaba con los temas.
+- **Quitar un bloque pregunta antes qué pasa con sus lecciones**, y no se
+  puede saltar: o se mueven a otro --un solo commit por repositorio, aunque
+  sean noventa ficheros-- o se quedan sin bloque declarado, y entonces salen
+  en Entre repositorios para arreglarlas cuando toque. Lo que no puede pasar
+  es que noventa lecciones queden clasificadas en ninguna parte sin que nadie
+  lo haya decidido.
+- **Entre repositorios tiene una comprobación más: las lecciones sin bloque.**
+  Una lección que nombra un bloque que ningún repositorio abierto declara se
+  sigue viendo entera --el bloque sale por su id-- pero casi siempre significa
+  que falta abrir un repositorio, o que alguien quitó el bloque. Las dos
+  salidas están ahí. Y si dos repositorios le dan nombres distintos al mismo
+  bloque, se iguala desde donde ya se igualaban los de una asignatura.
+- **Dentro de un curso hay un filtro de bloque**, discreto, encima de la lista
+  de documentos, para quedarse con la teoría o con las prácticas. Solo aparece
+  cuando el curso tiene de más de uno.
+- **Nada de esto cambia lo que ya tenías.** Un repositorio que no declara
+  ningún bloque sigue teniendo teoría y problemas, con su nombre y en su
+  orden, porque Didacta los conoce sin que nadie los escriba.
+
+- **El selector de idioma de arriba ofrecía los diez que Didacta sabe
+  imprimir**, no los que hay en tu material. Elegir uno al que ningún
+  repositorio traduce dejaba la pantalla entera enseñando el texto de reserva,
+  y desde ahí no había nada que hacer. Ahora ofrece los que hay, y lo mismo el
+  menú Idioma y el selector de la biblioteca.
+- **Se pueden editar los idiomas de cada repositorio**, en Ajustes → Idiomas.
+  Era lo único que quedaba que había que hacer abriendo el `didacta.yaml` a
+  mano. El idioma de referencia sigue a la lista si se queda fuera, y quitar
+  uno no borra ningún fichero: dejan de pedirse.
+- **Y quitar uno que una asignatura usa ya no rompe la asignatura.** Se lo
+  podía quitar al repositorio y el `course.yaml` quedaba diciendo algo
+  imposible, así que esa asignatura desaparecía de la biblioteca y el motivo
+  quedaba en una lista de errores. Ahora Didacta se niega y dice cuáles lo
+  usan.
+- **La ficha de una asignatura solo ofrece los idiomas que su repositorio
+  mantiene.** Se podía marcar cualquiera de los diez y guardar, y el fallo no
+  se veía al guardar sino al volver a indexar. Con la asignatura repartida
+  entre dos repositorios, cada uno recibe lo suyo en lugar de la lista entera.
+- **Y puedes elegir con qué idiomas trabajas tú**, también en Ajustes. Un
+  repositorio del departamento que mantiene cinco y una persona que da clase
+  en dos no tienen por qué estorbarse. Viaja con el resto de tus preferencias,
+  no toca ningún fichero, y un idioma apagado sigue saliendo donde algo ya lo
+  declara: si no, guardar se lo llevaría por delante.
+- **Cambiar `didacta.yaml` o `taxonomy.yaml` no actualizaba nada hasta
+  reiniciar.** Didacta miraba si el índice se había quedado viejo recorriendo
+  el material, y esos dos ficheros no están dentro — así que añadir un idioma
+  a mano no se veía.
+- **Beautify de verdad, no solo sangría.** Ahora también **junta cada párrafo
+  y lo vuelve a cortar a 80 columnas**. Era lo que faltaba: lo que devuelve un
+  traductor es el párrafo entero en una sola línea de cuatrocientos
+  caracteres, y eso no se lee ni se revisa --cambiar una palabra sale en el
+  historial como la línea completa, así que el diff deja de decir qué cambió--.
+  Junta antes de cortar, así que un párrafo que ya venía mal cortado queda
+  bien y no peor.
+- No corta por dentro de una fórmula ni de unas llaves: partir
+  `\textit{negación}` compila igual pero deja la orden a un lado y su
+  argumento al otro. Si en toda la línea no hay ningún sitio bueno, la línea
+  se queda larga. Y una orden sola --`\vspace{-2mm}`, `\dpause`-- se queda
+  sola: quien la puso aparte la puso aparte porque hace algo aparte.
+- **El contenido de un `\begin{frame}` ahora sí se sangra.** Una unidad tiene
+  varias diapositivas, así que sí hay con qué contrastar.
+- La casilla se llama **«Beautify»**, y **pulsar la palabra ordena el fichero
+  en ese momento** sin tocar el ajuste. La casilla sigue diciendo si se hace
+  solo al guardar.
+- **Una traducción metía HTML en el `.tex`.** `l'operació` se guardaba como
+  `l&#39;operació`, y eso no compila: en LaTeX `&` separa columnas de tabla,
+  así que fuera de una da error y dentro parte la fila en dos. La traducción
+  se pide en formato HTML --es la única forma de que los proveedores respeten
+  las marcas que protegen el LaTeX-- y lo que volvía venía escapado. En
+  valenciano y en catalán eso es una palabra de cada cinco.
+- **Y perdía los espacios de alrededor de las fórmulas.**
+  `identificaremos $\mathbb Z$ con` volvía como `identificarem$\mathbb Z$ amb`:
+  el espacio que iba delante aparecía detrás, y la palabra quedaba pegada a la
+  fórmula. Lo mismo con `su \textit{negación}`, que volvía como
+  `la seva\textit{ negació}`, con el espacio metido dentro de las llaves. Pasa
+  porque la traducción viaja en HTML, y ahí el espacio de alrededor de una
+  marca no es texto sino formato: los proveedores lo mueven. Ahora ese espacio
+  no se le cree al traductor, se copia del original --es una propiedad de la
+  pieza, no del sitio, así que vale aunque cambie el orden de las palabras--.
+  El espacio entre palabras sigue siendo suyo.
+- **El editor lleva números de línea.** En el fichero entero, no en los campos
+  de un problema. El número va en la primera fila de cada línea: una línea
+  larga ocupa cuatro renglones en pantalla y sigue siendo una línea.
 - **Al guardar, el `.tex` queda ordenado.** Cada entorno abre y cierra donde
   se ve, y lo de dentro va sangrado. Usa `latexindent` --la herramienta de
   CTAN-- cuando está instalada y funciona; si no, un indentador propio que
   hace menos y no necesita instalar nada. En una traducción recién hecha es
   donde más se nota: un traductor devuelve cada párrafo en una sola línea, y
   esa primera versión es la que se queda en el repositorio.
+- Y **pone cada `\begin` y cada `\end` en su línea**, que es lo que la sangría
+  sola no podía arreglar: lo que volvía de traducir era
+  `\begin{definition} [Del seno] Las longitudes...`, con el entorno, su título
+  y el texto pegados. Ahí no hay principio de línea que sangrar, y las barras
+  de color del margen --que marcan dónde empieza y acaba cada entorno, por
+  línea-- no podían dibujarse.
 - Sangrar **no cambia una letra**: solo el espacio del principio de cada
   línea, y nunca dentro de un `verbatim` o un `lstlisting`, donde el espacio
   en blanco es el contenido.
