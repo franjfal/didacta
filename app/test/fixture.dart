@@ -19,11 +19,13 @@ import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/course_admin.dart';
 import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/local_clone.dart';
+import 'package:didacta_app/data/toolchain.dart';
 import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/model/file_history.dart';
 import 'package:didacta_app/model/update_manifest.dart';
 import 'package:didacta_app/model/tex_indent.dart';
+import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
 
@@ -256,11 +258,16 @@ Catalogue catalogueWith(
   List<Map<String, dynamic>> units, {
   List<Map<String, dynamic>>? courses,
   String repo = '',
+
+  /// A los que traduce este repositorio. Se puede cambiar porque dos
+  /// repositorios abiertos no tienen por qué mantener los mismos, y esa es
+  /// justo la situación que decide qué se puede escribir en cada uno.
+  List<String> languages = const ['es', 'va', 'en'],
 }) => Catalogue.fromIndex(
   manifest: {
     'schemaVersion': supportedSchemaVersion,
     'name': 'Prueba',
-    'languages': const ['es', 'va', 'en'],
+    'languages': languages,
     // Con más de los que el repositorio usa, que es la situación real desde
     // que Didacta trae diez ficheros de idioma: una pantalla que ofrece
     // activar idiomas se prueba contra una lista más larga que la de uso, o
@@ -835,6 +842,7 @@ class FakeSession extends Session {
     this.compilerOverride,
     this.adminOverride,
     this.cloneOverride,
+    this.toolchainOverride,
     this.onReload,
     Preferences? preferencesOverride,
     TranslationSecrets? translationSecretsOverride,
@@ -865,6 +873,18 @@ class FakeSession extends Session {
 
   /// El clon, sin git detrás.
   final FakeClone? cloneOverride;
+
+  /// Las herramientas de la máquina, sin máquina.
+  ///
+  /// Con todo puesto por defecto y no vacío: casi ninguna pantalla que se
+  /// prueba va de esto, y lo que tienen que enseñar es la aplicación
+  /// funcionando. Los tests de la lista de herramientas son los que piden
+  /// una a la que le falta algo, y lo dicen.
+  final Toolchain? toolchainOverride;
+
+  @override
+  Toolchain toolchain() =>
+      toolchainOverride ?? FakeToolchain(present: ToolId.values.toSet());
 
   @override
   LocalClone cloneAt(String directory) =>
@@ -995,5 +1015,97 @@ class LocalSession extends Session {
       private: true,
       canWrite: true,
     );
+  }
+}
+
+/// Las herramientas de la máquina, sin máquina.
+///
+/// Existe porque comprobar de verdad lanza `git --version` y compañía, e
+/// instalar de verdad descarga un instalador de CTAN: las dos cosas están
+/// fuera del alcance de un test de widgets, donde el reloj es falso y un
+/// proceso de verdad no termina nunca.
+///
+/// Lo que sí reproduce son los tres finales que la interfaz tiene que saber
+/// contar: instalar y que aparezca, instalar y que falle, e **instalar sin
+/// error y que siga sin aparecer**, que es el caso real de un instalador que
+/// deja el programa en un sitio que no es ninguno de los de siempre.
+class FakeToolchain implements Toolchain {
+  FakeToolchain({
+    this.host = Host.macos,
+    Set<ToolId> present = const {},
+    this.failure,
+    this.appears = true,
+    this.available = const {'brew'},
+  }) : _present = {...present};
+
+  @override
+  final Host host;
+
+  final Set<ToolId> _present;
+
+  /// Qué hay instalado ahora mismo. Cambia cuando una instalación sale bien.
+  Set<ToolId> get present => _present;
+
+  /// Con qué falla [install], si tiene que fallar.
+  final ToolInstallException? failure;
+
+  /// Si lo instalado aparece después. Falso es el instalador que dice que sí
+  /// y deja el programa donde Didacta no mira.
+  final bool appears;
+
+  /// Qué gestores de paquetes tiene esta máquina de mentira.
+  final Set<String> available;
+
+  /// Los planes que se han llegado a ejecutar, en orden.
+  final List<InstallPlan> installed = [];
+
+  /// A qué herramienta pertenece cada instalación pedida.
+  final List<ToolId> asked = [];
+
+  @override
+  Future<ToolState> inspect(ToolId id) async {
+    final tool = toolById(id);
+    if (_present.contains(id)) {
+      return ToolState(
+        tool: tool,
+        path: '/de/mentira/${tool.executables.first}',
+        version: '1.2.3',
+        searched: const ['/de/mentira'],
+      );
+    }
+    return ToolState(tool: tool, searched: const ['/de/mentira']);
+  }
+
+  @override
+  Future<List<ToolState>> inspectAll() async => [
+    for (final tool in didactaTools) await inspect(tool.id),
+  ];
+
+  @override
+  Future<InstallPlan> choose(List<InstallPlan> candidates) async {
+    for (final plan in candidates) {
+      final needs = plan.needs;
+      if (needs == null || available.contains(needs)) return plan;
+    }
+    return candidates.last;
+  }
+
+  @override
+  Future<void> install(
+    InstallPlan plan, {
+    void Function(String line)? onOutput,
+  }) async {
+    installed.add(plan);
+    onOutput?.call('instalando…');
+    final thrown = failure;
+    if (thrown != null) throw thrown;
+    if (!appears) return;
+    // Qué herramienta era se deduce del plan, que es lo único que llega
+    // aquí: cada uno aparece en la lista de una sola.
+    for (final tool in didactaTools) {
+      if (plansFor(tool.id, host).any((other) => other.label == plan.label)) {
+        _present.add(tool.id);
+      }
+    }
   }
 }

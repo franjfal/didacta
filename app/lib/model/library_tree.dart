@@ -220,10 +220,6 @@ String languageName(String code) => switch (code) {
   _ => code,
 };
 
-/// El nombre en castellano de un área.
-String areaName(String area) =>
-    area == 'problems' ? 'Problemas' : 'Teoría y apuntes';
-
 /// The whole library, as a tree.
 ///
 /// Built once per catalogue and held by the screen, because walking 2147

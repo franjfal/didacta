@@ -62,6 +62,19 @@ tiene su propia pantalla.
 
 El identificador se deduce del título, y se puede cambiar a mano.
 
+### Filtrar por bloque
+
+Cuando el curso tiene documentos de más de un [bloque](ajustes.md#bloques)
+--teoría y problemas, o esos y prácticas-- aparece una tira discreta encima de
+la lista para quedarse con uno.
+
+Un documento no declara bloque: lo **hereda** de las lecciones que compone,
+así que un tema con su teoría y sus ejercicios sale con los dos filtros. Es lo
+correcto, porque está en los dos. Y uno todavía sin lecciones no se esconde
+nunca: es el que se acaba de crear.
+
+Con un solo bloque la tira no aparece.
+
 [:octicons-arrow-right-24: La composición](composicion.md)
 
 ## Las titulaciones

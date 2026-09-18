@@ -139,7 +139,9 @@ class _CoursesPageState extends State<CoursesPage> {
           context: context,
           builder: (context) => NewCourseDialog(
             courses: catalogue.courses,
-            languages: catalogue.languages,
+            languages: [
+              for (final option in session.languageChoices) option.code,
+            ],
             defaultLanguage: catalogue.defaultLanguage,
           ),
         );
@@ -222,7 +224,14 @@ class _CoursesPageState extends State<CoursesPage> {
     final answer = await editCourse(
       context,
       course: course,
-      options: session.catalogue.languageOptions,
+      // Lo que **se puede** escribir en su `course.yaml`, no los diez a los
+      // que Didacta sabe imprimir: una asignatura no puede darse en un idioma
+      // que su repositorio no mantiene, y el motor la rechaza entera si lo
+      // dice. Más lo que la asignatura ya declara, que nunca se esconde.
+      options: session.languagesToEdit(
+        allowed: session.catalogue.languagesAvailableTo(course),
+        declared: course.languages,
+      ),
       degrees: session.catalogue.degrees,
       language: session.language,
     );
@@ -274,9 +283,7 @@ class _CoursesPageState extends State<CoursesPage> {
     // Los idiomas de la asignatura, y si no los declara, los del catálogo:
     // preguntar por tres cuando la asignatura se da en uno llena la pantalla
     // de opciones que no son.
-    final languages = course.languages.isNotEmpty
-        ? course.languages
-        : session.catalogue.languages;
+    final languages = session.languagesIn(course.id);
 
     final answer = await showDialog<ExportRequest>(
       context: context,
@@ -876,8 +883,15 @@ class _YearRow extends StatelessWidget {
           BuildButton(
             id: 'year-${course.id}-$year',
             what: 'todo el curso $year',
+            // Los de la asignatura ya cruzados con lo que mantienen sus
+            // repositorios y con el filtro de Ajustes: compilar en un idioma
+            // que no se ofrece en ninguna otra parte es una salida que nadie
+            // va a mirar.
             options: buildLanguagesOf(
-              declared: course.languages,
+              declared: [
+                for (final option in session.languageChoicesFor(course))
+                  option.code,
+              ],
               known: session.catalogue.languageOptions,
               fallback: session.language,
             ),

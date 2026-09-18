@@ -82,9 +82,16 @@ class MergedCatalogueSource extends CatalogueSource {
     }
     final merged = Catalogue.merge(loaded);
     if (failures.isEmpty) return merged;
+    // Lo mismo más la queja. Copiar campo a campo se había dejado atrás los
+    // grados y los idiomas posibles, así que un repositorio que no cargaba
+    // dejaba a los demás sin agrupar por titulación y con la lista de idiomas
+    // reducida a los códigos.
     return Catalogue(
       name: merged.name,
       languages: merged.languages,
+      available: merged.available,
+      byRepo: merged.byRepo,
+      degrees: merged.degrees,
       defaultLanguage: merged.defaultLanguage,
       contentHash: merged.contentHash,
       units: merged.units,

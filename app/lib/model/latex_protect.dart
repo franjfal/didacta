@@ -153,12 +153,117 @@ class ProtectedSegment {
     // los dos extremos serían la cadena entera--.
     if (text.trim().isEmpty) return text;
 
-    final body = translated.trim().replaceAllMapped(
-      _tag,
-      (match) => parts[int.parse(match.group(1)!)],
-    );
+    final body = _respaced(
+      translated.trim(),
+    ).replaceAllMapped(_tag, (match) => parts[int.parse(match.group(1)!)]);
     return '$_lead$body$_tail';
   }
+
+  /// Le devuelve a cada etiqueta el espacio que tenía alrededor en el original.
+  ///
+  /// Hace falta porque la traducción se pide en HTML --es la única forma de
+  /// que los dos proveedores respeten las etiquetas-- y en HTML el espacio de
+  /// alrededor de una etiqueta no es texto, es formato: los proveedores lo
+  /// **mueven**. Un `identificaremos $\mathbb Z$ con` sale como
+  /// `identificarem<x id="0"/> amb`: el espacio que iba delante aparece
+  /// detrás. Con la fórmula puesta de vuelta eso es `identificarem$\mathbb Z$`,
+  /// pegado, y lo mismo le pasaba a `su \textit{negación}`, que volvía como
+  /// `la seva\textit{ negació}` --con el espacio metido dentro de las llaves--.
+  ///
+  /// Así que el espacio de alrededor de una etiqueta no se le cree al
+  /// traductor: se copia del original. Es una propiedad de **la pieza** --si
+  /// iba pegada o separada-- y no del sitio, así que sigue valiendo aunque la
+  /// traducción haya cambiado el orden de las palabras.
+  ///
+  /// Lo que sí es suyo es el espacio entre palabras, que no se toca.
+  String _respaced(String translated) {
+    final want = _spacingInSource();
+    if (want.isEmpty) return translated;
+
+    // El texto partido por las etiquetas: `gaps` tiene una casilla más que
+    // `ids`, porque hay un hueco antes de la primera y otro después de la
+    // última.
+    final gaps = <String>[];
+    final ids = <int>[];
+    var cursor = 0;
+    for (final match in _tag.allMatches(translated)) {
+      gaps.add(translated.substring(cursor, match.start));
+      ids.add(int.parse(match.group(1)!));
+      cursor = match.end;
+    }
+    gaps.add(translated.substring(cursor));
+
+    for (var j = 0; j < gaps.length; j += 1) {
+      final left = j > 0 ? want[ids[j - 1]]?.after : null;
+      final right = j < ids.length ? want[ids[j]]?.before : null;
+      gaps[j] = _fixGap(gaps[j], after: left, before: right);
+    }
+
+    final out = StringBuffer();
+    for (var j = 0; j < gaps.length; j += 1) {
+      out.write(gaps[j]);
+      if (j < ids.length) out.write(tagFor(ids[j]));
+    }
+    return out.toString();
+  }
+
+  /// Un hueco entre etiquetas, con el espacio que piden sus dos lados.
+  ///
+  /// [after] es lo que quiere detrás la etiqueta de la izquierda y [before] lo
+  /// que quiere delante la de la derecha; nulo cuando ese lado es el principio
+  /// o el final del trozo, que ya los pone [_lead] y [_tail].
+  ///
+  /// Un hueco que es **solo** espacio lo comparten las dos, así que basta con
+  /// que una lo pida.
+  static String _fixGap(String gap, {bool? after, bool? before}) {
+    if (gap.trim().isEmpty) {
+      if (after == null || before == null) return gap;
+      if (!(after || before)) return '';
+      // Ya separa: puede ser un salto de línea, y ese vale igual que un
+      // espacio y además es el que tenía el fichero.
+      return gap.isEmpty ? ' ' : gap;
+    }
+    var body = gap;
+    if (after != null) body = _separate(body, after, atStart: true);
+    if (before != null) body = _separate(body, before, atStart: false);
+    return body;
+  }
+
+  /// Pone o quita la separación en un extremo de un hueco.
+  ///
+  /// «Separación» es cualquier espacio en blanco y no un espacio concreto: un
+  /// salto de línea separa igual, y es el que tenía el fichero. Quitando solo
+  /// se quitan espacios y tabuladores, nunca un salto: juntar dos líneas es
+  /// un cambio de forma, y aquí solo se está arreglando un espacio movido.
+  static String _separate(String body, bool wanted, {required bool atStart}) {
+    final edge = atStart
+        ? body.substring(0, 1)
+        : body.substring(body.length - 1);
+    final separated = _blank(edge);
+    if (wanted) {
+      if (separated) return body;
+      return atStart ? ' $body' : '$body ';
+    }
+    if (!separated) return body;
+    return atStart
+        ? body.replaceFirst(RegExp(r'^[ \t]+'), '')
+        : body.replaceFirst(RegExp(r'[ \t]+$'), '');
+  }
+
+  /// Qué etiquetas llevaban espacio delante y detrás en el original.
+  Map<int, _Spacing> _spacingInSource() {
+    final source = text.trim();
+    final out = <int, _Spacing>{};
+    for (final match in _tag.allMatches(source)) {
+      out[int.parse(match.group(1)!)] = _Spacing(
+        before: match.start > 0 && _blank(source[match.start - 1]),
+        after: match.end < source.length && _blank(source[match.end]),
+      );
+    }
+    return out;
+  }
+
+  static bool _blank(String ch) => ch == ' ' || ch == '\t' || ch == '\n';
 
   /// El espacio en blanco con el que empieza y acaba el trozo original.
   String get _lead => text.substring(0, text.length - text.trimLeft().length);
@@ -168,6 +273,14 @@ class ProtectedSegment {
   static final RegExp _tag = RegExp(r'<x id="(\d+)"/>');
 
   static String tagFor(int index) => '<x id="$index"/>';
+}
+
+/// Si una pieza iba pegada o separada de lo que tenía a cada lado.
+class _Spacing {
+  const _Spacing({required this.before, required this.after});
+
+  final bool before;
+  final bool after;
 }
 
 /// Parte un `.tex` en prosa y bloques opacos.

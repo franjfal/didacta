@@ -153,10 +153,22 @@ def survey(root, settings):
     ve. Alguien que mueve `content/` a `content_backup/` deja un índice que
     habla de dos mil unidades que ya no están ahí, y el `content/` vacío que
     queda no es más nuevo que nada.
+
+    Los ficheros de la raíz cuentan también, y no por completitud: lo que hay
+    en `didacta.yaml` y en `taxonomy.yaml` **sale en el índice** --los idiomas
+    del repositorio, las categorías-- y no está debajo de ninguno de los tres
+    directorios. Sin mirarlos, añadir un idioma y regenerar no cambiaba nada,
+    porque el índice no se daba por viejo.
     """
     newest = 0.0
     units = 0
     years = 0
+
+    for name in (repo_mod.SETTINGS, repo_mod.TAXONOMY, repo_mod.DEGREES_META):
+        try:
+            newest = max(newest, os.path.getmtime(os.path.join(root, name)))
+        except OSError:
+            continue
 
     for area in (repo_mod.CONTENT, repo_mod.PROBLEMS, repo_mod.COURSES):
         top = os.path.join(root, area)
@@ -477,8 +489,11 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
         # categoría o el tema de un fichero necesita la lista entera, y
         # deducirla de lo que las unidades usan hoy daría una lista que se
         # encoge en cuanto la última unidad de un tema cambia de sitio.
+        # Con los bloques dentro, que es donde se declaran: un bloque es una
+        # clasificación de la unidad, como la categoría y el tema. Estaban
+        # aparte, en una lista de dos que escribía el motor, y por eso no se
+        # podían ni renombrar ni añadir.
         "taxonomy": (taxonomy or repo_mod.Taxonomy()).as_dict(),
-        "blocks": list(repo_mod.BLOCKS),
         "files": sorted([UNITS, COURSES, CATEGORIES]),
         # Whatever `scan_*` complained about, so a reader is not silently
         # served an index built from a repository that does not load cleanly.

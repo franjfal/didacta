@@ -331,7 +331,7 @@ class _UnitPageState extends State<UnitPage> {
       return _Missing(path: widget.unitPath);
     }
 
-    final languages = session.catalogue.languages;
+    final languages = languagesOfUnit(session, unit);
     // El de la dirección manda: se llega aquí desde «esto falta por
     // traducir», y abrir otra pestaña sería mandar a buscarla.
     _active ??= languages.contains(widget.language)
@@ -451,7 +451,7 @@ class _UnitPageState extends State<UnitPage> {
         );
       }
     }
-    final languages = session.catalogue.languages;
+    final languages = languagesOfUnit(session, unit);
     if (session.splitEditors && _isLanguage(active, languages)) {
       return _SplitEditors(
         unit: unit,
@@ -516,7 +516,7 @@ class _UnitPageState extends State<UnitPage> {
   /// es de uno: enseñar el de `es.tex` estando en el valenciano sería
   /// contestar a otra pregunta.
   String _historyPathFor(Unit unit, Session session) {
-    final languages = session.catalogue.languages;
+    final languages = languagesOfUnit(session, unit);
     final last = _lastLanguage;
     final language = last != null && languages.contains(last)
         ? last
@@ -913,6 +913,11 @@ class _EditorView extends StatelessWidget {
                           readOnly: !canWrite,
                           hintText: 'El fichero está vacío.',
                           padding: const EdgeInsets.all(14),
+                          // Con números: aquí se edita el fichero entero, y
+                          // es la única pantalla donde «la línea 37» quiere
+                          // decir algo --lo que dice un error de LaTeX, lo
+                          // que se señala hablando con alguien--.
+                          lineNumbers: true,
                         ),
                       ),
                     ),
@@ -1166,9 +1171,7 @@ Future<void> _tidy(BuildContext context, _LanguageEditor editor) async {
   messenger.showSnackBar(
     SnackBar(
       content: Text(
-        changed
-            ? 'Sangría ordenada. Guarda para dejarlo así.'
-            : 'Ya estaba ordenado.',
+        changed ? 'Ordenado. Guarda para dejarlo así.' : 'Ya estaba ordenado.',
       ),
       duration: const Duration(seconds: 3),
     ),
@@ -1201,9 +1204,14 @@ Future<void> _translateHere(
   );
 }
 
-/// La casilla que apaga la sangría automática de un idioma.
+/// La casilla que apaga el beautify automático de un idioma, y el botón que
+/// lo fuerza.
 ///
-/// **Por qué se puede apagar.** Sangrar es reescribir el fichero, y hay
+/// Dos cosas en un sitio, y a propósito: **la casilla** dice si este idioma
+/// se ordena solo al guardar, y **la palabra** lo ordena ahora. Quien acaba de
+/// leer «Beautify» y quiere ver qué hace, lo que pulsa es la palabra.
+///
+/// **Por qué se puede apagar.** Ordenar es reescribir el fichero, y hay
 /// ficheros que no admiten que se los reescriba:
 ///
 ///  * Un entorno de código cuyo nombre no está en [verbatimEnvironments]
@@ -1237,43 +1245,55 @@ class _IndentToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final on = editor.unit.indentsIn(editor.language);
-    return Tooltip(
-      message: on
-          ? 'Al guardar se ordena la sangría de ${editor.language}.\n'
-                'Quítalo si este fichero tiene que quedarse tal cual.'
-          : 'La sangría de ${editor.language} se queda como esté.',
-      child: InkWell(
-        onTap: canWrite ? () => _toggle(context, !on) : null,
-        borderRadius: BorderRadius.circular(4),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: Checkbox(
-                  key: const Key('editor-indent'),
-                  value: on,
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  onChanged: canWrite
-                      ? (value) => _toggle(context, value ?? true)
-                      : null,
-                ),
-              ),
-              if (showLabel) ...[
-                const SizedBox(width: 4),
-                const Text(
-                  'Sangrar',
-                  style: TextStyle(fontSize: 11.5, color: didactaMuted),
-                ),
-              ],
-            ],
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Tooltip(
+          message: on
+              ? 'Al guardar se ordena el ${editor.language}.\n'
+                    'Quítalo si este fichero tiene que quedarse tal cual.'
+              : 'El ${editor.language} se queda como esté.',
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: Checkbox(
+              key: const Key('editor-indent'),
+              value: on,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              onChanged: canWrite
+                  ? (value) => _toggle(context, value ?? true)
+                  : null,
+            ),
           ),
         ),
-      ),
+        if (showLabel) ...[
+          const SizedBox(width: 2),
+          // La palabra es un botón, no una etiqueta de la casilla. Pulsarla
+          // ordena el fichero abierto ahora mismo: es la forma de forzarlo sin
+          // tocar el ajuste, y sin tener que ir a buscar el botón de la barra
+          // de formato.
+          Tooltip(
+            message: 'Ordena este fichero ahora.',
+            child: InkWell(
+              key: const Key('editor-beautify'),
+              onTap: canWrite ? () => _tidy(context, editor) : null,
+              borderRadius: BorderRadius.circular(4),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: Text(
+                  'Beautify',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    color: didactaMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -1341,12 +1361,21 @@ class _EditorBar extends StatelessWidget {
           // está en el punto de la pestaña y en que el botón esté vivo-- y
           // «Descartar» se queda en su icono.
           //
-          // El segundo subió de 620 a 860 al entrar la casilla de sangría: a
-          // 800 px con el fichero tocado la fila se desbordaba 27 píxeles, y
-          // lo que sobra ahí es justo la palabra «sin guardar», que repite lo
-          // que ya dicen el punto de la pestaña y el botón encendido. Una
-          // barra que se desborda esconde su propio botón de guardar.
-          final tight = constraints.maxWidth < 860;
+          // El segundo ha subido dos veces, y las dos por lo mismo: cada
+          // cosa que entra en la barra empuja. Con la casilla, de 620 a 860;
+          // con «Beautify», de 860 a 1100, porque a 915 se desbordaba 88
+          // píxeles. Lo que se va por debajo es la palabra «sin guardar»
+          // --que repite lo que ya dicen el punto de la pestaña y el botón
+          // encendido-- y el rótulo de «Descartar», que se queda en su icono.
+          // Una barra que se desborda esconde su propio botón de guardar, y
+          // hay un test que la mide a doce anchos para que no vuelva a pasar.
+          final tight = constraints.maxWidth < 1100;
+          // El de «Campos / LaTeX» va aparte, y más abajo. Es el control que
+          // cambia **qué se está editando**, así que esconder sus rótulos es
+          // más caro que esconder cualquier otra cosa de la barra: convertirlo
+          // en un icono a 1000 px, solo porque «sin guardar» no cabe, sería
+          // pagar en el sitio equivocado.
+          final toggleTight = constraints.maxWidth < 760;
           // El mismo ancho decide la palabra del estado («borrador»,
           // «revisada»): por debajo queda el punto de color, que se pulsa
           // igual y lo dice en el tooltip.
@@ -1374,7 +1403,7 @@ class _EditorBar extends StatelessWidget {
               _ViewToggle(
                 fields: fields,
                 hasFields: hasFields,
-                compact: tight,
+                compact: toggleTight,
                 onChanged: onFields,
               ),
               const SizedBox(width: 10),
@@ -1404,7 +1433,11 @@ class _EditorBar extends StatelessWidget {
                 _IndentToggle(
                   editor: editor,
                   canWrite: canWrite,
-                  showLabel: constraints.maxWidth >= 1000,
+                  // Antes el rótulo era un adorno y solo salía si sobraba
+                  // sitio. Ahora es el botón que fuerza el beautify, así que
+                  // aguanta hasta mucho más abajo: lo que se va antes es la
+                  // palabra del estado, que se lee en el color del punto.
+                  showLabel: constraints.maxWidth >= 760,
                 ),
                 if (dirty && !tight) ...[
                   const SizedBox(width: 6),
@@ -2255,3 +2288,18 @@ class _TooNarrow extends StatelessWidget {
     ),
   );
 }
+
+/// En qué idiomas se enseña una unidad.
+///
+/// Los que se han encendido en Ajustes, más aquellos en los que **ya tiene
+/// fichero**. Lo segundo no es un detalle: una unidad con `en.tex` escrito y
+/// el inglés apagado seguiría teniendo ese fichero, y una pestaña que no
+/// aparece es contenido que no se puede ni leer ni borrar desde aquí.
+List<String> languagesOfUnit(Session session, Unit unit) =>
+    session.languagesToEditCodes(
+      allowed: session.catalogue.languages,
+      declared: [
+        for (final entry in unit.statuses.entries)
+          if (entry.value.exists) entry.key,
+      ],
+    );

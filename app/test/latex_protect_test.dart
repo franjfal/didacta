@@ -35,7 +35,77 @@ String roundTrip(String tex, {String Function(String)? translate}) {
   return out.toString();
 }
 
+/// Lo que hacen los dos proveedores de verdad con el espacio de alrededor de
+/// una etiqueta: **moverlo**. Para ellos no es texto, es formato HTML.
+String shiftsSpace(String text) => text
+    // Dart no sustituye grupos en `replaceAll`: ahí `$1` es el texto `$1`, y
+    // el reemplazo se lleva la etiqueta por delante.
+    .replaceAllMapped(RegExp(r'[ \t]+(<x id="\d+"/>)'), (m) => m.group(1)!)
+    .replaceAllMapped(
+      RegExp(r'(<x id="\d+"/>)(?=[^\s])'),
+      (m) => '${m.group(1)} ',
+    );
+
 void main() {
+  group('el espacio de alrededor de una etiqueta es del original', () {
+    // Salió de un fichero de verdad. `identificaremos $\mathbb Z$ con` volvía
+    // como `identificarem$\mathbb Z$ amb`: el espacio de delante aparecía
+    // detrás, y con la fórmula puesta de vuelta la palabra quedaba pegada.
+
+    test('el que iba delante de una fórmula vuelve delante', () {
+      expect(
+        roundTrip(
+          r'Por este motivo identificaremos $\mathbb Z$ con $\mathbb N$.',
+          translate: shiftsSpace,
+        ),
+        r'Por este motivo identificaremos $\mathbb Z$ con $\mathbb N$.',
+      );
+    });
+
+    test('y el que no estaba no aparece', () {
+      // `$\mathbb N$.` iba pegado al punto. El traductor lo separaba, y
+      // quedaba un « .» suelto a mitad de frase.
+      expect(
+        roundTrip(r'Con $\mathbb N$.', translate: shiftsSpace),
+        r'Con $\mathbb N$.',
+      );
+    });
+
+    test('una orden con argumento no se lleva el espacio dentro', () {
+      // `su \textit{negación}` volvía como `la seva\textit{ negació}`: el
+      // espacio se metía dentro de las llaves.
+      final out = roundTrip(
+        r'Definimos su \textit{negación} como el número.',
+        translate: shiftsSpace,
+      );
+      expect(out, contains(r' \textit{negación}'));
+      expect(out, isNot(contains(r'\textit{ negación}')));
+    });
+
+    test('varias fórmulas seguidas en la misma frase', () {
+      const tex = r'Si $(a$ --- $b)$ es un número entero, y $n=1$ también.';
+      expect(roundTrip(tex, translate: shiftsSpace), tex);
+    });
+
+    test('un salto de línea separa igual que un espacio, y se queda', () {
+      // Poner un espacio delante de un salto que ya separaba dejaría un
+      // « \n» que ensucia el diff de cada commit para siempre.
+      const tex = '\\didactatitle{Un título}\nEn 1829 alguien escribió.';
+      expect(roundTrip(tex, translate: shiftsSpace), tex);
+    });
+
+    test('el espacio entre palabras sigue siendo del traductor', () {
+      // Reflotar un párrafo es traducir: lo que no se le toca es eso.
+      expect(
+        roundTrip(
+          r'La raíz de $2$ es irracional.',
+          translate: (t) => t.replaceAll('La raíz de', 'La arrel de'),
+        ),
+        r'La arrel de $2$ es irracional.',
+      );
+    });
+  });
+
   group('lo que no sale de aquí', () {
     test('las matemáticas en línea', () {
       expect(

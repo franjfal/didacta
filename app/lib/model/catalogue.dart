@@ -593,6 +593,128 @@ class CourseYear {
   }
 }
 
+/// Los bloques que Didacta conoce sin que nadie los declare, con su nombre.
+///
+/// Eran los dos que había cuando esto estaba escrito en el código, y siguen
+/// aquí por una razón concreta: un repositorio que todavía no declara ninguno
+/// tiene que verse exactamente igual que antes. Sin esto enseñaría `theory`
+/// donde decía «Teoría», que es la clase de regresión que hace que nadie se
+/// fíe de una migración.
+const Map<String, Map<String, String>> defaultBlockTitles = {
+  'theory': {'es': 'Teoría', 'va': 'Teoria', 'en': 'Theory'},
+  'problems': {'es': 'Problemas', 'va': 'Problemes', 'en': 'Problems'},
+};
+
+/// Una parte en que se divide una asignatura: la teoría, los problemas, las
+/// prácticas de ordenador.
+///
+/// `CourseBlock` y no `Block`, como [CourseTheme] y por lo mismo: `Block` ya
+/// es una clase de `go_router`, y una pantalla que importe las dos no
+/// compila. El nombre largo aquí ahorra un `hide` en cada fichero que
+/// navegue.
+///
+/// El mismo patrón que un tema o una titulación, que es el que sostiene todo
+/// lo que se comparte entre repositorios: **la unidad nombra el bloque y el
+/// bloque lo declara quien lo tenga**. Así la teoría y los problemas pueden
+/// vivir en repositorios distintos y las dos unidades saben a qué parte de la
+/// asignatura pertenecen.
+///
+/// Y por eso no puede romper nada. Una unidad que nombra un bloque que no
+/// declara ningún repositorio abierto se ve entera --sale en la biblioteca,
+/// se edita, se compila-- solo que el bloque se enseña por su id y «Entre
+/// repositorios» dice que falta declararlo. Nunca desaparece material por no
+/// tener un repositorio.
+class CourseBlock {
+  const CourseBlock({
+    required this.id,
+    required this.titles,
+    this.sources = const {},
+  });
+
+  factory CourseBlock.fromJson(Map<String, dynamic> json, {String repo = ''}) {
+    final titles = _stringMap(json['title']);
+    return CourseBlock(
+      id: json['id'] as String? ?? '',
+      titles: titles,
+      sources: {repo: BlockFacts(titles: titles)},
+    );
+  }
+
+  final String id;
+  final Map<String, String> titles;
+
+  /// Lo que declara cada repositorio, por separado.
+  ///
+  /// Es lo único que permite darse cuenta de que no dicen lo mismo: sin esto,
+  /// la fusión elige un nombre y el otro desaparece para siempre.
+  final Map<String, BlockFacts> sources;
+
+  String title([String? language]) {
+    final wanted = titles[language ?? 'es'];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return blockLabel(id, language);
+  }
+
+  /// Si el nombre que se enseña no es el del idioma pedido. Lo mismo que en
+  /// una unidad, y por lo mismo: un nombre castellano en una lista valenciana
+  /// parece una traducción que existe.
+  bool titleIsFallback(String language) => (titles[language] ?? '').isEmpty;
+
+  /// Si lo declara alguien. Falso en los que solo existen porque alguna
+  /// lección los nombra, que es lo que hay que arreglar.
+  bool get declared => sources.isNotEmpty;
+
+  /// El mismo bloque sin lo que digan [hidden].
+  ///
+  /// Apagar un repositorio tiene que dar exactamente lo mismo que no tenerlo,
+  /// y lo que dijera el apagado no puede seguir contando como discrepancia.
+  CourseBlock withoutSources(Set<String> hidden) => CourseBlock(
+    id: id,
+    titles: titles,
+    sources: {
+      for (final entry in sources.entries)
+        if (!hidden.contains(entry.key)) entry.key: entry.value,
+    },
+  );
+
+  /// Junta lo que dicen dos repositorios del mismo bloque.
+  ///
+  /// Gana el primero para lo que se enseña, y se guarda lo que dice cada uno
+  /// para poder señalar la discrepancia. Nada se resuelve solo: son ficheros
+  /// que pueden ser de otra persona.
+  CourseBlock mergedWith(CourseBlock other) => CourseBlock(
+    id: id,
+    titles: {...other.titles, ...titles},
+    sources: {...sources, ...other.sources},
+  );
+}
+
+/// Lo que un repositorio declara de un bloque.
+class BlockFacts {
+  const BlockFacts({this.titles = const {}});
+
+  final Map<String, String> titles;
+
+  Map<String, String> get comparable => {
+    for (final entry in titles.entries)
+      if (entry.value.isNotEmpty) 'título (${entry.key})': entry.value,
+  };
+}
+
+/// El nombre de un bloque que no declara nadie.
+///
+/// Los dos de siempre por su nombre, y cualquier otro por su id. Enseñar el
+/// id es feo y es cierto, que en una clasificación es lo que hace falta:
+/// inventarle un nombre a un bloque que nadie declaró esconde justo lo que
+/// hay que arreglar.
+String blockLabel(String id, [String? language]) =>
+    defaultBlockTitles[id]?[language ?? 'es'] ??
+    defaultBlockTitles[id]?['es'] ??
+    id;
+
 /// Una titulación: el grado o el máster en que se da una asignatura.
 ///
 /// Sigue el mismo patrón que un tema, que es el que sostiene todo lo que se
@@ -738,11 +860,12 @@ class CourseFacts {
 /// No se resuelve solo. Son ficheros que pueden ser de otra persona, y
 /// propagar el valor «más nuevo» por su cuenta deshace el cambio de quien
 /// todavía no lo ha enviado. Se enseña, y se iguala cuando alguien lo decide.
-/// De qué se discrepa: de una asignatura o de una titulación.
+/// De qué se discrepa: de una asignatura, de una titulación o de un bloque.
 ///
-/// Dos ficheros distintos --`course.yaml` y `degrees.yaml`-- y dos formas de
-/// escribirlos, así que quien resuelve la discrepancia necesita saber cuál es.
-enum ConflictAbout { course, degree }
+/// Tres ficheros distintos --`course.yaml`, `degrees.yaml` y `taxonomy.yaml`--
+/// y tres formas de escribirlos, así que quien resuelve la discrepancia
+/// necesita saber cuál es.
+enum ConflictAbout { course, degree, block }
 
 class MetadataConflict {
   const MetadataConflict({
@@ -772,8 +895,11 @@ class MetadataConflict {
       about == ConflictAbout.course ? CourseFacts.pathOf(field) : null;
 
   /// Si se puede resolver desde la interfaz.
-  bool get fixable =>
-      about == ConflictAbout.degree ? _localised.hasMatch(field) : path != null;
+  bool get fixable => switch (about) {
+    ConflictAbout.degree => _localised.hasMatch(field),
+    ConflictAbout.block => _localised.hasMatch(field),
+    ConflictAbout.course => path != null,
+  };
 
   static final RegExp _localised = RegExp(r'^título \((\w+)\)$');
 
@@ -1037,13 +1163,47 @@ class LanguageOption {
   String toString() => '$code ($name)';
 }
 
+/// A qué idiomas traduce **un** repositorio.
+///
+/// Aparte de la unión que guarda [Catalogue.languages] porque las dos
+/// preguntas son distintas y las dos hacen falta. La unión contesta «¿qué
+/// idiomas hay en lo que estoy mirando?», que es lo que ordena la barra de
+/// arriba. Esto contesta «¿qué puedo escribir en el `course.yaml` de este
+/// repositorio?», y esa no la puede contestar la unión: el motor rechaza una
+/// asignatura que se declare en un idioma que **su** repositorio no mantiene,
+/// y una asignatura rechazada no sale en el catálogo.
+///
+/// Sin esto, la fusión de dos repositorios dejaba una sola lista y no había
+/// forma de volver atrás: la interfaz ofrecía los idiomas de uno para escribir
+/// en el otro.
+class RepoLanguages {
+  const RepoLanguages({
+    required this.repo,
+    required this.languages,
+    required this.defaultLanguage,
+  });
+
+  /// El repositorio, con el id que usa el espacio de trabajo. Vacío cuando el
+  /// catálogo se lee por HTTP y no hay repositorios que nombrar.
+  final String repo;
+
+  /// Los de su `didacta.yaml`.
+  final List<String> languages;
+
+  /// El de referencia, el que se supone cuando nada dice otra cosa. Tiene que
+  /// estar en [languages]: el motor lo comprueba al leer el fichero.
+  final String defaultLanguage;
+}
+
 /// The whole catalogue: what one load gives an interface.
 class Catalogue {
   const Catalogue({
     required this.name,
     required this.languages,
     this.available = const [],
+    this.byRepo = const [],
     this.degrees = const [],
+    this.blocks = const [],
     required this.defaultLanguage,
     required this.contentHash,
     required this.units,
@@ -1082,15 +1242,25 @@ class Catalogue {
       }
     }
 
+    final languages = _stringList(manifest['languages']);
+    final defaultLanguage = manifest['defaultLanguage'] as String? ?? 'es';
+
     return Catalogue(
       name: manifest['name'] as String? ?? 'Didacta',
-      languages: _stringList(manifest['languages']),
+      languages: languages,
       available: [
         for (final item
             in (manifest['availableLanguages'] as List?) ?? const [])
           LanguageOption.fromJson((item as Map).cast<String, dynamic>()),
       ],
-      defaultLanguage: manifest['defaultLanguage'] as String? ?? 'es',
+      byRepo: [
+        RepoLanguages(
+          repo: repo,
+          languages: languages,
+          defaultLanguage: defaultLanguage,
+        ),
+      ],
+      defaultLanguage: defaultLanguage,
       contentHash: manifest['contentHash'] as String? ?? '',
       units: [
         for (final item in (units['units'] as List?) ?? const [])
@@ -1103,6 +1273,18 @@ class Catalogue {
       degrees: [
         for (final item in (courses['degrees'] as List?) ?? const [])
           Degree.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
+      ],
+      // Dentro de la taxonomía, que es donde se declaran: un bloque clasifica
+      // una lección, igual que la categoría y el tema. Vacío en un índice de
+      // antes de que se declararan, y entonces valen los dos de siempre --ver
+      // [blockLabel]--, que es lo que hace que esto no rompa nada.
+      blocks: [
+        for (final item
+            in ((manifest['taxonomy'] as Map?)?['blocks'] as List?) ?? const [])
+          CourseBlock.fromJson(
+            (item as Map).cast<String, dynamic>(),
+            repo: repo,
+          ),
       ],
       profiles: [
         for (final item in (manifest['profiles'] as List?) ?? const [])
@@ -1134,6 +1316,72 @@ class Catalogue {
       ? available
       : [for (final code in languages) LanguageOption(code: code, name: code)];
 
+  /// Lo que declara cada repositorio por separado, en el orden en que se
+  /// leyeron. Ver [RepoLanguages] para por qué no basta con la unión.
+  final List<RepoLanguages> byRepo;
+
+  /// A qué idiomas traduce un repositorio.
+  ///
+  /// Los del catálogo entero cuando no se sabe de él --un índice leído por
+  /// HTTP no nombra repositorios--, que es lo que había antes de que esto
+  /// existiera y no puede quitarle idiomas a nadie.
+  List<String> languagesOf(String repo) {
+    for (final entry in byRepo) {
+      if (entry.repo == repo) return entry.languages;
+    }
+    return languages;
+  }
+
+  /// El idioma de referencia de un repositorio.
+  String defaultLanguageOf(String repo) {
+    for (final entry in byRepo) {
+      if (entry.repo == repo) return entry.defaultLanguage;
+    }
+    return defaultLanguage;
+  }
+
+  /// El techo de una asignatura: lo que mantienen los repositorios que la
+  /// declaran, se dé hoy en ellos o no.
+  ///
+  /// Es lo que puede ofrecer una pantalla que **escribe** su `course.yaml`:
+  /// ofrecer lo que ya declara no dejaría añadir ninguno, y ofrecer los diez
+  /// del registro deja escribir uno que el motor rechaza.
+  ///
+  /// Unión entre repositorios y no intersección: una asignatura repartida
+  /// entre el repositorio de teoría --castellano y valenciano-- y el de
+  /// problemas --castellano e inglés-- se puede dar en los tres, cada uno con
+  /// el material que tiene. Lo que no puede es declararle a uno un idioma del
+  /// otro, y de eso se encarga [languagesOf] al escribir.
+  List<String> languagesAvailableTo(Course course) {
+    final allowed = <String>[];
+    for (final repo in course.sources.keys) {
+      for (final code in languagesOf(repo)) {
+        if (!allowed.contains(code)) allowed.add(code);
+      }
+    }
+    return allowed.isEmpty ? languages : allowed;
+  }
+
+  /// En qué idiomas se da una asignatura: lo que declara, cruzado con su
+  /// techo.
+  ///
+  /// La intersección y no lo que declara a secas, aunque el motor garantice
+  /// que no puede declarar de más: el índice de un repositorio puede estar
+  /// viejo, y un repositorio apagado se lleva sus idiomas con él. Lo que se
+  /// ofrece para compilar o para traducir tiene que ser lo que hay ahora, no
+  /// lo que había cuando se generó el índice.
+  ///
+  /// Una asignatura que no declara ninguno se da en los de su repositorio,
+  /// que es lo que hace el motor.
+  List<String> languagesForCourse(Course course) {
+    final allowed = languagesAvailableTo(course);
+    if (course.languages.isEmpty) return allowed;
+    return [
+      for (final code in course.languages)
+        if (allowed.contains(code)) code,
+    ];
+  }
+
   /// Identifies the content this catalogue describes, so a stale tab can be
   /// told apart from a current one without comparing every record.
   final String contentHash;
@@ -1147,6 +1395,19 @@ class Catalogue {
   /// agrupar. Eso es lo que hace que esto no pueda romper nada: quien no tenga
   /// el repositorio donde alguien puso un título ve todo su material igual.
   final List<Degree> degrees;
+
+  /// Las partes en que se dividen las asignaturas, juntas de todos los
+  /// repositorios abiertos.
+  ///
+  /// En el orden en que se declaran, que es el orden en que se dan --primero
+  /// la teoría y luego los problemas-- y no alfabético: ordenar por nombre lo
+  /// cambiaría, y volvería a cambiarlo al mirar el material en otro idioma.
+  ///
+  /// Un bloque que no declara nadie no sale aquí, y sus lecciones se ven
+  /// igual: salen en la biblioteca con el bloque enseñado por su id, y
+  /// [undeclaredBlocks] lo cuenta para que alguien lo declare. Eso es lo que
+  /// hace que esto no pueda esconder material.
+  final List<CourseBlock> blocks;
   final List<OutputProfile> profiles;
 
   /// What the engine complained about while reading the repository. Surfaced
@@ -1234,6 +1495,20 @@ class Catalogue {
       }
     }
 
+    // Los bloques, por id y **sin ordenar**: el orden es el de la
+    // declaración, que es el orden en que se dan las partes de una
+    // asignatura. Que los dos repositorios declaren los mismos es el caso
+    // normal --la teoría y los problemas repartidos necesitan los dos-- y por
+    // eso se guarda lo que dice cada uno: es lo único que permite ver que no
+    // dicen lo mismo.
+    final blocks = <String, CourseBlock>{};
+    for (final part in parts) {
+      for (final block in part.blocks) {
+        final mine = blocks[block.id];
+        blocks[block.id] = mine == null ? block : mine.mergedWith(block);
+      }
+    }
+
     final available = <LanguageOption>[];
     for (final part in parts) {
       for (final option in part.available) {
@@ -1245,6 +1520,10 @@ class Catalogue {
       name: parts.first.name,
       languages: languages,
       available: available,
+      // Sin fundir: la unión de arriba dice qué idiomas hay en lo que se está
+      // mirando, y esto dice cuáles puede escribir cada repositorio. Lo
+      // segundo no se deduce de lo primero.
+      byRepo: [for (final part in parts) ...part.byRepo],
       defaultLanguage: parts.first.defaultLanguage,
       // Uno por repositorio, juntos: sirve para lo de siempre --saber si esto
       // sigue describiendo lo que hay en disco-- y cambia si cambia
@@ -1253,6 +1532,7 @@ class Catalogue {
       units: [for (final part in parts) ...part.units],
       courses: courses.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
       degrees: degrees.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
+      blocks: blocks.values.toList(),
       profiles: parts.first.profiles,
       errors: [for (final part in parts) ...part.errors, ...conflicts],
     );
@@ -1269,10 +1549,24 @@ class Catalogue {
   /// tiene esto?», que es la pregunta por la que se usa.
   Catalogue without(Set<String> hidden) {
     if (hidden.isEmpty) return this;
+    final kept = [
+      for (final entry in byRepo)
+        if (!hidden.contains(entry.repo)) entry,
+    ];
+    // Los idiomas también se encogen: apagar un repositorio tiene que dar
+    // exactamente lo mismo que no tenerlo, y quien solo tuviera los que
+    // quedan no vería el idioma que solo mantiene el apagado.
+    final remaining = <String>[];
+    for (final entry in kept) {
+      for (final code in entry.languages) {
+        if (!remaining.contains(code)) remaining.add(code);
+      }
+    }
     return Catalogue(
       name: name,
-      languages: languages,
+      languages: remaining.isEmpty ? languages : remaining,
       available: available,
+      byRepo: kept,
       defaultLanguage: defaultLanguage,
       contentHash: contentHash,
       units: [
@@ -1283,6 +1577,14 @@ class Catalogue {
       degrees: [
         for (final degree in degrees)
           if (degree.sources.keys.any((repo) => !hidden.contains(repo))) degree,
+      ],
+      // Y sin lo que dijera el apagado, no solo sin los suyos: si se quedara
+      // su versión del nombre, apagar un repositorio dejaría en pantalla una
+      // discrepancia con alguien que ya no está.
+      blocks: [
+        for (final block in blocks)
+          if (block.sources.keys.any((repo) => !hidden.contains(repo)))
+            block.withoutSources(hidden),
       ],
       profiles: profiles,
       errors: errors,
@@ -1344,6 +1646,7 @@ class Catalogue {
       }
     }
     conflicts.addAll(degreeConflicts);
+    conflicts.addAll(blockConflicts);
     return conflicts;
   }
 
@@ -1381,6 +1684,157 @@ class Catalogue {
       }
     }
     return conflicts;
+  }
+
+  /// Lo mismo, para los bloques.
+  ///
+  /// Un bloque repartido entre repositorios se declara en los dos
+  /// `taxonomy.yaml` y los dos tienen que decir lo mismo. Si uno pone
+  /// «Teoría» y el otro «Apuntes», el que se enseña depende de en qué orden
+  /// se abrieron los repositorios: la misma lección aparece bajo un nombre u
+  /// otro según la máquina, y el filtro de la biblioteca ofrece dos cosas que
+  /// son una.
+  List<MetadataConflict> get blockConflicts {
+    final conflicts = <MetadataConflict>[];
+    for (final block in blocks) {
+      if (block.sources.length < 2) continue;
+      final fields = <String>{};
+      for (final facts in block.sources.values) {
+        fields.addAll(facts.comparable.keys);
+      }
+      for (final field in fields.toList()..sort()) {
+        final values = <String, String>{};
+        for (final entry in block.sources.entries) {
+          final value = entry.value.comparable[field];
+          if (value != null && value.isNotEmpty) values[entry.key] = value;
+        }
+        // Solo lo que declaran los dos. Que uno tenga el nombre en inglés y
+        // el otro no, no es una discrepancia: es que uno lo sabe.
+        if (values.length < 2) continue;
+        if (values.values.toSet().length == 1) continue;
+        conflicts.add(
+          MetadataConflict(
+            course: block.id,
+            field: field,
+            values: values,
+            about: ConflictAbout.block,
+          ),
+        );
+      }
+    }
+    return conflicts;
+  }
+
+  /// Los bloques que alguna lección nombra y no declara ningún repositorio
+  /// abierto, **y que hay que arreglar**.
+  ///
+  /// No es un error --la lección se ve entera, y el bloque se enseña por su
+  /// id-- pero casi siempre significa una de dos cosas: que falta abrir el
+  /// repositorio donde está declarado, o que alguien quitó el bloque y sus
+  /// lecciones se quedaron nombrándolo. Las dos se arreglan desde «Entre
+  /// repositorios», y ninguna se arregla sola.
+  ///
+  /// **Mientras nadie declare ninguno, los dos de siempre no cuentan.** Un
+  /// repositorio de antes de que esto se pudiera declarar tiene teoría y
+  /// problemas y no tiene `blocks:`, y señalarle las dos mil lecciones como
+  /// «sin bloque» sería llenar la pantalla de un problema que no existe. En
+  /// cuanto alguien declara el primero la lista deja de ser implícita, y
+  /// entonces `theory` sin declarar es exactamente lo que parece: lecciones
+  /// que se quedaron atrás al quitar su bloque.
+  List<String> get undeclaredBlocks {
+    final named = _namedButNotDeclared;
+    if (blocks.isNotEmpty) return named;
+    return [
+      for (final id in named)
+        if (!defaultBlockTitles.containsKey(id)) id,
+    ];
+  }
+
+  /// Los ids que alguna lección nombra y nadie declara, sin más criterio.
+  ///
+  /// Separado de [undeclaredBlocks] porque son dos preguntas distintas: esta
+  /// es «¿qué bloques hay que ofrecer?», que no puede dejarse ninguno fuera
+  /// sin esconder material, y aquella «¿qué hay que arreglar?».
+  List<String> get _namedButNotDeclared {
+    final declared = {for (final block in blocks) block.id};
+    final named = <String>{
+      for (final unit in units)
+        if (unit.block.isNotEmpty) unit.block,
+    };
+    return (named.difference(declared).toList())..sort();
+  }
+
+  /// Las lecciones de un bloque.
+  List<Unit> unitsInBlock(String id) => [
+    for (final unit in units)
+      if (unit.block == id) unit,
+  ];
+
+  /// Lo que una pantalla tiene que ofrecer: los declarados, en su orden, y
+  /// detrás los que alguna lección nombra sin que nadie los declare.
+  ///
+  /// Los segundos salen **a propósito**. Un filtro que no ofrece un bloque es
+  /// un filtro desde el que no se llega a su material, así que esconderlos
+  /// escondería lecciones que existen -- que es justo lo que este diseño no
+  /// puede hacer. Se distinguen por [CourseBlock.declared].
+  ///
+  /// Los declarados salen aunque estén vacíos: uno vacío es uno que se acaba
+  /// de crear, y esconderlo deja sin sitio por donde meterle la primera
+  /// lección.
+  List<CourseBlock> get blocksInUse => [
+    ...blocks,
+    for (final id in _undeclaredInReadingOrder)
+      CourseBlock(id: id, titles: const {}),
+  ];
+
+  /// Los que nadie declara, en el orden en que se enseñan.
+  ///
+  /// Los dos de siempre primero y en el orden de siempre --la teoría antes
+  /// que los problemas-- porque un repositorio que no declara ninguno tiene
+  /// que verse exactamente igual que antes, y alfabético pondría los
+  /// problemas delante. Los demás, alfabéticos: nadie ha dicho en qué orden
+  /// van, y cualquier otro sería inventado.
+  List<String> get _undeclaredInReadingOrder {
+    final known = defaultBlockTitles.keys.toList();
+    int rank(String id) {
+      final at = known.indexOf(id);
+      return at < 0 ? known.length : at;
+    }
+
+    return _namedButNotDeclared.toList()..sort((a, b) {
+      final byDefault = rank(a).compareTo(rank(b));
+      return byDefault != 0 ? byDefault : a.compareTo(b);
+    });
+  }
+
+  /// El bloque con ese id, declarado o no.
+  ///
+  /// Nunca null para un id que alguien usa: si nadie lo declara sale uno sin
+  /// nombre, que se enseña por su id. Una pantalla que pregunta por el bloque
+  /// de una lección no puede quedarse sin respuesta.
+  CourseBlock blockNamed(String id) {
+    for (final block in blocks) {
+      if (block.id == id) return block;
+    }
+    return CourseBlock(id: id, titles: const {});
+  }
+
+  /// Los bloques a los que pertenece un documento: los de las lecciones que
+  /// compone.
+  ///
+  /// Derivado y no declarado, y eso es deliberado: un documento no elige
+  /// bloque, lo hereda de lo que lleva dentro. Un tema con su teoría y sus
+  /// ejercicios está en los dos, y decirlo de otra forma obligaría a
+  /// mantener a mano algo que ya está escrito en cada lección.
+  Set<String> blocksOf(Document document) {
+    final found = <String>{};
+    for (final reference in document.unitRefs) {
+      final unit =
+          unitByReference(reference, repo: document.repo) ??
+          unitByReference(reference);
+      if (unit != null) found.add(unit.block);
+    }
+    return found;
   }
 
   /// Las asignaturas de un grado, o las que no dicen a cuál pertenecen.

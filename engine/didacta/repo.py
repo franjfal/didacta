@@ -72,12 +72,26 @@ TAXONOMY = "taxonomy.yaml"
 #: libro lo citan el análisis bibliográfico del tema 1 y el del tema 6.
 DEFAULT_BIBLIOGRAPHY = "shared/bibliography.bib"
 
-#: Los dos bloques en que se parte una asignatura. No es lo mismo que el
-#: `kind` de una unidad: el kind dice qué es el fichero --una explicación, un
-#: ejemplo, un ejercicio-- y el bloque dice de qué parte de la asignatura
-#: forma parte. Una explicación teórica dentro de una práctica de problemas
-#: es `kind: theory` y `block: problems`, y las dos cosas son ciertas a la vez.
-BLOCKS = ("theory", "problems")
+#: Los bloques que Didacta conoce sin que nadie los declare. No es lo mismo
+#: que el `kind` de una unidad: el kind dice qué es el fichero --una
+#: explicación, un ejemplo, un ejercicio-- y el bloque dice de qué parte de la
+#: asignatura forma parte. Una explicación teórica dentro de una práctica de
+#: problemas es `kind: theory` y `block: problems`, y las dos cosas son
+#: ciertas a la vez.
+#:
+#: Son dos porque eran los dos que había cuando esto no se podía configurar, y
+#: siguen aquí porque un repositorio que no declara ninguno tiene que seguir
+#: viéndose exactamente igual que antes. Los que se declaran viven en
+#: `taxonomy.yaml`, y pueden ser los que quiera quien escribe el material.
+DEFAULT_BLOCKS = ("theory", "problems")
+
+#: El nombre que se enseña de los dos de siempre mientras nadie los declare.
+#: Sin esto, un repositorio de antes de que los bloques se declararan
+#: enseñaría `theory` donde decía «Teoría».
+DEFAULT_BLOCK_TITLES = {
+    "theory": {"es": "Teoría", "va": "Teoria", "en": "Theory"},
+    "problems": {"es": "Problemas", "va": "Problemes", "en": "Problems"},
+}
 
 #: Kinds a unit may declare.
 UNIT_KINDS = (
@@ -172,6 +186,40 @@ class Topic:
         return {"id": self.id, "title": dict(self.titles)}
 
 
+class Block:
+    """Una de las partes en que se divide una asignatura.
+
+    Teoría y problemas eran las dos que había, y estaban escritas en el
+    código. Ahora se declaran, con **id** y **nombre por idioma**, igual que
+    un tema o una titulación: el id es lo que guarda cada `unit.yaml` y el
+    nombre es lo que se lee, así que renombrar un bloque es cambiar una línea
+    y no mover ningún fichero.
+
+    Y como los temas y las titulaciones, **se declara donde se tenga y se
+    nombra desde cualquier sitio**: un bloque que no declara ningún
+    repositorio abierto no desaparece --sus unidades se ven enteras-- pero se
+    enseña por su id, y la aplicación lo señala para que alguien lo declare.
+    """
+
+    __slots__ = ("id", "titles", "raw")
+
+    def __init__(self, id, titles=None, raw=None):
+        self.id = id
+        self.titles = titles or {}
+        self.raw = raw or {}
+
+    def title(self, language=None):
+        if language and self.titles.get(language):
+            return self.titles[language]
+        for value in self.titles.values():
+            if value:
+                return value
+        return self.id
+
+    def as_dict(self):
+        return {"id": self.id, "title": dict(self.titles)}
+
+
 class Category:
     """One category, with the topics declared inside it."""
 
@@ -219,10 +267,14 @@ class Taxonomy:
     keeps working: the ids are then simply unchecked.
     """
 
-    __slots__ = ("categories", "declared", "raw")
+    __slots__ = ("categories", "blocks", "declared", "raw")
 
-    def __init__(self, categories=None, declared=False, raw=None):
+    def __init__(self, categories=None, blocks=None, declared=False, raw=None):
         self.categories = categories or []
+        #: Las partes en que se divide una asignatura. Vacía es lo corriente
+        #: en un repositorio de antes de que se pudieran declarar, y entonces
+        #: valen las de siempre: teoría y problemas.
+        self.blocks = blocks or []
         #: Whether the file exists. Without it nothing is validated, because
         #: a repository that has not declared its taxonomy is not a
         #: repository whose every unit is misclassified.
@@ -243,6 +295,24 @@ class Taxonomy:
 
         languages = (settings.languages if settings
                      else list(profiles_mod.DEFAULT_LANGUAGES))
+
+        blocks = []
+        block_ids = set()
+        for item in (data.get("blocks") or []):
+            if not isinstance(item, dict):
+                raise RepoError("%s: each block should be a mapping" % path)
+            identifier = item.get("id")
+            if not identifier:
+                raise RepoError("%s: a block is missing its `id`" % path)
+            if identifier in block_ids:
+                raise RepoError("%s: duplicate block `%s`" % (path, identifier))
+            block_ids.add(identifier)
+            blocks.append(Block(
+                id=identifier,
+                titles=yamlio.localised(item.get("title"), languages,
+                                        path=path, key="title"),
+                raw=item,
+            ))
         categories = []
         seen = set()
         for item in declared:
@@ -289,7 +359,8 @@ class Taxonomy:
                 topics=topics,
                 raw=item,
             ))
-        return cls(categories=categories, declared=True, raw=data)
+        return cls(categories=categories, blocks=blocks, declared=True,
+                   raw=data)
 
     def category(self, category_id):
         for category in self.categories:
@@ -297,8 +368,15 @@ class Taxonomy:
                 return category
         return None
 
+    def block(self, block_id):
+        for block in self.blocks:
+            if block.id == block_id:
+                return block
+        return None
+
     def as_dict(self):
-        return {"categories": [c.as_dict() for c in self.categories]}
+        return {"categories": [c.as_dict() for c in self.categories],
+                "blocks": [b.as_dict() for b in self.blocks]}
 
 
 # --------------------------------------------------------------------------
@@ -555,12 +633,15 @@ def load_unit(root, relpath, settings):
 
     # Qué parte de la asignatura. Declarado; si no lo está, se hereda del
     # árbol, que es lo que decidía esto antes de que fuese un campo.
+    #
+    # Y no se comprueba contra ninguna lista, a diferencia del kind. Quién
+    # declara un bloque es `taxonomy.yaml`, y **puede ser el del repositorio
+    # de al lado**: la teoría y los problemas se reparten en dos, y desde uno
+    # de ellos el otro sencillamente no existe. Rechazar aquí un bloque que no
+    # se declara aquí haría que abrir medio material fuese un error de
+    # lectura. Quien tiene los dos delante es la aplicación, y es ella quien
+    # señala los bloques que no declara nadie.
     block = data.get("block") or ("problems" if area == PROBLEMS else "theory")
-    if block not in BLOCKS:
-        raise RepoError(
-            "%s: unknown block `%s` (known: %s)"
-            % (meta_path, block, ", ".join(BLOCKS))
-        )
 
     identifier = data.get("id") or ".".join(
         p for p in parts[1:] if p

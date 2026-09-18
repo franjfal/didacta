@@ -165,7 +165,14 @@ class _DegreesDialogState extends State<DegreesDialog> {
   }
 
   Future<void> _rename(Degree degree) async {
-    final options = widget.session.catalogue.languageOptions;
+    // Los idiomas del material y no los diez del registro, más los que este
+    // grado ya tenga escritos: un título en un idioma al que nadie traduce es
+    // una fila que no se rellena nunca, y esconder uno que ya existe sería
+    // borrarlo al guardar.
+    final options = widget.session.languagesToEdit(
+      allowed: widget.session.catalogue.languages,
+      declared: degree.titles.keys.toList(),
+    );
     final answer = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => _TitlesDialog(

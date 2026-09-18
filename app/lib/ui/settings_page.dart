@@ -20,15 +20,19 @@ import 'package:provider/provider.dart';
 
 import '../data/browser.dart';
 import '../data/compiler.dart';
+import '../data/toolchain.dart';
 import '../model/workspace.dart';
 import '../router.dart';
 import '../data/mcp_process.dart';
 import '../state/mcp_service.dart';
 import '../state/session.dart';
+import 'language_settings.dart';
+import 'manage_blocks.dart';
 import 'shell.dart';
 import 'sign_in.dart';
 import 'add_repository.dart';
 import 'theme.dart';
+import 'toolchain_check.dart';
 import 'tour.dart';
 import 'translation_settings.dart';
 import 'update_section.dart';
@@ -59,6 +63,11 @@ class SettingsPage extends StatelessWidget {
               const SectionLabel('Al guardar'),
               _SavingSection(session: session),
 
+              if (Toolchain.supported) ...[
+                const SectionLabel('Herramientas'),
+                _ToolsSection(session: session),
+              ],
+
               if (session.canCompile) ...[
                 const SectionLabel('Compilar'),
                 _EngineSection(session: session),
@@ -72,6 +81,19 @@ class SettingsPage extends StatelessWidget {
 
               const SectionLabel('Mis preferencias'),
               _PrefsSection(session: session),
+
+              // Debajo de las preferencias porque la mitad de arriba **es**
+              // una preferencia --y se guarda donde diga la sección anterior--
+              // y encima del catálogo porque la de abajo cambia lo que el
+              // catálogo dice.
+              const SectionLabel('Idiomas'),
+              LanguageSettings(session: session),
+
+              // Debajo de los idiomas y encima del catálogo, por lo mismo que
+              // aquellos: los dos cambian cómo se clasifica el material, y el
+              // catálogo de abajo es lo que enseña el resultado.
+              const SectionLabel('Bloques'),
+              _BlocksSection(session: session),
 
               const SectionLabel('Catálogo'),
               _CatalogueSection(session: session),
@@ -583,6 +605,123 @@ class _ColourPicker extends StatelessWidget {
   );
 }
 
+/// Las partes en que se divide una asignatura.
+///
+/// Un resumen y un botón, no la lista entera: lo que hace falta saber de un
+/// vistazo es cuántos hay y si alguno está sin declarar, y lo demás pide una
+/// pantalla con sitio. La lleva [BlocksDialog].
+class _BlocksSection extends StatelessWidget {
+  const _BlocksSection({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) {
+    final catalogue = session.catalogue;
+    final blocks = catalogue.blocksInUse;
+    final missing = catalogue.undeclaredBlocks;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Las partes en que se divide una asignatura: la teoría, los '
+                'problemas, las prácticas. Cada lección dice a cuál '
+                'pertenece, y quien lo declara es el repositorio.',
+                style: TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              if (blocks.isEmpty)
+                const Note('Ninguno todavía.')
+              else
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final block in blocks)
+                      _BlockPill(
+                        label: block.title(session.language),
+                        count: catalogue.unitsInBlock(block.id).length,
+                        declared: block.declared,
+                      ),
+                  ],
+                ),
+              if (missing.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Note(
+                  missing.length == 1
+                      ? 'Un bloque lo nombra alguna lección y no lo declara '
+                            'ningún repositorio abierto. Sus lecciones se ven '
+                            'igual, pero el bloque sale por su id.'
+                      : '${missing.length} bloques los nombra alguna lección '
+                            'y no los declara ningún repositorio abierto. Sus '
+                            'lecciones se ven igual, pero los bloques salen '
+                            'por su id.',
+                  tone: didactaTeacher,
+                ),
+              ],
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    key: const Key('open-blocks'),
+                    icon: const Icon(Icons.category_outlined, size: 15),
+                    label: const Text('Gestionar los bloques'),
+                    onPressed: () => showBlocks(context, session),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Un bloque en una línea: su nombre, cuánto lleva y si alguien lo declara.
+class _BlockPill extends StatelessWidget {
+  const _BlockPill({
+    required this.label,
+    required this.count,
+    required this.declared,
+  });
+
+  final String label;
+  final int count;
+  final bool declared;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: didactaSurface,
+      border: Border.all(color: declared ? didactaRule : didactaTeacher),
+      borderRadius: BorderRadius.circular(Radii.control),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!declared)
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Icon(Icons.help_outline, size: 13, color: didactaTeacher),
+          ),
+        Text(label, style: const TextStyle(fontSize: 12.5)),
+        const SizedBox(width: 6),
+        Text(
+          '$count',
+          style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+        ),
+      ],
+    ),
+  );
+}
+
 class _CatalogueSection extends StatelessWidget {
   const _CatalogueSection({required this.session});
 
@@ -658,6 +797,27 @@ class _Fact extends StatelessWidget {
         ),
       ],
     ),
+  );
+}
+
+/// Qué hay instalado en la máquina, y el botón para lo que falte.
+///
+/// La misma lista que la bienvenida, y a propósito: aquí se vuelve el día que
+/// algo deja de funcionar --se ha cambiado de ordenador, alguien ha borrado
+/// TeX, el motor estaba en una carpeta que ya no existe-- y lo que hace falta
+/// entonces es exactamente lo mismo que la primera vez.
+///
+/// Encima de «Compilar» porque es lo que se mira primero: si falta LaTeX, la
+/// ruta del motor no es el problema de nadie.
+class _ToolsSection extends StatelessWidget {
+  const _ToolsSection({required this.session});
+
+  final Session session;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    child: ToolchainCheck(session: session),
   );
 }
 

@@ -41,6 +41,7 @@ class SyncedPrefs {
     this.hiddenRepos = const {},
     this.favouriteCourses = const {},
     this.favouriteYears = const {},
+    this.enabledLanguages = const {},
   });
 
   /// Lee lo que haya, y ante la duda devuelve vacío.
@@ -78,6 +79,7 @@ class SyncedPrefs {
         hiddenRepos: hidden,
         favouriteCourses: _names(data['favouriteCourses']),
         favouriteYears: _names(data['favouriteYears']),
+        enabledLanguages: _names(data['enabledLanguages']),
       );
     } catch (_) {
       return const SyncedPrefs();
@@ -101,6 +103,55 @@ class SyncedPrefs {
   /// Matemático I no dice nada de cuál de sus seis cursos se está dando, que
   /// es justo lo que hay que tener a mano.
   final Set<String> favouriteYears;
+
+  /// Los idiomas con los que se quiere trabajar.
+  ///
+  /// **Vacío es «todos»**, y no «ninguno»: es lo que hace que esto se pueda
+  /// añadir sin cambiar nada para quien no lo toque, y lo que impide que un
+  /// fichero a medio escribir deje la aplicación sin ningún idioma.
+  ///
+  /// Es un **filtro**, nunca una autoridad sobre los ficheros. A qué idiomas
+  /// se traduce lo dicen `didacta.yaml` y `course.yaml`, que son del material
+  /// y los ve todo el mundo; esto es de quien mira, y viaja con el resto de
+  /// preferencias. Apagar el inglés aquí no quita el inglés de ninguna
+  /// asignatura: deja de ofrecerse donde hay que elegir uno, y ya está. Por
+  /// eso las pantallas que escriben enseñan además lo que el fichero que
+  /// tienen delante ya declara, esté apagado o no --si no, guardar la ficha
+  /// de una asignatura le quitaría un idioma que nadie pidió quitar--.
+  ///
+  /// Aquí y no en las preferencias de la máquina por lo mismo que los temas
+  /// plegados: quien trabaja en castellano y valenciano lo hace en los dos
+  /// ordenadores.
+  final Set<String> enabledLanguages;
+
+  /// Si un idioma se ofrece. Sin nada elegido, todos.
+  bool isLanguageEnabled(String code) =>
+      enabledLanguages.isEmpty || enabledLanguages.contains(code);
+
+  /// Enciende o apaga un idioma.
+  ///
+  /// Apagar el último deja el conjunto vacío, que es «todos»: no hay forma de
+  /// quedarse sin ninguno, porque una aplicación sin ningún idioma no puede
+  /// enseñar una sola línea de material.
+  SyncedPrefs withLanguageEnabled(
+    String code,
+    bool on, {
+    required Iterable<String> all,
+  }) {
+    final next = enabledLanguages.isEmpty ? {...all} : {...enabledLanguages};
+    if (on) {
+      next.add(code);
+    } else {
+      next.remove(code);
+    }
+    // Todos marcados es lo mismo que no haber elegido, y se guarda igual:
+    // así el fichero no crece con una lista que hay que mantener cada vez que
+    // un repositorio añade un idioma.
+    if (next.isEmpty || all.every(next.contains)) {
+      return _copy(enabledLanguages: const {});
+    }
+    return _copy(enabledLanguages: next);
+  }
 
   /// Los repositorios apagados en la interfaz.
   ///
@@ -150,11 +201,13 @@ class SyncedPrefs {
     Set<String>? hiddenRepos,
     Set<String>? favouriteCourses,
     Set<String>? favouriteYears,
+    Set<String>? enabledLanguages,
   }) => SyncedPrefs(
     collapsedThemes: collapsedThemes ?? this.collapsedThemes,
     hiddenRepos: hiddenRepos ?? this.hiddenRepos,
     favouriteCourses: favouriteCourses ?? this.favouriteCourses,
     favouriteYears: favouriteYears ?? this.favouriteYears,
+    enabledLanguages: enabledLanguages ?? this.enabledLanguages,
   );
 
   SyncedPrefs withThemeCollapsed({
@@ -189,6 +242,7 @@ class SyncedPrefs {
       'hiddenRepos': hiddenRepos.toList()..sort(),
       'favouriteCourses': favouriteCourses.toList()..sort(),
       'favouriteYears': favouriteYears.toList()..sort(),
+      'enabledLanguages': enabledLanguages.toList()..sort(),
     })}\n';
   }
 
@@ -196,5 +250,6 @@ class SyncedPrefs {
       collapsedThemes.isEmpty &&
       hiddenRepos.isEmpty &&
       favouriteCourses.isEmpty &&
-      favouriteYears.isEmpty;
+      favouriteYears.isEmpty &&
+      enabledLanguages.isEmpty;
 }

@@ -119,8 +119,11 @@ class _TranslationsPageState extends State<TranslationsPage> {
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       segments: [
-                        for (final code in catalogue.languages)
-                          ButtonSegment(value: code, label: Text(code)),
+                        for (final option in session.languageChoices)
+                          ButtonSegment(
+                            value: option.code,
+                            label: Text(option.code),
+                          ),
                       ],
                       selected: {language},
                       onSelectionChanged: (values) =>

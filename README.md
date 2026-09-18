@@ -336,6 +336,14 @@ basta, sin instalar nada más. El sistema anterior arrastraba seis `.sty`
 no-CTAN y una fuente empaquetada en el repositorio, lo que hacía imposible
 compilar en una máquina limpia.
 
+**La aplicación comprueba las cuatro cosas que necesita** --git, Python 3,
+LaTeX y su propio motor-- la primera vez que se abre y siempre que se mire en
+**Ajustes → Herramientas**. De cada una dice si está, dónde y qué versión; de
+la que falte, ofrece instalarla por el camino que no pida contraseña de
+administrador, y vuelve a comprobarlo después. Cuando no puede --hace falta
+`sudo`, no hay gestor de paquetes, la máquina no es tuya-- enseña las órdenes
+para hacerlo a mano y el enlace a la guía oficial.
+
 `latexindent` es lo único opcional de la lista. Si está y funciona, es quien
 ordena la sangría de un `.tex` al guardarlo; si no, lo hace un indentador
 propio que viene dentro y hace menos. No hace falta instalar nada: viene con
@@ -361,6 +369,12 @@ compila, y las actualizaciones de CTAN no pueden depender de que se publique
 una versión de esta aplicación. Lo que sí hace es encontrar la que haya y
 decir dónde ha mirado cuando no encuentra ninguna; si está en un sitio raro,
 se le dice en Ajustes.
+
+Y sabe bajar la que le digas: en Ajustes → Herramientas se elige entre las de
+la tabla de arriba con su tamaño al lado, porque entre cien megas y seis gigas
+la decisión depende del disco y de la conexión de cada uno, no de lo que la
+aplicación prefiera. La ligera se instala sin contraseña de administrador y
+Didacta le añade después, con `tlmgr`, los paquetes que el preámbulo usa.
 
 Que la aplicación de escritorio busque en lugar de preguntar al PATH no es un
 lujo: **una app no hereda el PATH del terminal**. A una aplicación lanzada

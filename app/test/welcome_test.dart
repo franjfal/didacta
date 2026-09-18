@@ -9,6 +9,7 @@ library;
 
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/preferences.dart';
+import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/main.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/welcome.dart';
@@ -116,7 +117,11 @@ void main() {
       gatewayOverride: FakeGateway(),
       catalogue: catalogueWith(defaultUnits()),
     );
-    await tester.pumpWidget(MaterialApp(home: WelcomeScreen(session: session)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WelcomeScreen(session: session, toolchain: FakeToolchain()),
+      ),
+    );
     await settle(tester);
 
     await tester.tap(find.byKey(const Key('welcome-next')));
@@ -150,12 +155,15 @@ void main() {
         home: WelcomeScreen(
           session: session,
           onFinished: () => terminada = true,
+          // Sin esto, el paso de las herramientas lanzaría `git --version` de
+          // verdad: un proceso no termina dentro de un test de widgets.
+          toolchain: FakeToolchain(present: ToolId.values.toSet()),
         ),
       ),
     );
     await settle(tester);
 
-    // Qué es → cuenta → repositorio → (motor) → listo.
+    // Qué es → cuenta → (herramientas) → repositorio → listo.
     for (var i = 0; i < 6 && !terminada; i += 1) {
       final next = find.byKey(const Key('welcome-next'));
       if (next.evaluate().isEmpty) break;

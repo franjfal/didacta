@@ -64,6 +64,14 @@ abstract class PreviewTarget {
   /// De qué repositorio es lo que se compila: se compila contra su raíz.
   String get repo;
 
+  /// De qué asignatura, cuando se sabe.
+  ///
+  /// Null en una unidad suelta, que no es de ninguna: la biblioteca es
+  /// compartida y la misma lección la usan asignaturas distintas. Sirve para
+  /// saber en qué idiomas tiene sentido ofrecer compilar --los de esa
+  /// asignatura, no los de todo el material--.
+  String? get course => null;
+
   /// Qué falta por traducir para poder compilar en [language].
   ///
   /// Vacío es «se puede compilar». No vacío es que **no se compila**: lo que
@@ -94,6 +102,12 @@ class UnitTarget implements PreviewTarget {
 
   @override
   String get defaultLanguage => unit.reference;
+
+  /// Ninguna: la biblioteca es compartida y la misma lección la usan
+  /// asignaturas distintas, así que compilarla suelta se ofrece en los
+  /// idiomas del material y no en los de una.
+  @override
+  String? get course => null;
 
   @override
   String get what => 'esta unidad';
@@ -156,6 +170,9 @@ class DocumentTarget implements PreviewTarget {
   final String year;
   final String documentId;
   final String language;
+
+  @override
+  String? get course => courseId;
 
   /// El documento, para saber qué unidades lleva dentro.
   final Document document;
@@ -338,7 +355,7 @@ class PreviewState {
     final catalogue = session.catalogueOrNull;
     if (catalogue == null) return const {};
     final found = <String, List<MissingPiece>>{};
-    for (final code in catalogue.languages) {
+    for (final code in session.languagesIn(target.course)) {
       if (!languages.contains(code)) continue;
       final missing = target.missingIn(catalogue, code);
       if (missing.isNotEmpty) found[code] = missing;
@@ -429,7 +446,7 @@ class PreviewState {
         // siempre a la izquierda de `va`: comparar dos cosas que cambian de
         // lado entre compilaciones es peor que no compararlas.
         languages: [
-          for (final code in session.catalogue.languages)
+          for (final code in session.languagesIn(target.course))
             if (languages.contains(code)) code,
         ],
         onOutput: console.add,
@@ -496,7 +513,7 @@ class UnitPreview extends StatelessWidget {
           profiles: state.profiles,
           chosen: state.chosen,
           chosenLanguages: state.languages,
-          languages: state.session.catalogue.languages,
+          languages: state.session.languagesIn(state.target.course),
           outputs: state.outputCount,
           building: state.building,
           onToggle: state.toggle,

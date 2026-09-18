@@ -115,6 +115,30 @@ abstract class ContentGateway {
     required String message,
   });
 
+  /// Guarda varios ficheros como **un solo cambio**.
+  ///
+  /// Existe por una operación concreta: mover de bloque las noventa lecciones
+  /// que lo nombran. Eso es un cambio --una decisión, una frase que lo
+  /// explica-- y hacerlo con noventa llamadas a [save] deja noventa commits
+  /// consecutivos que dicen lo mismo, y un historial así deja de servir para
+  /// ver qué cambió de verdad.
+  ///
+  /// La implementación de aquí es la honesta para una pasarela que solo sabe
+  /// escribir de uno en uno; la del clon lo cierra en un commit.
+  Future<void> saveAll({
+    required List<({String path, String text, String sha})> files,
+    required String message,
+  }) async {
+    for (final file in files) {
+      await save(
+        path: file.path,
+        text: file.text,
+        sha: file.sha,
+        message: message,
+      );
+    }
+  }
+
   /// Si guardar deja el cambio confirmado o solo escrito.
   ///
   /// Lo pregunta la interfaz para saber qué decir al terminar --«guardado
@@ -292,6 +316,57 @@ class CloneGateway extends ContentGateway {
         // Not attempted without a token: it would fail, and a failed push
         // reported as a failed save would make an author think their work
         // was lost when it is committed and safe.
+        push: willPush,
+      );
+    } on CloneException catch (thrown) {
+      throw ContentException(
+        thrown.stderr.isEmpty
+            ? thrown.message
+            : '${thrown.message}\n${thrown.stderr}',
+        kind: _kindOf(thrown),
+      );
+    }
+  }
+
+  /// Todos escritos, y un commit al final.
+  ///
+  /// Escribir primero y confirmar después, y no fichero a fichero, porque el
+  /// cambio es uno: si algo falla a mitad, lo escrito se queda en el árbol de
+  /// trabajo --visible, y recuperable con `git checkout`-- en vez de dejar
+  /// medio historial con commits sueltos que no se sabe si completar o
+  /// deshacer.
+  @override
+  Future<void> saveAll({
+    required List<({String path, String text, String sha})> files,
+    required String message,
+  }) async {
+    if (files.isEmpty) return;
+    if (commitOnSave && author == null) {
+      throw const ContentException(
+        'Un commit necesita un autor. Inicia sesión antes de guardar.',
+        kind: ContentFailure.unauthenticated,
+      );
+    }
+    try {
+      await beforeWrite?.call();
+    } catch (_) {
+      // Ya lo cuenta quien puso la llamada.
+    }
+    try {
+      for (final file in files) {
+        await clone.writeFile(
+          path: file.path,
+          text: file.text,
+          expectedSha: file.sha,
+        );
+      }
+      if (!commitOnSave) return;
+      await clone.commitPaths(
+        paths: [for (final file in files) file.path],
+        message: message,
+        authorName: author!.name,
+        authorEmail: author!.email,
+        token: token,
         push: willPush,
       );
     } on CloneException catch (thrown) {

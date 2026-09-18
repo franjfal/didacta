@@ -35,12 +35,29 @@ sitio del árbol: es todo lo que lo menciona, venga de donde venga.
 
 ## Los filtros
 
+- **por bloque** — la tira de arriba de la primera columna;
 - **por idioma** — el que se está mirando manda en toda la aplicación, y
   decide qué títulos y qué estados se enseñan;
 - **por estado de traducción** — qué falta, qué está viejo;
-- **por tipo** — teoría o problemas;
+- **por tipo** — una explicación, un ejemplo, un ejercicio;
 - **por etiqueta**;
 - **por repositorio**, cuando hay varios abiertos.
+
+El **bloque** es la parte de la asignatura a la que pertenece cada lección.
+Eran dos y estaban escritas en el código --teoría y problemas--; ahora las
+declara cada repositorio en su `taxonomy.yaml`, así que quien parta su
+asignatura en teoría, problemas y prácticas de ordenador ve tres pestañas. Se
+gestionan desde [Ajustes](ajustes.md#bloques).
+
+La tira **no aparece con un solo bloque**: un filtro cuyo único valor es todo
+lo que hay no contesta ninguna pregunta.
+
+!!! info "Un bloque sin declarar también sale"
+
+    Si una lección nombra un bloque que ningún repositorio abierto declara, el
+    bloque sale igual, por su id. Esconderlo escondería sus lecciones, y un
+    filtro desde el que no se llega a parte del material es peor que uno feo.
+    [Entre repositorios](entre-repos.md) dice cuáles son y cómo arreglarlo.
 
 Las categorías se ordenan **por tamaño y no alfabéticamente**: 51 categorías
 en orden alfabético entierran las que se están dando.

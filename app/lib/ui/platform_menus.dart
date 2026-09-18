@@ -145,10 +145,15 @@ class _MacMenus extends StatelessWidget {
         PlatformMenu(
           label: 'Idioma',
           menus: [
-            for (final code in session.catalogueOrNull?.languages ?? const [])
+            // Los mismos que la barra de arriba, y con el nombre que se lee
+            // ahí: un menú que dice `va` y una barra que dice «Valencià» son
+            // dos listas que hay que aprender por separado.
+            for (final option in session.languageChoices)
               PlatformMenuItem(
-                label: code == session.language ? '✓ $code' : '  $code',
-                onSelected: () => sessionOf(context).language = code,
+                label: option.code == session.language
+                    ? '✓ ${option.name}'
+                    : '  ${option.name}',
+                onSelected: () => sessionOf(context).language = option.code,
               ),
           ],
         ),

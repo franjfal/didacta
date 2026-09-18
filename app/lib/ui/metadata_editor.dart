@@ -30,6 +30,7 @@ import '../model/line_diff.dart';
 import '../model/yaml_patch.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import 'unit_page.dart';
 
 /// The kinds the engine knows. Kept in step with `repo.UNIT_KINDS`; a value
 /// outside it is rejected when the repository is read, so offering a free
@@ -205,7 +206,8 @@ class _MetadataEditorState extends State<MetadataEditor> {
               : _Form(
                   patch: patch,
                   unit: widget.unit,
-                  languages: widget.session.catalogue.languages,
+                  languages: languagesOfUnit(widget.session, widget.unit),
+                  blocks: widget.session.catalogue.blocksInUse,
                   enabled: canWrite,
                   onEdit: _edit,
                 ),
@@ -427,6 +429,7 @@ class _Form extends StatelessWidget {
     required this.patch,
     required this.unit,
     required this.languages,
+    required this.blocks,
     required this.enabled,
     required this.onEdit,
   });
@@ -434,8 +437,31 @@ class _Form extends StatelessWidget {
   final YamlPatch patch;
   final Unit unit;
   final List<String> languages;
+
+  /// Los bloques entre los que se puede elegir. Ver [Catalogue.blocksInUse]:
+  /// los declarados y, detrás, los que alguna lección nombra sin que nadie
+  /// los declare -- porque el de esta lección puede ser uno de esos, y una
+  /// lista que no lo incluyera lo borraría al primer cambio de otro campo.
+  final List<CourseBlock> blocks;
+
   final bool enabled;
   final void Function(void Function(YamlPatch)) onEdit;
+
+  /// El bloque escrito en el fichero, o el que el catálogo dedujo.
+  ///
+  /// Sin escribir es lo corriente en material migrado: entonces lo decidía el
+  /// árbol, y es lo que [Unit] sigue deduciendo. Enseñar el deducido y no un
+  /// hueco es lo que hace que elegir otro sea un cambio y no un
+  /// descubrimiento.
+  String? get _block => patch.scalar(['block']) ?? unit.block;
+
+  /// Su nombre, de los que el catálogo ofrece.
+  String _blockName(String id) {
+    for (final block in blocks) {
+      if (block.id == id) return block.title();
+    }
+    return blockLabel(id);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -490,6 +516,25 @@ class _Form extends StatelessWidget {
           colours: kindColour,
           enabled: enabled,
           onChanged: (value) => onEdit((p) => p.setScalar(['kind'], value)),
+        ),
+        // De qué parte de la asignatura es. No es el tipo, y confundirlos es
+        // el error que esto deshizo: el tipo dice qué **es** el fichero --una
+        // explicación, un ejemplo, un ejercicio-- y el bloque de qué parte de
+        // la asignatura forma parte. Una explicación teórica dentro de una
+        // práctica de problemas es `kind: theory` y bloque «problemas», y las
+        // dos cosas son ciertas.
+        //
+        // Una lista y no un campo de texto, como el tipo: escribirlo a mano
+        // es como un repositorio acaba con `problms` y una lección que no
+        // sale en ningún filtro.
+        _ChoiceRow(
+          key: const ValueKey('unit-block'),
+          label: 'bloque',
+          value: _block,
+          options: [for (final block in blocks) block.id],
+          names: (value) => _blockName(value),
+          enabled: enabled && blocks.isNotEmpty,
+          onChanged: (value) => onEdit((p) => p.setScalar(['block'], value)),
         ),
         _TextRow(
           label: 'categoría',

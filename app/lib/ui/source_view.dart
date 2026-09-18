@@ -448,7 +448,10 @@ class _SourceTabState extends State<SourceTab> {
   /// línea, no se reserializa el fichero— para no borrar los `# TODO: va` ni
   /// las entradas comentadas (D40, D41).
   Future<void> _editHeading(ReadingHeading heading) async {
-    final languages = widget.session.catalogue.languages;
+    final languages = widget.session.languagesToEditCodes(
+      allowed: widget.session.languagesIn(widget.courseId),
+      declared: heading.titles.keys.toList(),
+    );
     final titles = await editHeadingTitles(
       context,
       heading: heading.kind == 'section' ? 'Apartado' : 'Subapartado',
@@ -552,7 +555,7 @@ class _SourceTabState extends State<SourceTab> {
         _Header(
           reading: reading,
           outline: _outline,
-          languages: widget.session.catalogue.languages,
+          languages: widget.session.languagesIn(widget.courseId),
           language: _viewLanguage,
           onLanguage: _switchDocument,
           dim: _dim,
@@ -604,17 +607,21 @@ class _SourceTabState extends State<SourceTab> {
                   focusNode: _focusFor(path),
                   canWrite: canWrite,
                   exists: _drafts.of(path)?.exists ?? true,
-                  languages: widget.session.catalogue.languages,
+                  languages: widget.session.languagesIn(widget.courseId),
                   language: _language[file.reference] ?? file.language,
                   dirty: _drafts.of(path)?.isDirty ?? false,
                   existsIn: {
-                    for (final code in widget.session.catalogue.languages)
+                    for (final code in widget.session.languagesIn(
+                      widget.courseId,
+                    ))
                       code:
                           _drafts.of('${file.unit.path}/$code.tex')?.exists ??
                           file.unit.statusIn(code).exists,
                   },
                   dirtyLanguages: {
-                    for (final code in widget.session.catalogue.languages)
+                    for (final code in widget.session.languagesIn(
+                      widget.courseId,
+                    ))
                       if (_drafts.of('${file.unit.path}/$code.tex')?.isDirty ??
                           false)
                         code,

@@ -15,8 +15,10 @@ en la máquina. **Didacta no lleva una dentro**, y conviene decir por qué:
 - las actualizaciones de CTAN no pueden depender de que alguien publique una
   versión de Didacta.
 
-Lo que sí hace es **encontrar la que haya**, y decir dónde ha mirado cuando no
-encuentra ninguna.
+Lo que sí hace es **encontrar la que haya**, decir dónde ha mirado cuando no
+encuentra ninguna, y **bajar la que le digas** si prefieres no instalarla tú.
+Las tres razones de arriba siguen en pie: por eso se elige, con el tamaño
+delante, en lugar de que la aplicación decida por ti.
 
 ## Cuál instalar
 
@@ -29,6 +31,29 @@ Sirve cualquiera de estas. Hace falta **TeX Live 2023 o posterior**, con
 | Windows | [TeX Live](https://tug.org/texlive/) o [MiKTeX](https://miktex.org/) | MiKTeX instala paquetes según los necesita |
 | Linux | el `texlive-full` de tu distribución | `texlive` + `texlive-latex-extra` + `latexmk` |
 | las tres | [TinyTeX](https://yihui.org/tinytex/), ~100 MB y ampliable con `tlmgr` | |
+
+## Que la instale Didacta
+
+En **Ajustes → Herramientas**, la fila de LaTeX tiene un botón que abre esta
+misma tabla: se elige una y Didacta se encarga.
+
+| | Qué hace el botón |
+|---|---|
+| TinyTeX | descarga el instalador oficial y lo ejecuta. No pide contraseña de administrador y queda en tu carpeta personal. Al terminar, Didacta le pide a `tlmgr` los paquetes que el preámbulo usa |
+| BasicTeX y MacTeX | descargan el `.pkg` de CTAN y abren el instalador de macOS, que **te pedirá la contraseña de administrador** |
+| MiKTeX | lo instala `winget`, que viene con Windows |
+| TeX Live (Windows) | descarga el instalador oficial y lo abre |
+| El `texlive` de tu distribución | instalar paquetes del sistema pide `sudo`, y eso se teclea en un terminal: Didacta enseña las órdenes en lugar de pedirte la contraseña |
+
+Los instaladores que se abren en su propia ventana terminan **fuera** de
+Didacta, así que la fila se queda esperando y hay un «Volver a comprobar»
+para cuando acabe. Es lo honesto: Didacta no sabe cuándo termina el
+instalador de Apple.
+
+Si algo falla --la red de la facultad corta CTAN, el gestor de paquetes no
+está, la máquina no es tuya-- sale un aviso con lo que contestó el programa,
+las órdenes para hacerlo a mano y el enlace a la guía oficial. No hay ningún
+camino que acabe en un callejón sin salida.
 
 !!! tip "Todos los paquetes que Didacta usa están en CTAN"
 
@@ -43,8 +68,9 @@ Sirve cualquiera de estas. Hace falta **TeX Live 2023 o posterior**, con
 
 ## Si Didacta no la encuentra
 
-Aparece en **Ajustes → Compilación**, con la lista de los sitios donde ha
-mirado. Hay un botón para buscar otra vez y un campo para decirle dónde está.
+Aparece en **Ajustes → Herramientas**, con la lista de los sitios donde ha
+mirado, y en **Ajustes → Compilación** hay un botón para buscar otra vez y un
+campo para decirle dónde está.
 
 Esto pasa más de lo que parece, y la razón no es evidente:
 

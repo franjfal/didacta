@@ -135,7 +135,11 @@ class BuildTests(unittest.TestCase):
         """
         self.assertIn("taxonomy", self.manifest)
         self.assertIn("categories", self.manifest["taxonomy"])
-        self.assertEqual(self.manifest["blocks"], ["theory", "problems"])
+        # Los bloques van dentro de la taxonomía, que es donde se declaran:
+        # un bloque clasifica una unidad, como la categoría y el tema. Vacío
+        # cuando el repositorio no declara ninguno, y entonces valen los dos
+        # de siempre, que es lo que hace que esto no rompa nada.
+        self.assertEqual(self.manifest["taxonomy"]["blocks"], [])
 
     def test_repository_errors_reach_the_manifest(self):
         # An index built from a repository that does not load cleanly must say
@@ -362,6 +366,42 @@ class StalenessTests(unittest.TestCase):
         report = self.report()
         self.assertTrue(report["stale"])
         self.assertEqual(report["disk"]["years"], before + 1)
+
+    def test_editing_the_settings_is_stale(self):
+        # `didacta.yaml` no está debajo de content/, problems/ ni courses/, y
+        # sin embargo lo que dice --los idiomas del repositorio-- sale en el
+        # índice. Sin mirarlo, añadir un idioma y regenerar no cambiaba nada:
+        # el índice no se daba por viejo, así que no se regeneraba.
+        self.write_index()
+        later = time.time() + 60
+        os.utime(os.path.join(self.repo, repo_mod.SETTINGS), (later, later))
+
+        report = self.report()
+        self.assertTrue(report["stale"])
+        self.assertIn("editado", report["reason"])
+
+    def test_editing_the_taxonomy_is_stale(self):
+        # Lo mismo con la clasificación: las categorías y los temas viajan en
+        # el manifiesto, así que declarar uno nuevo tiene que verse.
+        self.write_index()
+        path = os.path.join(self.repo, repo_mod.TAXONOMY)
+        if not os.path.isfile(path):
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("categories: []\n")
+        later = time.time() + 60
+        os.utime(path, (later, later))
+
+        self.assertTrue(self.report()["stale"])
+
+    def test_a_repository_without_those_files_still_works(self):
+        # Ninguno de los tres es obligatorio, y que falte uno no puede dejar
+        # la comprobación sin contestar.
+        for name in (repo_mod.TAXONOMY, repo_mod.DEGREES_META):
+            path = os.path.join(self.repo, name)
+            if os.path.isfile(path):
+                os.remove(path)
+        self.write_index()
+        self.assertFalse(self.report()["stale"], self.report()["reason"])
 
     def test_the_survey_does_not_open_any_file(self):
         # La garantía de que es barato: si un día alguien le mete un

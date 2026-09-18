@@ -522,6 +522,24 @@ title:
 """
 
 
+def _default_block(repository, area):
+    """El bloque de una unidad recién creada.
+
+    El primero que el repositorio declare, y si no declara ninguno, el que
+    salía del árbol antes de que los bloques se pudieran declarar. Así una
+    unidad nueva nunca nace en un bloque que nadie declara, que es la única
+    forma de quedarse sin sitio donde verla.
+    """
+    try:
+        taxonomy = repo_mod.Taxonomy.load(repository.root, repository.settings)
+    except (repo_mod.RepoError, yamlio.YamlError):
+        taxonomy = repo_mod.Taxonomy()
+    wanted = "problems" if area == repo_mod.PROBLEMS else "theory"
+    if taxonomy.blocks:
+        return wanted if taxonomy.block(wanted) else taxonomy.blocks[0].id
+    return wanted
+
+
 def tool_create_unit(workspace, arguments):
     repository = workspace.writable(arguments.get("repository"))
     area = arguments.get("area") or repo_mod.CONTENT
@@ -558,7 +576,7 @@ def tool_create_unit(workspace, arguments):
     meta = NEW_UNIT_YAML % {
         "title": title,
         "kind": arguments.get("kind") or "theory",
-        "block": arguments.get("block") or "theory",
+        "block": arguments.get("block") or _default_block(repository, area),
         "language": language,
         "quoted": yamlio._fmt(title),
         "pending": pending,
@@ -884,7 +902,10 @@ def build_tools(latex_dir=None):
                     "text": _string("El LaTeX de la unidad."),
                     "language": _string("Por defecto, el del repositorio."),
                     "kind": _string("`theory`, `example`, `problem`…"),
-                    "block": _string("El bloque al que pertenece."),
+                    "block": _string(
+                        "El bloque al que pertenece, de los que declara "
+                        "`taxonomy.yaml`. Por defecto, el primero."
+                    ),
                 },
                 "required": ["path", "title", "text"],
             },
@@ -909,7 +930,9 @@ def build_tools(latex_dir=None):
                         "additionalProperties": {"type": "string"},
                     },
                     "kind": _string("El tipo de unidad."),
-                    "block": _string("El bloque."),
+                    "block": _string(
+                        "El bloque, de los que declara `taxonomy.yaml`."
+                    ),
                     "category": _string("La categoría."),
                     "topic": _string("El tema de la taxonomía."),
                     "tags": {
