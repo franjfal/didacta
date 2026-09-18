@@ -233,4 +233,30 @@ void main() {
       expect(prefs.isLanguageEnabled('en'), isTrue);
     });
   });
+
+  group('la vista de las asignaturas', () {
+    test('viaja con lo demás', () {
+      // Es la lista con la que se trabaja, no una forma de buscar un rato:
+      // quien ordena sus asignaturas se queda en «las ocultas» un buen rato.
+      final prefs = const SyncedPrefs().withCoursesView('hidden');
+
+      expect(prefs.isEmpty, isFalse);
+      expect(SyncedPrefs.fromJson(prefs.toJson()).coursesView, 'hidden');
+    });
+
+    test('sin elegir nada son las que se dan', () {
+      expect(const SyncedPrefs().coursesView, 'visible');
+      // Y eso no es una preferencia que haya que escribir: un fichero vacío
+      // sigue estando vacío.
+      expect(const SyncedPrefs().withCoursesView('visible').isEmpty, isTrue);
+    });
+
+    test('se guarda el nombre, tal cual', () {
+      // El enumerado es de la pantalla y este fichero se lee dentro de un
+      // año: lo que no se reconozca lo resuelve quien lo dibuja, no esto.
+      const written = '{"version": 1, "coursesView": "loquesea"}';
+
+      expect(SyncedPrefs.fromJson(written).coursesView, 'loquesea');
+    });
+  });
 }

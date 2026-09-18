@@ -39,6 +39,90 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## 0.1.0 — 2026-09-17
 
+- **Didacta abre por las asignaturas.** Abría por la biblioteca, que contesta
+  «¿qué tengo de esto?» -- una pregunta que se hace a ratos. Al abrir se viene
+  a preparar una clase, y eso empieza en la asignatura que se da mañana.
+- **Las asignaturas y los cursos académicos se pueden ocultar**, uno a uno.
+  Ocultar no es quitar: siguen en el repositorio, siguen compilando y siguen en
+  la biblioteca; lo que cambia es la lista, que después de unos años son veinte
+  asignaturas de las que se dan tres. Arriba se elige qué se mira: las que doy,
+  las ocultas --para deshacerlo-- o todas.
+- **Y se pliegan**: el título de una asignatura es un botón, y plegada enseña
+  cuántos cursos lleva dentro sin ocupar la pantalla con ellos.
+- **Marcar ya no reordena.** Lo marcado subía al principio y era peor: la lista
+  dejaba de estar donde se aprendió que estaba, y marcar una asignatura movía
+  otras cuatro de sitio. La estrella dice «esta me importa»; para no ver lo que
+  no se da está ocultarla. De paso, «el primer curso» vuelve a querer decir «el
+  último que se dio», que es de lo que se fía la pantalla para marcarlo.
+- **Lo que se está mirando se queda puesto**, y viaja de un ordenador a otro
+  con el resto de preferencias. Quien se pone a ordenar la lista se queda un
+  rato en «las ocultas»; volver de un curso y encontrarse otra vez «las que
+  doy» convertía esa tarde en un baile de clics.
+
+- **Exportar deja de estar escondido detrás de unos puntos suspensivos.** El
+  botón está en la fila del curso, al lado de la estrella: entrar, darle y
+  decir en qué carpeta.
+- **Y se puede exportar un documento suelto**, desde su fila del listado del
+  curso, para cuando lo que hay que subir al aula virtual es solo el Tema 3.
+  Aparece si tiene algo compilado, que es cuando hay algo que copiar.
+- **El visor de PDF guarda una copia** de lo que se está mirando, con el
+  nombre que le pone el motor. Antes había que abrirlo en el visor del sistema
+  y guardarlo desde allí.
+- Exportar **no pide permiso de escritura**: copia lo compilado y no toca el
+  repositorio, así que también se lleva material quien solo lo tenga para leer.
+
+- **Un botón para contar un problema**, abajo a la derecha, al lado del de
+  actualizar. Abre las incidencias de Didacta en GitHub con la versión y el
+  sistema ya escritos: un informe sin eso necesita un viaje de ida y vuelta
+  antes de poder mirarse, y quien lo escribe no tiene por qué saber cuál es su
+  versión. Está ahí y no en Ajustes porque el momento en que se encuentra un
+  fallo es el momento en que se está usando la aplicación.
+
+- **Guardar decía que había guardado y la pantalla seguía igual.** Cambiar el
+  título de un grado --o de un tema, o de un documento-- escribía el fichero y
+  no se veía: lo que Didacta escribe son ficheros YAML y lo que lee son los
+  índices que el motor saca de ellos, y nadie los regeneraba. Ahora recargar
+  el catálogo pone el índice al día primero, así que lo que se guarda se ve. El
+  cambio estaba en el disco todo el tiempo; lo que faltaba era enseñarlo.
+- **Un grado se puede declarar y dejar de declarar en cada repositorio**, desde
+  la misma pantalla de grados, con una casilla por repositorio. Quitarlo del
+  último no pierde nada: sus asignaturas salen enteras, sin agrupar, y la
+  pantalla las enseña como «nombradas y sin declarar».
+
+- **Las quince salidas dejan de estar escritas en el programa.** Cambiar el
+  margen de los apuntes o meter un paquete propio era editar el LaTeX de
+  Didacta. Ahora un repositorio puede declarar sus **plantillas**: una salida
+  con su clase de documento, sus opciones, sus ejes y **su propio preámbulo**,
+  que se lee al final del de Didacta y por tanto puede redefinir lo que
+  Didacta acaba de definir.
+- **Cada bloque dice con qué se compila lo suyo**, y cada documento y cada
+  lección pueden quedarse con menos sin tocar el bloque. Una lista vacía
+  siempre quiere decir «lo que toque» y nunca «nada»: no hay forma de dejarse
+  material sin salidas sin haberlo pedido.
+- **Una plantilla se puede apagar sin borrarla.** Deja de compilarse y se
+  queda declarada, con su cabecera, para el curso que vuelva a hacer falta.
+- **Nada de esto cambia lo que ya compilaba.** Un repositorio que no declara
+  ninguna plantilla sigue sacando las quince salidas de siempre, y una
+  plantilla que se llame como una de ellas la sustituye solo cuando compila
+  Didacta: `pdflatex master.tex` a mano, en un editor y con SyncTeX, sigue
+  dando lo mismo que daba.
+- Y se declaran en un repositorio y las usan todos, como los bloques: la
+  teoría y los problemas están repartidos en dos, y el bloque de uno puede
+  compilarse con la plantilla que declara el otro.
+- **Todo eso se toca desde Ajustes → Plantillas**: ver las que hay, apagar las
+  que no se sacan, renombrarlas, duplicarlas y **escribir su cabecera de LaTeX
+  a mano**. Editar una de las que trae Didacta la escribe en el repositorio que
+  elijas, y lo dice antes de hacerlo: a partir de ahí manda la tuya.
+- **Una plantilla puede guardarse en el programa** en vez de en un repositorio,
+  para lo que es tuyo y no de la asignatura, o para cuando el material es de
+  otra persona. Lo que se guarda ahí **no lo protege nadie** --ni git, ni la
+  sincronización-- así que Ajustes lo dice y trae los dos botones que hacen
+  falta: copiar las plantillas a una carpeta y traerlas de una.
+- **Cada bloque elige con qué se compila lo suyo**, y cada tema y cada lección
+  pueden apartarse desde su propia pantalla. Lo que viene marcado al compilar
+  ya no sale de una tabla escondida en el motor: sale de lo que hayas
+  configurado.
+
 - **Teoría y problemas ya no están escritos en el código.** Eran los dos
   bloques que había y no se podían ni renombrar ni añadir. Ahora los declara
   cada repositorio, con un nombre por idioma, así que quien parta su
@@ -447,6 +531,54 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 - **Y un recorrido guiado por la ventana**, que señala el carril, la barra de
   arriba y la cola de traducción diciendo para qué es cada cosa. Se sale con
   ++esc++ o pulsando fuera, y desde Ajustes se vuelven a ver las dos cosas.
+- **Lo que se añade a la composición sale en el PDF.** Un apartado o un
+  subapartado nuevo se guardaba, se veía en la pantalla de composición y el PDF
+  seguía sin él: la composición vive en `year.yaml` y lo que compila LaTeX es el
+  `.tex` de al lado, y nadie los ponía de acuerdo. Ahora compilar lo hace, y
+  `didacta check` avisa cuando el `.tex` se ha quedado atrás. El fichero se
+  respeta: sólo se reescribe la lista de unidades y apartados, lo desactivado
+  sigue desactivado, y si alguien había escrito LaTeX ahí en medio no se toca y
+  se dice.
+- **Un icono de información en cada lección y en cada tema.** Contesta las dos
+  preguntas que se hacen con algo delante y que no son de su contenido: dónde
+  más se da esto, y qué versiones tengo guardadas. Lo primero estaba enterrado
+  en el panel de la derecha de una lección --que se puede tener cerrado, y que
+  no existe en un tema-- y lo segundo estaba en la pantalla de Asignaturas, a
+  dos pantallas de donde te lo preguntas. Desde ahí se salta a cada sitio, se
+  ven y se crean versiones congeladas, se da una lección en otro tema y se
+  parte en dos lo que esté vinculado en varios sitios. Las versiones congeladas
+  son de una asignatura y no de un fichero, así que una lección que se da en
+  cuatro sale con los cuatro juegos y el nombre de cada asignatura delante.
+- **Los botones de vinculación de una lección ya no se salen del panel.** Con
+  la lección dada en dos sitios eran dos, no cabían en los trescientos y pico
+  píxeles del panel, y el que decía «Gestionar vinculación» quedaba fuera de la
+  pantalla. Ahora viven en el icono de información, que es donde se buscan.
+- **El visor de PDF es un visor de verdad.** Trae un lateral con el índice del
+  documento --los apartados, para saltar a uno-- y las miniaturas de las
+  páginas; el número de página se escribe en lugar de llegar a la 84 a base de
+  flechas; y están el zoom y los tres ajustes de siempre: al ancho, al alto y
+  página entera. A la derecha, una barra de desplazamiento que se arrastra y va
+  diciendo por qué página pasa. Con dos idiomas abiertos lado a lado, todo eso
+  mueve los dos a la vez, que es lo que permite compararlos.
+
+- **Los teoremas y las definiciones vuelven a ir en una caja.** Con su marco de
+  color, su fondo teñido y el nombre --«Definición 1.2 (Espacio normado)»-- en
+  una etiqueta montada sobre el borde de arriba, que es como se veían antes de
+  la migración. En los apuntes la caja va suave, porque una página lleva ocho
+  seguidas y se lee durante una hora; proyectada va con más contraste y una
+  sombra corta, para que se lea desde el fondo del aula. La caja se parte entre
+  páginas: un teorema largo ya no se sale del papel.
+- **Las notas del profesor, los objetivos y los recuadros sin etiqueta van
+  igual**, cada uno con su color. Una página donde el teorema lleva marco y la
+  nota didáctica lleva una raya se lee como dos documentos pegados.
+- **Las presentaciones tienen portada.** Una banda de color de canto a canto
+  con el título de la asignatura en blanco, el logotipo y los datos del curso
+  abajo: es la diapositiva que está proyectada mientras la gente entra y se
+  sienta. Las páginas de apartado dicen además de qué apartado se trata, y el
+  pie remata con las franjas escalonadas de siempre.
+- **La portada de los apuntes ya no lleva el encabezado puesto** --repetía el
+  título dos centímetros por encima del título-- ni el número de página. Y la
+  institución se compone debajo de la ficha del curso, no a su derecha.
 
 ---
 

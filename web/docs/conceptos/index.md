@@ -73,6 +73,12 @@ dos asignaturas es nombrarla en las dos. Quitar algo de este curso es
 comentarlo, no borrarlo: sigue existiendo, y volver a activarlo es descomentar
 una línea.
 
+Y un tema entero se puede **compartir** en lugar de copiar: el mismo tema en
+varios cursos y varias asignaturas, de modo que editarlo desde cualquiera de
+ellos lo cambia en todos. Cuando dejen de ir juntos, se separan.
+
+[:octicons-arrow-right-24: Contenido vinculado](vinculos.md)
+
 [:octicons-arrow-right-24: Repositorios, cursos y documentos](repositorios.md)
 
 ## Los idiomas son variantes de la misma entidad
@@ -116,6 +122,15 @@ de perfiles.
     No hay que buscar en qué carpeta de qué año estaba: la unidad está en la
     biblioteca, con su estado de traducción y con la lista de los cursos que
     la han usado. Se añade a la composición de este año y ya está.
+
+!!! example "El curso que viene"
+
+    En junio congelas el curso como quedó —«Versión final 2025-26»— y en
+    septiembre creas el de 2026-27 a partir de esa versión.
+
+    No se copia material: la composición del año nuevo referencia las mismas
+    lecciones. Y la versión congelada sigue ahí, así que en marzo se puede
+    mirar cómo estaba el curso el día que se dio, y comparar.
 
 !!! example "Una colección compartida"
 

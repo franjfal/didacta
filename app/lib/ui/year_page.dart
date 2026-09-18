@@ -25,11 +25,16 @@ import '../state/session.dart';
 import 'build_console.dart';
 import 'commit_dialog.dart';
 import 'course_admin_ui.dart';
+import 'document_links.dart';
+import 'freezes.dart';
+import 'reuse.dart';
 import 'new_document.dart';
 import 'pdf_dialog.dart';
 import 'shell.dart';
 import 'sync_bar.dart';
 import 'build_button.dart';
+import 'document_properties.dart';
+import 'export_actions.dart';
 import 'heading_title.dart';
 import 'theme.dart';
 
@@ -744,6 +749,17 @@ class _DocumentsState extends State<_Documents> {
     await _loadOutputs();
   }
 
+  /// Si dos listas de plantillas dicen lo mismo, en el mismo orden.
+  ///
+  /// El orden cuenta: es el orden en que salen las versiones, y reordenarlas
+  /// es un cambio aunque las plantillas sean las mismas.
+  static bool _sameTemplates(List<String> before, List<String> after) =>
+      before.length == after.length &&
+      List.generate(
+        before.length,
+        (i) => before[i] == after[i],
+      ).every((x) => x);
+
   /// El título de un tema, en todos los idiomas a la vez.
   ///
   /// Se escribe en el `themes.yaml` del repositorio que lo declara, que es
@@ -782,20 +798,22 @@ class _DocumentsState extends State<_Documents> {
     }
   }
 
-  /// El título de un documento, en todos los idiomas a la vez.
+  /// Las propiedades de un documento: su título y qué se puede compilar de él.
+  ///
+  /// Las dos cosas en el mismo sitio porque es el mismo gesto --«tocar este
+  /// documento»-- y porque separarlas dejaba las plantillas escondidas en la
+  /// pantalla del tema, que es donde no se entra a configurar.
   Future<void> _editDocumentTitle(Document document) async {
     final repo = _repoOf(document.id) ?? document.repo;
-    final titles = await editHeadingTitles(
+    final answer = await editDocumentProperties(
       context,
-      heading: 'documento',
+      session: widget.session,
+      document: document,
       languages: [for (final option in _buildLanguages) option.code],
-      titles: document.titles,
-      reference: document.language,
-      note:
-          'Un idioma en blanco se queda marcado como pendiente en el fichero, '
-          'no se borra el documento.',
+      allowed: widget.session.catalogue.templatesForDocument(document),
     );
-    if (titles == null || !mounted) return;
+    if (answer == null || !mounted) return;
+    final titles = answer.titles;
 
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -806,6 +824,18 @@ class _DocumentsState extends State<_Documents> {
         id: document.id,
         titles: titles,
       );
+      // Y la restricción, si ha cambiado. En su propio guardado: son dos
+      // decisiones distintas y el historial tiene que poder contarlas por
+      // separado.
+      if (!_sameTemplates(document.profiles, answer.templates)) {
+        await widget.session.setDocumentTemplates(
+          repo: repo,
+          course: widget.course.id,
+          year: widget.year,
+          id: document.id,
+          templates: answer.templates,
+        );
+      }
       // El `year.yaml` que esta pantalla tiene abierto acaba de cambiar en
       // disco; sin releerlo, el siguiente guardado escribiría encima con el
       // título viejo.
@@ -1712,6 +1742,10 @@ class _DocumentTile extends StatelessWidget {
         ),
     ];
     final broken = resolved.where((pair) => pair.$2 == null).length;
+    // En cuántos sitios se da este tema. Uno es lo corriente y no se señala:
+    // un indicador que sale siempre no indica nada.
+    final linked =
+        session.catalogue.sharedById(document.content)?.placements.length ?? 1;
 
     return Hoverable(
       onTap: () => context.go(Routes.document(course.id, year, document.id)),
@@ -1770,6 +1804,18 @@ class _DocumentTile extends StatelessWidget {
                             ),
                           ),
                         ),
+                        // Que este tema se da en más sitios. Discreto: un
+                        // icono y un número, porque lo que hace falta es que
+                        // se vea que hay algo que mirar. Lo demás está en el
+                        // menú.
+                        if (linked > 1) ...[
+                          const SizedBox(width: 8),
+                          LinkBadge(
+                            places: linked,
+                            what: 'Este tema',
+                            onPressed: () => _showLinkedPlaces(context),
+                          ),
+                        ],
                         // De qué repositorio es este tema. Solo con varios
                         // abiertos: con uno, marcar no dice nada.
                         if (session.colourOf(document.repo) != null) ...[
@@ -1858,6 +1904,23 @@ class _DocumentTile extends StatelessWidget {
                 outputs: outputs,
                 onPressed: onOpenPdfs ?? () {},
               ),
+              // Llevárselo, con la misma regla que el de mirarlo: sin nada
+              // compilado no hay nada que exportar, y un botón que solo sabe
+              // decir «no había nada» es un botón que estorba.
+              if (outputs.isNotEmpty)
+                IconButton(
+                  key: Key('export-document-$id'),
+                  tooltip: 'Exportar este documento a una carpeta',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.file_download_outlined, size: 16),
+                  onPressed: () => exportDocument(
+                    context,
+                    session: session,
+                    course: course,
+                    year: year,
+                    document: document,
+                  ),
+                ),
               if (onEditTitle != null)
                 TitleButton(
                   id: 'document-$id',
@@ -1872,6 +1935,34 @@ class _DocumentTile extends StatelessWidget {
                   current: session.language,
                   onBuild: onBuild!,
                 ),
+              // Mirando una versión congelada no se edita nada, así que en
+              // lugar del menú de reutilizar sale lo único que tiene sentido
+              // desde aquí: traerse este tema tal como estaba.
+              if (session.isFrozen)
+                IconButton(
+                  key: Key('restore-document-$id'),
+                  tooltip: 'Restaurar este tema como estaba en esta versión',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.restore, size: 16),
+                  onPressed: () => showRestore(
+                    context,
+                    session: session,
+                    course: course,
+                    year: year,
+                    freeze: session.frozen!.freeze,
+                    scope: RestoreScope.document,
+                    path: document.id,
+                    label: document.title(session.language),
+                    content: document.content,
+                  ),
+                )
+              else if (canWrite)
+                _ReuseMenu(
+                  session: session,
+                  course: course,
+                  year: year,
+                  document: document,
+                ),
               if (canWrite)
                 IconButton(
                   key: Key('remove-document-$id'),
@@ -1885,6 +1976,27 @@ class _DocumentTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Dónde más se da este tema.
+  Future<void> _showLinkedPlaces(BuildContext context) {
+    final found = document == null
+        ? null
+        : session.catalogue.sharedById(document!.content);
+    return showPlaces(
+      context,
+      title: '«${document?.title(session.language) ?? id}»',
+      places: placementLinks(
+        session,
+        found?.placements ?? const <ContentPlacement>[],
+        course: course.id,
+        year: year,
+        document: id,
+      ),
+      explanation:
+          'Es el mismo tema en todas ellas, no copias: lo que se edite desde '
+          'cualquiera se ve en las demás.',
     );
   }
 
@@ -2121,5 +2233,165 @@ class _OpenButton extends StatelessWidget {
       color: stale ? didactaMuted : didactaThm,
       onPressed: onPressed,
     );
+  }
+}
+
+/// Lo que se puede hacer con un tema para reutilizarlo en otro sitio.
+///
+/// Cuatro operaciones separadas y no una: mover, vincular, duplicar y
+/// dividir son cuatro cosas distintas, y confundirlas es cómo se pierde
+/// material. Cada una dice lo que hace en el diálogo que abre, que es donde
+/// importa la diferencia.
+class _ReuseMenu extends StatelessWidget {
+  const _ReuseMenu({
+    required this.session,
+    required this.course,
+    required this.year,
+    required this.document,
+  });
+
+  final Session session;
+  final Course course;
+  final String year;
+  final Document document;
+
+  List<ContentPlacement> get _places => placementsOf(session, document);
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    builder: (context, controller, child) => IconButton(
+      key: Key('reuse-menu-${document.id}'),
+      tooltip: 'Reutilizar este tema en otro sitio',
+      visualDensity: VisualDensity.compact,
+      icon: const Icon(Icons.more_horiz, size: 17),
+      onPressed: () =>
+          controller.isOpen ? controller.close() : controller.open(),
+    ),
+    menuChildren: [
+      MenuItemButton(
+        key: Key('document-move-${document.id}'),
+        leadingIcon: const Icon(Icons.drive_file_move_outlined, size: 15),
+        onPressed: () => _reuse(context, ReuseMode.move),
+        child: const Text('Mover a…'),
+      ),
+      MenuItemButton(
+        key: Key('document-link-${document.id}'),
+        leadingIcon: const Icon(Icons.link, size: 15),
+        onPressed: () => _reuse(context, ReuseMode.link),
+        child: const Text('Añadir vinculado a…'),
+      ),
+      MenuItemButton(
+        key: Key('document-duplicate-${document.id}'),
+        leadingIcon: const Icon(Icons.content_copy_outlined, size: 15),
+        onPressed: () => _reuse(context, ReuseMode.duplicate),
+        child: const Text('Duplicar en…'),
+      ),
+      if (document.isLinked) ...[
+        const Divider(height: 1),
+        MenuItemButton(
+          key: Key('document-places-${document.id}'),
+          leadingIcon: const Icon(Icons.travel_explore, size: 15),
+          onPressed: () => _showPlaces(context),
+          child: Text('Ver ubicaciones vinculadas (${_places.length})'),
+        ),
+        MenuItemButton(
+          key: Key('document-split-${document.id}'),
+          leadingIcon: const Icon(Icons.call_split, size: 15),
+          onPressed: () => _split(context),
+          child: const Text('Gestionar vinculación…'),
+        ),
+        MenuItemButton(
+          key: Key('document-unlink-${document.id}'),
+          leadingIcon: const Icon(Icons.link_off, size: 15),
+          onPressed: () => _unlink(context),
+          child: const Text('Crear copia independiente'),
+        ),
+      ],
+    ],
+  );
+
+  Future<void> _reuse(BuildContext context, ReuseMode mode) async {
+    final target = await askReuseTarget(
+      context,
+      session: session,
+      title: '${reuseNames[mode]}: «${document.title(session.language)}»',
+      fromCourse: course.id,
+      fromYear: year,
+      documentId: document.id,
+      mode: mode,
+    );
+    if (target == null || !context.mounted) return;
+    await reuseDocument(
+      context,
+      session: session,
+      course: course.id,
+      year: year,
+      document: document.id,
+      target: target,
+      repo: document.repo,
+    );
+  }
+
+  Future<void> _showPlaces(BuildContext context) => showPlaces(
+    context,
+    title: '«${document.title(session.language)}»',
+    places: placementLinks(
+      session,
+      _places,
+      course: course.id,
+      year: year,
+      document: document.id,
+    ),
+    explanation:
+        'Es el mismo tema en todas ellas, no copias: lo que se edite desde '
+        'cualquiera se ve en las demás. Para separarlas, «Gestionar '
+        'vinculación».',
+  );
+
+  Future<void> _split(BuildContext context) =>
+      splitDocumentLinks(context, session, document);
+
+  Future<void> _unlink(BuildContext context) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '¿Separar «${document.title(session.language)}» de las demás?',
+        ),
+        content: const SizedBox(
+          width: 460,
+          child: Note(
+            'Esta ubicación se queda con una copia del tema tal como está '
+            'ahora, con identidad propia. A partir de ahí van por su lado: lo '
+            'que se edite aquí deja de verse en las demás, y al revés.\n\n'
+            'No se pierde nada: las otras ubicaciones siguen igual.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            key: const Key('confirm-unlink'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Separar'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true || !context.mounted) return;
+    final ok = await runAdmin(
+      context,
+      session,
+      (admin) => admin.unlinkDocument(
+        course: course.id,
+        year: year,
+        document: document.id,
+      ),
+      done: 'Separado. A partir de ahora es un tema aparte.',
+      repo: document.repo,
+    );
+    if (ok) await session.reloadCatalogue();
   }
 }

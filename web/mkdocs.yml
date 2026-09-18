@@ -169,6 +169,7 @@ nav:
       - conceptos/perfiles.md
       - conceptos/problemas.md
       - conceptos/idiomas.md
+      - conceptos/vinculos.md
       - conceptos/repositorios.md
   - La aplicación:
       - app/index.md
@@ -176,9 +177,11 @@ nav:
       - app/unidad.md
       - app/asignaturas.md
       - app/composicion.md
+      - app/vinculos.md
       - app/compilar.md
       - app/traduccion.md
       - app/historial.md
+      - app/congelaciones.md
       - app/exportar.md
       - app/entre-repos.md
       - app/mcp.md

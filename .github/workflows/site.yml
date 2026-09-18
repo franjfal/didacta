@@ -21,6 +21,11 @@
 # Linux, porque es donde las tipografías del sistema se parecen a las que ve
 # quien usa Didacta.
 #
+# Las de los vínculos y las versiones congeladas van en un segundo guion,
+# `tool/shots_reuse.dart`, porque necesitan otra cosa: un repositorio de
+# contenido de verdad, con git y con el motor. Una captura de «este tema se da
+# en tres sitios» montada sobre datos inventados no enseñaría que funciona.
+#
 # **La página de descarga se escribe.** `packaging/web.py` lee el último
 # release de este mismo repositorio --sin credencial, es público-- y escribe
 # el trozo de markdown que la portada y Descargas incluyen. Si todavía no hay
@@ -83,6 +88,17 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+
+      - name: las capturas de vínculos y congelaciones
+        # Aparte de las de arriba porque necesitan otra cosa: un repositorio
+        # de contenido **de verdad**, con git y con el motor, en lugar del
+        # catálogo del fixture. Vincular un tema o congelar un curso son
+        # operaciones sobre ficheros y sobre commits, y una captura de eso
+        # montada sobre datos inventados no probaría que funciona.
+        #
+        # Detrás de `setup-python` porque lanzan `cli/didacta`.
+        working-directory: app
+        run: flutter test tool/shots_reuse.dart
 
       - name: la página de descarga
         # Del release publicado, no de un fichero: así un rollback se corrige

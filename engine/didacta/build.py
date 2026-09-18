@@ -30,6 +30,7 @@ import subprocess
 import time
 
 from . import profiles as profiles_mod
+from . import templates as templates_mod
 
 
 class BuildError(RuntimeError):
@@ -274,7 +275,7 @@ class Engine:
     """
 
     def __init__(self, latex_dir, build_dir, engine="latexmk", verbose=False,
-                 on_output=None):
+                 on_output=None, template_dirs=(), settings=None):
         self.latex_dir = os.path.abspath(latex_dir)
         self.build_dir = os.path.abspath(build_dir)
         self.engine = engine
@@ -288,6 +289,19 @@ class Engine:
         #: diagnostics, which is the summary of a run it never got to watch.
         self.on_output = on_output
         self.profiles = profiles_mod.load(self.latex_dir)
+
+        #: Las plantillas de los directorios abiertos, por encima del registro
+        #: que trae Didacta: una plantilla con el mismo id **sustituye** a la
+        #: salida de serie. Así se puede cambiar el margen de los apuntes sin
+        #: tocar el programa, y quien no declare ninguna compila como siempre.
+        #:
+        #: Varios directorios porque la teoría y los problemas viven en
+        #: repositorios distintos, y el bloque de uno puede usar la plantilla
+        #: que declara el otro. Gana el primero que la declare.
+        self.templates = templates_mod.load_many(template_dirs, settings)
+        for template in self.templates:
+            self.profiles[template.id] = template
+        self._declared = None
 
     def say(self, line):
         """Emit one line of progress, if anybody is listening."""
@@ -326,6 +340,23 @@ class Engine:
         if missing:
             return False, "not installed: %s" % ", ".join(missing)
         return True, None
+
+    def declarations(self):
+        r"""El fichero que le dice a LaTeX qué plantillas hay.
+
+        Se escribe una vez por motor y no una por salida: son las mismas
+        quince líneas para las treinta compilaciones de un curso.
+
+        None cuando no hay ninguna declarada, y entonces el arranque de LaTeX
+        no lee nada y todo compila con el registro de serie -- que es lo que
+        hace que esto no pueda romper un repositorio que no usa plantillas.
+        """
+        if self._declared is None:
+            self._declared = templates_mod.write_declarations(
+                os.path.join(self.build_dir, templates_mod.DECLARATIONS),
+                self.templates,
+            ) or ""
+        return self._declared or None
 
     # -- building --------------------------------------------------------
 
@@ -569,6 +600,17 @@ class Engine:
     def _command(self, source_name, job, outdir, profile, language,
                  content_root, inject=None, bibliography=None):
         pretex = profile.pretex(language, content_root)
+        # Las declaraciones de las plantillas, antes que nada: el arranque las
+        # lee para saber qué clase de documento pedir.
+        declared = self.declarations()
+        if declared:
+            pretex += "\\def\\DidactaTemplates{%s}" % os.path.abspath(declared)
+        # Y el preámbulo de la que se está compilando, si lo tiene. Lo lee
+        # `didacta.sty` al final del suyo, así que puede redefinir lo que
+        # Didacta acaba de definir.
+        preamble = getattr(profile, "preamble", None)
+        if preamble:
+            pretex += "\\def\\DidactaPreamble{%s}" % os.path.abspath(preamble)
         if bibliography:
             # Relativa a la raíz, como las unidades: el paquete la compone con
             # \DidactaContentRoot, así que el documento no lleva ninguna ruta.

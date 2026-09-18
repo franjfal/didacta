@@ -28,6 +28,7 @@
 
 \def\didactaContentsName{Contents}
 \def\didactaChapterName{Chapter}
+\def\didactaSectionName{Section}
 \def\didactaCourseName{Course}
 \def\didactaTeacherName{Lecturer}
 \def\didactaAcademicYearName{Academic year}

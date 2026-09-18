@@ -219,7 +219,10 @@ Map<String, dynamic> courseJson() => {
           'kind': 'theory',
           'language': 'es',
           'title': const {'es': 'Tema 1. Espacios normados'},
-          'profiles': const ['handout', 'slides'],
+          // Lo que este tema **permite** compilar. Desde que se puede
+          // restringir, esto no es una preselección: es la lista de lo que
+          // puede salir de él.
+          'profiles': const ['slides', 'notes'],
           'unitRefs': const [
             'analysis/normed/definition',
             'analysis/normed/banach',
@@ -257,6 +260,11 @@ Map<String, dynamic> courseJson() => {
 Catalogue catalogueWith(
   List<Map<String, dynamic>> units, {
   List<Map<String, dynamic>>? courses,
+  List<Map<String, dynamic>>? profiles,
+
+  /// Los temas compartidos, con las ubicaciones que los dan. Vacío es lo
+  /// corriente: sin nada vinculado, todo se ve como se veía.
+  List<Map<String, dynamic>> shared = const [],
   String repo = '',
 
   /// A los que traduce este repositorio. Se puede cambiar porque dos
@@ -285,32 +293,51 @@ Catalogue catalogueWith(
     // Con las versiones que el motor ofrece de verdad, y con su nombre:
     // sin ellas, cualquier pantalla que las liste se prueba contra una
     // lista vacía, que es el único caso que no ocurre nunca.
-    'profiles': const [
-      {
-        'id': 'slides',
-        'label': 'Diapositivas',
-        'family': 'slides',
-        'documentClass': 'beamer',
-      },
-      {
-        'id': 'book',
-        'label': 'Libro',
-        'family': 'notes',
-        'documentClass': 'book',
-      },
-      {
-        'id': 'notes',
-        'label': 'Apuntes',
-        'family': 'notes',
-        'documentClass': 'article',
-      },
-    ],
+    //
+    // Y salen de aquí y no del compilador de mentira porque desde que hay
+    // plantillas quien decide con qué se compila algo es el catálogo: las dos
+    // listas tienen que decir lo mismo o la pantalla ofrece una cosa y el
+    // motor compila otra.
+    'profiles':
+        profiles ??
+        const [
+          {
+            'id': 'slides',
+            'label': 'Diapositivas',
+            'family': 'slides',
+            'documentClass': 'beamer',
+          },
+          {
+            'id': 'book',
+            'label': 'Libro',
+            'family': 'notes',
+            'documentClass': 'book',
+          },
+          {
+            'id': 'notes',
+            'label': 'Apuntes',
+            'family': 'notes',
+            'documentClass': 'article',
+          },
+          // La versión del profesor, que es la que prueba que lo que se ofrece no
+          // viene marcado por defecto. Las mismas que ofrece [FakeCompiler]: desde
+          // que las salidas salen del catálogo, las dos listas tienen que decir lo
+          // mismo o la pantalla ofrece una cosa y el motor compila otra.
+          {
+            'id': 'notes-teacher',
+            'label': 'Apuntes (profesor)',
+            'family': 'notes',
+            'documentClass': 'article',
+            'reveals': 'teacher',
+          },
+        ],
     'errors': const <String>[],
   },
   units: {'schemaVersion': supportedSchemaVersion, 'units': units},
   courses: {
     'schemaVersion': supportedSchemaVersion,
     'courses': courses ?? [courseJson()],
+    'shared': shared,
   },
   repo: repo,
 );
@@ -370,6 +397,35 @@ class FakeGateway extends ContentGateway {
 
   bool commitsWhenSaving = true;
 }
+
+/// Las mismas tres, como las trae el índice.
+///
+/// Dos formas de lo mismo porque hay dos capas: el catálogo dice qué salidas
+/// hay --y es quien manda desde que existen las plantillas-- y el compilador
+/// las recibe ya elegidas.
+const problemProfilesJson = [
+  {
+    'id': 'problems',
+    'label': 'Hoja de problemas',
+    'family': 'problems',
+    'documentClass': 'article',
+    'reveals': 'statements',
+  },
+  {
+    'id': 'problems-answers',
+    'label': 'Hoja de problemas (con resultados)',
+    'family': 'problems',
+    'documentClass': 'article',
+    'reveals': 'answers',
+  },
+  {
+    'id': 'problems-teacher',
+    'label': 'Hoja de problemas (profesor)',
+    'family': 'problems',
+    'documentClass': 'article',
+    'reveals': 'teacher',
+  },
+];
 
 /// Las tres versiones de cualquier cosa con ejercicios dentro, tal como las
 /// lista el motor: enunciados, enunciados con el resultado, y la del
@@ -460,6 +516,17 @@ class FakeCompiler implements Compiler {
 
   @override
   Future<({bool stale, String? reason})> indexStale() async => staleIndex;
+
+  /// Las plantillas que declara una carpeta.
+  ///
+  /// Vacía por defecto: la carpeta del programa es de quien la use, y una
+  /// pantalla que se prueba no tiene ninguna guardada ahí. Los tests que van
+  /// de eso la ponen.
+  List<OutputTemplate> storedTemplates = const [];
+
+  @override
+  Future<List<OutputTemplate>> templatesIn(String directory) async =>
+      storedTemplates;
 
   @override
   Future<String> reindex() async {
@@ -826,6 +893,117 @@ class FakeClone implements LocalClone {
 
   @override
   Future<void> push({required String token}) async {}
+
+  // -- Congelaciones -------------------------------------------------------
+  //
+  // Lo mismo que arriba: lo que se prueba desde una pantalla es qué se le
+  // pide a git y qué se enseña con la respuesta. Que un worktree sea un
+  // worktree se prueba contra git de verdad en `freeze_git_test.dart`.
+
+  /// El commit en el que dice estar, y los que dice tener.
+  String at = 'abc1234abc1234abc1234abc1234abc1234abc12';
+  Set<String> commitsHere = {};
+  bool shallow = false;
+
+  /// Lo que se ha pedido traer, comparar, restaurar y abrir.
+  final List<String> fetched = [];
+  final List<String> opened = [];
+  final List<String> removedTrees = [];
+  final List<({String from, String to, List<String> paths})> compared = [];
+  final List<({String sha, List<String> paths})> restored = [];
+
+  /// Lo que este clon dice que cambió entre dos commits.
+  List<TreeChange> changes = const [];
+
+  /// Y el diff de cada fichero, por ruta.
+  final Map<String, FileDiff> between = {};
+
+  @override
+  Future<String> head() async => at;
+
+  @override
+  Future<bool> hasCommit(String sha) async => commitsHere.contains(sha);
+
+  @override
+  Future<bool> isShallow() async => shallow;
+
+  @override
+  Future<void> fetchCommit(
+    String sha, {
+    required String token,
+    void Function(FetchDepth step) onStep = _noStep,
+  }) async {
+    fetched.add(sha);
+    onStep(FetchDepth.justTheCommit);
+    commitsHere.add(sha);
+  }
+
+  static void _noStep(FetchDepth step) {}
+
+  @override
+  Future<Worktree> worktreeAt(String sha) async {
+    opened.add(sha);
+    return Worktree(
+      directory: '/clon/.git/didacta-worktrees/$sha',
+      commit: sha,
+    );
+  }
+
+  @override
+  Future<void> removeWorktree(String sha) async => removedTrees.add(sha);
+
+  @override
+  Future<List<Worktree>> worktrees() async => [
+    for (final sha in opened)
+      Worktree(directory: '/clon/.git/didacta-worktrees/$sha', commit: sha),
+  ];
+
+  @override
+  Future<int> clearWorktrees() async {
+    final count = opened.length;
+    removedTrees.addAll(opened);
+    opened.clear();
+    return count;
+  }
+
+  @override
+  Future<List<TreeChange>> changesBetween({
+    required String from,
+    required String to,
+    List<String> paths = const [],
+  }) async {
+    compared.add((from: from, to: to, paths: paths));
+    return changes;
+  }
+
+  @override
+  Future<FileDiff> diffBetween({
+    required String from,
+    required String to,
+    required String path,
+    int context = 3,
+  }) async => between[path] ?? const FileDiff(hunks: []);
+
+  @override
+  Future<List<String>> pathsAt({
+    required String sha,
+    String under = '',
+  }) async => const [];
+
+  @override
+  Future<List<TreeChange>> previewRestore({
+    required String sha,
+    required List<String> paths,
+  }) async => changes;
+
+  @override
+  Future<List<TreeChange>> restoreFrom({
+    required String sha,
+    required List<String> paths,
+  }) async {
+    restored.add((sha: sha, paths: paths));
+    return changes;
+  }
 }
 
 /// A session wired to a fake gateway, with no Firebase anywhere.
@@ -844,6 +1022,7 @@ class FakeSession extends Session {
     this.cloneOverride,
     this.toolchainOverride,
     this.onReload,
+    this.reloadsForReal = false,
     Preferences? preferencesOverride,
     TranslationSecrets? translationSecretsOverride,
   }) : super(
@@ -904,12 +1083,21 @@ class FakeSession extends Session {
   /// pantalla no enseñe lo que acaba de crear.
   final void Function()? onReload;
 
+  /// Si recarga **de verdad** en lugar de solo contar.
+  ///
+  /// Casi ningún test quiere lo primero: una pantalla se prueba contra un
+  /// catálogo que no se mueve. Lo quiere el test de la recarga, porque lo que
+  /// hay que fijar ahí es justamente lo que hace `reloadCatalogue` -- pedirle
+  /// al motor que ponga el índice al día antes de leerlo.
+  final bool reloadsForReal;
+
   int reloads = 0;
 
   @override
   Future<void> reloadCatalogue() async {
     reloads += 1;
     onReload?.call();
+    if (reloadsForReal) await super.reloadCatalogue();
   }
 
   @override
@@ -925,8 +1113,11 @@ class FakeSession extends Session {
   /// git de verdad-- sino lo que la pantalla enseña. Sin esto, pedir la de un
   /// repositorio que no está en el espacio de trabajo devuelve una pasarela
   /// sin configurar y la pantalla se queda en el error de carga.
+  /// Salvo mirando una versión congelada, que es de solo lectura y va por la
+  /// suya: esa negativa es lo que se está probando y sustituirla la borraría.
   @override
-  ContentGateway gatewayFor(String? repo) => gatewayOverride;
+  ContentGateway gatewayFor(String? repo) =>
+      frozen == null ? gatewayOverride : super.gatewayFor(repo);
 
   @override
   Compiler? compiler({String? repo}) => compilerOverride;

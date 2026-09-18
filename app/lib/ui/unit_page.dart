@@ -41,6 +41,10 @@ import 'tabs.dart';
 import 'tex_field.dart';
 import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
+import 'course_admin_ui.dart';
+import 'freezes.dart';
+import 'reuse.dart';
+import 'info_menu.dart';
 import 'theme.dart';
 import 'translate_unit.dart';
 
@@ -338,6 +342,29 @@ class _UnitPageState extends State<UnitPage> {
         ? widget.language
         : _preferredLanguage(unit, session, languages);
 
+    // El ancho, aquí arriba: la cabecera tiene que decidir con el mismo
+    // número que decide el cuerpo. El panel de la derecha sólo existe a
+    // partir de mil píxeles, así que por debajo su botón ofrece algo que no
+    // va a pasar --y desde que la ⓘ ocupa su sitio, además estrechaba el
+    // título hasta hacerlo saltar de línea y desbordar la pantalla.
+    return LayoutBuilder(
+      builder: (context, page) => _body(
+        context,
+        session,
+        unit,
+        languages,
+        roomy: page.maxWidth >= 1000,
+      ),
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    Session session,
+    Unit unit,
+    List<String> languages, {
+    required bool roomy,
+  }) {
     return Column(
       children: [
         PageHeader(
@@ -356,17 +383,48 @@ class _UnitPageState extends State<UnitPage> {
                 on: session.splitEditors,
                 onChanged: (value) => sessionOf(context).setSplitEditors(value),
               ),
-            IconButton(
-              tooltip: session.unitPanelVisible
-                  ? 'Ocultar el panel de la derecha'
-                  : 'Mostrar el panel de la derecha',
-              isSelected: session.unitPanelVisible,
-              icon: const Icon(Icons.info_outline, size: 18),
-              selectedIcon: const Icon(Icons.info, size: 18),
-              onPressed: () => sessionOf(
-                context,
-              ).setUnitPanelVisible(!session.unitPanelVisible),
+            // Dónde está y qué hay guardado de ella. Aquí y no sólo en el
+            // panel: el panel se puede tener cerrado, y las congelaciones
+            // estaban a dos pantallas de donde se preguntan.
+            InfoMenu(
+              session: session,
+              places: [
+                for (final use in unit.usedBy)
+                  InfoPlace(
+                    course: use.course,
+                    year: use.year,
+                    document: use.document,
+                  ),
+              ],
+              placesLabel: 'Se da en',
+              placesEmpty:
+                  'Ninguna composición la referencia. Después de una '
+                  'migración esto es material que llegó y no se está dando.',
+              onSplit:
+                  !session.isFrozen &&
+                      unit.usedBy.length > 1 &&
+                      session.canWriteIn(unit.repo)
+                  ? () => _splitUnit(context, session, unit)
+                  : null,
+              onUse: !session.isFrozen && session.canWriteIn(unit.repo)
+                  ? () => _useUnit(context, session, unit)
+                  : null,
+              onRestore: session.isFrozen
+                  ? () => _restoreUnit(context, session, unit)
+                  : null,
             ),
+            if (roomy)
+              IconButton(
+                tooltip: session.unitPanelVisible
+                    ? 'Ocultar el panel de la derecha'
+                    : 'Mostrar el panel de la derecha',
+                isSelected: session.unitPanelVisible,
+                icon: const Icon(Icons.view_sidebar_outlined, size: 18),
+                selectedIcon: const Icon(Icons.view_sidebar, size: 18),
+                onPressed: () => sessionOf(
+                  context,
+                ).setUnitPanelVisible(!session.unitPanelVisible),
+              ),
             IconButton(
               tooltip: 'Copiar la referencia para una composición',
               icon: const Icon(Icons.content_copy_outlined, size: 18),
@@ -1756,7 +1814,15 @@ class _UnitPanel extends StatelessWidget {
             ),
           ),
 
-        SectionLabel('Se usa en ${unit.usedBy.length} documento(s)'),
+        // El rótulo y la lista, y nada más.
+        //
+        // Las tres acciones que había aquí --darla en otro tema, partirla en
+        // dos y restaurarla desde una congelación-- se han ido a la ⓘ de la
+        // cabecera. Dos razones, y la segunda es la que manda: este panel se
+        // puede tener cerrado, y con la lección en dos sitios los dos botones
+        // no cabían en sus trescientos y pico píxeles, así que el que decía
+        // «Gestionar vinculación…» se salía del panel y no se podía pulsar.
+        SectionLabel('Se usa en ${unit.usedBy.length} ubicación(es)'),
         if (unit.usedBy.isEmpty)
           const Padding(
             padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
@@ -2303,3 +2369,109 @@ List<String> languagesOfUnit(Session session, Unit unit) =>
           if (entry.value.exists) entry.key,
       ],
     );
+
+/// Separa unas cuantas ubicaciones de una lección del resto.
+///
+/// Las que se nombren pasan a una copia con identidad propia; las demás se
+/// quedan con la de siempre. Los dos grupos siguen sincronizados por dentro y
+/// dejan de estarlo entre ellos.
+Future<void> _splitUnit(
+  BuildContext context,
+  Session session,
+  Unit unit,
+) async {
+  String label(UnitUsage use) =>
+      '${session.courseById(use.course)?.title(session.language) ?? use.course}'
+      ' · ${use.year} · ${use.document}'
+      '${use.index > 0 ? ' (posición ${use.index + 1})' : ''}';
+
+  final request = await askSplit(
+    context,
+    title: 'Dividir la vinculación de «${unit.title(session.language)}»',
+    places: [
+      for (final use in unit.usedBy) SyncPlace(key: use.key, label: label(use)),
+    ],
+    explanation:
+        'Cada grupo que se separe recibe una copia de la lección, con su '
+        'texto, sus figuras y sus metadatos tal como están ahora, y un id '
+        'propio. Nada se pierde y ningún otro sitio cambia.',
+  );
+  if (request == null || !context.mounted) return;
+  final groups = request.groups;
+
+  final ok = await runAdmin(
+    context,
+    session,
+    (admin) => admin.splitContent(
+      unit: unit.path,
+      groups: groups,
+      paths: [
+        for (final use in unit.usedBy) 'courses/${use.course}/${use.year}',
+      ],
+      message:
+          'Dividir la vinculación de «${unit.title(session.language)}» en '
+          '${groups.length + 1} grupo(s)',
+    ),
+    done: 'Vinculación dividida. Cada grupo sigue sincronizado por dentro.',
+    repo: unit.repo,
+  );
+  if (ok) await session.reloadCatalogue();
+}
+
+/// Trae una lección al estado que tiene en la versión congelada que se está
+/// mirando.
+///
+/// La carpeta entera: su texto en cada idioma, sus figuras y sus metadatos.
+/// Una lección **sí** es una carpeta, así que restaurarla es copiar lo que
+/// había, y lo que queda es un cambio pendiente como cualquier otro.
+Future<void> _restoreUnit(
+  BuildContext context,
+  Session session,
+  Unit unit,
+) async {
+  final frozen = session.frozen;
+  if (frozen == null) return;
+  final course =
+      session.courseById(frozen.freeze.course) ??
+      session.catalogue.courses.firstOrNull;
+  if (course == null) return;
+  await showRestore(
+    context,
+    session: session,
+    course: course,
+    year: frozen.freeze.year,
+    freeze: frozen.freeze,
+    scope: RestoreScope.lesson,
+    path: unit.path,
+    label: unit.title(session.language),
+  );
+}
+
+/// Da esta lección también en otro tema, de otra asignatura si hace falta.
+Future<void> _useUnit(BuildContext context, Session session, Unit unit) async {
+  final target = await askLessonTarget(
+    context,
+    session: session,
+    title: 'Dar «${unit.title(session.language)}» en otro tema',
+    fromCourse: unit.usedBy.firstOrNull?.course ?? '',
+  );
+  if (target == null || !context.mounted) return;
+
+  final ok = await runAdmin(
+    context,
+    session,
+    (admin) => admin.useUnit(
+      unit: unit.path,
+      toCourse: target.course,
+      toYear: target.year,
+      document: target.document,
+      duplicate: target.duplicate,
+    ),
+    done: target.duplicate
+        ? 'Copiada en «${target.document}». Son dos lecciones a partir de ahora.'
+        : 'Añadida a «${target.document}». Es la misma lección: corregirla '
+              'sigue siendo corregirla una vez.',
+    repo: unit.repo,
+  );
+  if (ok) await session.reloadCatalogue();
+}

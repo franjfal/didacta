@@ -78,32 +78,74 @@ void main() {
     });
   });
 
-  group('lo marcado', () {
-    test('una asignatura marcada sube, aunque empiece por Z', () async {
+  group('lo marcado no cambia el orden', () {
+    // Lo cambiaba --las marcadas subían al principio-- y era peor: la lista
+    // dejaba de estar donde se aprendió que estaba, y marcar una asignatura
+    // movía otras cuatro de sitio. La estrella dice «esta me importa»; para
+    // no ver lo que no se da está ocultarla.
+
+    test('una asignatura marcada se queda donde estaba', () async {
       final it = await session();
       await it.setFavouriteCourse('zoo', true);
-      expect(it.sortedCourses.map((c) => c.id), ['zoo', 'alg', 'am-i']);
+      expect(it.sortedCourses.map((c) => c.id), ['alg', 'am-i', 'zoo']);
+      expect(it.isFavouriteCourse('zoo'), isTrue);
     });
 
-    test('entre marcadas se sigue ordenando por título', () async {
+    test('y el orden es siempre por título', () async {
       final it = await session();
       await it.setFavouriteCourse('zoo', true);
       await it.setFavouriteCourse('alg', true);
-      expect(it.sortedCourses.map((c) => c.id), ['alg', 'zoo', 'am-i']);
+      expect(it.sortedCourses.map((c) => c.id), ['alg', 'am-i', 'zoo']);
     });
 
-    test('un curso marcado sube dentro de su asignatura', () async {
+    test('un curso marcado tampoco se mueve', () async {
+      // Y así «el primero» vuelve a querer decir «el último que se dio»,
+      // que es de lo que se fía la pantalla para marcar el curso actual.
       final it = await session();
       await it.setFavouriteYear('am-i', '2022-2023', true);
       final course = it.catalogue.courses.firstWhere((c) => c.id == 'am-i');
-      expect(it.sortedYearsOf(course), ['2022-2023', '2026-2027', '2024-2025']);
+      expect(it.sortedYearsOf(course), ['2026-2027', '2024-2025', '2022-2023']);
+    });
+  });
+
+  group('ocultar y plegar', () {
+    test('ocultar una asignatura no la quita de ningún sitio', () async {
+      // Ocultar no es quitar: sigue en el catálogo, sigue compilando y sigue
+      // en la biblioteca. Lo que cambia es una lista.
+      final it = await session();
+      await it.setCourseHidden('zoo', true);
+      expect(it.isHiddenCourse('zoo'), isTrue);
+      expect(it.sortedCourses.map((c) => c.id), ['alg', 'am-i', 'zoo']);
+      expect(it.catalogue.courses, hasLength(3));
     });
 
-    test('desmarcar lo devuelve a su sitio', () async {
+    test('un curso académico se oculta por su cuenta', () async {
+      // Aparte de la asignatura: la asignatura se sigue dando y lo que sobra
+      // en la lista son los seis años anteriores.
       final it = await session();
-      await it.setFavouriteCourse('zoo', true);
-      await it.setFavouriteCourse('zoo', false);
-      expect(it.sortedCourses.map((c) => c.id), ['alg', 'am-i', 'zoo']);
+      await it.setYearHidden('am-i', '2022-2023', true);
+      expect(it.isHiddenYear('am-i', '2022-2023'), isTrue);
+      expect(it.isHiddenYear('am-i', '2024-2025'), isFalse);
+      expect(it.isHiddenCourse('am-i'), isFalse);
+    });
+
+    test('plegar es otra cosa que ocultar', () async {
+      final it = await session();
+      await it.setCourseCollapsed('am-i', true);
+      expect(it.isCollapsedCourse('am-i'), isTrue);
+      expect(it.isHiddenCourse('am-i'), isFalse);
+    });
+
+    test('y todo se recuerda para el próximo arranque', () async {
+      final it = await session();
+      await it.setCourseHidden('zoo', true);
+      await it.setYearHidden('am-i', '2022-2023', true);
+      await it.setCourseCollapsed('am-i', true);
+
+      final again = SyncedPrefs.fromJson(it.syncedPrefs.toJson());
+      expect(again.isHiddenCourse('zoo'), isTrue);
+      expect(again.isHiddenYear('am-i', '2022-2023'), isTrue);
+      expect(again.isCollapsedCourse('am-i'), isTrue);
     });
   });
 

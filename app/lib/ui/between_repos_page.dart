@@ -411,6 +411,9 @@ class _ConflictRow extends StatelessWidget {
           ConflictAbout.block =>
             'Bloque ${conflict.course} · '
                 '${conflict.field}',
+          ConflictAbout.template =>
+            'Plantilla ${conflict.course} · '
+                '${conflict.field}',
           ConflictAbout.course => '${conflict.course} · ${conflict.field}',
         }, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
@@ -455,6 +458,11 @@ class _ConflictRow extends StatelessWidget {
             ConflictAbout.block =>
               'De un bloque solo se puede igualar el nombre desde aquí. '
                   'Lo demás, a mano en `taxonomy.yaml`.',
+            ConflictAbout.template =>
+              'De una plantilla solo se puede igualar el nombre desde aquí. '
+                  'La clase y las opciones se cambian editándola: cambiar a '
+                  'distancia qué PDF sale es algo que se mira antes de '
+                  'pulsar.',
             ConflictAbout.course =>
               'Este campo hay que igualarlo a mano: Didacta no sabe en '
                   'qué línea de `course.yaml` se escribe.',
@@ -478,6 +486,11 @@ class _ConflictRow extends StatelessWidget {
         // direcciona por clave: lo escribe [TaxonomyFile], que lo busca por
         // su id.
         ConflictAbout.block => await session.setBlockTitles(
+          id: conflict.course,
+          titles: {conflict.language!: value},
+        ),
+        // Y una plantilla, en la lista de `templates.yaml`.
+        ConflictAbout.template => await session.setTemplateTitles(
           id: conflict.course,
           titles: {conflict.language!: value},
         ),

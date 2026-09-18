@@ -461,13 +461,12 @@
 %% you are holding.
 %% ---------------------------------------------------------------------------
 
+%% La misma caja con pestaña que un teorema, en el color del profesor. Antes
+%% era una raya al margen, y en una copia del profesor --que es donde esto
+%% sale-- quedaba como lo único de la página sin enmarcar.
 \newtcolorbox{didacta@teacherbox}[1][]{
-  enhanced jigsaw, breakable,
-  boxrule=0pt, colframe=white, interior hidden,
-  borderline west={1.8pt}{0pt}{didactaTeacher},
-  left=1.4em, right=0pt, top=0.3ex, bottom=0.3ex,
-  before skip=1.8ex, after skip=1.8ex,
-  coltitle=didactaTeacher!60!black, fonttitle=\bfseries\small,
+  didacta@box=didactaTeacher,
+  fonttitle=\bfseries\small,
   title={\didactaTeachingNoteName\ifblank{#1}{}{: #1}},
 }
 
@@ -504,12 +503,8 @@
 
 \newcommand{\didacta@listblock}[2]{%
   \begin{tcolorbox}[
-    enhanced, breakable,
-    colback=didactaAccent!5, colframe=didactaAccent!40,
-    boxrule=0.4pt, arc=2pt,
-    left=1ex, right=1ex, top=0.6ex, bottom=0.6ex,
-    before skip=1.6ex, after skip=1.6ex,
-    coltitle=black, fonttitle=\bfseries\small, title={#1},
+    didacta@box=didactaAccentDark,
+    fonttitle=\bfseries\small, title={#1},
   ]\small #2\end{tcolorbox}%
 }
 
@@ -540,6 +535,32 @@
   }{%
     \renewcommand{\contentsname}{\didactaContentsName}%
     \tableofcontents\clearpage
+  }%
+}
+
+%% ---------------------------------------------------------------------------
+%% El preámbulo de la plantilla
+%%
+%% Lo último del paquete y por tanto lo último del preámbulo del documento:
+%% así una plantilla puede redefinir lo que Didacta acaba de definir --los
+%% márgenes, los colores, un entorno-- en lugar de que Didacta la pise. Para
+%% eso está: es la parte de la cabecera que escribe quien enseña.
+%%
+%% El fichero se lee **con `@` de símbolo corriente**, no de letra: es código
+%% de quien escribe el material y se lee con las reglas de un documento. De
+%% ahí el baile de `\makeatother` alrededor del `\input` en vez de ponerlo
+%% detrás del de abajo -- ahí `\@ifundefined` ya no existiría, y el error que
+%% sale es una cascada ilegible dentro de tcolorbox.
+%%
+%% Nunca vive en el repositorio de contenido: el motor apunta aquí al `.tex`
+%% de la plantilla, que está en `templates/` y se edita desde Ajustes.
+\@ifundefined{DidactaPreamble}{}{%
+  \IfFileExists{\DidactaPreamble}{%
+    \makeatother
+    \input{\DidactaPreamble}%
+    \makeatletter
+  }{%
+    \PackageWarning{didacta}{Template preamble not found: \DidactaPreamble}%
   }%
 }
 

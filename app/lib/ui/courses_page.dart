@@ -20,6 +20,7 @@ import '../router.dart';
 import '../state/session.dart';
 import 'build_console.dart';
 import 'course_admin_ui.dart';
+import 'freezes.dart';
 import 'export_year.dart';
 import 'shell.dart';
 import 'build_button.dart';
@@ -27,6 +28,14 @@ import 'edit_course.dart';
 import 'manage_degrees.dart';
 import 'heading_title.dart';
 import 'theme.dart';
+
+/// Qué se enseña de la lista: lo que se mira, lo que se escondió, o todo.
+///
+/// Tres y no una casilla de «ver ocultas», porque son tres preguntas
+/// distintas: «lo que doy» --lo de todos los días--, «qué escondí» --para
+/// deshacerlo-- y «todo», que es la lista de verdad. Sin la segunda, ocultar
+/// sería un viaje sin vuelta.
+enum CoursesView { visible, hidden, all }
 
 class CoursesPage extends StatefulWidget {
   const CoursesPage({super.key});
@@ -44,23 +53,44 @@ class _CoursesPageState extends State<CoursesPage> {
   /// dar una aplicación.
   String? _degree;
 
+  /// Qué se está mirando: lo visible, lo oculto o todo.
+  ///
+  /// De las preferencias, al revés que el grado. Parecían la misma clase de
+  /// filtro y no lo son: el grado es una forma de buscar un rato, y esto es
+  /// la lista con la que se trabaja. Quien se pone a ordenar las asignaturas
+  /// se queda un rato en «las ocultas», y volver de un curso para encontrarse
+  /// otra vez «las que doy» convierte esa tarde en un baile de clics.
+  ///
+  /// Un nombre que no se reconozca --un fichero de otra versión-- vuelve a
+  /// «las que doy» en lugar de dejar la pantalla sin lista.
+  CoursesView _viewOf(Session session) => CoursesView.values.firstWhere(
+    (view) => view.name == session.coursesView,
+    orElse: () => CoursesView.visible,
+  );
+
   @override
   Widget build(BuildContext context) {
     final session = watchSession(context);
-    // Marcadas primero y el resto por título. El orden lo decide la sesión:
-    // si cada lista lo hiciera por su cuenta, acabarían discrepando.
+    // Por título. El orden lo decide la sesión: si cada lista lo hiciera por
+    // su cuenta, acabarían discrepando.
     final all = session.sortedCourses;
+    final view = _viewOf(session);
     final degrees = session.catalogue.degrees;
     // Un grado que se filtra y luego deja de existir --se cierra el
     // repositorio que lo declaraba-- no puede dejar la lista vacía sin
     // explicación: si ya no está, se mira todo.
     final filtering = degrees.any((degree) => degree.id == _degree);
-    final courses = filtering
+    final byDegree = filtering
         ? [
             for (final course in all)
               if (course.degreeId == _degree) course,
           ]
         : all;
+    final courses = [
+      for (final course in byDegree)
+        if (_shows(session, course)) course,
+    ];
+    final hidden = byDegree.length - courses.length;
 
     final years = courses.fold<int>(0, (sum, c) => sum + c.years.length);
     final documents = courses.fold<int>(
@@ -75,9 +105,19 @@ class _CoursesPageState extends State<CoursesPage> {
           title: 'Asignaturas',
           subtitle: filtering
               ? '${courses.length} de ${all.length} asignaturas'
-              : '${courses.length} asignaturas · $years cursos '
-                    'académicos · $documents documentos',
+              : [
+                  '${courses.length} asignaturas',
+                  '$years cursos académicos',
+                  '$documents documentos',
+                  if (hidden > 0 && view == CoursesView.visible)
+                    '$hidden sin enseñar',
+                ].join(' · '),
           actions: [
+            // Qué se mira. Primero, porque decide lo que hay debajo.
+            _ViewFilter(
+              view: view,
+              onChanged: (value) => session.setCoursesView(value.name),
+            ),
             // Filtrar por grado. Solo con más de uno declarado: con ninguno o
             // con uno no filtra nada, y un desplegable de una opción es un
             // control que enseña que no hay nada que elegir.
@@ -111,6 +151,7 @@ class _CoursesPageState extends State<CoursesPage> {
             itemBuilder: (context, index) => _CourseTile(
               course: courses[index],
               session: session,
+              view: view,
               admin: session.admin() != null,
               onDuplicate: () => _duplicateYear(session, courses[index]),
               onCopy: (year) => _copyYear(session, courses[index], year),
@@ -129,6 +170,22 @@ class _CoursesPageState extends State<CoursesPage> {
       ],
     );
   }
+
+  /// Si esta asignatura entra en lo que se está mirando.
+  ///
+  /// En «ocultas» entra también la que no lo está pero tiene algún curso
+  /// escondido: si no, sus cursos ocultos no se podrían volver a enseñar
+  /// desde ningún sitio, que es la forma de que ocultar fuese un viaje sin
+  /// vuelta.
+  bool _shows(Session session, Course course) => switch (_viewOf(session)) {
+    CoursesView.all => true,
+    CoursesView.visible => !session.isHiddenCourse(course.id),
+    CoursesView.hidden =>
+      session.isHiddenCourse(course.id) ||
+          course.years.keys.any(
+            (year) => session.isHiddenYear(course.id, year),
+          ),
+  };
 
   Future<void> _createCourse(Session session) async {
     final catalogue = session.catalogue;
@@ -396,6 +453,7 @@ class _CoursesPageState extends State<CoursesPage> {
         year: year,
         entry: entry,
         language: session.language,
+        courses: session.catalogue.courses,
       ),
     );
     if (answer == null || !mounted) return;
@@ -425,7 +483,7 @@ class _CoursesPageState extends State<CoursesPage> {
         (admin) => admin.copyDocuments(
           fromCourse: course.id,
           fromYear: year,
-          toCourse: course.id,
+          toCourse: answer.toCourse.isEmpty ? course.id : answer.toCourse,
           toYear: answer.toYear,
           documents: group.value,
         ),
@@ -490,6 +548,53 @@ class _CoursesPageState extends State<CoursesPage> {
 }
 
 /// El desplegable que filtra por titulación.
+/// Qué se está mirando: lo visible, lo oculto o todo.
+///
+/// Un menú y no tres pestañas: es una pregunta que se hace de vez en cuando
+/// --«¿qué escondí?»-- y tres pestañas permanentes en la cabecera dirían que
+/// es una decisión de todos los días, que no lo es.
+///
+/// Con el ojo cerrado cuando no se está en lo normal, para que se vea de un
+/// vistazo que la lista no está entera.
+class _ViewFilter extends StatelessWidget {
+  const _ViewFilter({required this.view, required this.onChanged});
+
+  final CoursesView view;
+  final ValueChanged<CoursesView> onChanged;
+
+  static const Map<CoursesView, String> _names = {
+    CoursesView.visible: 'Las que doy',
+    CoursesView.hidden: 'Las ocultas',
+    CoursesView.all: 'Todas',
+  };
+
+  @override
+  Widget build(BuildContext context) => MenuAnchor(
+    builder: (context, controller, child) => TextButton.icon(
+      key: const Key('courses-view'),
+      icon: Icon(
+        view == CoursesView.visible
+            ? Icons.visibility_outlined
+            : Icons.visibility_off_outlined,
+        size: 15,
+        color: view == CoursesView.visible ? didactaMuted : didactaTeacher,
+      ),
+      label: Text(_names[view]!, style: const TextStyle(fontSize: 12.5)),
+      onPressed: () =>
+          controller.isOpen ? controller.close() : controller.open(),
+    ),
+    menuChildren: [
+      for (final entry in _names.entries)
+        MenuItemButton(
+          key: Key('courses-view-${entry.key.name}'),
+          leadingIcon: Icon(view == entry.key ? Icons.check : null, size: 15),
+          onPressed: () => onChanged(entry.key),
+          child: Text(entry.value),
+        ),
+    ],
+  );
+}
+
 class _DegreeFilter extends StatelessWidget {
   const _DegreeFilter({
     required this.degrees,
@@ -634,6 +739,7 @@ class _CourseTile extends StatelessWidget {
   const _CourseTile({
     required this.course,
     required this.session,
+    required this.view,
     required this.admin,
     required this.onDuplicate,
     required this.onCopy,
@@ -645,6 +751,10 @@ class _CourseTile extends StatelessWidget {
 
   /// Si se pueden ofrecer las operaciones: hacen falta el clon y el motor.
   final Session session;
+
+  /// Qué se está mirando, que decide qué cursos de dentro se enseñan.
+  final CoursesView view;
+
   final bool admin;
   final VoidCallback onDuplicate;
 
@@ -665,7 +775,14 @@ class _CourseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sortedYears = session.sortedYearsOf(course);
+    final all = session.sortedYearsOf(course);
+    final sortedYears = [
+      for (final year in all)
+        if (_showsYear(year)) year,
+    ];
+    final hiddenYears = all.length - sortedYears.length;
+    final collapsed = session.isCollapsedCourse(course.id);
+    final hidden = session.isHiddenCourse(course.id);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
@@ -676,29 +793,75 @@ class _CourseTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      course.title(session.language),
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                // El título pliega. Un botón entero y no un triangulito al
+                // lado: lo que se quiere pulsar es el nombre de la
+                // asignatura, y un objetivo de doce píxeles al lado de un
+                // texto de quince es un objetivo que se falla.
+                child: Hoverable(
+                  onTap: () => session.setCourseCollapsed(
+                    course.id,
+                    !session.isCollapsedCourse(course.id),
+                  ),
+                  builder: (context, hovering) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            collapsed ? Icons.chevron_right : Icons.expand_more,
+                            size: 18,
+                            color: didactaMuted,
+                            key: Key('collapse-${course.id}'),
+                          ),
+                          const SizedBox(width: 2),
+                          Flexible(
+                            child: Text(
+                              course.title(session.language),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: hidden ? didactaMuted : didactaInk,
+                                decoration: hovering
+                                    ? TextDecoration.underline
+                                    : null,
+                                decorationColor: didactaRule,
+                              ),
+                            ),
+                          ),
+                          // Que está oculta se dice aquí, donde se está
+                          // mirando: si no, en la vista de todas no habría
+                          // forma de saber cuál se escondió.
+                          if (hidden)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Text(
+                                'oculta',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: didactaTeacher,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      [
-                        if (course.code != null) course.code!,
-                        course.language,
-                        if (course.teacher != null) course.teacher!,
-                      ].join(' · '),
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: didactaMuted,
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          if (course.code != null) course.code!,
+                          course.language,
+                          if (course.teacher != null) course.teacher!,
+                          if (collapsed)
+                            all.length == 1
+                                ? '1 curso académico'
+                                : '${all.length} cursos académicos',
+                        ].join(' · '),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: didactaMuted,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               // El título en todos los idiomas. Un lápiz y no una entrada del
@@ -719,6 +882,12 @@ class _CourseTile extends StatelessWidget {
                 what: course.title(session.language),
                 onChanged: (value) =>
                     session.setFavouriteCourse(course.id, value),
+              ),
+              _Eye(
+                id: 'course-${course.id}',
+                hidden: hidden,
+                what: course.title(session.language),
+                onChanged: (value) => session.setCourseHidden(course.id, value),
               ),
               // Las operaciones de la asignatura, en un menú y no en botones:
               // son dos, una de ellas destructiva, y no compiten con los
@@ -756,35 +925,60 @@ class _CourseTile extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 8),
-          // El más reciente arriba: el curso que se está dando es el que se
-          // quiere, y una lista alfabética de ocho años lo entierra.
-          for (final year in sortedYears)
-            _YearRow(
-              course: course,
-              year: year,
-              entry: course.years[year]!,
-              session: session,
-              current: year == sortedYears.first,
-              canEdit: admin,
-              onCopy: () => onCopy(year),
-              onBuild: (languages) => onBuild(year, languages),
-              onExport: () => onExport(year),
-            ),
-          if (admin)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                key: Key('add-year-${course.id}'),
-                icon: const Icon(Icons.add, size: 15),
-                label: const Text('Nuevo curso académico'),
-                onPressed: onDuplicate,
+          if (!collapsed) ...[
+            const SizedBox(height: 8),
+            // El más reciente arriba: el curso que se está dando es el que se
+            // quiere, y una lista alfabética de ocho años lo entierra.
+            for (final year in sortedYears)
+              _YearRow(
+                course: course,
+                year: year,
+                entry: course.years[year]!,
+                session: session,
+                current: year == all.first,
+                hidden: session.isHiddenYear(course.id, year),
+                canEdit: admin,
+                onCopy: () => onCopy(year),
+                onBuild: (languages) => onBuild(year, languages),
+                onExport: () => onExport(year),
               ),
-            ),
+            if (hiddenYears > 0 && view == CoursesView.visible)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  hiddenYears == 1
+                      ? '1 curso académico sin enseñar'
+                      : '$hiddenYears cursos académicos sin enseñar',
+                  style: const TextStyle(fontSize: 11, color: didactaMuted),
+                ),
+              ),
+            if (admin)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: Key('add-year-${course.id}'),
+                  icon: const Icon(Icons.add, size: 15),
+                  label: const Text('Nuevo curso académico'),
+                  onPressed: onDuplicate,
+                ),
+              ),
+          ],
         ],
       ),
     );
   }
+
+  /// Si este curso académico entra en lo que se está mirando.
+  ///
+  /// Con la asignatura oculta se enseñan todos: se ha entrado a mirar qué
+  /// hay escondido, y esconder la asignatura no dice nada de sus cursos.
+  bool _showsYear(String year) => switch (view) {
+    CoursesView.all => true,
+    CoursesView.visible => !session.isHiddenYear(course.id, year),
+    CoursesView.hidden =>
+      session.isHiddenCourse(course.id) ||
+          session.isHiddenYear(course.id, year),
+  };
 }
 
 /// Un curso académico: lo que lleva, y lo que se puede hacer con él.
@@ -800,6 +994,7 @@ class _YearRow extends StatelessWidget {
     required this.entry,
     required this.session,
     required this.current,
+    required this.hidden,
     this.canEdit = false,
     required this.onCopy,
     required this.onBuild,
@@ -811,6 +1006,12 @@ class _YearRow extends StatelessWidget {
   final String year;
   final CourseYear entry;
   final bool current;
+
+  /// Si está oculto. Se enseña igual cuando se está mirando lo oculto o
+  /// todo, y marcado: en la vista de todas, sin marca no habría forma de
+  /// saber cuál se escondió.
+  final bool hidden;
+
   final bool canEdit;
   final VoidCallback onCopy;
 
@@ -898,12 +1099,33 @@ class _YearRow extends StatelessWidget {
             current: session.language,
             onBuild: onBuild,
           ),
+          // Llevarse el curso a una carpeta. Fuera del menú y al lado de la
+          // estrella a propósito: exportar es de las tres cosas que se hacen
+          // con un curso --mirarlo, compilarlo y repartirlo-- y estaba
+          // escondido detrás de unos puntos suspensivos.
+          //
+          // Y sin pedir permiso de escritura, al revés que lo del menú:
+          // exportar copia lo compilado y no toca el repositorio, así que
+          // también lo hace quien solo lo tiene para leer.
+          IconButton(
+            key: Key('export-year-${course.id}-$year'),
+            tooltip: 'Exportar este curso a una carpeta',
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.file_download_outlined, size: 17),
+            onPressed: onExport,
+          ),
           _Star(
             id: 'year-${course.id}-$year',
             on: session.isFavouriteYear(course.id, year),
             what: '${course.title(session.language)} $year',
             onChanged: (value) =>
                 session.setFavouriteYear(course.id, year, value),
+          ),
+          _Eye(
+            id: 'year-${course.id}-$year',
+            hidden: hidden,
+            what: '${course.title(session.language)} $year',
+            onChanged: (value) => session.setYearHidden(course.id, year, value),
           ),
           // Lo que se puede hacer con **este** curso. En el borde, alineado
           // con el de la asignatura: el mismo gesto siempre en el mismo
@@ -925,11 +1147,32 @@ class _YearRow extends StatelessWidget {
                   onPressed: onCopy,
                   child: const Text('Copiar a otro curso…'),
                 ),
+                const Divider(height: 1),
+                // Las versiones congeladas. En el menú del curso y no en una
+                // pantalla aparte porque congelar es algo que se hace
+                // **mirando el curso** --el día que empieza, el día antes del
+                // parcial-- y no algo a lo que se va.
                 MenuItemButton(
-                  key: Key('export-year-${course.id}-$year'),
-                  leadingIcon: const Icon(Icons.folder_zip_outlined, size: 15),
-                  onPressed: onExport,
-                  child: const Text('Exportar…'),
+                  key: Key('freeze-year-${course.id}-$year'),
+                  leadingIcon: const Icon(Icons.ac_unit, size: 15),
+                  onPressed: () => createFreeze(
+                    context,
+                    session,
+                    course,
+                    year,
+                    repo: entry.repos.firstOrNull,
+                  ),
+                  child: const Text('Crear versión congelada…'),
+                ),
+                MenuItemButton(
+                  key: Key('freezes-${course.id}-$year'),
+                  leadingIcon: const Icon(Icons.history_toggle_off, size: 15),
+                  onPressed: () => showFreezes(context, session, course, year),
+                  child: Text(
+                    entry.freezes.isEmpty
+                        ? 'Ver versiones congeladas…'
+                        : 'Ver versiones congeladas (${entry.freezes.length})…',
+                  ),
                 ),
               ],
             )
@@ -947,6 +1190,41 @@ class _YearRow extends StatelessWidget {
 /// que hay que poder ver sin abrir nada. Apagada se queda en gris y con el
 /// contorno, para que se vea que se puede marcar y que no lo está -- una
 /// estrella que solo aparece cuando está encendida no se descubre nunca.
+/// Ocultar algo de la lista, o volver a enseñarlo.
+///
+/// Un ojo y no una papelera, y el tooltip lo dice: **ocultar no es quitar**.
+/// La asignatura sigue en el repositorio, sigue compilando y sigue en la
+/// biblioteca; lo que cambia es esta lista, que después de unos años son
+/// veinte asignaturas de las que se dan tres.
+class _Eye extends StatelessWidget {
+  const _Eye({
+    required this.id,
+    required this.hidden,
+    required this.what,
+    required this.onChanged,
+  });
+
+  final String id;
+  final bool hidden;
+  final String what;
+  final void Function(bool value) onChanged;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    key: Key('hide-$id'),
+    tooltip: hidden
+        ? 'Volver a enseñar «$what» en esta lista'
+        : 'Ocultar «$what» de esta lista. Sigue estando: no se quita nada.',
+    visualDensity: VisualDensity.compact,
+    icon: Icon(
+      hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+      size: 17,
+      color: hidden ? didactaTeacher : didactaMuted,
+    ),
+    onPressed: () => onChanged(!hidden),
+  );
+}
+
 class _Star extends StatelessWidget {
   const _Star({
     required this.id,
@@ -967,7 +1245,7 @@ class _Star extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     key: Key('favourite-$id'),
-    tooltip: on ? 'Quitar «$what» de arriba' : 'Poner «$what» arriba',
+    tooltip: on ? 'Desmarcar «$what»' : 'Marcar «$what»',
     visualDensity: VisualDensity.compact,
     icon: Icon(
       on ? Icons.star : Icons.star_border,

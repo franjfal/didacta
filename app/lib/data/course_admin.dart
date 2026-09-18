@@ -189,17 +189,31 @@ class CourseAdmin {
     required String course,
     required String year,
     String from = '',
+    String fromDirectory = '',
+    String fromLabel = '',
   }) => _change(
     arguments: [
       'new',
       'year',
-      if (from.isEmpty) '--empty' else ...['--from', from],
+      if (fromDirectory.isNotEmpty) ...[
+        '--from-dir',
+        fromDirectory,
+      ] else if (from.isEmpty)
+        '--empty'
+      else ...[
+        '--from',
+        from,
+      ],
       '--',
       course,
       year,
     ],
     paths: ['courses/$course/$year'],
-    message: from.isEmpty
+    message: fromDirectory.isNotEmpty
+        // El nombre de la congelación y no la carpeta: la carpeta es una
+        // caché de esta máquina y no dice nada a quien lea el historial.
+        ? 'Añadir el curso $year de $course, desde «$fromLabel»'
+        : from.isEmpty
         ? 'Añadir el curso $year de $course'
         : 'Añadir el curso $year de $course, copiado de $from',
   );
@@ -271,6 +285,235 @@ class CourseAdmin {
         : 'Copiar ${documents.length} documentos de $fromYear a $toYear',
   );
 
+  // -- Contenido vinculado -------------------------------------------------
+  //
+  // Todo por el motor y cerrado en un commit, como el resto: vincular un tema
+  // toca el `year.yaml` de dos cursos, un fichero en `shared/documents/` y a
+  // veces un `themes.yaml`, y repartir eso en cuatro commits deja cuatro
+  // estados intermedios en los que el repositorio se contradice.
+
+  /// Da el mismo tema en otro curso, vinculado.
+  Future<void> linkDocument({
+    required String fromCourse,
+    required String fromYear,
+    required String document,
+    required String toCourse,
+    required String toYear,
+    String? asId,
+  }) => _change(
+    arguments: [
+      'link',
+      '--from',
+      '$fromCourse@$fromYear/$document',
+      '--to',
+      '$toCourse@$toYear',
+      if (asId != null && asId.isNotEmpty) ...['--as', asId],
+    ],
+    paths: [
+      'courses/$fromCourse/$fromYear',
+      'courses/$toCourse/$toYear',
+      'shared/documents',
+    ],
+    message:
+        'Dar «$document» también en $toCourse $toYear, vinculado a '
+        '$fromCourse $fromYear',
+  );
+
+  /// Cambia de sitio una ubicación, sin tocar la identidad del contenido.
+  Future<void> moveDocument({
+    required String fromCourse,
+    required String fromYear,
+    required String document,
+    required String toCourse,
+    required String toYear,
+    String? asId,
+  }) => _change(
+    arguments: [
+      'move',
+      '--from',
+      '$fromCourse@$fromYear/$document',
+      '--to',
+      '$toCourse@$toYear',
+      if (asId != null && asId.isNotEmpty) ...['--as', asId],
+    ],
+    paths: [
+      'courses/$fromCourse/$fromYear',
+      'courses/$toCourse/$toYear',
+      'shared/documents',
+    ],
+    message: 'Mover «$document» de $fromCourse $fromYear a $toCourse $toYear',
+  );
+
+  /// Parte un grupo de ubicaciones sincronizadas en varios.
+  ///
+  /// [groups] son las que se separan; lo que no se nombre se queda con la
+  /// entidad de siempre. Cada grupo es una lista de claves
+  /// `asignatura@año/documento`, o `…#posición` para una lección.
+  Future<void> splitContent({
+    String? content,
+    String? unit,
+    required List<List<String>> groups,
+    required List<String> paths,
+    required String message,
+    bool deep = false,
+  }) => _change(
+    arguments: [
+      'split',
+      if (content != null && content.isNotEmpty) ...['--content', content],
+      if (unit != null && unit.isNotEmpty) ...['--unit', unit],
+      for (final group in groups) ...['--group', group.join(',')],
+      if (deep) '--deep',
+    ],
+    paths: [...paths, 'shared/documents', 'content', 'problems'],
+    message: message,
+  );
+
+  /// Da una lección en otro tema, de otra asignatura si hace falta.
+  ///
+  /// Vinculada por defecto, que es lo que una referencia ha sido siempre: la
+  /// lección vive una vez y los dos temas llaman a la misma. Con [duplicate],
+  /// una copia con identidad propia.
+  Future<void> useUnit({
+    required String unit,
+    required String toCourse,
+    required String toYear,
+    required String document,
+    bool duplicate = false,
+  }) => _change(
+    arguments: [
+      'use',
+      '--unit',
+      unit,
+      '--in',
+      '$toCourse@$toYear/$document',
+      if (duplicate) '--duplicate',
+    ],
+    paths: [
+      'courses/$toCourse/$toYear',
+      'shared/documents',
+      if (duplicate) ...['content', 'problems'],
+    ],
+    message: duplicate
+        ? 'Duplicar «$unit» en «$document» de $toCourse $toYear'
+        : 'Dar «$unit» también en «$document» de $toCourse $toYear',
+  );
+
+  /// Hace independiente una ubicación de un tema vinculado.
+  Future<void> unlinkDocument({
+    required String course,
+    required String year,
+    required String document,
+  }) => _change(
+    arguments: ['unlink', '--at', '$course@$year/$document'],
+    paths: ['courses/$course/$year', 'shared/documents'],
+    message: 'Separar «$document» de $course $year del tema compartido',
+  );
+
+  /// Pone un id estable a cada lección que no lo tenga.
+  ///
+  /// La migración. No mueve nada, no renombra nada y no toca el contenido:
+  /// escribe una línea `id:` en cada `unit.yaml` que le falte, derivada de la
+  /// ruta con un hash, así que dos personas que lo hagan por su cuenta
+  /// escriben los mismos ids y el merge no tiene nada que resolver.
+  Future<void> writeUnitIds() => _change(
+    arguments: const ['ids', '--apply'],
+    paths: const ['content', 'problems'],
+    message:
+        'Poner un id estable a cada lección\n\n'
+        'Derivado de la ruta con un hash, así que es el mismo lo haga quien '
+        'lo haga. A partir de aquí manda el id y no la ruta: mover una '
+        'lección de carpeta ya no rompe quién la usa.',
+  );
+
+  /// Lo que haría [writeUnitIds], sin escribir nada.
+  Future<String> previewUnitIds() => compiler.run(const ['ids']);
+
+  // -- Versiones congeladas -------------------------------------------------
+
+  /// Registra una versión congelada: el commit que hay ahora, con nombre.
+  ///
+  /// El commit que anota la congelación no puede contener su propio hash, así
+  /// que apunta al que era HEAD al crearla. Es lo correcto: lo que se congela
+  /// es el estado que había, no la línea que lo anota.
+  Future<void> addFreeze({
+    required String course,
+    required String year,
+    required String name,
+    required String commit,
+    String description = '',
+  }) => _change(
+    arguments: [
+      'freeze',
+      'add',
+      '$course@$year',
+      '--name',
+      name,
+      '--commit',
+      commit,
+      if (description.isNotEmpty) ...['--description', description],
+    ],
+    paths: ['courses/$course/$year'],
+    message: 'Congelar «$name» en $course $year',
+    reindex: false,
+  );
+
+  /// Quita una congelación. Ni un commit, ni una rama, ni la historia.
+  Future<void> removeFreeze({
+    required String course,
+    required String year,
+    required String id,
+    required String name,
+  }) => _change(
+    arguments: ['freeze', 'remove', '$course@$year', id],
+    paths: ['courses/$course/$year'],
+    message: 'Quitar la versión congelada «$name» de $course $year',
+    reindex: false,
+  );
+
+  Future<void> renameFreeze({
+    required String course,
+    required String year,
+    required String id,
+    required String name,
+    String? description,
+  }) => _change(
+    arguments: [
+      'freeze',
+      'rename',
+      '$course@$year',
+      id,
+      '--name',
+      name,
+      if (description != null) ...['--description', description],
+    ],
+    paths: ['courses/$course/$year'],
+    message: 'Renombrar una versión congelada de $course $year a «$name»',
+    reindex: false,
+  );
+
+  /// Devuelve un tema al estado que tiene en otra versión del repositorio.
+  ///
+  /// [fromDirectory] es la raíz del árbol de una congelación. El curso entero
+  /// y una lección se restauran copiando ficheros --eso lo hace el clon--;
+  /// un tema no, porque su composición vive dentro del `year.yaml` entre las
+  /// de los demás y hay que sustituir solo su bloque.
+  Future<void> restoreDocument({
+    required String course,
+    required String year,
+    required String document,
+    required String fromDirectory,
+    required String fromLabel,
+  }) => _change(
+    arguments: ['restore', '--from', fromDirectory, '$course@$year/$document'],
+    paths: ['courses/$course/$year', 'shared/documents'],
+    message: 'Restaurar «$document» de $course $year desde «$fromLabel»',
+    // Sin confirmar, como el resto de restaurar: lo que sale es un cambio
+    // pendiente que se revisa y se guarda con el mensaje que quiera quien lo
+    // hizo. Restaurar no es una excepción a la regla de que todo cambio es un
+    // commit normal; lo que no es, es un commit que aparece solo.
+    commit: false,
+  );
+
   /// Lanza el motor, regenera el índice y cierra todo en un commit.
   ///
   /// Si el motor falla no hay commit, y si no cambió nada tampoco: un
@@ -284,6 +527,8 @@ class CourseAdmin {
     required List<String> arguments,
     required List<String> paths,
     required String message,
+    bool reindex = true,
+    bool commit = true,
   }) async {
     final who = author;
     if (who == null) {
@@ -312,15 +557,34 @@ class CourseAdmin {
     // cambio de vista, que es peor que tener el índice viejo. Se dice, eso
     // sí, porque hasta que se regenere la pantalla no verá lo que se hizo.
     Object? indexProblem;
-    try {
-      await compiler.run(const ['index']);
-    } on CompileException catch (error) {
-      indexProblem = error;
+    // Las congelaciones no entran en el índice de contenido --lo que cambian
+    // es un `freezes.yaml`, y el motor lo lee con el curso--, así que
+    // regenerar dos mil unidades por ponerle nombre a un commit sería pagar
+    // unos segundos por nada. El índice sí cambia, y se escribe igual: por
+    // eso la ruta va en el commit aunque no se regenere aquí.
+    if (reindex) {
+      try {
+        await compiler.run(const ['index']);
+      } on CompileException catch (error) {
+        indexProblem = error;
+      }
+    }
+
+    if (!commit) {
+      if (indexProblem != null) {
+        throw AdminException(
+          'El cambio está hecho, pero el índice no se pudo regenerar, así que '
+          'la pantalla no lo verá todavía. Ejecuta `didacta index` en el '
+          'repositorio.',
+          detail: '$indexProblem',
+        );
+      }
+      return;
     }
 
     try {
       final committed = await clone.commitPaths(
-        paths: [...paths, _index],
+        paths: [...paths, if (reindex) _index],
         message: message,
         authorName: who.name,
         authorEmail: who.email,

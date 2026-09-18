@@ -288,6 +288,15 @@ migrado y `mathtools` por sí solo no lo trae.
 
 Motivo: un sistema que no compila en una máquina limpia no es una plataforma.
 
+Sustituir no es tirar el aspecto. Lo que hacían aquellos paquetes se reproduce
+con los de CTAN: la pestaña con el nombre montada sobre el borde de la caja
+—`\newboxedtheorem` de `boiboites`— sale de `attach boxed title to top left`
+de `tcolorbox`, y con ella la caja sigue partiéndose entre páginas, que es lo
+que la de TikZ no hacía; la banda de portada, las franjas escalonadas del pie
+y la regla bajo el título de la diapositiva —`fancy` y `decolines`— son treinta
+líneas de `didacta-theme.sty`. La primera versión sustituyó los paquetes y no
+el acabado, y la diferencia se vio al proyectar.
+
 Python 3.9 sin dependencias. PyYAML se usa si está; si no, el motor trae su
 propio lector del subconjunto que los esquemas necesitan — la plataforma tiene
 que funcionar en un runner de CI sin un paso de `pip`.
@@ -421,6 +430,8 @@ se pueda ver qué toca no es una herramienta en la que haya motivo para confiar.
 | D76 | Didacta comprueba las cuatro herramientas de las que depende, y ofrece instalarlas | git, Python, LaTeX y el motor faltaban **de uno en uno y tarde**: el fallo de git salía dentro del diálogo de elegir repositorio y dicho en el idioma de git, y el de LaTeX al pulsar compilar. Ahora están las cuatro en una lista, en la bienvenida y en Ajustes, con la ruta y la versión de cada una --que es lo que contesta «¿cuál de los dos gits usa?»-- y los directorios donde se ha mirado cuando no aparece, que es el caso frecuente de verdad. El botón intenta el mejor camino que no pida contraseña (Homebrew o las herramientas de Apple, winget en Windows) y **vuelve a comprobar después**: instalar no es terminar, y un instalador que deja el programa donde Didacta no mira es un tick verde que miente. Lo que termina fuera --el instalador de Apple, el `.pkg` de macOS-- se dice que termina fuera en lugar de fingir una barra de progreso. LaTeX se **elige**, porque entre TinyTeX y MacTeX hay cien megas y seis gigas de diferencia y eso depende del disco de cada uno; D18 sigue en pie --Didacta no lleva una distribución dentro-- y lo que cambia es que ahora sabe bajar la que le digas. Cuando nada funciona, el modal trae las tres cosas que permiten salir del paso: qué se intentó, qué contestó y cómo se hace a mano, más la guía oficial |
 | D77 | Los idiomas son cuatro listas anidadas, y solo tres son del material | Didacta sabe imprimir a diez, un repositorio traduce a los que diga su `didacta.yaml`, una asignatura se da en los suyos **de entre esos**, y quien mira trabaja con los que quiera. La interfaz ofrecía los diez en todas partes, y las dos consecuencias eran distintas: en la barra de arriba se podía elegir un idioma al que nadie traduce y dejar la pantalla entera con el texto de reserva; en la ficha de una asignatura se podía **escribir** uno que su repositorio no mantiene, que el motor rechaza --y un `course.yaml` rechazado hace desaparecer la asignatura de la biblioteca, con el motivo en una lista de errores--. Así que el catálogo guarda los idiomas **por repositorio** en lugar de fundirlos en una unión: la unión contesta «¿qué hay en lo que miro?» y la otra «¿qué puedo escribir aquí?», y no se deducen la una de la otra. La cuarta lista es una preferencia sincronizada y **nunca escribe nada**: filtra lo que se ofrece, y las pantallas que escriben enseñan además lo que el fichero que tienen delante ya declara, porque si no apagar un idioma para mirar sería borrarlo al guardar. Quitar uno de un repositorio se **niega** mientras alguna asignatura lo declare, en lugar de escribir y dejar que el fallo se descubra al indexar |
 | D78 | Los bloques de una asignatura se declaran, y quien no declara ninguno se comporta como siempre | teoría y problemas estaban escritos en el código --en el motor, en el catálogo y en tres pantallas--, así que no se podían ni renombrar ni añadir; quien da prácticas de ordenador tenía que meterlas en uno de los dos. Ahora son id + nombre por idioma en `taxonomy.yaml`, con el mismo patrón que los temas y las titulaciones: **la lección nombra el bloque y el bloque lo declara quien lo tenga**. Tres consecuencias que son el diseño entero. La primera: el motor **deja de validar** el `block:` de una unidad, porque con la teoría y los problemas repartidos en dos repositorios el que declara el bloque puede ser el de al lado, y rechazarlo convertiría abrir medio material en un error de lectura -- quien tiene los dos delante es la aplicación, y es ella la que señala los huérfanos. La segunda: un bloque que no declara nadie **no esconde nada**; sus lecciones salen en la biblioteca y el filtro lo ofrece por su id, porque un filtro desde el que no se llega a parte del material es peor que uno feo. La tercera: `theory` y `problems` siguen valiendo sin declararse **mientras nadie declare ninguno**, que es lo que hace que un repositorio de antes de esto se vea exactamente igual; en cuanto se declara el primero la lista deja de ser implícita, y entonces una lección que nombra `theory` sin declarar es lo que parece: una que se quedó atrás al quitar su bloque. Por eso quitar uno pregunta antes a dónde van sus lecciones |
+| D79 | Compilar reescribe el cuerpo del `.tex` con lo que dice `year.yaml` | D29 dejó el encabezado en los dos sitios y nombró la autoridad, pero nadie escribía el derivado: sólo la migración, una vez. Así que un subapartado añadido desde la aplicación se guardaba en `year.yaml`, se veía en la pantalla de composición --que lee `year.yaml`-- y **no salía en el PDF**, que compila el `.tex`. Es la peor forma de fallar: lo que se mira para comprobarlo es justo lo único que sí lo enseñaba. Lo hace `didacta build` antes de llamar a LaTeX y no la aplicación al guardar, porque entonces también valdría para un `year.yaml` editado a mano y para el `didacta build` del terminal, que es desde donde se compila cuando la aplicación corre en un navegador. Escribe **sólo el cuerpo** --el preámbulo y la portada son de quien los escribió--, conserva comentado lo que está comentado (D22) y se **niega** cuando entre las unidades hay LaTeX que la composición no sabe decir, como los apartados envueltos en `\onlyslides` que dejó la migración: un `.tex` que alguien editó no se sacrifica para que el motor tenga razón. `didacta check` lo avisa sin escribir |
+| D80 | Un entorno con nombre se dibuja en una caja con la pestaña del nombre montada en el borde, y es la misma caja en pantalla y en papel | La primera migración cambió la caja de `boiboites` por una raya al margen, y lo que se perdió no fue adorno: la pestaña es **dónde empieza** el teorema y **dónde acaba**, que en una página con tres seguidos y una demostración en medio es lo que se busca al hojear. La raya marcaba el principio y el final con el mismo trazo y sin nada que los separase del párrafo de al lado. Una caja por medio --pestaña, marco y fondo-- lo dice de una sola mirada, que es la única que se le dedica. Misma forma en los dos medios y sólo dos cosas cambian: en pantalla más contraste y una sombra corta, en papel un tinte muy flojo, porque una página lleva ocho cajas seguidas y se lee durante una hora. Y **la usan también las que no son teoremas** --nota didáctica, objetivos, recuadro sin etiqueta--, cada una con su color: una página donde el teorema lleva marco y la nota didáctica lleva una raya se lee como dos documentos pegados. Las respuestas de una hoja de problemas (`answer`, `solution`, `marking`) se quedan con la raya a propósito: van **dentro** de un ejercicio y no son cosas aparte, y veinte cajas anidadas en un folio no se leen |
 
 ---
 
@@ -719,6 +730,49 @@ mirar qué número sale (`release.py next`), escribir esa sección del
 El detalle entero --artefactos por sistema, el manifiesto, la firma, la web y
 cómo hacer rollback-- está en
 [`docs/DISTRIBUTION.md`](https://github.com/franjfal/didacta/blob/main/docs/DISTRIBUTION.md).
+
+---
+
+## 8.quater Identidad, vínculos y congelaciones
+
+Dos cosas que se construyeron juntas porque se necesitan mutuamente: el
+contenido vinculado --un mismo tema en varios cursos y varias asignaturas,
+sincronizado de verdad-- y las versiones congeladas --ese material tal como
+estaba un día--. El detalle entero está en
+[`docs/IDENTIDAD.md`](https://github.com/franjfal/didacta/blob/main/docs/IDENTIDAD.md);
+aquí, lo que hay que saber para leer el resto.
+
+**La mitad ya era cierta.** `- unit: analysis/normed/definition` nunca fue una
+copia: la lección vive una vez y los treinta cursos que la llaman llaman a la
+misma. Lo que faltaba era poder decirlo desde la interfaz, que un **tema
+entero** pudiera compartirse igual --copiarlo sí duplicaba--, y que la
+identidad no dependiera de la ruta.
+
+**Identidad de contenido y identidad de ubicación son dos cosas.** Una lección
+declara `id:` en su `unit.yaml`; un tema compartido, en
+`shared/documents/<id>.yaml`. Una ubicación es una línea de un fichero de
+curso: `- unit: …` dentro de una composición, o `- id: … / link: …` dentro de
+`documents:`. Editar el contenido desde cualquier ubicación lo cambia en
+todas, porque es el mismo fichero -- no hay nada que propagar.
+
+**El grupo de sincronización no se guarda.** Es el conjunto de ubicaciones que
+nombran el mismo id, y se calcula leyendo los ficheros. Una tabla aparte sería
+una segunda fuente de verdad que puede contradecir a los ficheros, y
+reconciliarla después de un `git merge` es exactamente el problema que esto
+existe para no tener. La consecuencia que importa: **un clon limpio reconstruye
+todos los vínculos**, porque los vínculos *son* los ficheros.
+
+**Una congelación es un commit con nombre.** `freezes.yaml`, dentro del
+repositorio, guarda lo que git no sabe: que ese commit es «Antes del primer
+parcial». Abrirla es un `git worktree` en una caché dentro de `.git`, y el
+catálogo que se lee es el `generated/` de aquel commit, que ya está versionado.
+No se copia nada, no se mueve HEAD y no se toca el árbol de trabajo. Quitarla
+quita su entrada y su carpeta de la caché: ni un commit, ni una rama, ni la
+historia.
+
+**Restaurar no reescribe nada.** Trae el contenido de aquel commit al árbol de
+trabajo de ahora y lo deja como un cambio pendiente, que se confirma como
+cualquier otro. Nunca `reset --hard`, nunca force push.
 
 ---
 

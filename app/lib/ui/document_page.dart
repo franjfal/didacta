@@ -22,8 +22,11 @@ import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'build_console.dart';
+import 'document_links.dart';
 import 'history_tab.dart';
+import 'info_menu.dart';
 import 'composition_editor.dart';
+import 'manage_templates.dart';
 import 'shell.dart';
 import '../data/compiler.dart';
 import 'pdf_tab.dart';
@@ -258,6 +261,40 @@ class _DocumentPageState extends State<DocumentPage> {
             (year, Routes.year(courseId, year)),
           ],
           actions: [
+            // De qué asignatura es, a qué temas pertenece --que puede
+            // declararlos otro repositorio-- y qué versiones congeladas hay
+            // de su curso. Lo último estaba sólo en Asignaturas, que es donde
+            // no estás cuando te lo preguntas.
+            InfoMenu(
+              session: session,
+              // Los sitios donde se da **este mismo tema**: vinculado en dos
+              // grupos son dos, no uno, y es lo que hay que ver antes de
+              // tocarlo. Sin vincular, el suyo.
+              places: () {
+                final linked = placementsOf(session, document);
+                if (linked.isEmpty) {
+                  return [InfoPlace(course: courseId, year: year)];
+                }
+                return [
+                  for (final place in linked)
+                    InfoPlace(
+                      course: place.course,
+                      year: place.year,
+                      document: place.document,
+                    ),
+                ];
+              }(),
+              placesLabel: 'Se da en',
+              belongsTo: document.themes,
+              belongsToLabel: 'Pertenece a',
+              splitLabel: 'Gestionar vinculación…',
+              onSplit:
+                  !session.isFrozen &&
+                      document.isLinked &&
+                      session.canWriteIn(document.repo)
+                  ? () => splitDocumentLinks(context, session, document)
+                  : null,
+            ),
             // A toggle rather than a separate route: it is the same document,
             // and the URL of a document should not depend on whether someone
             // happens to be rearranging it.
@@ -316,7 +353,7 @@ class _DocumentPageState extends State<DocumentPage> {
     Session session,
     Course course,
     Document document,
-    List<OutputProfile> profiles,
+    List<OutputTemplate> profiles,
     String language,
   ) {
     if (_active.startsWith(documentPdfPrefix)) {
@@ -411,7 +448,14 @@ class _DocumentPageState extends State<DocumentPage> {
               const VerticalDivider(width: 1),
               SizedBox(
                 width: 320,
-                child: _OutputsPanel(document: document, profiles: profiles),
+                child: _OutputsPanel(
+                  document: document,
+                  profiles: profiles,
+                  language: language,
+                  onChoose: session.canWriteIn(document.repo)
+                      ? () => _chooseTemplates(session, document)
+                      : null,
+                ),
               ),
             ],
           );
@@ -421,7 +465,14 @@ class _DocumentPageState extends State<DocumentPage> {
         // unbounded height, so the whole screen rendered nothing on a phone.
         return _NarrowPanels(
           composition: composition,
-          outputs: _OutputsPanel(document: document, profiles: profiles),
+          outputs: _OutputsPanel(
+            document: document,
+            profiles: profiles,
+            language: language,
+            onChoose: session.canWriteIn(document.repo)
+                ? () => _chooseTemplates(session, document)
+                : null,
+          ),
           outputCount: profiles.length,
           unitCount: document.unitRefs.length,
         );
@@ -429,30 +480,59 @@ class _DocumentPageState extends State<DocumentPage> {
     );
   }
 
-  /// Which profiles this document builds.
+  /// En qué plantillas se compila este tema.
   ///
-  /// An explicit list in `year.yaml` wins. When there is none the engine
-  /// decides from the kind, and the app must not invent a different answer —
-  /// so the fallback is by family, matching `profiles.FAMILY_FOR_KIND`.
-  List<OutputProfile> _profilesFor(Document document, Session session) {
-    final all = session.catalogue.profiles;
-    if (document.profiles.isNotEmpty) {
-      return [
-        for (final id in document.profiles)
-          ...all.where((profile) => profile.id == id),
-      ];
+  /// Lo decide el catálogo: lo que el documento declare, y si no declara
+  /// nada, lo que digan los bloques de las lecciones que compone. Aquí había
+  /// una tabla por tipo de documento --copia de la que tenía el motor-- y las
+  /// dos tenían que decir lo mismo para siempre; ahora lo decide quien lo
+  /// configuró.
+  List<OutputTemplate> _profilesFor(Document document, Session session) => [
+    for (final id in session.catalogue.templatesForDocument(document))
+      session.catalogue.templateNamed(id),
+  ];
+
+  /// Cambiar con qué se compila este tema.
+  Future<void> _chooseTemplates(Session session, Document document) async {
+    final catalogue = session.catalogue;
+    final inherited = <String>{};
+    for (final block in catalogue.blocksOf(document)) {
+      inherited.addAll(catalogue.templatesOfBlock(block));
     }
-    final families = switch (document.kind) {
-      'theory' || 'seminar' => const ['slides', 'notes'],
-      'problems' => const ['problems'],
-      'handout' || 'practical' => const ['handout'],
-      'exam' => const ['exam'],
-      _ => const ['notes'],
-    };
-    return [
-      for (final profile in all)
-        if (families.contains(profile.family)) profile,
-    ];
+    final chosen = await chooseTemplates(
+      context,
+      session,
+      title: 'Salidas de «${document.title(document.language)}»',
+      inherited: inherited.isEmpty
+          ? 'Las de los bloques de sus lecciones. Todavía no lleva ninguna, '
+                'así que salen todas las encendidas.'
+          : 'Las de los bloques de sus lecciones: ${inherited.length}',
+      chosen: document.profiles,
+      byDefault: catalogue.templatesForDocument(document),
+    );
+    if (chosen == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await session.setDocumentTemplates(
+        repo: document.repo,
+        course: courseId,
+        year: year,
+        id: document.id,
+        templates: chosen,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            chosen.isEmpty
+                ? 'Este tema vuelve a compilar lo que digan sus bloques.'
+                : 'Guardado: ${chosen.length} salida(s).',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    }
   }
 }
 
@@ -999,10 +1079,20 @@ class _PanelTab extends StatelessWidget {
 
 /// What this document produces.
 class _OutputsPanel extends StatelessWidget {
-  const _OutputsPanel({required this.document, required this.profiles});
+  const _OutputsPanel({
+    required this.document,
+    required this.profiles,
+    required this.language,
+    this.onChoose,
+  });
 
   final Document document;
-  final List<OutputProfile> profiles;
+  final List<OutputTemplate> profiles;
+  final String language;
+
+  /// Cambiar con qué se compila. Null cuando no se puede escribir en su
+  /// repositorio: se ve lo que sale, y no se ofrece un botón que va a fallar.
+  final VoidCallback? onChoose;
 
   @override
   Widget build(BuildContext context) {
@@ -1010,15 +1100,30 @@ class _OutputsPanel extends StatelessWidget {
       padding: EdgeInsets.zero,
       children: [
         SectionLabel('Salidas (${profiles.length})'),
-        if (document.profiles.isEmpty)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
-            child: Text(
-              'year.yaml no lista perfiles, así que el motor compila los que '
-              'corresponden a este tipo.',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                document.profiles.isEmpty
+                    ? 'Este tema no elige: compila lo que digan los bloques '
+                          'de las lecciones que lleva dentro.'
+                    : 'Este tema elige sus salidas, en su `year.yaml`.',
+                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              ),
+              if (onChoose != null) ...[
+                const SizedBox(height: 6),
+                OutlinedButton.icon(
+                  key: const Key('choose-document-templates'),
+                  icon: const Icon(Icons.tune, size: 15),
+                  label: const Text('Elegir salidas'),
+                  onPressed: onChoose,
+                ),
+              ],
+            ],
           ),
+        ),
         for (final profile in profiles)
           ListTile(
             leading: Icon(
@@ -1028,9 +1133,12 @@ class _OutputsPanel extends StatelessWidget {
               size: 16,
               color: profile.isSlides ? didactaThm : didactaDefn,
             ),
-            title: Text(profile.id, style: const TextStyle(fontSize: 12.5)),
+            title: Text(
+              profile.title(language),
+              style: const TextStyle(fontSize: 12.5),
+            ),
             subtitle: Text(
-              profile.documentClass,
+              '${profile.id} · ${profile.documentClass}',
               style: const TextStyle(fontSize: 11),
             ),
           ),

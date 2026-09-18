@@ -24,6 +24,7 @@ import '../model/catalogue.dart';
 import '../model/library_tree.dart' show languageName;
 import '../model/slug.dart';
 import '../state/session.dart';
+import 'manage_templates.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
 
@@ -168,6 +169,7 @@ class _BlocksDialogState extends State<BlocksDialog> {
                   busy: _busy == block.id,
                   onRename: () => _rename(block),
                   onRemove: () => _remove(block),
+                  onTemplates: () => _templates(block),
                   onToggle: (repo, declared) =>
                       _toggle(block, repo, declared: declared),
                 ),
@@ -350,6 +352,44 @@ class _BlocksDialogState extends State<BlocksDialog> {
     }
   }
 
+  /// Con qué plantillas se compila lo de un bloque.
+  Future<void> _templates(CourseBlock block) async {
+    final catalogue = widget.session.catalogue;
+    final chosen = await chooseTemplates(
+      context,
+      widget.session,
+      title: 'Plantillas de «${block.title(widget.session.language)}»',
+      inherited:
+          'Todas las plantillas encendidas: '
+          '${catalogue.activeTemplates.length}',
+      chosen: block.templates,
+      byDefault: catalogue.templatesOfBlock(block.id),
+    );
+    if (chosen == null || !mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = block.id);
+    try {
+      final written = await widget.session.setBlockTemplates(
+        id: block.id,
+        templates: chosen,
+      );
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            written == 0
+                ? 'No ha cambiado nada.'
+                : 'Guardado en $written repositorio(s).',
+          ),
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
   /// Declarar o dejar de declarar un bloque en un repositorio concreto.
   ///
   /// Quitarlo del **último** que lo declara es quitar el bloque, así que
@@ -395,6 +435,7 @@ class _BlockRow extends StatelessWidget {
     required this.busy,
     required this.onRename,
     required this.onRemove,
+    required this.onTemplates,
     required this.onToggle,
   });
 
@@ -404,6 +445,7 @@ class _BlockRow extends StatelessWidget {
   final bool busy;
   final VoidCallback onRename;
   final VoidCallback onRemove;
+  final VoidCallback onTemplates;
   final void Function(String repo, bool declared) onToggle;
 
   @override
@@ -437,7 +479,8 @@ class _BlockRow extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${block.id} · ${_lessons(lessons)}',
+                      '${block.id} · ${_lessons(lessons)} · '
+                      '${_outputs(session, block)}',
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: didactaMuted,
@@ -462,6 +505,16 @@ class _BlockRow extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.edit_outlined, size: 15),
                   onPressed: canWrite ? onRename : null,
+                ),
+                IconButton(
+                  key: Key('block-templates-${block.id}'),
+                  tooltip: canWrite
+                      ? 'Con qué plantillas se compila lo de este bloque'
+                      : 'Solo lectura: lo declara un repositorio en el que no '
+                            'puedes escribir',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.description_outlined, size: 15),
+                  onPressed: canWrite ? onTemplates : null,
                 ),
                 IconButton(
                   key: Key('remove-block-${block.id}'),
@@ -509,6 +562,19 @@ class _BlockRow extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// Con qué se compila lo de este bloque, en una línea.
+  ///
+  /// Lo que de verdad va a salir, no lo que dice el fichero: una plantilla
+  /// apagada que el bloque siga nombrando no se compila, y decir «7
+  /// versiones» cuando salen 6 es peor que no decir nada.
+  String _outputs(Session session, CourseBlock block) {
+    final count = session.catalogue.templatesOfBlock(block.id).length;
+    if (block.templates.isEmpty) {
+      return count == 1 ? 'todas: 1 versión' : 'todas: $count versiones';
+    }
+    return count == 1 ? '1 versión' : '$count versiones';
   }
 
   /// Los que se ofrecen: en los que se puede escribir, más aquellos donde ya

@@ -138,6 +138,9 @@ void main() {
     tester,
   ) async {
     await pumpApp(tester);
+    // Didacta abre por las asignaturas, así que a la biblioteca se llega
+    // como se llega de verdad: pulsándola en el carril.
+    await goTo(tester, '/');
     await goTo(tester, '/unit/content/analysis/normed/definition');
     await tester.tap(back);
     await settle(tester);
@@ -170,6 +173,10 @@ void railTests() {
     NavigationRail rail() =>
         tester.widget<NavigationRail>(find.byType(NavigationRail));
 
+    // Se abre por las asignaturas, que son las primeras del carril.
+    expect(rail().selectedIndex, 0, reason: 'se entra por las asignaturas');
+
+    await goTo(tester, '/');
     expect(rail().selectedIndex, 1, reason: 'la biblioteca es la segunda');
 
     await goTo(tester, '/courses/am-iii/2025-2026/tema-1');

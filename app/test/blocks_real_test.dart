@@ -68,21 +68,18 @@ void main() {
       expect(catalogue.blocks.first.titleIsFallback('en'), isFalse);
     });
 
-    test('los declaran los dos repositorios, y dicen lo mismo', () {
+    test('cada uno lo declara alguien, y los que se repiten no discrepan', () {
       if (catalogue == null) {
         markTestSkipped('sin los repositorios de contenido delante');
         return;
       }
+      // Quién declara qué es una decisión de quien enseña: la migración los
+      // puso en los dos repositorios y luego se pueden repartir. Lo que no
+      // puede pasar es que dos digan cosas distintas del mismo bloque, porque
+      // entonces lo que se enseña depende de en qué orden se abrieron.
       for (final block in catalogue.blocks) {
-        expect(
-          block.sources.keys,
-          containsAll(repos.keys),
-          reason: '${block.id} no lo declaran los dos',
-        );
+        expect(block.sources, isNotEmpty, reason: block.id);
       }
-      // Que los declaren los dos es lo corriente aquí --la teoría y los
-      // problemas están repartidos-- y es justo lo que puede acabar
-      // discrepando. Hoy no discrepa.
       expect(catalogue.blockConflicts, isEmpty);
     });
 

@@ -24,6 +24,9 @@ import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../data/compiler.dart';
+import 'export_actions.dart';
+import 'pdf_controls.dart';
+import 'pdf_sidebar.dart';
 import 'theme.dart';
 
 /// Un PDF abierto: qué es, y de dónde salió.
@@ -235,20 +238,71 @@ class _PdfTabViewState extends State<PdfTabView> {
   final Map<String, int> _pages = {};
   final Map<String, Object> _problem = {};
 
+  /// El documento abierto de cada panel, para las miniaturas, y su índice.
+  final Map<String, PdfDocument> _documents = {};
+  final Map<String, List<PdfOutlineNode>> _outlines = {};
+
+  /// El zoom del panel que manda, redondeado a lo que se enseña. Guardado
+  /// en lugar de leído en cada `build` porque quien lo mueve es el visor y
+  /// hay que enterarse: sin escuchar al controlador, el porcentaje se
+  /// quedaba en el que tenía al abrir.
+  int? _zoom;
+
+  /// Si el lateral está desplegado. Cerrado al abrir: lo primero que se
+  /// quiere ver del PDF recién compilado es el PDF, y con dos idiomas lado
+  /// a lado el ancho es lo que escasea.
+  bool _sidebar = false;
+
   PdfViewerController _controllerFor(String key) =>
-      _controllers.putIfAbsent(key, PdfViewerController.new);
+      _controllers.putIfAbsent(key, () {
+        final controller = PdfViewerController();
+        // Al controlador que manda --el del primer panel-- se le escucha el
+        // zoom. A los demás no: enseñan el mismo número porque los mueve la
+        // misma barra, y cuatro oyentes pintando lo mismo es trabajo tirado.
+        controller.addListener(() => _noteZoom(controller));
+        return controller;
+      });
+
+  /// El controlador del panel que manda: el primero, que es el que rotula
+  /// la barra.
+  PdfViewerController? get _leader =>
+      _controllers[widget.group.panes.first.path];
+
+  void _noteZoom(PdfViewerController controller) {
+    if (!mounted || controller != _leader || !controller.isReady) return;
+    final now = (controller.currentZoom * 100).round();
+    if (now == _zoom) return;
+    setState(() => _zoom = now);
+  }
 
   // Métodos con nombre en lugar de dejar que el panel toque `setState`: un
   // widget que llama al `setState` de otro es un widget que nadie puede leer
   // sin ir a mirar el otro.
-  void _noteReady(String path, int pages) {
+  void _noteReady(String path, PdfDocument document) {
     if (!mounted) return;
     setState(() {
-      _pages[path] = pages;
+      _pages[path] = document.pages.length;
+      _documents[path] = document;
       // Un PDF que abre bien deja de tener el problema de antes: tras
       // recompilar, el error de «no existe» ya no vale.
       _problem.remove(path);
     });
+    _loadOutline(path, document);
+  }
+
+  /// Los marcadores, que llegan después de abrir.
+  ///
+  /// Un PDF sin `hyperref` no trae ninguno y eso no es un fallo: el lateral
+  /// enseña las páginas y no ofrece la pestaña del índice.
+  Future<void> _loadOutline(String path, PdfDocument document) async {
+    List<PdfOutlineNode> outline;
+    try {
+      outline = await document.loadOutline();
+    } catch (_) {
+      outline = const [];
+    }
+    if (!mounted || _documents[path] != document) return;
+    setState(() => _outlines[path] = outline);
   }
 
   void _notePage(String path, int page) {
@@ -282,24 +336,117 @@ class _PdfTabViewState extends State<PdfTabView> {
     }
   }
 
+  /// Un salto del índice. Sólo el panel que manda sabe a qué sitio va su
+  /// marcador --el valenciano tiene ese apartado en otra página-- así que
+  /// los demás se llevan a la página que resulte, que es lo mismo que hace
+  /// pasar página.
+  void _goToDest(PdfDest? dest) {
+    final leader = _leader;
+    if (dest == null || leader == null) return;
+    leader.goToDest(dest);
+    for (final pane in widget.group.panes.skip(1)) {
+      final controller = _controllers[pane.path];
+      if (controller == null) continue;
+      final total = _pages[pane.path] ?? pane.pages;
+      controller.goToPage(
+        pageNumber: dest.pageNumber > total ? total : dest.pageNumber,
+      );
+    }
+  }
+
+  /// El zoom y los ajustes, en todos los paneles a la vez.
+  ///
+  /// Por lo mismo que las páginas: dos idiomas del mismo perfil se comparan
+  /// al mismo tamaño, y uno al 140% al lado de otro al 80% no compara nada.
+  void _eachReady(void Function(PdfViewerController controller) what) {
+    for (final pane in widget.group.panes) {
+      final controller = _controllers[pane.path];
+      if (controller == null || !controller.isReady) continue;
+      what(controller);
+    }
+  }
+
+  void _zoomBy({required bool up}) => _eachReady(
+    (controller) => up ? controller.zoomUp() : controller.zoomDown(),
+  );
+
+  void _actualSize() => _eachReady(
+    (controller) => controller.setZoom(controller.centerPosition, 1),
+  );
+
+  void _fit(Matrix4? Function(PdfViewerController controller, int page) how) =>
+      _eachReady((controller) {
+        final page = controller.pageNumber ?? 1;
+        final matrix = how(controller, page);
+        if (matrix != null) controller.goTo(matrix);
+      });
+
+  bool get _ready => _leader?.isReady ?? false;
+
   @override
   Widget build(BuildContext context) {
     final panes = widget.group.panes;
     return Column(
       children: [
-        _Bar(
-          group: widget.group,
+        // Lo que vale para toda la pestaña: el lateral, la página y el
+        // tamaño en los dos paneles a la vez, separar una versión, y elegir
+        // otras. Lo que se hace a *un* PDF va en su panel, donde no hay que
+        // preguntar cuál.
+        PdfViewerBar(
           page: _current,
           pages: _total,
-          onFirst: _total > 1 ? () => _goTo(1) : null,
-          onPrevious: _current > 1 ? () => _goTo(_current - 1) : null,
-          onNext: _current < _total ? () => _goTo(_current + 1) : null,
-          onRecompile: widget.onRecompile,
-          onDetach: widget.onDetach,
+          sidebar: _sidebar,
+          zoom: _ready ? (_zoom ?? 100) / 100 : null,
+          onSidebar: () => setState(() => _sidebar = !_sidebar),
+          onGoToPage: _goTo,
+          onZoomOut: _ready ? () => _zoomBy(up: false) : null,
+          onZoomIn: _ready ? () => _zoomBy(up: true) : null,
+          onActualSize: _ready ? _actualSize : null,
+          onFitWidth: _ready
+              ? () => _fit(
+                  (c, page) => c.calcMatrixFitWidthForPage(pageNumber: page),
+                )
+              : null,
+          onFitHeight: _ready
+              ? () => _fit(
+                  (c, page) => c.calcMatrixFitHeightForPage(pageNumber: page),
+                )
+              : null,
+          onFitPage: _ready
+              ? () => _fit((c, page) => c.calcMatrixForFit(pageNumber: page))
+              : null,
+          label: widget.group.isSingle
+              ? widget.group.panes.single.path.split('/').last
+              : '${widget.group.panes.length} versiones · las páginas se '
+                    'mueven juntas',
+          labelDirection: widget.group.isSingle
+              ? TextDirection.rtl
+              : TextDirection.ltr,
+          trailing: [
+            // Separar una versión: solo tiene sentido con más de una.
+            if (!widget.group.isSingle)
+              _DetachButton(group: widget.group, onDetach: widget.onDetach),
+            IconButton(
+              key: const Key('pdf-recompile'),
+              tooltip: 'Elegir otras versiones',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.tune, size: 17),
+              onPressed: widget.onRecompile,
+            ),
+          ],
         ),
         Expanded(
           child: Row(
             children: [
+              if (_sidebar) ...[
+                PdfSidebar(
+                  document: _documents[panes.first.path],
+                  outline: _outlines[panes.first.path] ?? const [],
+                  page: _current,
+                  onGoToPage: _goTo,
+                  onGoToDest: _goToDest,
+                ),
+              ],
               for (var i = 0; i < panes.length; i += 1) ...[
                 if (i > 0) const VerticalDivider(width: 1),
                 Expanded(
@@ -415,6 +562,13 @@ class _Pane extends StatelessWidget {
                 onPressed: pane.busy ? null : onRecompile,
               ),
               IconButton(
+                key: Key('pane-save-${pane.language}'),
+                tooltip: 'Guardar una copia de ${pane.language}',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.file_download_outlined, size: 15),
+                onPressed: () => savePdfCopy(context, path: pane.path),
+              ),
+              IconButton(
                 key: Key('pane-external-${pane.language}'),
                 tooltip:
                     'Abrir ${pane.language} en el visor del sistema '
@@ -451,8 +605,21 @@ class _Pane extends StatelessWidget {
                     params: PdfViewerParams(
                       margin: 8,
                       backgroundColor: const Color(0xFF52565C),
+                      // La barra de desplazamiento, que no venía de serie.
+                      // Un PDF de ciento veinte páginas sin ella sólo se
+                      // recorre con la rueda, y no dice por dónde va.
+                      viewerOverlayBuilder: (context, size, handleLinkTap) => [
+                        PdfViewerScrollThumb(
+                          controller: parent._controllerFor(pane.path),
+                          orientation: ScrollbarOrientation.right,
+                          thumbSize: const Size(38, 26),
+                          thumbBuilder:
+                              (context, thumbSize, pageNumber, controller) =>
+                                  _ScrollThumb(page: pageNumber),
+                        ),
+                      ],
                       onViewerReady: (document, controller) =>
-                          parent._noteReady(pane.path, document.pages.length),
+                          parent._noteReady(pane.path, document),
                       onPageChanged: (page) {
                         if (page != null) parent._notePage(pane.path, page);
                       },
@@ -475,94 +642,32 @@ class _Pane extends StatelessWidget {
   }
 }
 
-class _Bar extends StatelessWidget {
-  const _Bar({
-    required this.group,
-    required this.page,
-    required this.pages,
-    required this.onFirst,
-    required this.onPrevious,
-    required this.onNext,
-    required this.onRecompile,
-    required this.onDetach,
-  });
+/// El tirador de la barra de desplazamiento, con el número de página dentro.
+///
+/// El número es la mitad de para qué sirve arrastrarla: se busca «por la
+/// mitad, hacia la 60», y sin número hay que soltar para ver dónde se cayó.
+class _ScrollThumb extends StatelessWidget {
+  const _ScrollThumb({required this.page});
 
-  final PdfGroup group;
-  final int page;
-  final int pages;
-  final VoidCallback? onFirst;
-  final VoidCallback? onPrevious;
-  final VoidCallback? onNext;
-  final VoidCallback onRecompile;
-  final ValueChanged<String> onDetach;
+  final int? page;
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: didactaSurface,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: didactaInk.withValues(alpha: 0.72),
+      borderRadius: BorderRadius.circular(13),
+    ),
+    alignment: Alignment.center,
+    child: Text(
+      '${page ?? ''}',
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        fontFeatures: [FontFeature.tabularFigures()],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      // Aquí van las acciones que valen para toda la pestaña: pasar página en
-      // los dos paneles a la vez, separar, y elegir otras versiones. Lo que
-      // se hace a *un* PDF va en su panel, donde no hay que preguntar cuál.
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: 'Primera página',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.first_page, size: 18),
-            onPressed: onFirst,
-          ),
-          IconButton(
-            tooltip: 'Anterior',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.chevron_left, size: 18),
-            onPressed: onPrevious,
-          ),
-          Text(
-            '$page / $pages',
-            style: const TextStyle(
-              fontSize: 12,
-              fontFeatures: [FontFeature.tabularFigures()],
-              color: didactaMuted,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Siguiente',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.chevron_right, size: 18),
-            onPressed: onNext,
-          ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              group.isSingle
-                  ? group.panes.single.path.split('/').last
-                  : '${group.panes.length} versiones · las páginas se mueven '
-                        'juntas',
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              textDirection: group.isSingle
-                  ? TextDirection.rtl
-                  : TextDirection.ltr,
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
-            ),
-          ),
-          // Separar una versión: solo tiene sentido cuando hay más de una.
-          if (!group.isSingle) _DetachButton(group: group, onDetach: onDetach),
-          IconButton(
-            key: const Key('pdf-recompile'),
-            tooltip: 'Elegir otras versiones',
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.tune, size: 17),
-            onPressed: onRecompile,
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
 }
 
 /// Sacar una versión a su propia pestaña.

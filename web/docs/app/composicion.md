@@ -59,6 +59,23 @@ structure:
   - unit: analysis/normed/banach-spaces
 ```
 
+## El icono de información
+
+Arriba a la derecha, la **ⓘ**, la misma que en una lección. Contesta dónde
+está este tema y qué hay guardado de él:
+
+- **Se da en**: los sitios donde se da **este mismo tema**. Un tema vinculado
+  en dos grupos son dos, no uno: no son copias, es uno, y lo que se edita
+  desde cualquiera se ve en el otro.
+- **Pertenece a**: los temas que declara. El que los declara puede ser otro
+  repositorio --la teoría en uno y los problemas en otro-- y entonces el
+  vínculo no se ve desde el fichero.
+- **Versiones congeladas** de su curso académico: verlas y crear una. Estaban
+  sólo en la pantalla de Asignaturas, que es donde no estás cuando te lo
+  preguntas.
+- **Gestionar vinculación…**, cuando está vinculado en varios sitios: parte la
+  vinculación en dos, y cada grupo sigue sincronizado por dentro.
+
 ## Guardar
 
 Como en todas partes: un commit, con mensaje y con el diff delante. Y con el
@@ -68,3 +85,22 @@ y no se reescribe el fichero.
 
 Si la forma del fichero no se reconoce, Didacta lo dice y ofrece el editor de
 texto en lugar de adivinar.
+
+## Y el `.tex` del documento
+
+La composición vive en `year.yaml`, que es **la autoridad**: lleva el orden y
+los apartados en los tres idiomas. Al lado hay un `<documento>.tex`, que es lo
+que compila `pdflatex`, y que repite esa misma lista porque tiene que seguir
+funcionando por su cuenta: abrirlo en un editor y compilarlo a mano da el
+documento que dice la composición, sin que el motor intervenga.
+
+**Compilar pone los dos de acuerdo.** Antes de llamar a LaTeX, `didacta build`
+reescribe el cuerpo del `.tex` con lo que dice `year.yaml` --sólo el cuerpo: el
+preámbulo y la portada se quedan como están, y lo que está desactivado sigue
+desactivado, comentado--. Así que no hay que tocar ese fichero a mano, y un
+subapartado añadido aquí sale en el PDF siguiente.
+
+`didacta check` lo dice antes de compilar, cuando el `.tex` se ha quedado
+atrás. Y si el cuerpo lleva LaTeX que la composición no sabe decir --algo
+escrito a mano entre las unidades-- el fichero no se toca y se avisa: un `.tex`
+que alguien editó no se sacrifica para que el motor tenga razón.

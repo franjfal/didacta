@@ -42,7 +42,8 @@ didacta profiles            # las salidas disponibles
 didacta units               # la biblioteca
 didacta units --category analysis --missing va
 didacta translations        # qué falta traducir, por cuánto se usa
-didacta built am-iii/2025-2026   # qué hay compilado de un curso
+didacta built am-iii@2025-2026   # qué hay compilado de un curso
+didacta places --document am-iii@2025-2026/tema-1   # dónde más se da
 ```
 
 ## Comprobar
@@ -75,17 +76,86 @@ llena de `.aux`, y el PDF sabe volver a la línea del fichero fuente.
 didacta new unit analysis/normed/dual-space
 didacta new unit analysis/series/convergence --kind problem
 didacta new year am-iii 2026-2027
-didacta copy am-iii/2025-2026 am-iii/2026-2027 --document tema-1
+didacta copy --from am-iii@2025-2026 --to am-iii@2026-2027 tema-1
 ```
+
+`copy` **duplica** la composición: el curso de destino se lleva su propia
+entrada y a partir de ahí los dos van por su lado. Para dar *el mismo* tema en
+los dos sitios, `link`.
 
 ## Repartir
 
 ```bash
-didacta export am-iii/2025-2026 ~/Escritorio/AM3
+didacta export am-iii@2025-2026 --to ~/Escritorio/AM3
 ```
 
 Saca los PDF ya compilados a una carpeta, en carpetas por idioma y con nombres
 que se leen.
+
+## Compartir temario entre cursos
+
+```bash
+didacta places --document am-iii@2025-2026/tema-1   # dónde se da
+didacta places --unit analysis/normed/definition    # y una lección
+didacta link  --from am-iii@2025-2026/tema-1 --to mat@2026-2027
+didacta move  --from am-iii@2025-2026/tema-1 --to am-iii@2026-2027
+didacta use   --unit analysis/normed/definition --in am-iii@2026-2027/tema-1
+didacta unlink --at mat@2026-2027/tema-1
+```
+
+`link` hace que los dos cursos den **el mismo tema**: lo que se edite desde
+cualquiera se ve desde el otro, porque es un solo fichero. `unlink` separa una
+ubicación con una copia propia.
+
+Dividir un grupo de varias ubicaciones a la vez:
+
+```bash
+didacta split --content d-8a41f0c27b53 \
+              --group "mat@2026-2027/tema-1,doble@2026-2027/tema-1"
+didacta split --unit analysis/normed/definition \
+              --group "mat@2026-2027/tema-1#0"
+```
+
+Lo que no se nombre en ningún `--group` se queda con la entidad de siempre.
+Con `--deep` se duplican además las lecciones que el tema lleva dentro; sin
+él, que es lo corriente, el tema se separa y el material sigue siendo uno.
+
+```bash
+didacta ids            # qué lecciones no tienen id estable
+didacta ids --apply    # y ponérselo
+```
+
+Escribe una línea `id:` en cada `unit.yaml` que no la tenga, derivada de la
+ruta con un hash — así que sale el mismo lo haga quien lo haga, y dos personas
+que pongan al día el mismo repositorio por su cuenta no crean dos identidades
+para la misma lección. No mueve nada ni renombra nada.
+
+[:octicons-arrow-right-24: Contenido vinculado](../conceptos/vinculos.md)
+
+## Versiones congeladas
+
+```bash
+didacta freeze list   am-iii@2026-2027
+didacta freeze add    am-iii@2026-2027 --name "Inicio curso 2026-27" \
+                      --commit $(git rev-parse HEAD)
+didacta freeze rename am-iii@2026-2027 f-3c07a9e12b64 --name "Otro nombre"
+didacta freeze remove am-iii@2026-2027 f-3c07a9e12b64
+```
+
+Una congelación es **un commit con nombre**, guardado en
+`courses/<asignatura>/<año>/freezes.yaml`. No copia nada y quitarla no borra
+ningún commit. El SHA tiene que ser el entero.
+
+Abrir una versión, compararla y restaurar desde ella se hacen desde la
+aplicación, que es la que sabe preparar el árbol de trabajo. Lo que sí se
+puede hacer aquí es traer un tema del árbol de otra versión:
+
+```bash
+didacta restore am-iii@2026-2027/tema-1 --from /ruta/al/arbol/congelado
+didacta new year am-iii 2027-2028 --from-dir /ruta/al/arbol/congelado/courses/am-iii/2026-2027
+```
+
+[:octicons-arrow-right-24: Versiones congeladas](../app/congelaciones.md)
 
 ## El catálogo
 

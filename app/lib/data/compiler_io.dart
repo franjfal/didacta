@@ -8,6 +8,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import '../model/catalogue.dart';
 import 'compiler.dart';
 
 bool get supported => true;
@@ -16,10 +17,12 @@ Compiler makeCompiler({
   required String enginePath,
   required String repositoryPath,
   String? texPath,
+  List<String> templateDirs = const [],
 }) => _ProcessCompiler(
   enginePath: enginePath,
   repositoryPath: repositoryPath,
   texPath: texPath,
+  templateDirs: templateDirs,
 );
 
 /// El script del motor dentro de su repositorio.
@@ -183,10 +186,22 @@ class _ProcessCompiler implements Compiler {
     required this.enginePath,
     required this.repositoryPath,
     this.texPath,
+    this.templateDirs = const [],
   });
 
   final String enginePath;
   final String repositoryPath;
+
+  /// Los demás sitios donde hay plantillas de compilación declaradas.
+  ///
+  /// El repositorio que se compila las lee siempre por su cuenta; esto son
+  /// **los otros**: el repositorio de al lado y la carpeta del programa. Hace
+  /// falta porque el material está repartido --la teoría en uno y los
+  /// problemas en otro-- y el bloque de uno puede compilarse con una
+  /// plantilla que declara el otro. El motor solo ve un repositorio; quien
+  /// los tiene todos abiertos es la aplicación, así que es ella la que se los
+  /// dice.
+  final List<String> templateDirs;
 
   /// La carpeta `bin` de TeX, cuando está en un sitio que no es ninguno de
   /// los de siempre. Normalmente null: se busca.
@@ -305,6 +320,24 @@ class _ProcessCompiler implements Compiler {
       stale: decoded['stale'] == true,
       reason: decoded['reason'] as String?,
     );
+  }
+
+  @override
+  Future<List<OutputTemplate>> templatesIn(String directory) async {
+    // `profiles --json` da las quince de serie con las plantillas encima, y
+    // cada una dice de qué carpeta salió; aquí interesan las de esta.
+    final output = await _run([
+      '--templates-from',
+      directory,
+      'profiles',
+      '--json',
+    ]);
+    final records = jsonDecode(output) as List;
+    return [
+      for (final record in records)
+        if ((record as Map)['source'] == directory)
+          OutputTemplate.fromJson(record.cast<String, dynamic>()),
+    ];
   }
 
   @override
@@ -638,6 +671,11 @@ class _ProcessCompiler implements Compiler {
     void Function(String line)? onOutput,
   }) async {
     final script = cliIn(enginePath);
+    // Delante de la orden, que es donde van las opciones globales.
+    arguments = [
+      for (final directory in templateDirs) ...['--templates-from', directory],
+      ...arguments,
+    ];
     final Process process;
     try {
       process = await Process.start(

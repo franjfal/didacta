@@ -127,6 +127,29 @@ class TaxonomyFile {
     _lines.replaceRange(start, end + 1, written);
   }
 
+  /// Con qué plantillas se compila un bloque, por defecto.
+  ///
+  /// Lista vacía quita la línea, que es «todas las activas» y no «ninguna»:
+  /// un bloque sin salidas no se podría compilar y nadie entendería por qué.
+  void setBlockTemplates(String id, List<String> templates) {
+    final block = _blocks().where((b) => b.id == id).firstOrNull;
+    if (block == null) {
+      throw TaxonomyException('no se declara el bloque `$id`');
+    }
+    final field = ' ' * block.fieldIndent;
+    final written = templates.isEmpty
+        ? <String>[]
+        : ['${field}templates: [${templates.join(', ')}]'];
+
+    for (var i = block.firstLine; i <= block.lastLine; i += 1) {
+      if (_keyAt(_lines[i], block.fieldIndent) != 'templates') continue;
+      _lines.replaceRange(i, i + 1, written);
+      return;
+    }
+    if (written.isEmpty) return;
+    _lines.insertAll(block.lastLine + 1, written);
+  }
+
   /// Declara un bloque nuevo al final de la lista.
   ///
   /// Delante de `categories:` cuando la clave `blocks:` no existía todavía.

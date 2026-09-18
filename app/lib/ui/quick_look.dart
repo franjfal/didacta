@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 
 import '../router.dart';
 import '../state/session.dart';
+import 'export_actions.dart';
 import 'theme.dart';
 
 /// Qué versión de una unidad se puede ojear, si es que hay alguna.
@@ -261,6 +262,13 @@ class _Bar extends StatelessWidget {
           ),
           const SizedBox(width: 6),
         ],
+        IconButton(
+          key: const Key('quick-look-save'),
+          tooltip: 'Guardar una copia',
+          visualDensity: VisualDensity.compact,
+          icon: const Icon(Icons.file_download_outlined, size: 17),
+          onPressed: () => savePdfCopy(context, path: output.pdf),
+        ),
         IconButton(
           key: const Key('quick-look-external'),
           tooltip: 'Abrir en el visor del sistema',

@@ -57,7 +57,7 @@
 
 \titleformat{\section}
   {\normalfont\Large\bfseries\sffamily\color{didactaInk}}
-  {\thesection}{0.7em}{}
+  {\color{didactaAccentDark}\thesection}{0.7em}{}
   [{\color{didactaAccent}\titlerule[1pt]}]
 \titleformat{\subsection}
   {\normalfont\large\bfseries\sffamily\color{didactaInk}}
@@ -76,17 +76,36 @@
 %% Document title page
 %% ---------------------------------------------------------------------------
 
+%% La portada lleva la misma marca que las diapositivas --regla gruesa arriba,
+%% par de franjas escalonadas bajo el título-- para que los apuntes y lo que
+%% se proyectó en clase se reconozcan como la misma asignatura. Dentro de la
+%% caja de texto y no a sangre: esto se imprime, y una mancha de color de
+%% borde a borde en una fotocopiadora sale sucia y se come el tóner.
+\newcommand{\didacta@coverrules}{%
+  \par\nointerlineskip
+  \hbox to\linewidth{\hskip0.16\linewidth
+    \color{didactaAccent}\rule{0.84\linewidth}{2.2pt}}%
+  \nointerlineskip
+  \hbox to\linewidth{\hskip0.06\linewidth
+    \color{didactaAccentDark}\rule{0.94\linewidth}{1.4pt}}%
+  \par
+}
+
 \newcommand{\didacta@titlepage@doc}{%
   \begin{titlepage}
+    %% Sin encabezado ni número: una portada con el encabezado puesto repite
+    %% el título dos centímetros por encima del título.
+    \thispagestyle{empty}%
     \centering
-    \vspace*{2.5cm}
+    \noindent{\color{didactaAccentDark}\rule{\linewidth}{3pt}}\par
+    \vspace*{2.2cm}
     \ifdefempty{\didactaCourseLogo}{}{%
       \includegraphics[height=2cm]{\didactaCourseLogo}\par\vspace{1.4cm}}
     {\sffamily\Huge\bfseries\color{didactaInk}\didactaCourseTitle\par}
     \ifdefempty{\didactaCourseSubtitle}{}{%
       \vspace{0.5cm}{\sffamily\Large\color{didactaMuted}\didactaCourseSubtitle\par}}
     \vspace{1cm}
-    {\color{didactaAccent}\rule{0.4\linewidth}{1.5pt}\par}
+    \didacta@coverrules
     \vspace{1cm}
     \ifdefempty{\didactaDocumentTitle}{}{%
       {\sffamily\LARGE\color{didactaInk}\didactaDocumentTitle\par}}
@@ -108,7 +127,9 @@
         {\small\color{didactaMuted}\didactaAcademicYearName} &
         {\small\didactaCourseYear} \\[0.3ex]}
     \end{tabular}
-    \vspace{0.8cm}
+    %% El \par cierra la línea de la tabla. Sin él, la institución se compone
+    %% *al lado* de la tabla y no debajo, que es como salía.
+    \par\vspace{0.8cm}
     \ifdefempty{\didactaCourseInstitution}{}{%
       {\small\color{didactaMuted}\didactaCourseInstitution\par}}
     \ifdefempty{\didactaCourseDepartment}{}{%

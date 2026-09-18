@@ -11,6 +11,7 @@
 /// funcionar es peor que su ausencia explicada.
 library;
 
+import '../model/catalogue.dart';
 import 'compiler_stub.dart' if (dart.library.io) 'compiler_io.dart' as platform;
 
 /// Un perfil de salida ofrecido para una unidad, tal como lo lista el motor.
@@ -203,10 +204,12 @@ abstract class Compiler {
     required String enginePath,
     required String repositoryPath,
     String? texPath,
+    List<String> templateDirs = const [],
   }) => platform.makeCompiler(
     enginePath: enginePath,
     repositoryPath: repositoryPath,
     texPath: texPath,
+    templateDirs: templateDirs,
   );
 
   /// Si compilar es posible aquí. Falso en web, donde no hay LaTeX ni forma
@@ -261,6 +264,15 @@ abstract class Compiler {
     bool fast = false,
     void Function(String line)? onOutput,
   });
+
+  /// Las plantillas que declara un directorio, tal como las lee el motor.
+  ///
+  /// Existe por la carpeta de plantillas del programa: no es un repositorio,
+  /// así que no tiene índice y el catálogo no la ve. Se le pregunta al motor
+  /// en lugar de leer su `templates.yaml` aquí, porque tener dos lectores del
+  /// mismo fichero es tener dos respuestas a la misma pregunta -- y la que
+  /// importa es la del que compila.
+  Future<List<OutputTemplate>> templatesIn(String directory);
 
   /// Si el índice de `generated/` ya no describe lo que hay en el disco.
   ///

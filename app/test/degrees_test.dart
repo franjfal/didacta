@@ -197,6 +197,49 @@ void main() {
     });
   });
 
+  group('dejar de declarar', () {
+    test('quita el grado y no toca a los demás', () {
+      final file = DegreesFile(degreesYaml)..remove('matematicas');
+      expect(file.ids, ['fisica']);
+      expect(file.titlesOf('fisica'), {
+        'es': 'Grado en Física',
+        'va': 'Grau en Física',
+      });
+      expect(file.text, contains('no agrupa'));
+    });
+
+    test('el último deja una lista vacía, no una clave colgando', () {
+      // `degrees:` sin valor se lee como null y no como lista vacía, que es
+      // un error de lectura del repositorio entero.
+      final file = DegreesFile(degreesYaml)
+        ..remove('matematicas')
+        ..remove('fisica');
+      expect(file.ids, isEmpty);
+      expect(file.text, contains('degrees: []'));
+    });
+
+    test('quitar uno que no se declara aquí se niega', () {
+      expect(
+        () => DegreesFile(degreesYaml).remove('quimicas'),
+        throwsA(isA<DegreesException>()),
+      );
+    });
+
+    test('y sus asignaturas siguen saliendo, sin agrupar', () {
+      // La regla que hace que esto no pueda perder material: un grado que no
+      // declara nadie no agrupa, y sus asignaturas salen enteras.
+      final catalogue = Catalogue.merge([
+        repoWith(
+          repo: 'x/teoria',
+          courses: [courseJsonIn('am-i', degree: 'matematicas')],
+        ),
+      ]);
+      expect(catalogue.degrees, isEmpty);
+      expect(catalogue.courses, hasLength(1));
+      expect(catalogue.undeclaredDegrees, ['matematicas']);
+    });
+  });
+
   group('agrupar sin romper nada', () {
     test('las asignaturas de un grado se pueden pedir', () {
       final catalogue = repoWith(

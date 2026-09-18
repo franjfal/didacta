@@ -42,6 +42,7 @@
 %% Estructura y portada.
 \def\didactaContentsName{Edukiak}
 \def\didactaChapterName{Kapitulua}
+\def\didactaSectionName{Atala}
 \def\didactaCourseName{Irakasgaia}
 \def\didactaTeacherName{Irakaslea}
 \def\didactaAcademicYearName{Ikasturtea}

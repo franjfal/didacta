@@ -41,8 +41,8 @@ import 'package:flutter/material.dart';
 
 import '../data/local_clone.dart';
 import '../model/file_history.dart';
-import '../model/line_diff.dart';
 import '../state/session.dart';
+import 'diff_view.dart';
 import 'theme.dart';
 
 /// El estado de mirar el historial de un fichero.
@@ -198,7 +198,7 @@ class _HistoryTabState extends State<HistoryTab> {
     final state = widget.state;
 
     if (!state.available) {
-      return const _Empty(
+      return const DiffPlaceholder(
         icon: Icons.history_toggle_off,
         text:
             'El historial sale de git, así que hace falta un clon del '
@@ -209,10 +209,13 @@ class _HistoryTabState extends State<HistoryTab> {
       return const Center(child: CircularProgressIndicator());
     }
     if (state.problem != null && state.commits.isEmpty) {
-      return _Empty(icon: Icons.error_outline, text: '${state.problem}');
+      return DiffPlaceholder(
+        icon: Icons.error_outline,
+        text: '${state.problem}',
+      );
     }
     if (state.commits.isEmpty) {
-      return const _Empty(
+      return const DiffPlaceholder(
         icon: Icons.history,
         text:
             'Este fichero todavía no tiene historial: no hay ningún commit '
@@ -421,7 +424,7 @@ class _Detail extends StatelessWidget {
   Widget build(BuildContext context) {
     final chosen = commit;
     if (chosen == null) {
-      return const _Empty(
+      return const DiffPlaceholder(
         icon: Icons.history,
         text: 'Elige una versión para ver cómo estaba el fichero.',
       );
@@ -433,7 +436,7 @@ class _Detail extends StatelessWidget {
         Expanded(
           child: loading
               ? const Center(child: CircularProgressIndicator())
-              : _ContentView(diff: diff, unchanged: unchanged),
+              : DiffView(diff: diff, unchanged: unchanged),
         ),
       ],
     );
@@ -653,216 +656,3 @@ String exactMoment(DateTime when) {
 
 /// El fichero como estaba en esa versión, con lo que el commit añadió en verde
 /// y lo que quitó en rojo.
-class _ContentView extends StatelessWidget {
-  const _ContentView({required this.diff, required this.unchanged});
-
-  final FileDiff? diff;
-
-  /// El contenido cuando el commit no cambió nada y no hay diff.
-  final String? unchanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final found = diff;
-    if (found == null) {
-      return const _Empty(icon: Icons.difference_outlined, text: '');
-    }
-    if (found.isBinary) {
-      return const _Empty(
-        icon: Icons.image_outlined,
-        text:
-            'Es un fichero binario: git no guarda sus líneas, así que no hay '
-            'contenido que enseñar.',
-      );
-    }
-
-    final lines = <DiffLine>[];
-    // Delante de qué líneas hay un salto. Pidiendo el fichero entero git da un
-    // solo trozo, así que esto normalmente está vacío; se dibuja igualmente
-    // porque un commit de fusión sí puede llegar partido, y un texto al que le
-    // faltan líneas en medio sin decirlo es un texto que miente.
-    final gaps = <int>{};
-    for (final hunk in found.hunks) {
-      if (lines.isNotEmpty) gaps.add(lines.length);
-      lines.addAll(hunk.lines);
-    }
-    final text = unchanged;
-    if (lines.isEmpty && text != null) {
-      // El commit no cambió el contenido --lo renombró, le cambió los
-      // permisos--, así que todas las líneas son las que ya había.
-      final all = text.split('\n');
-      for (var i = 0; i < all.length; i += 1) {
-        lines.add(
-          DiffLine(ChangeKind.kept, all[i], oldLine: i + 1, newLine: i + 1),
-        );
-      }
-    }
-
-    if (lines.isEmpty) {
-      return const _Empty(
-        icon: Icons.help_outline,
-        text:
-            'De esta versión no se puede sacar el contenido: en este commit '
-            'el fichero todavía estaba en otro sitio o con otro nombre.',
-      );
-    }
-
-    return SelectionArea(
-      child: ListView.builder(
-        padding: const EdgeInsets.only(bottom: 28),
-        itemCount: lines.length,
-        itemBuilder: (context, index) =>
-            _DiffRow(line: lines[index], gap: gaps.contains(index)),
-      ),
-    );
-  }
-}
-
-/// Una línea del fichero: dos números, un signo y el texto.
-class _DiffRow extends StatelessWidget {
-  const _DiffRow({required this.line, this.gap = false});
-
-  final DiffLine line;
-
-  /// Si delante de esta línea el texto se corta.
-  final bool gap;
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color background, Color gutter, String sign) = switch (line.kind) {
-      ChangeKind.added => (_addedBack, _addedGutter, '+'),
-      ChangeKind.removed => (_removedBack, _removedGutter, '−'),
-      ChangeKind.kept => (Colors.white, didactaPanel, ' '),
-    };
-
-    final row = Container(
-      color: background,
-      // `IntrinsicHeight` y no `CrossAxisAlignment.stretch`: estirar dentro de
-      // una fila cuya altura la deciden sus propios hijos es circular, y
-      // Flutter lo dice pidiendo una altura infinita. Con esto los márgenes
-      // de números llegan hasta abajo también cuando la línea de LaTeX es
-      // larga y se parte en dos, que es lo que se quería del estirado.
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Gutter(number: line.oldLine, colour: gutter),
-            _Gutter(number: line.newLine, colour: gutter),
-            Container(
-              width: 18,
-              color: gutter,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: 1),
-              child: Text(
-                sign,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  fontFamily: 'monospace',
-                  color: didactaMuted,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 1.5, 8, 1.5),
-                child: Text(
-                  // Una línea vacía sigue siendo una línea: sin esto la fila se
-                  // encoge y el texto se lee como si faltara algo.
-                  line.text.isEmpty ? ' ' : line.text,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.45,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (!gap) return row;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Container(
-          height: 22,
-          color: didactaPanel,
-          alignment: Alignment.center,
-          child: const Text(
-            '⋯',
-            style: TextStyle(fontSize: 12, color: didactaMuted),
-          ),
-        ),
-        row,
-      ],
-    );
-  }
-}
-
-class _Gutter extends StatelessWidget {
-  const _Gutter({required this.number, required this.colour});
-
-  final int? number;
-  final Color colour;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    width: 46,
-    color: colour,
-    alignment: Alignment.centerRight,
-    padding: const EdgeInsets.fromLTRB(0, 1.5, 7, 1.5),
-    child: Text(
-      number?.toString() ?? '',
-      style: const TextStyle(
-        fontSize: 11,
-        height: 1.45,
-        fontFamily: 'monospace',
-        color: didactaMuted,
-      ),
-    ),
-  );
-}
-
-/// Los verdes y los rojos de lo que cambió.
-///
-/// Claros a propósito: lo que tiene que leerse es el texto, y un fondo
-/// saturado detrás de LaTeX en monoespaciada cansa a los diez segundos. El
-/// margen va un punto más fuerte que la fila, que es lo que deja seguir la
-/// columna de cambios sin leer línea a línea.
-const Color _addedBack = Color(0xFFE9F6EC);
-const Color _addedGutter = Color(0xFFCFEAD8);
-const Color _removedBack = Color(0xFFFBECEC);
-const Color _removedGutter = Color(0xFFF2D4D4);
-
-class _Empty extends StatelessWidget {
-  const _Empty({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 400),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 28, color: didactaMuted),
-            if (text.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(
-                text,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: didactaMuted),
-              ),
-            ],
-          ],
-        ),
-      ),
-    ),
-  );
-}

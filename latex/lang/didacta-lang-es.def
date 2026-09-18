@@ -36,6 +36,7 @@
 %% Structure and front matter.
 \def\didactaContentsName{Contenidos}
 \def\didactaChapterName{Tema}
+\def\didactaSectionName{Apartado}
 \def\didactaCourseName{Asignatura}
 \def\didactaTeacherName{Profesor}
 \def\didactaAcademicYearName{Curso}

@@ -40,6 +40,17 @@
 
 \input{didacta-profiles}
 
+%% Las plantillas del repositorio, si el motor las ha generado.
+%%
+%% Después del registro que trae Didacta, así que una plantilla con el mismo
+%% id sustituye a la de serie. Y **opcional**: sin este fichero todo sigue
+%% compilando con las quince de siempre, que es lo que hace que `pdflatex
+%% master.tex` a mano en un editor siga produciendo los apuntes sin que el
+%% motor intervenga.
+\@ifundefined{DidactaTemplates}{}{%
+  \IfFileExists{\DidactaTemplates}{\input{\DidactaTemplates}}{}%
+}
+
 %% Fail loudly on an unknown profile. A silent fallback would hand back a PDF
 %% that looks plausible and is the wrong output.
 \@ifundefined{didacta@profile@\DidactaProfile @class}{%

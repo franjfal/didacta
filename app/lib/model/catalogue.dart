@@ -76,23 +76,45 @@ enum TranslationStatus {
       this == TranslationStatus.draft;
 }
 
-/// Where a unit is used: one document in one year of one course.
+/// Una ubicación de una lección: un documento de un año de una asignatura.
+///
+/// Con la posición dentro de la composición, porque **la misma lección puede
+/// estar dos veces en el mismo tema** y entonces son dos ubicaciones. Sin
+/// poder nombrarlas por separado, separar una de la otra sería adivinar cuál
+/// se estaba tocando.
 class UnitUsage {
   const UnitUsage({
     required this.course,
     required this.year,
     required this.document,
+    this.index = 0,
+    this.reference = '',
   });
 
   factory UnitUsage.fromJson(Map<String, dynamic> json) => UnitUsage(
     course: json['course'] as String? ?? '',
     year: json['year'] as String? ?? '',
     document: json['document'] as String? ?? '',
+    index: (json['index'] as num?)?.toInt() ?? 0,
+    reference: json['ref'] as String? ?? '',
   );
 
   final String course;
   final String year;
   final String document;
+
+  /// Qué posición ocupa dentro de la composición. Cero en un índice de antes
+  /// de que se publicara, que es el caso en que no había dos iguales que
+  /// distinguir.
+  final int index;
+
+  /// Cómo está escrita la referencia: la ruta o el id. Las dos nombran la
+  /// misma lección, y quien vaya a reescribir la línea necesita saber cuál
+  /// de las dos hay delante.
+  final String reference;
+
+  /// Cómo se nombra esta ubicación en una orden del motor.
+  String get key => '$course@$year/$document#$index';
 
   @override
   String toString() => '$course/$year/$document';
@@ -106,6 +128,7 @@ class Unit {
     this.repo = '',
     required this.area,
     required this.block,
+    this.templates = const [],
     required this.kind,
     required this.category,
     required this.topic,
@@ -135,6 +158,7 @@ class Unit {
       block:
           json['block'] as String? ??
           (json['area'] == 'problems' ? 'problems' : 'theory'),
+      templates: _stringList(json['templates']),
       kind: json['kind'] as String? ?? 'theory',
       category: json['category'] as String? ?? '',
       topic: json['topic'] as String? ?? '',
@@ -189,6 +213,13 @@ class Unit {
   /// teórica dentro de una práctica de problemas es `kind: theory` y
   /// `block: problems`, y las dos cosas son ciertas.
   final String block;
+
+  /// En qué plantillas se compila **esta** lección.
+  ///
+  /// Vacía es lo corriente y quiere decir «las que diga su bloque». Elegir
+  /// aquí es la excepción --esta lección concreta no se quiere en
+  /// diapositivas-- y por eso lo normal no se declara.
+  final List<String> templates;
 
   final String kind;
   final String category;
@@ -360,6 +391,7 @@ class Document {
     required this.unitRefs,
     this.structure = const [],
     this.themes = const [],
+    this.content = '',
   });
 
   factory Document.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
@@ -373,6 +405,7 @@ class Document {
         unitRefs: _stringList(json['unitRefs']),
         structure: _structure(json['structure']),
         themes: _stringList(json['themes']),
+        content: json['content'] as String? ?? '',
       );
 
   /// La estructura tal como la escribe el motor: una lista de mapas de una
@@ -426,6 +459,19 @@ class Document {
   /// declara no es un error: el documento sale suelto.
   final List<String> themes;
 
+  /// De qué entidad de contenido es esta ubicación.
+  ///
+  /// Vacío en un documento que solo se da aquí: no forma grupo, así que no
+  /// necesita identidad aparte, y eso es lo que evita que compartir sea
+  /// obligatorio para escribir un curso. Con valor, el tema está **vinculado**
+  /// y lo que se edite se ve desde todas las ubicaciones que lo nombran.
+  final String content;
+
+  bool get isLinked => content.isNotEmpty;
+
+  /// Cómo se nombra esta ubicación en una orden del motor.
+  String key(String course, String year) => '$course@$year/$id';
+
   String title([String? language]) {
     final wanted = titles[language ?? this.language];
     if (wanted != null && wanted.isNotEmpty) return wanted;
@@ -450,6 +496,149 @@ class ThemedDocuments {
   bool get isLoose => theme == null;
 }
 
+/// Una versión congelada de un curso: un commit con nombre.
+///
+/// No hay ninguna copia detrás. git ya guarda el contenido de cada commit; lo
+/// que Didacta guarda es lo que git no sabe -- que ese commit concreto es
+/// «Antes del primer parcial» y que pertenece a este curso.
+///
+/// Vive en el repositorio, en `courses/<asignatura>/<año>/freezes.yaml`, por
+/// lo mismo que todo lo demás: un clon en otro ordenador tiene que ver las
+/// mismas congelaciones, y una base de datos local no se clona.
+class Freeze {
+  const Freeze({
+    required this.id,
+    required this.name,
+    required this.commit,
+    this.description = '',
+    this.created = '',
+    this.course = '',
+    this.year = '',
+    this.repo = '',
+  });
+
+  factory Freeze.fromJson(Map<String, dynamic> json, {String repo = ''}) =>
+      Freeze(
+        repo: repo,
+        id: json['id'] as String? ?? '',
+        name: json['name'] as String? ?? '',
+        commit: json['commit'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        created: json['created'] as String? ?? '',
+        course: json['course'] as String? ?? '',
+        year: json['year'] as String? ?? '',
+      );
+
+  final String id;
+  final String name;
+
+  /// El commit entero. Los cortos no valen: se guardan para años, y un
+  /// prefijo que hoy es único deja de serlo cuando el repositorio crece.
+  final String commit;
+
+  final String description;
+
+  /// Cuándo se creó, en ISO-8601 con zona. Texto y no `DateTime` porque es lo
+  /// que dice el fichero; quien quiera ordenarlas lo convierte.
+  final String created;
+
+  final String course;
+  final String year;
+
+  /// De qué repositorio sale. Un curso puede estar repartido entre varios, y
+  /// una congelación es de aquel cuyo commit nombra.
+  final String repo;
+
+  String get shortCommit =>
+      commit.length <= 7 ? commit : commit.substring(0, 7);
+
+  DateTime? get when => DateTime.tryParse(created);
+}
+
+/// Una ubicación de un contenido: dónde aparece.
+class ContentPlacement {
+  const ContentPlacement({
+    required this.course,
+    required this.year,
+    required this.document,
+    this.index,
+  });
+
+  factory ContentPlacement.fromJson(Map<String, dynamic> json) =>
+      ContentPlacement(
+        course: json['course'] as String? ?? '',
+        year: json['year'] as String? ?? '',
+        document: json['document'] as String? ?? '',
+        index: (json['index'] as num?)?.toInt(),
+      );
+
+  final String course;
+  final String year;
+  final String document;
+
+  /// La posición dentro de una composición, para las lecciones. Nula para un
+  /// documento, que no está dentro de nada.
+  final int? index;
+
+  String get key => index == null
+      ? '$course@$year/$document'
+      : '$course@$year/$document#$index';
+}
+
+/// Un documento compartido y dónde se da.
+///
+/// El grupo de sincronización no se guarda en ninguna parte: **es** el
+/// conjunto de ubicaciones que nombran el mismo id, y el motor lo calcula
+/// leyendo los ficheros. Una lista aparte sería una segunda verdad que puede
+/// contradecir a los ficheros, y reconciliarla después de un `git merge` es
+/// exactamente el problema que este modelo existe para no tener.
+class SharedDocument {
+  const SharedDocument({
+    required this.id,
+    required this.placements,
+    this.declared = true,
+    this.titles = const {},
+    this.kind = '',
+    this.repo = '',
+  });
+
+  factory SharedDocument.fromJson(
+    Map<String, dynamic> json, {
+    String repo = '',
+  }) => SharedDocument(
+    repo: repo,
+    id: json['id'] as String? ?? '',
+    declared: json['declared'] as bool? ?? true,
+    titles: _stringMap(json['title']),
+    kind: json['kind'] as String? ?? '',
+    placements: [
+      for (final item in (json['placements'] as List?) ?? const [])
+        ContentPlacement.fromJson((item as Map).cast<String, dynamic>()),
+    ],
+  );
+
+  final String id;
+
+  /// Que el fichero esté **aquí**. Puede estar en el repositorio de al lado,
+  /// y entonces el tema sale vacío hasta que se abra el otro: el mismo trato
+  /// que un tema que declara otro repositorio.
+  final bool declared;
+
+  final Map<String, String> titles;
+  final String kind;
+  final List<ContentPlacement> placements;
+  final String repo;
+
+  String title(String language) {
+    final wanted = titles[language];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return id;
+  }
+}
+
 /// One academic year of a course.
 class CourseYear {
   const CourseYear({
@@ -458,6 +647,7 @@ class CourseYear {
     required this.documents,
     this.group,
     this.themes = const [],
+    this.freezes = const [],
   });
 
   factory CourseYear.fromJson(
@@ -474,6 +664,10 @@ class CourseYear {
     documents: [
       for (final item in (json['documents'] as List?) ?? const [])
         Document.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
+    ],
+    freezes: [
+      for (final item in (json['freezes'] as List?) ?? const [])
+        Freeze.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
     ],
   );
 
@@ -504,12 +698,24 @@ class CourseYear {
         if (!byTheme.containsKey(theme.id)) theme,
     ];
 
+    // Las congelaciones se suman igual que los temas: cada repositorio
+    // congela los commits del suyo, y un curso repartido entre dos tiene las
+    // de los dos. Un id repetido se queda con la primera -- son ids opacos,
+    // así que repetirse significa que es la misma.
+    final byFreeze = {for (final item in freezes) item.id};
+    final mergedFreezes = [
+      ...freezes,
+      for (final item in other.freezes)
+        if (!byFreeze.contains(item.id)) item,
+    ];
+
     return CourseYear(
       year: year,
       language: language,
       group: group ?? other.group,
       themes: mergedThemes,
       documents: [...documents, ...added],
+      freezes: mergedFreezes,
     );
   }
 
@@ -526,6 +732,12 @@ class CourseYear {
 
   /// In composition order, which is content: the order units are taught in.
   final List<Document> documents;
+
+  /// Las versiones congeladas de este curso, en el orden en que se crearon.
+  ///
+  /// Vacía es lo corriente: un curso sin congelar no tiene ninguna, y es el
+  /// caso de todos hasta que alguien congela el primero.
+  final List<Freeze> freezes;
 
   /// El mismo año sin lo que aporten [hidden].
   ///
@@ -553,6 +765,10 @@ class CourseYear {
           if (!hidden.contains(theme.repo)) theme,
       ],
       documents: kept,
+      freezes: [
+        for (final item in freezes)
+          if (!hidden.contains(item.repo)) item,
+      ],
     );
   }
 
@@ -628,20 +844,30 @@ class CourseBlock {
   const CourseBlock({
     required this.id,
     required this.titles,
+    this.templates = const [],
     this.sources = const {},
   });
 
   factory CourseBlock.fromJson(Map<String, dynamic> json, {String repo = ''}) {
     final titles = _stringMap(json['title']);
+    final templates = _stringList(json['templates']);
     return CourseBlock(
       id: json['id'] as String? ?? '',
       titles: titles,
-      sources: {repo: BlockFacts(titles: titles)},
+      templates: templates,
+      sources: {repo: BlockFacts(titles: titles, templates: templates)},
     );
   }
 
   final String id;
   final Map<String, String> titles;
+
+  /// En qué plantillas se compila lo de este bloque, por defecto.
+  ///
+  /// Vacía quiere decir «todas las activas» y no «ninguna»: declarar un
+  /// bloque no puede dejar su material sin salidas. Cada documento y cada
+  /// lección pueden quedarse con menos.
+  final List<String> templates;
 
   /// Lo que declara cada repositorio, por separado.
   ///
@@ -674,6 +900,7 @@ class CourseBlock {
   CourseBlock withoutSources(Set<String> hidden) => CourseBlock(
     id: id,
     titles: titles,
+    templates: templates,
     sources: {
       for (final entry in sources.entries)
         if (!hidden.contains(entry.key)) entry.key: entry.value,
@@ -688,19 +915,26 @@ class CourseBlock {
   CourseBlock mergedWith(CourseBlock other) => CourseBlock(
     id: id,
     titles: {...other.titles, ...titles},
+    templates: templates.isEmpty ? other.templates : templates,
     sources: {...sources, ...other.sources},
   );
 }
 
 /// Lo que un repositorio declara de un bloque.
 class BlockFacts {
-  const BlockFacts({this.titles = const {}});
+  const BlockFacts({this.titles = const {}, this.templates = const []});
 
   final Map<String, String> titles;
+  final List<String> templates;
 
   Map<String, String> get comparable => {
     for (final entry in titles.entries)
       if (entry.value.isNotEmpty) 'título (${entry.key})': entry.value,
+    // Con qué se compila entra en la comparación: si un repositorio dice que
+    // la teoría sale en diapositivas y apuntes y el otro solo en apuntes, lo
+    // que se compila depende de en qué orden se abrieron -- y eso se
+    // descubre cuando falta media clase.
+    if (templates.isNotEmpty) 'plantillas': templates.join(', '),
   };
 }
 
@@ -865,7 +1099,7 @@ class CourseFacts {
 /// Tres ficheros distintos --`course.yaml`, `degrees.yaml` y `taxonomy.yaml`--
 /// y tres formas de escribirlos, así que quien resuelve la discrepancia
 /// necesita saber cuál es.
-enum ConflictAbout { course, degree, block }
+enum ConflictAbout { course, degree, block, template }
 
 class MetadataConflict {
   const MetadataConflict({
@@ -898,6 +1132,10 @@ class MetadataConflict {
   bool get fixable => switch (about) {
     ConflictAbout.degree => _localised.hasMatch(field),
     ConflictAbout.block => _localised.hasMatch(field),
+    // De una plantilla solo se iguala el nombre desde aquí. La clase y las
+    // opciones se dicen, y se arreglan editándola: cambiarlas a distancia es
+    // cambiar qué PDF sale, y eso se mira antes de pulsar.
+    ConflictAbout.template => _localised.hasMatch(field),
     ConflictAbout.course => path != null,
   };
 
@@ -1112,6 +1350,7 @@ class OutputProfile {
     required this.family,
     required this.documentClass,
     this.label = '',
+    this.reveals = 'statements',
   });
 
   factory OutputProfile.fromJson(Map<String, dynamic> json) => OutputProfile(
@@ -1119,6 +1358,7 @@ class OutputProfile {
     family: json['family'] as String? ?? '',
     documentClass: json['documentClass'] as String? ?? '',
     label: json['label'] as String? ?? '',
+    reveals: json['reveals'] as String? ?? 'statements',
   );
 
   final String id;
@@ -1131,9 +1371,254 @@ class OutputProfile {
   /// en un índice viejo, y entonces se enseña el id, que es feo pero cierto.
   final String label;
 
+  /// Cuánto enseña de un ejercicio: `statements`, `answers`, `solutions` o
+  /// `teacher`.
+  ///
+  /// Lo dice el motor y viaja en el índice. Es lo que contesta la pregunta
+  /// que se hace de verdad delante del menú --«¿esta lleva las
+  /// soluciones?»--, y entregar a una clase la hoja equivocada es el fallo
+  /// que eso viene a impedir.
+  final String reveals;
+
   String get name => label.isEmpty ? id : label;
 
   bool get isSlides => documentClass == 'beamer';
+}
+
+/// Una plantilla de compilación: una salida que declara el repositorio.
+///
+/// Es **lo mismo** que un [OutputProfile] --qué clase de documento sale, con
+/// qué opciones y con qué ejes-- con dos diferencias que lo cambian todo: la
+/// escribe quien enseña, y puede traer su propio preámbulo de LaTeX. Las
+/// quince de siempre siguen viniendo con el programa; una plantilla con el
+/// mismo id las sustituye.
+///
+/// Y como los bloques y las titulaciones, **se declara donde se tenga y se
+/// nombra desde cualquier sitio**: el bloque de teoría puede compilarse con
+/// una plantilla que declara el repositorio de problemas, que es como está
+/// repartido el material de verdad.
+class OutputTemplate {
+  const OutputTemplate({
+    required this.id,
+    this.titles = const {},
+    this.label = '',
+    this.family = '',
+    this.reveals = 'statements',
+    this.documentClass = '',
+    this.classOptions = '',
+    this.axes = const {},
+    this.active = true,
+    this.hasPreamble = false,
+    this.storedIn = '',
+    this.sources = const {},
+  });
+
+  factory OutputTemplate.fromJson(
+    Map<String, dynamic> json, {
+    String repo = '',
+  }) {
+    final titles = _stringMap(json['title']);
+    final template = OutputTemplate(
+      id: json['id'] as String? ?? '',
+      titles: titles,
+      label: json['label'] as String? ?? '',
+      family: json['family'] as String? ?? '',
+      reveals: json['reveals'] as String? ?? 'statements',
+      documentClass: json['documentClass'] as String? ?? '',
+      classOptions: json['classOptions'] as String? ?? '',
+      axes: _stringMap(json['axes']),
+      active: json['active'] as bool? ?? true,
+      hasPreamble: json['hasPreamble'] as bool? ?? false,
+      // De qué carpeta salió. Solo lo dice `didacta profiles`, que es por
+      // donde llegan las del programa; en el índice no viaja, porque ese
+      // fichero se versiona y una ruta absoluta lo haría distinto en cada
+      // ordenador.
+      storedIn: json['source'] as String? ?? '',
+    );
+    return template._withSource(repo);
+  }
+
+  /// La misma salida vista como plantilla, para un repositorio que no declara
+  /// ninguna.
+  ///
+  /// Sin esto, la primera pantalla que preguntara por las plantillas de un
+  /// repositorio recién abierto no ofrecería nada que compilar. Las que trae
+  /// el programa no las declara nadie, y eso es exactamente lo que dice
+  /// [declared].
+  factory OutputTemplate.ofProfile(OutputProfile profile) => OutputTemplate(
+    id: profile.id,
+    label: profile.label,
+    family: profile.family,
+    reveals: profile.reveals,
+    documentClass: profile.documentClass,
+  );
+
+  final String id;
+
+  /// El nombre puesto a mano, por idioma. Vacío es lo corriente: [label] ya
+  /// dice «Diapositivas (sin pausas)» sin que nadie lo escriba.
+  final Map<String, String> titles;
+
+  /// El nombre que deduce el motor de los ejes de la plantilla.
+  final String label;
+
+  /// `slides`, `notes`, `problems`, `handout`, `exam`.
+  final String family;
+
+  /// Cuánto enseña de un ejercicio: `statements`, `answers`, `solutions` o
+  /// `teacher`.
+  final String reveals;
+
+  final String documentClass;
+  final String classOptions;
+  final Map<String, String> axes;
+
+  /// Si se compila. Apagada queda declarada y fuera de las salidas, que es lo
+  /// que se quiere de una versión que este curso no se da: borrarla perdería
+  /// su preámbulo.
+  final bool active;
+
+  /// Si trae un `templates/<id>.tex` con su propia cabecera.
+  final bool hasPreamble;
+
+  /// La carpeta que la declara, cuando se sabe.
+  ///
+  /// Vacía para las que llegan por el índice de un repositorio --ahí quien la
+  /// declara es [sources]-- y puesta para las de la carpeta del programa, que
+  /// no son de ningún repositorio y hay que poder distinguirlas para decir
+  /// dónde se editan y que nadie las respalda.
+  final String storedIn;
+
+  /// Lo que declara cada repositorio, por separado. Lo mismo que en un bloque
+  /// y por lo mismo: es lo único que permite ver que no dicen lo mismo.
+  final Map<String, TemplateFacts> sources;
+
+  /// Si la declara alguien, o viene con el programa.
+  bool get declared => sources.isNotEmpty;
+
+  String title([String? language]) {
+    final wanted = titles[language ?? 'es'];
+    if (wanted != null && wanted.isNotEmpty) return wanted;
+    for (final value in titles.values) {
+      if (value.isNotEmpty) return value;
+    }
+    return label.isEmpty ? id : label;
+  }
+
+  bool get isSlides => documentClass == 'beamer';
+
+  /// Si enseña algo que un alumno no debería ver antes de tiempo.
+  bool get givesAway => reveals != 'statements';
+
+  /// Lo que enseña de un ejercicio, en una línea.
+  ///
+  /// Es la pregunta que se hace de verdad delante de un menú de versiones
+  /// --«¿esta lleva las soluciones?»-- y la que no se contesta leyendo
+  /// `problems` o `problems-answers`. Entregar a una clase la hoja
+  /// equivocada es el fallo que esto viene a impedir.
+  String get shows => switch (reveals) {
+    'answers' => 'enunciados y resultados',
+    'solutions' => 'enunciados, resultados y solución',
+    'teacher' => 'todo, con la solución paso a paso',
+    _ => 'solo los enunciados',
+  };
+
+  /// La misma, declarada por [repo].
+  ///
+  /// Para las de la carpeta del programa: llegan por el motor, que no sabe de
+  /// repositorios, y la sesión les pone el suyo para que todo lo demás
+  /// --quién la declara, dónde se escribe-- funcione igual que con las de un
+  /// repositorio.
+  OutputTemplate declaredBy(String repo) => _withSource(repo);
+
+  OutputTemplate _withSource(String repo) => OutputTemplate(
+    id: id,
+    titles: titles,
+    label: label,
+    family: family,
+    reveals: reveals,
+    documentClass: documentClass,
+    classOptions: classOptions,
+    axes: axes,
+    active: active,
+    hasPreamble: hasPreamble,
+    storedIn: storedIn,
+    sources: {
+      repo: TemplateFacts(
+        titles: titles,
+        documentClass: documentClass,
+        classOptions: classOptions,
+        axes: axes,
+        active: active,
+      ),
+    },
+  );
+
+  /// Junta lo que dicen dos repositorios de la misma plantilla. Gana el
+  /// primero para lo que se compila, y se guarda lo que dice cada uno.
+  OutputTemplate mergedWith(OutputTemplate other) => OutputTemplate(
+    id: id,
+    titles: {...other.titles, ...titles},
+    label: label.isEmpty ? other.label : label,
+    family: family.isEmpty ? other.family : family,
+    reveals: reveals,
+    documentClass: documentClass,
+    classOptions: classOptions,
+    axes: axes,
+    active: active,
+    hasPreamble: hasPreamble || other.hasPreamble,
+    storedIn: storedIn.isEmpty ? other.storedIn : storedIn,
+    sources: {...sources, ...other.sources},
+  );
+
+  OutputTemplate withoutSources(Set<String> hidden) => OutputTemplate(
+    id: id,
+    titles: titles,
+    label: label,
+    family: family,
+    reveals: reveals,
+    documentClass: documentClass,
+    classOptions: classOptions,
+    axes: axes,
+    active: active,
+    hasPreamble: hasPreamble,
+    storedIn: storedIn,
+    sources: {
+      for (final entry in sources.entries)
+        if (!hidden.contains(entry.key)) entry.key: entry.value,
+    },
+  );
+}
+
+/// Lo que un repositorio declara de una plantilla.
+class TemplateFacts {
+  const TemplateFacts({
+    this.titles = const {},
+    this.documentClass = '',
+    this.classOptions = '',
+    this.axes = const {},
+    this.active = true,
+  });
+
+  final Map<String, String> titles;
+  final String documentClass;
+  final String classOptions;
+  final Map<String, String> axes;
+  final bool active;
+
+  /// Los campos comparables, con el nombre que se enseña.
+  ///
+  /// La clase y las opciones entran: dos repositorios que declaran la misma
+  /// plantilla con clases distintas producen PDF distintos con el mismo
+  /// nombre según en qué orden se abrieron, que es la peor clase de
+  /// comportamiento. Los ejes no, porque son seis y llenarían la pantalla de
+  /// filas para una discrepancia que casi siempre está en la clase.
+  Map<String, String> get comparable => {
+    for (final entry in titles.entries)
+      if (entry.value.isNotEmpty) 'título (${entry.key})': entry.value,
+    if (documentClass.isNotEmpty) 'clase': documentClass,
+    if (classOptions.isNotEmpty) 'opciones': classOptions,
+  };
 }
 
 /// Un idioma al que Didacta sabe imprimir.
@@ -1204,12 +1689,14 @@ class Catalogue {
     this.byRepo = const [],
     this.degrees = const [],
     this.blocks = const [],
+    this.templates = const [],
     required this.defaultLanguage,
     required this.contentHash,
     required this.units,
     required this.courses,
     required this.profiles,
     required this.errors,
+    this.shared = const [],
   });
 
   /// Builds from the three index files.
@@ -1286,9 +1773,30 @@ class Catalogue {
             repo: repo,
           ),
       ],
+      // Las plantillas que declara este repositorio. Vacío es lo corriente:
+      // entonces se compila con las que trae el programa, que es lo que hace
+      // que esto no cambie nada mientras nadie declare ninguna.
+      templates: [
+        for (final item in (manifest['templates'] as List?) ?? const [])
+          OutputTemplate.fromJson(
+            (item as Map).cast<String, dynamic>(),
+            repo: repo,
+          ),
+      ],
       profiles: [
         for (final item in (manifest['profiles'] as List?) ?? const [])
           OutputProfile.fromJson((item as Map).cast<String, dynamic>()),
+      ],
+      // Los temas compartidos de **este** repositorio, con las ubicaciones
+      // que los dan. Vacío es lo corriente y también lo que trae un índice de
+      // antes de que existieran: entonces no hay nada vinculado y todo se ve
+      // como se veía.
+      shared: [
+        for (final item in (courses['shared'] as List?) ?? const [])
+          SharedDocument.fromJson(
+            (item as Map).cast<String, dynamic>(),
+            repo: repo,
+          ),
       ],
       errors: _stringList(manifest['errors']),
     );
@@ -1408,7 +1916,24 @@ class Catalogue {
   /// [undeclaredBlocks] lo cuenta para que alguien lo declare. Eso es lo que
   /// hace que esto no pueda esconder material.
   final List<CourseBlock> blocks;
+
+  /// Las plantillas de compilación declaradas, juntas de todos los
+  /// repositorios abiertos.
+  ///
+  /// Vacía quiere decir «nadie declara ninguna», y entonces se compila con
+  /// las quince que trae el programa -- ver [templatesInUse], que es lo que
+  /// pregunta una pantalla.
+  final List<OutputTemplate> templates;
+
   final List<OutputProfile> profiles;
+
+  /// Los temas compartidos, con las ubicaciones que los dan.
+  ///
+  /// El grupo de sincronización no está guardado en ninguna parte: **es** el
+  /// conjunto de ubicaciones que nombran el mismo id, y el motor lo calcula
+  /// leyendo los ficheros. Esto es esa cuenta ya hecha, para que la interfaz
+  /// no tenga que recorrer todas las composiciones para pintar un icono.
+  final List<SharedDocument> shared;
 
   /// What the engine complained about while reading the repository. Surfaced
   /// rather than swallowed: an interface built on a repository that does not
@@ -1509,6 +2034,20 @@ class Catalogue {
       }
     }
 
+    // Las plantillas, igual: por id y en el orden en que se declaran, que es
+    // el orden en que se ofrecen las salidas. Que las declaren dos no es raro
+    // --la teoría y los problemas están repartidos-- y es lo que puede acabar
+    // discrepando.
+    final templates = <String, OutputTemplate>{};
+    for (final part in parts) {
+      for (final template in part.templates) {
+        final mine = templates[template.id];
+        templates[template.id] = mine == null
+            ? template
+            : mine.mergedWith(template);
+      }
+    }
+
     final available = <LanguageOption>[];
     for (final part in parts) {
       for (final option in part.available) {
@@ -1533,8 +2072,74 @@ class Catalogue {
       courses: courses.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
       degrees: degrees.values.toList()..sort((a, b) => a.id.compareTo(b.id)),
       blocks: blocks.values.toList(),
+      templates: templates.values.toList(),
       profiles: parts.first.profiles,
+      // Por id, juntando ubicaciones: un tema compartido puede darse en
+      // cursos de dos repositorios distintos, y el grupo es el de los dos.
+      shared: _mergedShared(parts),
       errors: [for (final part in parts) ...part.errors, ...conflicts],
+    );
+  }
+
+  static List<SharedDocument> _mergedShared(List<Catalogue> parts) {
+    final found = <String, SharedDocument>{};
+    for (final part in parts) {
+      for (final item in part.shared) {
+        final mine = found[item.id];
+        if (mine == null) {
+          found[item.id] = item;
+          continue;
+        }
+        final keys = {for (final place in mine.placements) place.key};
+        found[item.id] = SharedDocument(
+          id: item.id,
+          // Declarado en cuanto **alguno** lo tenga. Que falte en uno es el
+          // caso normal de un curso repartido entre dos repositorios.
+          declared: mine.declared || item.declared,
+          titles: mine.declared ? mine.titles : item.titles,
+          kind: mine.declared ? mine.kind : item.kind,
+          repo: mine.declared ? mine.repo : item.repo,
+          placements: [
+            ...mine.placements,
+            for (final place in item.placements)
+              if (!keys.contains(place.key)) place,
+          ],
+        );
+      }
+    }
+    return found.values.toList()..sort((a, b) => a.id.compareTo(b.id));
+  }
+
+  /// El mismo catálogo con unas plantillas más.
+  ///
+  /// Para las que no viven en ningún repositorio: la carpeta del programa. Se
+  /// añaden **detrás** y solo las que no estén ya, así que un repositorio que
+  /// declare el mismo id gana -- lo compartido manda sobre lo personal, que
+  /// es lo que evita que la copia de alguien cambie en silencio lo que sale
+  /// para todos.
+  Catalogue withTemplates(List<OutputTemplate> extra) {
+    if (extra.isEmpty) return this;
+    final known = {for (final template in templates) template.id};
+    final added = [
+      for (final template in extra)
+        if (!known.contains(template.id)) template,
+    ];
+    if (added.isEmpty) return this;
+    return Catalogue(
+      name: name,
+      languages: languages,
+      available: available,
+      byRepo: byRepo,
+      degrees: degrees,
+      blocks: blocks,
+      templates: [...templates, ...added],
+      defaultLanguage: defaultLanguage,
+      contentHash: contentHash,
+      units: units,
+      courses: courses,
+      profiles: profiles,
+      shared: shared,
+      errors: errors,
     );
   }
 
@@ -1586,10 +2191,50 @@ class Catalogue {
           if (block.sources.keys.any((repo) => !hidden.contains(repo)))
             block.withoutSources(hidden),
       ],
+      templates: [
+        for (final template in templates)
+          if (template.sources.keys.any((repo) => !hidden.contains(repo)))
+            template.withoutSources(hidden),
+      ],
       profiles: profiles,
+      // Un tema compartido deja de verse cuando ya no lo da ningún curso
+      // visible: apagar un repositorio tiene que dar exactamente lo mismo que
+      // no tenerlo.
+      shared: [
+        for (final item in shared)
+          if (item.placements.any(
+            (place) => courses.any(
+              (course) =>
+                  course.id == place.course &&
+                  !hidden.contains(item.repo) &&
+                  (course.years[place.year]?.documents.any(
+                        (document) => document.id == place.document,
+                      ) ??
+                      false),
+            ),
+          ))
+            item,
+      ],
       errors: errors,
     );
   }
+
+  /// Dónde más se da un tema compartido.
+  ///
+  /// La lista entera, incluida la ubicación desde la que se pregunta: «este
+  /// tema se da en cuatro sitios» quiere decir cuatro, y quitar el de delante
+  /// obliga a sumar uno de cabeza.
+  SharedDocument? sharedById(String content) {
+    if (content.isEmpty) return null;
+    for (final item in shared) {
+      if (item.id == content) return item;
+    }
+    return null;
+  }
+
+  /// Las ubicaciones de una lección: dónde está y en qué posición.
+  List<UnitUsage> usesOf(String path, {String? repo}) =>
+      unitByPath(path, repo: repo)?.usedBy ?? const [];
 
   /// Los documentos de un curso, de todos los repositorios que aporten algo.
   List<Document> documentsIn(String courseId, String year) {
@@ -1647,6 +2292,7 @@ class Catalogue {
     }
     conflicts.addAll(degreeConflicts);
     conflicts.addAll(blockConflicts);
+    conflicts.addAll(templateConflicts);
     return conflicts;
   }
 
@@ -1835,6 +2481,163 @@ class Catalogue {
       if (unit != null) found.add(unit.block);
     }
     return found;
+  }
+
+  // -- las plantillas de compilación ---------------------------------------
+
+  /// Las plantillas que hay que ofrecer, declaradas o de serie.
+  ///
+  /// Las declaradas cuando hay alguna, y si no las quince que trae el
+  /// programa. Esa caída es lo que hace que un repositorio que todavía no
+  /// declara ninguna compile exactamente como antes: sin ella, la primera
+  /// pantalla que preguntara no ofrecería nada.
+  List<OutputTemplate> get templatesInUse => templates.isNotEmpty
+      ? templates
+      : [for (final profile in profiles) OutputTemplate.ofProfile(profile)];
+
+  /// Las que se pueden compilar: las de arriba sin las apagadas.
+  ///
+  /// Apagar una es decir «esta versión no se saca», y es la respuesta a tener
+  /// quince salidas de las que se usan cuatro. Sigue declarada, con su
+  /// preámbulo, para el día que vuelva a hacer falta.
+  List<OutputTemplate> get activeTemplates => [
+    for (final template in templatesInUse)
+      if (template.active) template,
+  ];
+
+  /// La plantilla con ese id, declarada o no.
+  ///
+  /// Nunca null para un id que alguien usa: si nadie la declara sale una sin
+  /// nombre, que se enseña por su id. Una pantalla que pregunta con qué se
+  /// compila algo no puede quedarse sin respuesta.
+  OutputTemplate templateNamed(String id) {
+    for (final template in templatesInUse) {
+      if (template.id == id) return template;
+    }
+    return OutputTemplate(id: id);
+  }
+
+  /// Con qué se compila lo de un bloque, por defecto.
+  ///
+  /// Lo que el bloque declare, y si no declara nada, todas las activas. Vacío
+  /// no puede significar «ninguna»: declarar un bloque dejaría su material
+  /// sin salidas y nadie entendería por qué el botón de compilar no hace
+  /// nada.
+  ///
+  /// Siempre filtrado por las activas: una plantilla apagada no se compila
+  /// aunque un bloque la nombre, que es justo lo que significa apagarla.
+  List<String> templatesOfBlock(String block) {
+    final live = {for (final template in activeTemplates) template.id};
+    for (final entry in blocks) {
+      if (entry.id != block) continue;
+      if (entry.templates.isEmpty) break;
+      return [
+        for (final id in entry.templates)
+          if (live.contains(id)) id,
+      ];
+    }
+    return live.toList();
+  }
+
+  /// Con qué se compila una lección.
+  ///
+  /// La suya si la declara, y si no la de su bloque. Es el orden en que se
+  /// decide: el bloque pone lo normal y la lección concreta se aparta.
+  List<String> templatesFor(Unit unit) {
+    if (unit.templates.isEmpty) return templatesOfBlock(unit.block);
+    final live = {for (final template in activeTemplates) template.id};
+    return [
+      for (final id in unit.templates)
+        if (live.contains(id)) id,
+    ];
+  }
+
+  /// Con qué se compila un documento.
+  ///
+  /// Lo que declare, y si no lo de los bloques de las lecciones que compone
+  /// --un tema con su teoría y sus ejercicios hereda de los dos--. En el
+  /// orden de las plantillas y no en el de los bloques, para que dos
+  /// documentos del mismo curso no ofrezcan lo mismo en orden distinto.
+  List<String> templatesForDocument(Document document) {
+    final live = {for (final template in activeTemplates) template.id};
+    if (document.profiles.isNotEmpty) {
+      return [
+        for (final id in document.profiles)
+          if (live.contains(id)) id,
+      ];
+    }
+    final wanted = <String>{};
+    for (final block in blocksOf(document)) {
+      wanted.addAll(templatesOfBlock(block));
+    }
+    // Sin lecciones todavía --un documento recién creado-- no hay bloque del
+    // que heredar, y quedarse sin nada que compilar sería lo peor que puede
+    // pasarle a lo que se acaba de crear.
+    if (wanted.isEmpty) return live.toList();
+    return [
+      for (final template in activeTemplates)
+        if (wanted.contains(template.id)) template.id,
+    ];
+  }
+
+  /// Las plantillas que alguien nombra y no declara nadie.
+  ///
+  /// Un bloque que compila en `apuntes-a5` y el repositorio que la declaraba
+  /// sin abrir: se ve, se dice, y se arregla. Mientras nadie declare ninguna
+  /// plantilla no cuenta ninguna, por lo mismo que con los bloques -- las
+  /// quince de serie no las declara nadie y no son un problema.
+  List<String> get undeclaredTemplates {
+    if (templates.isEmpty) return const [];
+    final declared = {for (final template in templates) template.id};
+    final named = <String>{};
+    for (final block in blocks) {
+      named.addAll(block.templates);
+    }
+    for (final unit in units) {
+      named.addAll(unit.templates);
+    }
+    for (final course in courses) {
+      for (final year in course.years.values) {
+        for (final document in year.documents) {
+          named.addAll(document.profiles);
+        }
+      }
+    }
+    return (named.difference(declared).toList())..sort();
+  }
+
+  /// Campos de una plantilla en los que dos repositorios no coinciden.
+  ///
+  /// La misma plantilla declarada en los dos con clases distintas produce dos
+  /// PDF distintos con el mismo nombre según en qué orden se abrieron los
+  /// repositorios.
+  List<MetadataConflict> get templateConflicts {
+    final conflicts = <MetadataConflict>[];
+    for (final template in templates) {
+      if (template.sources.length < 2) continue;
+      final fields = <String>{};
+      for (final facts in template.sources.values) {
+        fields.addAll(facts.comparable.keys);
+      }
+      for (final field in fields.toList()..sort()) {
+        final values = <String, String>{};
+        for (final entry in template.sources.entries) {
+          final value = entry.value.comparable[field];
+          if (value != null && value.isNotEmpty) values[entry.key] = value;
+        }
+        if (values.length < 2) continue;
+        if (values.values.toSet().length == 1) continue;
+        conflicts.add(
+          MetadataConflict(
+            course: template.id,
+            field: field,
+            values: values,
+            about: ConflictAbout.template,
+          ),
+        );
+      }
+    }
+    return conflicts;
   }
 
   /// Las asignaturas de un grado, o las que no dicen a cuál pertenecen.

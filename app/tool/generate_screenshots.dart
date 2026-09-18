@@ -349,6 +349,18 @@ ThemeData shotTheme() {
     snackBarTheme: base.snackBarTheme.copyWith(
       contentTextStyle: family(base.snackBarTheme.contentTextStyle),
     ),
+    // Los diálogos. No hacía falta mientras no se capturaba ninguno; en
+    // cuanto se capturó el primero, el cuerpo salió en cajas negras -- el
+    // estilo del contenido de un `AlertDialog` sale de aquí y no del tema de
+    // texto, como el resto de estilos de componente.
+    dialogTheme: base.dialogTheme.copyWith(
+      titleTextStyle: family(
+        base.dialogTheme.titleTextStyle ?? base.textTheme.headlineSmall,
+      ),
+      contentTextStyle: family(
+        base.dialogTheme.contentTextStyle ?? base.textTheme.bodyMedium,
+      ),
+    ),
   );
 }
 

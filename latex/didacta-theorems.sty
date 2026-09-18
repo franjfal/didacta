@@ -3,11 +3,11 @@
 %%
 %% One set of environment names, two visual treatments chosen by medium:
 %%
-%%   slides    a filled box with a coloured title bar. Has to read from the
-%%             back of a lecture theatre, so it is high contrast and compact.
-%%   document  a tinted rule down the left margin and a rule under the title.
-%%             Has to read for an hour on paper, so it is quiet and it breaks
-%%             across pages.
+%%   slides    a boxed environment with a raised title tab: tinted fill,
+%%             coloured frame and a short shadow. Has to read from the back of
+%%             a lecture theatre, so it is high contrast and compact.
+%%   document  the same box, quieter: a much lighter tint and no shadow. Has
+%%             to read for an hour on paper, and it breaks across pages.
 %%
 %% The author's material distinguishes these with two separate template files
 %% and two separate environment name sets (`ndefn` boxed vs `defn` plain),
@@ -76,58 +76,102 @@
 }
 
 %% ---------------------------------------------------------------------------
-%% Slide rendering: filled box, coloured title bar.
+%% La forma de la caja
+%%
+%% Las dos versiones --pantalla y papel-- son la misma caja con distinta
+%% intensidad: marco redondeado, fondo teñido y el título en una **pestaña**
+%% que monta sobre el borde superior, desplazada a la izquierda.
+%%
+%% Esa pestaña es lo que el material heredado tenía y lo que se había perdido
+%% al migrar. `boiboites.sty` la dibujaba a mano con dos nodos de TikZ (uno
+%% para la caja, otro anclado en `box.north west`); `tcolorbox` la trae hecha
+%% en `attach boxed title to top left`, con la ventaja de que la caja sigue
+%% siendo `breakable` y se parte entre páginas, cosa que la de TikZ no hacía
+%% --un teorema largo se salía del papel.
+%%
+%% El desplazamiento vertical es medio alto de pestaña: así queda mitad dentro
+%% y mitad fuera, que es lo que hace que se lea como una etiqueta cosida a la
+%% caja y no como otra caja encima. El `top` de la caja reserva ese medio alto
+%% para que la primera línea del texto no se meta debajo del título.
+%%
+%% El tono del marco (`!55!black`) y el del título (`!25!black`) salen del
+%% color del entorno, no de una lista aparte: añadir un entorno nuevo es
+%% elegir un color y nada más.
+%% ---------------------------------------------------------------------------
+
+\tcbset{
+  %% Papel: teñido muy flojo. La página lleva muchas cajas seguidas y un
+  %% fondo saturado la convierte en un cartel.
+  didacta@thm@paper/.style={
+    enhanced, breakable,
+    colback=#1!4, colframe=#1!55!black,
+    boxrule=0.7pt, arc=3pt,
+    left=1em, right=1em, top=1.6ex, bottom=1.1ex,
+    before skip=3.2ex, after skip=2.4ex,
+    fonttitle=\bfseries, coltitle=#1!25!black,
+    attach boxed title to top left={xshift=1.1em, yshift=-\tcboxedtitleheight/2},
+    boxed title style={
+      enhanced, size=small, arc=2.5pt, boxrule=0.7pt,
+      colback=#1!15, colframe=#1!55!black,
+    },
+  },
+  %% Pantalla: más contraste y una sombra corta. Se ve desde el fondo del
+  %% aula, que es el único criterio que cuenta aquí.
+  didacta@thm@screen/.style={
+    enhanced, breakable,
+    colback=#1!7, colframe=#1!55!black,
+    boxrule=0.8pt, arc=3pt,
+    drop fuzzy shadow=black!12,
+    left=1em, right=1em, top=1.5ex, bottom=1ex,
+    before skip=2.6ex, after skip=2ex,
+    fonttitle=\bfseries, coltitle=#1!20!black,
+    attach boxed title to top left={xshift=1em, yshift=-\tcboxedtitleheight/2},
+    boxed title style={
+      enhanced, size=small, arc=2.5pt, boxrule=0.8pt,
+      colback=#1!22, colframe=#1!55!black,
+    },
+  },
+}
+
+%% El estilo que corresponde al medio de esta compilación, con un solo nombre.
+%%
+%% Lo usan también las cajas que no son teoremas --las notas del profesor, los
+%% objetivos de la unidad-- y por eso vive aquí y no dentro de cada una: una
+%% página donde el teorema lleva pestaña y la nota didáctica lleva otra cosa
+%% se lee como dos documentos pegados.
+\iftoggle{didacta@slides}%
+  {\tcbset{didacta@box/.style={didacta@thm@screen=#1}}}%
+  {\tcbset{didacta@box/.style={didacta@thm@paper=#1}}}
+
+%% ---------------------------------------------------------------------------
+%% Slide rendering
 %% ---------------------------------------------------------------------------
 
 \newcommand{\didacta@thm@slide}[3]{%
   \refstepcounter{didactathm}%
-  \begin{tcolorbox}[
-    enhanced, breakable,
-    colback=#2!8, colframe=#2!55!black, colbacktitle=#2!30,
-    coltitle=black, fonttitle=\bfseries,
-    boxrule=0.6pt, arc=2.5pt,
-    left=1.2ex, right=1.2ex, top=0.9ex, bottom=0.9ex,
-    before skip=1.4ex, after skip=1.4ex,
+  \begin{tcolorbox}[didacta@thm@screen=#2,
     title={#1~\thedidactathm\ifblank{#3}{}{\ \textnormal{(#3)}}},
   ]%
 }
 \newcommand{\didacta@thm@slide@plain}[3]{%
-  \begin{tcolorbox}[
-    enhanced, breakable,
-    colback=#2!8, colframe=#2!55!black, colbacktitle=#2!30,
-    coltitle=black, fonttitle=\bfseries,
-    boxrule=0.6pt, arc=2.5pt,
-    left=1.2ex, right=1.2ex, top=0.9ex, bottom=0.9ex,
-    before skip=1.4ex, after skip=1.4ex,
+  \begin{tcolorbox}[didacta@thm@screen=#2,
     title={#1\ifblank{#3}{}{\ \textnormal{(#3)}}},
   ]%
 }
 \newcommand{\didacta@thm@slide@end}{\end{tcolorbox}}
 
 %% ---------------------------------------------------------------------------
-%% Document rendering: left rule, no fill, breaks across pages.
+%% Document rendering: the same box, quieter, and it breaks across pages.
 %% ---------------------------------------------------------------------------
 
 \newcommand{\didacta@thm@doc}[3]{%
   \refstepcounter{didactathm}%
-  \begin{tcolorbox}[
-    enhanced jigsaw, breakable,
-    boxrule=0pt, colframe=white, interior hidden,
-    borderline west={1.8pt}{0pt}{#2!70!black},
-    left=1.4em, right=0pt, top=0.3ex, bottom=0.3ex,
-    before skip=2.2ex, after skip=2.2ex,
-    coltitle=black, fonttitle=\bfseries,
+  \begin{tcolorbox}[didacta@thm@paper=#2,
     title={#1~\thedidactathm\ifblank{#3}{}{\ \textnormal{(#3)}}},
   ]%
 }
 \newcommand{\didacta@thm@doc@plain}[3]{%
-  \begin{tcolorbox}[
-    enhanced jigsaw, breakable,
-    boxrule=0pt, colframe=white, interior hidden,
-    borderline west={1.8pt}{0pt}{#2!70!black},
-    left=1.4em, right=0pt, top=0.3ex, bottom=0.3ex,
-    before skip=2.2ex, after skip=2.2ex,
-    coltitle=black, fonttitle=\bfseries,
+  \begin{tcolorbox}[didacta@thm@paper=#2,
     title={#1\ifblank{#3}{}{\ \textnormal{(#3)}}},
   ]%
 }
@@ -220,12 +264,15 @@
 %% For the one equation on the slide that matters.
 %% ---------------------------------------------------------------------------
 
+%% Esquinas redondeadas y el mismo grosor de marco que las cajas de teorema:
+%% una fórmula destacada dentro de un ejemplo son dos cajas, una en otra, y
+%% con radios distintos se ven como dos sistemas.
 \newtcolorbox{didacta@formulabox}{
-  enhanced, sharp corners=downhill,
+  enhanced,
   colback=didactaAccent!7, colframe=didactaAccent!60!black,
-  boxrule=0.5pt, arc=2pt,
-  left=1ex, right=1ex, top=0.6ex, bottom=0.6ex,
-  before skip=1.4ex, after skip=1.4ex,
+  boxrule=0.7pt, arc=3pt,
+  left=1ex, right=1ex, top=0.8ex, bottom=0.8ex,
+  before skip=1.6ex, after skip=1.6ex,
 }
 \newenvironment{keyformula}{%
   \begin{didacta@formulabox}\begin{equation*}
@@ -255,27 +302,43 @@
 %% from anything: it is where the reasoning starts. A box says «retén esto»
 %% without giving it a name it does not have.
 %%
-%% No counter and no label, on purpose. The optional title is set in bold at
-%% the head of the box, not as `\theoremname n.n`, so a box can carry a name
-%% without pretending to be a numbered result.
+%% No counter and no label, on purpose. Con título, éste va en la misma
+%% pestaña que llevan los teoremas --en tinta, no en color, porque esto no es
+%% ninguno de ellos-- y sin título la caja va lisa. Lo que no puede pasar es
+%% que un recuadro con nombre se componga distinto de los demás recuadros con
+%% nombre de la misma página.
 %% ---------------------------------------------------------------------------
 
+%% La caja del medio que toque, en gris: así hereda la sombra en pantalla y la
+%% discreción en papel sin repetir aquí ninguna medida. Sin título no hay
+%% pestaña, y entonces sobra el hueco que se le reservaba arriba.
 \newtcolorbox{didacta@pointbox}{
-  enhanced, sharp corners,
-  breakable,
-  colback=white, colframe=didactaInk!55,
-  boxrule=0.5pt,
-  left=1.1em, right=1.1em, top=0.9ex, bottom=0.9ex,
-  before skip=1.6ex, after skip=1.6ex,
+  didacta@box=didactaMuted,
+  top=0.9ex,
 }
 
+\newtcolorbox{didacta@pointbox@titled}[1]{
+  didacta@box=didactaMuted,
+  title={#1},
+}
+
+%% Cuál de las dos cajas se ha abierto se recuerda en una macro, porque el
+%% cierre del entorno ya no ve el argumento opcional.
+\newcommand{\didacta@point@end}{}
+
 \newenvironment{keypoint}[1][]{%
-  \begin{didacta@pointbox}%
-  \ifblank{#1}{}{{\bfseries #1}\par\nobreak\smallskip}%
+  \ifblank{#1}%
+    {\let\didacta@point@end\didacta@point@end@plain
+     \begin{didacta@pointbox}}%
+    {\let\didacta@point@end\didacta@point@end@titled
+     \begin{didacta@pointbox@titled}{#1}}%
   \ignorespaces
 }{%
-  \end{didacta@pointbox}%
+  \didacta@point@end
 }
+
+\newcommand{\didacta@point@end@plain}{\end{didacta@pointbox}}
+\newcommand{\didacta@point@end@titled}{\end{didacta@pointbox@titled}}
 
 \makeatother
 \endinput

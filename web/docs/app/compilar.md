@@ -57,6 +57,27 @@ PDF concreto --abrirlo en el visor del sistema, enseñarlo en el Finder-- están
 en su propio panel, porque con dos PDF a la vez «abrir en el visor» en la
 barra no dice cuál.
 
+### Moverse por el documento
+
+El número de página **se escribe**: con ciento veinte páginas, llegar a la 84
+con las flechas son setenta y siete clics. Al lado están el zoom y los tres
+ajustes --al ancho, al alto y página entera--, que es como se llega al tamaño
+que se quiere de verdad; el porcentaje es un rótulo, y pulsarlo devuelve al
+tamaño real.
+
+El botón de la izquierda despliega el **lateral**, con dos vistas:
+
+- **Índice**: los apartados y subapartados del documento, tal y como están en
+  la composición. Pulsar uno salta ahí. Sólo aparece cuando el PDF trae
+  marcadores, que es el caso de cualquier documento compilado por Didacta.
+- **Páginas**: las miniaturas, para reconocer una página por su forma --la
+  diapositiva con la figura, la hoja que se quedó casi vacía--.
+
+Todo esto mueve los dos paneles a la vez, igual que pasar página: dos idiomas
+del mismo perfil se comparan al mismo tamaño y en la misma página. Y a la
+derecha del PDF hay una barra de desplazamiento que se arrastra y dice por qué
+página va mientras se mueve.
+
 El visor del sistema sigue estando, y no es redundancia: tiene pantalla
 completa para pasar diapositivas de verdad, y el explorador de archivos es
 desde donde se arrastra un PDF a un correo.

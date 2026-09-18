@@ -704,6 +704,361 @@ class _GitClone implements LocalClone {
     return path;
   }
 
+  // -- Congelaciones: commits, árboles aparte y diferencias ---------------
+  //
+  // Todo lo de aquí se apoya en una idea: **git ya guarda el contenido de
+  // cada commit**. Lo que faltaba no era una copia del repositorio, sino una
+  // forma de mirar uno de esos commits sin mover el árbol de trabajo de
+  // siempre. Eso es exactamente un worktree.
+
+  /// Dónde viven los árboles de trabajo de las congelaciones.
+  ///
+  /// Dentro de `.git` a propósito, y no al lado del repositorio: ahí git no
+  /// lo mira nunca, así que no sale en `git status` ni se cuela en un commit;
+  /// se va con el clon cuando el clon se va; y no hace falta pedirle al
+  /// sistema una carpeta de caché que después alguien tenga que limpiar.
+  String get _worktreeBase => '$directory/.git/didacta-worktrees';
+
+  @override
+  Future<String> head() => _text(['rev-parse', 'HEAD']);
+
+  @override
+  Future<bool> hasCommit(String sha) async {
+    if (sha.isEmpty) return false;
+    try {
+      // `^{commit}` y no el objeto a secas: en un clon shallow el borde de la
+      // historia deja objetos a los que se llega y que no son commits
+      // completos, y mirarlos como tales da un «sí» que después falla.
+      await _text(['cat-file', '-e', '$sha^{commit}']);
+      return true;
+    } on CloneException {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> isShallow() async {
+    final answer = await _optional(['rev-parse', '--is-shallow-repository']);
+    return answer?.trim() == 'true';
+  }
+
+  @override
+  Future<void> fetchCommit(
+    String sha, {
+    required String token,
+    void Function(FetchDepth step) onStep = _ignoreStep,
+  }) async {
+    if (await hasCommit(sha)) return;
+
+    // 1. Pedirlo por su nombre. Es lo barato, y es lo que GitHub permite
+    //    desde que soporta `uploadpack.allowReachableSHA1InWant`.
+    onStep(FetchDepth.justTheCommit);
+    try {
+      await _run(
+        ['fetch', '--no-tags', '--quiet', 'origin', sha],
+        token: token,
+        what: 'traer el commit $sha',
+      );
+      if (await hasCommit(sha)) return;
+    } on CloneException {
+      // El servidor no lo permite. Se sigue cavando.
+    }
+
+    // 2. Más historia, por tramos. Un clon shallow que solo tiene el último
+    //    commit suele estar a unas decenas del que se busca, así que esto
+    //    acaba casi siempre en la primera o la segunda vuelta.
+    if (await isShallow()) {
+      for (final depth in const [50, 250, 1000]) {
+        onStep(FetchDepth.deeper);
+        try {
+          await _run(
+            ['fetch', '--no-tags', '--quiet', '--deepen=$depth'],
+            token: token,
+            what: 'traer más historia',
+          );
+        } on CloneException {
+          break;
+        }
+        if (await hasCommit(sha)) return;
+      }
+
+      // 3. Entera. El último recurso, y quien llama ya lo ha contado.
+      onStep(FetchDepth.everything);
+      await _run(
+        ['fetch', '--no-tags', '--quiet', '--unshallow'],
+        token: token,
+        what: 'traer la historia entera',
+      );
+      if (await hasCommit(sha)) return;
+    } else {
+      // No es shallow: si el commit no está, o no está en el remoto o está en
+      // una rama que no se sigue. Una última pasada normal lo resuelve.
+      onStep(FetchDepth.deeper);
+      await _run(
+        ['fetch', '--no-tags', '--quiet', 'origin'],
+        token: token,
+        what: 'traer los commits del repositorio',
+      );
+      if (await hasCommit(sha)) return;
+    }
+
+    throw CloneException(
+      'El commit $sha no está en el repositorio, ni aquí ni en GitHub. '
+      'Puede que quien lo hizo no lo haya enviado todavía.',
+    );
+  }
+
+  static void _ignoreStep(FetchDepth step) {}
+
+  @override
+  Future<Worktree> worktreeAt(String sha) async {
+    final full = await _text(['rev-parse', '$sha^{commit}']);
+    final path = '$_worktreeBase/$full';
+
+    // Reutilizar el que haya. Recrearlo en cada apertura sería copiar el
+    // árbol entero cada vez, que es justo el coste que esto evita.
+    if (await Directory(path).exists()) {
+      final at = await _optional(['-C', path, 'rev-parse', 'HEAD']);
+      if (at?.trim() == full) return Worktree(directory: path, commit: full);
+      // Está pero no sirve: alguien lo tocó, o quedó a medias. Se rehace.
+      await _dropWorktree(path);
+    }
+
+    // Registros huérfanos de una caché que alguien borró a mano: sin esto,
+    // `worktree add` falla diciendo que la ruta ya está registrada.
+    await _optional(['worktree', 'prune']);
+
+    await Directory(_worktreeBase).create(recursive: true);
+    await _run(
+      // `--detach`: sin rama. Una congelación no es una línea de trabajo, es
+      // una foto, y crear una rama por cada una llenaría el repositorio de
+      // ramas que nadie pidió.
+      ['worktree', 'add', '--detach', '--quiet', path, full],
+      what: 'preparar la versión congelada $full',
+    );
+    return Worktree(directory: path, commit: full);
+  }
+
+  @override
+  Future<void> removeWorktree(String sha) async {
+    if (sha.isEmpty) return;
+    final full = await _optional(['rev-parse', '$sha^{commit}']);
+    await _dropWorktree('$_worktreeBase/${(full ?? sha).trim()}');
+  }
+
+  Future<void> _dropWorktree(String path) async {
+    if (await Directory(path).exists()) {
+      // `--force` porque el árbol puede tener ficheros sin seguir --un PDF
+      // compilado mientras se miraba-- y negarse por eso dejaría la caché sin
+      // forma de vaciarse. No hay nada que perder ahí: es una caché.
+      try {
+        await _run([
+          'worktree',
+          'remove',
+          '--force',
+          path,
+        ], what: 'quitar la versión congelada');
+      } on CloneException {
+        await Directory(path).delete(recursive: true);
+      }
+    }
+    await _optional(['worktree', 'prune']);
+  }
+
+  @override
+  Future<List<Worktree>> worktrees() async {
+    final base = Directory(_worktreeBase);
+    if (!await base.exists()) return const [];
+    final found = <Worktree>[];
+    for (final entry in base.listSync()) {
+      if (entry is! Directory) continue;
+      found.add(
+        Worktree(directory: entry.path, commit: entry.path.split('/').last),
+      );
+    }
+    found.sort((a, b) => a.commit.compareTo(b.commit));
+    return found;
+  }
+
+  @override
+  Future<int> clearWorktrees() async {
+    final found = await worktrees();
+    for (final tree in found) {
+      await _dropWorktree(tree.directory);
+    }
+    final base = Directory(_worktreeBase);
+    if (await base.exists()) await base.delete(recursive: true);
+    await _optional(['worktree', 'prune']);
+    return found.length;
+  }
+
+  @override
+  Future<List<TreeChange>> changesBetween({
+    required String from,
+    required String to,
+    List<String> paths = const [],
+  }) async {
+    final output = await _zText([
+      'diff',
+      '--name-status',
+      // Los renombrados, detectados: un fichero que se movió tiene que salir
+      // como movido y no como un borrado más un alta, que es la diferencia
+      // entre «reorganizaron la carpeta» y «perdimos treinta lecciones».
+      '--find-renames',
+      // Los campos separados por NUL. Un nombre con un espacio o un acento
+      // vuelve entrecomillado y con escapes en el formato normal, y
+      // desentrecomillarlo a mano es una fuente de fallos que no hace falta.
+      '-z',
+      from,
+      to,
+      '--',
+      ...paths,
+    ], what: 'comparar $from con $to');
+    return _parseNameStatus(output);
+  }
+
+  @override
+  Future<FileDiff> diffBetween({
+    required String from,
+    required String to,
+    required String path,
+    int context = 3,
+  }) async {
+    final output = await _text([
+      'diff',
+      '--find-renames',
+      '--unified=$context',
+      from,
+      to,
+      '--',
+      path,
+    ]);
+    return parseUnifiedDiff(output);
+  }
+
+  @override
+  Future<List<String>> pathsAt({required String sha, String under = ''}) async {
+    try {
+      final output = await _zText([
+        'ls-tree',
+        '-r',
+        '--name-only',
+        '-z',
+        sha,
+        '--',
+        if (under.isNotEmpty) under,
+      ], what: 'leer el árbol de $sha');
+      return [
+        for (final name in output.split(_nul))
+          if (name.isNotEmpty) name,
+      ];
+    } on CloneException {
+      return const [];
+    }
+  }
+
+  @override
+  Future<List<TreeChange>> previewRestore({
+    required String sha,
+    required List<String> paths,
+  }) =>
+      // De HEAD **hacia** el commit congelado: lo que sale es lo que habría
+      // que hacerle al árbol de trabajo para que volviera a ser aquello.
+      changesBetween(from: 'HEAD', to: sha, paths: paths);
+
+  @override
+  Future<List<TreeChange>> restoreFrom({
+    required String sha,
+    required List<String> paths,
+  }) async {
+    final changes = await previewRestore(sha: sha, paths: paths);
+    for (final change in changes) {
+      switch (change.kind) {
+        // `added` aquí quiere decir «está en el commit congelado y no ahora»,
+        // así que restaurarlo es volver a escribirlo.
+        case TreeChangeKind.added:
+        case TreeChangeKind.modified:
+          await _restoreOne(sha, change.path);
+        case TreeChangeKind.removed:
+          await _deleteOne(change.path);
+        case TreeChangeKind.renamed:
+          await _restoreOne(sha, change.path);
+          if (change.from.isNotEmpty) await _deleteOne(change.from);
+      }
+    }
+    return changes;
+  }
+
+  Future<void> _restoreOne(String sha, String path) async {
+    final text = await _run(['show', '$sha:$path'], what: 'leer $path');
+    final file = File('$directory/$path');
+    await file.parent.create(recursive: true);
+    await file.writeAsString(text);
+  }
+
+  Future<void> _deleteOne(String path) async {
+    final file = File('$directory/$path');
+    if (await file.exists()) await file.delete();
+  }
+
+  /// La salida cruda de una orden con `-z`, sin el salto final.
+  ///
+  /// El lector de procesos rearma la salida por líneas y escribe un `\n` al
+  /// final; con `-z` no hay líneas, así que ese salto es un campo de más que
+  /// aparece como una ruta vacía. Se quita aquí y no recortando la cadena
+  /// entera: un nombre de fichero puede acabar en espacio, y `trim()` lo
+  /// convertiría en otro nombre.
+  Future<String> _zText(List<String> arguments, {required String what}) async {
+    final output = await _run(arguments, what: what);
+    return output.endsWith('\n')
+        ? output.substring(0, output.length - 1)
+        : output;
+  }
+
+  /// El separador que pone `-z`.
+  static final String _nul = String.fromCharCode(0);
+
+  /// La salida de `diff --name-status -z`, leída por campos: el estado, y
+  /// detrás una ruta, o dos cuando el fichero se movió.
+  static List<TreeChange> _parseNameStatus(String output) {
+    final fields = output.split(_nul);
+    final changes = <TreeChange>[];
+    var index = 0;
+    while (index < fields.length) {
+      final status = fields[index].trim();
+      if (status.isEmpty) {
+        index += 1;
+        continue;
+      }
+      final letter = status[0];
+      if (letter == 'R' || letter == 'C') {
+        if (index + 2 >= fields.length) break;
+        changes.add(
+          TreeChange(
+            kind: TreeChangeKind.renamed,
+            path: fields[index + 2],
+            from: fields[index + 1],
+          ),
+        );
+        index += 3;
+        continue;
+      }
+      if (index + 1 >= fields.length) break;
+      changes.add(
+        TreeChange(
+          kind: switch (letter) {
+            'A' => TreeChangeKind.added,
+            'D' => TreeChangeKind.removed,
+            _ => TreeChangeKind.modified,
+          },
+          path: fields[index + 1],
+        ),
+      );
+      index += 2;
+    }
+    return changes;
+  }
+
   Future<String> _text(List<String> arguments) async {
     final result = await _run(arguments, what: arguments.first);
     return result.trim();

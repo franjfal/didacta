@@ -225,12 +225,22 @@ class DocumentDraft {
     required this.kind,
     required this.titles,
     required this.themes,
+    this.link = '',
   });
 
   final String id;
   final String kind;
   final Map<String, String> titles;
   final List<String> themes;
+
+  /// El contenido al que apunta, cuando el tema está vinculado.
+  ///
+  /// Entonces el título, el tipo y la composición no están en este fichero:
+  /// están en `shared/documents/<link>.yaml`, que es lo que hace que los
+  /// cursos que lo dan den el mismo tema y no dos copias.
+  final String link;
+
+  bool get isLinked => link.isNotEmpty;
 
   String title(String language) {
     final wanted = titles[language];
@@ -276,6 +286,7 @@ class CompositionFile {
         kind: _fieldOf(document, 'kind') ?? 'theory',
         titles: _titlesOf(document),
         themes: _listOf(document, 'themes'),
+        link: _fieldOf(document, 'link') ?? '',
       ),
   ];
 
@@ -395,6 +406,43 @@ class CompositionFile {
     }
     if (end < start) end = document.lastLine;
     _lines.replaceRange(start, end + 1, block);
+  }
+
+  /// Con qué plantillas se compila un documento.
+  ///
+  /// Se escribe `templates:`, que es como se llama ahora. Si el documento
+  /// traía el `profiles:` de antes se sustituye, porque los dos dicen lo
+  /// mismo y dejar los dos sería dejar dos respuestas a la misma pregunta.
+  ///
+  /// Lista vacía quita la línea: el documento vuelve a compilarse con lo que
+  /// digan los bloques de sus lecciones, que es el estado normal.
+  void setDocumentTemplates(String id, List<String> templates) {
+    final document = _documents().where((d) => d.id == id).firstOrNull;
+    if (document == null) {
+      throw CompositionException('no existe el documento `$id`');
+    }
+    final field = ' ' * document.fieldIndent;
+    final written = templates.isEmpty
+        ? <String>[]
+        : ['${field}templates: [${templates.join(', ')}]'];
+
+    // Las dos claves, en una sola pasada y de atrás adelante: quitar una
+    // línea mueve las de abajo, y hacerlo al revés deja el índice de la
+    // segunda apuntando a otra cosa.
+    final found = <int>[];
+    for (var i = document.firstLine; i <= document.lastLine; i += 1) {
+      final key = _keyAt(_lines[i], document.fieldIndent);
+      if (key == 'templates' || key == 'profiles') found.add(i);
+    }
+    if (found.isEmpty) {
+      if (written.isEmpty) return;
+      _lines.insertAll(document.firstLine + 1, written);
+      return;
+    }
+    for (var i = found.length - 1; i >= 1; i -= 1) {
+      _lines.removeAt(found[i]);
+    }
+    _lines.replaceRange(found.first, found.first + 1, written);
   }
 
   /// Reordena los documentos del año.

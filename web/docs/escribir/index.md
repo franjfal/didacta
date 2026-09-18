@@ -67,9 +67,11 @@ Por el lema de Zorn\ldots
 ```
 
 Hay `definition`, `theorem`, `proposition`, `lemma`, `corollary`, `example`,
-`remark`, `question` y `proof`. Cada uno tiene **dos aspectos**: en
-diapositivas son un recuadro de color, y en documento un bloque con su
-numeración.
+`remark`, `question` y `proof`. Todos salen en una caja con el nombre y el
+número --«Definición 1.2»-- en una etiqueta montada sobre el borde de arriba,
+y el color dice de qué entorno se trata. Tiene **dos aspectos**: proyectada la
+caja va con más contraste y una sombra corta, y en los apuntes con un tinte
+muy suave, porque se lee durante una hora. La caja se parte entre páginas.
 
 Los nombres --«Definición», «Definició», «Definition»-- los pone el idioma del
 documento, no el fichero.
