@@ -298,16 +298,22 @@ class _DocumentPageState extends State<DocumentPage> {
             // A toggle rather than a separate route: it is the same document,
             // and the URL of a document should not depend on whether someone
             // happens to be rearranging it.
-            IconButton(
-              key: const Key('toggle-composition-editor'),
-              tooltip: _editing
-                  ? 'Dejar de editar la composición'
-                  : 'Editar la composición',
-              isSelected: _editing,
-              icon: const Icon(Icons.reorder, size: 18),
-              selectedIcon: const Icon(Icons.reorder, size: 18),
-              onPressed: () => setState(() => _editing = !_editing),
-            ),
+            //
+            // Y solo con la composición delante. Estaba siempre, y en las
+            // demás pestañas era un botón que no hacía nada visible: se
+            // pulsaba mirando el PDF o el historial y no pasaba nada, porque
+            // lo que enciende está en otra pantalla.
+            if (_active == compositionTab)
+              IconButton(
+                key: const Key('toggle-composition-editor'),
+                tooltip: _editing
+                    ? 'Dejar de editar la composición'
+                    : 'Editar la composición',
+                isSelected: _editing,
+                icon: const Icon(Icons.reorder, size: 18),
+                selectedIcon: const Icon(Icons.reorder, size: 18),
+                onPressed: () => setState(() => _editing = !_editing),
+              ),
             IconButton(
               tooltip: 'Copiar el comando para compilarlo',
               icon: const Icon(Icons.terminal_outlined, size: 18),
@@ -392,10 +398,14 @@ class _DocumentPageState extends State<DocumentPage> {
 
     if (_active == historyTab) {
       return HistoryTab(
+        // El fichero donde está escrita **su** composición: el `year.yaml`
+        // del curso, o el compartido cuando el tema está vinculado. Con el
+        // del año se estaba enseñando la historia de un fichero que de este
+        // tema solo dice una línea `link:`.
         state: _history ??= HistoryState(
           session: session,
           repo: document.repo,
-          path: 'courses/$courseId/$year/year.yaml',
+          path: compositionFileOf(document, courseId, year).path,
         ),
       );
     }

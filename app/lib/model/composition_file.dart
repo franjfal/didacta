@@ -253,7 +253,31 @@ class DocumentDraft {
 }
 
 class CompositionFile {
-  CompositionFile(String text) : _lines = text.split('\n');
+  CompositionFile(String text) : _lines = text.split('\n'), _shared = false;
+
+  /// La composición de un tema compartido.
+  ///
+  /// Un fichero de `shared/documents/` lleva **un solo tema** y sin
+  /// envoltorio: su `structure:` está en el primer nivel en lugar de colgar
+  /// de `documents: - id: …`.
+  ///
+  /// El mismo lector y el mismo escritor que el de un `year.yaml`, y eso no
+  /// es ahorro: es lo que garantiza que un tema vinculado y uno que no lo
+  /// está se editen igual, incluidas las novecientas entradas comentadas y
+  /// los `# TODO: va` que un volcado de YAML se llevaría por delante.
+  CompositionFile.shared(String text)
+    : _lines = text.split('\n'),
+      _shared = true;
+
+  /// Cómo se nombra el único tema de un fichero compartido.
+  ///
+  /// No sale a ninguna parte: es lo que se le pasa a [blockFor] y a
+  /// [setStructure] para dirigirse a él, porque en ese fichero no hay id que
+  /// buscar -- el tema es el fichero.
+  static const String sharedDocument = '';
+
+  /// Si esto es un fichero compartido en vez de un `year.yaml`.
+  final bool _shared;
 
   /// `es: Tema 1`, dentro de un `title:`.
   static final RegExp _draftTitle = RegExp(r'^([a-z]{2}):(.*)$');
@@ -784,6 +808,14 @@ class CompositionFile {
   // -- finding things ------------------------------------------------------
 
   List<_Document> _documents() {
+    if (_shared) {
+      // Un tema compartido es el fichero entero: `structure:` en el primer
+      // nivel y nada que buscar antes.
+      return [
+        _Document(id: sharedDocument, firstLine: 0, fieldIndent: 0)
+          ..lastLine = _lines.length - 1,
+      ];
+    }
     final start = _lines.indexWhere((line) => _keyAt(line, 0) == 'documents');
     if (start < 0) return const [];
 

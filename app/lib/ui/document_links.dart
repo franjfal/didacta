@@ -16,6 +16,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../model/catalogue.dart';
+import '../model/composition_file.dart';
 import '../state/session.dart';
 import 'course_admin_ui.dart';
 import 'reuse.dart';
@@ -32,6 +33,24 @@ String placementLabel(Session session, ContentPlacement place) {
   return '${course?.title(session.language) ?? place.course} · '
       '${place.year} · ${place.document}';
 }
+
+/// Dónde está escrita la composición de un tema, y con qué nombre buscarla.
+///
+/// El `year.yaml` de su curso, o el fichero compartido cuando el tema está
+/// vinculado. **Es la diferencia que hace que editarlo desde cualquiera de
+/// los cursos que lo dan lo cambie en todos**, y olvidarla es lo que dejaba
+/// el editor de composición en blanco: el tema estaba en el `year.yaml`, sí,
+/// pero con una línea `link:` y sin composición que enseñar.
+({String path, String document}) compositionFileOf(
+  Document document,
+  String courseId,
+  String year,
+) => document.isLinked
+    ? (
+        path: 'shared/documents/${document.content}.yaml',
+        document: CompositionFile.sharedDocument,
+      )
+    : (path: 'courses/$courseId/$year/year.yaml', document: document.id);
 
 /// Los sitios donde se da un tema, como una lista que lleva a cada uno.
 ///

@@ -25,6 +25,7 @@ import '../model/line_diff.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'commit_dialog.dart';
+import 'document_links.dart';
 import 'heading_title.dart';
 import 'theme.dart';
 
@@ -42,11 +43,40 @@ class CompositionEditor extends StatefulWidget {
   final String documentId;
   final Session session;
 
-  /// Where the composition of a year lives.
-  String get path => 'courses/$courseId/$year/year.yaml';
+  Document? get _document => session.documentIn(courseId, year, documentId);
 
-  /// El repositorio del documento: es su `year.yaml` el que se edita.
-  String get repo => session.documentIn(courseId, year, documentId)?.repo ?? '';
+  /// Dónde está escrita esta composición.
+  ///
+  /// El `year.yaml` del curso, o el fichero compartido cuando el tema está
+  /// vinculado: entonces su `year.yaml` solo lleva una línea `link:`, y
+  /// editar ahí era editar un sitio donde no hay nada que editar.
+  String get path {
+    final document = _document;
+    if (document == null) return 'courses/$courseId/$year/year.yaml';
+    return compositionFileOf(document, courseId, year).path;
+  }
+
+  /// Con qué nombre se busca el tema dentro de ese fichero. En uno
+  /// compartido no hay ninguno que buscar: el tema es el fichero.
+  String get documentKey {
+    final document = _document;
+    if (document == null) return documentId;
+    return compositionFileOf(document, courseId, year).document;
+  }
+
+  /// Si lo que se guarde aquí cambia el tema en más de un curso.
+  bool get shared => (_document?.isLinked ?? false);
+
+  /// En cuántos sitios se da. Uno es lo corriente.
+  int get places {
+    final document = _document;
+    if (document == null || !document.isLinked) return 1;
+    return session.catalogue.sharedById(document.content)?.placements.length ??
+        1;
+  }
+
+  /// El repositorio del documento: es donde vive el fichero que se edita.
+  String get repo => _document?.repo ?? '';
 
   @override
   State<CompositionEditor> createState() => _CompositionEditorState();
@@ -81,13 +111,20 @@ class _CompositionEditorState extends State<CompositionEditor> {
       final file = await widget.session
           .gatewayFor(widget.repo)
           .read(widget.path);
-      final composition = CompositionFile(file.text);
-      final block = composition.blockFor(widget.documentId);
+      final composition = widget.shared
+          ? CompositionFile.shared(file.text)
+          : CompositionFile(file.text);
+      final block = composition.blockFor(widget.documentKey);
       if (block == null) {
         throw CompositionException(
-          'el documento `${widget.documentId}` no está en '
-          '${widget.path}. Puede que el catálogo esté desactualizado: se '
-          'regenera con `didacta index`.',
+          widget.shared
+              ? 'el tema compartido `${widget.documentId}` dice vivir en '
+                    '${widget.path}, y ahí no hay ninguna composición. Puede '
+                    'que el fichero esté en otro repositorio que no tienes '
+                    'abierto.'
+              : 'el documento `${widget.documentId}` no está en '
+                    '${widget.path}. Puede que el catálogo esté '
+                    'desactualizado: se regenera con `didacta index`.',
         );
       }
       if (!mounted) return;
@@ -109,9 +146,11 @@ class _CompositionEditorState extends State<CompositionEditor> {
 
   /// Applies a new order to the file, reporting a refusal rather than a guess.
   void _apply(List<StructureEntry> entries) {
-    final composition = CompositionFile(_text);
+    final composition = widget.shared
+        ? CompositionFile.shared(_text)
+        : CompositionFile(_text);
     try {
-      composition.setStructure(widget.documentId, entries);
+      composition.setStructure(widget.documentKey, entries);
     } on CompositionException catch (thrown) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -159,13 +198,30 @@ class _CompositionEditorState extends State<CompositionEditor> {
           onDiscard: _dirty ? () => _apply(_reload()) : null,
           onSave: _save,
         ),
+        // Que esto se da en más sitios, y que guardar los cambia todos. Se
+        // dice **antes** de tocar nada: descubrirlo después de reordenar
+        // cuarenta lecciones no es descubrirlo, es enterarse.
+        if (widget.shared && widget.places > 1)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+            child: Note(
+              'Este tema se da en ${widget.places} cursos y es el mismo en '
+              'todos: lo que ordenes, añadas o quites aquí se ve en los demás. '
+              'Para que deje de ser así, «Gestionar vinculación».',
+              tone: didactaThm,
+            ),
+          ),
         if (_conflicted)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Note(
-              'year.yaml ha cambiado en el repositorio desde que lo abriste. '
-              'Vuelve a cargarlo antes de guardar; tu orden sigue aquí '
-              'mientras decides.',
+              widget.shared
+                  ? 'El tema compartido ha cambiado en el repositorio desde '
+                        'que lo abriste. Vuelve a cargarlo antes de guardar; '
+                        'tu orden sigue aquí mientras decides.'
+                  : 'year.yaml ha cambiado en el repositorio desde que lo '
+                        'abriste. Vuelve a cargarlo antes de guardar; tu '
+                        'orden sigue aquí mientras decides.',
               tone: didactaTeacher,
             ),
           ),
@@ -254,7 +310,12 @@ class _CompositionEditorState extends State<CompositionEditor> {
   }
 
   List<StructureEntry> _reload() =>
-      CompositionFile(_loaded).blockFor(widget.documentId)?.entries ?? const [];
+      (widget.shared
+              ? CompositionFile.shared(_loaded)
+              : CompositionFile(_loaded))
+          .blockFor(widget.documentKey)
+          ?.entries ??
+      const [];
 
   /// `onReorderItem` hands back an index already adjusted for the removal,
   /// which is the whole reason it replaced `onReorder`.
