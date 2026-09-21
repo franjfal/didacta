@@ -83,6 +83,24 @@ y es una decisión que se toma al añadirla, no después.
 Si el tema de destino está vinculado, el diálogo lo avisa: la lección entra en
 **todos** los cursos que lo dan.
 
+## Editar un tema compartido
+
+Se edita como cualquier otro: la pestaña **Composición**, el mismo editor, el
+mismo arrastrar para reordenar.
+
+![La composición de un tema vinculado](../img/app/vinculos-componer.png)
+
+Dos cosas que la pantalla dice, y que conviene mirar antes de tocar:
+
+- **de qué fichero sale**, arriba a la izquierda. En un tema vinculado es
+  `shared/documents/<id>.yaml` y no el `year.yaml` del curso, porque el tema
+  es uno y el `year.yaml` solo dice que aquí se da;
+- **a cuántos cursos llega**, en la nota azul. Lo que ordenes, añadas o quites
+  se ve en todos, que es justamente lo que se pidió al vincularlo.
+
+El historial de la pestaña **Historial** es el de ese mismo fichero, así que
+enseña los cambios del tema y no los del curso.
+
 ## Separar lo que estaba junto
 
 ### Una ubicación suelta

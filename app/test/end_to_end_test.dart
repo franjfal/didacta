@@ -34,6 +34,7 @@ import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/model/catalogue.dart';
+import 'package:didacta_app/model/composition_file.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/year_page.dart';
@@ -122,7 +123,7 @@ void main() {
       'courses/matematicas/course.yaml',
       'id: matematicas\ntitle:\n  es: Matemáticas\n',
     );
-    for (final name in ['convergencia', 'criterios']) {
+    for (final name in ['convergencia', 'criterios', 'potencias']) {
       write(
         'content/analisis/series/$name/unit.yaml',
         'kind: theory\ntitle:\n  es: $name\n',
@@ -403,6 +404,73 @@ void main() {
       expect(check.exitCode, 0, reason: '${check.stdout}\n${check.stderr}');
     },
   );
+
+  test('el editor lee y reescribe el fichero que escribe el motor', () async {
+    // La juntura más fácil de romper de todo esto: el tema compartido lo
+    // escribe el motor, en Python, y quien lo edita es el editor de
+    // composición, en Dart. Si la sangría o la forma no coinciden, el editor
+    // se queda en blanco -- que es exactamente lo que pasó.
+    final session = await openSession();
+    final admin = session.admin(repo: 'test/repo')!;
+    await admin.linkDocument(
+      fromCourse: 'analisis',
+      fromYear: '2025-2026',
+      document: 'series',
+      toCourse: 'analisis',
+      toYear: '2026-2027',
+    );
+    await session.reloadCatalogue();
+
+    final document = documentOf(session, 'analisis', '2026-2027', 'series');
+    expect(document.isLinked, isTrue);
+
+    final path = 'shared/documents/${document.content}.yaml';
+    final file = await session.gatewayFor('test/repo').read(path);
+    final block = CompositionFile.shared(
+      file.text,
+    ).blockFor(CompositionFile.sharedDocument);
+
+    expect(block, isNotNull, reason: 'el editor no encuentra la composición');
+    // Las dos, y la comentada **como comentada**: es material que existe y
+    // que este año no se da, y perderlo al mudar el tema al fichero
+    // compartido habría sido el peor resultado posible.
+    expect(
+      [for (final entry in block!.entries) (entry.value, entry.enabled)],
+      [
+        ('analisis/series/convergencia', true),
+        ('analisis/series/criterios', false),
+      ],
+    );
+
+    // Y reescribirla deja un fichero que el motor vuelve a leer igual: la
+    // ida y la vuelta, que es lo único que prueba que las dos mitades se
+    // entienden.
+    final composition = CompositionFile.shared(file.text)
+      ..setStructure(CompositionFile.sharedDocument, [
+        ...block.entries,
+        const StructureEntry(
+          kind: EntryKind.unit,
+          value: 'analisis/series/potencias',
+        ),
+      ]);
+    await session
+        .gatewayFor('test/repo')
+        .save(
+          path: path,
+          text: composition.text,
+          sha: file.sha,
+          message: 'Series: una lección más',
+        );
+    await session.reloadCatalogue();
+
+    for (final year in const ['2025-2026', '2026-2027']) {
+      expect(
+        documentOf(session, 'analisis', year, 'series').unitRefs,
+        ['analisis/series/convergencia', 'analisis/series/potencias'],
+        reason: 'lo editado tiene que verse desde los dos cursos',
+      );
+    }
+  });
 
   testWidgets('la pantalla de un curso enseña el vínculo y lo sabe romper', (
     tester,

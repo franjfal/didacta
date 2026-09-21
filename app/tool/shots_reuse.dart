@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/composition_editor.dart';
 import 'package:didacta_app/ui/freezes.dart';
 import 'package:didacta_app/ui/reuse.dart';
 import 'package:didacta_app/ui/shell.dart';
@@ -317,6 +318,32 @@ void main() {
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
     await shoot(tester, 'vinculos-destino');
+  });
+
+  testWidgets('editar la composición de un tema vinculado', (tester) async {
+    // El repositorio es el mismo para todas las capturas y la de arriba ya
+    // vinculó este tema: aquí solo se abre.
+    late Session session;
+    await tester.runAsync(() async {
+      session = await openSession();
+    });
+
+    await mount(
+      tester,
+      ChangeNotifierProvider<Session>.value(
+        value: session,
+        child: Scaffold(
+          body: CompositionEditor(
+            courseId: 'analisis',
+            year: '2026-2027',
+            documentId: 'series',
+            session: session,
+          ),
+        ),
+      ),
+    );
+    await settleReal(tester);
+    await shoot(tester, 'vinculos-componer');
   });
 
   testWidgets('dar una lección en otro tema', (tester) async {
