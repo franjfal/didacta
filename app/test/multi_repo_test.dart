@@ -200,6 +200,56 @@ void main() {
     );
   });
 
+  test('enviar cuenta lo que hace, en el registro', () async {
+    // La razón de que exista el registro: un envío grande son minutos de
+    // `git add`, `git commit` y `git push`, y sin esto el único indicio de
+    // que algo pasaba era un botón gris --que se vuelve a pulsar, porque
+    // desde fuera eso es una aplicación colgada--.
+    File(
+      '${uno.directory}/content/analysis/normed/def/es.tex',
+    ).writeAsStringSync('Tocado por fuera en uno.\n');
+
+    await session.pushAll('Trabajo de la tarde');
+
+    final console = session.syncConsole;
+    expect(console.running, isFalse);
+    expect(console.ok, isTrue);
+    expect(console.title, 'Enviar a GitHub');
+    // El repositorio al que le toca, y las órdenes que se le dieron a git.
+    expect(console.lines, contains('=== x/uno'));
+    expect(console.lines, contains(r'$ git push'));
+    expect(
+      console.lines.where((line) => line.startsWith(r'$ git add -A')),
+      isNotEmpty,
+    );
+    // Y lo que git contestó: sin esto el registro sería una lista de órdenes,
+    // que es lo mismo que no tener registro.
+    expect(
+      console.lines.where((line) => line.contains('main')),
+      isNotEmpty,
+      reason: 'el resumen del commit que escribe git',
+    );
+  });
+
+  test('un envío que falla se queda dicho en el registro', () async {
+    // El remoto desaparece por debajo: es el caso en que el registro tiene
+    // que quedarse abierto, porque lo que git diga ahí es lo único que
+    // explica por qué no salió.
+    File(
+      '${uno.directory}/content/analysis/normed/def/es.tex',
+    ).writeAsStringSync('Tocado por fuera en uno.\n');
+    await Directory(uno.remote).delete(recursive: true);
+
+    final result = await session.pushAll('Trabajo de la tarde');
+
+    expect(result['x/uno'], isA<CloneException>());
+    expect(session.syncConsole.ok, isFalse);
+    expect(
+      session.syncConsole.lines.where((line) => line.startsWith('--- FAIL')),
+      isNotEmpty,
+    );
+  });
+
   test('traer se trae lo de los dos', () async {
     // Otra persona empuja a cada remoto.
     for (final repo in [uno, dos]) {
@@ -215,6 +265,18 @@ void main() {
 
     expect(File('${uno.directory}/nuevo.txt').existsSync(), isTrue);
     expect(File('${dos.directory}/nuevo.txt').existsSync(), isTrue);
+
+    // Y contado, igual que el envío.
+    expect(session.syncConsole.title, 'Traer de GitHub');
+    expect(session.syncConsole.ok, isTrue);
+    expect(session.syncConsole.lines, contains(r'$ git pull --ff-only'));
+    expect(
+      session.syncConsole.lines.where(
+        (line) => line.startsWith('--- ahora en'),
+      ),
+      hasLength(2),
+      reason: 'los dos clones se movieron, y el registro dice a dónde',
+    );
   });
 
   test('lo que no se toca no se envía', () async {

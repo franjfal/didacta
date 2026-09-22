@@ -41,6 +41,7 @@ documents:
           es: "Apéndice: lo que hará falta"
       - subsection:
           es: Logaritmos
+          va: Logaritmes
       - unit: analisis/apendice/logaritmos
       - subsection:
           es: Trigonometría
@@ -126,9 +127,60 @@ class RenderTests(unittest.TestCase):
     def test_writes_each_kind_with_its_macro(self):
         found = compose.entries(YEAR, "practica-1")
         body = compose.render(found, "es")
-        self.assertIn("\\section{Los naturales}", body)
-        self.assertIn("\\subsection{Logaritmos}", body)
+        self.assertIn("\\DidactaSection{es={Los naturales}}", body)
+        self.assertIn(
+            "\\DidactaSubsection{es={Logaritmos}, va={Logaritmes}}", body)
         self.assertIn("\\DidactaUnit{analisis/apendice/logaritmos}", body)
+
+    def test_a_heading_carries_every_language_it_has(self):
+        """El master es uno y los idiomas son tres.
+
+        Un `\\section{...}` ata el encabezado al idioma con el que se compuso,
+        y la compilación en otro idioma sale con el contenido traducido y los
+        apartados sin traducir: media traducción, que en clase es peor que
+        ninguna porque no se ve hasta que está proyectada.
+        """
+        found = compose.entries(YEAR, "practica-1")
+        for language in ("es", "va"):
+            body = compose.render(found, language)
+            self.assertIn(
+                "\\DidactaSubsection{es={Logaritmos}, va={Logaritmes}}", body,
+                "compuesto en %s" % language,
+            )
+
+    def test_the_same_composition_gives_the_same_body_in_any_language(self):
+        """Y por eso `didacta check` no tiene que preguntar en qué idioma."""
+        found = compose.entries(YEAR, "practica-1")
+        self.assertEqual(compose.render(found, "es"), compose.render(found, "va"))
+
+    def test_a_heading_without_languages_keeps_the_plain_order(self):
+        """`- section: Logaritmos` no tiene nada que elegir.
+
+        Envolverlo en claves diría que hay una traducción donde no la hay.
+        """
+        year = YEAR.replace("      - subsection:\n          es: Logaritmos\n"
+                            "          va: Logaritmes\n",
+                            "      - subsection: Logaritmos\n")
+        body = compose.render(compose.entries(year, "practica-1"), "es")
+        self.assertIn("\\subsection{Logaritmos}", body)
+
+    def test_a_title_with_a_comma_survives_the_keys(self):
+        """keyval parte por comas, así que cada título va entre llaves.
+
+        Sin ellas, `Extremos de funciones, optimización` se lee como dos
+        claves y la segunda no existe: error de compilación en la línea de la
+        composición, que es donde nadie mira.
+        """
+        entry = compose.Entry("section", titles={
+            "es": "Extremos de funciones, optimización",
+            "va": "Extrems de funcions, optimització",
+        })
+        line = compose.render([entry], "es")[0]
+        self.assertEqual(
+            line,
+            "\\DidactaSection{es={Extremos de funciones, optimización}, "
+            "va={Extrems de funcions, optimització}}",
+        )
 
     def test_what_is_off_stays_off(self):
         body = compose.render(compose.entries(YEAR, "practica-1"), "es")
@@ -136,17 +188,18 @@ class RenderTests(unittest.TestCase):
 
     def test_a_blank_line_opens_a_section_and_not_a_subsection(self):
         body = compose.render(compose.entries(YEAR, "practica-1"), "es")
-        at = body.index("\\section{Apéndice: lo que hará falta}")
+        at = body.index("\\DidactaSection{es={Apéndice: lo que hará falta}}")
         self.assertEqual(body[at - 1], "")
-        self.assertNotEqual(body[body.index("\\subsection{Logaritmos}") - 1], "")
+        self.assertNotEqual(
+            body[body.index("\\DidactaSubsection{es={Logaritmos}, va={Logaritmes}}") - 1], "")
 
 
 class ComposeTests(unittest.TestCase):
     def test_adds_the_subheadings_the_composition_gained(self):
         out, why = compose.compose(MASTER, compose.entries(YEAR, "practica-1"), "es")
         self.assertIsNone(why)
-        self.assertIn("\\subsection{Logaritmos}", out)
-        self.assertIn("\\subsection{Trigonometría}", out)
+        self.assertIn("\\DidactaSubsection{es={Logaritmos}, va={Logaritmes}}", out)
+        self.assertIn("\\DidactaSubsection{es={Trigonometría}}", out)
 
     def test_leaves_the_preamble_and_the_cover_alone(self):
         out, _ = compose.compose(MASTER, compose.entries(YEAR, "practica-1"), "es")
@@ -167,7 +220,7 @@ class ComposeTests(unittest.TestCase):
         self.assertIsNone(why)
         self.assertIn("\\DidactaUnit{analisis/induccion/principio}", out)
         self.assertLess(out.index("\\DidactaContents"),
-                        out.index("\\section{Los naturales}"))
+                        out.index("\\DidactaSection{es={Los naturales}}"))
 
     def test_refuses_a_body_with_latex_the_composition_cannot_say(self):
         # La migración dejó apartados envueltos en `\onlyslides{...}` porque
@@ -213,7 +266,8 @@ class OnDiskTests(unittest.TestCase):
     def test_writes_the_master_and_says_so(self):
         result = compose.compose_document(self._document(), self.year_path)
         self.assertTrue(result.changed)
-        self.assertIn("\\subsection{Logaritmos}", self._read())
+        self.assertIn("\\DidactaSubsection{es={Logaritmos}, va={Logaritmes}}",
+                      self._read())
 
     def test_write_false_answers_without_touching_the_file(self):
         result = compose.compose_document(

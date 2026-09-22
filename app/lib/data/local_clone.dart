@@ -432,6 +432,7 @@ build_dir: .didacta-build
     required String authorEmail,
     required String token,
     bool push = true,
+    void Function(String line)? onProgress,
   });
 
   /// Trae de GitHub lo que haya, **sin tocar el clon**.
@@ -442,9 +443,22 @@ build_dir: .didacta-build
   /// detrás sin volver a la red.
   Future<void> fetch({required String token});
 
-  Future<void> pull({required String token});
+  /// [onProgress] recibe lo que git va diciendo, línea a línea.
+  ///
+  /// Con alguien escuchando se le pide a git que **cuente lo que hace**:
+  /// normalmente se calla porque no está hablando con un terminal, y un
+  /// `push` de setecientos ficheros son minutos de silencio absoluto. Lo que
+  /// tiene que decir --cuántos objetos lleva contados, comprimidos y
+  /// subidos-- es exactamente lo que distingue esperar de estar colgado.
+  Future<void> pull({
+    required String token,
+    void Function(String line)? onProgress,
+  });
 
-  Future<void> push({required String token});
+  Future<void> push({
+    required String token,
+    void Function(String line)? onProgress,
+  });
 
   /// El SHA entero de HEAD.
   ///

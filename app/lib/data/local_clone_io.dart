@@ -600,6 +600,7 @@ class _GitClone implements LocalClone {
     required String authorEmail,
     required String token,
     bool push = true,
+    void Function(String line)? onProgress,
   }) async {
     if (paths.isEmpty) return false;
 
@@ -629,6 +630,8 @@ class _GitClone implements LocalClone {
     // `add -A -- <rutas>` recoge lo nuevo, lo cambiado y lo borrado dentro
     // de esas rutas, que es lo que hace falta: una asignatura que se va son
     // borrados, y una que se crea son ficheros nuevos.
+    final plural = known.length == 1 ? 'ruta' : 'rutas';
+    onProgress?.call('\$ git add -A -- ${known.length} $plural');
     await _run(['add', '-A', '--', ...known], what: 'preparar los cambios');
 
     final staged = await _text([
@@ -653,6 +656,7 @@ class _GitClone implements LocalClone {
         ...known,
       ],
       what: 'hacer el commit',
+      onProgress: onProgress,
       environment: {
         'GIT_AUTHOR_NAME': authorName,
         'GIT_AUTHOR_EMAIL': authorEmail,
@@ -661,7 +665,7 @@ class _GitClone implements LocalClone {
       },
     );
 
-    if (push) await this.push(token: token);
+    if (push) await this.push(token: token, onProgress: onProgress);
     return true;
   }
 
@@ -675,18 +679,38 @@ class _GitClone implements LocalClone {
   );
 
   @override
-  Future<void> pull({required String token}) => _run(
-    // `--ff-only`: a merge commit made behind someone's back is not a
-    // thing an editor should produce. Diverged history is a conversation,
-    // not an automatic resolution.
-    ['pull', '--ff-only'],
-    token: token,
-    what: 'traer los cambios del repositorio',
-  );
+  Future<void> pull({
+    required String token,
+    void Function(String line)? onProgress,
+  }) {
+    onProgress?.call(r'$ git pull --ff-only');
+    return _run(
+      // `--ff-only`: a merge commit made behind someone's back is not a
+      // thing an editor should produce. Diverged history is a conversation,
+      // not an automatic resolution.
+      //
+      // `--progress` solo cuando hay quien lo lea: git se calla al escribir
+      // a una tubería, y lo que se calla es justo el rato largo.
+      ['pull', '--ff-only', if (onProgress != null) '--progress'],
+      token: token,
+      what: 'traer los cambios del repositorio',
+      onProgress: onProgress,
+    );
+  }
 
   @override
-  Future<void> push({required String token}) =>
-      _run(['push'], token: token, what: 'enviar los commits al repositorio');
+  Future<void> push({
+    required String token,
+    void Function(String line)? onProgress,
+  }) {
+    onProgress?.call(r'$ git push');
+    return _run(
+      ['push', if (onProgress != null) '--progress'],
+      token: token,
+      what: 'enviar los commits al repositorio',
+      onProgress: onProgress,
+    );
+  }
 
   Future<String> _hashOf(String path) => _text(['hash-object', '--', path]);
 
@@ -1068,12 +1092,14 @@ class _GitClone implements LocalClone {
     List<String> arguments, {
     required String what,
     String? token,
+    void Function(String line)? onProgress,
     Map<String, String>? environment,
   }) => _runIn(
     arguments,
     directory: directory,
     what: what,
     token: token,
+    onProgress: onProgress,
     environment: environment,
   );
 }

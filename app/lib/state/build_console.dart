@@ -1,12 +1,19 @@
-/// El registro de una compilación, mientras corre.
+/// El registro de un trabajo largo, mientras corre.
 ///
-/// Compilar es lo único que hace esta aplicación que tarda: una unidad son
-/// tres segundos, un tema con veinte unidades en tres idiomas es un minuto
-/// largo. Hasta ahora eso era un botón que ponía «Compilando…» y nada más, y
-/// un minuto de silencio no se distingue de un cuelgue. Lo que LaTeX escribe
+/// Nació para compilar, que es lo que más tarda: una unidad son tres
+/// segundos, un tema con veinte unidades en tres idiomas es un minuto largo.
+/// Hasta entonces eso era un botón que ponía «Compilando…» y nada más, y un
+/// minuto de silencio no se distingue de un cuelgue. Lo que LaTeX escribe
 /// mientras tanto --qué fichero está leyendo, qué paquete está cargando, qué
 /// pasada va-- es exactamente la información que falta, y ya existía: se
 /// estaba tirando.
+///
+/// **Y hablar con GitHub tarda lo mismo.** Enviar setecientos ficheros son
+/// minutos de `git add`, `git commit` y `git push`, y era otro botón que se
+/// quedaba gris sin decir nada; quien lo pulsaba lo volvía a pulsar, porque
+/// desde fuera eso es una aplicación colgada. git dice en voz alta lo que
+/// está haciendo --cuántos objetos lleva contados, cuánto lleva subido-- así
+/// que esto es el mismo registro con otro texto dentro.
 ///
 /// Dos decisiones que conviene dejar dichas:
 ///
@@ -35,9 +42,25 @@ import 'package:flutter/foundation.dart';
 /// compilando de verdad.
 const int _maxLines = 20000;
 
-/// Lo que el motor va diciendo, y en qué estado está.
+/// Lo que la herramienta va diciendo, y en qué estado está.
 class BuildConsole extends ChangeNotifier {
   final List<String> _lines = [];
+
+  /// Lo que se enseña mientras no ha salido ninguna línea todavía.
+  ///
+  /// Se dice al empezar porque depende del trabajo: «Arrancando el motor…»
+  /// delante de un `git push` sería mentira, y esa mentira se lee justo en el
+  /// momento en que alguien mira la ventana porque no sabe qué está pasando.
+  static const String openingBuild = 'Arrancando el motor…';
+  static const String aboutBuild =
+      'Todo lo que escribe LaTeX, según lo escribe.';
+
+  String get opening => _opening;
+  String _opening = openingBuild;
+
+  /// Qué es esta ventana, para el pie mientras está vacía.
+  String get about => _about;
+  String _about = aboutBuild;
 
   /// Cuántas líneas se han caído por arriba al llegar al tope.
   int _dropped = 0;
@@ -92,10 +115,17 @@ class BuildConsole extends ChangeNotifier {
   /// Se tira a propósito. Lo que interesa es lo que está pasando ahora, y un
   /// registro acumulado entre compilaciones obliga a buscar dónde empieza la
   /// que se está mirando.
-  void start(String title, {int total = 0}) {
+  void start(
+    String title, {
+    int total = 0,
+    String opening = openingBuild,
+    String about = aboutBuild,
+  }) {
     _lines.clear();
     _dropped = 0;
     _title = title;
+    _opening = opening;
+    _about = about;
     _running = true;
     _ok = true;
     _startedAt = DateTime.now();
@@ -116,6 +146,17 @@ class BuildConsole extends ChangeNotifier {
   /// ha colgado.
   int get total => _total;
   int _total = 0;
+
+  /// Cuántas piezas resultaron ser, cuando no se sabe al arrancar.
+  ///
+  /// Enviar a GitHub empieza antes de saberlo --lo primero que hace es
+  /// preguntarle a git qué hay pendiente, y eso ya tarda-- y arrancar el
+  /// registro después de esa pregunta dejaría el primer tramo de espera sin
+  /// nada en pantalla, que es justo el tramo que se quería contar.
+  void expect(int total) {
+    _total = total;
+    _notifyNow();
+  }
 
   int get done => _done;
   int _done = 0;

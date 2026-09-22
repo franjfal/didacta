@@ -639,6 +639,19 @@ class Session extends ChangeNotifier {
   /// pantalla. Uno solo, además, porque las compilaciones van de una en una.
   final BuildConsole buildConsole = BuildConsole();
 
+  /// Y lo que git va diciendo mientras se trae o se envía.
+  ///
+  /// Separada de la de compilar y no la misma, aunque la ventana sea la
+  /// misma: son dos trabajos que se lanzan por su cuenta y que se solapan
+  /// --se envía mientras compila un tema-- y compartir el registro haría que
+  /// el segundo borrase lo del primero. Una por trabajo, y cada botón abre
+  /// la suya.
+  final BuildConsole syncConsole = BuildConsole();
+
+  /// Lo que se enseña mientras git todavía no ha dicho nada.
+  static const String _gitOpening = 'Preguntándole a git…';
+  static const String _gitAbout = 'Todo lo que dice git, según lo dice.';
+
   /// The compiler, or null when there is nothing to compile with -- no
   /// engine, no clone, or a browser.
   ///
@@ -950,6 +963,7 @@ class Session extends ChangeNotifier {
       unawaited(subscription.cancel());
     }
     buildConsole.dispose();
+    syncConsole.dispose();
     super.dispose();
   }
 
@@ -1047,6 +1061,16 @@ class Session extends ChangeNotifier {
           directory: paths[index],
         ),
     ]);
+  }
+
+  /// Para un test: quién firma los commits, sin git ni GitHub.
+  ///
+  /// Lo normal es que salga de la cuenta con la que se entró, o de lo que
+  /// tenga configurado git en la máquina, y las dos cosas las averigua
+  /// `refreshAccess` yendo al disco. Una prueba de widgets no puede.
+  @visibleForTesting
+  void setCloneAuthorForTest(({String name, String email}) author) {
+    _cloneAuthor = author;
   }
 
   /// Para un test: lo compilado, sin motor que lo diga.
@@ -3093,45 +3117,89 @@ class Session extends ChangeNotifier {
 
   /// Confirma lo que haya escrito y sin confirmar, con un mensaje.
   ///
-  /// Solo hace falta con los commits automáticos apagados: con ellos puestos
-  /// no queda nunca nada pendiente. Por eso el botón que llama a esto
-  /// aparece y desaparece con la preferencia, en vez de estar siempre y no
-  /// hacer nada la mitad del tiempo.
+  /// **También con los commits automáticos puestos.** Se creía que con ellos
+  /// no quedaba nunca nada pendiente, y no es verdad: lo que se escribe
+  /// desde fuera --otro editor, un `cp` de una lección, una carpeta traída
+  /// de otro sitio-- aparece en el árbol de trabajo sin pasar por Didacta, y
+  /// ahí se queda. Setecientos ficheros sin confirmar en un repositorio son
+  /// setecientos ficheros que nadie más tiene.
+  ///
+  /// [only] son las rutas elegidas, por repositorio; null es todo lo
+  /// pendiente. Se puede elegir porque setecientos ficheros rara vez son un
+  /// solo cambio que contar, y un commit que dice «Editar 706 ficheros» es
+  /// un commit que nadie va a poder leer dentro de seis meses.
   ///
   /// Repositorio por repositorio y por rutas, no un `git add -A`: cada uno
   /// tiene su historial y su mensaje, y barrer el árbol entero se llevaría al
   /// commit lo que alguien tenga a medias fuera de Didacta.
   ///
   /// Devuelve en cuántos repositorios se confirmó algo.
-  Future<int> commitPending(String message) async {
+  Future<int> commitPending(
+    String message, {
+    Map<String, List<String>>? only,
+  }) async {
+    // El registro, desde el principio: confirmar setecientos ficheros tarda,
+    // y lo que tarda tiene que decir lo que está haciendo.
+    syncConsole.start(
+      'Confirmar los cambios',
+      opening: _gitOpening,
+      about: _gitAbout,
+    );
+
     if (message.trim().isEmpty) {
-      throw ArgumentError('un commit necesita un mensaje');
+      final problem = ArgumentError('un commit necesita un mensaje');
+      syncConsole.finish(failure: problem);
+      throw problem;
     }
     final author = _cloneAuthor;
     if (author == null) {
-      throw ArgumentError(
+      final problem = ArgumentError(
         'Un commit necesita un autor. Inicia sesión antes de confirmar.',
       );
+      syncConsole.finish(failure: problem);
+      throw problem;
     }
 
+    final chosen = only ?? pendingChanges;
+    syncConsole.expect(chosen.values.where((files) => files.isNotEmpty).length);
+
     var done = 0;
-    for (final entry in pendingChanges.entries) {
+    Object? failure;
+    for (final entry in chosen.entries) {
       if (entry.value.isEmpty) continue;
       final clone = cloneFor(entry.key);
       if (clone == null) continue;
-      final committed = await clone.commitPaths(
-        paths: entry.value,
-        message: message.trim(),
-        authorName: author.name,
-        authorEmail: author.email,
-        token: _token ?? '',
-        // Enviar o no lo decide la otra preferencia, igual que con los
-        // commits automáticos: son dos decisiones distintas.
-        push: _pushOnCommit && (_token ?? '').isNotEmpty,
-      );
-      if (committed) done += 1;
+      syncConsole.startStep(entry.key);
+      syncConsole.add('=== ${entry.key}');
+      try {
+        final committed = await clone.commitPaths(
+          paths: entry.value,
+          message: message.trim(),
+          authorName: author.name,
+          authorEmail: author.email,
+          token: _token ?? '',
+          // Enviar o no lo decide la otra preferencia, igual que con los
+          // commits automáticos: son dos decisiones distintas.
+          push: _pushOnCommit && (_token ?? '').isNotEmpty,
+          onProgress: syncConsole.add,
+        );
+        if (committed) done += 1;
+        if (!committed) syncConsole.add('--- no había nada que confirmar');
+      } catch (thrown) {
+        // Uno que falle no para a los demás, igual que al enviar: lo que se
+        // pudo confirmar queda confirmado, y por qué no salió el otro está
+        // escrito ahí arriba.
+        failure ??= thrown;
+        syncConsole.add('--- FAIL $thrown');
+      }
+      syncConsole.finishStep();
     }
-    if (done > 0) await refreshAccess();
+    if (done > 0) {
+      syncConsole.startStep('volviendo a mirar los repositorios');
+      await refreshAccess();
+    }
+    syncConsole.finish(ok: failure == null);
+    if (failure != null) throw failure;
     return done;
   }
 
@@ -3677,19 +3745,49 @@ class Session extends ChangeNotifier {
   /// Devuelve cuántos commits se han traído, por repositorio. Uno que falle
   /// no para a los demás: se cuenta y se sigue.
   Future<Map<String, Object>> pullAll() async {
+    // Lo primero de todo y antes del primer `await`, para que quien abra el
+    // registro justo después lo encuentre ya en marcha y no enseñando lo de
+    // la vez anterior.
+    syncConsole.start(
+      'Traer de GitHub',
+      total: _workspace.repos.length,
+      opening: _gitOpening,
+      about: _gitAbout,
+    );
+
     final result = <String, Object>{};
     final token = _token ?? await tokenStore.read() ?? '';
     for (final repo in _workspace.repos) {
+      syncConsole.startStep(repo.label);
+      syncConsole.add('=== ${repo.id}');
       try {
         final clone = cloneAt(repo.directory);
         final before = await clone.status();
-        await clone.pull(token: token);
+        await clone.pull(token: token, onProgress: syncConsole.add);
         final after = await clone.status();
         result[repo.id] = before.head == after.head ? 0 : (before.behind);
+        // El commit en el que queda, y no cuántos entraron: `before.behind`
+        // es de la última vez que se preguntó a GitHub, así que en un clon
+        // que no había hecho `fetch` diría cero justo cuando acaba de traer
+        // algo. Cuántos fueron ya lo dice git ahí arriba.
+        syncConsole.add(
+          before.head == after.head
+              ? '--- ya estaba al día'
+              : '--- ahora en ${after.head}',
+        );
       } catch (thrown) {
         result[repo.id] = thrown;
+        syncConsole.add('--- FAIL $thrown');
       }
+      syncConsole.finishStep();
     }
+
+    // Y el registro sigue abierto durante lo que queda, que no es de git
+    // pero tarda igual: releer el índice de un repositorio grande son varios
+    // segundos más. Cerrarlo al acabar el `pull` devolvería la aplicación a
+    // la pantalla quieta que esto viene a quitar, justo antes del final.
+    syncConsole.startStep('releyendo el índice');
+    syncConsole.add('--- releyendo el índice y el catálogo');
     _forgetFreshness();
     await refreshAccess();
     if (await refreshIndex()) {
@@ -3697,6 +3795,7 @@ class Session extends ChangeNotifier {
     } else {
       await reloadCatalogue();
     }
+    syncConsole.finish(ok: result.values.every((each) => each is int));
     return result;
   }
 
@@ -3728,10 +3827,26 @@ class Session extends ChangeNotifier {
   /// El mensaje es uno para todos porque el gesto es uno: se estaba
   /// trabajando en algo, y ese algo tocó ficheros de varios repositorios.
   Future<Map<String, Object>> pushAll(String message) async {
+    // Antes del primer `await`, por lo mismo que en `pullAll`: la primera
+    // espera de un envío es `outbox()`, que en un repositorio grande son ya
+    // varios segundos de `git status`, y arrancar el registro después
+    // dejaría sin contar justo el tramo en el que no se ve nada.
+    syncConsole.start(
+      'Enviar a GitHub',
+      opening: _gitOpening,
+      about: _gitAbout,
+    );
+
     final result = <String, Object>{};
     final token = _token ?? await tokenStore.read() ?? '';
     final author = _cloneAuthor;
-    for (final box in await outbox()) {
+    final boxes = await outbox();
+    syncConsole.expect(boxes.length);
+    if (boxes.isEmpty) syncConsole.add('--- no había nada que enviar');
+
+    for (final box in boxes) {
+      syncConsole.startStep(box.repo.label);
+      syncConsole.add('=== ${box.repo.id}');
       try {
         final clone = cloneAt(box.repo.directory);
         if (box.pending.isNotEmpty && author != null) {
@@ -3742,16 +3857,24 @@ class Session extends ChangeNotifier {
             authorEmail: author.email,
             token: token,
             push: false,
+            onProgress: syncConsole.add,
           );
         }
-        await clone.push(token: token);
+        await clone.push(token: token, onProgress: syncConsole.add);
         result[box.repo.id] = box.ahead + (box.pending.isEmpty ? 0 : 1);
       } catch (thrown) {
         result[box.repo.id] = thrown;
+        syncConsole.add('--- FAIL $thrown');
       }
+      syncConsole.finishStep();
     }
+
+    // Lo mismo que al traer: el registro se queda hasta que la aplicación
+    // ha terminado de enterarse, y no solo hasta que git ha terminado.
+    syncConsole.startStep('volviendo a mirar los repositorios');
     _forgetFreshness();
     await refreshAccess();
+    syncConsole.finish(ok: result.values.every((each) => each is int));
     return result;
   }
 

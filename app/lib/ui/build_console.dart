@@ -1,9 +1,9 @@
-/// El terminal de una compilación, en una ventana.
+/// El terminal de un trabajo largo, en una ventana.
 ///
-/// Lo que el motor va escribiendo, según lo escribe: qué fichero está
-/// leyendo, qué paquete está cargando, qué pasada va. La alternativa que
-/// había era un botón que ponía «Compilando…», y un minuto de eso no se
-/// distingue de un cuelgue.
+/// Lo que la herramienta va escribiendo, según lo escribe: qué fichero está
+/// leyendo LaTeX, cuántos objetos lleva contados git. La alternativa que
+/// había era un botón gris, y un minuto de eso no se distingue de un cuelgue
+/// --se vuelve a pulsar, que es lo que hace cualquiera--.
 ///
 /// Se enseña entero y sin filtrar. Los diagnósticos ya parseados siguen en
 /// las tarjetas de resultado, que contestan a «¿qué ha fallado?»; esta
@@ -22,9 +22,9 @@ import 'package:flutter/services.dart';
 import '../state/build_console.dart';
 import 'theme.dart';
 
-/// Abre el terminal de la compilación.
+/// Abre el terminal del trabajo que esté corriendo.
 ///
-/// No bloquea: la compilación sigue por su cuenta y cerrar esto no la para.
+/// No bloquea: el trabajo sigue por su cuenta y cerrar esto no lo para.
 /// Se puede volver a abrir mientras corre y después, que es lo que permite
 /// quitarlo de en medio sin perder nada.
 ///
@@ -157,7 +157,7 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
                 width: double.infinity,
                 color: _terminalBack,
                 child: console.isEmpty
-                    ? const _Waiting()
+                    ? _Waiting(console.opening)
                     : NotificationListener<ScrollNotification>(
                         onNotification: _onScroll,
                         child: SelectionArea(
@@ -371,9 +371,7 @@ class _Footer extends StatelessWidget {
       children: [
         Expanded(
           child: Text(
-            console.isEmpty
-                ? 'Todo lo que escribe LaTeX, según lo escribe.'
-                : '${console.lines.length} líneas',
+            console.isEmpty ? console.about : '${console.lines.length} líneas',
             style: const TextStyle(fontSize: 11.5, color: didactaMuted),
           ),
         ),
@@ -419,15 +417,17 @@ class _Footer extends StatelessWidget {
 }
 
 class _Waiting extends StatelessWidget {
-  const _Waiting();
+  const _Waiting(this.text);
+
+  final String text;
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       child: Text(
-        'Arrancando el motor…',
-        style: TextStyle(
+        text,
+        style: const TextStyle(
           fontSize: 12.5,
           fontFamily: 'monospace',
           color: _terminalDim,

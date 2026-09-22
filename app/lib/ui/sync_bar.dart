@@ -10,13 +10,22 @@
 ///
 /// Y enviar **propone un mensaje** con lo que se tocó, y lo deja editar antes
 /// de escribir nada: es lo que queda en el historial de otra gente.
+///
+/// Las dos abren el terminal, el mismo de compilar. Un envío de setecientos
+/// ficheros son minutos de `git add`, `git commit` y `git push`, y hasta
+/// ahora eso era un botón gris y nada más: quien lo pulsaba lo volvía a
+/// pulsar, porque desde fuera una aplicación que no dice nada durante dos
+/// minutos está colgada. git cuenta lo que hace; solo había que enseñarlo.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../model/commit_message.dart';
 import '../model/workspace.dart';
 import '../state/session.dart';
+import 'build_console.dart';
 import 'theme.dart';
 
 class SyncBar extends StatefulWidget {
@@ -33,30 +42,45 @@ class _SyncBarState extends State<SyncBar> {
 
   /// Confirma lo pendiente, con el mensaje que se escriba.
   Future<void> _commit() async {
-    final pending = widget.session.pendingChanges;
-    final message = await showDialog<String>(
+    final session = widget.session;
+    final chosen = await showDialog<_Chosen>(
       context: context,
-      builder: (context) => _CommitDialog(pending: pending),
+      builder: (context) => _CommitDialog(
+        pending: session.pendingChanges,
+        repos: session.workspace.repos,
+      ),
     );
-    if (message == null || !mounted) return;
+    if (chosen == null || !mounted) return;
 
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final done = await widget.session.commitPending(message);
+      // Igual que traer y enviar: `commitPending` arranca el registro antes
+      // de su primer `await`, y confirmar setecientos ficheros tarda lo
+      // suyo.
+      final committing = session.commitPending(
+        chosen.message,
+        only: chosen.paths,
+      );
+      unawaited(
+        showBuildConsole(context, session.syncConsole, autoClose: true),
+      );
+      final done = await committing;
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             done == 0
                 ? 'No había nada que confirmar.'
-                : widget.session.pushOnCommit
+                : session.pushOnCommit
                 ? 'Confirmado y enviado.'
                 : 'Confirmado. Queda enviarlo.',
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('$error'), backgroundColor: didactaTeacher),
+      );
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -66,7 +90,15 @@ class _SyncBarState extends State<SyncBar> {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final result = await widget.session.pullAll();
+      // El registro se abre con la operación ya lanzada: `pullAll` arranca
+      // la consola antes de su primer `await`, así que para cuando esta
+      // ventana se monta ya está enseñando lo de ahora y no lo de la vez
+      // anterior.
+      final bringing = widget.session.pullAll();
+      unawaited(
+        showBuildConsole(context, widget.session.syncConsole, autoClose: true),
+      );
+      final result = await bringing;
       final failed = [
         for (final entry in result.entries)
           if (entry.value is! int) '${entry.key}: ${entry.value}',
@@ -109,7 +141,11 @@ class _SyncBarState extends State<SyncBar> {
       );
       if (message == null || !mounted) return;
 
-      final result = await widget.session.pushAll(message);
+      final sending = widget.session.pushAll(message);
+      unawaited(
+        showBuildConsole(context, widget.session.syncConsole, autoClose: true),
+      );
+      final result = await sending;
       final failed = [
         for (final entry in result.entries)
           if (entry.value is! int) '${entry.key}: ${entry.value}',
@@ -141,10 +177,15 @@ class _SyncBarState extends State<SyncBar> {
     if (repos.isEmpty) return const SizedBox.shrink();
 
     final behind = session.behind ?? 0;
-    var waiting = session.ahead;
-    for (final files in session.pendingChanges.values) {
-      waiting += files.length;
-    }
+
+    // Los commits que no han salido de esta máquina, **y nada más**. Antes
+    // esta cuenta sumaba también los ficheros escritos y sin confirmar, y
+    // eso decía «697 sin enviar» sobre un repositorio que no tenía ni un
+    // commit pendiente: lo que había eran 697 ficheros que ni siquiera
+    // estaban en un commit todavía. Son dos cosas distintas y se arreglan
+    // con dos botones distintos, así que se cuentan por separado.
+    final unsent = session.ahead;
+    final pending = session.pendingCount;
 
     return Container(
       decoration: const BoxDecoration(
@@ -214,7 +255,15 @@ class _SyncBarState extends State<SyncBar> {
           // el repositorio evita pulsarla queriendo pulsar otra cosa.
           _LanguagePicker(session: session),
           // Y confirmar, delante de los dos: es el paso que va antes.
-          if (!session.commitOnSave)
+          //
+          // Con los commits automáticos puestos aparece **solo cuando hay
+          // algo pendiente**, que se creía que no pasaba nunca y pasa: lo
+          // que se escribe fuera de Didacta --otro editor, una carpeta
+          // copiada, una lección traída de otro sitio-- llega al árbol de
+          // trabajo sin pasar por aquí y se queda sin confirmar. Cuando no
+          // hay nada, no se enseña: un botón que no hace nada se aprende a
+          // ignorar justo antes del día en que sí hacía falta.
+          if (!session.commitOnSave || pending > 0)
             _CommitButton(session: session, onPressed: _busy ? null : _commit),
           if (_busy)
             const Padding(
@@ -237,10 +286,15 @@ class _SyncBarState extends State<SyncBar> {
           _SyncButton(
             id: 'push',
             icon: Icons.upload_outlined,
-            tooltip: waiting > 0
-                ? 'Enviar a GitHub ($waiting sin enviar)'
-                : 'Enviar a GitHub',
-            badge: waiting,
+            tooltip: [
+              'Enviar a GitHub',
+              if (unsent > 0) '$unsent commit(s) sin enviar',
+              // Dicho aquí también, porque enviar se los lleva: cierra en un
+              // commit lo que quede suelto antes de empujar. Quien quiera
+              // contarlos por separado tiene el botón de al lado.
+              if (pending > 0) '$pending fichero(s) sin confirmar',
+            ].join('\n'),
+            badge: unsent,
             colour: didactaAccentDark,
             onPressed: _busy ? null : _push,
           ),
@@ -268,7 +322,8 @@ class _CommitButton extends StatelessWidget {
     return Tooltip(
       message: pending == 0
           ? 'No hay nada escrito sin confirmar'
-          : 'Confirmar $pending fichero(s) como un commit',
+          : 'Confirmar $pending fichero(s) escritos y sin confirmar, '
+                'eligiendo cuáles entran',
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -290,6 +345,7 @@ class _CommitButton extends StatelessWidget {
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
+                  key: const Key('sync-commit-badge'),
                   pending > 99 ? '99+' : '$pending',
                   style: const TextStyle(
                     fontSize: 9,
@@ -306,15 +362,38 @@ class _CommitButton extends StatelessWidget {
   }
 }
 
-/// Pide el mensaje del commit manual.
+/// Lo elegido en el diálogo de confirmar: el mensaje y las rutas que entran.
+typedef _Chosen = ({String message, Map<String, List<String>> paths});
+
+/// Qué se confirma, y con qué mensaje.
 ///
 /// El mismo trato que el de guardar una unidad: un mensaje se escribe, no se
 /// genera. «Cambios» en cuarenta commits seguidos es un historial que no
 /// sirve para nada, y el que lo va a leer eres tú dentro de seis meses.
+///
+/// **Y se elige qué entra.** Lo pendiente puede ser un fichero o pueden ser
+/// setecientos --una carpeta de lecciones traída de otro sitio, una tarde de
+/// trabajo en otro editor-- y meter setecientos en un commit que dice una
+/// sola cosa es tirar el historial de esos ficheros antes de tenerlo. Todo
+/// viene marcado, que es lo corriente; desmarcar es para quien quiera
+/// contarlo en varios commits, y entonces se vuelve a abrir con lo que
+/// quedó.
+///
+/// Con un filtro por ruta, porque a setecientas líneas elegir a mano no es
+/// elegir. Escribir `taylor` deja lo de Taylor, y la casilla del repositorio
+/// pasa a marcar y desmarcar **lo que se ve**: ese es el gesto que convierte
+/// una tarde de trabajo en cinco commits que se leen.
+///
+/// Agrupado por repositorio porque un commit **es de un repositorio**: lo
+/// que se firma aquí son dos commits cuando hay dos repositorios tocados, y
+/// una lista plana de rutas no deja ver cuál va a dónde.
 class _CommitDialog extends StatefulWidget {
-  const _CommitDialog({required this.pending});
+  const _CommitDialog({required this.pending, required this.repos});
 
   final Map<String, List<String>> pending;
+
+  /// Los repositorios abiertos, para el color y la etiqueta de cada grupo.
+  final List<ContentRepo> repos;
 
   @override
   State<_CommitDialog> createState() => _CommitDialogState();
@@ -323,23 +402,115 @@ class _CommitDialog extends StatefulWidget {
 class _CommitDialogState extends State<_CommitDialog> {
   final _message = TextEditingController();
 
+  /// Suyo y no el primario: dentro de un diálogo no hay ninguno que adoptar,
+  /// y la barra de desplazamiento tiene que agarrarse a esta lista.
+  final _scroll = ScrollController();
+
+  final _filter = TextEditingController();
+
+  String get _needle => _filter.text.trim().toLowerCase();
+
+  /// Lo marcado, por repositorio. Todo, de salida.
+  late final Map<String, Set<String>> _chosen = {
+    for (final entry in widget.pending.entries)
+      if (entry.value.isNotEmpty) entry.key: {...entry.value},
+  };
+
+  /// Los ficheros de un repositorio que pasan el filtro, en el orden en que
+  /// los dio git.
+  List<String> _shownOf(String repo) {
+    final all = widget.pending[repo] ?? const <String>[];
+    if (_needle.isEmpty) return all;
+    return [
+      for (final path in all)
+        if (path.toLowerCase().contains(_needle)) path,
+    ];
+  }
+
+  int _pickedOf(String repo) {
+    final chosen = _chosen[repo];
+    if (chosen == null) return 0;
+    return _shownOf(repo).where(chosen.contains).length;
+  }
+
+  /// Los repositorios con algo pendiente, en el orden del espacio de trabajo
+  /// para que sean los mismos colores en el mismo orden que arriba.
+  late final List<String> _order = [
+    for (final repo in widget.repos)
+      if (widget.pending[repo.id]?.isNotEmpty ?? false) repo.id,
+    // Y los que no estén en el espacio de trabajo, detrás: no debería
+    // pasar, y perderlos de vista sería peor que enseñarlos sin color.
+    for (final id in widget.pending.keys)
+      if (widget.pending[id]!.isNotEmpty &&
+          !widget.repos.any((repo) => repo.id == id))
+        id,
+  ];
+
+  int get _picked =>
+      _chosen.values.fold<int>(0, (sum, files) => sum + files.length);
+
+  /// Cuántos deja ver el filtro, sumando los repositorios.
+  int get _shown => _order.fold<int>(0, (sum, id) => sum + _shownOf(id).length);
+
+  int get _total =>
+      widget.pending.values.fold<int>(0, (sum, files) => sum + files.length);
+
+  ContentRepo? _repoOf(String id) =>
+      widget.repos.where((repo) => repo.id == id).firstOrNull;
+
+  /// Las filas de la lista: una cabecera por repositorio y una por fichero.
+  ///
+  /// Una lista plana y no una columna de columnas porque puede haber
+  /// ochocientas filas, y `ListView.builder` solo construye las que se ven.
+  List<({String repo, String? path})> get _rows => [
+    for (final id in _order)
+      if (_shownOf(id).isNotEmpty) ...[
+        (repo: id, path: null),
+        for (final path in _shownOf(id)) (repo: id, path: path),
+      ],
+  ];
+
+  void _toggle(String repo, String path) {
+    setState(() {
+      final files = _chosen[repo] ??= <String>{};
+      if (!files.remove(path)) files.add(path);
+    });
+  }
+
+  /// Marca o desmarca **lo que se ve** de ese repositorio.
+  ///
+  /// Lo que se ve y no todo lo suyo: con un filtro puesto, lo que se está
+  /// mirando es lo que se quiere meter en este commit, y que la casilla de
+  /// la cabecera marcase además las seiscientas que el filtro dejó fuera
+  /// sería exactamente lo contrario de lo que se pidió.
+  void _toggleRepo(String repo) {
+    setState(() {
+      final shown = _shownOf(repo);
+      final files = _chosen[repo] ??= <String>{};
+      if (shown.every(files.contains)) {
+        files.removeAll(shown);
+      } else {
+        files.addAll(shown);
+      }
+    });
+  }
+
   @override
   void dispose() {
     _message.dispose();
+    _filter.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final files = [
-      for (final entry in widget.pending.entries)
-        for (final path in entry.value) (repo: entry.key, path: path),
-    ];
+    final rows = _rows;
 
     return AlertDialog(
       title: const Text('Confirmar los cambios'),
       content: SizedBox(
-        width: 520,
+        width: 560,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,34 +526,97 @@ class _CommitDialogState extends State<_CommitDialog> {
                 isDense: true,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
+            // El filtro solo cuando hay bastante que filtrar. Con cuatro
+            // ficheros delante, un campo de búsqueda es una casilla más que
+            // leer antes de llegar al botón.
+            if (_total > 12) ...[
+              TextField(
+                key: const Key('commit-pending-filter'),
+                controller: _filter,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: 'Filtrar por ruta: taylor, va.tex, series/…',
+                  prefixIcon: const Icon(Icons.search, size: 17),
+                  prefixIconConstraints: const BoxConstraints(
+                    minWidth: 30,
+                    minHeight: 30,
+                  ),
+                  suffixIcon: _needle.isEmpty
+                      ? null
+                      : IconButton(
+                          key: const Key('commit-pending-filter-clear'),
+                          tooltip: 'Quitar el filtro',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.close, size: 15),
+                          onPressed: () {
+                            _filter.clear();
+                            setState(() {});
+                          },
+                        ),
+                ),
+                style: const TextStyle(fontSize: 12.5),
+              ),
+              const SizedBox(height: 8),
+            ],
             Text(
-              files.length == 1 ? 'Un fichero:' : '${files.length} ficheros:',
+              [
+                if (_picked == _total)
+                  _total == 1 ? 'Un fichero' : '$_total ficheros'
+                else
+                  '$_picked de $_total ficheros',
+                if (_needle.isNotEmpty) '$_shown se ven',
+              ].join(' · '),
+              key: const Key('commit-pending-count'),
               style: const TextStyle(fontSize: 11.5, color: didactaMuted),
             ),
             const SizedBox(height: 4),
-            // Lo que va dentro, a la vista. Un commit que se firma sin ver
-            // qué lleva es como se envía por error media traducción.
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final file in files)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 2),
-                        child: Text(
-                          file.path,
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontFamily: 'monospace',
-                          ),
+            // Lo que va dentro, a la vista y marcable. Un commit que se firma
+            // sin ver qué lleva es como se envía por error media traducción.
+            SizedBox(
+              height: 280,
+              child: rows.isEmpty
+                  ? Center(
+                      child: Text(
+                        'Nada encaja con «${_filter.text.trim()}».',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: didactaMuted,
                         ),
                       ),
-                  ],
-                ),
-              ),
+                    )
+                  : Scrollbar(
+                      controller: _scroll,
+                      // Siempre a la vista: con setecientas rutas dentro, un
+                      // pulgar que solo sale al pasar el ratón esconde que
+                      // hay setecientas.
+                      thumbVisibility: true,
+                      child: ListView.builder(
+                        key: const Key('commit-pending-files'),
+                        controller: _scroll,
+                        itemCount: rows.length,
+                        itemExtent: 22,
+                        itemBuilder: (context, index) {
+                          final row = rows[index];
+                          if (row.path == null) {
+                            return _RepoHeader(
+                              repo: _repoOf(row.repo),
+                              id: row.repo,
+                              picked: _pickedOf(row.repo),
+                              total: _shownOf(row.repo).length,
+                              onToggle: () => _toggleRepo(row.repo),
+                            );
+                          }
+                          return _FileRow(
+                            path: row.path!,
+                            chosen:
+                                _chosen[row.repo]?.contains(row.path!) ?? false,
+                            onToggle: () => _toggle(row.repo, row.path!),
+                          );
+                        },
+                      ),
+                    ),
             ),
           ],
         ),
@@ -394,14 +628,119 @@ class _CommitDialogState extends State<_CommitDialog> {
         ),
         FilledButton(
           key: const Key('commit-pending-confirm'),
-          onPressed: _message.text.trim().isEmpty
+          // Sin mensaje no, y sin nada marcado tampoco: un commit vacío no
+          // es un commit, y el botón tiene que decirlo antes de pulsarlo.
+          onPressed: _message.text.trim().isEmpty || _picked == 0
               ? null
-              : () => Navigator.of(context).pop(_message.text.trim()),
+              : () => Navigator.of(context).pop((
+                  message: _message.text.trim(),
+                  paths: <String, List<String>>{
+                    for (final entry in _chosen.entries)
+                      if (entry.value.isNotEmpty)
+                        // En el orden en que los dio git, no en el del
+                        // conjunto: un commit cuyas rutas salen barajadas
+                        // se lee peor en `git show`.
+                        entry.key: [
+                          for (final path in widget.pending[entry.key]!)
+                            if (entry.value.contains(path)) path,
+                        ],
+                  },
+                )),
           child: const Text('Confirmar'),
         ),
       ],
     );
   }
+}
+
+/// La cabecera de un repositorio en la lista, que marca y desmarca el suyo.
+class _RepoHeader extends StatelessWidget {
+  const _RepoHeader({
+    required this.repo,
+    required this.id,
+    required this.picked,
+    required this.total,
+    required this.onToggle,
+  });
+
+  final ContentRepo? repo;
+  final String id;
+  final int picked;
+  final int total;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    key: Key('commit-repo-$id'),
+    onTap: onToggle,
+    child: Row(
+      children: [
+        SizedBox(
+          width: 26,
+          child: Icon(
+            picked == total
+                ? Icons.check_box_outlined
+                : picked == 0
+                ? Icons.check_box_outline_blank
+                : Icons.indeterminate_check_box_outlined,
+            size: 15,
+            color: didactaMuted,
+          ),
+        ),
+        if (repo != null)
+          RepoChip(colour: repo!.colour, label: repo!.label, compact: true)
+        else
+          Text(id, style: const TextStyle(fontSize: 10.5)),
+        const SizedBox(width: 7),
+        Text(
+          picked == total ? '$total' : '$picked de $total',
+          style: const TextStyle(fontSize: 11, color: didactaMuted),
+        ),
+      ],
+    ),
+  );
+}
+
+class _FileRow extends StatelessWidget {
+  const _FileRow({
+    required this.path,
+    required this.chosen,
+    required this.onToggle,
+  });
+
+  final String path;
+  final bool chosen;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    key: Key('commit-file-$path'),
+    onTap: onToggle,
+    child: Row(
+      children: [
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 26,
+          child: Icon(
+            chosen ? Icons.check_box_outlined : Icons.check_box_outline_blank,
+            size: 14,
+            color: chosen ? didactaAccentDark : didactaMuted,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            path,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontFamily: 'monospace',
+              color: chosen ? null : didactaMuted,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// El idioma en el que se está trabajando, arriba y siempre a la vista.
@@ -616,6 +955,7 @@ class _SyncButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
+                key: Key('sync-$id-badge'),
                 '$badge',
                 style: const TextStyle(
                   fontSize: 9,
@@ -674,7 +1014,7 @@ class _PushDialogState extends State<_PushDialog> {
                     [
                       if (box.ahead > 0) '${box.ahead} commits sin enviar',
                       if (box.pending.isNotEmpty)
-                        '${box.pending.length} ficheros sin guardar',
+                        '${box.pending.length} ficheros sin confirmar',
                     ].join(' · '),
                     style: const TextStyle(fontSize: 12, color: didactaMuted),
                   ),
@@ -705,17 +1045,22 @@ class _PushDialogState extends State<_PushDialog> {
             ],
             if (_pending.isEmpty)
               const Text(
-                'No hay nada escrito sin guardar: solo se envían los commits '
-                'que ya están hechos.',
+                'No hay nada escrito sin confirmar: solo se envían los '
+                'commits que ya están hechos.',
                 style: TextStyle(fontSize: 12, color: didactaMuted),
               )
             else
+              // El mensaje del commit que cierra lo que queda suelto. Un
+              // mensaje solo, y no uno por repositorio, porque el gesto es
+              // uno: se estaba trabajando en algo, y ese algo tocó ficheros
+              // de varios sitios. Para contarlo en varios commits está el
+              // botón de confirmar, que deja elegir qué entra en cada uno.
               TextField(
                 key: const Key('push-message'),
                 controller: _message,
                 autofocus: true,
                 decoration: const InputDecoration(
-                  labelText: 'Mensaje del commit',
+                  labelText: 'Mensaje del commit que cierra lo que falta',
                   border: OutlineInputBorder(),
                 ),
               ),
