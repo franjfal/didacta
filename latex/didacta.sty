@@ -290,6 +290,7 @@
 %%   \DidactaSection{es={Los números naturales},
 %%                   va={Els nombres naturals},
 %%                   en={The natural numbers}}
+%%   \DidactaSubsection{es={Logaritmos}, va={Logaritmes}}
 %%
 %% A composition is the one place where prose lives outside a unit: the titles
 %% of its sections. Writing them with a plain \section means they stay in one
@@ -329,20 +330,37 @@
   \expandafter\let\expandafter\didacta@sec@now\csname didacta@sec@#1\endcsname
   \ifx\didacta@sec@now\relax \let\didacta@sec@now\@empty \fi}
 
-\newcommand{\DidactaSection}[1]{%
+%% El título en el idioma que se compila, en `\didacta@sec@now`. Lo usan
+%% \DidactaSection y \DidactaSubsection, que sólo se diferencian en qué
+%% orden de LaTeX acaban llamando: un subapartado se traduce igual que un
+%% apartado, y tener dos copias de esto era tener una que se arreglaba.
+\newcommand{\didacta@sec@resolve}[1]{%
   \@for\didacta@lang:=\didacta@langs\do{%
     \expandafter\let\csname didacta@sec@\didacta@lang\endcsname\@empty
   }%
   \setkeys{didacta@section}{#1}%
   \didacta@sec@use{\DidactaLanguage}%
   \ifx\didacta@sec@now\@empty
-    \PackageWarning{didacta}{No `\DidactaLanguage' title for this section;
+    \PackageWarning{didacta}{No `\DidactaLanguage' title for this heading;
       using another language}%
     \@for\didacta@lang:=\didacta@langs\do{%
       \ifx\didacta@sec@now\@empty \didacta@sec@use{\didacta@lang}\fi
     }%
   \fi
+}
+
+\newcommand{\DidactaSection}[1]{%
+  \didacta@sec@resolve{#1}%
   \section{\didacta@sec@now}%
+}
+
+%% Un subapartado, con las mismas claves. La composición los escribe desde
+%% que `year.yaml` los tiene, y sin esto el `\subsection` seguía saliendo en
+%% un solo idioma: la mitad del encabezado traducida y la otra mitad no es
+%% peor que ninguna, porque no se ve al revisar el apartado.
+\newcommand{\DidactaSubsection}[1]{%
+  \didacta@sec@resolve{#1}%
+  \subsection{\didacta@sec@now}%
 }
 
 %% ---------------------------------------------------------------------------

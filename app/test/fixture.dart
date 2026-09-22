@@ -741,10 +741,21 @@ class FakeCompiler implements Compiler {
 /// desde la pantalla es otra cosa --qué se le pide y qué se enseña-- y para
 /// eso basta con recordar la petición.
 class FakeClone implements LocalClone {
-  FakeClone({this.changed = true, this.behind = 0, this.failFetch = false});
+  FakeClone({
+    this.changed = true,
+    this.behind = 0,
+    this.ahead = 0,
+    this.dirty = const [],
+    this.failFetch = false,
+  });
 
   /// Commits que hay en el remoto y no aquí.
   final int behind;
+
+  /// Y los que hay aquí y no en el remoto, con los ficheros escritos y sin
+  /// confirmar: es lo que hace que un clon tenga algo que enviar.
+  final int ahead;
+  final List<String> dirty;
 
   /// Sin red, sin token o sin remoto: preguntar falla y lo local sigue
   /// valiendo.
@@ -808,7 +819,9 @@ class FakeClone implements LocalClone {
     required String authorEmail,
     required String token,
     bool push = true,
+    void Function(String line)? onProgress,
   }) async {
+    onProgress?.call('[main abc1234] $message');
     commits.add((
       paths: paths,
       message: message,
@@ -830,9 +843,9 @@ class FakeClone implements LocalClone {
     directory: '/clon',
     branch: 'main',
     head: 'abc1234',
-    ahead: 0,
+    ahead: ahead,
     behind: behind,
-    dirtyPaths: const [],
+    dirtyPaths: dirty,
   );
 
   @override
@@ -889,10 +902,21 @@ class FakeClone implements LocalClone {
   }
 
   @override
-  Future<void> pull({required String token}) async => pulls += 1;
+  Future<void> pull({
+    required String token,
+    void Function(String line)? onProgress,
+  }) async {
+    onProgress?.call('Already up to date.');
+    pulls += 1;
+  }
 
   @override
-  Future<void> push({required String token}) async {}
+  Future<void> push({
+    required String token,
+    void Function(String line)? onProgress,
+  }) async {
+    onProgress?.call('Everything up-to-date');
+  }
 
   // -- Congelaciones -------------------------------------------------------
   //

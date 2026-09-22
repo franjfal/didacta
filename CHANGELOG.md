@@ -580,6 +580,41 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   título dos centímetros por encima del título-- ni el número de página. Y la
   institución se compone debajo de la ficha del curso, no a su derecha.
 
+- **Los apartados de un documento salen en el idioma que se compila.** El
+  valenciano de un tema venía con el contenido traducido y los encabezados en
+  castellano: media traducción, que en clase es peor que ninguna porque no se
+  ve hasta que está proyectada. Los títulos estaban escritos en los dos
+  idiomas desde el principio; lo que pasaba es que el documento se quedaba con
+  uno. Ahora los lleva todos y elige al compilar, así que el mismo documento da
+  el castellano con encabezados castellanos y el valenciano con valencianos, y
+  no hay dos ficheros que mantener de acuerdo.
+
+- **Traer, enviar y confirmar abren el terminal**, el mismo que se abre al
+  compilar. Un envío con setecientos ficheros esperando tarda un rato largo, y
+  hasta ahora eso era un botón apagado y nada más: desde fuera no se distingue
+  de una aplicación colgada, así que se pulsa otra vez. Ahora se ve lo que está
+  haciendo --qué repositorio va, cuántos objetos lleva contados, cuánto lleva
+  subido-- y la ventana se quita sola cuando termina bien. Si algo falla se
+  queda, que es cuando hay que leerla.
+- **Lo que falta por confirmar se cuenta aparte de lo que falta por enviar.**
+  La insignia de enviar sumaba las dos cosas y decía «697 sin enviar» sobre un
+  repositorio que no tenía ni un commit pendiente: lo que había eran 697
+  ficheros que no estaban todavía dentro de ningún commit. Ahora cada botón
+  lleva su número, y dicen cosas distintas porque son cosas distintas.
+- **Y confirmar está siempre que haya algo que confirmar**, también con los
+  commits automáticos puestos. Se daba por hecho que con ellos no quedaba
+  nunca nada suelto, y no es verdad: lo que se escribe fuera de Didacta --otro
+  editor, una carpeta de lecciones copiada, material traído de otro sitio--
+  llega al disco sin pasar por aquí, y ahí se quedaba, sin botón que lo
+  arreglara.
+- **El diálogo de confirmar deja elegir qué entra.** Lo pendiente puede ser un
+  fichero o pueden ser setecientos, y meter setecientos en un commit que dice
+  una sola cosa es tirar su historial antes de tenerlo. Salen agrupados por
+  repositorio, con un filtro por ruta --escribe «taylor» y quedan los de
+  Taylor-- y la casilla del repositorio marca y desmarca lo que se ve. Así una
+  tarde de trabajo sale en cinco commits que se pueden leer, en vez de uno que
+  no.
+
 ---
 
 ## 1.1.0 — 2026-09-15

@@ -16,6 +16,7 @@ import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/build_console.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/build_console.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_preview.dart';
 
@@ -185,6 +186,51 @@ void main() {
       expect(console.ok, isFalse);
       expect(console.failure, isNull, reason: 'el motor sí arrancó');
     });
+
+    test('cada trabajo dice con qué texto se espera', () {
+      // Aquí también escribe git --traer y enviar-- y «Arrancando el
+      // motor…» delante de un `git push` sería mentira, leída justo por
+      // quien está mirando la ventana porque no sabe qué pasa.
+      final console = BuildConsole();
+      addTearDown(console.dispose);
+
+      console.start('Enviar a GitHub', opening: 'Preguntándole a git…');
+      expect(console.opening, 'Preguntándole a git…');
+
+      console.start('Compilando esta unidad');
+      expect(console.opening, BuildConsole.openingBuild);
+    });
+  });
+
+  testWidgets('la ventana espera con el texto del trabajo que la abrió', (
+    tester,
+  ) async {
+    final console = BuildConsole()
+      ..start(
+        'Enviar a GitHub',
+        opening: 'Preguntándole a git…',
+        about: 'Todo lo que dice git, según lo dice.',
+      );
+    addTearDown(console.dispose);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: didactaTheme(),
+        home: BuildConsoleDialog(console: console),
+      ),
+    );
+    await settle(tester);
+
+    expect(find.text('Enviar a GitHub'), findsOneWidget);
+    expect(find.text('Preguntándole a git…'), findsOneWidget);
+    expect(find.text('Todo lo que dice git, según lo dice.'), findsOneWidget);
+    expect(find.textContaining('Arrancando el motor'), findsNothing);
+
+    // Y en cuanto git dice algo, el texto de espera deja sitio a lo que dijo.
+    console.add('Enumerating objects: 706, done.');
+    await settle(tester);
+    expect(find.text('Preguntándole a git…'), findsNothing);
+    expect(find.text('Enumerating objects: 706, done.'), findsOneWidget);
   });
 
   testWidgets('compilar abre el terminal y enseña lo que escribe el motor', (

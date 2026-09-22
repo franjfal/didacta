@@ -29,6 +29,7 @@ from __future__ import annotations
 import os
 import re
 
+from . import profiles
 from . import yamlio
 
 #: Las cuatro cosas que puede haber en una composición.
@@ -48,9 +49,14 @@ _ID = re.compile(r"^-\s+id\s*:\s*(?P<value>.*)$")
 
 #: Lo que este módulo sabe escribir en el cuerpo de un master, para
 #: reconocer lo que escribió la vez anterior.
+#:
+#: `\\section` y `\\subsection` a secas siguen aquí aunque ya no se escriban:
+#: son lo que dejó la migración y lo que escribían las versiones anteriores,
+#: y sin reconocerlos el cuerpo que tienen los masters de hoy contaría como
+#: «LaTeX que la composición no sabe decir» y no se podría poner al día.
 _COMPOSED = re.compile(
     r"^\s*(?:%+\s*)?\\(?:section|subsection)\{|"
-    r"^\s*(?:%+\s*)?\\Didacta(?:Unit|Problem)\{"
+    r"^\s*(?:%+\s*)?\\Didacta(?:Section|Subsection|Unit|Problem)\{"
 )
 
 _BEGIN = re.compile(r"^\s*\\begin\{document\}")
@@ -271,18 +277,59 @@ def read_shared_entries(path):
 # --------------------------------------------------------------------------
 
 
+#: El orden en que salen los idiomas de un encabezado. El del registro, para
+#: que dos compilaciones del mismo `year.yaml` den el mismo fichero: un orden
+#: que dependa del diccionario convierte cualquier compilación en un cambio
+#: que revisar.
+def _language_order(codes):
+    known = [code for code in profiles.LANGUAGES if code in codes]
+    return known + sorted(code for code in codes if code not in profiles.LANGUAGES)
+
+
+def _heading(entry, language):
+    """Un apartado o subapartado, en todos los idiomas que tenga.
+
+    `\\DidactaSection` y `\\DidactaSubsection` llevan un título por idioma y
+    eligen al compilar, que es la única forma de que el mismo master dé el
+    PDF castellano con encabezados castellanos y el valenciano con
+    encabezados valencianos. Escribir `\\section{...}` aquí ataba el
+    encabezado al idioma del documento, y la compilación en otro idioma
+    salía con el contenido traducido y los apartados sin traducir.
+
+    Un apartado escrito como escalar --`- section: Logaritmos`, sin idiomas--
+    no tiene nada que elegir, así que se queda con la orden de LaTeX de
+    siempre: envolverlo en claves diría que hay una traducción donde no la hay.
+
+    En una sola línea a propósito: el cuerpo se lee y se reescribe por líneas,
+    y una orden partida en tres dejaría dos que no reconoce y con las que se
+    negaría a tocar el fichero.
+    """
+    macro = "DidactaSection" if entry.kind == "section" else "DidactaSubsection"
+    titles = {code: text for code, text in entry.titles.items() if text}
+    if not titles:
+        return "\\%s{%s}" % (entry.kind, entry.title(language))
+    keys = ", ".join(
+        "%s={%s}" % (code, titles[code]) for code in _language_order(titles)
+    )
+    return "\\%s{%s}" % (macro, keys)
+
+
 def render(collected, language):
     """El cuerpo del master: las líneas de la composición y nada más.
 
     Un apartado abre con una línea en blanco delante y un subapartado no,
     que es como quedó el material migrado: la separación marca dónde empieza
     un bloque, y puesta también en los subapartados deja de marcar nada.
+
+    `language` ya sólo decide el título de un encabezado escrito sin idiomas:
+    los demás salen con todos, y quien elige es LaTeX. Así el master es el
+    mismo para las tres compilaciones y `didacta check` no tiene que preguntar
+    «¿al día en qué idioma?».
     """
     out = []
     for entry in collected:
         if entry.is_heading:
-            title = entry.title(language)
-            body = "\\%s{%s}" % (entry.kind, title)
+            body = _heading(entry, language)
             if out and entry.kind == "section":
                 out.append("")
         elif entry.kind == "unit":
@@ -291,6 +338,47 @@ def render(collected, language):
             body = "\\DidactaProblem{%s}" % entry.value
         out.append(body if entry.enabled else "%% " + body)
     return out
+
+
+def _composed_at(lines, index):
+    """Cuántas líneas ocupa la entrada que empieza en [index], o 0 si no hay.
+
+    Una orden de la composición puede estar escrita en varias líneas: el
+    ejemplo de `didacta.sty` reparte los tres idiomas de un apartado en tres,
+    que es como se lee bien a mano. Contando una sola, las otras dos eran
+    «LaTeX que la composición no sabe decir», el fichero no se podía poner al
+    día, y el apartado acababa escrito dos veces --una por cada formato-- que
+    es lo que le pasó al curso de ejemplo.
+
+    Se cuentan llaves porque es lo que delimita la orden. Un comentario de
+    final de línea no cuenta, y una entrada desactivada --`%% \\DidactaUnit`--
+    ocupa la suya y nada más, que es como las escribe [render].
+    """
+    if not _COMPOSED.match(lines[index]):
+        return 0
+    depth = 0
+    for count, line in enumerate(lines[index:], start=1):
+        text = _strip_comment(line)
+        depth += text.count("{") - text.count("}")
+        if depth <= 0:
+            return count
+    # Llaves sin cerrar hasta el final: se queda con la suya y el que llama
+    # dirá que hay algo que no sabe reescribir.
+    return 1
+
+
+def _spans(lines, begin, end):
+    """Las líneas de [begin, end) que son composición, por índice."""
+    covered = set()
+    index = begin
+    while index < end:
+        span = _composed_at(lines, index)
+        if span:
+            covered.update(range(index, min(index + span, end)))
+            index += span
+        else:
+            index += 1
+    return covered
 
 
 def _region(lines):
@@ -311,12 +399,9 @@ def _region(lines):
     if begin is None or end is None or end <= begin:
         return None
 
-    first = last = None
-    for index in range(begin + 1, end):
-        if _COMPOSED.match(lines[index]):
-            if first is None:
-                first = index
-            last = index
+    covered = _spans(lines, begin + 1, end)
+    first = min(covered) if covered else None
+    last = max(covered) if covered else None
     if first is None:
         # Sin nada escrito: al final del cuerpo, saltando las líneas en
         # blanco que lo cierran para no acumularlas en cada pasada.
@@ -341,10 +426,11 @@ def compose(text, collected, language):
                       "donde escribir la composición")
 
     start, stop = where
+    covered = _spans(lines, start, stop)
     foreign = [
         lines[index].strip()
         for index in range(start, stop)
-        if lines[index].strip() and not _COMPOSED.match(lines[index])
+        if lines[index].strip() and index not in covered
     ]
     if foreign:
         return text, (
