@@ -40,6 +40,24 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## 0.2.1
+
+- **Quitar un repositorio pregunta qué hacer con su carpeta.** Se puede dejar
+  en el disco, como siempre, o mandarla a la Papelera con todo lo que tiene
+  dentro. Antes de tirarla dice si tiene cambios sin guardar o sin enviar a
+  GitHub, y nunca la borra del todo: desde la Papelera se recupera.
+- **La carpeta de cada repositorio se abre en el Finder** desde Ajustes, con
+  el botón que hay al lado de su nombre.
+- **Se puede empezar de cero**: Ajustes → Empezar de cero → Restablecer. Borra
+  de este ordenador la sesión de GitHub, los ajustes y la lista de
+  repositorios, y la bienvenida vuelve a salir. Tirar la aplicación a la
+  Papelera no lo hace, porque el sistema guarda los ajustes aparte.
+- **Didacta se identifica como `io.github.franjfal.didacta`**, el nombre de su
+  web, y no como `es.uv.didacta`. Los ajustes y las plantillas se traen solos
+  la primera vez; en Linux hay que volver a entrar en GitHub una vez. En
+  Windows, el editor que sale en «Aplicaciones instaladas» pasa a ser Javier
+  Falcó.
+
 ## 0.2.0
 
 - **Clonar un repositorio dice por dónde va.** Hasta ahora ponía «Clonando…» y
