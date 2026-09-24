@@ -12,7 +12,7 @@
 /// un error.
 ///
 /// Lo que **no** comparten es cómo se enseña el progreso ni dónde sale un
-/// fallo, y por eso [RepositoryAdder] no pinta nada: recibe tres funciones y
+/// fallo, y por eso [RepositoryAdder] no pinta nada: recibe cuatro funciones y
 /// cada pantalla lo cuenta a su manera.
 library;
 
@@ -29,6 +29,7 @@ class RepositoryAdder {
   const RepositoryAdder({
     required this.session,
     required this.onBusy,
+    required this.onStep,
     required this.onProgress,
     required this.onProblem,
   });
@@ -38,7 +39,15 @@ class RepositoryAdder {
   /// Si hay algo en marcha. Lo que se enseña mientras, lo decide quien llama.
   final void Function(bool working) onBusy;
 
-  /// Una línea de progreso: la que escribe git al clonar, o la nuestra.
+  /// Qué se está haciendo, en nuestras palabras: «Clonando didacta/curso…».
+  /// Vacío cuando ya no hay nada que contar.
+  ///
+  /// Va aparte de [onProgress] para que lo que escribe git no lo pise: su
+  /// primera línea es «Cloning into '.'...», y a partir de ahí ya no se sabe
+  /// qué repositorio se está clonando.
+  final void Function(String what) onStep;
+
+  /// Una línea de las que escribe git mientras trabaja, tal cual.
   final void Function(String line) onProgress;
 
   /// Lo que salió mal, o `null` para limpiar lo anterior.
@@ -56,9 +65,12 @@ class RepositoryAdder {
     );
     if (chosen == null || chosen.isEmpty || !context.mounted) return;
 
-    for (final repo in chosen) {
+    for (final (index, repo) in chosen.indexed) {
       if (!context.mounted) return;
-      if (!await _addOne(context, repo)) break;
+      // Con varios, cuál va: tres clones seguidos sin decirlo parecen uno
+      // que no acaba nunca.
+      final of = chosen.length > 1 ? ' (${index + 1} de ${chosen.length})' : '';
+      if (!await _addOne(context, repo, of: of)) break;
     }
     onBusy(false);
   }
@@ -69,7 +81,11 @@ class RepositoryAdder {
   /// y la carpeta puede tener el clon de otra persona o cualquier otra cosa:
   /// mirarlo antes es lo que permite decirlo a tiempo en vez de explicarlo
   /// después.
-  Future<bool> _addOne(BuildContext context, GitHubRepo chosen) async {
+  Future<bool> _addOne(
+    BuildContext context,
+    GitHubRepo chosen, {
+    String of = '',
+  }) async {
     final target = await session.inspectTarget(
       owner: chosen.owner,
       name: chosen.name,
@@ -118,10 +134,10 @@ class RepositoryAdder {
 
     onBusy(true);
     onProblem(null);
-    onProgress(
+    onStep(
       target.state == CloneTarget.alreadyCloned
-          ? 'Abriendo ${chosen.id}…'
-          : 'Clonando ${chosen.id}…',
+          ? 'Abriendo ${chosen.id}$of…'
+          : 'Clonando ${chosen.id}$of…',
     );
     try {
       await session.addRepository(
@@ -130,6 +146,9 @@ class RepositoryAdder {
         branch: chosen.defaultBranch,
         onProgress: onProgress,
       );
+      // Ya está en la lista, con su marca: dejar «Clonando…» debajo diría
+      // que sigue.
+      onStep('');
     } on EmptyRepositoryException catch (empty) {
       // Recién creado en GitHub y sin nada dentro. No es un error que haya
       // que enseñar tal cual: es un repositorio por empezar, y eso se puede
@@ -158,14 +177,14 @@ class RepositoryAdder {
       );
       return;
     }
-    onProgress('${chosen.id} está vacío.');
+    onStep('${chosen.id} está vacío.');
     final title = await showDialog<String>(
       context: context,
       builder: (context) => InitializeRepositoryDialog(repo: chosen),
     );
     if (title == null) return;
 
-    onProgress('Preparando ${chosen.id}…');
+    onStep('Preparando ${chosen.id}…');
     try {
       await session.initializeRepository(
         owner: chosen.owner,
@@ -174,6 +193,7 @@ class RepositoryAdder {
         title: title,
         onProgress: onProgress,
       );
+      onStep('');
     } catch (thrown) {
       onProblem(thrown);
     }
@@ -194,9 +214,10 @@ class RepositoryAdder {
     if (chosen == null) return;
     onBusy(true);
     onProblem(null);
-    onProgress('Comprobando $chosen en GitHub…');
+    onStep('Comprobando $chosen en GitHub…');
     try {
       await session.addExistingRepository(chosen);
+      onStep('');
       // Se añadió, pero puede no haber quedado al día: eso no es un fallo de
       // añadir, y decirlo como si lo fuera haría pensar que no se añadió.
       onProblem(session.addProblem);

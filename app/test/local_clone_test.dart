@@ -23,6 +23,7 @@ import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/data/preferences.dart';
+import 'package:didacta_app/model/git_progress.dart';
 import 'package:didacta_app/state/session.dart';
 
 import 'fixture.dart';
@@ -263,6 +264,25 @@ void main() {
       expect(status.head, isNotEmpty);
       expect(status.isClean, isTrue);
       expect(status.isSynced, isTrue);
+    });
+
+    test('clonar cuenta por dónde va, no solo «Cloning into»', () async {
+      // Sin `--progress`, git escribiendo a una tubería se calla hasta el
+      // final, y un clon de minutos era una línea quieta. Por `file://` y no
+      // por la ruta: con una ruta git copia los objetos tal cual y no hay
+      // nada que contar, y lo que se quiere ver es lo que pasa con GitHub.
+      final lines = <String>[];
+      await LocalClone.create(
+        directory: '${root.path}/con-progreso',
+        owner: 'x',
+        repo: 'x',
+        branch: 'main',
+        token: '',
+        url: Uri.file(remote).toString(),
+        onProgress: lines.add,
+      );
+      expect(lines.first, 'Preguntando a GitHub por x/x…');
+      expect(lines.map(GitProgress.parse).nonNulls, isNotEmpty);
     });
 
     test('sees a change made outside the app', () async {

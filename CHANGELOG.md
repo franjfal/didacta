@@ -37,6 +37,15 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## 0.2.0
+
+- **Clonar un repositorio dice por dónde va.** Hasta ahora ponía «Clonando…» y
+  se quedaba así hasta el final, que en un repositorio grande son minutos y
+  desde fuera parece una aplicación colgada. Ahora se ve una barra con la fase
+  --contando, recibiendo, resolviendo--, cuánto se lleva bajado y a qué
+  velocidad, y cuánto tiempo lleva. Con varios repositorios, cuál va de
+  cuántos. Lo mismo al descargar el motor.
+
 ## 0.1.0 — 2026-09-17
 
 - **Didacta abre por las asignaturas.** Abría por la biblioteca, que contesta

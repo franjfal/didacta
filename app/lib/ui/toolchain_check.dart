@@ -40,6 +40,7 @@ import '../data/toolchain.dart';
 import '../model/toolchain.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import 'working.dart';
 
 class ToolchainCheck extends StatefulWidget {
   const ToolchainCheck({
@@ -81,6 +82,11 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
 
   /// La última línea de lo que está pasando.
   String _progress = '';
+
+  /// Qué se está haciendo, cuando [_progress] son las líneas de otro: al
+  /// descargar el motor, git escribe «Cloning into '.'...» y ahí ya no pone
+  /// qué se descarga.
+  String _doing = '';
 
   /// Las que han terminado su instalación fuera de Didacta y todavía no han
   /// aparecido. Es lo que convierte «no está» en «se está instalando ahí
@@ -231,7 +237,8 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   Future<void> _installEngine() async {
     setState(() {
       _installing = ToolId.engine;
-      _progress = 'Descargando el motor…';
+      _doing = 'Descargando el motor…';
+      _progress = '';
     });
     try {
       final where = await widget.session.installEngine(
@@ -245,6 +252,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       _toolchain = widget.toolchain ?? widget.session.toolchain();
       setState(() {
         _installing = null;
+        _doing = '';
         _progress = 'El motor está en $where';
       });
       await _check();
@@ -252,6 +260,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       if (!mounted) return;
       setState(() {
         _installing = null;
+        _doing = '';
         _progress = '';
       });
       await _explain(
@@ -335,7 +344,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
         ),
         if (_installing != null) ...[
           const SizedBox(height: 10),
-          _Working(line: _progress),
+          Working(step: _doing, line: _progress),
         ] else if (_progress.isNotEmpty) ...[
           const SizedBox(height: 10),
           Text(
@@ -846,34 +855,4 @@ class ToolProblemDialog extends StatelessWidget {
       ],
     );
   }
-}
-
-class _Working extends StatelessWidget {
-  const _Working({required this.line});
-
-  final String line;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      const SizedBox(
-        width: 14,
-        height: 14,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(
-          line,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 11.5,
-            height: 1.4,
-            color: didactaMuted,
-          ),
-        ),
-      ),
-    ],
-  );
 }
