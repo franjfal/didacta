@@ -19,7 +19,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../model/toolchain.dart';
-import 'compiler_io.dart' show texAwarePath, texDirectories;
+import 'compiler_io.dart' show pythonDirectories, texAwarePath, texDirectories;
 import 'toolchain.dart';
 
 bool get supported => true;
@@ -76,6 +76,9 @@ List<String> toolDirectories({String? texPath}) {
         '$local\\Microsoft\\WindowsApps',
       ],
       r'C:\Windows\System32',
+      // Donde deja Python el instalador de python.org, que no lo añade al
+      // PATH salvo que se marque una casilla que viene desmarcada.
+      ...pythonDirectories(),
     ]);
   }
 

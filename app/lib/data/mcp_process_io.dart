@@ -17,7 +17,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../model/mcp.dart';
-import 'compiler_io.dart' show cliIn, texAwarePath;
+import 'compiler_io.dart'
+    show cliIn, engineCommand, noPythonProblem, texAwarePath;
 import 'mcp_process.dart';
 
 McpRunner runnerFor({required String enginePath, String? texPath}) {
@@ -42,10 +43,14 @@ class ProcessRunner implements McpRunner {
     if (!await File(script).exists()) {
       throw StateError('No existe $script.');
     }
+    // Con el intérprete delante en Windows, igual que al compilar: lanzar el
+    // script tal cual allí no ha funcionado nunca.
+    final command = await engineCommand(enginePath, texPath: texPath);
+    if (command == null) throw StateError(noPythonProblem);
 
     final process = await Process.start(
-      script,
-      [
+      command.executable,
+      command.then([
         'mcp',
         '--http',
         // Cero: lo elige el sistema y lo dice. Un puerto fijo choca con otra
@@ -55,7 +60,7 @@ class ProcessRunner implements McpRunner {
           repository.writable ? '--write' : '--repo',
           repository.directory,
         ],
-      ],
+      ]),
       environment: {
         'NO_COLOR': '1',
         'TERM': 'dumb',

@@ -231,6 +231,11 @@ def read_notes(version):
             break
 
     notes = "\n".join(lines[start:end]).strip()
+    # Sin la raya que separa esta sección de la siguiente. En el CHANGELOG
+    # ordena la lectura; en las notas del release --y en el diálogo de
+    # actualizar, que enseña lo mismo-- es una raya suelta al final.
+    while notes.endswith("---"):
+        notes = notes[: -len("---")].rstrip()
     if not notes:
         raise Problem("la sección %s del CHANGELOG está vacía" % version)
     return notes

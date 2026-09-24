@@ -9,6 +9,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../model/catalogue.dart';
+import '../model/launch.dart';
+import '../model/toolchain.dart' show Host;
 import 'compiler.dart';
 
 bool get supported => true;
@@ -27,6 +29,102 @@ Compiler makeCompiler({
 
 /// El script del motor dentro de su repositorio.
 String cliIn(String engineRoot) => '$engineRoot/cli/didacta';
+
+/// El sistema, dicho como lo dice el modelo.
+///
+/// Aquí y no importado de `toolchain_io.dart`, que es quien tiene otro igual,
+/// porque aquel importa éste: son tres líneas, y un ciclo de imports entre
+/// los dos ficheros que hablan con procesos es peor que repetirlas.
+Host get _host => switch (true) {
+  _ when Platform.isMacOS => Host.macos,
+  _ when Platform.isWindows => Host.windows,
+  _ => Host.linux,
+};
+
+/// Dónde suele estar Python en Windows, además de lo que diga el PATH.
+///
+/// Por lo mismo que se busca TeX en lugar de preguntar al PATH: el
+/// instalador de python.org **no** añade Python al PATH salvo que se marque
+/// una casilla que viene desmarcada, y quien lo instaló sin marcarla tiene un
+/// Python que funciona y que ninguna aplicación encuentra. El lanzador `py`
+/// sí suele estar --en la carpeta de Windows, o en la del usuario--, y las
+/// versiones instaladas acaban siempre en los mismos dos sitios.
+///
+/// Las versiones, de la más nueva a la más vieja: `Python313` antes que
+/// `Python39`, que ordenado como texto saldría al revés.
+List<String> pythonDirectories() {
+  if (!Platform.isWindows) return const [];
+  final local = Platform.environment['LOCALAPPDATA'] ?? '';
+  final system = Platform.environment['SystemRoot'] ?? r'C:\Windows';
+
+  final found = <String>[
+    system,
+    if (local.isNotEmpty) '$local\\Programs\\Python\\Launcher',
+  ];
+  final versions = <(int, String)>[];
+  for (final root in [
+    if (local.isNotEmpty) '$local\\Programs\\Python',
+    r'C:\Program Files',
+  ]) {
+    final directory = Directory(root);
+    if (!directory.existsSync()) continue;
+    for (final entry in directory.listSync().whereType<Directory>()) {
+      final name = entry.path.split(Platform.pathSeparator).last.toLowerCase();
+      if (!name.startsWith('python3')) continue;
+      versions.add((int.tryParse(name.substring(6)) ?? 0, entry.path));
+    }
+  }
+  versions.sort((a, b) => b.$1.compareTo(a.$1));
+  found.addAll(versions.map((version) => version.$2));
+  return [
+    for (final directory in found)
+      if (Directory(directory).existsSync()) directory,
+  ];
+}
+
+/// Cómo se lanza el motor en esta máquina, o `null` si no se puede.
+///
+/// La decisión está en `model/launch.dart`, donde se prueba para los tres
+/// sistemas; aquí sólo se mira el disco. `null` sólo pasa en Windows, y
+/// significa que no hay ningún Python: en macOS y en Linux el script se lanza
+/// solo.
+Future<LaunchCommand?> engineCommand(
+  String engineRoot, {
+  String? texPath,
+}) async {
+  final separator = Platform.isWindows ? ';' : ':';
+  final directories = [
+    ...texAwarePath(configured: texPath).split(separator),
+    ...pythonDirectories(),
+  ];
+  final suffixes = Platform.isWindows ? ['.exe', ''] : [''];
+
+  String? find(String name) {
+    for (final directory in directories) {
+      if (directory.isEmpty) continue;
+      for (final suffix in suffixes) {
+        final candidate = '$directory${Platform.pathSeparator}$name$suffix';
+        // El alias de la Store se salta aquí y no sólo en la decisión: suele
+        // ir antes en el PATH que el Python de verdad, y quedarse con el
+        // primero que aparece sería quedarse con la tienda.
+        if (isStoreAlias(candidate)) continue;
+        if (File(candidate).existsSync()) return candidate;
+      }
+    }
+    return null;
+  }
+
+  return engineLaunch(script: cliIn(engineRoot), host: _host, find: find);
+}
+
+/// Lo que se le dice a quien no tiene Python en Windows.
+const String noPythonProblem =
+    'El motor de Didacta está escrito en Python, y en este ordenador no '
+    'encuentro ninguno.\n\n'
+    'Instala Python 3 desde https://www.python.org/downloads/ --basta con la '
+    'versión 3.9 o posterior, y no hace falta instalar nada más--. Si ya lo '
+    'tienes, puede que sea el de la Microsoft Store, que no es un Python sino '
+    'un acceso directo a la tienda.';
 
 /// Dónde vive TeX, además de lo que diga el PATH.
 ///
@@ -223,6 +321,16 @@ class _ProcessCompiler implements Compiler {
         ready: false,
         enginePath: enginePath,
         problem: 'No existe ${cliIn(enginePath)}.',
+      );
+    }
+    // Con qué se lanza. Sólo puede faltar en Windows, y hay que decirlo aquí:
+    // descubrirlo al compilar es enseñar «no es una aplicación Win32 válida»,
+    // que no le dice a nadie que lo que falta es Python.
+    if (await engineCommand(enginePath, texPath: texPath) == null) {
+      return CompilerStatus(
+        ready: false,
+        enginePath: enginePath,
+        problem: noPythonProblem,
       );
     }
     if (repositoryPath.isEmpty) {
@@ -670,7 +778,10 @@ class _ProcessCompiler implements Compiler {
     bool allowFailure = false,
     void Function(String line)? onOutput,
   }) async {
-    final script = cliIn(enginePath);
+    // Con el intérprete delante en Windows, y el script tal cual en los
+    // demás. Ver `engineCommand`.
+    final command = await engineCommand(enginePath, texPath: texPath);
+    if (command == null) throw const CompileException(noPythonProblem);
     // Delante de la orden, que es donde van las opciones globales.
     arguments = [
       for (final directory in templateDirs) ...['--templates-from', directory],
@@ -679,8 +790,8 @@ class _ProcessCompiler implements Compiler {
     final Process process;
     try {
       process = await Process.start(
-        script,
-        arguments,
+        command.executable,
+        command.then(arguments),
         // Desde el clon: el motor busca la raíz subiendo hasta didacta.yaml.
         workingDirectory: repositoryPath,
         environment: {
@@ -697,7 +808,7 @@ class _ProcessCompiler implements Compiler {
       );
     } on ProcessException catch (error) {
       throw CompileException(
-        'No se pudo lanzar el motor ($script).',
+        'No se pudo lanzar el motor ($command).',
         detail: error.message,
       );
     }
@@ -750,14 +861,25 @@ class _ProcessCompiler implements Compiler {
   @override
   Future<void> reveal(String pdf) => _reveal(pdf, reveal: true);
 
+  /// Abrir el PDF con su programa, o enseñarlo en su carpeta.
+  ///
+  /// Estaba sólo para macOS, y en Windows y en Linux lanzaba una excepción:
+  /// el botón «Abrir en el visor» existía en los tres y sólo funcionaba en
+  /// uno. Qué orden toca en cada sistema está en `model/launch.dart`.
   Future<void> _reveal(String pdf, {required bool reveal}) async {
-    if (!Platform.isMacOS) {
-      throw const CompileException(
-        'Abrir el PDF solo está implementado en macOS por ahora.',
+    final command = fileLaunch(file: pdf, reveal: reveal, host: _host);
+    final ProcessResult result;
+    try {
+      result = await Process.run(command.executable, command.arguments);
+    } on ProcessException catch (error) {
+      // En un Linux sin `xdg-open`, que existe: un servidor, un escritorio
+      // mínimo. El PDF se sigue viendo dentro de Didacta.
+      throw CompileException(
+        'No se pudo abrir el PDF con otro programa ($command).',
+        detail: error.message,
       );
     }
-    final result = await Process.run('open', [if (reveal) '-R', pdf]);
-    if (result.exitCode != 0) {
+    if (exitCodeMeansFailure(_host) && result.exitCode != 0) {
       throw CompileException(
         'No se pudo abrir el PDF.',
         detail: (result.stderr as String?)?.trim() ?? '',

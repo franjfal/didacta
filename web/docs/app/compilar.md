@@ -8,10 +8,11 @@ description: Sacar los PDF, ver la consola y comparar versiones dentro de la ven
 Didacta no reimplementa nada de LaTeX: llama a `cli/didacta`, que es el mismo
 camino que se usa desde el terminal. Lo que aporta es elegir, lanzar y enseñar.
 
-!!! note "Hoy, en macOS y Linux"
+!!! note "En Windows hace falta Python"
 
-    En Windows el resto de la aplicación funciona, pero los PDF hay que
-    sacarlos desde el terminal.
+    El motor está escrito en Python, que macOS y Linux traen y Windows no. Si
+    falta, Didacta lo dice en Ajustes --y en el botón de compilar-- antes de
+    que pulses nada. [Cómo instalarlo](../empezar/index.md#que-mas-hace-falta-en-la-maquina).
 
 ![Elegir qué versiones y en qué idiomas](../img/app/unidad-compilar.png)
 
