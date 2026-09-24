@@ -1,9 +1,13 @@
 # Publicar una versión de Didacta.
 #
-# Se lanza a mano desde Actions → «Publish Didacta Release» → Run workflow, y
-# no hay nada que rellenar: **el número lo pone el ciclo**. Cada publicación
-# sube la mediana --1.1.0 → 1.2.0-- y el build de uno en uno. El procedimiento
-# entero es escribir la sección del CHANGELOG y pulsar el botón.
+# Lo normal es lanzarlo desde el terminal, que pregunta y lo comprueba todo:
+#
+#     python3 packaging/publish.py
+#
+# Y también a mano, desde Actions → «Publish Didacta Release» → Run workflow,
+# sin nada que rellenar: **el número lo pone el ciclo**. Cada publicación sube
+# lo que diga `release.yaml` --grande, mediana o pequeña; la mediana si no
+# dice otra cosa-- y el build de uno en uno.
 #
 #     python3 packaging/release.py next     # el número que va a salir
 #
@@ -11,6 +15,10 @@
 # registro de lo último que se publicó, y quien la sube es este workflow al
 # publicar. Subirla a mano se salta un número, porque el ciclo la subirá igual
 # la próxima vez.
+#
+# `release.yaml` vale para **una** publicación: el commit final de `publicar`
+# lo vuelve a dejar en `minor`. Una grande que se quedara puesta haría grande
+# también la siguiente, y la de después.
 #
 # Cómo se reparte ese número sin pasarse un commit entre trabajos: cada
 # trabajo ejecuta `release.py bump` sobre su propia copia nada más
@@ -95,7 +103,9 @@ jobs:
       - name: el número de esta versión
         # Sobre esta copia y sin commit: aquí sólo se calcula y se comprueba.
         # Quien lo escribe en el repositorio es `publicar`, y sólo cuando el
-        # release ya está hecho.
+        # release ya está hecho. Cuánto sube lo dice `release.yaml`, que se
+        # lee aquí antes que en ningún otro trabajo: si tiene una errata, el
+        # workflow para en este paso y no después de compilar.
         run: python3 packaging/release.py bump
 
       - name: la versión, el build y las notas
@@ -122,7 +132,7 @@ jobs:
         run: |
           if gh release view "${{ steps.leer.outputs.tag }}" \
                -R "$RELEASE_REPO" >/dev/null 2>&1; then
-            echo "::error::La versión ${{ steps.leer.outputs.version }} ya está publicada en $RELEASE_REPO. Sube el número en app/pubspec.yaml."
+            echo "::error::La versión ${{ steps.leer.outputs.version }} ya está publicada en $RELEASE_REPO. Elige otro tamaño en release.yaml (python3 packaging/publish.py lo pregunta)."
             exit 1
           fi
           echo "· ${{ steps.leer.outputs.tag }} está libre."
@@ -545,7 +555,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email \
             "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/pubspec.yaml
+
+          # Y lo que se eligió para esta, gastado con ella: la siguiente
+          # vuelve a ser mediana salvo que alguien diga otra cosa. En el mismo
+          # commit que la versión, para que no pueda quedar una sin la otra.
+          python3 packaging/release.py plan --reset
+          git add app/pubspec.yaml release.yaml
           git commit -m "Didacta $VERSION"
 
           # Un reintento y no un `--force`: si alguien ha empujado a la rama
@@ -556,7 +571,7 @@ jobs:
             git fetch origin "$RAMA"
             git rebase "origin/$RAMA"
             if ! git push origin "HEAD:$RAMA"; then
-              echo "::error::Didacta $VERSION está publicada, pero no he podido escribir la versión en $RAMA. Súbela a mano en app/pubspec.yaml antes de volver a publicar, o la próxima publicación repetirá el número."
+              echo "::error::Didacta $VERSION está publicada, pero no he podido escribir la versión en $RAMA. Súbela a mano en app/pubspec.yaml y deja release.yaml en minor antes de volver a publicar, o la próxima publicación repetirá el número."
               exit 1
             fi
           fi

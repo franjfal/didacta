@@ -26,12 +26,15 @@ El formato lo lee `packaging/release.py`, y es el mínimo que hace falta:
 El encabezado tiene que empezar por `## ` seguido de la versión. La fecha
 detrás es opcional y no se usa para nada más que para leerla aquí.
 
-**Qué versión.** La que asigne la próxima publicación, que sube la mediana por
-su cuenta. La dice:
+**Qué versión.** La que asigne la próxima publicación, que sube lo que diga
+`release.yaml` --la mediana si no dice otra cosa--. La dice:
 
 ```
 python3 packaging/release.py next
 ```
+
+Si todavía no se sabe, la sección puede empezar como `## Próxima`:
+`python3 packaging/publish.py` pregunta el tamaño y le pone el número.
 
 Sin esa sección no se publica: el workflow se para antes de compilar nada.
 

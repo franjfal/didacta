@@ -32,6 +32,12 @@ jobs:
       - name: los tests
         run: python3 -m unittest discover -s tests -v
 
+      - name: la herramienta de publicación
+        # También aquí y no sólo al publicar: una errata en `release.yaml`, o
+        # un `publish.py` roto, tienen que verse en el pull request y no el
+        # día que alguien quiere sacar una versión.
+        run: python3 -m unittest discover -s packaging -p 'test_*.py' -v
+
       - name: la herramienta arranca
         # Cheap, and catches the failure that no unit test would: a syntax
         # error or a bad import in the entry point itself.

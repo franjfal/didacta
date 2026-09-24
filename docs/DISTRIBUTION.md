@@ -58,24 +58,52 @@ aplicación dice de sí misma, y lo que declara el manifiesto. Ningún otro siti
 escribe un número de versión a mano.
 
 **Y ese número no lo escribe nadie: lo sube la publicación.** Cada release sube
-la mediana --1.4.2 → 1.5.0-- y el build de uno en uno. Esa línea deja de ser
-algo que se edita antes de publicar y pasa a ser el registro de lo último que
-se publicó.
+una parte --la que diga `release.yaml`-- y el build de uno en uno. Esa línea
+deja de ser algo que se edita antes de publicar y pasa a ser el registro de lo
+último que se publicó.
+
+**Cuánto sube lo dice `release.yaml`**, en la raíz del repositorio:
+
+```yaml
+bump: minor
+```
+
+| `bump` | También vale | 1.4.2 → | Para |
+|---|---|---|---|
+| `major` | `grande` | 2.0.0 | algo que obliga a aprender otra vez |
+| `minor` | `mediana` | 1.5.0 | lo de siempre: lo hecho desde la anterior |
+| `patch` | `pequeña` | 1.4.3 | sólo arreglos |
+
+Tres reglas que lo hacen difícil de estropear:
+
+- **Vale para una publicación.** El commit final del workflow, el que escribe
+  la versión en `pubspec.yaml`, deja también `release.yaml` otra vez en
+  `minor`. Una grande que se quedara puesta haría grande la siguiente, y la de
+  después, sin que nadie lo hubiera pedido.
+- **Una errata para, no publica otra cosa.** Una clave que no existe
+  (`bumb:`), un valor que no es ninguno de los seis, una línea repetida o
+  sangrada: el workflow se para en su primer paso, antes de compilar, y dice
+  qué línea es. Los tests de `packaging/` lo leen también en cada pull request.
+- **Es un fichero del repositorio y no un campo del botón**, para que los
+  cuatro trabajos, que descargan el mismo commit, lean exactamente lo mismo, y
+  para que la decisión quede en el historial junto a sus notas.
+
+Crecer es añadir una línea a `PLAN_KEYS`, en `release.py`: cómo se lee la
+clave y qué vale si no está.
 
 ```
+$ python3 packaging/release.py plan
+bump: minor (mediana) · 1.4.2 → 1.5.0
 $ python3 packaging/release.py next
 1.5.0
 ```
 
-Es la orden que se ejecuta antes de escribir el CHANGELOG, porque la sección
-hay que titularla con el número que va a salir. El parche vuelve a cero
---1.5.0 y no 1.5.2--: lo que una mediana dice es «otra tanda de cambios», y
-arrastrar el parche de la anterior no significa nada.
+El parche vuelve a cero --1.5.0 y no 1.5.2--: lo que una mediana dice es «otra
+tanda de cambios», y arrastrar el parche de la anterior no significa nada.
 
-Por qué la mediana y no el parche: lo que cada versión trae es lo que se haya
-hecho desde la anterior, y eso nadie lo clasifica al pulsar el botón. Un parche
-afirmaría que sólo se han arreglado cosas. Para los otros dos casos está
-`release.py bump --part major|patch`, que ya es una decisión y se toma a mano.
+Por qué la mediana si nadie dice nada: lo que cada versión trae es lo que se
+haya hecho desde la anterior. Un parche afirmaría que sólo se han arreglado
+cosas, y eso lo tiene que decir alguien a propósito.
 
 **Cómo llega ese número a los cuatro trabajos** sin pasarse un commit entre
 ellos: cada uno ejecuta `release.py bump` sobre su propia copia nada más
@@ -95,12 +123,43 @@ no es un error sino algo peor: una actualización que nunca se ofrece.
 
 ## 4. Publicar una versión
 
-Cuatro pasos:
+Dos pasos:
 
-1. `python3 packaging/release.py next`, para saber qué número va a salir;
-2. escribir esa sección en `CHANGELOG.md`;
-3. GitHub → Actions → **Publish Didacta Release** → Run workflow;
-4. nada más.
+1. escribir arriba de `CHANGELOG.md` lo que trae la versión. Si todavía no
+   sabes el número, `## Próxima` vale: se lo pone el paso siguiente;
+2. `python3 packaging/publish.py`.
+
+```
+¿Cómo es esta versión?
+  1) pequeña   0.1.0 → 0.1.1    sólo arreglos
+  2) mediana   0.1.0 → 0.2.0    lo de siempre: lo hecho desde la anterior   ← la de release.yaml
+  3) grande    0.1.0 → 1.0.0    algo que obliga a aprender otra vez
+```
+
+Después pregunta si se publica o se ensaya, enseña lo que va a hacer y pide un
+«sí». Antes de escribir nada comprueba lo que suele salir mal:
+
+- que estás en `main` y al día con GitHub --después de cada publicación el
+  workflow deja allí un commit con la versión, y lo ofrece traer--;
+- que el número no está publicado ya, ni en un borrador a medias;
+- que hay notas para él, y si la sección de arriba tiene otro título, le pone
+  el que toca;
+- **lo que no va a entrar**: se compila lo que hay en GitHub, así que un
+  cambio sin commit no va en la versión, y lo dice con la lista delante;
+- que no hay otra publicación en marcha.
+
+Si se le dice que sí, deja la parte en `release.yaml`, hace un commit
+«Preparar Didacta X» con eso y el CHANGELOG --sólo con eso--, lo sube y lanza el
+workflow con `gh`. Si `gh` no está instalado (`brew install gh && gh auth
+login`), hace todo lo demás y abre la página del botón. Al final ofrece
+quedarse siguiendo el workflow.
+
+`--part`, `--dry-run` y `--yes` lo dejan contestado de antemano; `--yes` dice
+que sí a las preguntas, pero no se salta ninguna comprobación.
+
+Sin el script también se puede: escribir la sección con el número que diga
+`python3 packaging/release.py next`, poner la parte en `release.yaml`, y
+GitHub → Actions → **Publish Didacta Release** → Run workflow.
 
 `app/pubspec.yaml` no se toca. Subirlo a mano se salta un número, porque el
 ciclo lo subirá igual la próxima vez.
@@ -112,7 +171,7 @@ El workflow (`.github/workflows/release.yml`) hace, en este orden:
 | 1 | `comprobar` | Sube el número, exige la sección del CHANGELOG, comprueba que el tag no exista ya |
 | 2 | `pruebas` | Tests de Python, tests de Dart, `flutter analyze --fatal-infos`, formato |
 | 3 | `construir` | macOS, Windows y Linux **en paralelo, sin `fail-fast`**, cada uno con el número ya subido |
-| 4 | `publicar` | Solo si los tres salieron. Publica el release --GitHub crea el tag sobre el commit compilado-- y al final escribe la versión nueva en `main` |
+| 4 | `publicar` | Solo si los tres salieron. Publica el release --GitHub crea el tag sobre el commit compilado-- y al final escribe la versión nueva en `main` y deja `release.yaml` en `minor` |
 
 El orden importa. Descubrir que falta la sección del CHANGELOG después de tres
 compilaciones de quince minutos es tirar media hora por algo que se ve en un
@@ -568,10 +627,12 @@ medias.
 .github/workflows/site.yml         El de la web y las capturas
 web/                               La web de documentación
 CHANGELOG.md                       Las notas, escritas a mano
+release.yaml                       Cuánto sube la próxima: grande, mediana o pequeña
 packaging/
-├── release.py                     Versión, notas, checksums, manifiesto
+├── publish.py                     Publicar desde el terminal, preguntando
+├── release.py                     Versión, plan, notas, checksums, manifiesto
 ├── web.py                         El bloque de descargas de la web
-├── test_release.py                Sus tests
+├── test_release.py, test_publish.py  Sus tests
 ├── macos/{package,sign,notarize}.sh
 ├── windows/didacta.iss
 └── linux/{package.sh,didacta.desktop,didacta-*.png}

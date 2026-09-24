@@ -268,9 +268,15 @@ preguntando.
 
 ### Publicar una versión
 
-1. `python3 packaging/release.py next`, para saber qué número va a salir;
-2. escribir esa sección en [`CHANGELOG.md`](CHANGELOG.md);
-3. Actions → **Publish Didacta Release** → Run workflow.
+1. escribir arriba de [`CHANGELOG.md`](CHANGELOG.md) lo que trae, bajo
+   `## Próxima` si todavía no sabes el número;
+2. `python3 packaging/publish.py`.
+
+Pregunta si es grande, mediana o pequeña --1.0.0, 0.2.0 o 0.1.1 desde la
+0.1.0-- y si se publica o se ensaya; le pone el número a la sección, avisa de
+lo que no va a entrar, hace el commit, lo sube y lanza **Publish Didacta
+Release** en GitHub. Lo que elige lo deja en [`release.yaml`](release.yaml),
+que también se puede editar a mano y pulsar el botón en Actions.
 
 Compila macOS, Windows y Linux, calcula los SHA-256, publica el release aquí
 mismo y dispara el despliegue de la web, que reescribe su página de descarga

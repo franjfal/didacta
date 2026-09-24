@@ -1,0 +1,15 @@
+# Cómo sale la próxima versión de Didacta.
+#
+# Lo leen packaging/release.py y el workflow «Publish Didacta Release». Lo
+# normal es no tocarlo a mano: `python3 packaging/publish.py` pregunta, lo
+# escribe y lanza la publicación.
+#
+# bump: cuánto sube el número respecto al último publicado (app/pubspec.yaml)
+#
+#   major   grande    1.4.2 → 2.0.0   algo que obliga a aprender otra vez
+#   minor   mediana   1.4.2 → 1.5.0   lo de siempre: lo hecho desde la anterior
+#   patch   pequeña   1.4.2 → 1.4.3   sólo arreglos
+#
+# Vale para UNA publicación: al publicar, el workflow lo vuelve a dejar en
+# minor. Así una grande no se queda puesta y la siguiente no salta otra vez.
+bump: minor

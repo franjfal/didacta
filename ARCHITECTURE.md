@@ -723,9 +723,11 @@ haciendo falta, pero por lo que siempre fue de verdad: el material vive en
 repositorios de GitHub. Lo que ya no hace es decidir si la aplicación se puede
 usar.
 
-Publicar una versión son tres pasos y ninguno es una orden en un terminal:
-mirar qué número sale (`release.py next`), escribir esa sección del
-`CHANGELOG.md`, y Actions → «Publish Didacta Release» → Run workflow.
+Publicar una versión son dos pasos: escribir lo que trae en el `CHANGELOG.md`
+y ejecutar `python3 packaging/publish.py`, que pregunta si es grande, mediana o
+pequeña, lo deja en `release.yaml`, comprueba lo que suele salir mal y lanza
+«Publish Didacta Release». El botón de Actions sigue valiendo igual: sube lo
+que diga `release.yaml`, la mediana si no dice nada.
 
 El detalle entero --artefactos por sistema, el manifiesto, la firma, la web y
 cómo hacer rollback-- está en
