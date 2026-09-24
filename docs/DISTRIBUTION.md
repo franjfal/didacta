@@ -112,7 +112,7 @@ El workflow (`.github/workflows/release.yml`) hace, en este orden:
 | 1 | `comprobar` | Sube el número, exige la sección del CHANGELOG, comprueba que el tag no exista ya |
 | 2 | `pruebas` | Tests de Python, tests de Dart, `flutter analyze --fatal-infos`, formato |
 | 3 | `construir` | macOS, Windows y Linux **en paralelo, sin `fail-fast`**, cada uno con el número ya subido |
-| 4 | `publicar` | Solo si los tres salieron. Al final escribe la versión nueva en `main` y la etiqueta |
+| 4 | `publicar` | Solo si los tres salieron. Publica el release --GitHub crea el tag sobre el commit compilado-- y al final escribe la versión nueva en `main` |
 
 El orden importa. Descubrir que falta la sección del CHANGELOG después de tres
 compilaciones de quince minutos es tirar media hora por algo que se ve en un
@@ -147,8 +147,10 @@ próxima publicación asigna ese mismo número.
 
 ### Si la publicación sale pero el commit de la versión no
 
-El último paso de `publicar` escribe `app/pubspec.yaml` en `main` y crea el
-tag. Si alguien empujó a la rama mientras se compilaba, reintenta poniéndose
+El último paso de `publicar` escribe `app/pubspec.yaml` en `main`. El tag no:
+lo crea GitHub al publicar el release, sobre el commit que se compiló
+(`$GITHUB_SHA`). Crearlo también desde el workflow chocaba con ése, y la 0.1.0
+salió publicada con el trabajo marcado en rojo por eso. Si alguien empujó a la rama mientras se compilaba, reintenta poniéndose
 detrás; si aun así no puede --una rama protegida, por ejemplo--, el trabajo
 falla diciéndolo, y la versión ya está publicada. Entonces hay que subir esa
 línea a mano, o la siguiente publicación repetirá el número y se parará en la

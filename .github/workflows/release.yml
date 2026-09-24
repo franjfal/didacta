@@ -470,7 +470,7 @@ jobs:
             --title "Didacta $VERSION" \
             --notes-file notas.md \
             --draft \
-            --target main
+            --target "$GITHUB_SHA"
           gh release upload "$TAG" -R "$RELEASE_REPO" dist/*
 
       - name: el manifiesto
@@ -518,15 +518,24 @@ jobs:
       # alguien marca otra versión como la última --un rollback-- basta con
       # volver a desplegar, sin publicar nada.
 
-      - name: la versión nueva y su tag, en el repositorio de código
+      - name: la versión nueva, en el repositorio de código
         # El número se deja escrito **aquí**, no al empezar. Si algo se
         # rompiera antes, `main` se queda como estaba y el siguiente intento
         # vuelve a calcular el mismo número en vez de saltárselo. Un ensayo,
         # por lo mismo, no gasta ninguno.
         #
-        # Y el tag va sobre ese commit, para poder volver exactamente al
-        # código de una versión publicada -- incluido el número que lleva
-        # dentro.
+        # El tag no se crea aquí: lo crea GitHub al publicar el release, sobre
+        # el commit que se le dio como `--target`, que es `$GITHUB_SHA` --el
+        # que descargaron y compilaron los cuatro trabajos--. Crearlo también
+        # aquí era lo que hacía antes, cuando las versiones vivían en otro
+        # repositorio y el tag de éste estaba libre; con el release en el
+        # mismo repositorio, el `git push` del tag chocaba con el que GitHub
+        # acababa de crear y marcaba como fallida una publicación que había
+        # salido bien. Pasó con la 0.1.0.
+        #
+        # Y el tag en el commit compilado es el sitio correcto: volver a esa
+        # versión es sacar ese commit y ejecutar `release.py bump`, que es lo
+        # que hizo cada trabajo, y da exactamente lo que se repartió.
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
@@ -551,9 +560,6 @@ jobs:
               exit 1
             fi
           fi
-
-          git tag -a "$TAG" -m "Didacta $VERSION"
-          git push origin "$TAG"
 
       - name: el resumen
         run: |
