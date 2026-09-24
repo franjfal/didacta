@@ -31,8 +31,10 @@ import 'course_admin_ui.dart';
 import 'language_settings.dart';
 import 'manage_blocks.dart';
 import 'manage_templates.dart';
+import 'remove_repository.dart';
 import 'shell.dart';
 import 'sign_in.dart';
+import 'start_over.dart';
 import 'add_repository.dart';
 import 'theme.dart';
 import 'toolchain_check.dart';
@@ -116,6 +118,13 @@ class SettingsPage extends StatelessWidget {
 
               const SectionLabel('Ayuda'),
               _HelpSection(session: session),
+
+              // Al final del todo: se busca a propósito, y no puede estar a
+              // mano de quien sólo venía a cambiar un ajuste.
+              if (session.files.supported) ...[
+                const SectionLabel('Empezar de cero'),
+                StartOverSection(session: session),
+              ],
             ],
           ),
         ),
@@ -241,7 +250,7 @@ class _PrefsSection extends StatelessWidget {
                       ),
                       for (final repo in repos)
                         RadioListTile<String?>(
-                          key: Key('prefs-repo-\${repo.id}'),
+                          key: Key('prefs-repo-${repo.id}'),
                           value: repo.id,
                           dense: true,
                           contentPadding: EdgeInsets.zero,
@@ -423,7 +432,8 @@ class _ReposSectionState extends State<_ReposSection> {
                 _RepoRow(
                   session: session,
                   repo: repo,
-                  onRemove: () => session.removeRepository(repo.id),
+                  onRemove: () =>
+                      removeRepositoryAsking(context, session, repo),
                 ),
                 const Divider(height: 18),
               ],
@@ -497,6 +507,16 @@ class _RepoRow extends StatelessWidget {
   final ContentRepo repo;
   final VoidCallback onRemove;
 
+  /// La carpeta en el explorador de archivos. Si no se abre --se movió, o no
+  /// hay explorador--, se dice dónde debería estar.
+  Future<void> _open(BuildContext context) async {
+    if (await session.files.open(repo.directory)) return;
+    if (!context.mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text('No he podido abrir ${repo.directory}.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = session.statusOf(repo.id);
@@ -546,8 +566,16 @@ class _RepoRow extends StatelessWidget {
                   style: const TextStyle(fontSize: 11.5, color: didactaMuted),
                 ),
               ),
+            if (session.files.supported)
+              IconButton(
+                key: Key('repo-open-${repo.id}'),
+                tooltip: session.files.openLabel,
+                icon: const Icon(Icons.folder_open_outlined, size: 16),
+                onPressed: () => _open(context),
+              ),
             IconButton(
-              tooltip: 'Quitarlo de la lista (la carpeta se queda)',
+              key: Key('repo-remove-${repo.id}'),
+              tooltip: 'Quitarlo de la lista…',
               icon: const Icon(Icons.close, size: 16),
               onPressed: onRemove,
             ),

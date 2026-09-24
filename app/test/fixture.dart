@@ -17,6 +17,7 @@ import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/course_admin.dart';
+import 'package:didacta_app/data/file_manager.dart';
 import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/data/toolchain.dart';
@@ -41,7 +42,7 @@ UpdateService offlineUpdates() => UpdateService(
   info: const AppInfo(
     version: AppVersion(1, 0, 0),
     build: 1,
-    packageName: 'es.uv.didacta',
+    packageName: 'io.github.franjfal.didacta',
     platform: UpdatePlatform.macos,
     architecture: 'universal',
   ),
@@ -1049,10 +1050,13 @@ class FakeSession extends Session {
     this.reloadsForReal = false,
     Preferences? preferencesOverride,
     TranslationSecrets? translationSecretsOverride,
+    FileManager? filesOverride,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
          tokenStore: StubStore(),
          preferences: preferencesOverride,
+         files: filesOverride ?? RecordingFileManager(),
+         forgetLegacy: _forgetNothing,
          // En memoria por defecto: un test que monta una pantalla no puede
          // ponerse a leer el llavero del sistema.
          translationSecrets:
@@ -1161,6 +1165,47 @@ class FakeSession extends Session {
 /// no se abre**, así que una pantalla que se prueba es siempre una pantalla de
 /// alguien que entró. Los tests de la puerta son los que piden un llavero
 /// vacío, y lo dicen: `StubStore(token: null)`.
+/// Lo que ponen las sesiones de prueba para «lo que quede del nombre de
+/// antes»: nada. El de verdad borra en la carpeta de usuario de quien ejecuta
+/// las pruebas, y eso no lo puede hacer ninguna prueba.
+Future<void> _forgetNothing() async {}
+
+/// Un explorador de archivos que no abre nada ni tira nada: apunta.
+///
+/// Tirar carpetas de verdad en un test no prueba nada que no pruebe esto, y
+/// una ruta equivocada en un test es una carpeta de verdad en la Papelera.
+class RecordingFileManager extends FileManager {
+  RecordingFileManager({this.canTrash = true});
+
+  /// Si mandar a la Papelera sale bien.
+  bool canTrash;
+
+  final List<String> opened = [];
+  final List<String> trashed = [];
+
+  @override
+  bool get supported => true;
+
+  @override
+  String get openLabel => 'Abrir en el Finder';
+
+  @override
+  String get home => '/Users/profe';
+
+  @override
+  Future<bool> open(String folder) async {
+    opened.add(folder);
+    return true;
+  }
+
+  @override
+  Future<bool> trash(String folder) async {
+    if (!canTrash) return false;
+    trashed.add(folder);
+    return true;
+  }
+}
+
 class StubStore implements SecretStore {
   StubStore({this.token = 'gho_de_prueba'});
 
@@ -1196,8 +1241,13 @@ class LocalSession extends Session {
     required super.catalogueSource,
     required super.tokenStore,
     super.preferences,
+    super.translationSecrets,
+    FileManager? files,
     this.who = testUser,
-  });
+  }) : super(
+         files: files ?? RecordingFileManager(),
+         forgetLegacy: _forgetNothing,
+       );
 
   /// Null es «GitHub no contesta», para probar el arranque sin red.
   final GitHubUser? who;

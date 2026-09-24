@@ -30,6 +30,8 @@ import '../data/content_gateway.dart';
 import '../data/course_admin.dart';
 import '../data/frozen.dart';
 import '../data/disk_watch.dart';
+import '../data/file_manager.dart';
+import '../data/legacy_identity.dart';
 import '../data/github.dart';
 import '../data/indenter.dart';
 import '../data/local_clone.dart';
@@ -39,11 +41,13 @@ import '../data/toolchain.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
 import '../model/degrees_file.dart';
+import '../model/folder_safety.dart';
 import '../model/slug.dart';
 import '../model/synced_prefs.dart';
 import '../model/taxonomy_file.dart';
 import '../model/templates_file.dart';
 import '../model/themes_file.dart';
+import '../model/translation.dart' show TranslationProvider;
 import '../data/translator.dart';
 import '../model/translation_memory.dart';
 import '../model/translation_run.dart';
@@ -118,8 +122,22 @@ class Session extends ChangeNotifier {
     required this.tokenStore,
     TranslationSecrets? translationSecrets,
     Preferences? preferences,
+    this.files = const FileManager(),
+    this.forgetLegacy = forgetLegacyData,
   }) : preferences = preferences ?? MemoryPreferences(),
        translationSecrets = translationSecrets ?? KeychainTranslationSecrets();
+
+  /// El explorador de archivos: abrir la carpeta de un repositorio y
+  /// mandarla a la Papelera. Las pruebas ponen uno que sólo apunta.
+  final FileManager files;
+
+  /// Borrar lo que quede del nombre de antes, al restablecer.
+  ///
+  /// Inyectado por la misma razón que [files], y con más motivo: el de
+  /// verdad borra carpetas y un dominio de preferencias de la carpeta de
+  /// usuario **de quien ejecuta las pruebas**. Una prueba de «Restablecer»
+  /// con el de verdad es un «Restablecer» de verdad.
+  final Future<void> Function() forgetLegacy;
 
   final CatalogueSource catalogueSource;
 
@@ -3725,12 +3743,96 @@ class Session extends ChangeNotifier {
   }
 
   /// Lo quita del espacio de trabajo. La carpeta se queda donde está: lleva
-  /// trabajo dentro y borrarla no es cosa de un botón de esta lista.
-  Future<void> removeRepository(String id) async {
+  /// trabajo dentro, y borrarla es otra decisión que hay que pedir aparte.
+  ///
+  /// Se pide con [trashFolder]: entonces la carpeta va a la
+  /// Papelera --nunca se borra del todo--, y sólo si [whyNotTrash] no
+  /// encuentra nada dentro que no sea suyo. Devuelve qué pasó con la carpeta
+  /// si no se pudo tirar, o `null`. Que no se pueda no deshace el quitarlo:
+  /// ya no está en la lista, y la carpeta sigue donde estaba.
+  Future<String?> removeRepository(
+    String id, {
+    bool trashFolder = false,
+  }) async {
+    ContentRepo? removed;
+    for (final repo in _workspace.repos) {
+      if (repo.id == id) removed = repo;
+    }
     _workspace = _workspace.without(id);
     await preferences.setWorkspace(_workspace.toJson());
+    // Antes de tirarla: así ya nadie la está mirando.
     await refreshAccess();
+    String? problem;
+    if (trashFolder && removed != null) {
+      problem = await _trashRepositoryFolder(removed);
+    }
     await reloadCatalogue();
+    return problem;
+  }
+
+  /// Manda a la Papelera la carpeta de [repo], si es seguro. Devuelve el
+  /// porqué si no se pudo.
+  Future<String?> _trashRepositoryFolder(ContentRepo repo) async {
+    final folder = repo.directory;
+    final why = whyNotTrash(
+      folder,
+      home: files.home,
+      cloneBase: _cloneBase,
+      engine: _enginePath,
+      others: [
+        for (final other in _workspace.repos)
+          if (other.id != repo.id) other.directory,
+      ],
+    );
+    if (why != null) {
+      return 'No he mandado $folder a la Papelera: $why. Sigue donde estaba.';
+    }
+    if (!await files.trash(folder)) {
+      return 'No he podido mandar $folder a la Papelera, así que sigue donde '
+          'estaba. Si quieres quitarla, bórrala a mano.';
+    }
+    return null;
+  }
+
+  /// Deja Didacta en este ordenador como recién instalada.
+  ///
+  /// Borra la sesión de GitHub, las claves de traducción, todos los ajustes
+  /// --la lista de repositorios, la bienvenida vista, dónde se clona-- y lo
+  /// que quedara del nombre de antes. Las carpetas de los repositorios y las
+  /// plantillas guardadas en el programa, sólo si se pide con [folders] y
+  /// [templates], y a la Papelera.
+  ///
+  /// Después hay que volver a arrancar la aplicación ([restartApp]): lo que
+  /// hay en memoria sigue siendo lo de antes, y es arrancar de nuevo lo que lo
+  /// lee todo desde cero.
+  ///
+  /// Devuelve lo que no se pudo tirar. Lo demás se borra igual: una carpeta
+  /// que no se deja tirar no es razón para dejar la sesión abierta.
+  Future<List<String>> resetEverything({
+    bool folders = false,
+    bool templates = false,
+  }) async {
+    final problems = <String>[];
+    if (folders) {
+      for (final repo in List.of(_workspace.repos)) {
+        final problem = await _trashRepositoryFolder(repo);
+        if (problem != null) problems.add(problem);
+      }
+    }
+    final store = _templateStore?.directory;
+    if (templates && store != null && !await files.trash(store)) {
+      problems.add(
+        'No he podido mandar las plantillas del programa ($store) a la '
+        'Papelera.',
+      );
+    }
+    await tokenStore.clear();
+    for (final provider in TranslationProvider.values) {
+      await translationSecrets.clear(provider);
+    }
+    await preferences.clearAll();
+    await forgetLegacy();
+    return problems;
   }
 
   /// Cambia el color con el que se marca un repositorio en la interfaz.
