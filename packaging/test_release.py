@@ -38,9 +38,14 @@ class VersionTest(unittest.TestCase):
         self.pubspec = os.path.join(self.temp, "pubspec.yaml")
         self.original = release.PUBSPEC
         release.PUBSPEC = self.pubspec
+        # Sin el `release.yaml` de verdad: lo que diga el de la raíz el día
+        # que alguien prepare una grande no puede cambiar lo que se prueba.
+        self.original_plan = release.PLAN
+        release.PLAN = os.path.join(self.temp, "release.yaml")
 
     def tearDown(self):
         release.PUBSPEC = self.original
+        release.PLAN = self.original_plan
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def write(self, text):
@@ -93,9 +98,14 @@ class BumpTest(unittest.TestCase):
         self.pubspec = os.path.join(self.temp, "pubspec.yaml")
         self.original = release.PUBSPEC
         release.PUBSPEC = self.pubspec
+        # Sin el `release.yaml` de verdad: lo que diga el de la raíz el día
+        # que alguien prepare una grande no puede cambiar lo que se prueba.
+        self.original_plan = release.PLAN
+        release.PLAN = os.path.join(self.temp, "release.yaml")
 
     def tearDown(self):
         release.PUBSPEC = self.original
+        release.PLAN = self.original_plan
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def write(self, text):
@@ -195,6 +205,195 @@ class BumpTest(unittest.TestCase):
             seen.append((after, build))
         self.assertEqual(
             seen, [("1.1.0", 2), ("1.2.0", 3), ("1.3.0", 4), ("1.4.0", 5)])
+
+
+class PlanTest(unittest.TestCase):
+    """Lo que dice `release.yaml`: cuánto sube la próxima.
+
+    Un fichero que se edita a mano y decide un número que no se puede
+    corregir después. Así que lo que se prueba sobre todo es que **no se
+    equivoque callado**: una errata para el workflow, no publica otra cosa.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.mkdtemp()
+        self.originals = (release.PLAN, release.PUBSPEC)
+        release.PLAN = os.path.join(self.temp, "release.yaml")
+        release.PUBSPEC = os.path.join(self.temp, "pubspec.yaml")
+        with open(release.PUBSPEC, "w", encoding="utf-8") as handle:
+            handle.write("name: didacta_app\nversion: 1.4.2+9\n")
+
+    def tearDown(self):
+        release.PLAN, release.PUBSPEC = self.originals
+        shutil.rmtree(self.temp, ignore_errors=True)
+
+    def write(self, text):
+        with open(release.PLAN, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+    def read(self):
+        with open(release.PLAN, encoding="utf-8") as handle:
+            return handle.read()
+
+    def test_sin_fichero_es_la_mediana_de_siempre(self):
+        self.assertEqual(release.planned_part(), "minor")
+
+    def test_la_plantilla_dice_la_mediana(self):
+        self.write(release.PLAN_TEMPLATE)
+        self.assertEqual(release.planned_part(), "minor")
+
+    def test_el_de_la_raiz_se_entiende(self):
+        # El que va en el repositorio. Si alguien lo edita y se equivoca, que
+        # lo diga este test en el pull request y no el workflow al publicar.
+        release.PLAN = self.originals[0]
+        self.assertIn(release.planned_part(), release.PARTS)
+
+    def test_las_tres_partes_y_sus_nombres_en_castellano(self):
+        for written, part in [
+            ("major", "major"), ("grande", "major"),
+            ("minor", "minor"), ("mediana", "minor"), ("media", "minor"),
+            ("patch", "patch"), ("pequeña", "patch"), ("Pequeña", "patch"),
+        ]:
+            self.write("bump: %s\n" % written)
+            self.assertEqual(release.planned_part(), part, written)
+
+    def test_los_comentarios_y_las_comillas_no_cuentan(self):
+        self.write("# lo de arriba\n\nbump: 'patch'   # sólo arreglos\n")
+        self.assertEqual(release.planned_part(), "patch")
+
+    def test_una_parte_mal_escrita_para(self):
+        # `bump: mayor` es castellano correcto, y vale. `bump: majr` no, y
+        # publicar una mediana en su lugar sería peor que no publicar.
+        self.write("bump: majr\n")
+        with self.assertRaises(release.Problem) as caught:
+            release.planned_part()
+        self.assertIn("línea 1", str(caught.exception))
+        self.assertIn("major", str(caught.exception))
+
+    def test_una_clave_mal_escrita_para(self):
+        self.write("bumb: major\n")
+        with self.assertRaises(release.Problem) as caught:
+            release.planned_part()
+        self.assertIn("bumb", str(caught.exception))
+
+    def test_dos_veces_la_misma_clave_para(self):
+        # ¿Cuál vale? YAML diría «la última»; quien lo lee de arriba abajo
+        # diría la primera. Que no haya que decidirlo.
+        self.write("bump: major\nbump: patch\n")
+        with self.assertRaises(release.Problem):
+            release.planned_part()
+
+    def test_lo_sangrado_o_vacio_para(self):
+        for text in ["  bump: major\n", "bump:\n", "bump major\n"]:
+            self.write(text)
+            with self.assertRaises(release.Problem, msg=text):
+                release.planned_part()
+
+    def test_bump_y_next_siguen_al_fichero(self):
+        self.write("bump: patch\n")
+        self.assertEqual(release.bump(), ("1.4.2", "1.4.3", 10))
+        self.write("bump: major\n")
+        self.assertEqual(release.bump(), ("1.4.3", "2.0.0", 11))
+
+    def test_y_una_parte_dada_manda_sobre_el_fichero(self):
+        self.write("bump: major\n")
+        self.assertEqual(release.bump("patch"), ("1.4.2", "1.4.3", 10))
+
+    def test_una_errata_no_deja_subir_el_numero(self):
+        self.write("bump: enorme\n")
+        with self.assertRaises(release.Problem):
+            release.bump()
+        self.assertEqual(release.read_version(), ("1.4.2", 9))
+
+    def test_escribirlo_no_toca_los_comentarios(self):
+        self.write(release.PLAN_TEMPLATE)
+        release.write_plan("bump", "major")
+        self.assertEqual(
+            self.read(),
+            release.PLAN_TEMPLATE.replace("bump: minor", "bump: major"))
+
+    def test_escribirlo_sin_fichero_lo_crea_con_su_explicacion(self):
+        release.write_plan("bump", "patch")
+        self.assertIn("pequeña", self.read())
+        self.assertEqual(release.planned_part(), "patch")
+
+    def test_publicar_lo_deja_en_la_mediana(self):
+        """Lo que hace el trabajo que publica justo antes de su commit.
+
+        Sin esto, una grande se quedaría puesta: la siguiente publicación, y
+        la de después, saltarían de mayor otra vez.
+        """
+        self.write(release.PLAN_TEMPLATE.replace("bump: minor", "bump: major"))
+        with io.StringIO() as out:
+            guardado, sys.stdout = sys.stdout, out
+            try:
+                self.assertEqual(release.main(["plan", "--reset"]), 0)
+            finally:
+                sys.stdout = guardado
+        self.assertEqual(release.planned_part(), "minor")
+        self.assertEqual(self.read(), release.PLAN_TEMPLATE)
+
+    def test_el_ciclo_con_una_grande_en_medio(self):
+        # Mediana, grande, y otra vez mediana sin que nadie toque nada: la
+        # grande se gasta al publicarla.
+        seen = []
+        for chosen in [None, "major", None]:
+            if chosen:
+                release.write_plan("bump", chosen)
+            _, after, _ = release.bump()
+            release.write_plan("bump", release.DEFAULT_PART)
+            seen.append(after)
+        self.assertEqual(seen, ["1.5.0", "2.0.0", "2.1.0"])
+
+
+class PendingSectionTest(unittest.TestCase):
+    """La sección del CHANGELOG que todavía no tiene número, o no el bueno."""
+
+    def setUp(self):
+        self.temp = tempfile.mkdtemp()
+        self.original = release.CHANGELOG
+        release.CHANGELOG = os.path.join(self.temp, "CHANGELOG.md")
+
+    def tearDown(self):
+        release.CHANGELOG = self.original
+        shutil.rmtree(self.temp, ignore_errors=True)
+
+    def write(self, text):
+        with open(release.CHANGELOG, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+    def test_arriba_la_ya_publicada_no_es_pendiente(self):
+        self.write("# Cambios\n\n## 0.1.0 — 2026-09-17\n\n- Lo primero\n")
+        self.assertIsNone(release.pending_section("0.1.0"))
+
+    def test_una_con_numero_mayor_si_lo_es(self):
+        # Escrita como 0.2.0 antes de decidir que era una pequeña.
+        self.write("# Cambios\n\n## 0.2.0\n\n- Lo nuevo\n\n## 0.1.0\n\n- Antes\n")
+        self.assertEqual(release.pending_section("0.1.0"), (2, "0.2.0"))
+
+    def test_y_una_sin_numero_tambien(self):
+        self.write("# Cambios\n\n## Próxima\n\n- Lo nuevo\n\n## 0.1.0\n\n- Antes\n")
+        self.assertEqual(release.pending_section("0.1.0"), (2, "Próxima"))
+
+    def test_el_ejemplo_del_encabezado_no_cuenta(self):
+        self.write(
+            "# Cambios\n\n```markdown\n## 9.9.9 — ejemplo\n```\n\n"
+            "## 0.1.0\n\n- Lo primero\n")
+        self.assertIsNone(release.pending_section("0.1.0"))
+
+    def test_ponerle_el_numero(self):
+        self.write("# Cambios\n\n## Próxima\n\n- Lo nuevo\n\n## 0.1.0\n\n- Antes\n")
+        index, _ = release.pending_section("0.1.0")
+        release.retitle_section(index, "0.1.1", today="2026-09-24")
+        with open(release.CHANGELOG, encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertIn("## 0.1.1 — 2026-09-24\n\n- Lo nuevo", text)
+        self.assertIn("## 0.1.0\n\n- Antes\n", text)
+        self.assertEqual(release.read_notes("0.1.1"), "- Lo nuevo")
+
+    def test_las_notas_de_unas_lineas_sin_escribirlas(self):
+        lines = ["# Cambios", "", "## 0.3.0", "", "- Esto", "", "## 0.2.0", "- Eso"]
+        self.assertEqual(release.notes_in(lines, "0.3.0"), "- Esto")
 
 
 class ChangelogTest(unittest.TestCase):
@@ -562,6 +761,8 @@ class WindowsOutputTest(unittest.TestCase):
         self.temp = tempfile.mkdtemp()
         self.original = release.PUBSPEC
         release.PUBSPEC = os.path.join(self.temp, "pubspec.yaml")
+        self.original_plan = release.PLAN
+        release.PLAN = os.path.join(self.temp, "release.yaml")
         with open(release.PUBSPEC, "w", encoding="utf-8") as handle:
             # Con acentos, como el de verdad: si `bump` reescribiera el
             # fichero en cp1252, «compilación» se perdería por el camino.
@@ -573,6 +774,7 @@ class WindowsOutputTest(unittest.TestCase):
 
     def tearDown(self):
         release.PUBSPEC = self.original
+        release.PLAN = self.original_plan
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def test_la_flecha_de_bump_no_tumba_windows(self):
@@ -640,6 +842,21 @@ class WorkflowTest(unittest.TestCase):
                         match.group(1).strip(),
                         "%s:%d interpola nada: %s" % (name, number, line.strip()),
                     )
+
+    def test_publicar_gasta_lo_que_diga_release_yaml(self):
+        """El commit final de la publicación vuelve a dejarlo en la mediana.
+
+        Si alguien quitara esa línea, nada fallaría: la publicación saldría
+        bien, y la **siguiente** saltaría de mayor otra vez sin que nadie lo
+        hubiera pedido. Es el tipo de fallo que sólo se ve cuando ya está
+        publicado, así que se mira aquí.
+        """
+        text = dict(self.workflows())["release.yml"]
+        reset = text.index("release.py plan --reset")
+        added = text.index("git add app/pubspec.yaml release.yaml")
+        commit = text.index('git commit -m "Didacta $VERSION"')
+        self.assertLess(reset, added)
+        self.assertLess(added, commit)
 
     def test_las_llaves_estan_equilibradas(self):
         # `${{ algo }` o `${ algo }}` dan el mismo 422 y son igual de

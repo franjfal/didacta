@@ -115,5 +115,7 @@ cambia y por qué**, no qué ficheros se tocaron: eso ya lo dice el diff.
 
 ## El CHANGELOG
 
-Solo lo escribe quien publica una versión, con el número que dirá
-`python3 packaging/release.py next`. Un pull request no necesita tocarlo.
+Solo lo escribe quien publica una versión: arriba del todo, bajo `## Próxima`
+o bajo el número que dirá `python3 packaging/release.py next`.
+`python3 packaging/publish.py` le pone el número que toque al publicar. Un pull
+request no necesita tocarlo, ni tampoco `release.yaml`.
