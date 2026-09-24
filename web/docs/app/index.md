@@ -87,7 +87,6 @@ que significar algo y recargar tiene que dejarte donde estabas.
 
 Dicho aquí porque es mejor saberlo antes que descubrirlo:
 
-- **compilar en Windows.** El resto funciona; los PDF salen desde el terminal;
 - **crear una unidad desde cero.** Se editan, se traducen, se reclasifican y
   se recomponen las que hay; para una nueva, `didacta new unit`;
 - **resolver conflictos de git.** Un conflicto se dice y se ofrece recargar.

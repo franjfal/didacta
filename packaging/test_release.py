@@ -291,6 +291,14 @@ class ChangelogTest(unittest.TestCase):
         self.assertIn("Después del ejemplo", notes)
         self.assertNotIn("Lo viejo", notes)
 
+    def test_la_raya_que_separa_las_secciones_no_entra_en_las_notas(self):
+        # En el CHANGELOG, cada sección acaba en `---`. En las notas del
+        # release sería una raya suelta al final del diálogo de actualizar.
+        self.write(
+            "## 1.5.0\n\n- Lo nuevo.\n\n---\n\n## 1.4.0\n\n- Lo viejo.\n"
+        )
+        self.assertEqual(release.read_notes("1.5.0"), "- Lo nuevo.")
+
     def test_acepta_la_v_delante(self):
         self.write("# Cambios\n\n## v1.4.2\n\n- Algo\n")
         self.assertEqual(release.read_notes("1.4.2"), "- Algo")

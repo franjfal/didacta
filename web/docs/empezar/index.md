@@ -64,12 +64,16 @@ buscarlos y decir dónde ha mirado cuando no los encuentra.
 
 </div>
 
-!!! note "Compilar desde la aplicación, hoy"
+!!! warning "En Windows, Python hay que instalarlo"
 
-    El botón de compilar funciona en **macOS y en Linux**. En Windows la
-    aplicación hace todo lo demás --biblioteca, edición, traducción,
-    composición, historial-- pero los PDF hay que sacarlos desde el terminal
-    con `python cli\didacta build …`.
+    macOS y Linux lo traen; Windows no. Descárgalo de
+    [python.org](https://www.python.org/downloads/) --cualquier versión 3.9 o
+    posterior-- y Didacta lo encuentra solo, aunque no marques la casilla de
+    añadirlo al PATH.
+
+    El `python.exe` que viene con Windows **no es un Python**: es un acceso
+    directo que abre la Microsoft Store. Didacta lo reconoce y te lo dice en
+    lugar de intentar usarlo.
 
 ## Instalar, sistema por sistema
 

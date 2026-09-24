@@ -614,6 +614,16 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   Taylor-- y la casilla del repositorio marca y desmarca lo que se ve. Así una
   tarde de trabajo sale en cinco commits que se pueden leer, en vez de uno que
   no.
+- **Compilar funciona en Windows.** No había funcionado nunca: la aplicación
+  lanzaba el motor como en macOS y en Linux, y Windows no sabe ejecutar un
+  script de Python sin decirle con qué. Ahora busca el intérprete --el
+  lanzador `py`, o `python`-- también donde lo deja el instalador de
+  python.org cuando no se marca la casilla del PATH. Y si lo único que hay es
+  el `python.exe` que trae Windows, que no es un Python sino un acceso directo
+  a la Microsoft Store, lo dice en lugar de abrir la tienda.
+- **«Abrir en el visor» y «Enseñar en la carpeta» funcionan en Windows y en
+  Linux.** Sólo estaban hechos para macOS, y en los otros dos el botón estaba
+  pero daba un error.
 
 ---
 

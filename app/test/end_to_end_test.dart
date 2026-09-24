@@ -30,6 +30,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/catalogue_source.dart';
+import 'package:didacta_app/data/compiler_io.dart' show findTool;
 import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/local_clone.dart';
 import 'package:didacta_app/data/preferences.dart';
@@ -235,6 +236,15 @@ void main() {
   test(
     'un tema compartido entre dos asignaturas, por la pila entera',
     () async {
+      // Sin TeX no hay pila entera que probar: `CourseAdmin` no arranca sin
+      // una distribución, y lo dice. En un runner de CI no hay ninguna --son
+      // varios gigas-- así que allí esto se salta en lugar de fallar, igual
+      // que las pruebas del compilador contra el motor real. En la máquina de
+      // quien desarrolla, que sí la tiene, corre entera.
+      if (await findTool('latexmk') == null) {
+        markTestSkipped('sin una distribución de TeX no arranca CourseAdmin');
+        return;
+      }
       final session = await openSession();
       final admin = session.admin(repo: 'test/repo')!;
       final ready = await admin.status();
