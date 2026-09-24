@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'data/legacy_identity.dart';
 import 'data/app_info.dart';
 import 'data/catalogue_source.dart';
 import 'data/preferences.dart';
@@ -104,6 +105,11 @@ Future<void> main() async {
     // a failed keychain read is not worth the whole application.
     return true;
   };
+
+  // Lo que se guardó cuando la aplicación se llamaba es.uv.didacta. Antes de
+  // tocar los ajustes: en Windows y en Linux viven en esa carpeta, y leerlos
+  // primero sería arrancar con los de una instalación vacía.
+  await bringLegacyData();
 
   // Dónde se clonan los repositorios, si no se ha dicho otra cosa.
   final home =

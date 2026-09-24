@@ -34,7 +34,7 @@ const String hash =
 const AppInfo installed = AppInfo(
   version: AppVersion(1, 4, 1),
   build: 141,
-  packageName: 'es.uv.didacta',
+  packageName: 'io.github.franjfal.didacta',
   platform: UpdatePlatform.macos,
   architecture: 'arm64',
 );
@@ -472,7 +472,7 @@ void main() {
         info: const AppInfo(
           version: AppVersion(1, 4, 1),
           build: 141,
-          packageName: 'es.uv.didacta',
+          packageName: 'io.github.franjfal.didacta',
           platform: UpdatePlatform.linux,
           architecture: 'x64',
         ),
@@ -621,7 +621,7 @@ void main() {
       info: const AppInfo(
         version: AppVersion(1, 4, 1),
         build: 141,
-        packageName: 'es.uv.didacta',
+        packageName: 'io.github.franjfal.didacta',
         platform: null,
         architecture: 'web',
       ),

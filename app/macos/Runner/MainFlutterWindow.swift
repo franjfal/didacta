@@ -3,6 +3,11 @@ import FlutterMacOS
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
+    // Lo primero: antes de que arranque Flutter, que lee los ajustes en
+    // cuanto empieza, y antes de `setFrameUsingName`, que lee dónde estaba
+    // la ventana. Las dos cosas se guardan con el nombre de la aplicación.
+    LegacyIdentity.bringPreferences()
+
     let flutterViewController = FlutterViewController()
     self.contentViewController = flutterViewController
 
@@ -43,5 +48,39 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()
+  }
+}
+
+/// Lo que Didacta guardó cuando se llamaba de otra forma.
+///
+/// Hasta la 0.2.0 el identificador era `es.uv.didacta`, y macOS guarda los
+/// ajustes de cada aplicación en un dominio con su identificador. Al pasar a
+/// `io.github.franjfal.didacta`, la aplicación arrancaba con un dominio vacío:
+/// sin repositorios, sin la bienvenida vista, sin la ventana donde estaba.
+/// Quien se actualizara sola se encontraría una instalación nueva.
+///
+/// Así que la primera vez se copia lo de antes. Sólo lo que falte --nunca
+/// encima de algo que ya esté-- y una sola vez: la marca que queda impide
+/// volver a hacerlo, también después de «Restablecer», que es justo cuando
+/// traerlo otra vez desharía lo que se pidió. El dominio viejo no se borra:
+/// una versión anterior de Didacta lo seguiría usando.
+private enum LegacyIdentity {
+  static let bundleIdentifier = "es.uv.didacta"
+
+  /// Sin el prefijo `flutter.` a propósito: `shared_preferences` sólo ve las
+  /// claves que lo llevan, así que ni la aplicación la lee ni «Restablecer»,
+  /// que borra las suyas, se la lleva.
+  static let marker = "didacta.legacy.migrated"
+
+  static func bringPreferences() {
+    let defaults = UserDefaults.standard
+    guard Bundle.main.bundleIdentifier != bundleIdentifier,
+          defaults.object(forKey: marker) == nil else { return }
+    if let old = defaults.persistentDomain(forName: bundleIdentifier) {
+      for (key, value) in old where defaults.object(forKey: key) == nil {
+        defaults.set(value, forKey: key)
+      }
+    }
+    defaults.set(bundleIdentifier, forKey: marker)
   }
 }

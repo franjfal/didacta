@@ -24,7 +24,7 @@ import 'update_service_test.dart' show FakeInstaller, manifestBody, releaseBody;
 const AppInfo installed = AppInfo(
   version: AppVersion(1, 4, 1),
   build: 141,
-  packageName: 'es.uv.didacta',
+  packageName: 'io.github.franjfal.didacta',
   platform: UpdatePlatform.macos,
   architecture: 'arm64',
 );

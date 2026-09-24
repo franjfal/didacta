@@ -40,7 +40,7 @@ class AppInfo {
   /// El `+BUILD` de `pubspec.yaml`.
   final int build;
 
-  /// `es.uv.didacta`.
+  /// `io.github.franjfal.didacta`.
   final String packageName;
 
   /// `null` en web, donde no hay nada que actualizar: la página se recarga.
@@ -76,7 +76,7 @@ class AppInfo {
   static Future<AppInfo> load() async {
     var version = const AppVersion(0, 0, 0);
     var build = 0;
-    var package = 'es.uv.didacta';
+    var package = 'io.github.franjfal.didacta';
     try {
       final info = await PackageInfo.fromPlatform();
       version = AppVersion.tryParse(info.version) ?? version;
