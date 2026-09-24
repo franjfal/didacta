@@ -12,4 +12,4 @@
 #
 # Vale para UNA publicación: al publicar, el workflow lo vuelve a dejar en
 # minor. Así una grande no se queda puesta y la siguiente no salta otra vez.
-bump: patch
+bump: minor
