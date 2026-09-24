@@ -164,4 +164,65 @@ void main() {
       expect(exitCodeMeansFailure(Host.linux), isTrue);
     });
   });
+
+  group('las carpetas', () {
+    test('abrir una carpeta es abrirla, no enseñarla dentro de otra', () {
+      expect(
+        folderLaunch(
+          folder: '/Users/ana/Didacta/curso',
+          host: Host.macos,
+        ).toString(),
+        'open /Users/ana/Didacta/curso',
+      );
+      expect(
+        folderLaunch(
+          folder: 'C:/Users/ana/curso',
+          host: Host.windows,
+        ).toString(),
+        r'explorer C:\Users\ana\curso',
+      );
+      expect(
+        folderLaunch(folder: '/home/ana/curso', host: Host.linux).toString(),
+        'xdg-open /home/ana/curso',
+      );
+    });
+
+    test('a la Papelera: nunca con rm, ni en ningún sistema', () {
+      for (final host in Host.values) {
+        final commands = trashFolderLaunches(folder: '/x/curso', host: host);
+        expect(commands, isNotEmpty);
+        for (final command in commands) {
+          expect(command.executable, isNot(anyOf('rm', 'rmdir', 'del')));
+          expect(command.arguments, isNot(contains('-rf')));
+        }
+      }
+    });
+
+    test('en macOS, primero la orden del sistema y después el Finder', () {
+      final commands = trashFolderLaunches(
+        folder: '/Users/ana/curso',
+        host: Host.macos,
+      );
+      expect(commands.first.executable, '/usr/bin/trash');
+      expect(commands.first.arguments, ['/Users/ana/curso']);
+      expect(commands.last.executable, 'osascript');
+    });
+
+    test('un nombre con comillas no se convierte en otra orden', () {
+      // En AppleScript y en PowerShell la ruta va dentro de una cadena, y una
+      // comilla en el nombre de la carpeta la cerraría.
+      final apple = trashFolderLaunches(
+        folder: '/Users/ana/el "curso"',
+        host: Host.macos,
+      ).last.arguments.last;
+      expect(apple, contains(r'POSIX file "/Users/ana/el \"curso\""'));
+
+      final power = trashFolderLaunches(
+        folder: "C:/Users/ana/l'aula",
+        host: Host.windows,
+      ).single.arguments.last;
+      expect(power, contains(r"'C:\Users\ana\l''aula'"));
+      expect(power, contains('SendToRecycleBin'));
+    });
+  });
 }

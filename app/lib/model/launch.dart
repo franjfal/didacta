@@ -128,3 +128,65 @@ String _folderOf(String file) {
 /// perfectamente, así que tomarlo como un fallo enseñaría un error cada vez
 /// que todo ha ido bien.
 bool exitCodeMeansFailure(Host host) => host != Host.windows;
+
+/// Cómo se abre una carpeta en el explorador de archivos de [host].
+///
+/// Las mismas órdenes que para abrir un fichero: con una carpeta, las tres
+/// abren una ventana de su explorador en ella.
+LaunchCommand folderLaunch({required String folder, required Host host}) =>
+    fileLaunch(file: folder, reveal: false, host: host);
+
+/// Cómo se manda una carpeta a la Papelera en [host], de la mejor a la peor.
+///
+/// **Nunca un borrado definitivo.** Una carpeta de un repositorio puede tener
+/// dentro trabajo que no está en GitHub, y desde la Papelera se recupera.
+/// Si ninguna de estas funciona, quien llama dice que no se pudo y la
+/// carpeta se queda donde estaba: borrarla del todo para cumplir sería
+/// cambiar lo que se pidió por algo que no tiene vuelta atrás.
+///
+/// * **macOS**: `/usr/bin/trash`, que viene con el sistema desde la 14; y si
+///   no está, pedírselo al Finder, que en la primera vez pregunta si se le
+///   deja a Didacta controlarlo.
+/// * **Windows**: la papelera de reciclaje por la API de Visual Basic, que
+///   es la única forma de llegar a ella desde la línea de órdenes sin
+///   instalar nada.
+/// * **Linux**: `gio trash`, que tiene cualquier escritorio con GLib; si no,
+///   `trash-put`.
+List<LaunchCommand> trashFolderLaunches({
+  required String folder,
+  required Host host,
+}) => switch (host) {
+  Host.macos => [
+    LaunchCommand('/usr/bin/trash', [folder]),
+    LaunchCommand('osascript', [
+      '-e',
+      'tell application "Finder" to delete '
+          '(POSIX file ${_appleScriptString(folder)} as alias)',
+    ]),
+  ],
+  Host.windows => [
+    LaunchCommand('powershell', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      'Add-Type -AssemblyName Microsoft.VisualBasic; '
+          '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory('
+          "${_powerShellString(folder.replaceAll('/', r'\'))}, "
+          "'OnlyErrorDialogs', 'SendToRecycleBin')",
+    ]),
+  ],
+  Host.linux => [
+    LaunchCommand('gio', ['trash', folder]),
+    LaunchCommand('trash-put', [folder]),
+  ],
+};
+
+/// Una cadena de AppleScript: entre comillas, con las comillas y las barras
+/// de dentro escapadas. Un nombre de carpeta con una comilla no puede
+/// convertirse en otra orden.
+String _appleScriptString(String value) =>
+    '"${value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"';
+
+/// Una cadena de PowerShell entre comillas simples, que no interpretan nada
+/// salvo otra comilla simple, que se dobla.
+String _powerShellString(String value) => "'${value.replaceAll("'", "''")}'";

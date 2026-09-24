@@ -10,6 +10,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// What the app remembers between runs, other than secrets.
 abstract class Preferences {
+  /// Olvida todo lo guardado aquí, como si Didacta se acabara de instalar.
+  ///
+  /// Es lo que hace «Restablecer». Sólo lo de este fichero: el token y las
+  /// claves de traducción están en el llavero, y las carpetas en el disco,
+  /// y cada cosa se borra desde donde vive.
+  Future<void> clearAll();
+
   /// Los repositorios abiertos, serializados.
   ///
   /// Aquí y no en el llavero: es una lista de rutas y de colores, no un
@@ -173,6 +180,9 @@ class StoredPreferences implements Preferences {
   /// Igual, para el motor.
   final String defaultEnginePath;
 
+  /// El prefijo de todas las claves de Didacta.
+  static const String _prefix = 'didacta.';
+
   static const String _workspace = 'didacta.workspace';
   static const String _clientId = 'didacta.github.clientId';
   static const String _githubUser = 'didacta.github.user';
@@ -193,6 +203,16 @@ class StoredPreferences implements Preferences {
   static const String _mcp = 'didacta.mcp.enabled';
   static const String _commitOnSave = 'didacta.clone.commitOnSave';
   static const String _mcpWritable = 'didacta.mcp.writable';
+
+  /// Las claves de Didacta, y ninguna más: `clear()` se llevaría también lo
+  /// que guardara cualquier otro plugin en el mismo fichero.
+  @override
+  Future<void> clearAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in prefs.getKeys().toList()) {
+      if (key.startsWith(_prefix)) await prefs.remove(key);
+    }
+  }
 
   /// The stored value, then the build-time default. A stored empty string is
   /// a real answer -- "I turned the clone off" -- and must win over the
@@ -464,6 +484,23 @@ class MemoryPreferences implements Preferences {
   String? clientId;
   String? base;
   String? githubUserJson;
+
+  /// Si se llamó a [clearAll].
+  bool cleared = false;
+
+  /// Lo que una prueba de «Restablecer» mira: que no quede nada que diga
+  /// quién era ni qué tenía abierto, y que la bienvenida vuelva.
+  @override
+  Future<void> clearAll() async {
+    cleared = true;
+    path = null;
+    engine = null;
+    repos = null;
+    base = null;
+    githubUserJson = null;
+    welcome = false;
+    tour = false;
+  }
 
   bool commit = true;
   bool mcp = false;
