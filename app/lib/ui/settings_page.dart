@@ -39,6 +39,7 @@ import 'toolchain_check.dart';
 import 'tour.dart';
 import 'translation_settings.dart';
 import 'update_section.dart';
+import 'working.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -361,6 +362,7 @@ class _ReposSection extends StatefulWidget {
 
 class _ReposSectionState extends State<_ReposSection> {
   bool _working = false;
+  String _doing = '';
   String _progress = '';
   Object? _problem;
 
@@ -371,6 +373,14 @@ class _ReposSectionState extends State<_ReposSection> {
     session: widget.session,
     onBusy: (working) {
       if (mounted) setState(() => _working = working);
+    },
+    onStep: (what) {
+      if (mounted) {
+        setState(() {
+          _doing = what;
+          _progress = '';
+        });
+      }
     },
     onProgress: (line) {
       if (mounted) setState(() => _progress = line);
@@ -461,27 +471,7 @@ class _ReposSectionState extends State<_ReposSection> {
               ),
               if (_working) ...[
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _progress,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontFamily: 'monospace',
-                          color: didactaMuted,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                Working(step: _doing, line: _progress),
               ],
               if (_problem != null) ...[
                 const SizedBox(height: 10),

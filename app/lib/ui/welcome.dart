@@ -38,6 +38,7 @@ import 'sign_in.dart';
 import 'theme.dart';
 import 'toolchain_check.dart';
 import 'welcome_art.dart';
+import 'working.dart';
 
 /// Qué pasos tiene la bienvenida.
 enum WelcomeStep {
@@ -93,6 +94,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   WelcomeStep _step = WelcomeStep.what;
 
   bool _working = false;
+  String _doing = '';
   String _progress = '';
   Object? _problem;
 
@@ -100,6 +102,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     session: widget.session,
     onBusy: (working) {
       if (mounted) setState(() => _working = working);
+    },
+    onStep: (what) {
+      if (mounted) {
+        setState(() {
+          _doing = what;
+          _progress = '';
+        });
+      }
     },
     onProgress: (line) {
       if (mounted) setState(() => _progress = line);
@@ -125,6 +135,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _go(WelcomeStep step) => setState(() {
     _step = step;
     _problem = null;
+    _doing = '';
     _progress = '';
   });
 
@@ -174,14 +185,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           _body(),
                           if (_working) ...[
                             const SizedBox(height: 14),
-                            _Working(line: _progress),
-                          ] else if (_progress.isNotEmpty) ...[
+                            Working(step: _doing, line: _progress),
+                          ] else if (_doing.isNotEmpty) ...[
                             const SizedBox(height: 14),
                             Text(
-                              _progress,
+                              _doing,
                               style: const TextStyle(
-                                fontSize: 11.5,
-                                fontFamily: 'monospace',
+                                fontSize: 12,
                                 color: didactaMuted,
                               ),
                             ),
@@ -570,35 +580,6 @@ class _Tick extends StatelessWidget {
       const Icon(Icons.check_circle, size: 16, color: didactaAccentDark),
       const SizedBox(width: 8),
       Expanded(child: Text(text, style: const TextStyle(fontSize: 12.5))),
-    ],
-  );
-}
-
-class _Working extends StatelessWidget {
-  const _Working({required this.line});
-
-  final String line;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      const SizedBox(
-        width: 14,
-        height: 14,
-        child: CircularProgressIndicator(strokeWidth: 2),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(
-          line,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontFamily: 'monospace',
-            color: didactaMuted,
-          ),
-        ),
-      ),
     ],
   );
 }

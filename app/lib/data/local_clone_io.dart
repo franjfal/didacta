@@ -118,7 +118,7 @@ Future<LocalClone> cloneInto({
         'La carpeta ya es un clon de $owner/$repo; '
         'actualizándolo.',
       );
-      await existing.pull(token: token);
+      await existing.pull(token: token, onProgress: onProgress);
       return existing;
     }
     throw CloneException(
@@ -127,6 +127,7 @@ Future<LocalClone> cloneInto({
     );
   }
 
+  onProgress?.call('Preguntando a GitHub por $owner/$repo…');
   // Antes de crear nada. Un repositorio recién creado en GitHub no tiene
   // ninguna rama, y git lo cuenta como «Remote branch main not found», que
   // ni dice lo que pasa ni deja ver que tiene arreglo.
@@ -137,7 +138,17 @@ Future<LocalClone> cloneInto({
   await _intoFresh(
     target,
     () => _run(
-      ['clone', '--branch', branch, remote, '.'],
+      // `--progress` solo cuando hay quien lo lea, como al traer: git se calla
+      // al escribir a una tubería, y sin él un clon de minutos era un
+      // «Cloning into '.'...» quieto hasta el final.
+      [
+        'clone',
+        if (onProgress != null) '--progress',
+        '--branch',
+        branch,
+        remote,
+        '.',
+      ],
       directory: directory,
       token: token,
       onProgress: onProgress,
