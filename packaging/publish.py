@@ -150,6 +150,7 @@ def _run(command, check=True, quiet=True, raw=False):
         stderr=subprocess.PIPE if quiet else None,
         universal_newlines=True,
         encoding="utf-8",
+        env=_quiet_git(),
     )
     if check and result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip() if quiet else ""
@@ -161,8 +162,56 @@ def _run(command, check=True, quiet=True, raw=False):
     return (result.stdout or "") if raw else (result.stdout or "").strip()
 
 
+def _quiet_git():
+    """El entorno, con git sin permiso para preguntar usuario y contraseña.
+
+    Sin credenciales, git pregunta «Username for 'https://github.com':» y se
+    queda ahí, con la salida capturada y nadie viéndolo: desde fuera es un
+    programa colgado. Así falla, y el fallo se puede explicar. Se calcula en
+    cada llamada y no al importar, para que valga el PATH de ese momento.
+    """
+    return dict(os.environ, GIT_TERMINAL_PROMPT="0")
+
+
 def _git(*arguments, check=True):
     return _run(["git"] + list(arguments), check=check)
+
+
+def _can_push(branch):
+    """Si GitHub va a aceptar un `git push` desde aquí, y si no, por qué.
+
+    Un `push --dry-run` habla con GitHub y se autentica como el de verdad,
+    pero no sube nada. Se hace al principio porque descubrirlo en el último
+    paso es haberlo preguntado todo para nada.
+    """
+    result = subprocess.run(
+        ["git", "push", "--dry-run", "--quiet", "origin", "HEAD:%s" % branch],
+        cwd=release.ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+        encoding="utf-8",
+        env=_quiet_git(),
+    )
+    return result.returncode == 0, (result.stderr or result.stdout or "").strip()
+
+
+def _cannot_push(detail, github):
+    """El mensaje para cuando GitHub no deja subir, con lo que lo arregla."""
+    fix = (
+        "    gh auth refresh -h github.com -s workflow\n"
+        "    gh auth setup-git\n\n"
+        "La primera da permiso a gh para subir cambios en .github/workflows/;\n"
+        "la segunda le dice a git que use la sesión de gh con GitHub."
+        if github.ready else
+        "    brew install gh && gh auth login -s workflow\n"
+        "    gh auth setup-git"
+    )
+    return (
+        "GitHub no me deja subir nada desde aquí:\n\n    %s\n\n"
+        "No he tocado nada. Para arreglarlo, en un terminal:\n\n%s"
+        % (detail.replace("\n", "\n    ") or "(sin detalle)", fix)
+    )
 
 
 def _succeeds(command):
@@ -356,6 +405,9 @@ def publish(args, reader=None):
         _git("pull", "--ff-only", "--quiet")
 
     github = GitHub(repo)
+    pushable, detail = _can_push(branch)
+    if not pushable:
+        raise Stop(_cannot_push(detail, github))
 
     # ---- la versión -------------------------------------------------------
     published, build = release.read_version()
@@ -532,7 +584,16 @@ def publish(args, reader=None):
         _git("commit", "--quiet", "-m", "Preparar Didacta %s" % version,
              "--", *touched)
         _say("· commit «Preparar Didacta %s»" % version)
-    _run(["git", "push", "--quiet", "origin", "HEAD:%s" % branch])
+    try:
+        _run(["git", "push", "--quiet", "origin", "HEAD:%s" % branch])
+    except Stop as failed:
+        # Pasó la prueba del principio y aun así no entra. Lo típico: el
+        # commit toca .github/workflows/ y el token no tiene `workflow`,
+        # algo que GitHub sólo comprueba al subir de verdad.
+        raise Stop(
+            "%s\n\nEl commit se ha quedado aquí, sin subir: arreglado lo de "
+            "arriba, vuelve a ejecutar esto y lo sube.\n\n%s"
+            % (failed, _cannot_push("", github).split("\n\n", 2)[2]))
     sha = _git("rev-parse", "HEAD")
     _say("· subido a %s (%s)" % (branch, sha[:7]))
 
