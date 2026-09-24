@@ -239,7 +239,7 @@ void main() {
 
     final cmake = File('linux/CMakeLists.txt').readAsStringSync();
     expect(cmake, contains('set(BINARY_NAME "didacta")'));
-    expect(cmake, contains('set(APPLICATION_ID "es.uv.didacta")'));
+    expect(cmake, contains('set(APPLICATION_ID "io.github.franjfal.didacta")'));
   });
 
   test('Windows también se llama Didacta, no didacta_app', () {
@@ -252,6 +252,22 @@ void main() {
 
     final cmake = File('windows/CMakeLists.txt').readAsStringSync();
     expect(cmake, contains('set(BINARY_NAME "didacta")'));
+  });
+
+  test('en Windows, el editor es quien publica Didacta', () {
+    // Y tiene que decir lo mismo en el ejecutable y en el instalador: el
+    // del ejecutable decide la carpeta de datos, y el del instalador es el
+    // que sale en «Aplicaciones instaladas». Hasta la 0.2.0 los dos decían
+    // «Universitat de València», y `legacy_identity_io.dart` trae lo que
+    // se guardó con ese nombre.
+    final rc = File('windows/runner/Runner.rc').readAsStringSync();
+    expect(rc, contains(r'"CompanyName", "Javier Falc\363"'));
+    final iss = File('../packaging/windows/didacta.iss').readAsStringSync();
+    expect(iss, contains('AppPublisher=Javier Falcó'));
+    expect(
+      iss,
+      contains('AppPublisherURL=https://github.com/franjfal/didacta\n'),
+    );
   });
 
   test('la aplicación de macOS se llama Didacta', () {
@@ -270,7 +286,9 @@ void main() {
       settings[line.substring(0, at).trim()] = line.substring(at + 1).trim();
     }
     expect(settings['PRODUCT_NAME'], 'Didacta');
-    expect(settings['PRODUCT_BUNDLE_IDENTIFIER'], 'es.uv.didacta');
+    // El dominio de la web de Didacta al revés. Cambiarlo es cambiar dónde
+    // guarda macOS los ajustes: ver `MainFlutterWindow.swift`.
+    expect(settings['PRODUCT_BUNDLE_IDENTIFIER'], 'io.github.franjfal.didacta');
   });
 
   test('la web también se llama Didacta', () {

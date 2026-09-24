@@ -89,7 +89,7 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "Universitat de Val\350ncia" "\0"
+            VALUE "CompanyName", "Javier Falc\363" "\0"
             VALUE "FileDescription", "Didacta" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "Didacta" "\0"
