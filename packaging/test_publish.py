@@ -381,6 +381,19 @@ class PublishTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("release.yaml, línea 1", self.output)
 
+    def test_si_github_no_deja_subir_lo_dice_antes_de_preguntar(self):
+        # Lo que pasó al publicar la 0.2.0: sin credenciales, git pedía un
+        # usuario en el último paso, después de haberlo preguntado todo.
+        git(self.clone, "config", "remote.origin.pushurl",
+            os.path.join(self.temp, "no-existe.git"))
+        code = self.run_it([])
+        self.assertEqual(code, 1)
+        self.assertIn("no me deja subir", self.output)
+        self.assertIn("gh auth setup-git", self.output)
+        self.assertEqual(self.asked, [])
+        self.assertEqual(git(self.clone, "status", "--porcelain"), "")
+        self.assertEqual(self.launched(), [])
+
     def test_sin_terminal_y_sin_yes_no_se_queda_esperando(self):
         saved = sys.stdin
         sys.stdin = io.StringIO("")
