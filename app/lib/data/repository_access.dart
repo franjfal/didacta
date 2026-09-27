@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'secrets.dart';
+import '../l10n/tr.dart';
 
 /// Lo que puede fallar al guardar una credencial.
 class RepositoryAccessException implements Exception {
@@ -78,9 +79,11 @@ class TokenStore implements SecretStore {
   @override
   Future<void> write(String token) async {
     if (!canStoreSafely) {
-      throw const RepositoryAccessException(
-        'Un navegador no puede guardar un token de forma segura. En web el '
-        'acceso va por la API, que lo guarda por ti.',
+      throw RepositoryAccessException(
+        tr(
+          'Un navegador no puede guardar un token de forma segura. En web el '
+          'acceso va por la API, que lo guarda por ti.',
+        ),
       );
     }
     await _storage.write(key: _key, value: token.trim());

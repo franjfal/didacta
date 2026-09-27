@@ -17,6 +17,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:didacta_app/model/catalogue.dart';
+import 'package:didacta_app/model/source_hash.dart';
 import 'package:didacta_app/model/translation.dart';
 import 'package:didacta_app/model/translation_memory.dart';
 import 'package:didacta_app/data/translator.dart';
@@ -123,6 +124,47 @@ void main() {
       (c) => c.path.endsWith('/va.tex'),
     );
     expect(written.message, contains('borrador'));
+  });
+
+  test('queda marcada como borrador, en el mismo commit', () async {
+    // Sin el estado, el motor la contaba como «traducida» y desaparecía de
+    // lo que hay que revisar. Y en el mismo commit que el texto: separados,
+    // el primero miente hasta que llega el segundo.
+    final (session, gateway) = await ready();
+    await session.translateUnit(
+      unit: theUnit(session),
+      from: 'es',
+      to: 'va',
+      translator: FakeTranslator(),
+    );
+
+    final yaml = gateway.commits.firstWhere(
+      (c) => c.path == '$unitPathHere/unit.yaml',
+    );
+    expect(yaml.text, contains('va: {status: draft, source_hash: sha256:'));
+    expect(
+      gateway.batches,
+      contains(
+        unorderedEquals(['$unitPathHere/va.tex', '$unitPathHere/unit.yaml']),
+      ),
+    );
+  });
+
+  test('con la huella del original del que se tradujo', () async {
+    // Si el original cambia después, el borrador se queda atrás y el motor
+    // lo marca como desactualizado.
+    final (session, gateway) = await ready();
+    await session.translateUnit(
+      unit: theUnit(session),
+      from: 'es',
+      to: 'va',
+      translator: FakeTranslator(),
+    );
+    final yaml = gateway.commits.firstWhere(
+      (c) => c.path == '$unitPathHere/unit.yaml',
+    );
+    final original = gateway.files['$unitPathHere/es.tex']!;
+    expect(yaml.text, contains('source_hash: ${contentHash(original)}'));
   });
 
   test('lo aprendido se guarda en la memoria del par de idiomas', () async {

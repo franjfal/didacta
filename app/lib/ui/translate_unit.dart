@@ -15,7 +15,17 @@
 /// Lo que salga se guarda como borrador: es una traducción que no ha leído
 /// nadie, y marcarla de otra forma la sacaría de la lista de lo que queda por
 /// revisar, que es justo donde tiene que estar.
+///
+/// **De salida solo se traduce lo que no tiene texto.** Un borrador puede
+/// estar ya corregido a mano, y una desactualizada es una traducción revisada
+/// a la que le falta un cambio: pasarles la máquina por encima tira ese
+/// trabajo. Rehacerlas es una casilla aparte, que dice eso mismo. Y de los
+/// idiomas se marca el que se está mirando, no todos los que falten: una
+/// tanda a tres idiomas sin haberlo pedido son tres veces más borradores que
+/// revisar.
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -26,6 +36,7 @@ import '../model/translation_run.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Lo que se va a traducir: una lección en un idioma.
 class TranslationJob {
@@ -42,6 +53,8 @@ class BatchResult {
     required this.failed,
     required this.stats,
     required this.warnings,
+    this.stopped = false,
+    this.commits = 0,
   });
 
   /// Lo que se escribió, para poder ir a mirarlo.
@@ -56,7 +69,36 @@ class BatchResult {
   final TranslationStats stats;
   final List<String> warnings;
 
+  /// Si se paró antes de acabar. Lo traducido hasta ahí está guardado.
+  final bool stopped;
+
+  /// En cuántos cambios se guardó el material: uno por repositorio.
+  final int commits;
+
   int get done => written.length;
+}
+
+/// Lo que cobra cada proveedor por millón de caracteres, a tarifa y en
+/// dólares: Google Cloud Translation y Azure AI Translator (S1).
+///
+/// Para dar un orden de magnitud antes de pulsar, no una factura: no cuenta
+/// lo gratuito de cada mes ni los descuentos por volumen, y por eso se enseña
+/// con la tarifa al lado.
+const Map<TranslationProvider, double> pricePerMillion = {
+  TranslationProvider.google: 20,
+  TranslationProvider.azure: 10,
+  TranslationProvider.apertium: 0,
+};
+
+/// «1.234.567», con el punto de millares del castellano.
+String thousands(int value) {
+  final digits = '$value';
+  final out = StringBuffer();
+  for (var i = 0; i < digits.length; i += 1) {
+    if (i > 0 && (digits.length - i) % 3 == 0) out.write('.');
+    out.write(digits[i]);
+  }
+  return out.toString();
 }
 
 /// Abre el diálogo para estas lecciones. Null si se cancela.
@@ -90,6 +132,19 @@ class TranslateDialog extends StatefulWidget {
   /// Solo estos idiomas, cuando se viene de un sitio que ya sabe cuál.
   final List<String>? only;
 
+  /// Lo que la máquina puede hacer sin tirar el trabajo de nadie: no hay
+  /// texto que perder.
+  static bool isEmptyIn(Unit unit, String language) =>
+      unit.statusIn(language) == TranslationStatus.missing;
+
+  /// Lo que tiene texto y aun así está en la lista: borradores y
+  /// desactualizadas. Traducirlas sustituye lo que tengan.
+  static bool isRedoableIn(Unit unit, String language) {
+    final status = unit.statusIn(language);
+    return status == TranslationStatus.draft ||
+        status == TranslationStatus.outdated;
+  }
+
   @override
   State<TranslateDialog> createState() => _TranslateDialogState();
 }
@@ -98,10 +153,27 @@ class _TranslateDialogState extends State<TranslateDialog> {
   final Map<TranslationProvider, Credentials> _ready = {};
   TranslationProvider? _provider;
 
-  late final Set<String> _languages = {..._offered.map((e) => e.code)};
+  /// El que se está mirando, si falta; si no, el primero que falte.
+  late final Set<String> _languages = {
+    if (_offered.any((e) => e.code == widget.session.language))
+      widget.session.language
+    else if (_offered.isNotEmpty)
+      _offered.first.code,
+  };
+
+  /// Si también se rehacen las que ya tienen texto.
+  bool _redo = false;
 
   bool _loading = true;
   bool _running = false;
+
+  /// Si se ha pulsado «Detener»: se para antes de la siguiente lección.
+  bool _stopping = false;
+
+  /// Lo que costaría lo marcado, y para qué lo marcado se calculó: se
+  /// recalcula al cambiar los idiomas o la casilla de rehacer.
+  TranslationEstimate? _estimate;
+  String _estimated = '';
   int _progressDone = 0;
   String _doing = '';
   String? _problem;
@@ -112,7 +184,8 @@ class _TranslateDialogState extends State<TranslateDialog> {
   /// Solo los que le faltan **a algo**: ofrecer un idioma que ya tienen todas
   /// es un clic que no hace nada, y ofrecer el de referencia de una lección
   /// es lo que producía el «traducir de castellano a castellano».
-  late final List<({String code, String name, int pending})> _offered = () {
+  late final List<({String code, String name, int empty, int redoable})>
+  _offered = () {
     // Los idiomas **a los que este espacio de trabajo traduce**, no los diez
     // a los que Didacta sabe imprimir. Ofrecer el resto sería ofrecer un
     // fichero que el repositorio no espera, que el motor rechaza al indexar
@@ -122,24 +195,43 @@ class _TranslateDialogState extends State<TranslateDialog> {
         option.code: option.name,
     };
     final wanted = widget.only;
-    final found = <({String code, String name, int pending})>[];
+    final found = <({String code, String name, int empty, int redoable})>[];
     for (final code in widget.session.languagesIn(null)) {
       if (wanted != null && !wanted.contains(code)) continue;
-      final pending = _pendingIn(code).length;
-      if (pending == 0) continue;
-      found.add((code: code, name: names[code] ?? code, pending: pending));
+      final empty = _candidates(code, TranslateDialog.isEmptyIn).length;
+      final redoable = _candidates(code, TranslateDialog.isRedoableIn).length;
+      if (empty + redoable == 0) continue;
+      found.add((
+        code: code,
+        name: names[code] ?? code,
+        empty: empty,
+        redoable: redoable,
+      ));
     }
     return found;
   }();
 
-  /// Las lecciones a las que les falta este idioma.
+  /// Las lecciones de este idioma que cumplen [test].
   ///
-  /// Se salta la que ya lo tiene al día, y la que lo tiene **como referencia**:
-  /// traducir algo a su propio idioma no es una operación.
-  List<Unit> _pendingIn(String language) => [
+  /// Nunca la que lo tiene **como referencia**: traducir algo a su propio
+  /// idioma no es una operación.
+  List<Unit> _candidates(String language, bool Function(Unit, String) test) => [
     for (final unit in widget.units)
-      if (unit.reference != language && unit.statusIn(language).needsWork) unit,
+      if (unit.reference != language && test(unit, language)) unit,
   ];
+
+  /// Lo que se traduciría en este idioma: lo vacío, y lo que ya tiene texto
+  /// solo si se ha pedido rehacerlo.
+  List<Unit> _pendingIn(String language) => [
+    ..._candidates(language, TranslateDialog.isEmptyIn),
+    if (_redo) ..._candidates(language, TranslateDialog.isRedoableIn),
+  ];
+
+  /// Cuántas de los idiomas marcados ya tienen texto.
+  int get _redoableMarked => [
+    for (final entry in _offered)
+      if (_languages.contains(entry.code)) entry.redoable,
+  ].fold(0, (sum, count) => sum + count);
 
   List<TranslationJob> get _jobs => [
     for (final entry in _offered)
@@ -151,7 +243,7 @@ class _TranslateDialogState extends State<TranslateDialog> {
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   Future<void> _load() async {
@@ -168,14 +260,37 @@ class _TranslateDialogState extends State<TranslateDialog> {
     });
   }
 
+  /// Qué se está estimando: los mismos trabajos dan la misma cuenta.
+  String _keyOf(List<TranslationJob> jobs) =>
+      [for (final job in jobs) '${job.unit.path}:${job.language}'].join('|');
+
+  Future<void> _reestimate(List<TranslationJob> jobs) async {
+    final key = _keyOf(jobs);
+    if (key == _estimated) return;
+    _estimated = key;
+    final estimate = jobs.isEmpty
+        ? const TranslationEstimate()
+        : await widget.session.estimateTranslation([
+            for (final job in jobs)
+              (unit: job.unit, from: job.unit.reference, to: job.language),
+          ]);
+    if (!mounted || key != _estimated) return;
+    setState(() => _estimate = estimate);
+  }
+
   @override
   Widget build(BuildContext context) {
     final jobs = _jobs;
+    if (!_loading && !_running && _result == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _reestimate(jobs));
+    }
     return AlertDialog(
       title: Text(
         widget.units.length == 1
-            ? 'Traducir «${widget.units.single.title(widget.units.single.reference)}»'
-            : 'Traducir ${widget.units.length} lecciones',
+            ? tr('Traducir «{0}»', [
+                widget.units.single.title(widget.units.single.reference),
+              ])
+            : tr('Traducir {0} lecciones', [widget.units.length]),
       ),
       content: SizedBox(
         width: 540,
@@ -184,12 +299,15 @@ class _TranslateDialogState extends State<TranslateDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_loading)
-              const Note('Mirando qué proveedores hay configurados…')
+              Note(tr('Mirando qué proveedores hay configurados…'))
             else if (_ready.isEmpty)
-              const Note(
-                'No hay ninguna clave puesta. En Ajustes → Traducción '
-                'automática se configuran Google o Azure.',
-                tone: didactaEx,
+              Note(
+                tr(
+                  'No hay ningún proveedor puesto. En Ajustes → Traducción '
+                  'automática se configuran Google o Azure, o se enciende '
+                  'Apertium, que es gratuito.',
+                ),
+                tone: context.palette.ex,
               )
             else if (_result != null)
               _Summary(
@@ -207,14 +325,17 @@ class _TranslateDialogState extends State<TranslateDialog> {
               )
             else ...[
               if (_offered.isEmpty)
-                const Note('No falta ningún idioma aquí. Nada que traducir.')
+                Note(tr('No falta ningún idioma aquí. Nada que traducir.'))
               else ...[
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'A qué idiomas les falta',
-                        style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                        tr('A qué idiomas les falta'),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: context.palette.muted,
+                        ),
                       ),
                     ),
                     TextButton(
@@ -222,8 +343,8 @@ class _TranslateDialogState extends State<TranslateDialog> {
                       onPressed: _running ? null : _toggleAll,
                       child: Text(
                         _languages.length == _offered.length
-                            ? 'Ninguno'
-                            : 'Todos',
+                            ? tr('Ninguno')
+                            : tr('Todos'),
                       ),
                     ),
                   ],
@@ -236,7 +357,10 @@ class _TranslateDialogState extends State<TranslateDialog> {
                     for (final entry in _offered)
                       FilterChip(
                         key: Key('translate-language-${entry.code}'),
-                        label: Text('${entry.name} · ${entry.pending}'),
+                        label: Text(
+                          '${entry.name} · '
+                          '${entry.empty + (_redo ? entry.redoable : 0)}',
+                        ),
                         selected: _languages.contains(entry.code),
                         onSelected: _running
                             ? null
@@ -250,11 +374,47 @@ class _TranslateDialogState extends State<TranslateDialog> {
                       ),
                   ],
                 ),
+                // Solo si hay algo que rehacer en lo marcado: la casilla
+                // sin nada detrás es una pregunta que no viene a cuento.
+                if (_redoableMarked > 0 || _redo) ...[
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    key: const Key('translate-redo'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    activeColor: context.palette.teacher,
+                    value: _redo,
+                    onChanged: _running
+                        ? null
+                        : (on) => setState(() => _redo = on ?? false),
+                    title: Text(
+                      _redoableMarked == 1
+                          ? tr('Rehacer también la que ya tiene texto')
+                          : tr(
+                              'Rehacer también las {0} que ya '
+                              'tienen texto',
+                              [_redoableMarked],
+                            ),
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    subtitle: Text(
+                      tr(
+                        'Borradores y desactualizadas. Se sustituye lo que '
+                        'tengan, también lo que alguien haya corregido a mano.',
+                      ),
+                      style: TextStyle(fontSize: 11.5),
+                    ),
+                  ),
+                ],
                 if (_ready.length > 1) ...[
                   const SizedBox(height: 14),
-                  const Text(
-                    'Con qué',
-                    style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                  Text(
+                    tr('Con qué'),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.palette.muted,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   DropdownButtonFormField<TranslationProvider>(
@@ -281,22 +441,43 @@ class _TranslateDialogState extends State<TranslateDialog> {
                 for (final aviso in _approximations)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 6),
-                    child: Note(aviso, tone: didactaTeacher),
+                    child: Note(aviso, tone: context.palette.teacher),
                   ),
                 Note(
                   jobs.isEmpty
-                      ? 'Marca algún idioma.'
-                      : '${jobs.length} ficheros. Lo que salga se guarda como '
-                            'borrador, así que sigue apareciendo en la lista '
-                            'de lo que hay que revisar. Las fórmulas y las '
-                            'claves de `\\label` no se traducen.',
+                      ? _languages.isEmpty
+                            ? tr('Marca algún idioma.')
+                            : tr(
+                                'En lo marcado no hay nada sin texto. Para '
+                                'pasar la máquina por lo que ya tiene, '
+                                'marca «Rehacer».',
+                              )
+                      : tr(
+                          '{0}. '
+                          'Lo que salga se guarda como '
+                          'borrador, así que sigue apareciendo en la lista '
+                          'de lo que hay que revisar. Las fórmulas y las '
+                          'claves de `\\label` no se traducen.',
+                          [
+                            jobs.length == 1
+                                ? tr('1 fichero')
+                                : tr('{0} ficheros', [jobs.length]),
+                          ],
+                        ),
                 ),
+                if (jobs.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _EstimateLine(
+                    estimate: _estimated == _keyOf(jobs) ? _estimate : null,
+                    provider: _provider,
+                  ),
+                ],
               ],
             ],
 
             if (_problem != null) ...[
               const SizedBox(height: 10),
-              Note(_problem!, tone: didactaEx),
+              Note(_problem!, tone: context.palette.ex),
             ],
             if (_running) ...[
               const SizedBox(height: 14),
@@ -309,17 +490,26 @@ class _TranslateDialogState extends State<TranslateDialog> {
                 key: const Key('translate-progress'),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ],
           ],
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: _running ? null : () => Navigator.of(context).pop(_result),
-          child: Text(_result == null ? 'Cancelar' : 'Cerrar'),
-        ),
+        if (_running)
+          TextButton(
+            key: const Key('translate-stop'),
+            onPressed: _stopping
+                ? null
+                : () => setState(() => _stopping = true),
+            child: Text(_stopping ? tr('Parando…') : tr('Detener')),
+          )
+        else
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(_result),
+            child: Text(_result == null ? tr('Cancelar') : tr('Cerrar')),
+          ),
         if (_result == null)
           FilledButton(
             key: const Key('translate-go'),
@@ -327,7 +517,9 @@ class _TranslateDialogState extends State<TranslateDialog> {
                 ? null
                 : _run,
             child: Text(
-              jobs.length == 1 ? 'Traducir' : 'Traducir ${jobs.length}',
+              jobs.length == 1
+                  ? tr('Traducir')
+                  : tr('Traducir {0}', [jobs.length]),
             ),
           ),
       ],
@@ -337,8 +529,8 @@ class _TranslateDialogState extends State<TranslateDialog> {
   /// Los idiomas marcados que el proveedor no traduce tal cual.
   ///
   /// Hoy es uno: el valenciano, que ningún traductor automático distingue del
-  /// catalán. Sale catalán central --«Qüestió» donde el valenciano dice
-  /// «Questió»-- y hay que ajustarlo al revisar.
+  /// catalán. Sale catalán central --«aquest» donde el valenciano dice
+  /// «este», «durada» donde dice «duració»-- y hay que ajustarlo al revisar.
   List<String> get _approximations {
     final provider = _provider;
     if (provider == null) return const [];
@@ -346,12 +538,25 @@ class _TranslateDialogState extends State<TranslateDialog> {
       for (final option in widget.session.catalogue.languageOptions)
         option.code: option.name,
     };
+    final sources = {for (final unit in widget.units) unit.reference};
     return [
       for (final code in _languages)
         if (approximationFor(provider, code) case final actual?)
-          '${names[code] ?? code}: ${provider.label} no lo distingue de '
-              '«$actual» y traducirá a ese. Sale una traducción cercana que '
-              'hay que ajustar al revisar.',
+          tr(
+            '{0}: {1} no lo distingue de '
+            '«{2}» y traducirá a ese. Sale una traducción cercana que '
+            'hay que ajustar al revisar.',
+            [names[code] ?? code, provider.label, actual],
+          ),
+      for (final code in _languages)
+        for (final source in sources)
+          if (source != code && !supportsPair(provider, source, code))
+            tr(
+              '{0} no traduce de «{1}» a '
+              '«{2}»: esas se quedarán sin hacer. Elige '
+              'otro proveedor para ellas.',
+              [provider.label, names[source] ?? source, names[code] ?? code],
+            ),
     ];
   }
 
@@ -367,7 +572,9 @@ class _TranslateDialogState extends State<TranslateDialog> {
     final jobs = _jobs;
     final translator = translatorFor(_provider!, _ready[_provider]!);
     if (translator == null) {
-      setState(() => _problem = 'Falta algo en la credencial del proveedor.');
+      setState(
+        () => _problem = tr('Falta algo en la credencial del proveedor.'),
+      );
       return;
     }
 
@@ -377,34 +584,36 @@ class _TranslateDialogState extends State<TranslateDialog> {
       _progressDone = 0;
     });
 
-    var stats = const TranslationStats();
-    final warnings = <String>[];
-    final written = <TranslationJob>[];
-    var failed = 0;
-
-    for (final job in jobs) {
-      if (!mounted) return;
-      setState(
-        () =>
-            _doing = '${job.unit.title(job.unit.reference)} → ${job.language}',
+    _stopping = false;
+    TranslationBatch batch;
+    try {
+      batch = await widget.session.translateUnits(
+        tasks: [
+          for (final job in jobs)
+            (unit: job.unit, from: job.unit.reference, to: job.language),
+        ],
+        translator: translator,
+        stop: () => _stopping || !mounted,
+        onProgress: (done, task) {
+          if (!mounted) return;
+          setState(() {
+            _progressDone = done;
+            final next = done < jobs.length ? jobs[done] : null;
+            _doing = next == null
+                ? tr('Guardando…')
+                : '${next.unit.title(next.unit.reference)} → ${next.language}';
+          });
+        },
       );
-      try {
-        final result = await widget.session.translateUnit(
-          unit: job.unit,
-          from: job.unit.reference,
-          to: job.language,
-          translator: translator,
-        );
-        stats = stats.plus(result.stats);
-        warnings.addAll(result.warnings);
-        written.add(job);
-      } catch (error) {
-        // Una que falla no para la tanda: las otras doscientas no tienen la
-        // culpa, y quedarse a medias sin decir cuál falló es peor.
-        failed += 1;
-        warnings.add('${job.unit.path} → ${job.language}: $error');
-      }
-      if (mounted) setState(() => _progressDone += 1);
+    } catch (error) {
+      // Lo que falla aquí es guardar: la traducción no ha llegado al disco.
+      if (!mounted) return;
+      setState(() {
+        _running = false;
+        _doing = '';
+        _problem = tr('No se ha podido guardar lo traducido: {0}', [error]);
+      });
+      return;
     }
 
     if (!mounted) return;
@@ -412,12 +621,107 @@ class _TranslateDialogState extends State<TranslateDialog> {
       _running = false;
       _doing = '';
       _result = BatchResult(
-        written: written,
-        failed: failed,
-        stats: stats,
-        warnings: warnings,
+        written: [
+          for (final task in batch.written)
+            TranslationJob(unit: task.unit, language: task.to),
+        ],
+        failed: batch.failed.length,
+        stats: batch.stats,
+        warnings: [
+          ...batch.warnings,
+          for (final failure in batch.failed)
+            '${failure.task.unit.path} → ${failure.task.to}: '
+                '${failure.error}',
+        ],
+        stopped: batch.stopped,
+        commits: batch.commits,
       );
     });
+  }
+}
+
+/// Cuánto se va a mandar, y cuánto costaría, antes de pulsar.
+class _EstimateLine extends StatelessWidget {
+  const _EstimateLine({required this.estimate, required this.provider});
+
+  final TranslationEstimate? estimate;
+  final TranslationProvider? provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final found = estimate;
+    final price = provider == null ? null : pricePerMillion[provider];
+    final String text;
+    if (found == null) {
+      text = tr('Calculando cuánto hay que mandar…');
+    } else if (found.characters == 0 && found.unreadable > 0) {
+      text = found.files == 0
+          ? tr('No se ha podido leer el original: no se sabe cuánto costaría.')
+          : tr(
+              'No se ha podido leer {0} original(es): la '
+              'cuenta no está completa.',
+              [found.unreadable],
+            );
+    } else if (found.characters == 0) {
+      text = tr(
+        'Todo sale de la memoria: no hay que mandar nada al proveedor, '
+        'y no cuesta nada.',
+      );
+    } else {
+      final cost = price == null || price == 0
+          ? null
+          : found.characters / 1e6 * price;
+      text = [
+        '${thousands(found.characters)} caracteres que mandar',
+        if (found.reused > 0)
+          tr(
+            '{0} de {1} '
+            'párrafos salen de la memoria',
+            [thousands(found.reused), thousands(found.segments)],
+          ),
+        if (cost != null)
+          tr(
+            '{0} a la tarifa de {1} '
+            '({2} \$ el millón)',
+            [_money(cost), provider!.label, price!.toStringAsFixed(0)],
+          ),
+        if (price == 0) tr('gratis con {0}', [provider!.label]),
+        if (found.unreadable > 0)
+          tr('{0} sin poder leer, que no están en la cuenta', [
+            found.unreadable,
+          ]),
+      ].join(' · ');
+    }
+    return Row(
+      key: const Key('translate-estimate'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(
+            Icons.payments_outlined,
+            size: 14,
+            color: context.palette.muted,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: context.palette.muted,
+              height: 1.35,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _money(double value) {
+    if (value < 0.01) return tr('menos de un céntimo de dólar');
+    return tr('unos {0} \$', [value.toStringAsFixed(2).replaceAll('.', ',')]);
   }
 }
 
@@ -437,29 +741,45 @@ class _Summary extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          result.failed == 0
-              ? '${result.done} fichero(s) traducidos y guardados como '
-                    'borrador.'
-              : '${result.done} traducidos, ${result.failed} sin hacer.',
+          [
+            result.failed == 0
+                ? tr(
+                    '{0} fichero(s) traducidos y guardados como '
+                    'borrador',
+                    [result.done],
+                  )
+                : tr('{0} traducidos, {1} sin hacer', [
+                    result.done,
+                    result.failed,
+                  ]),
+            if (result.stopped) tr('parado antes de acabar'),
+            if (result.commits > 1)
+              tr('en {0} cambios, uno por repositorio', [result.commits]),
+          ].join(' · '),
           key: const Key('translate-summary'),
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: result.failed == 0 ? didactaAccentDark : didactaEx,
+            color: result.failed == 0
+                ? context.palette.accentDark
+                : context.palette.ex,
           ),
         ),
         const SizedBox(height: 6),
         Text(
-          '${stats.segments} párrafos · ${stats.reused} de la memoria · '
-          '${stats.translated} traducidos · '
-          '${stats.characters} caracteres mandados',
-          style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+          tr(
+            '{0} párrafos · {1} de la memoria · '
+            '{2} traducidos · '
+            '{3} caracteres mandados',
+            [stats.segments, stats.reused, stats.translated, stats.characters],
+          ),
+          style: TextStyle(fontSize: 11.5, color: context.palette.muted),
         ),
         if (result.written.isNotEmpty) ...[
           const SizedBox(height: 12),
-          const Text(
-            'Para revisar y aprobar',
-            style: TextStyle(fontSize: 11.5, color: didactaMuted),
+          Text(
+            tr('Para revisar y aprobar'),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
           const SizedBox(height: 2),
           ConstrainedBox(
@@ -477,9 +797,9 @@ class _Summary extends StatelessWidget {
         ],
         if (result.warnings.isNotEmpty) ...[
           const SizedBox(height: 10),
-          const Text(
-            'Para mirar',
-            style: TextStyle(fontSize: 11.5, color: didactaTeacher),
+          Text(
+            tr('Para mirar'),
+            style: TextStyle(fontSize: 11.5, color: context.palette.teacher),
           ),
           const SizedBox(height: 4),
           ConstrainedBox(
@@ -530,7 +850,7 @@ class _WrittenRow extends StatelessWidget {
             height: 24,
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(
-              color: didactaAccentDark,
+              color: context.palette.accentDark,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -551,25 +871,29 @@ class _WrittenRow extends StatelessWidget {
                   '${job.unit.path}/${job.language}.tex',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          const Text(
-            'Abrir',
+          Text(
+            tr('Abrir'),
             style: TextStyle(
               fontSize: 11.5,
-              color: didactaAccentDark,
+              color: context.palette.accentDark,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const Icon(Icons.chevron_right, size: 16, color: didactaAccentDark),
+          Icon(
+            Icons.chevron_right,
+            size: 16,
+            color: context.palette.accentDark,
+          ),
         ],
       ),
     ),

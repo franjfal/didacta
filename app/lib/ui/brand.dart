@@ -74,7 +74,7 @@ void paintDidactaMark(
   Canvas canvas,
   Rect box, {
   Color sheet = Colors.white,
-  Color ink = didactaAccentDark,
+  Color ink = didactaBrand,
   bool detail = true,
 }) {
   final unit = box.shortestSide;
@@ -175,10 +175,10 @@ void paintDidactaIcon(
   // un Dock un plano absoluto parece un icono sin terminar.
   final tilePaint = Paint()
     ..isAntiAlias = true
-    ..shader = const LinearGradient(
+    ..shader = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: [Color(0xFF5FB35F), didactaAccentDark],
+      colors: [didactaBrandLight, didactaBrand],
     ).createShader(tile);
 
   if (rounded) {
@@ -231,7 +231,7 @@ class _MarkPainter extends CustomPainter {
         Radius.circular(math.max(3, tile.shortestSide * 0.18)),
       ),
       Paint()
-        ..color = didactaAccentDark
+        ..color = didactaBrand
         ..isAntiAlias = true,
     );
     paintDidactaMark(

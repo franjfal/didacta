@@ -110,9 +110,12 @@ void main() {
     final star = find.byKey(const Key('favourite-year-am-iii-2025-2026'));
     expect(tester.getCenter(export).dy, tester.getCenter(star).dy);
 
-    // Y sin permiso de escritura no hay ni menú donde esconderlo, que es la
-    // otra mitad: exportar copia lo compilado y no toca el repositorio.
-    expect(find.byKey(const Key('year-menu-am-iii-2025-2026')), findsNothing);
+    // Y sin permiso de escritura, en «…» solo está ocultarlo: exportar no
+    // está escondido ahí, porque copia lo compilado y no toca el repositorio.
+    await tester.tap(find.byKey(const Key('year-menu-am-iii-2025-2026')));
+    await settle(tester);
+    expect(find.byKey(const Key('hide-year-am-iii-2025-2026')), findsOneWidget);
+    expect(find.byKey(const Key('copy-year-am-iii-2025-2026')), findsNothing);
   });
 
   testWidgets('un documento se exporta si tiene algo compilado', (
@@ -124,8 +127,15 @@ void main() {
       };
     await pumpYear(tester, of: compiler);
 
+    // En «…», con lo que no se usa cada día.
+    await tester.tap(find.byKey(const Key('document-menu-tema-1')));
+    await settle(tester);
     expect(find.byKey(const Key('export-document-tema-1')), findsOneWidget);
+    await tester.tapAt(const Offset(5, 5));
+    await settle(tester);
     // Y de lo que no está compilado no se ofrece: no hay nada que copiar.
+    await tester.tap(find.byKey(const Key('document-menu-hoja-1')));
+    await settle(tester);
     expect(find.byKey(const Key('export-document-hoja-1')), findsNothing);
   });
 

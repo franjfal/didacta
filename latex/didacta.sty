@@ -99,7 +99,64 @@
 
 \RequirePackage[utf8]{inputenc}
 \RequirePackage[T1]{fontenc}
+%% Latin Modern: la misma letra que Computer Modern, en vectorial. Sin esto,
+%% con T1 y sin el paquete cm-super instalado, pdfLaTeX saca las letras como
+%% mapas de bits, que se ven borrosas en pantalla y en un proyector.
+\RequirePackage{lmodern}
 \expandafter\RequirePackage\expandafter[\didactaBabelName]{babel}
+
+%% La coma decimal y el espacio antes de %: una sola política para todos.
+%%
+%% El castellano y el gallego de babel convierten `3.14` en «3,14» dentro de
+%% una fórmula y escriben «25 %» con un espacio fino; los demás idiomas de
+%% babel no hacen ninguna de las dos cosas. Como una traducción copia las fórmulas tal cual,
+%% la misma lección salía «3,14» en castellano y «3.14» en valenciano, y las
+%% normas de los dos piden la coma. Aquí se hace para los demás lo mismo que
+%% ya hacen esos dos: un punto seguido de una cifra, dentro de una
+%% fórmula, es una coma decimal; cualquier otro punto sigue siendo un punto.
+%%
+%% La coma, en todos los que la usan, que son todos menos el inglés. El
+%% espacio antes de %, solo donde la norma lo pide: en italiano y en
+%% portugués se escribe «25%», y en euskera el signo va delante.
+\def\didacta@decimal@languages{va,ca,eu,fr,de,it,pt}
+\def\didacta@percent@languages{va,ca,fr,de}
+\newif\ifdidacta@percentspace
+\@for\didacta@code:=\didacta@percent@languages\do{%
+  \ifx\didacta@code\DidactaLanguage\global\didacta@percentspacetrue\fi}
+\newif\ifdidacta@decimalcomma
+\@for\didacta@code:=\didacta@decimal@languages\do{%
+  \ifx\didacta@code\DidactaLanguage\global\didacta@decimalcommatrue\fi}
+\ifdidacta@decimalcomma
+  \@for\didacta@digit:={0,1,2,3,4,5,6,7,8,9}\do{%
+    \expandafter\let\csname didacta@digit@\didacta@digit\endcsname\relax}
+  \newcommand{\didacta@dot}{%
+    \futurelet\didacta@next\didacta@dot@check}
+  \newcommand{\didacta@dot@check}{%
+    \edef\didacta@next@name{\expandafter\meaning\noexpand\didacta@next}%
+    \expandafter\didacta@dot@digit\didacta@next@name\relax}
+  %% `\meaning` de una cifra es «the character 3»: la última palabra dice
+  %% cuál. Si es una cifra, coma de tipo ordinario, sin espacio detrás.
+  \def\didacta@dot@digit#1\relax{%
+    \def\didacta@last{}%
+    \didacta@dot@last#1 \relax
+    \ifcsname didacta@digit@\didacta@last\endcsname
+      \mathchar"013B
+    \else
+      \mathchar"013A
+    \fi}
+  \def\didacta@dot@last#1 #2\relax{%
+    \ifx\relax#2\relax
+      \def\didacta@last{#1}%
+    \else
+      \didacta@dot@last#2\relax
+    \fi}
+  {\catcode`\.=\active \gdef.{\didacta@dot}}
+  \AtBeginDocument{\mathcode`\.="8000}
+\fi
+\ifdidacta@percentspace
+  \let\didacta@percent\%
+  \DeclareRobustCommand{\%}{\unskip\,\didacta@percent}
+\fi
 
 %% ---------------------------------------------------------------------------
 %% Medium setup
@@ -129,6 +186,33 @@
 %% ---------------------------------------------------------------------------
 
 \RequirePackage{amsmath,amssymb,amsfonts,mathtools}
+
+%% Las funciones con nombre castellano: \sen, \tg, \arcsen, \arctg, \cotg,
+%% \cosec, \senh y \tgh.
+%%
+%% Las define babel-spanish, y solo mientras el castellano es el idioma
+%% activo. Una lección escrita en castellano que las usa compila; su
+%% traducción, que copia las fórmulas tal cual, falla en valenciano con
+%% «Undefined control sequence». Aquí existen en todos los idiomas, con el
+%% nombre que se escribe en cada uno --lo dice su `didacta-lang-XX.def`, y sin
+%% decirlo, el internacional--. En castellano siguen mandando las de babel,
+%% que las redefine al entrar en el idioma.
+\providecommand{\didactaSineName}{sin}
+\providecommand{\didactaTangentName}{tan}
+\providecommand{\didactaArcSineName}{arcsin}
+\providecommand{\didactaArcTangentName}{arctan}
+\providecommand{\didactaCotangentName}{cot}
+\providecommand{\didactaCosecantName}{csc}
+\providecommand{\didactaSinhName}{sinh}
+\providecommand{\didactaTanhName}{tanh}
+\providecommand{\sen}{\operatorname{\didactaSineName}}
+\providecommand{\tg}{\operatorname{\didactaTangentName}}
+\providecommand{\arcsen}{\operatorname{\didactaArcSineName}}
+\providecommand{\arctg}{\operatorname{\didactaArcTangentName}}
+\providecommand{\cotg}{\operatorname{\didactaCotangentName}}
+\providecommand{\cosec}{\operatorname{\didactaCosecantName}}
+\providecommand{\senh}{\operatorname{\didactaSinhName}}
+\providecommand{\tgh}{\operatorname{\didactaTanhName}}
 %% empheq: boxed and multi-line highlighted equations. Used by the
 %% migrated material, and mathtools alone does not provide it.
 \RequirePackage{empheq}
@@ -148,6 +232,15 @@
 \iftoggle{didacta@slides}{}{\RequirePackage{enumitem}}
 \RequirePackage{csquotes}
 \RequirePackage{tikz}
+%% El texto alternativo de un dibujo: \begin{tikzpicture}[alt={Una parábola
+%% que corta el eje en 1 y en 3}]. Con el PDF etiquetado es lo que lee un
+%% lector de pantalla en lugar del dibujo; sin él no hace nada. Pero tiene
+%% que aceptarse siempre --pgf no conoce la clave y se para--, o el mismo
+%% fuente dejaría de compilar en cuanto alguien escribiera el texto. En
+%% \includegraphics[alt={…}] ya lo acepta el propio LaTeX.
+\AtBeginDocument{%
+  \pgfkeysifdefined{/tikz/alt/.@cmd}{}{%
+    \pgfkeysifdefined{/tikz/alt}{}{\tikzset{alt/.code={}}}}}
 \RequirePackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usetikzlibrary{calc,patterns,intersections,shapes.callouts,decorations.pathmorphing,arrows.meta,positioning}
@@ -285,6 +378,49 @@
 }
 
 %% ---------------------------------------------------------------------------
+%% Los metadatos del PDF
+%%
+%% El título, el autor, la asignatura y el idioma, en las propiedades del
+%% fichero. Salían vacíos, y es lo que enseña un lector de PDF en la barra, lo
+%% que indexa un buscador y lo primero que lee un lector de pantalla --que
+%% además necesita el idioma para pronunciar bien--. Después de los metadatos
+%% inyectados, que se leen en otro \AtBeginDocument de más arriba.
+%% ---------------------------------------------------------------------------
+
+%% Los mismos códigos están en didacta-bootstrap.tex, que los necesita antes de
+%% la clase para el PDF etiquetado; estos valen cuando el paquete se carga sin
+%% el arranque.
+\@namedef{didacta@pdflang@es}{es-ES}
+\@namedef{didacta@pdflang@va}{ca-ES-valencia}
+\@namedef{didacta@pdflang@ca}{ca-ES}
+\@namedef{didacta@pdflang@gl}{gl-ES}
+\@namedef{didacta@pdflang@eu}{eu-ES}
+\@namedef{didacta@pdflang@en}{en}
+\@namedef{didacta@pdflang@fr}{fr-FR}
+\@namedef{didacta@pdflang@de}{de-DE}
+\@namedef{didacta@pdflang@it}{it-IT}
+\@namedef{didacta@pdflang@pt}{pt-PT}
+
+\AtBeginDocument{%
+  \ifdefempty{\didactaDocumentTitle}{%
+    \ifdefempty{\didactaCourseTitle}{}{%
+      \hypersetup{pdftitle={\didactaCourseTitle}}}%
+  }{\hypersetup{pdftitle={\didactaDocumentTitle}}}%
+  \ifdefempty{\didactaCourseTeacher}{}{%
+    \hypersetup{pdfauthor={\didactaCourseTeacher}}}%
+  \ifdefempty{\didactaCourseTitle}{}{%
+    \hypersetup{pdfsubject={\didactaCourseTitle}}}%
+}
+%% El idioma, en el preámbulo y no al empezar el documento: hyperref lo
+%% escribe en el catálogo en su propio \AtBeginDocument, que va antes.
+\@ifundefined{didacta@pdflang@\DidactaLanguage}{}{%
+  \hypersetup{pdflang=\csname didacta@pdflang@\DidactaLanguage\endcsname}}
+%% Que el visor enseñe en la barra el título y no el nombre del fichero --«Tema
+%% 3. Series» y no «Tema 3 - notes - es.pdf»--, que es lo primero que lee un
+%% lector de pantalla y lo que pide PDF/UA. Y quién lo hizo.
+\hypersetup{pdfdisplaydoctitle=true, pdfcreator={Didacta}}
+
+%% ---------------------------------------------------------------------------
 %% Sections of a composition, in every language
 %%
 %%   \DidactaSection{es={Los números naturales},
@@ -415,10 +551,24 @@
   \endgroup
 }
 
-%% Try each language in turn, then give up visibly.
+%% El idioma original de cada lección que no está escrita primero en
+%% castellano. Lo sabe el `unit.yaml` (`reference:`), que LaTeX no lee: el
+%% motor lo reúne en un fichero y lo pasa por \DidactaUnitReferences.
+\newcommand{\DidactaUnitReference}[2]{\@namedef{didacta@reference@#1}{#2}}
+\@ifundefined{DidactaUnitReferences}{}{%
+  \IfFileExists{\DidactaUnitReferences}{\input{\DidactaUnitReferences}}{}}
+
+%% Try each language in turn, then give up visibly: first the unit's own
+%% original, which is the version everything else was translated from, and
+%% then every language Didacta prints, not just three.
 \newcommand{\didacta@unit@fallback}[3]{%
   \def\didacta@found{0}%
-  \@for\didacta@try:={es,va,en}\do{%
+  \edef\didacta@order{%
+    \ifcsname didacta@reference@#1#2\endcsname
+      \csname didacta@reference@#1#2\endcsname,%
+    \fi
+    es,va,ca,en,gl,eu,fr,it,pt,de}%
+  \@for\didacta@try:=\didacta@order\do{%
     \if\didacta@found0
       \IfFileExists{\DidactaContentRoot#1#2/\didacta@try.tex}{%
         \PackageWarning{didacta}{%
@@ -572,6 +722,22 @@
 %%
 %% Nunca vive en el repositorio de contenido: el motor apunta aquí al `.tex`
 %% de la plantilla, que está en `templates/` y se edita desde Ajustes.
+%%
+%% Justo antes, lo que definen los snippets del repositorio: los entornos y
+%% las órdenes propias que ofrece la barra del editor. Antes y no después
+%% para que la plantilla pueda seguir redefiniéndolo todo, y con las mismas
+%% reglas de documento, porque también es código de quien escribe el
+%% material. El motor lo reúne de `snippets.yaml` en la carpeta de
+%% compilación; sin snippets propios no hay fichero y no se lee nada.
+\@ifundefined{DidactaSnippets}{}{%
+  \IfFileExists{\DidactaSnippets}{%
+    \makeatother
+    \input{\DidactaSnippets}%
+    \makeatletter
+  }{%
+    \PackageWarning{didacta}{Snippet definitions not found: \DidactaSnippets}%
+  }%
+}
 \@ifundefined{DidactaPreamble}{}{%
   \IfFileExists{\DidactaPreamble}{%
     \makeatother

@@ -15,13 +15,16 @@ import 'package:go_router/go_router.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../data/compiler.dart';
+import '../data/file_manager.dart';
 import '../model/catalogue.dart';
 import 'package:provider/provider.dart';
 
 import '../router.dart';
 import '../state/session.dart';
 import 'export_actions.dart';
+import 'problem.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Qué versión de una unidad se puede ojear, si es que hay alguna.
 ///
@@ -140,13 +143,13 @@ class _QuickLookState extends State<_QuickLook> {
             ),
             Expanded(
               child: ColoredBox(
-                color: didactaPanel,
+                color: context.palette.panel,
                 child: PdfViewer.file(
                   output.pdf,
                   controller: _controller,
                   params: PdfViewerParams(
                     margin: 10,
-                    backgroundColor: didactaPanel,
+                    backgroundColor: context.palette.panel,
                     onViewerReady: (document, controller) {
                       if (!mounted) return;
                       setState(() => _pages = document.pages.length);
@@ -190,9 +193,9 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: didactaCard,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.card,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
     child: Row(
@@ -214,24 +217,33 @@ class _Bar extends StatelessWidget {
                 children: [
                   Text(
                     '${output.label} · ${output.language}',
-                    style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.palette.muted,
+                    ),
                   ),
                   // Cuando no es lo que se pidió, se dice: enseñar otra cosa
                   // sin avisar es peor que no enseñar nada.
                   if (!asked)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(left: 6),
                       child: Text(
-                        'la que había compilada',
-                        style: TextStyle(fontSize: 11, color: didactaEx),
+                        tr('la que había compilada'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.palette.ex,
+                        ),
                       ),
                     ),
                   if (output.stale)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(left: 6),
                       child: Text(
-                        'se ha editado después de compilar',
-                        style: TextStyle(fontSize: 11, color: didactaEx),
+                        tr('se ha editado después de compilar'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.palette.ex,
+                        ),
                       ),
                     ),
                 ],
@@ -241,21 +253,21 @@ class _Bar extends StatelessWidget {
         ),
         if (pages > 0) ...[
           IconButton(
-            tooltip: 'Anterior',
+            tooltip: tr('Anterior'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.chevron_left, size: 18),
             onPressed: page > 1 ? () => onPage(-1) : null,
           ),
           Text(
             '$page/$pages',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: didactaMuted,
+              color: context.palette.muted,
               fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
           IconButton(
-            tooltip: 'Siguiente',
+            tooltip: tr('Siguiente'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.chevron_right, size: 18),
             onPressed: page < pages ? () => onPage(1) : null,
@@ -264,21 +276,21 @@ class _Bar extends StatelessWidget {
         ],
         IconButton(
           key: const Key('quick-look-save'),
-          tooltip: 'Guardar una copia',
+          tooltip: tr('Guardar una copia'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.file_download_outlined, size: 17),
           onPressed: () => savePdfCopy(context, path: output.pdf),
         ),
         IconButton(
           key: const Key('quick-look-external'),
-          tooltip: 'Abrir en el visor del sistema',
+          tooltip: tr('Abrir en el visor del sistema'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.open_in_new, size: 17),
           onPressed: onExternal,
         ),
         IconButton(
           key: const Key('quick-look-reveal'),
-          tooltip: 'Ver en el Finder',
+          tooltip: const FileManager().revealLabel,
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.folder_open_outlined, size: 17),
           onPressed: onReveal,
@@ -287,12 +299,12 @@ class _Bar extends StatelessWidget {
         FilledButton.icon(
           key: const Key('quick-look-open-unit'),
           icon: const Icon(Icons.edit_outlined, size: 15),
-          label: const Text('Abrir la unidad'),
+          label: Text(tr('Abrir la unidad')),
           onPressed: onOpenUnit,
         ),
         IconButton(
           key: const Key('quick-look-close'),
-          tooltip: 'Cerrar',
+          tooltip: tr('Cerrar'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.close, size: 18),
           onPressed: () => Navigator.of(context).pop(),
@@ -326,7 +338,15 @@ class QuickLookButton extends StatelessWidget {
   final bool compact;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([
+      sessionOf(context).builds,
+      sessionOf(context).settings,
+    ]),
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final session = watchSession(context);
     final output = quickLookFor(session, unit, language: language);
     final size = compact ? 26.0 : 30.0;
@@ -340,15 +360,17 @@ class QuickLookButton extends StatelessWidget {
         child: IconButton(
           key: Key('quick-look-${unit.path}'),
           tooltip: output.stale
-              ? 'Ojear lo compilado (se ha editado después)'
-              : 'Ojear ${output.label.toLowerCase()} sin abrir la unidad',
+              ? tr('Ojear lo compilado (se ha editado después)')
+              : tr('Ojear {0} sin abrir la unidad', [
+                  output.label.toLowerCase(),
+                ]),
           visualDensity: VisualDensity.compact,
           padding: EdgeInsets.zero,
           constraints: BoxConstraints(minWidth: size, minHeight: size),
           icon: Icon(
             Icons.visibility_outlined,
             size: compact ? 15 : 16,
-            color: output.stale ? didactaEx : didactaMuted,
+            color: output.stale ? context.palette.ex : context.palette.muted,
           ),
           // Sin `onPressed` cuando no se ve: si no, un clic en el hueco de
           // una fila que no está apuntada abriría un PDF.
@@ -381,7 +403,7 @@ class QuickLookButton extends StatelessWidget {
     try {
       reveal ? await compiler.reveal(path) : await compiler.open(path);
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     }
   }
 }

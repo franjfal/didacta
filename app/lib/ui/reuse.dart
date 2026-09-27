@@ -25,6 +25,7 @@ import '../router.dart';
 import '../state/session.dart';
 import 'course_admin_ui.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Qué se hace con un tema al llevarlo a otro sitio.
 enum ReuseMode {
@@ -38,23 +39,28 @@ enum ReuseMode {
   duplicate,
 }
 
-const Map<ReuseMode, String> reuseNames = {
-  ReuseMode.link: 'Añadir vinculado',
-  ReuseMode.move: 'Mover',
-  ReuseMode.duplicate: 'Duplicar',
+Map<ReuseMode, String> get reuseNames => {
+  ReuseMode.link: tr('Añadir vinculado'),
+  ReuseMode.move: tr('Mover'),
+  ReuseMode.duplicate: tr('Duplicar'),
 };
 
-const Map<ReuseMode, String> reuseExplained = {
-  ReuseMode.link:
-      'El mismo tema en los dos sitios. Lo que se edite desde cualquiera de '
-      'ellos se ve desde el otro, porque es un solo fichero y no dos que '
-      'alguien mantiene iguales.',
-  ReuseMode.move:
-      'Deja de estar aquí y pasa a estar allí. No se copia nada y la '
-      'identidad no cambia: lo que estuviera vinculado sigue vinculado.',
-  ReuseMode.duplicate:
-      'Una copia con identidad propia. A partir de ahí son dos temas y cada '
-      'uno va por su lado.',
+Map<ReuseMode, String> get reuseExplained => {
+  ReuseMode.link: tr(
+    'El mismo tema en los dos sitios. Lo que se edite desde cualquiera de '
+    'ellos se ve desde el otro, porque es un solo fichero y no dos que '
+    'alguien mantiene iguales.',
+  ),
+  ReuseMode.move: tr(
+    'Deja de estar aquí y pasa a estar allí. No se copia nada y la '
+    'identidad no cambia: lo que estuviera vinculado sigue vinculado.',
+  ),
+  ReuseMode.duplicate: tr(
+    'Una copia de la composición, con identidad propia: a partir de ahí '
+    'son dos temas, y cambiar el orden o los apartados de uno no toca el '
+    'otro. Las lecciones siguen siendo las mismas --corregir una se ve en '
+    'los dos-- salvo que se dupliquen también.',
+  ),
 };
 
 /// A dónde va algo: una asignatura y un curso académico.
@@ -64,11 +70,15 @@ class ReuseTarget {
     required this.year,
     required this.mode,
     this.asId = '',
+    this.withUnits = false,
   });
 
   final String course;
   final String year;
   final ReuseMode mode;
+
+  /// Al duplicar, si las lecciones se duplican también.
+  final bool withUnits;
 
   /// Con qué nombre llega, cuando hay que cambiárselo.
   final String asId;
@@ -128,6 +138,7 @@ class _TargetDialogState extends State<_TargetDialog> {
   late String _course = widget.fromCourse;
   String? _year;
   late ReuseMode _mode = widget.mode;
+  bool _withUnits = false;
   late final TextEditingController _as = TextEditingController(
     text: widget.documentId,
   );
@@ -188,7 +199,7 @@ class _TargetDialogState extends State<_TargetDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (widget.modes.length > 1) ...[
-                const SectionLabel('Qué operación'),
+                SectionLabel(tr('Qué operación')),
                 const SizedBox(height: 4),
                 RadioGroup<ReuseMode>(
                   groupValue: _mode,
@@ -208,9 +219,9 @@ class _TargetDialogState extends State<_TargetDialog> {
                             ),
                             subtitle: Text(
                               reuseExplained[mode]!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11.5,
-                                color: didactaMuted,
+                                color: context.palette.muted,
                               ),
                             ),
                           ),
@@ -219,7 +230,7 @@ class _TargetDialogState extends State<_TargetDialog> {
                 ),
                 const SizedBox(height: Space.medium),
               ],
-              const SectionLabel('A qué asignatura'),
+              SectionLabel(tr('A qué asignatura')),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 key: const Key('reuse-course'),
@@ -230,7 +241,9 @@ class _TargetDialogState extends State<_TargetDialog> {
                       value: course.id,
                       child: Text(
                         course.id == widget.fromCourse
-                            ? '${course.title(session.language)}  (esta)'
+                            ? tr('{0}  (esta)', [
+                                course.title(session.language),
+                              ])
                             : course.title(session.language),
                       ),
                     ),
@@ -241,13 +254,15 @@ class _TargetDialogState extends State<_TargetDialog> {
                 }),
               ),
               const SizedBox(height: Space.medium),
-              const SectionLabel('A qué curso académico'),
+              SectionLabel(tr('A qué curso académico')),
               const SizedBox(height: 4),
               if (years.isEmpty)
-                const Note(
-                  'Esa asignatura no tiene ningún otro curso académico. Crea '
-                  'uno primero.',
-                  tone: didactaEx,
+                Note(
+                  tr(
+                    'Esa asignatura no tiene ningún otro curso académico. Crea '
+                    'uno primero.',
+                  ),
+                  tone: context.palette.ex,
                 )
               else
                 Wrap(
@@ -268,16 +283,44 @@ class _TargetDialogState extends State<_TargetDialog> {
                 key: const Key('reuse-as'),
                 controller: _as,
                 decoration: InputDecoration(
-                  labelText: 'Con qué nombre llega',
+                  labelText: tr('Con qué nombre llega'),
                   helperText: _clash
-                      ? 'Ya hay un tema con ese nombre en el destino.'
-                      : 'Es el nombre del fichero que compila.',
+                      ? tr('Ya hay un tema con ese nombre en el destino.')
+                      : tr('Es el nombre del fichero que compila.'),
                   helperStyle: TextStyle(
-                    color: _clash ? didactaTeacher : didactaMuted,
+                    color: _clash
+                        ? context.palette.teacher
+                        : context.palette.muted,
                   ),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
+              if (_mode == ReuseMode.duplicate) ...[
+                const SizedBox(height: Space.medium),
+                CheckboxListTile(
+                  key: const Key('reuse-with-units'),
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: _withUnits,
+                  onChanged: (on) => setState(() => _withUnits = on ?? false),
+                  title: Text(
+                    tr('Duplicar también las lecciones'),
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  subtitle: Text(
+                    tr(
+                      'Cada lección del tema, copiada con su propia identidad: '
+                      'lo que se corrija en una copia no se ve en la otra. Son '
+                      'carpetas nuevas en el repositorio.',
+                    ),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                ),
+              ],
               // La explicación de lo elegido, y solo cuando no hay nada que
               // elegir: con el selector delante ya está escrita debajo de cada
               // opción, y repetirla abajo la convierte en ruido.
@@ -292,7 +335,7 @@ class _TargetDialogState extends State<_TargetDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('reuse-confirm'),
@@ -304,6 +347,7 @@ class _TargetDialogState extends State<_TargetDialog> {
                     year: _year!,
                     mode: _mode,
                     asId: _as.text.trim(),
+                    withUnits: _mode == ReuseMode.duplicate && _withUnits,
                   ),
                 ),
           child: Text(reuseNames[_mode]!),
@@ -343,26 +387,44 @@ Future<bool> reuseDocument(
         toYear: target.year,
         asId: target.asId,
       ),
-      // Duplicar es la copia de siempre: composición, nunca contenido. Lo que
-      // cambia respecto a vincular es justo que el destino se lleva su propia
-      // entrada y a partir de ahí va por su lado.
+      // Duplicar es la copia de siempre, pero de verdad independiente: un
+      // tema vinculado deja de estarlo en la copia --antes se llevaba su
+      // `link:` y seguía siendo el mismo-- y, si se pide, con sus propias
+      // lecciones.
       ReuseMode.duplicate => admin.copyDocuments(
         fromCourse: course,
         fromYear: year,
         toCourse: target.course,
         toYear: target.year,
         documents: [document],
+        asId: target.asId == document ? '' : target.asId,
+        independent: true,
+        withUnits: target.withUnits,
       ),
     },
     done: switch (target.mode) {
-      ReuseMode.link =>
-        '«$document» se da también en ${target.course} ${target.year}. Es el '
-            'mismo tema: lo que se edite se ve desde los dos.',
-      ReuseMode.move =>
-        '«$document» está ahora en ${target.course} ${target.year}.',
+      ReuseMode.link => tr(
+        '«{0}» se da también en {1} {2}. Es el '
+        'mismo tema: lo que se edite se ve desde los dos.',
+        [document, target.course, target.year],
+      ),
+      ReuseMode.move => tr('«{0}» está ahora en {1} {2}.', [
+        document,
+        target.course,
+        target.year,
+      ]),
       ReuseMode.duplicate =>
-        '«$document» copiado a ${target.course} ${target.year}. Son dos temas '
-            'independientes.',
+        target.withUnits
+            ? tr(
+                '«{0}» duplicado en {1} {2}, con '
+                'sus propias lecciones.',
+                [document, target.course, target.year],
+              )
+            : tr(
+                '«{0}» duplicado en {1} {2}. Son '
+                'dos temas; las lecciones siguen siendo las mismas.',
+                [document, target.course, target.year],
+              ),
     },
     repo: repo,
   );
@@ -483,7 +545,7 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SectionLabel('A qué asignatura'),
+              SectionLabel(tr('A qué asignatura')),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
                 key: const Key('lesson-course'),
@@ -495,7 +557,9 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                       value: course.id,
                       child: Text(
                         course.id == widget.from
-                            ? '${course.title(session.language)}  (esta)'
+                            ? tr('{0}  (esta)', [
+                                course.title(session.language),
+                              ])
                             : course.title(session.language),
                       ),
                     ),
@@ -507,7 +571,7 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                 }),
               ),
               const SizedBox(height: Space.medium),
-              const SectionLabel('A qué curso académico'),
+              SectionLabel(tr('A qué curso académico')),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 6,
@@ -526,12 +590,12 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                 ],
               ),
               const SizedBox(height: Space.medium),
-              const SectionLabel('A qué tema'),
+              SectionLabel(tr('A qué tema')),
               const SizedBox(height: 4),
               if (documents.isEmpty)
-                const Note(
-                  'Ese curso no tiene todavía ningún tema donde ponerla.',
-                  tone: didactaEx,
+                Note(
+                  tr('Ese curso no tiene todavía ningún tema donde ponerla.'),
+                  tone: context.palette.ex,
                 )
               else
                 DropdownButtonFormField<String>(
@@ -544,8 +608,11 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                         value: document.id,
                         child: Text(
                           document.isLinked
-                              ? '${document.title(session.language)}  '
-                                    '(vinculado)'
+                              ? tr(
+                                  '{0}  '
+                                  '(vinculado)',
+                                  [document.title(session.language)],
+                                )
                               : document.title(session.language),
                         ),
                       ),
@@ -562,23 +629,30 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                 value: _duplicate,
                 onChanged: (value) =>
                     setState(() => _duplicate = value ?? false),
-                title: const Text(
-                  'Llevar una copia independiente',
+                title: Text(
+                  tr('Llevar una copia independiente'),
                   style: TextStyle(fontSize: 12.5),
                 ),
-                subtitle: const Text(
-                  'Con identidad propia: a partir de ahí son dos lecciones. '
-                  'Sin marcar es la misma, y corregirla sigue siendo '
-                  'corregirla una vez.',
-                  style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                subtitle: Text(
+                  tr(
+                    'Con identidad propia: a partir de ahí son dos lecciones. '
+                    'Sin marcar es la misma, y corregirla sigue siendo '
+                    'corregirla una vez.',
+                  ),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
               ),
               if (_documentIsLinked && !_duplicate) ...[
                 const SizedBox(height: Space.small),
-                const Note(
-                  'Ese tema está vinculado, así que la lección entra en todos '
-                  'los cursos que lo dan.',
-                  tone: didactaEx,
+                Note(
+                  tr(
+                    'Ese tema está vinculado, así que la lección entra en todos '
+                    'los cursos que lo dan.',
+                  ),
+                  tone: context.palette.ex,
                 ),
               ],
             ],
@@ -588,7 +662,7 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('lesson-confirm'),
@@ -602,7 +676,9 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                     duplicate: _duplicate,
                   ),
                 ),
-          child: Text(_duplicate ? 'Duplicar aquí' : 'Añadir vinculada'),
+          child: Text(
+            _duplicate ? tr('Duplicar aquí') : tr('Añadir vinculada'),
+          ),
         ),
       ],
     );
@@ -662,8 +738,8 @@ Future<void> showPlaces(
         children: [
           Text(
             places.length == 1
-                ? 'Se utiliza en 1 ubicación:'
-                : 'Se utiliza en ${places.length} ubicaciones:',
+                ? tr('Se utiliza en 1 ubicación:')
+                : tr('Se utiliza en {0} ubicaciones:', [places.length]),
             style: const TextStyle(fontSize: 13),
           ),
           const SizedBox(height: Space.small),
@@ -678,7 +754,7 @@ Future<void> showPlaces(
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cerrar'),
+        child: Text(tr('Cerrar')),
       ),
     ],
   ),
@@ -698,7 +774,7 @@ class _PlaceRow extends StatelessWidget {
           Icon(
             place.here ? Icons.my_location : Icons.link,
             size: 14,
-            color: place.here ? didactaMuted : didactaThm,
+            color: place.here ? context.palette.muted : context.palette.thm,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -706,20 +782,22 @@ class _PlaceRow extends StatelessWidget {
               place.label,
               style: TextStyle(
                 fontSize: 12.5,
-                color: place.here ? didactaMuted : didactaAccentDark,
+                color: place.here
+                    ? context.palette.muted
+                    : context.palette.accentDark,
                 decoration: place.here ? null : TextDecoration.underline,
-                decorationColor: didactaRule,
+                decorationColor: context.palette.rule,
               ),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           if (place.here)
-            const Text(
-              'aquí',
-              style: TextStyle(fontSize: 11, color: didactaMuted),
+            Text(
+              tr('aquí'),
+              style: TextStyle(fontSize: 11, color: context.palette.muted),
             )
           else
-            const Icon(Icons.arrow_forward, size: 13, color: didactaMuted),
+            Icon(Icons.arrow_forward, size: 13, color: context.palette.muted),
         ],
       ),
     );
@@ -862,10 +940,13 @@ class _SplitDialogState extends State<_SplitDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Ahora mismo hay ${widget.places.length} ubicaciones '
-              'sincronizadas. Reparte cada una en el grupo que le toque: '
-              'dentro de cada grupo seguirán sincronizadas, y entre grupos '
-              'dejarán de estarlo.',
+              tr(
+                'Ahora mismo hay {0} ubicaciones '
+                'sincronizadas. Reparte cada una en el grupo que le toque: '
+                'dentro de cada grupo seguirán sincronizadas, y entre grupos '
+                'dejarán de estarlo.',
+                [widget.places.length],
+              ),
               style: const TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: Space.medium),
@@ -906,7 +987,7 @@ class _SplitDialogState extends State<_SplitDialog> {
                       child: TextButton.icon(
                         key: const Key('split-add-group'),
                         icon: const Icon(Icons.add, size: 15),
-                        label: Text('Grupo ${_letters[_groups]}'),
+                        label: Text(tr('Grupo {0}', [_letters[_groups]])),
                         onPressed: () => setState(() => _groups += 1),
                       ),
                     ),
@@ -914,7 +995,7 @@ class _SplitDialogState extends State<_SplitDialog> {
               ),
             ),
             const Divider(height: Space.large),
-            const SectionLabel('Al confirmar'),
+            SectionLabel(tr('Al confirmar')),
             const SizedBox(height: 4),
             SizedBox(
               height: widget.offerDeep ? 160 : 92,
@@ -927,15 +1008,26 @@ class _SplitDialogState extends State<_SplitDialog> {
                         padding: const EdgeInsets.only(bottom: 4),
                         child: Text(
                           preview[number].isEmpty
-                              ? 'Grupo ${_letters[number]}: vacío'
-                              : 'Grupo ${_letters[number]}'
-                                    '${number == 0 ? ' (conserva la identidad)' : ''}'
-                                    ': ${preview[number].map((p) => p.label).join(' · ')}',
+                              ? tr('Grupo {0}: vacío', [_letters[number]])
+                              : tr(
+                                  'Grupo {0}'
+                                  '{1}'
+                                  ': {2}',
+                                  [
+                                    _letters[number],
+                                    number == 0
+                                        ? tr(' (conserva la identidad)')
+                                        : '',
+                                    preview[number]
+                                        .map((p) => p.label)
+                                        .join(' · '),
+                                  ],
+                                ),
                           style: TextStyle(
                             fontSize: 11.5,
                             color: preview[number].isEmpty
-                                ? didactaTeacher
-                                : didactaMuted,
+                                ? context.palette.teacher
+                                : context.palette.muted,
                           ),
                         ),
                       ),
@@ -949,15 +1041,20 @@ class _SplitDialogState extends State<_SplitDialog> {
                         value: _deep,
                         onChanged: (value) =>
                             setState(() => _deep = value ?? false),
-                        title: const Text(
-                          'Duplicar también las lecciones del tema',
+                        title: Text(
+                          tr('Duplicar también las lecciones del tema'),
                           style: TextStyle(fontSize: 12.5),
                         ),
-                        subtitle: const Text(
-                          'Cada rama se lleva su propia copia de cada '
-                          'lección. Sin marcar, el tema se separa y el '
-                          'material sigue siendo uno.',
-                          style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                        subtitle: Text(
+                          tr(
+                            'Cada rama se lleva su propia copia de cada '
+                            'lección. Sin marcar, el tema se separa y el '
+                            'material sigue siendo uno.',
+                          ),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ),
                     ],
@@ -975,7 +1072,7 @@ class _SplitDialogState extends State<_SplitDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('split-confirm'),
@@ -984,7 +1081,7 @@ class _SplitDialogState extends State<_SplitDialog> {
                   context,
                 ).pop(SplitRequest(groups: _result, deep: _deep))
               : null,
-          child: const Text('Dividir'),
+          child: Text(tr('Dividir')),
         ),
       ],
     );
@@ -1018,29 +1115,31 @@ class LinkBadge extends StatelessWidget {
     final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: didactaThm.withValues(alpha: 0.10),
+        color: context.palette.thm.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(Radii.chip),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.link, size: 12, color: didactaThm),
+          Icon(Icons.link, size: 12, color: context.palette.thm),
           const SizedBox(width: 3),
           Text(
             '$places',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: didactaThm,
+              color: context.palette.thm,
             ),
           ),
         ],
       ),
     );
     return Tooltip(
-      message:
-          '$what se utiliza en $places ubicaciones. Lo que se edite aquí '
-          'se ve en todas.',
+      message: tr(
+        '{0} se utiliza en {1} ubicaciones. Lo que se edite aquí '
+        'se ve en todas.',
+        [what, places],
+      ),
       child: onPressed == null
           ? chip
           : InkWell(

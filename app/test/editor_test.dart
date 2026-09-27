@@ -12,6 +12,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
@@ -84,11 +85,36 @@ void main() {
     expect(button.onPressed, isNull);
   });
 
-  testWidgets('editing then saving asks for a message and commits', (
+  testWidgets('guardar deja el mensaje propuesto y ofrece ver los cambios', (
+    tester,
+  ) async {
+    // Lo de salida: sin diálogo. El mensaje propuesto dice qué se cambió, y
+    // lo cambiado está a un clic en el aviso.
+    final gateway = FakeGateway();
+    await pumpEditor(tester, gateway: gateway);
+    await tester.enterText(find.byType(TextField), 'Texto nuevo');
+    await tester.pump();
+
+    await tester.tap(barSave);
+    await settle(tester);
+    expect(find.text('Guardar el cambio'), findsNothing);
+    expect(gateway.commits.single.text, 'Texto nuevo');
+    expect(gateway.commits.single.message, contains('Editar la versión es'));
+    expect(find.byKey(const Key('saved-notice')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('saved-show-changes')));
+    await settle(tester);
+    expect(find.byKey(const Key('saved-changes')), findsOneWidget);
+    expect(find.text('+ Texto nuevo'), findsOneWidget);
+    expect(find.text('− El contenido original en castellano.'), findsOneWidget);
+  });
+
+  testWidgets('revisando cada cambio, pide el mensaje y guarda', (
     tester,
   ) async {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
+    await reviewEachSave(tester);
 
     await tester.enterText(find.byType(TextField), 'Texto nuevo');
     await tester.pump();
@@ -102,10 +128,10 @@ void main() {
 
     // The message is asked for, and pre-filled with something meaningful --
     // a log full of "edit file" is a log nobody reads.
-    expect(find.text('Guardar como commit'), findsOneWidget);
+    expect(find.text('Guardar el cambio'), findsOneWidget);
     expect(find.textContaining('Editar la versión es'), findsOneWidget);
 
-    await tester.tap(dialogSave);
+    await tapIfShown(tester, dialogSave);
     await settle(tester);
 
     expect(gateway.commits, hasLength(1));
@@ -115,6 +141,81 @@ void main() {
     expect(commit.message, contains('Espacios normados'));
     // The sha the content was read at: what makes this a compare-and-set.
     expect(commit.sha, 'sha-$unitPath/es.tex');
+  });
+
+  group('avisos antes de compilar', () {
+    testWidgets('sin nada que avisar, no hay panel', (tester) async {
+      await pumpEditor(tester, gateway: FakeGateway());
+      expect(find.byKey(const Key('tex-warnings')), findsNothing);
+    });
+
+    testWidgets('una llave sin cerrar se dice, y lleva a su línea', (
+      tester,
+    ) async {
+      const text = 'Primera línea.\nSegunda con \\textbf{una llave.\n';
+      await pumpEditor(
+        tester,
+        gateway: FakeGateway(files: {'$unitPath/es.tex': text}),
+      );
+      expect(find.byKey(const Key('tex-warnings')), findsOneWidget);
+      expect(find.text('Línea 2'), findsOneWidget);
+      expect(find.text('Una llave «{» que no se cierra.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tex-warning-0')));
+      await tester.pump();
+      final field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.controller!.selection.baseOffset, text.indexOf('{'));
+      expect(field.focusNode!.hasFocus, isTrue);
+
+      // Al arreglarlo, el panel se va.
+      await tester.enterText(find.byType(TextField), 'Todo en orden.');
+      await tester.pump();
+      expect(find.byKey(const Key('tex-warnings')), findsNothing);
+    });
+  });
+
+  group('guardar con el teclado', () {
+    Future<void> press(WidgetTester tester, LogicalKeyboardKey modifier) async {
+      await tester.sendKeyDownEvent(modifier);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+      await tester.sendKeyUpEvent(modifier);
+      await settle(tester);
+    }
+
+    testWidgets('Ctrl+S hace lo mismo que el botón', (tester) async {
+      final gateway = FakeGateway();
+      await pumpEditor(tester, gateway: gateway);
+      await reviewEachSave(tester);
+      await tester.enterText(find.byType(TextField), 'Texto nuevo');
+      await tester.pump();
+
+      await press(tester, LogicalKeyboardKey.control);
+      // El mismo diálogo, con el mismo mensaje sugerido.
+      expect(find.text('Guardar el cambio'), findsOneWidget);
+      await tapIfShown(tester, dialogSave);
+      await settle(tester);
+      expect(gateway.commits.single.text, 'Texto nuevo');
+    });
+
+    testWidgets('⌘S, en macOS', (tester) async {
+      await pumpEditor(tester, gateway: FakeGateway());
+      await reviewEachSave(tester);
+      await tester.enterText(find.byType(TextField), 'Texto nuevo');
+      await tester.pump();
+      await press(tester, LogicalKeyboardKey.meta);
+      expect(find.text('Guardar el cambio'), findsOneWidget);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+    testWidgets('sin cambios no abre nada', (tester) async {
+      final gateway = FakeGateway();
+      await pumpEditor(tester, gateway: gateway);
+      await reviewEachSave(tester);
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
+      await press(tester, LogicalKeyboardKey.control);
+      expect(find.text('Guardar el cambio'), findsNothing);
+      expect(gateway.commits, isEmpty);
+    });
   });
 
   testWidgets('a read-only gateway gives a read-only editor', (tester) async {
@@ -142,7 +243,7 @@ void main() {
     await tester.pump();
     await tester.tap(barSave);
     await settle(tester);
-    await tester.tap(dialogSave);
+    await tapIfShown(tester, dialogSave);
     await settle(tester);
 
     expect(gateway.commits, isEmpty);
@@ -162,7 +263,7 @@ void main() {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 
-    await tester.tap(find.text('va'));
+    await tester.tap(find.byKey(const Key('language-tab-va')));
     await settle(tester);
 
     // Vacío: ni el original ni una plantilla.
@@ -187,7 +288,7 @@ void main() {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 
-    await tester.tap(find.text('va'));
+    await tester.tap(find.byKey(const Key('language-tab-va')));
     await settle(tester);
     // Dos: el botón de arriba y la frase que lo señala.
     expect(find.textContaining('lado a lado'), findsNWidgets(2));
@@ -200,7 +301,7 @@ void main() {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 
-    await tester.tap(find.text('va'));
+    await tester.tap(find.byKey(const Key('language-tab-va')));
     await settle(tester);
 
     expect(
@@ -218,7 +319,7 @@ void main() {
     final gateway = FakeGateway();
     await pumpEditor(tester, gateway: gateway);
 
-    await tester.tap(find.text('va'));
+    await tester.tap(find.byKey(const Key('language-tab-va')));
     await settle(tester);
     await tester.enterText(find.byType(TextField), 'El contingut en valencià.');
     await tester.pump();
@@ -227,7 +328,7 @@ void main() {
 
     expect(find.textContaining('Añadir la versión va'), findsOneWidget);
 
-    await tester.tap(dialogSave);
+    await tapIfShown(tester, dialogSave);
     await settle(tester);
 
     expect(gateway.commits.single.path, '$unitPath/va.tex');

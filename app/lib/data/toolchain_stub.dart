@@ -9,6 +9,7 @@ library;
 
 import '../model/toolchain.dart';
 import 'toolchain.dart';
+import '../l10n/tr.dart';
 
 bool get supported => false;
 
@@ -24,7 +25,7 @@ class _NoToolchain implements Toolchain {
   @override
   Future<ToolState> inspect(ToolId id) async => ToolState(
     tool: toolById(id),
-    problem: 'En el navegador no hay nada que comprobar.',
+    problem: tr('En el navegador no hay nada que comprobar.'),
   );
 
   @override
@@ -40,7 +41,7 @@ class _NoToolchain implements Toolchain {
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,
-  }) async => throw const ToolInstallException(
-    'En el navegador no se puede instalar nada.',
+  }) async => throw ToolInstallException(
+    tr('En el navegador no se puede instalar nada.'),
   );
 }

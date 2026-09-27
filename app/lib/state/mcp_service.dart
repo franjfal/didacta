@@ -27,6 +27,8 @@ import 'package:flutter/foundation.dart';
 
 import '../data/mcp_process.dart';
 import '../model/mcp.dart';
+import '../data/diagnostics.dart';
+import '../l10n/tr.dart';
 
 /// En qué punto está el servidor.
 enum McpState {
@@ -60,6 +62,9 @@ class McpService extends ChangeNotifier {
   /// Dónde escucha, cuando escucha. Es lo que se pega en la configuración de
   /// un cliente.
   String? get url => _url;
+
+  /// El que hay que mandar en cada petición, mientras está encendido.
+  String? get token => _session?.token;
 
   String? _problem;
   String? get problem => _problem;
@@ -99,7 +104,7 @@ class McpService extends ChangeNotifier {
   Future<void> start({required List<McpRepository> repositories}) async {
     if (_state == McpState.starting || _state == McpState.running) return;
     if (repositories.isEmpty) {
-      _fail('No hay ningún repositorio abierto que servir.');
+      _fail(tr('No hay ningún repositorio abierto que servir.'));
       return;
     }
 
@@ -152,7 +157,8 @@ class McpService extends ChangeNotifier {
       if (found.isEmpty) return;
       _tools = found;
       notifyListeners();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('mcp_service.listTools', caught, trace);
       // No poder listarlas quita la referencia, no el servidor: el modelo las
       // pregunta por su cuenta y sigue funcionando igual.
     }
@@ -170,7 +176,7 @@ class McpService extends ChangeNotifier {
     // encendido y no contesta es peor que uno apagado.
     if (_state == McpState.running) {
       _state = McpState.failed;
-      _problem = 'El servidor se detuvo solo.';
+      _problem = tr('El servidor se detuvo solo.');
       _url = null;
       _note(McpEvent.stopped());
       notifyListeners();
@@ -199,9 +205,19 @@ class McpService extends ChangeNotifier {
   String? get clientConfiguration {
     final where = _url;
     if (where == null) return null;
+    final token = _session?.token;
     return const JsonEncoder.withIndent('  ').convert({
       'mcpServers': {
-        'didacta': {'type': 'http', 'url': where},
+        'didacta': {
+          'type': 'http',
+          'url': where,
+          // Sin él no contesta. Cambia cada vez que se enciende, como el
+          // puerto, así que se vuelve a copiar después de reiniciar.
+          if (token != null)
+            'headers': {
+              'Authorization': tr('Bearer {0}', [token]),
+            },
+        },
       },
     });
   }

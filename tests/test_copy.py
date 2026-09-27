@@ -46,12 +46,15 @@ def load_cli():
 class Args:
     """Lo que el parser le pasaría al comando."""
 
-    def __init__(self, root, source, target, documents=(), create=False):
+    def __init__(self, root, source, target, documents=(), create=False,
+                 independent=False, with_units=False):
         self.root = root
         self.From = source
         self.to = target
         self.documents = list(documents)
         self.create_year = create
+        self.independent = independent
+        self.with_units = with_units
 
 
 class CopyTests(unittest.TestCase):
@@ -280,6 +283,86 @@ class CopyTests(unittest.TestCase):
 
 
 
+class HonestDuplicateTests(unittest.TestCase):
+    """«Duplicar» que cumple lo que promete.
+
+    Prometía «a partir de ahí son dos temas y cada uno va por su lado», y un
+    tema vinculado seguía vinculado en la copia --el bloque se copiaba con su
+    `link:`-- y los dos llamaban a las mismas lecciones.
+    """
+
+    # El mismo repositorio de juguete que los de copiar, sin sus tests.
+    @classmethod
+    def setUpClass(cls):
+        cls.cli = load_cli()
+
+    write = CopyTests.write
+    unit = CopyTests.unit
+    read = CopyTests.read
+
+    def setUp(self):
+        CopyTests.setUp(self)
+        self.write(
+            "shared/documents/d-aaaaaaaaaaaa.yaml",
+            "id: d-aaaaaaaaaaaa\nkind: theory\ntitle:\n  es: Compartido\n"
+            "structure:\n  - unit: a/b/c\n  - unit: a/b/d\n",
+        )
+        year = self.read("courses/am-i/2022-2023/year.yaml")
+        self.write(
+            "courses/am-i/2022-2023/year.yaml",
+            year + "\n  - id: compartido\n    link: d-aaaaaaaaaaaa\n",
+        )
+        self.write("courses/am-i/2022-2023/compartido.tex",
+                   "\\begin{document}\n\\end{document}\n")
+
+    def duplicate(self, **flags):
+        return self.cli.cmd_copy(Args(
+            self.root, "am-i@2022-2023", "am-i@2026-2027", ["compartido"],
+            **flags))
+
+    def test_by_default_a_copy_stays_linked(self):
+        # Lo de siempre, para «Copiar a otro curso»: no cambia.
+        self.assertEqual(self.duplicate(), 0)
+        self.assertIn("link: d-aaaaaaaaaaaa",
+                      self.read("courses/am-i/2026-2027/year.yaml"))
+
+    def test_independent_gives_the_copy_its_own_composition(self):
+        self.assertEqual(self.duplicate(independent=True), 0)
+        copy = self.read("courses/am-i/2026-2027/year.yaml")
+        self.assertNotIn("link:", copy)
+        self.assertIn("- unit: a/b/c", copy)
+        # El original sigue vinculado y su fichero compartido, en su sitio.
+        self.assertIn("link: d-aaaaaaaaaaaa",
+                      self.read("courses/am-i/2022-2023/year.yaml"))
+        self.assertTrue(os.path.isfile(os.path.join(
+            self.root, "shared", "documents", "d-aaaaaaaaaaaa.yaml")))
+
+    def test_with_another_name(self):
+        # «Con qué nombre llega» se pedía y no se usaba: duplicar al mismo
+        # curso con otro nombre salía con el de siempre, o no salía.
+        args = Args(self.root, "am-i@2022-2023", "am-i@2026-2027", ["tema-1"])
+        args.As = "tema-1-bis"
+        self.assertEqual(self.cli.cmd_copy(args), 0)
+        copy = self.read("courses/am-i/2026-2027/year.yaml")
+        self.assertIn("- id: tema-1-bis", copy)
+        self.assertNotIn("- id: tema-1\n", copy)
+        self.assertTrue(os.path.isfile(os.path.join(
+            self.root, "courses", "am-i", "2026-2027", "tema-1-bis.tex")))
+
+    def test_with_units_gives_it_its_own_lessons_too(self):
+        self.assertEqual(self.duplicate(with_units=True), 0)
+        copy = self.read("courses/am-i/2026-2027/year.yaml")
+        self.assertNotIn("link:", copy)
+        self.assertNotIn("- unit: a/b/c\n", copy)
+        units, _ = repo_mod.scan_units(self.root, self.settings)
+        found = list(units.values()) if isinstance(units, dict) else units
+        # Dos lecciones nuevas, con su id propio, y las de antes intactas.
+        self.assertEqual(len(found), 4)
+        self.assertEqual(len({unit.id for unit in found}), 4)
+        self.assertIn("- unit: a/b/c", self.read(
+            "shared/documents/d-aaaaaaaaaaaa.yaml"))
+
+
 class EmptyYearTests(unittest.TestCase):
     """Un curso académico que se empieza en blanco.
 
@@ -371,6 +454,27 @@ class EmptyYearTests(unittest.TestCase):
         )
         self.assertEqual(self.new_year("2026-2027", source="2025-2026"), 0)
         self.assertIn("tema-1", self.year_file("2026-2027"))
+
+    def test_copying_brings_the_themes_along(self):
+        # Sin `themes.yaml` el curso nuevo llegaba con los documentos sueltos:
+        # cada uno decía `themes: [tema-1]` y nadie declaraba ese tema.
+        self.new_year("2025-2026")
+        self.write(
+            "courses/am-i/2025-2026/year.yaml",
+            "course: am-i\nyear: 2025-2026\nlanguage: es\n\n"
+            "documents:\n  - id: tema-1\n    kind: theory\n"
+            "    themes: [numeros]\n    structure: []\n",
+        )
+        self.write(
+            "courses/am-i/2025-2026/themes.yaml",
+            "themes:\n  - id: numeros\n    title:\n      es: Los números\n",
+        )
+        self.assertEqual(self.new_year("2026-2027", source="2025-2026"), 0)
+        copied = os.path.join(self.root, "courses", "am-i", "2026-2027",
+                              "themes.yaml")
+        self.assertTrue(os.path.isfile(copied))
+        with open(copied, encoding="utf-8") as handle:
+            self.assertIn("numeros", handle.read())
 
 
 if __name__ == "__main__":

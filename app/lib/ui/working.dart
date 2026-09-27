@@ -103,10 +103,10 @@ class _WorkingState extends State<Working> {
                 headline,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   height: 1.35,
-                  color: didactaInk,
+                  color: context.palette.ink,
                 ),
               ),
             ),
@@ -115,9 +115,9 @@ class _WorkingState extends State<Working> {
               Text(
                 _clock(Duration(seconds: _seconds)),
                 key: const Key('working-elapsed'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
@@ -134,7 +134,7 @@ class _WorkingState extends State<Working> {
                 key: const Key('working-bar'),
                 value: progress.fraction,
                 minHeight: 4,
-                backgroundColor: didactaRule,
+                backgroundColor: context.palette.rule,
               ),
             ),
           ),
@@ -147,10 +147,10 @@ class _WorkingState extends State<Working> {
               detail,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 fontFamily: 'monospace',
-                color: didactaMuted,
+                color: context.palette.muted,
               ),
             ),
           ),

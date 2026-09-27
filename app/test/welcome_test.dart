@@ -11,6 +11,7 @@ import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/main.dart';
+import 'package:didacta_app/model/workspace.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/welcome.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +38,34 @@ Future<void> pumpApp(WidgetTester tester, Session session) async {
     await Future<void>.delayed(const Duration(milliseconds: 300));
   });
   await settle(tester);
+}
+
+/// Una sesión que «crea» el ejemplo sin GitHub ni git, y cuenta las veces.
+class ExampleFake extends FakeSession {
+  ExampleFake()
+    : super(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogueWith(defaultUnits()),
+      );
+
+  int asked = 0;
+
+  @override
+  Future<({ContentRepo repo, bool reused})> createExampleRepository({
+    Map<String, String>? files,
+    void Function(String what)? onStep,
+    void Function(String line)? onProgress,
+  }) async {
+    asked += 1;
+    return (
+      repo: const ContentRepo(
+        owner: 'profe',
+        name: 'didacta-ejemplo',
+        directory: '/tmp/didacta-ejemplo',
+      ),
+      reused: false,
+    );
+  }
 }
 
 Session sessionWith({required bool welcomeSeen, String? token}) => LocalSession(
@@ -174,5 +203,92 @@ void main() {
     }
 
     expect(terminada, isTrue);
+  });
+
+  for (final (count, said) in [
+    (1, 'Tienes un repositorio abierto.'),
+    (2, 'Tienes 2 repositorios abiertos.'),
+  ]) {
+    testWidgets('al final cuenta bien $count repositorio(s)', (tester) async {
+      // Decía «Tienes un repositorio abiertos».
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogueWith(defaultUnits()),
+      );
+      await session.primeForTest(catalogueWith(defaultUnits()));
+      await session.useClonesForTest([
+        for (var i = 0; i < count; i += 1) '/tmp/didacta-repo-$i',
+      ]);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: WelcomeScreen(
+            session: session,
+            onFinished: () {},
+            toolchain: FakeToolchain(present: ToolId.values.toSet()),
+          ),
+        ),
+      );
+      await settle(tester);
+
+      // Hasta el último paso, que es el único que habla de las asignaturas
+      // al entrar: «Listo» sale también en el de las herramientas.
+      final last = find.textContaining('Al entrar verás tus asignaturas');
+      for (var i = 0; i < 6 && last.evaluate().isEmpty; i += 1) {
+        await tester.tap(find.byKey(const Key('welcome-next')));
+        await settle(tester);
+      }
+      expect(last, findsOneWidget);
+      expect(find.textContaining(said), findsOneWidget);
+    });
+  }
+
+  testWidgets('el ejemplo se pide, se confirma y lleva al final', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final session = ExampleFake();
+    await session.primeForTest(catalogueWith(defaultUnits()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WelcomeScreen(
+          session: session,
+          onFinished: () {},
+          toolchain: FakeToolchain(present: ToolId.values.toSet()),
+        ),
+      ),
+    );
+    await settle(tester);
+
+    // Hasta el paso del material: qué es → cuenta → herramientas → material.
+    for (var i = 0; i < 3; i += 1) {
+      await tester.tap(find.byKey(const Key('welcome-next')));
+      await settle(tester);
+    }
+    final example = find.byKey(const Key('welcome-try-example'));
+    expect(example, findsOneWidget);
+
+    // Crea algo en la cuenta de GitHub de quien lo pulsa: se pregunta, y
+    // cancelar no hace nada.
+    await tester.tap(example);
+    await settle(tester);
+    expect(find.textContaining('didacta-ejemplo, privado'), findsOneWidget);
+    await tester.tap(find.text('Cancelar'));
+    await settle(tester);
+    expect(session.asked, 0);
+
+    await tester.tap(example);
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('create-example')));
+    await settle(tester);
+
+    expect(session.asked, 1);
+    expect(find.text('Empezar a trabajar'), findsOneWidget);
   });
 }

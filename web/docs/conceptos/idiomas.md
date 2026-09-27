@@ -53,6 +53,15 @@ El documento no se cae. Se compila con el idioma de referencia en su sitio, y
 Es una decisión deliberada: un tema de quince unidades con una sin traducir
 tiene que poder darse. Lo que no puede pasar es que nadie se entere.
 
+## Los números, como se escriben en cada idioma
+
+`$3.14$` sale «3,14» en todos los idiomas menos en inglés, que es el único
+que escribe «3.14». Y `25\%` sale «25 %», con su espacio fino, en castellano,
+valenciano, catalán, gallego, francés y alemán; en los demás, «25%». Se
+escribe siempre igual, con punto, y cada idioma lo compone a su manera. El punto que no va
+entre cifras --`$f.g$`, el de final de frase dentro de una fórmula-- sigue
+siendo un punto.
+
 ## Qué idiomas hay
 
 Hay **cuatro listas**, y no son la misma. Confundirlas es cómo acaba una

@@ -11,6 +11,7 @@
 /// Se salta si el repositorio no está, para que la suite siga corriendo en una
 /// máquina que no lo tenga clonado.
 @TestOn('vm')
+@Tags(['real'])
 library;
 
 import 'dart:io';

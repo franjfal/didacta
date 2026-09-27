@@ -61,4 +61,17 @@
 \def\didactaExamName{Azterketa}
 \def\didactaDurationName{Iraupena}
 \def\didactaTotalMarksName{Puntuazio osoa}
+
+%% Cómo se escriben en este idioma las funciones que el castellano llama
+%% \sen, \tg, \arcsen, \arctg, \cotg, \cosec, \senh y \tgh. Ver
+%% `didacta.sty`: existen en todos los idiomas para que una traducción que
+%% copia las fórmulas tal cual compile, y aquí se decide cómo se leen.
+\def\didactaSineName{sin}
+\def\didactaTangentName{tan}
+\def\didactaArcSineName{arcsin}
+\def\didactaArcTangentName{arctan}
+\def\didactaCotangentName{cot}
+\def\didactaCosecantName{csc}
+\def\didactaSinhName{sinh}
+\def\didactaTanhName{tanh}
 \endinput

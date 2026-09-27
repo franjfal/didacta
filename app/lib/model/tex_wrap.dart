@@ -29,6 +29,7 @@
 library;
 
 import 'tex_scan.dart';
+import '../l10n/tr.dart';
 
 /// El texto después de una operación, con lo que queda seleccionado.
 ///
@@ -58,26 +59,35 @@ enum TexWrapGroup {
 
   /// Teoremas y afines.
   theory,
+
+  /// Lo que solo lee el profesor.
+  teacher,
+
+  /// Lo que declara un repositorio y no trae Didacta: un snippet propio.
+  custom,
 }
 
 /// Un envoltorio de Didacta, con sus dos formas y sus nombres heredados.
 class TexWrapper {
   const TexWrapper({
     required this.id,
-    required this.label,
+    required this._label,
     required this.group,
     this.macro,
     this.environment,
     this.macroAliases = const [],
     this.environmentAliases = const [],
     this.block = false,
+    this.arguments = '',
+    this._groupLabel,
   }) : assert(macro != null || environment != null);
 
   /// Identificador estable, el de la forma preferida.
   final String id;
 
-  /// Lo que se lee en la barra.
-  final String label;
+  /// Lo que se lee en la barra, en el idioma de la interfaz.
+  String get label => tr(_label);
+  final String _label;
 
   final TexWrapGroup group;
 
@@ -93,6 +103,24 @@ class TexWrapper {
   /// Siempre entorno, aunque la selección sea una frase: un `exercise` o un
   /// `answer` de una línea sigue siendo un bloque.
   final bool block;
+
+  /// Lo que va entre el nombre y el cuerpo: `[Título]` en
+  /// `\begin{theorem}[Título]`, `{red}` en `\textcolor{red}{…}`.
+  ///
+  /// Se escribe tal cual al envolver, y al desenvolver se reconoce: un
+  /// `\textcolor{red}{…}` es «En rojo» y un `\textcolor{blue}{…}` no lo es.
+  /// En un entorno, un argumento opcional `[…]` se reconoce siempre --es lo
+  /// que ya hacía la barra con `\begin{exercise}[Norma]`--, lo declare el
+  /// snippet o no.
+  final String arguments;
+
+  /// El grupo con el que se enseña en el selector, si no es el de [group].
+  ///
+  /// Los de serie se agrupan por lo que son; un snippet propio dice dónde va
+  /// con una palabra --«Teoría», «Mis cajas»-- que no tiene por qué ser una
+  /// de las de Didacta.
+  String? get groupLabel => _groupLabel == null ? null : tr(_groupLabel);
+  final String? _groupLabel;
 
   List<String> get _allMacros => [?macro, ...macroAliases];
 
@@ -175,6 +203,12 @@ const List<TexWrapper> didactaWrappers = [
     group: TexWrapGroup.slide,
     environment: 'frame',
     block: true,
+  ),
+  TexWrapper(
+    id: 'didactatitle',
+    label: 'Título',
+    group: TexWrapGroup.slide,
+    macro: 'didactatitle',
   ),
   TexWrapper(
     id: 'exercise',
@@ -276,6 +310,45 @@ const List<TexWrapper> didactaWrappers = [
     block: true,
   ),
   TexWrapper(
+    id: 'property',
+    label: 'Propiedad',
+    group: TexWrapGroup.theory,
+    environment: 'property',
+    environmentAliases: ['pro', 'npro'],
+    block: true,
+  ),
+  TexWrapper(
+    id: 'question',
+    label: 'Cuestión',
+    group: TexWrapGroup.theory,
+    environment: 'question',
+    environmentAliases: ['ques', 'nques'],
+    block: true,
+  ),
+  TexWrapper(
+    id: 'axiom',
+    label: 'Axioma',
+    group: TexWrapGroup.theory,
+    environment: 'axiom',
+    environmentAliases: ['axioma', 'naxioma'],
+    block: true,
+  ),
+  TexWrapper(
+    id: 'notation',
+    label: 'Notación',
+    group: TexWrapGroup.theory,
+    environment: 'notation',
+    block: true,
+  ),
+  TexWrapper(
+    id: 'algorithm',
+    label: 'Algoritmo',
+    group: TexWrapGroup.theory,
+    environment: 'algorithm',
+    environmentAliases: ['recipe'],
+    block: true,
+  ),
+  TexWrapper(
     id: 'proof',
     label: 'Demostración',
     group: TexWrapGroup.theory,
@@ -295,6 +368,20 @@ const List<TexWrapper> didactaWrappers = [
     group: TexWrapGroup.theory,
     environment: 'keyformula',
     environmentAliases: ['nformula'],
+    block: true,
+  ),
+  TexWrapper(
+    id: 'teaching',
+    label: 'Nota didáctica',
+    group: TexWrapGroup.teacher,
+    environment: 'teaching',
+    block: true,
+  ),
+  TexWrapper(
+    id: 'commonmistake',
+    label: 'Error frecuente',
+    group: TexWrapGroup.teacher,
+    environment: 'commonmistake',
     block: true,
   ),
 ];
@@ -395,10 +482,6 @@ class _Span {
   final int bodyEnd;
   final int outerEnd;
 
-  /// Si es un entorno hay que llevarse también el salto de línea que dejaron
-  /// los delimitadores al ocupar su propia línea.
-  bool get isEnvironment => bodyStart - outerStart > 2;
-
   bool contains(int start, int end) => bodyStart <= start && end <= bodyEnd;
 }
 
@@ -411,13 +494,17 @@ _Span? _enclosing(String masked, TexWrapper wrapper, int start, int end) {
   }
   _Span? best;
   for (final name in wrapper._allMacros) {
-    for (final span in _macroSpans(masked, name)) {
+    for (final span in _macroSpans(masked, name, wrapper.arguments)) {
       if (!span.contains(start, end)) continue;
       if (best == null || span.bodyStart > best.bodyStart) best = span;
     }
   }
   for (final name in wrapper._allEnvironments) {
-    for (final span in _environmentSpans(masked, name)) {
+    for (final span in _environmentSpans(
+      masked,
+      name,
+      _braceGroups(wrapper.arguments),
+    )) {
       if (!span.contains(start, end)) continue;
       if (best == null || span.bodyStart > best.bodyStart) best = span;
     }
@@ -425,14 +512,24 @@ _Span? _enclosing(String masked, TexWrapper wrapper, int start, int end) {
   return best;
 }
 
-Iterable<_Span> _macroSpans(String masked, String name) sync* {
+Iterable<_Span> _macroSpans(
+  String masked,
+  String name, [
+  String arguments = '',
+]) sync* {
   final needle = '\\$name';
   var from = 0;
   while (true) {
     final at = masked.indexOf(needle, from);
     if (at < 0) return;
     from = at + needle.length;
-    final open = at + needle.length;
+    var open = at + needle.length;
+    // Con argumentos, los mismos: `\textcolor{red}{` es «En rojo» y
+    // `\textcolor{blue}{` es otra cosa.
+    if (arguments.isNotEmpty) {
+      if (!masked.startsWith(arguments, open)) continue;
+      open += arguments.length;
+    }
     // `\onlyslidesfoo{` no es `\onlyslides{`.
     if (open >= masked.length || masked[open] != '{') continue;
     final close = matchBrace(masked, open);
@@ -441,7 +538,11 @@ Iterable<_Span> _macroSpans(String masked, String name) sync* {
   }
 }
 
-Iterable<_Span> _environmentSpans(String masked, String name) sync* {
+Iterable<_Span> _environmentSpans(
+  String masked,
+  String name, [
+  int braces = 0,
+]) sync* {
   final open = '\\begin{$name}';
   final close = '\\end{$name}';
   var from = 0;
@@ -451,10 +552,26 @@ Iterable<_Span> _environmentSpans(String masked, String name) sync* {
     from = at + open.length;
 
     var bodyStart = at + open.length;
-    // El argumento opcional es parte del delimitador: `\begin{exercise}[Norma]`.
-    if (bodyStart < masked.length && masked[bodyStart] == '[') {
-      final shut = masked.indexOf(']', bodyStart);
-      if (shut > 0) bodyStart = shut + 1;
+    // Los argumentos son parte del delimitador: el opcional siempre
+    // --`\begin{exercise}[Norma]`--, y los de llave que declare el snippet
+    // --`\begin{frame}{Título}`--, que sin declararlos son el principio del
+    // cuerpo.
+    var pending = braces;
+    while (bodyStart < masked.length) {
+      if (masked[bodyStart] == '[') {
+        final shut = masked.indexOf(']', bodyStart);
+        if (shut < 0) break;
+        bodyStart = shut + 1;
+        continue;
+      }
+      if (masked[bodyStart] == '{' && pending > 0) {
+        final shut = matchBrace(masked, bodyStart);
+        if (shut == null) break;
+        bodyStart = shut + 1;
+        pending -= 1;
+        continue;
+      }
+      break;
     }
 
     var depth = 1;
@@ -486,17 +603,16 @@ TexEdit _unwrap(String text, _Span span) {
   var bodyStart = span.bodyStart;
   var bodyEnd = span.bodyEnd;
 
-  if (span.isEnvironment) {
-    // `\begin{x}\n` se lleva su salto, y el `\n` con la sangría que hubiera
-    // delante de `\end{x}` también: si no, desenvolver deja el cuerpo rodeado
-    // de líneas en blanco que nadie escribió.
-    if (bodyStart < text.length && text[bodyStart] == '\n') bodyStart += 1;
-    var j = bodyEnd - 1;
-    while (j >= bodyStart && (text[j] == ' ' || text[j] == '\t')) {
-      j -= 1;
-    }
-    if (j >= bodyStart && text[j] == '\n') bodyEnd = j;
+  // `\begin{x}\n` se lleva su salto, y el `\n` con la sangría que hubiera
+  // delante de `\end{x}` también: si no, desenvolver deja el cuerpo rodeado
+  // de líneas en blanco que nadie escribió. Lo mismo una orden que ocupa
+  // varias líneas, `\onlyslides{` en la suya y `}` en otra.
+  if (bodyStart < text.length && text[bodyStart] == '\n') bodyStart += 1;
+  var j = bodyEnd - 1;
+  while (j >= bodyStart && (text[j] == ' ' || text[j] == '\t')) {
+    j -= 1;
   }
+  if (j >= bodyStart && text[j] == '\n') bodyEnd = j;
 
   final body = text.substring(bodyStart, bodyEnd);
   final out =
@@ -514,14 +630,16 @@ TexEdit _wrap(String text, int start, int end, TexWrapper wrapper) {
           (wrapper.block || _needsEnvironment(body)));
 
   if (!asEnvironment) {
-    final open = '\\${wrapper.macro}{';
+    final open = '\\${wrapper.macro}${wrapper.arguments}{';
     final out = '${text.substring(0, from)}$open$body}${text.substring(to)}';
     return TexEdit(out, from + open.length, from + open.length + body.length);
   }
 
   final atLineStart = from == 0 || text[from - 1] == '\n';
   final atLineEnd = to == text.length || text[to] == '\n';
-  final open = '${atLineStart ? '' : '\n'}\\begin{${wrapper.environment}}\n';
+  final open =
+      '${atLineStart ? '' : '\n'}'
+      '\\begin{${wrapper.environment}}${wrapper.arguments}\n';
   final close = '\n\\end{${wrapper.environment}}${atLineEnd ? '' : '\n'}';
   final out =
       text.substring(0, from) + open + body + close + text.substring(to);
@@ -573,6 +691,26 @@ bool _needsEnvironment(String body) =>
     end -= 1;
   }
   return (start, end);
+}
+
+/// Cuántos argumentos de llave hay en [arguments]: `{a}[b]{c}` son dos.
+int _braceGroups(String arguments) {
+  var count = 0;
+  var depth = 0;
+  for (var i = 0; i < arguments.length; i += 1) {
+    final ch = arguments[i];
+    if (ch == r'\') {
+      i += 1;
+      continue;
+    }
+    if (ch == '{') {
+      if (depth == 0) count += 1;
+      depth += 1;
+    } else if (ch == '}') {
+      depth -= 1;
+    }
+  }
+  return count;
 }
 
 bool _isBlank(String ch) => ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';

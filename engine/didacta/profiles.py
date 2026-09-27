@@ -230,6 +230,39 @@ class Profile:
             extra.append("con resultados")
         return "%s (%s)" % (base, ", ".join(extra)) if extra else base
 
+    def label_in(self, language):
+        """[label], dicho en [language]: el nombre de un fichero repartido.
+
+        Lo que sale al exportar lo lee un estudiante, en su idioma: «Tema 1 -
+        Apunts.pdf» y no «Tema 1 - notes - va.pdf». Se compone igual que
+        [label], de los ejes, así que una plantilla nueva también tiene nombre
+        en todos los idiomas.
+        """
+        words = _LABEL_WORDS.get(language) or _LABEL_WORDS["es"]
+        if self.is_slides:
+            base = words["slides"]
+            if not self.pauses and not self.is_teacher:
+                base += " (%s)" % words["flat"]
+        elif self.layout == "exam":
+            base = words["exam"]
+        elif self.id.startswith("problems"):
+            base = words["problems"]
+        elif self.id == "book":
+            base = words["book"]
+        elif self.layout == "compact":
+            base = words["handout"]
+        else:
+            base = words["notes"]
+        if self.is_teacher:
+            extra = words["teacher"]
+        elif self.solutions == "full":
+            extra = words["solutions"]
+        elif self.solutions == "answers":
+            extra = words["answers"]
+        else:
+            extra = ""
+        return "%s (%s)" % (base, extra) if extra else base
+
     def __repr__(self):  # pragma: no cover - debugging aid
         return "Profile(%r, %s)" % (self.id, self.axes)
 
@@ -286,6 +319,56 @@ class Profile:
         # Everything can be stripped away -- a title of "%" leaves nothing --
         # and an empty jobname is a worse failure than a dull one.
         return name or "documento"
+
+
+#: Las palabras de [Profile.label_in], por idioma. Las de los diez que
+#: Didacta sabe imprimir; uno que no esté cae en castellano.
+_LABEL_WORDS = {
+    "es": {"slides": "Diapositivas", "flat": "sin pausas", "exam": "Examen",
+           "problems": "Hoja de problemas", "book": "Libro",
+           "handout": "Guía", "notes": "Apuntes", "teacher": "profesor",
+           "solutions": "con soluciones", "answers": "con resultados"},
+    "va": {"slides": "Diapositives", "flat": "sense pauses",
+           "exam": "Examen", "problems": "Full de problemes",
+           "book": "Llibre", "handout": "Guia", "notes": "Apunts",
+           "teacher": "professor", "solutions": "amb solucions",
+           "answers": "amb resultats"},
+    "ca": {"slides": "Diapositives", "flat": "sense pauses",
+           "exam": "Examen", "problems": "Full de problemes",
+           "book": "Llibre", "handout": "Guia", "notes": "Apunts",
+           "teacher": "professor", "solutions": "amb solucions",
+           "answers": "amb resultats"},
+    "gl": {"slides": "Diapositivas", "flat": "sen pausas", "exam": "Exame",
+           "problems": "Folla de problemas", "book": "Libro",
+           "handout": "Guía", "notes": "Apuntamentos", "teacher": "profesor",
+           "solutions": "con solucións", "answers": "con resultados"},
+    "eu": {"slides": "Diapositibak", "flat": "etenik gabe",
+           "exam": "Azterketa", "problems": "Ariketa-orria",
+           "book": "Liburua", "handout": "Gida", "notes": "Apunteak",
+           "teacher": "irakaslea", "solutions": "soluzioekin",
+           "answers": "emaitzekin"},
+    "en": {"slides": "Slides", "flat": "no pauses", "exam": "Exam",
+           "problems": "Problem sheet", "book": "Book", "handout": "Handout",
+           "notes": "Notes", "teacher": "teacher",
+           "solutions": "with solutions", "answers": "with answers"},
+    "fr": {"slides": "Diapositives", "flat": "sans pauses",
+           "exam": "Examen", "problems": "Feuille d'exercices",
+           "book": "Livre", "handout": "Fiche", "notes": "Notes de cours",
+           "teacher": "enseignant", "solutions": "avec solutions",
+           "answers": "avec résultats"},
+    "de": {"slides": "Folien", "flat": "ohne Pausen", "exam": "Prüfung",
+           "problems": "Übungsblatt", "book": "Buch", "handout": "Handout",
+           "notes": "Skript", "teacher": "Lehrkraft",
+           "solutions": "mit Lösungen", "answers": "mit Ergebnissen"},
+    "it": {"slides": "Diapositive", "flat": "senza pause", "exam": "Esame",
+           "problems": "Foglio di esercizi", "book": "Libro",
+           "handout": "Scheda", "notes": "Appunti", "teacher": "docente",
+           "solutions": "con soluzioni", "answers": "con risultati"},
+    "pt": {"slides": "Diapositivos", "flat": "sem pausas", "exam": "Exame",
+           "problems": "Folha de exercícios", "book": "Livro",
+           "handout": "Guia", "notes": "Apontamentos", "teacher": "professor",
+           "solutions": "com soluções", "answers": "com resultados"},
+}
 
 
 def _strip_comments(text):

@@ -230,6 +230,14 @@ void main() {
       }
     });
 
+    test('y los de las citas, que sin ellos no hay bibliografía', () {
+      expect(didactaTexPackages, containsAll(['biblatex', 'biber']));
+      for (final host in Host.values) {
+        // Sin biber se compila; se avisa con la orden de ese sistema.
+        expect(missingBiber(host), contains('tlmgr install biblatex biber'));
+      }
+    });
+
     test('sin repetidos: tlmgr los lee de una lista', () {
       expect(didactaTexPackages.toSet(), hasLength(didactaTexPackages.length));
     });

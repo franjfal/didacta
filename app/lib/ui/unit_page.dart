@@ -26,30 +26,45 @@ import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
+import '../data/diagnostics.dart';
+import '../data/draft_store.dart';
 import '../model/catalogue.dart';
+import '../model/file_history.dart' show FileCommit;
 import '../model/tex_indent.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'build_console.dart';
+import 'commit_dialog.dart' show DiffBox;
 import 'history_tab.dart';
 import 'metadata_editor.dart';
+import 'command_palette.dart';
+import 'new_unit.dart' show duplicateUnitFrom, moveUnitFrom;
 import 'pdf_tab.dart';
+import 'problem.dart';
 import 'unit_preview.dart';
 import 'shell.dart';
 import 'problem_editor.dart';
 import 'tabs.dart';
+import 'shortcuts.dart';
 import 'tex_field.dart';
+import 'tex_find_bar.dart';
 import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
+import 'tex_warnings.dart';
 import 'course_admin_ui.dart';
+import 'document_properties.dart' show languageNameOf;
 import 'freezes.dart';
 import 'reuse.dart';
+import 'save_review.dart';
+import 'save_shortcut.dart';
 import 'info_menu.dart';
 import 'theme.dart';
+import 'tour.dart';
 import 'translate_unit.dart';
+import '../l10n/tr.dart';
 
 class UnitPage extends StatefulWidget {
-  const UnitPage({super.key, required this.unitPath, this.language});
+  const UnitPage({super.key, required this.unitPath, this.language, this.line});
 
   final String unitPath;
 
@@ -57,6 +72,10 @@ class UnitPage extends StatefulWidget {
   /// tenga más sentido», que es lo que hace falta al entrar desde la
   /// biblioteca.
   final String? language;
+
+  /// La línea donde dejar el cursor, desde 1: se llega aquí desde un error
+  /// de compilación, y lo que se quiere ver es esa línea.
+  final int? line;
 
   @override
   State<UnitPage> createState() => _UnitPageState();
@@ -91,6 +110,36 @@ class _UnitPageState extends State<UnitPage> {
   /// One editor per language, created when its tab is first opened.
   final Map<String, _LanguageEditor> _editors = {};
   String? _active;
+
+  /// La línea a la que llevar el cursor en cuanto el texto esté cargado.
+  late int? _pendingLine = widget.line;
+
+  @override
+  void didUpdateWidget(UnitPage old) {
+    super.didUpdateWidget(old);
+    // La misma lección con otra dirección: otro error de la misma lista, que
+    // puede ser de otro idioma y de otra línea.
+    if (widget.language != null && widget.language != old.language) {
+      _active = widget.language;
+    }
+    if (widget.line != old.line) _pendingLine = widget.line;
+  }
+
+  /// Si hay una línea pendiente y el texto ya está, lleva allí el cursor.
+  void _goToPendingLine(List<String> languages) {
+    final line = _pendingLine;
+    final active = _active;
+    if (line == null || active == null || !_isLanguage(active, languages)) {
+      return;
+    }
+    final editor = _editors[active];
+    if (editor == null || editor.loading) return;
+    _pendingLine = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      editor.goTo(offsetOfLine(editor.controller.text, line));
+    });
+  }
 
   /// Las pestañas de PDF abiertas, en el orden en que se abrieron.
   ///
@@ -214,26 +263,35 @@ class _UnitPageState extends State<UnitPage> {
 
     setState(() => _open[at] = _open[at].replacing(pane.working()));
 
-    final console = session.buildConsole;
-    console.start('${pane.profile} · $language');
-    unawaited(showBuildConsole(context, console, autoClose: true));
+    unawaited(showBuildConsole(context, session.buildConsole, autoClose: true));
 
     try {
-      final results = await compiler.compile(
-        unitPath: unit.path,
-        profiles: [pane.profile],
-        languages: [language],
-        onOutput: console.add,
-      );
-      console.finish(ok: results.every((result) => result.ok));
+      // Por la cola: si ya se compila otra cosa, espera su turno.
+      final results = await session.runBuild('${pane.profile} · $language', (
+        console,
+      ) async {
+        final made = await compiler.compile(
+          unitPath: unit.path,
+          profiles: [pane.profile],
+          languages: [language],
+          onOutput: console.add,
+        );
+        console.finish(ok: made.every((result) => result.ok));
+        return made;
+      });
       if (!mounted) return;
-      final result = results.firstOrNull;
       // El índice se vuelve a buscar: entre el await y aquí alguien puede
       // haber cerrado la pestaña o separado el panel.
       final now = _open.indexWhere((group) => group.id == groupId);
       if (now < 0) return;
       final current = _open[now].pane(language);
       if (current == null) return;
+      // Detenida: el panel vuelve a como estaba, sin error que decir.
+      if (results == null) {
+        setState(() => _open[now] = _open[now].replacing(current.idle()));
+        return;
+      }
+      final result = results.firstOrNull;
 
       setState(() {
         _open[now] = _open[now].replacing(
@@ -246,10 +304,9 @@ class _UnitPageState extends State<UnitPage> {
       });
 
       if (result != null && !result.ok) {
-        _say(result.errors.isEmpty ? 'No compiló.' : result.errors.first);
+        _say(result.errors.isEmpty ? tr('No compiló.') : result.errors.first);
       }
     } catch (error) {
-      console.finish(failure: error);
       if (!mounted) return;
       final now = _open.indexWhere((group) => group.id == groupId);
       if (now >= 0) {
@@ -317,23 +374,54 @@ class _UnitPageState extends State<UnitPage> {
   /// sería cobrarlo casi siempre por nada.
   HistoryState? _history;
 
+  /// La sesión en la que se apuntó lo que hay sin guardar, para borrarlo al
+  /// cerrarse: en `dispose` ya no se puede buscar en el contexto.
+  Session? _session;
+
   @override
   void dispose() {
+    _session?.unsaved.mark(this, null);
     for (final editor in _editors.values) {
       editor.dispose();
     }
+    _original?.dispose();
     _history?.dispose();
     super.dispose();
   }
 
+  /// Qué hay sin guardar en esta lección, dicho para el aviso de salir.
+  String? _unsavedIn(Unit unit, Session session) {
+    final dirty = [
+      for (final editor in _editors.values)
+        if (editor.isDirty) editor.language,
+    ];
+    if (dirty.isEmpty) return null;
+    return tr('«{0}» en {1}', [unit.title(session.language), dirty.join(', ')]);
+  }
+
+  // El panel, los editores lado a lado y la interfaz avisan por los
+  // ajustes, no por la sesión.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final session = watchSession(context);
     final unit = session.unitByPath(widget.unitPath);
+    _session = session;
 
     if (unit == null) {
       return _Missing(path: widget.unitPath);
     }
+    // Para «Abiertas hace poco» de la biblioteca.
+    session.noteOpened(unit);
+    session.unsaved.mark(
+      this,
+      _unsavedIn(unit, session),
+      place: Routes.unit(unit.path),
+    );
 
     final languages = languagesOfUnit(session, unit);
     // El de la dirección manda: se llega aquí desde «esto falta por
@@ -347,16 +435,115 @@ class _UnitPageState extends State<UnitPage> {
     // partir de mil píxeles, así que por debajo su botón ofrece algo que no
     // va a pasar --y desde que la ⓘ ocupa su sitio, además estrechaba el
     // título hasta hacerlo saltar de línea y desbordar la pantalla.
-    return LayoutBuilder(
-      builder: (context, page) => _body(
-        context,
-        session,
-        unit,
-        languages,
-        roomy: page.maxWidth >= 1000,
+    _goToPendingLine(languages);
+    return PaletteCommands(
+      commands: (context) => _paletteCommands(context, unit, languages),
+      child: LayoutBuilder(
+        builder: (context, page) => _body(
+          context,
+          session,
+          unit,
+          languages,
+          roomy: page.maxWidth >= 1000,
+        ),
       ),
     );
   }
+
+  /// Lo que ofrece la paleta de órdenes en esta lección: guardar lo que se
+  /// está escribiendo, ir a otra pestaña y lo del menú ⓘ.
+  List<PaletteCommand> _paletteCommands(
+    BuildContext context,
+    Unit unit,
+    List<String> languages,
+  ) {
+    final session = sessionOf(context);
+    final active = _active;
+    final editor = active == null ? null : _editors[active];
+    final writable = !session.isFrozen && session.canWriteIn(unit.repo);
+    final canAdmin = writable && session.admin(repo: unit.repo) != null;
+    void show(String tab) {
+      if (mounted) setState(() => _active = tab);
+    }
+
+    return [
+      if (editor != null && editor.isDirty && writable)
+        PaletteCommand(
+          title: tr(
+            'Guardar «{0}» en '
+            '{1}',
+            [unit.title(session.language), _languageName(session, active!)],
+          ),
+          keywords: tr('guardar commit'),
+          icon: Icons.save_outlined,
+          shortcut: AppShortcut.save,
+          run: () => _saveEditor(this.context, editor),
+        ),
+      for (final option in session.namedLanguages(languages))
+        if (option.code != active)
+          PaletteCommand(
+            title: tr('Editar en {0}', [option.name]),
+            detail: unit.title(session.language),
+            keywords: tr('idioma pestaña {0}', [option.code]),
+            icon: Icons.edit_outlined,
+            run: () => show(option.code),
+          ),
+      if (active != previewTab)
+        PaletteCommand(
+          title: tr('Compilar y ver el PDF'),
+          keywords: tr('vista previa pdf compilar'),
+          icon: Icons.picture_as_pdf_outlined,
+          run: () => show(previewTab),
+        ),
+      if (active != metadataTab)
+        PaletteCommand(
+          title: tr('Ver los metadatos'),
+          keywords: tr('unit.yaml ficha etiquetas prerrequisitos'),
+          icon: Icons.tune,
+          run: () => show(metadataTab),
+        ),
+      if (active != historyTab)
+        PaletteCommand(
+          title: tr('Ver el historial'),
+          keywords: tr('versiones cambios anteriores git'),
+          icon: Icons.history,
+          run: () => show(historyTab),
+        ),
+      if (active != null && _isLanguage(active, languages))
+        PaletteCommand(
+          title: session.splitEditors
+              ? tr('Un idioma cada vez')
+              : tr('Los idiomas lado a lado'),
+          keywords: tr('dividir editores comparar'),
+          icon: Icons.vertical_split_outlined,
+          run: () => session.setSplitEditors(!session.splitEditors),
+        ),
+      if (writable)
+        PaletteCommand(
+          title: tr('Darla en otro tema…'),
+          keywords: tr('usar añadir documento curso'),
+          icon: Icons.playlist_add,
+          run: () => _useUnit(this.context, session, unit),
+        ),
+      if (canAdmin) ...[
+        PaletteCommand(
+          title: tr('Duplicar esta lección…'),
+          keywords: tr('copiar copia'),
+          icon: Icons.copy_outlined,
+          run: () => duplicateUnitFrom(this.context, session, unit),
+        ),
+        PaletteCommand(
+          title: tr('Mover o renombrar esta lección…'),
+          keywords: tr('carpeta nombre'),
+          icon: Icons.drive_file_move_outline,
+          run: () => moveUnitFrom(this.context, session, unit),
+        ),
+      ],
+    ];
+  }
+
+  static String _languageName(Session session, String code) =>
+      session.namedLanguages([code]).first.name;
 
   Widget _body(
     BuildContext context,
@@ -374,7 +561,7 @@ class _UnitPageState extends State<UnitPage> {
           subtitle: session.colourOf(unit.repo) != null
               ? '${unit.repo} · ${unit.path}'
               : unit.path,
-          breadcrumbs: [('Biblioteca', Routes.library())],
+          breadcrumbs: [(tr('Biblioteca'), Routes.library())],
           actions: [
             // Solo cuando la pestaña activa es un idioma: partir en dos no
             // significa nada en `unit.yaml`, en compilar ni en un PDF.
@@ -396,18 +583,37 @@ class _UnitPageState extends State<UnitPage> {
                     document: use.document,
                   ),
               ],
-              placesLabel: 'Se da en',
-              placesEmpty:
-                  'Ninguna composición la referencia. Después de una '
-                  'migración esto es material que llegó y no se está dando.',
+              placesLabel: tr('Se da en'),
+              placesEmpty: tr(
+                'Ninguna composición la referencia. Después de una '
+                'migración esto es material que llegó y no se está dando.',
+              ),
+              // En Completa. La franja que sale al editar una lección que se
+              // da en varios cursos lo sigue ofreciendo a todos: ahí es parte
+              // de no romper la asignatura de otro, y eso no es opcional.
               onSplit:
-                  !session.isFrozen &&
+                  session.completeInterface &&
+                      !session.isFrozen &&
                       unit.usedBy.length > 1 &&
                       session.canWriteIn(unit.repo)
                   ? () => _splitUnit(context, session, unit)
                   : null,
               onUse: !session.isFrozen && session.canWriteIn(unit.repo)
                   ? () => _useUnit(context, session, unit)
+                  : null,
+              onDuplicate:
+                  !session.isFrozen &&
+                      session.canWriteIn(unit.repo) &&
+                      session.admin(repo: unit.repo) != null
+                  ? () => duplicateUnitFrom(context, session, unit)
+                  : null,
+              // Para todos: reescribe las composiciones de otros cursos, y
+              // por eso el diálogo los nombra antes de confirmar.
+              onMove:
+                  !session.isFrozen &&
+                      session.canWriteIn(unit.repo) &&
+                      session.admin(repo: unit.repo) != null
+                  ? () => moveUnitFrom(context, session, unit)
                   : null,
               onRestore: session.isFrozen
                   ? () => _restoreUnit(context, session, unit)
@@ -416,8 +622,8 @@ class _UnitPageState extends State<UnitPage> {
             if (roomy)
               IconButton(
                 tooltip: session.unitPanelVisible
-                    ? 'Ocultar el panel de la derecha'
-                    : 'Mostrar el panel de la derecha',
+                    ? tr('Ocultar el panel de la derecha')
+                    : tr('Mostrar el panel de la derecha'),
                 isSelected: session.unitPanelVisible,
                 icon: const Icon(Icons.view_sidebar_outlined, size: 18),
                 selectedIcon: const Icon(Icons.view_sidebar, size: 18),
@@ -425,16 +631,21 @@ class _UnitPageState extends State<UnitPage> {
                   context,
                 ).setUnitPanelVisible(!session.unitPanelVisible),
               ),
-            IconButton(
-              tooltip: 'Copiar la referencia para una composición',
-              icon: const Icon(Icons.content_copy_outlined, size: 18),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: unit.reference_));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Copiado: ${unit.reference_}')),
-                );
-              },
-            ),
+            if (session.completeInterface)
+              IconButton(
+                tooltip: tr('Copiar la referencia para una composición'),
+                icon: const Icon(Icons.content_copy_outlined, size: 18),
+                onPressed: () {
+                  unawaited(
+                    Clipboard.setData(ClipboardData(text: unit.reference_)),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(tr('Copiado: {0}', [unit.reference_])),
+                    ),
+                  );
+                },
+              ),
           ],
           bottom: _LanguageTabs(
             unit: unit,
@@ -453,8 +664,11 @@ class _UnitPageState extends State<UnitPage> {
               // Al volver a un PDF o a compilar, se vuelven a mirar las
               // fechas: puede haberse guardado un `.tex` mientras tanto.
               if (code == previewTab || code.startsWith(pdfTabPrefix)) {
-                _refreshStaleness(session);
-                if (code == previewTab) _preview?.refreshExisting();
+                unawaited(_refreshStaleness(session));
+                final preview = _preview;
+                if (code == previewTab && preview != null) {
+                  unawaited(preview.refreshExisting());
+                }
               }
             },
             onClose: _closePdf,
@@ -475,9 +689,12 @@ class _UnitPageState extends State<UnitPage> {
                   children: [
                     Expanded(child: editor),
                     const VerticalDivider(width: 1),
-                    SizedBox(
-                      width: 340,
-                      child: _UnitPanel(unit: unit, session: session),
+                    TourTarget(
+                      id: 'unit-used',
+                      child: SizedBox(
+                        width: 340,
+                        child: _UnitPanel(unit: unit, session: session),
+                      ),
                     ),
                   ],
                 );
@@ -516,7 +733,19 @@ class _UnitPageState extends State<UnitPage> {
         session: session,
         languages: languages,
         active: active,
-        editorFor: (language) => _editorFor(unit, language, session),
+        // Con varios a la vez, el tour señala el de la pestaña elegida: la
+        // marca es una clave global y no puede estar en dos.
+        editorFor: (language) => _editorFor(
+          unit,
+          language,
+          session,
+          tour: language == active,
+          // Revisando una traducción, el original se lee y no se toca: una
+          // corrección que cae en el original por error cambia lo que dicen
+          // todas las traducciones. Se pulsa su cabecera para editarlo.
+          locked: language == unit.reference && active != unit.reference,
+        ),
+        scrollOf: (language) => _editors[language]?.scroll,
         onSelect: (language) => setState(() => _active = language),
       );
     }
@@ -532,7 +761,12 @@ class _UnitPageState extends State<UnitPage> {
       // La ruta del fichero que se está mirando, no la de la unidad: el
       // historial contesta «¿qué le ha pasado a **esto**?», y en una unidad
       // eso es el `.tex` del idioma abierto.
-      historyTab => HistoryTab(state: _historyFor(unit, session)),
+      historyTab => HistoryTab(
+        state: _historyFor(unit, session),
+        onRecover: session.canWriteIn(unit.repo)
+            ? (text, commit) => _recover(unit, session, text, commit)
+            : null,
+      ),
       previewTab => UnitPreview(
         onOpen: _openPdf,
         state: _preview ??= PreviewState(
@@ -567,20 +801,57 @@ class _UnitPageState extends State<UnitPage> {
     );
   }
 
+  /// Lleva una versión del historial al editor de su idioma, sin guardar.
+  ///
+  /// Como cualquier otra edición: el editor queda con cambios, Guardar pide
+  /// el mensaje y enseña el diff, y Descartar vuelve a lo de ahora.
+  Future<void> _recover(
+    Unit unit,
+    Session session,
+    String text,
+    FileCommit commit,
+  ) async {
+    final language = _historyLanguageFor(unit, session);
+    _editorFor(unit, language, session);
+    final editor = _editors[language];
+    if (editor == null) return;
+    await editor.ready;
+    if (!mounted) return;
+    editor.replaceText(text);
+    setState(() {
+      _lastLanguage = language;
+      _active = language;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const Key('recovered-notice'),
+        duration: const Duration(seconds: 8),
+        content: Text(
+          tr(
+            'La versión del {0} está en el editor, sin '
+            'guardar. Guardar la deja como la de ahora; Descartar vuelve atrás.',
+            [exactDay(commit.when)],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// El idioma del fichero cuyo historial se enseña.
+  String _historyLanguageFor(Unit unit, Session session) {
+    final languages = languagesOfUnit(session, unit);
+    final last = _lastLanguage;
+    return last != null && languages.contains(last) ? last : unit.reference;
+  }
+
   /// De qué fichero se enseña el historial.
   ///
   /// El del idioma que estaba abierto, y el de referencia si se llegó aquí
   /// desde otra pestaña. Una unidad son tres o cuatro ficheros y el historial
   /// es de uno: enseñar el de `es.tex` estando en el valenciano sería
   /// contestar a otra pregunta.
-  String _historyPathFor(Unit unit, Session session) {
-    final languages = languagesOfUnit(session, unit);
-    final last = _lastLanguage;
-    final language = last != null && languages.contains(last)
-        ? last
-        : unit.reference;
-    return unit.fileFor(language);
-  }
+  String _historyPathFor(Unit unit, Session session) =>
+      unit.fileFor(_historyLanguageFor(unit, session));
 
   Future<void> _external(
     Session session,
@@ -599,9 +870,7 @@ class _UnitPageState extends State<UnitPage> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      showProblem(context, error);
     }
   }
 
@@ -625,7 +894,38 @@ class _UnitPageState extends State<UnitPage> {
     return unit.reference;
   }
 
-  Widget _editorFor(Unit unit, String language, Session session) {
+  /// El original leído aparte, solo para comparar las fórmulas de una
+  /// traducción cuando su pestaña no está abierta. No es un editor: no tiene
+  /// pestaña, ni cambios sin guardar, ni borrador.
+  TextEditingController? _original;
+  String? _originalPath;
+
+  TextEditingController _originalOf(Unit unit, Session session) {
+    final path = unit.fileFor(unit.reference);
+    if (_original != null && _originalPath == path) return _original!;
+    _original?.dispose();
+    final controller = TextEditingController();
+    _original = controller;
+    _originalPath = path;
+    unawaited(() async {
+      try {
+        final file = await session.gatewayFor(unit.repo).read(path);
+        if (identical(_original, controller)) controller.text = file.text;
+      } catch (caught, trace) {
+        Diagnostics.instance.note('unit_page._originalOf', caught, trace);
+        // Sin original no hay con qué comparar: el panel no dice nada.
+      }
+    }());
+    return controller;
+  }
+
+  Widget _editorFor(
+    Unit unit,
+    String language,
+    Session session, {
+    bool tour = true,
+    bool locked = false,
+  }) {
     final editor = _editors.putIfAbsent(
       language,
       () => _LanguageEditor(
@@ -639,7 +939,20 @@ class _UnitPageState extends State<UnitPage> {
     // sobrevive a un cambio de pestaña y a una recarga, y lo que la unidad
     // dice de sí misma --su estado, su título-- cambia por debajo.
     editor.unit = unit;
-    return _EditorView(editor: editor, unit: unit, language: language);
+    // Una traducción se compara con su original: las fórmulas tienen que
+    // ser las mismas. El del original es un editor como los demás --si ya
+    // está abierto, el mismo, con lo que se esté escribiendo en él--.
+    editor.original =
+        language == unit.reference || !unit.statusIn(unit.reference).exists
+        ? null
+        : (_editors[unit.reference]?.controller ?? _originalOf(unit, session));
+    return _EditorView(
+      editor: editor,
+      unit: unit,
+      language: language,
+      tour: tour,
+      locked: locked,
+    );
   }
 }
 
@@ -660,8 +973,18 @@ class _LanguageEditor {
     // during build. A microtask puts the whole of it after the frame's build
     // phase. Nothing is lost by waiting -- `loading` already starts true, so
     // the screen shows the spinner on the very first frame either way.
-    scheduleMicrotask(load);
+    scheduleMicrotask(() async {
+      await load();
+      if (!_firstLoad.isCompleted) _firstLoad.complete();
+    });
   }
+
+  final Completer<void> _firstLoad = Completer<void>();
+
+  /// Cuando el fichero ya se ha leído la primera vez. Quien quiera poner algo
+  /// en el editor --una versión recuperada del historial-- espera a esto:
+  /// antes, la lectura lo pisaría.
+  Future<void> get ready => _firstLoad.future;
 
   /// La unidad, **refrescada en cada `build`** de la página.
   ///
@@ -677,11 +1000,20 @@ class _LanguageEditor {
   final Session session;
   final VoidCallback onChanged;
 
+  /// El texto del original, si este es una traducción: con él se comparan
+  /// las fórmulas. El del editor del original si está abierto --con lo que
+  /// se esté escribiendo en él--, o una lectura aparte si no.
+  TextEditingController? original;
+
   /// Pinta el LaTeX que contiene: órdenes, comentarios, matemáticas y los
   /// delimitadores de cada entorno, del color de ese entorno. Un fichero
   /// suelto calcula su propio árbol, así que aquí también sale en rojo lo que
   /// se quedó sin cerrar.
   final TexEditingController controller = TexEditingController();
+
+  /// El desplazamiento del texto, para que el modo lado a lado lleve a la
+  /// vez el original y la traducción.
+  final ScrollController scroll = ScrollController();
 
   /// El foco del área de texto. Aquí y no en el widget por lo mismo que el
   /// controlador: la barra devuelve el cursor al editor después de envolver,
@@ -713,6 +1045,56 @@ class _LanguageEditor {
     onChanged();
   }
 
+  /// Si la barra de buscar está abierta, y lo que busca al abrirse.
+  bool finding = false;
+  String findInitial = '';
+  final GlobalKey<TexFindBarState> findBar = GlobalKey<TexFindBarState>();
+
+  /// ⌘F: abre la barra de buscar, o le devuelve el foco si ya estaba.
+  ///
+  /// Con lo seleccionado como búsqueda, si es un trozo de una línea: es lo
+  /// que se quiere encontrar otra vez casi siempre. Desde los campos de un
+  /// problema, pasando al texto, que es donde se busca.
+  void openFind() {
+    if (finding) {
+      findBar.currentState?.focusQuery();
+      return;
+    }
+    final selection = controller.selection;
+    final picked = selection.isValid && !selection.isCollapsed
+        ? selection.textInside(controller.text)
+        : '';
+    findInitial = picked.contains('\n') ? '' : picked;
+    finding = true;
+    if (asFields) {
+      setAsFields(false);
+    } else {
+      onChanged();
+    }
+  }
+
+  void closeFind() {
+    finding = false;
+    onChanged();
+  }
+
+  /// Lleva el cursor a [offset] del fichero, con el foco en el texto.
+  ///
+  /// Desde los campos de un problema, pasando antes al texto: un aviso
+  /// nombra una línea del fichero, y en los campos no hay líneas.
+  void goTo(int offset) {
+    void place() {
+      controller.selection = TextSelection.collapsed(
+        offset: offset.clamp(0, controller.text.length),
+      );
+      focusNode.requestFocus();
+    }
+
+    if (!asFields) return place();
+    setAsFields(false);
+    WidgetsBinding.instance.addPostFrameCallback((_) => place());
+  }
+
   /// Sustituye el fichero entero, desde los campos.
   ///
   /// Por el mismo controlador que el editor de texto, y no por un camino
@@ -726,7 +1108,53 @@ class _LanguageEditor {
 
   bool get exists => unit.statusIn(language).exists;
 
-  void _onEdit() => onChanged();
+  /// Lo que quedó escrito y sin guardar la última vez, si Didacta se cerró
+  /// antes de guardarlo. Se ofrece al abrir; ver `data/draft_store.dart`.
+  Draft? recovered;
+
+  String get _draftKey => '${unit.repo}|${unit.fileFor(language)}';
+
+  Timer? _draftTimer;
+
+  void _onEdit() {
+    onChanged();
+    // Con un respiro: copiarlo a cada tecla es escribir en disco a cada
+    // tecla, y lo que importa es no perder más de un segundo de trabajo.
+    if (loading) return;
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 800), _keepDraft);
+  }
+
+  Future<void> _keepDraft() async {
+    if (controller.text == _loadedText) {
+      await session.drafts.delete(_draftKey);
+    } else {
+      await session.drafts.write(
+        _draftKey,
+        Draft(
+          text: controller.text,
+          base: file?.sha ?? '',
+          when: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  /// Vuelve a poner lo recuperado en el editor, como cambio sin guardar.
+  void restoreDraft() {
+    final draft = recovered;
+    if (draft == null) return;
+    recovered = null;
+    controller.text = draft.text;
+  }
+
+  /// Tira el borrador: ni se recupera ni se vuelve a ofrecer.
+  Future<void> forgetDraft() async {
+    _draftTimer?.cancel();
+    recovered = null;
+    await session.drafts.delete(_draftKey);
+    onChanged();
+  }
 
   Future<void> load() async {
     loading = true;
@@ -758,6 +1186,14 @@ class _LanguageEditor {
         _loadedText = loaded.text;
         controller.text = loaded.text;
       }
+      // Si quedó algo sin guardar de la última vez, se ofrece; si es lo
+      // mismo que hay en el fichero, sobra.
+      final draft = await session.drafts.read(_draftKey);
+      if (draft != null && draft.text != _loadedText) {
+        recovered = draft;
+      } else if (draft != null) {
+        await session.drafts.delete(_draftKey);
+      }
     } catch (thrown) {
       error = thrown;
     } finally {
@@ -788,8 +1224,8 @@ class _LanguageEditor {
   /// nobody reads.
   String suggestedMessage() {
     final title = unit.title(language);
-    if (!exists) return 'Añadir la versión $language de «$title»';
-    return 'Editar la versión $language de «$title»';
+    if (!exists) return tr('Añadir la versión {0} de «{1}»', [language, title]);
+    return tr('Editar la versión {0} de «{1}»', [language, title]);
   }
 
   Future<String?> save(String message) async {
@@ -818,6 +1254,10 @@ class _LanguageEditor {
       if (controller.text != text) controller.text = text;
       _loadedText = text;
       file = ContentFile(path: unit.fileFor(language), text: text, sha: sha);
+      // Guardado: el borrador ya no protege nada.
+      _draftTimer?.cancel();
+      recovered = null;
+      await session.drafts.delete(_draftKey);
       return null;
     } on ContentException catch (thrown) {
       if (thrown.kind == ContentFailure.conflict) conflicted = true;
@@ -830,10 +1270,64 @@ class _LanguageEditor {
     }
   }
 
+  /// Si esta versión se puede dar por revisada desde aquí: una traducción
+  /// que existe, que nadie ha revisado todavía o que se ha quedado atrás.
+  bool get canApprove {
+    if (language == unit.reference || !exists) return false;
+    final status = unit.statusIn(language);
+    return status == TranslationStatus.draft ||
+        status == TranslationStatus.translated ||
+        status == TranslationStatus.outdated;
+  }
+
+  /// La da por revisada, con lo que se haya corregido, en un solo cambio.
+  /// Ver [Session.approveTranslation]. Null si fue bien; si no, por qué.
+  Future<String?> approve() async {
+    saving = true;
+    conflicted = false;
+    onChanged();
+    try {
+      final text = !isDirty
+          ? null
+          : unit.indentsIn(language)
+          ? await session.tidyLatex(controller.text)
+          : controller.text;
+      final written = await session.approveTranslation(
+        unit: unit,
+        language: language,
+        text: text,
+        sha: file?.sha ?? '',
+      );
+      if (text != null) {
+        if (controller.text != text) controller.text = text;
+        _loadedText = text;
+        if (written != null) file = written;
+        _draftTimer?.cancel();
+        recovered = null;
+        await session.drafts.delete(_draftKey);
+      }
+      return null;
+    } on ContentException catch (thrown) {
+      if (thrown.kind == ContentFailure.conflict) conflicted = true;
+      return thrown.message;
+    } catch (thrown) {
+      return thrown.toString();
+    } finally {
+      saving = false;
+      onChanged();
+    }
+  }
+
+  /// Al cerrar la pantalla, el borrador se va con ella: salir es haber
+  /// decidido --con el aviso delante-- no guardarlo. Solo sobrevive a lo que
+  /// no pasa por aquí, que es justo cerrarse de golpe.
   void dispose() {
+    _draftTimer?.cancel();
+    unawaited(session.drafts.delete(_draftKey));
     controller.removeListener(_onEdit);
     controller.dispose();
     focusNode.dispose();
+    scroll.dispose();
   }
 }
 
@@ -842,14 +1336,28 @@ class _EditorView extends StatelessWidget {
     required this.editor,
     required this.unit,
     required this.language,
+    this.tour = true,
+    this.locked = false,
   });
 
   final _LanguageEditor editor;
   final Unit unit;
   final String language;
 
+  /// Si su barra es la que señala el tour.
+  final bool tour;
+
+  /// De solo lectura aunque se pueda escribir: el original, mientras se
+  /// revisa una traducción al lado.
+  final bool locked;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     if (editor.loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -862,7 +1370,7 @@ class _EditorView extends StatelessWidget {
       );
     }
 
-    final canWrite = watchSession(context).canWriteIn(unit.repo);
+    final canWrite = watchSession(context).canWriteIn(unit.repo) && !locked;
     // Los tres campos, para los problemas. Lo decide el tipo de la unidad y
     // no el árbol donde vive: una teoría o un ejemplo dentro de una práctica
     // se escriben de corrido. Y el fichero manda por encima de eso: si no
@@ -871,29 +1379,75 @@ class _EditorView extends StatelessWidget {
     // esconder el botón.
     final structured = unit.editsAsProblem;
 
+    return SaveShortcut(
+      onSave: canWrite && editor.isDirty && !editor.saving
+          ? () => _saveEditor(context, editor)
+          : null,
+      // Buscar en el texto, aquí: en la biblioteca ⌘F busca en la biblioteca,
+      // y dentro de una lección lo que se busca está en la lección.
+      child: CallbackShortcuts(
+        bindings: {
+          activatorFor(AppShortcut.search): editor.openFind,
+          findNextActivator(): () => editor.findBar.currentState?.go(1),
+          findNextActivator(back: true): () =>
+              editor.findBar.currentState?.go(-1),
+        },
+        child: _editorColumn(context, canWrite, structured),
+      ),
+    );
+  }
+
+  Widget _editorColumn(BuildContext context, bool canWrite, bool structured) {
     return Column(
       children: [
-        _EditorBar(
-          editor: editor,
-          canWrite: canWrite,
-          // El interruptor sale **siempre**, también en una lección que no
-          // tiene campos: decir «estás viendo el LaTeX entero» es lo que
-          // contesta «¿dónde veo el LaTeX entero?», y un control que aparece y
-          // desaparece según el tipo de unidad es una pantalla que nadie sabe
-          // describir. En las que no son problemas, «Campos» está apagado y
-          // dice por qué.
-          fields: structured && editor.asFields,
-          hasFields: structured,
-          onFields: structured ? (value) => editor.setAsFields(value) : null,
+        TourTarget.first(
+          id: 'unit-editor',
+          when: tour,
+          child: _EditorBar(
+            editor: editor,
+            canWrite: canWrite,
+            // El interruptor sale **siempre**, también en una lección que no
+            // tiene campos: decir «estás viendo el LaTeX entero» es lo que
+            // contesta «¿dónde veo el LaTeX entero?», y un control que aparece y
+            // desaparece según el tipo de unidad es una pantalla que nadie sabe
+            // describir. En las que no son problemas, «Campos» está apagado y
+            // dice por qué.
+            fields: structured && editor.asFields,
+            hasFields: structured,
+            onFields: structured ? (value) => editor.setAsFields(value) : null,
+          ),
         ),
+        // Encima del texto y sin forma de cerrarla: el «Se da en» del panel
+        // se puede tener oculto, y lo que se guarda aquí cambia en todos esos
+        // cursos a la vez. Solo en el editor activo, que con dos lado a lado
+        // la franja repetida no dice nada más.
+        if (tour && canWrite && !watchSession(context).isFrozen)
+          SharedLessonStrip(
+            unit: unit,
+            onSplit: () => _splitUnit(context, sessionOf(context), editor.unit),
+          ),
+        // Desactualizada: el original ha cambiado desde que se revisó. Lo que
+        // hace falta para ponerla al día es saber qué, y está a un clic.
+        if (language != unit.reference &&
+            unit.statusIn(language) == TranslationStatus.outdated)
+          _OutdatedStrip(unit: unit, language: language),
+        if (editor.recovered case final draft?)
+          _RecoveredDraft(
+            draft: draft,
+            changedSince: draft.base != (editor.file?.sha ?? ''),
+            onRestore: editor.restoreDraft,
+            onForget: editor.forgetDraft,
+          ),
         if (editor.conflicted)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Note(
-              'El fichero ha cambiado en el repositorio desde que lo abriste. '
-              'Vuelve a cargarlo para no sobrescribir el trabajo de otra '
-              'persona; tu texto sigue aquí mientras decides.',
-              tone: didactaTeacher,
+              tr(
+                'El fichero ha cambiado en el repositorio desde que lo abriste. '
+                'Vuelve a cargarlo para no sobrescribir el trabajo de otra '
+                'persona; tu texto sigue aquí mientras decides.',
+              ),
+              tone: context.palette.teacher,
             ),
           )
         else if (!editor.exists)
@@ -903,14 +1457,25 @@ class _EditorView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Note(
-                  'No existe la versión en $language de esta unidad. Lo que '
-                  'se escriba aquí la crea, y hasta entonces ningún documento '
-                  'que la use se puede compilar en $language.'
-                  '${canWrite ? '\n\nPara traducir con el original delante, '
-                            'marca «lado a lado» arriba: así se ve al lado y '
-                            'no se puede guardar por error como si fuera '
-                            'esta.' : ''}',
-                  tone: didactaTeacher,
+                  tr(
+                    'No existe la versión en {0} de esta unidad. Lo que '
+                    'se escriba aquí la crea, y hasta entonces ningún documento '
+                    'que la use se puede compilar en {1}.'
+                    '{2}',
+                    [
+                      language,
+                      language,
+                      canWrite
+                          ? tr(
+                              '\n\nPara traducir con el original delante, '
+                              'marca «lado a lado» arriba: así se ve al lado y '
+                              'no se puede guardar por error como si fuera '
+                              'esta.',
+                            )
+                          : '',
+                    ],
+                  ),
+                  tone: context.palette.teacher,
                 ),
                 // Traducir esta pestaña, desde esta pestaña. Aquí y no solo
                 // en la lista de traducciones porque es donde se descubre
@@ -923,7 +1488,9 @@ class _EditorView extends StatelessWidget {
                     child: OutlinedButton.icon(
                       key: const Key('translate-this-language'),
                       icon: const Icon(Icons.auto_awesome_outlined, size: 15),
-                      label: Text('Traducirla a $language con la máquina'),
+                      label: Text(
+                        tr('Traducirla a {0} con la máquina', [language]),
+                      ),
                       onPressed: () =>
                           _translateHere(context, editor, language),
                     ),
@@ -934,11 +1501,12 @@ class _EditorView extends StatelessWidget {
         Expanded(
           child: structured && editor.asFields
               ? ColoredBox(
-                  color: didactaCard,
+                  color: context.palette.card,
                   child: ProblemFields(
                     text: editor.controller.text,
                     readOnly: !canWrite,
                     onChanged: editor.replaceText,
+                    repo: editor.unit.repo,
                   ),
                 )
               : Column(
@@ -950,6 +1518,7 @@ class _EditorView extends StatelessWidget {
                       controller: editor.controller,
                       enabled: canWrite,
                       focusNode: editor.focusNode,
+                      repo: editor.unit.repo,
                       // Solo cuando este idioma se sangra: ofrecerlo en uno
                       // que está marcado para dejar quieto sería ofrecer
                       // justo lo que se ha dicho que no se haga.
@@ -957,9 +1526,22 @@ class _EditorView extends StatelessWidget {
                           ? () => _tidy(context, editor)
                           : null,
                     ),
+                    if (editor.finding)
+                      TexFindBar(
+                        key: editor.findBar,
+                        controller: editor.controller,
+                        editorFocus: editor.focusNode,
+                        onClose: editor.closeFind,
+                        // Reemplazar, en la interfaz completa: buscar es de
+                        // todos, reescribir de golpe no.
+                        readOnly:
+                            !canWrite ||
+                            !watchSession(context).completeInterface,
+                        initial: editor.findInitial,
+                      ),
                     Expanded(
                       child: Container(
-                        color: Colors.white,
+                        color: context.palette.card,
                         // La misma caja que en el tema: el LaTeX coloreado y
                         // una columna por cada entorno que envuelve a la
                         // línea. Una lección suelta calcula su propio árbol,
@@ -968,8 +1550,9 @@ class _EditorView extends StatelessWidget {
                         child: TexField(
                           controller: editor.controller,
                           focusNode: editor.focusNode,
+                          scrollController: editor.scroll,
                           readOnly: !canWrite,
-                          hintText: 'El fichero está vacío.',
+                          hintText: tr('El fichero está vacío.'),
                           padding: const EdgeInsets.all(14),
                           // Con números: aquí se edita el fichero entero, y
                           // es la única pantalla donde «la línea 37» quiere
@@ -982,6 +1565,15 @@ class _EditorView extends StatelessWidget {
                   ],
                 ),
         ),
+        // Debajo del texto y en los dos modos: lo que no va a compilar no
+        // depende de cómo se esté mirando el fichero.
+        if (canWrite)
+          TexWarnings(
+            controller: editor.controller,
+            language: editor.language,
+            onGo: editor.goTo,
+            original: editor.original,
+          ),
       ],
     );
   }
@@ -1011,7 +1603,7 @@ class _ViewToggle extends StatelessWidget {
       return IconButton(
         key: const Key('problem-view-toggle'),
         tooltip: hasFields
-            ? (fields ? 'Ver el LaTeX' : 'Ver los campos')
+            ? (fields ? tr('Ver el LaTeX') : tr('Ver los campos'))
             : _noFields,
         visualDensity: VisualDensity.compact,
         icon: Icon(fields ? Icons.code : Icons.view_agenda_outlined, size: 16),
@@ -1020,8 +1612,8 @@ class _ViewToggle extends StatelessWidget {
     }
     return Container(
       decoration: BoxDecoration(
-        color: didactaPanel,
-        border: Border.all(color: didactaRule),
+        color: context.palette.panel,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(Radii.control),
       ),
       padding: const EdgeInsets.all(2),
@@ -1029,10 +1621,12 @@ class _ViewToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Tooltip(
-            message: hasFields ? 'Enunciado, resultado y solución' : _noFields,
+            message: hasFields
+                ? tr('Enunciado, resultado y solución')
+                : _noFields,
             child: _ViewOption(
               key: const Key('problem-view-fields'),
-              label: 'Campos',
+              label: tr('Campos'),
               icon: Icons.view_agenda_outlined,
               selected: fields,
               enabled: hasFields,
@@ -1080,21 +1674,21 @@ class _ViewOption extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: selected
-            ? didactaCard
-            : (hovering ? didactaHover : Colors.transparent),
+            ? context.palette.card
+            : (hovering ? context.palette.hover : Colors.transparent),
         borderRadius: BorderRadius.circular(Radii.small),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: _colour),
+          Icon(icon, size: 13, color: _colour(context.palette)),
           const SizedBox(width: 4),
           Text(
             label,
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              color: _colour,
+              color: _colour(context.palette),
             ),
           ),
         ],
@@ -1104,9 +1698,9 @@ class _ViewOption extends StatelessWidget {
 }
 
 extension on _ViewOption {
-  Color get _colour => !enabled
-      ? didactaMuted.withValues(alpha: 0.45)
-      : (selected ? didactaAccentDark : didactaMuted);
+  Color _colour(DidactaPalette palette) => !enabled
+      ? palette.muted.withValues(alpha: 0.45)
+      : (selected ? palette.accentDark : palette.muted);
 }
 
 /// El estado del idioma que se está editando, y cómo cambiarlo.
@@ -1133,45 +1727,55 @@ class _StatusButton extends StatelessWidget {
   /// Sin la palabra: solo el punto de color y la flecha.
   final bool compact;
 
-  static const Map<String, String> _names = {
-    'draft': 'borrador',
-    'translated': 'traducida',
-    'reviewed': 'revisada',
-    'source': 'original',
-  };
+  static Map<String, String> get _names => declarableStatusNames;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final status = editor.unit.statusIn(editor.language);
-    final settable = canWrite && !status.computed;
+    // En la interfaz esencial, dos estados: pendiente de revisar y revisada.
+    // Ver [declarableStatusesFor].
+    final options = declarableStatusesFor(
+      complete: editor.session.completeInterface,
+      reference: editor.language == editor.unit.reference,
+    );
+    final settable = canWrite && !status.computed && options.isNotEmpty;
 
     final tag = compact
         ? Container(
             width: 9,
             height: 9,
             decoration: BoxDecoration(
-              color: statusColour(status),
+              color: context.palette.status(status),
               shape: BoxShape.circle,
             ),
           )
-        : _Tag(statusName(status), colour: statusColour(status));
+        : _Tag(statusName(status), colour: context.palette.status(status));
     if (!settable) {
       return Tooltip(
-        message: canWrite
-            ? 'Lo calcula el motor: ${statusName(status)}'
-            : 'Solo lectura · ${statusName(status)}',
+        message: !canWrite
+            ? tr('Solo lectura · {0}', [statusName(status)])
+            : status.computed
+            ? tr('Lo calcula el motor: {0}', [statusName(status)])
+            : tr('Es el original: la versión de la que se traduce'),
         child: tag,
       );
     }
 
     return PopupMenuButton<String>(
       key: Key('status-${editor.language}'),
-      tooltip:
-          'Estado de la versión en ${editor.language}: '
-          '${statusName(status)}',
+      tooltip: tr(
+        'Estado de la versión en {0}: '
+        '{1}',
+        [editor.language, statusName(status)],
+      ),
       position: PopupMenuPosition.under,
       itemBuilder: (context) => [
-        for (final option in declarableStatuses)
+        for (final option in options)
           CheckedPopupMenuItem<String>(
             key: Key('status-${editor.language}-$option'),
             value: option,
@@ -1184,7 +1788,7 @@ class _StatusButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           tag,
-          const Icon(Icons.arrow_drop_down, size: 15, color: didactaMuted),
+          Icon(Icons.arrow_drop_down, size: 15, color: context.palette.muted),
         ],
       ),
     );
@@ -1204,7 +1808,7 @@ class _StatusButton extends StatelessWidget {
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     }
   }
 }
@@ -1229,7 +1833,9 @@ Future<void> _tidy(BuildContext context, _LanguageEditor editor) async {
   messenger.showSnackBar(
     SnackBar(
       content: Text(
-        changed ? 'Ordenado. Guarda para dejarlo así.' : 'Ya estaba ordenado.',
+        changed
+            ? tr('Ordenado. Guarda para dejarlo así.')
+            : tr('Ya estaba ordenado.'),
       ),
       duration: const Duration(seconds: 3),
     ),
@@ -1255,8 +1861,10 @@ Future<void> _translateHere(
     SnackBar(
       content: Text(
         result.failed > 0
-            ? 'No se pudo traducir. ${result.warnings.firstOrNull ?? ''}'
-            : 'Traducida como borrador. Revísala antes de darla por buena.',
+            ? tr('No se pudo traducir. {0}', [
+                result.warnings.firstOrNull ?? '',
+              ])
+            : tr('Traducida como borrador. Revísala antes de darla por buena.'),
       ),
     ),
   );
@@ -1308,9 +1916,12 @@ class _IndentToggle extends StatelessWidget {
       children: [
         Tooltip(
           message: on
-              ? 'Al guardar se ordena el ${editor.language}.\n'
-                    'Quítalo si este fichero tiene que quedarse tal cual.'
-              : 'El ${editor.language} se queda como esté.',
+              ? tr(
+                  'Al guardar se ordena el {0}.\n'
+                  'Quítalo si este fichero tiene que quedarse tal cual.',
+                  [editor.language],
+                )
+              : tr('El {0} se queda como esté.', [editor.language]),
           child: SizedBox(
             width: 22,
             height: 22,
@@ -1326,28 +1937,17 @@ class _IndentToggle extends StatelessWidget {
           ),
         ),
         if (showLabel) ...[
-          const SizedBox(width: 2),
-          // La palabra es un botón, no una etiqueta de la casilla. Pulsarla
-          // ordena el fichero abierto ahora mismo: es la forma de forzarlo sin
-          // tocar el ajuste, y sin tener que ir a buscar el botón de la barra
-          // de formato.
-          Tooltip(
-            message: 'Ordena este fichero ahora.',
-            child: InkWell(
-              key: const Key('editor-beautify'),
-              onTap: canWrite ? () => _tidy(context, editor) : null,
-              borderRadius: BorderRadius.circular(4),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: Text(
-                  'Beautify',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    color: didactaMuted,
-                  ),
-                ),
-              ),
+          const SizedBox(width: 4),
+          // Un rótulo y no un botón. Antes la palabra ordenaba el fichero al
+          // pulsarla, y el botón de la barra de formato hacía lo mismo: dos
+          // «Beautify» para una cosa. Ordenar ahora es el de la barra; esto
+          // dice qué hace la casilla.
+          Text(
+            tr('ordenar al guardar'),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: context.palette.muted,
             ),
           ),
         ],
@@ -1368,9 +1968,7 @@ class _IndentToggle extends StatelessWidget {
       // nada: lo que ya está escrito no se desordena a posta.
       if (on) await editor.tidyNow();
     } catch (thrown) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('$thrown'), backgroundColor: didactaTeacher),
-      );
+      showProblemIn(messenger, thrown);
     }
   }
 }
@@ -1396,12 +1994,21 @@ class _EditorBar extends StatelessWidget {
   final ValueChanged<bool>? onFields;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final dirty = editor.isDirty;
+    // Lo que se ve de salida es lo que hace falta para corregir una errata:
+    // guardar, descartar y el estado. La ruta, el contador y si se ordena al
+    // guardar son de quien mantiene el repositorio, en la interfaz completa.
+    final complete = watchSession(context).completeInterface;
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: LayoutBuilder(
@@ -1427,7 +2034,17 @@ class _EditorBar extends StatelessWidget {
           // encendido-- y el rótulo de «Descartar», que se queda en su icono.
           // Una barra que se desborda esconde su propio botón de guardar, y
           // hay un test que la mide a doce anchos para que no vuelva a pasar.
-          final tight = constraints.maxWidth < 1100;
+          //
+          // En la interfaz esencial la barra lleva mucho menos --ni ruta, ni
+          // contador, ni casilla--, y el mismo umbral dejaba el estado en un
+          // punto con media barra vacía al lado.
+          final approving = canWrite && editor.canApprove;
+          final base = complete ? 1250.0 : 600.0;
+          // «Aprobar y siguiente» ocupa: con él a la vista la barra se
+          // aprieta un poco antes, y su rótulo solo sale con sitio de sobra.
+          // Sin rótulo es su icono, que se pulsa igual y lo dice al pasar.
+          final tight = constraints.maxWidth < base + (approving ? 60 : 0);
+          final approveLabel = constraints.maxWidth >= base + 420;
           // El de «Campos / LaTeX» va aparte, y más abajo. Es el control que
           // cambia **qué se está editando**, así que esconder sus rótulos es
           // más caro que esconder cualquier otra cosa de la barra: convertirlo
@@ -1441,32 +2058,36 @@ class _EditorBar extends StatelessWidget {
           return Row(
             children: [
               Expanded(
-                child: Text(
-                  editor.file?.path ?? '',
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: false,
-                  // Tail first: the filename matters more than `content/`.
-                  textDirection: TextDirection.rtl,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontFamily: 'monospace',
-                    color: didactaMuted,
-                  ),
-                ),
+                child: !complete
+                    ? const SizedBox.shrink()
+                    : Text(
+                        editor.file?.path ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: false,
+                        // Tail first: the filename matters more than `content/`.
+                        textDirection: TextDirection.rtl,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontFamily: 'monospace',
+                          color: context.palette.muted,
+                        ),
+                      ),
               ),
               const SizedBox(width: 10),
               // Campos o texto, para un problema. Un botón y no una pestaña
               // más: es la misma cosa vista de dos maneras, y guardar guarda
               // lo mismo desde las dos.
-              _ViewToggle(
-                fields: fields,
-                hasFields: hasFields,
-                compact: toggleTight,
-                onChanged: onFields,
-              ),
-              const SizedBox(width: 10),
+              if (hasFields || complete) ...[
+                _ViewToggle(
+                  fields: fields,
+                  hasFields: hasFields,
+                  compact: toggleTight,
+                  onChanged: onFields,
+                ),
+                const SizedBox(width: 10),
+              ],
               if (!editor.exists)
-                const _Tag('nuevo', colour: didactaAccentDark)
+                _Tag('nuevo', colour: context.palette.accentDark)
               else ...[
                 // El estado de **este** idioma, y se puede cambiar desde
                 // aquí. Es lo que cierra el ciclo de traducir: una máquina
@@ -1483,37 +2104,40 @@ class _EditorBar extends StatelessWidget {
                   canWrite: canWrite,
                   compact: !roomForStatus,
                 ),
-                const SizedBox(width: 4),
                 // Si este idioma se re-sangra al guardar. Aquí y no en las
                 // preferencias porque la decisión es de **este fichero**: se
                 // apaga por lo que tiene dentro, no por cómo le gusta
-                // trabajar a nadie.
-                _IndentToggle(
-                  editor: editor,
-                  canWrite: canWrite,
-                  // Antes el rótulo era un adorno y solo salía si sobraba
-                  // sitio. Ahora es el botón que fuerza el beautify, así que
-                  // aguanta hasta mucho más abajo: lo que se va antes es la
-                  // palabra del estado, que se lee en el color del punto.
-                  showLabel: constraints.maxWidth >= 760,
-                ),
+                // trabajar a nadie. Y en la interfaz completa: de salida se
+                // ordena, y apagarlo es de quien sabe por qué.
+                if (complete) ...[
+                  const SizedBox(width: 4),
+                  _IndentToggle(
+                    editor: editor,
+                    canWrite: canWrite,
+                    // El rótulo es el botón que ordena ahora, así que aguanta
+                    // hasta mucho más abajo: lo que se va antes es la palabra
+                    // del estado, que se lee en el color del punto.
+                    // Con «Aprobar y siguiente» a la vista, cede antes.
+                    showLabel: constraints.maxWidth >= (approving ? 880 : 760),
+                  ),
+                ],
                 if (dirty && !tight) ...[
                   const SizedBox(width: 6),
-                  const _Tag('sin guardar', colour: didactaEx),
+                  _Tag(tr('sin guardar'), colour: context.palette.ex),
                 ],
               ],
-              if (!narrow) ...[
+              if (complete && !narrow) ...[
                 const SizedBox(width: 10),
                 Text(
-                  '${editor.controller.text.length} car.',
-                  style: const TextStyle(fontSize: 11, color: didactaMuted),
+                  tr('{0} car.', [editor.controller.text.length]),
+                  style: TextStyle(fontSize: 11, color: context.palette.muted),
                 ),
               ],
               const SizedBox(width: 10),
               if (dirty)
                 tight
                     ? IconButton(
-                        tooltip: 'Descartar los cambios',
+                        tooltip: tr('Descartar los cambios'),
                         visualDensity: VisualDensity.compact,
                         icon: const Icon(Icons.undo, size: 16),
                         onPressed: editor.saving
@@ -1524,27 +2148,34 @@ class _EditorBar extends StatelessWidget {
                         onPressed: editor.saving
                             ? null
                             : () => _discard(context),
-                        child: const Text('Descartar'),
+                        child: Text(tr('Descartar')),
                       ),
               const SizedBox(width: 4),
-              FilledButton.icon(
-                // Keyed because the commit dialog's confirm button carries the
-                // same label -- rightly, "Guardar" is what both do -- and a test
-                // that cannot tell them apart taps whichever comes first.
-                key: const Key('editor-save'),
-                icon: editor.saving
-                    ? const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check, size: 16),
-                label: Text(editor.saving ? 'Guardando…' : 'Guardar'),
-                // Disabled rather than hidden when there is nothing to save, so
-                // the button does not move around as you type.
-                onPressed: !canWrite || !dirty || editor.saving
-                    ? null
-                    : () => _save(context),
+              if (approving) ...[
+                _ApproveButton(editor: editor, compact: !approveLabel),
+                const SizedBox(width: 6),
+              ],
+              Tooltip(
+                message: tr('Guardar ({0})', [saveShortcutLabel]),
+                child: FilledButton.icon(
+                  // Keyed because the commit dialog's confirm button carries the
+                  // same label -- rightly, "Guardar" is what both do -- and a test
+                  // that cannot tell them apart taps whichever comes first.
+                  key: const Key('editor-save'),
+                  icon: editor.saving
+                      ? const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check, size: 16),
+                  label: Text(editor.saving ? tr('Guardando…') : tr('Guardar')),
+                  // Disabled rather than hidden when there is nothing to save, so
+                  // the button does not move around as you type.
+                  onPressed: !canWrite || !dirty || editor.saving
+                      ? null
+                      : () => _saveEditor(context, editor),
+                ),
               ),
             ],
           );
@@ -1557,51 +2188,320 @@ class _EditorBar extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Descartar los cambios?'),
-        content: const Text(
-          'Se perderá lo que has escrito desde que abriste el fichero.',
+        title: Text(tr('¿Descartar los cambios?')),
+        content: Text(
+          tr('Se perderá lo que has escrito desde que abriste el fichero.'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Seguir editando'),
+            child: Text(tr('Seguir editando')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Descartar'),
+            child: Text(tr('Descartar')),
           ),
         ],
       ),
     );
-    if (confirmed == true) await editor.load();
+    if (confirmed == true) {
+      await editor.forgetDraft();
+      await editor.load();
+    }
+  }
+}
+
+/// Guarda lo que hay en [editor]: pide el mensaje, hace el commit y lo dice.
+///
+/// Uno para el botón de la barra y para ⌘S / Ctrl+S, que tienen que hacer lo
+/// mismo.
+/// «El original ha cambiado desde que se revisó», con lo que ha cambiado.
+class _OutdatedStrip extends StatelessWidget {
+  const _OutdatedStrip({required this.unit, required this.language});
+
+  final Unit unit;
+  final String language;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const Key('outdated-strip'),
+    width: double.infinity,
+    color: context.palette.tint(
+      context.palette.status(TranslationStatus.outdated),
+      0.10,
+    ),
+    padding: const EdgeInsets.fromLTRB(12, 5, 8, 5),
+    child: Row(
+      children: [
+        Icon(
+          Icons.history_toggle_off,
+          size: 15,
+          color: context.palette.status(TranslationStatus.outdated),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            tr('El original ha cambiado desde que se revisó esta traducción.'),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12, color: context.palette.ink),
+          ),
+        ),
+        TextButton(
+          key: const Key('show-original-changes'),
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (context) => _OriginalChanges(
+              session: sessionOf(context),
+              unit: unit,
+              language: language,
+            ),
+          ),
+          child: Text(tr('Ver qué ha cambiado')),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Lo que ha cambiado en el original desde la última revisión.
+class _OriginalChanges extends StatefulWidget {
+  const _OriginalChanges({
+    required this.session,
+    required this.unit,
+    required this.language,
+  });
+
+  final Session session;
+  final Unit unit;
+  final String language;
+
+  @override
+  State<_OriginalChanges> createState() => _OriginalChangesState();
+}
+
+class _OriginalChangesState extends State<_OriginalChanges> {
+  bool _loading = true;
+  ({String text, FileCommit commit})? _then;
+  String _now = '';
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
   }
 
-  Future<void> _save(BuildContext context) async {
-    final message = await showDialog<String>(
-      context: context,
-      builder: (context) => _CommitDialog(suggested: editor.suggestedMessage()),
-    );
-    if (message == null || !context.mounted) return;
+  Future<void> _load() async {
+    final unit = widget.unit;
+    final then = await widget.session.originalAtReview(unit, widget.language);
+    var now = '';
+    try {
+      now =
+          (await widget.session
+                  .gatewayFor(unit.repo)
+                  .read(unit.fileFor(unit.reference)))
+              .text;
+    } catch (caught, trace) {
+      Diagnostics.instance.note('unit_page._load', caught, trace);
+    }
+    if (!mounted) return;
+    setState(() {
+      _then = then;
+      _now = now;
+      _loading = false;
+    });
+  }
 
-    final problem = await editor.save(message);
-    if (!context.mounted) return;
-
-    if (problem == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Guardado como un commit.')));
-      // The catalogue's translation status just changed, so the library and
-      // the counts in the rail have to catch up.
-      await sessionOf(context).reloadCatalogue();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(problem),
-          backgroundColor: didactaTeacher,
-          duration: const Duration(seconds: 6),
+  @override
+  Widget build(BuildContext context) {
+    final then = _then;
+    final reference = widget.unit.reference;
+    return AlertDialog(
+      title: Text(tr('Qué ha cambiado en el original ({0})', [reference])),
+      content: SizedBox(
+        width: 720,
+        child: _loading
+            ? const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : then == null
+            ? Note(
+                tr(
+                  'No se sabe desde cuándo: esta traducción no guardó la huella '
+                  'del original al revisarse --lo traducido antes de que '
+                  'existiera--, o esa versión no está en el historial. Ponlas '
+                  'lado a lado para compararlas.',
+                ),
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tr(
+                      'Desde la versión del {0} '
+                      '({1}), que es la que se revisó en '
+                      '{2}:',
+                      [
+                        _date(then.commit.when),
+                        then.commit.author,
+                        widget.language,
+                      ],
+                    ),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DiffBox(before: then.text, after: _now, maxHeight: 460),
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(tr('Cerrar')),
         ),
+      ],
+    );
+  }
+
+  static String _date(DateTime when) =>
+      '${when.day}/${when.month}/${when.year}';
+}
+
+/// «Aprobar y siguiente»: da por buena la traducción que se está leyendo y
+/// abre la siguiente sin revisar.
+///
+/// Revisar treinta traducciones era, treinta veces: guardar lo corregido,
+/// cambiar el estado, volver a la lista y buscar la siguiente. Aquí es un
+/// botón --con lo corregido y el estado en un solo cambio-- y la siguiente se
+/// abre ya en el mismo idioma, en el orden de la lista de Traducción.
+class _ApproveButton extends StatelessWidget {
+  const _ApproveButton({required this.editor, required this.compact});
+
+  final _LanguageEditor editor;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final tooltip = editor.isDirty
+        ? tr(
+            'Guardar lo corregido, darla por revisada y abrir la siguiente sin '
+            'revisar',
+          )
+        : tr('Darla por revisada y abrir la siguiente sin revisar');
+    final onPressed = editor.saving ? null : () => _approve(context, editor);
+    if (compact) {
+      return IconButton(
+        key: const Key('approve-next'),
+        tooltip: tooltip,
+        visualDensity: VisualDensity.compact,
+        icon: Icon(Icons.task_alt, size: 17, color: context.palette.accentDark),
+        onPressed: onPressed,
       );
     }
+    return Tooltip(
+      message: tooltip,
+      child: OutlinedButton.icon(
+        key: const Key('approve-next'),
+        icon: const Icon(Icons.task_alt, size: 16),
+        label: Text(tr('Aprobar y siguiente')),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+Future<void> _approve(BuildContext context, _LanguageEditor editor) async {
+  final session = sessionOf(context);
+  final messenger = ScaffoldMessenger.of(context);
+  final language = editor.language;
+  final title = editor.unit.title(editor.unit.reference);
+  // La siguiente, antes de aprobar: después esta ya no está en la lista, y
+  // no se sabría dónde se estaba.
+  final next = session.nextToReview(language, after: editor.unit.path);
+  final problem = await editor.approve();
+  if (!context.mounted) return;
+  if (problem != null) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(problem),
+        backgroundColor: context.palette.teacher,
+        duration: const Duration(seconds: 6),
+      ),
+    );
+    return;
+  }
+  if (next == null || next.path == editor.unit.path) {
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          tr('«{0}» revisada. No queda nada sin revisar en {1}.', [
+            title,
+            language,
+          ]),
+        ),
+      ),
+    );
+    return;
+  }
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(
+        tr('«{0}» revisada. Siguiente: «{1}».', [
+          title,
+          next.title(next.reference),
+        ]),
+      ),
+    ),
+  );
+  goTo(context, Routes.unit(next.path, language: language));
+}
+
+Future<void> _saveEditor(BuildContext context, _LanguageEditor editor) async {
+  final session = sessionOf(context);
+  final suggested = editor.suggestedMessage();
+  final message = await askSaveMessage(
+    context,
+    session,
+    suggested: suggested,
+    dialog: (context) => _CommitDialog(suggested: suggested),
+  );
+  if (message == null || !context.mounted) return;
+
+  // Lo de antes y lo de después, ahora: al guardar, lo cargado pasa a ser lo
+  // guardado y el diff ya no se podría sacar.
+  final before = editor._loadedText;
+  final after = editor.controller.text;
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final problem = await editor.save(message);
+  if (!context.mounted) return;
+
+  if (problem == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      savedNotice(
+        notice: session.saveNotice(editor.unit.repo),
+        message: message,
+        before: before,
+        after: after,
+        what: editor.unit.fileFor(editor.language),
+        navigator: navigator,
+      ),
+    );
+    // The catalogue's translation status just changed, so the library and
+    // the counts in the rail have to catch up.
+    await sessionOf(context).reloadCatalogue();
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(problem),
+        backgroundColor: context.palette.teacher,
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 }
 
@@ -1633,17 +2533,19 @@ class _CommitDialogState extends State<_CommitDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Guardar como commit'),
+      title: Text(tr('Guardar el cambio')),
       content: SizedBox(
         width: 460,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Cada cambio queda como un commit con autor y mensaje, así que '
-              'se puede ver quién cambió qué y revertirlo.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr(
+                'Queda en el historial con tu nombre y lo que digas aquí, así que '
+                'después se puede ver quién cambió qué, y cuándo.',
+              ),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -1651,7 +2553,7 @@ class _CommitDialogState extends State<_CommitDialog> {
               autofocus: true,
               maxLines: 3,
               minLines: 1,
-              decoration: const InputDecoration(labelText: 'Mensaje'),
+              decoration: InputDecoration(labelText: tr('Mensaje')),
               onSubmitted: (value) => Navigator.of(
                 context,
               ).pop(value.trim().isEmpty ? widget.suggested : value.trim()),
@@ -1662,7 +2564,7 @@ class _CommitDialogState extends State<_CommitDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('commit-save'),
@@ -1670,7 +2572,7 @@ class _CommitDialogState extends State<_CommitDialog> {
             final text = _controller.text.trim();
             Navigator.of(context).pop(text.isEmpty ? widget.suggested : text);
           },
-          child: const Text('Guardar'),
+          child: Text(tr('Guardar')),
         ),
       ],
     );
@@ -1700,6 +2602,7 @@ class _LanguageTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = watchSession(context);
     return SizedBox(
       height: 38,
       // Scrolls rather than wraps: three languages plus the metadata fit on a
@@ -1708,28 +2611,46 @@ class _LanguageTabs extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          for (final code in languages)
-            DidactaTab(
-              label: code,
-              status: unit.statusIn(code),
-              selected: code == active,
-              dirty: dirty.contains(code),
-              onTap: () => onSelect(code),
+          TourTarget(
+            id: 'unit-languages',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Con el nombre del idioma y no su código: «va» es un código
+                // que hay que saber, «Valencià» se lee. El código sigue en el
+                // tooltip, que es lo que nombran las rutas y los ficheros.
+                for (final code in languages)
+                  DidactaTab(
+                    key: Key('language-tab-$code'),
+                    label: languageNameOf(session, code),
+                    tooltip: '$code.tex',
+                    status: unit.statusIn(code),
+                    selected: code == active,
+                    dirty: dirty.contains(code),
+                    onTap: () => onSelect(code),
+                  ),
+              ],
             ),
+          ),
           const _Separator(),
           // Compilar delante de los metadatos: es lo que se hace entre una
           // edición y la siguiente, y `unit.yaml` se toca una vez cada varios
           // meses. El orden de una fila de pestañas es una afirmación sobre
           // con qué frecuencia se usa cada una.
-          DidactaTab(
-            label: 'compilar',
-            icon: Icons.play_circle_outline,
-            selected: active == previewTab,
-            dirty: false,
-            onTap: () => onSelect(previewTab),
+          TourTarget(
+            id: 'unit-compile',
+            child: DidactaTab(
+              label: 'compilar',
+              icon: Icons.play_circle_outline,
+              selected: active == previewTab,
+              dirty: false,
+              onTap: () => onSelect(previewTab),
+            ),
           ),
           DidactaTab(
-            label: 'unit.yaml',
+            key: const Key('metadata-tab'),
+            label: 'metadatos',
+            tooltip: tr('El unit.yaml de la lección'),
             selected: active == metadataTab,
             dirty: false,
             onTap: () => onSelect(metadataTab),
@@ -1753,9 +2674,9 @@ class _LanguageTabs extends StatelessWidget {
                   : group.isSingle
                   ? Icons.picture_as_pdf_outlined
                   : Icons.compare_outlined,
-              iconColour: group.hasStale ? didactaEx : null,
+              iconColour: group.hasStale ? context.palette.ex : null,
               tooltip: group.hasStale
-                  ? 'La unidad ha cambiado después de compilar esto'
+                  ? tr('La unidad ha cambiado después de compilar esto')
                   : null,
               selected: active == _pdfTab(group.id),
               dirty: false,
@@ -1772,9 +2693,9 @@ class _Separator extends StatelessWidget {
   const _Separator();
 
   @override
-  Widget build(BuildContext context) => const Padding(
+  Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.symmetric(horizontal: 4, vertical: 9),
-    child: SizedBox(width: 1, child: ColoredBox(color: didactaRule)),
+    child: SizedBox(width: 1, child: ColoredBox(color: context.palette.rule)),
   );
 }
 
@@ -1790,13 +2711,17 @@ class _UnitPanel extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        const SectionLabel('Qué es'),
-        _Row('tipo', kindName(unit.kind), colour: kindColour(unit.kind)),
-        _Row('categoría', unit.category),
+        SectionLabel(tr('Qué es')),
+        _Row(
+          'tipo',
+          kindName(unit.kind),
+          colour: context.palette.kind(unit.kind),
+        ),
+        _Row(tr('categoría'), unit.category),
         _Row('tema', unit.topic),
         if (unit.difficulty != null) _Row('dificultad', unit.difficulty!),
         if (unit.durationMinutes != null)
-          _Row('duración', '${unit.durationMinutes} min'),
+          _Row(tr('duración'), tr('{0} min', [unit.durationMinutes])),
         if (unit.tags.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
@@ -1822,14 +2747,16 @@ class _UnitPanel extends StatelessWidget {
         // puede tener cerrado, y con la lección en dos sitios los dos botones
         // no cabían en sus trescientos y pico píxeles, así que el que decía
         // «Gestionar vinculación…» se salía del panel y no se podía pulsar.
-        SectionLabel('Se usa en ${unit.usedBy.length} ubicación(es)'),
+        SectionLabel(tr('Se usa en {0} ubicación(es)', [unit.usedBy.length])),
         if (unit.usedBy.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: Note(
-              'Ninguna composición la referencia. Después de una migración '
-              'esto es material que llegó y no se está dando: o falta ponerlo '
-              'en una asignatura, o se puede quitar.',
+              tr(
+                'Ninguna composición la referencia. Después de una migración '
+                'esto es material que llegó y no se está dando: o falta ponerlo '
+                'en una asignatura, o se puede quitar.',
+              ),
             ),
           )
         else
@@ -1852,14 +2779,14 @@ class _UnitPanel extends StatelessWidget {
             ),
 
         if (unit.objectives.isNotEmpty) ...[
-          const SectionLabel('Objetivos'),
+          SectionLabel(tr('Objetivos')),
           for (final objective in unit.objectives)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 5),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('· ', style: TextStyle(color: didactaMuted)),
+                  Text('· ', style: TextStyle(color: context.palette.muted)),
                   Expanded(
                     child: Text(
                       objective,
@@ -1872,17 +2799,17 @@ class _UnitPanel extends StatelessWidget {
         ],
 
         if (unit.prerequisites.isNotEmpty) ...[
-          const SectionLabel('Prerrequisitos'),
+          SectionLabel(tr('Prerrequisitos')),
           for (final reference in unit.prerequisites)
             _Prerequisite(reference: reference, session: session),
         ],
 
         if (unit.warnings.isNotEmpty) ...[
-          const SectionLabel('Avisos'),
+          SectionLabel(tr('Avisos')),
           for (final warning in unit.warnings)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-              child: Note(warning, tone: didactaEx),
+              child: Note(warning, tone: context.palette.ex),
             ),
         ],
         const SizedBox(height: 16),
@@ -1905,13 +2832,15 @@ class _Prerequisite extends StatelessWidget {
       leading: Icon(
         missing ? Icons.link_off : Icons.arrow_right,
         size: 16,
-        color: missing ? didactaTeacher : didactaMuted,
+        color: missing ? context.palette.teacher : context.palette.muted,
       ),
       title: Text(
-        missing ? '$reference (no existe)' : unit.title(session.language),
+        missing
+            ? tr('{0} (no existe)', [reference])
+            : unit.title(session.language),
         style: TextStyle(
           fontSize: 12.5,
-          color: missing ? didactaTeacher : null,
+          color: missing ? context.palette.teacher : null,
         ),
         overflow: TextOverflow.ellipsis,
       ),
@@ -1936,7 +2865,7 @@ class _Row extends StatelessWidget {
           width: 76,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
         ),
         if (colour != null) ...[
@@ -2015,13 +2944,13 @@ class _LoadFailure extends StatelessWidget {
                 children: [
                   Icon(
                     forbidden ? Icons.lock_outline : Icons.error_outline,
-                    color: didactaTeacher,
+                    color: context.palette.teacher,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'No se ha podido abrir el fichero',
+                      tr('No se ha podido abrir el fichero'),
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -2033,10 +2962,10 @@ class _LoadFailure extends StatelessWidget {
               const SizedBox(height: 10),
               SelectableText(
                 path,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontFamily: 'monospace',
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
               ),
               const SizedBox(height: 10),
@@ -2050,13 +2979,14 @@ class _LoadFailure extends StatelessWidget {
                   if (unconfigured || forbidden)
                     FilledButton.icon(
                       icon: const Icon(Icons.settings, size: 16),
-                      label: const Text('Ir a Ajustes'),
-                      onPressed: () => context.go(Routes.settings()),
+                      label: Text(tr('Ir a Ajustes')),
+                      onPressed: () =>
+                          context.go(Routes.settings(section: 'repositorios')),
                     )
                   else
                     FilledButton.icon(
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Reintentar'),
+                      label: Text(tr('Reintentar')),
                       onPressed: onRetry,
                     ),
                 ],
@@ -2079,8 +3009,8 @@ class _Missing extends StatelessWidget {
     return Column(
       children: [
         PageHeader(
-          title: 'Unidad no encontrada',
-          breadcrumbs: [('Biblioteca', Routes.library())],
+          title: tr('Unidad no encontrada'),
+          breadcrumbs: [(tr('Biblioteca'), Routes.library())],
         ),
         Expanded(
           child: Center(
@@ -2100,16 +3030,18 @@ class _Missing extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'No está en el catálogo. Puede que se haya renombrado, '
-                      'o que el catálogo esté desactualizado: se regenera con '
-                      '`didacta index`.',
+                    Text(
+                      tr(
+                        'No está en el catálogo. Puede que se haya renombrado, '
+                        'o que el catálogo esté desactualizado: se regenera con '
+                        '`didacta index`.',
+                      ),
                       style: TextStyle(fontSize: 13),
                     ),
                     const SizedBox(height: 18),
                     FilledButton(
                       onPressed: () => context.go(Routes.library()),
-                      child: const Text('Ir a la biblioteca'),
+                      child: Text(tr('Ir a la biblioteca')),
                     ),
                   ],
                 ),
@@ -2153,8 +3085,8 @@ class _SplitToggle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: on
-          ? 'Volver a un idioma a la vez'
-          : 'Ver los idiomas uno al lado del otro',
+          ? tr('Volver a un idioma a la vez')
+          : tr('Ver los idiomas uno al lado del otro'),
       child: InkWell(
         onTap: () => onChanged(!on),
         borderRadius: BorderRadius.circular(5),
@@ -2176,11 +3108,13 @@ class _SplitToggle extends StatelessWidget {
               ),
               const SizedBox(width: 7),
               Text(
-                'lado a lado',
+                tr('lado a lado'),
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: on ? FontWeight.w700 : FontWeight.w500,
-                  color: on ? didactaAccentDark : didactaMuted,
+                  color: on
+                      ? context.palette.accentDark
+                      : context.palette.muted,
                 ),
               ),
             ],
@@ -2208,6 +3142,7 @@ class _SplitEditors extends StatelessWidget {
     required this.active,
     required this.editorFor,
     required this.onSelect,
+    this.scrollOf,
   });
 
   final Unit unit;
@@ -2216,6 +3151,9 @@ class _SplitEditors extends StatelessWidget {
   final String active;
   final Widget Function(String language) editorFor;
   final ValueChanged<String> onSelect;
+
+  /// El desplazamiento de cada idioma, para llevarlos a la vez.
+  final ScrollController? Function(String language)? scrollOf;
 
   @override
   Widget build(BuildContext context) {
@@ -2238,21 +3176,30 @@ class _SplitEditors extends StatelessWidget {
           );
         }
 
-        return Row(
-          children: [
-            for (var i = 0; i < shown.length; i += 1) ...[
-              if (i > 0) const VerticalDivider(width: 1),
-              Expanded(
-                child: _Pane(
-                  language: shown[i],
-                  unit: unit,
-                  selected: shown[i] == active,
-                  onTap: () => onSelect(shown[i]),
-                  child: editorFor(shown[i]),
-                ),
-              ),
-            ],
+        return _ScrollTogether(
+          leader: scrollOf?.call(active),
+          followers: [
+            for (final language in shown)
+              if (language != active) ?scrollOf?.call(language),
           ],
+          child: Row(
+            children: [
+              for (var i = 0; i < shown.length; i += 1) ...[
+                if (i > 0) const VerticalDivider(width: 1),
+                Expanded(
+                  child: _Pane(
+                    language: shown[i],
+                    unit: unit,
+                    selected: shown[i] == active,
+                    locked:
+                        shown[i] == unit.reference && active != unit.reference,
+                    onTap: () => onSelect(shown[i]),
+                    child: editorFor(shown[i]),
+                  ),
+                ),
+              ],
+            ],
+          ),
         );
       },
     );
@@ -2275,6 +3222,74 @@ class _SplitEditors extends StatelessWidget {
   }
 }
 
+/// Lleva los paneles a la vez: donde está el activo, los demás.
+///
+/// Por proporción y no por línea: el original y la traducción no tienen las
+/// mismas líneas, pero van en el mismo orden, y a media página de uno le toca
+/// media página del otro. Solo manda el activo --el que se está leyendo--:
+/// que los dos se movieran el uno al otro sería un rebote sin fin.
+class _ScrollTogether extends StatefulWidget {
+  const _ScrollTogether({
+    required this.leader,
+    required this.followers,
+    required this.child,
+  });
+
+  final ScrollController? leader;
+  final List<ScrollController> followers;
+  final Widget child;
+
+  @override
+  State<_ScrollTogether> createState() => _ScrollTogetherState();
+}
+
+class _ScrollTogetherState extends State<_ScrollTogether> {
+  ScrollController? _listening;
+
+  @override
+  void initState() {
+    super.initState();
+    _listen();
+  }
+
+  @override
+  void didUpdateWidget(_ScrollTogether old) {
+    super.didUpdateWidget(old);
+    if (old.leader != widget.leader) _listen();
+  }
+
+  void _listen() {
+    _listening?.removeListener(_follow);
+    _listening = widget.leader;
+    _listening?.addListener(_follow);
+  }
+
+  void _follow() {
+    final leader = widget.leader;
+    if (leader == null || !leader.hasClients) return;
+    final position = leader.position;
+    final fraction = position.maxScrollExtent <= 0
+        ? 0.0
+        : (position.pixels / position.maxScrollExtent).clamp(0.0, 1.0);
+    for (final follower in widget.followers) {
+      if (!follower.hasClients) continue;
+      final target = fraction * follower.position.maxScrollExtent;
+      if ((follower.position.pixels - target).abs() > 1) {
+        follower.jumpTo(target);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _listening?.removeListener(_follow);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
 class _Pane extends StatelessWidget {
   const _Pane({
     required this.language,
@@ -2282,6 +3297,7 @@ class _Pane extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.child,
+    this.locked = false,
   });
 
   final String language;
@@ -2289,6 +3305,10 @@ class _Pane extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final Widget child;
+
+  /// Si se está leyendo y no editando: el original, mientras se revisa una
+  /// traducción. La cabecera lo dice, y pulsarla lo deja editar.
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -2301,11 +3321,13 @@ class _Pane extends StatelessWidget {
             width: double.infinity,
             decoration: BoxDecoration(
               color: selected
-                  ? didactaAccentDark.withValues(alpha: 0.10)
-                  : didactaPanel,
+                  ? context.palette.accentDark.withValues(alpha: 0.10)
+                  : context.palette.panel,
               border: Border(
                 bottom: BorderSide(
-                  color: selected ? didactaAccentDark : didactaRule,
+                  color: selected
+                      ? context.palette.accentDark
+                      : context.palette.rule,
                   width: selected ? 1.6 : 1,
                 ),
               ),
@@ -2318,16 +3340,50 @@ class _Pane extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: selected ? didactaAccentDark : didactaInk,
+                    color: selected
+                        ? context.palette.accentDark
+                        : context.palette.ink,
                   ),
                 ),
                 const SizedBox(width: 8),
                 StatusBadge(language: language, status: status),
                 const Spacer(),
                 if (selected)
-                  const Text(
+                  Text(
                     'activo',
-                    style: TextStyle(fontSize: 10.5, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: context.palette.muted,
+                    ),
+                  )
+                else if (locked)
+                  Tooltip(
+                    message: tr(
+                      'El original, para leerlo al lado. Pulsa aquí para '
+                      'editarlo.',
+                    ),
+                    child: Row(
+                      key: Key('pane-locked-$language'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          size: 12,
+                          color: context.palette.muted,
+                        ),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            tr('solo lectura'),
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: context.palette.muted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -2345,12 +3401,14 @@ class _TooNarrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    color: didactaPanel,
+    color: context.palette.panel,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-    child: const Text(
-      'No hay ancho para dos columnas de LaTeX. Oculta el panel de la '
-      'derecha o ensancha la ventana.',
-      style: TextStyle(fontSize: 11.5, color: didactaMuted),
+    child: Text(
+      tr(
+        'No hay ancho para dos columnas de LaTeX. Oculta el panel de la '
+        'derecha o ensancha la ventana.',
+      ),
+      style: TextStyle(fontSize: 11.5, color: context.palette.muted),
     ),
   );
 }
@@ -2375,6 +3433,170 @@ List<String> languagesOfUnit(Session session, Unit unit) =>
 /// Las que se nombren pasan a una copia con identidad propia; las demás se
 /// quedan con la de siempre. Los dos grupos siguen sincronizados por dentro y
 /// dejan de estarlo entre ellos.
+/// Lo que quedó sin guardar la última vez, ofrecido al abrir el fichero.
+///
+/// Solo aparece si Didacta se cerró sin pasar por el aviso de salir --un
+/// cuelgue, un corte--: al salir de la pantalla a propósito el borrador se va
+/// con ella.
+class _RecoveredDraft extends StatelessWidget {
+  const _RecoveredDraft({
+    required this.draft,
+    required this.changedSince,
+    required this.onRestore,
+    required this.onForget,
+  });
+
+  final Draft draft;
+
+  /// Si el fichero ha cambiado desde que se escribió el borrador.
+  final bool changedSince;
+  final VoidCallback onRestore;
+  final VoidCallback onForget;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    key: const Key('recovered-draft'),
+    padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(11, 8, 6, 8),
+      decoration: BoxDecoration(
+        color: context.palette.ex.withValues(alpha: 0.08),
+        border: Border(left: BorderSide(color: context.palette.ex, width: 2.5)),
+        borderRadius: const BorderRadius.only(
+          topRight: Radius.circular(Radii.control),
+          bottomRight: Radius.circular(Radii.control),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.restore_page_outlined,
+            size: 16,
+            color: context.palette.ex,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              tr(
+                'Hay texto sin guardar de {0}: Didacta '
+                'se cerró antes de guardarlo.'
+                '{1}',
+                [
+                  describeWhen(draft.when),
+                  changedSince
+                      ? tr(
+                          ' El fichero ha cambiado desde entonces; si '
+                          'lo recuperas, mira qué cambia antes de guardar.',
+                        )
+                      : '',
+                ],
+              ),
+              style: const TextStyle(fontSize: 12.5, height: 1.35),
+            ),
+          ),
+          TextButton(
+            key: const Key('recovered-forget'),
+            onPressed: onForget,
+            child: Text(tr('Descartarlo')),
+          ),
+          FilledButton.tonal(
+            key: const Key('recovered-restore'),
+            onPressed: onRestore,
+            child: Text(tr('Recuperarlo')),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// El aviso de que esta lección se da en más de un curso.
+///
+/// Una lección es una sola carpeta aunque la llamen tres composiciones:
+/// guardarla la cambia en las tres. Eso es lo que la hace útil --se corrige
+/// una errata una vez-- y lo que sorprende a quien entra a retocarla pensando
+/// en el curso de este año. Por eso va encima del texto y dice cuáles, y
+/// ofrece lo que se hace cuando no se quiere eso: separar una copia.
+///
+/// Cuenta cursos académicos y no composiciones: la misma lección en el tema
+/// y en el examen del mismo curso es algo que quien la edita ya sabe.
+class SharedLessonStrip extends StatelessWidget {
+  const SharedLessonStrip({super.key, required this.unit, this.onSplit});
+
+  final Unit unit;
+  final VoidCallback? onSplit;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = watchSession(context);
+    final years = <String, UnitUsage>{};
+    for (final use in unit.usedBy) {
+      years.putIfAbsent('${use.course}@${use.year}', () => use);
+    }
+    if (years.length < 2) return const SizedBox.shrink();
+
+    String name(UnitUsage use) =>
+        '${session.courseById(use.course)?.title(session.language) ?? use.course}'
+        ' ${use.year}';
+    final names = [for (final use in years.values) name(use)];
+    final shown = names.length <= 3 ? names : names.take(2).toList();
+    final rest = names.length - shown.length;
+    final list = rest > 0
+        ? tr('{0} y {1} más', [shown.join(', '), rest])
+        : shown.length == 1
+        ? shown.single
+        : '${shown.take(shown.length - 1).join(', ')} y ${shown.last}';
+
+    return Padding(
+      key: const Key('shared-lesson-strip'),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(11, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: context.palette.pending.withValues(alpha: 0.08),
+          border: Border(
+            left: BorderSide(color: context.palette.pending, width: 2.5),
+          ),
+          borderRadius: const BorderRadius.only(
+            topRight: Radius.circular(Radii.control),
+            bottomRight: Radius.circular(Radii.control),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.call_split, size: 15, color: context.palette.pending),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: tr('Se da en {0} cursos', [years.length]),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    TextSpan(
+                      text: tr(' ({0}): lo que guardes aquí cambia en todos.', [
+                        list,
+                      ]),
+                    ),
+                  ],
+                ),
+                style: const TextStyle(fontSize: 12.5, height: 1.35),
+              ),
+            ),
+            if (onSplit != null)
+              TextButton(
+                key: const Key('shared-lesson-split'),
+                onPressed: onSplit,
+                child: Text(tr('Separar una copia…')),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 Future<void> _splitUnit(
   BuildContext context,
   Session session,
@@ -2383,18 +3605,21 @@ Future<void> _splitUnit(
   String label(UnitUsage use) =>
       '${session.courseById(use.course)?.title(session.language) ?? use.course}'
       ' · ${use.year} · ${use.document}'
-      '${use.index > 0 ? ' (posición ${use.index + 1})' : ''}';
+      '${use.index > 0 ? tr(' (posición {0})', [use.index + 1]) : ''}';
 
   final request = await askSplit(
     context,
-    title: 'Dividir la vinculación de «${unit.title(session.language)}»',
+    title: tr('Dividir la vinculación de «{0}»', [
+      unit.title(session.language),
+    ]),
     places: [
       for (final use in unit.usedBy) SyncPlace(key: use.key, label: label(use)),
     ],
-    explanation:
-        'Cada grupo que se separe recibe una copia de la lección, con su '
-        'texto, sus figuras y sus metadatos tal como están ahora, y un id '
-        'propio. Nada se pierde y ningún otro sitio cambia.',
+    explanation: tr(
+      'Cada grupo que se separe recibe una copia de la lección, con su '
+      'texto, sus figuras y sus metadatos tal como están ahora, y un id '
+      'propio. Nada se pierde y ningún otro sitio cambia.',
+    ),
   );
   if (request == null || !context.mounted) return;
   final groups = request.groups;
@@ -2408,11 +3633,13 @@ Future<void> _splitUnit(
       paths: [
         for (final use in unit.usedBy) 'courses/${use.course}/${use.year}',
       ],
-      message:
-          'Dividir la vinculación de «${unit.title(session.language)}» en '
-          '${groups.length + 1} grupo(s)',
+      message: tr(
+        'Dividir la vinculación de «{0}» en '
+        '{1} grupo(s)',
+        [unit.title(session.language), groups.length + 1],
+      ),
     ),
-    done: 'Vinculación dividida. Cada grupo sigue sincronizado por dentro.',
+    done: tr('Vinculación dividida. Cada grupo sigue sincronizado por dentro.'),
     repo: unit.repo,
   );
   if (ok) await session.reloadCatalogue();
@@ -2452,7 +3679,7 @@ Future<void> _useUnit(BuildContext context, Session session, Unit unit) async {
   final target = await askLessonTarget(
     context,
     session: session,
-    title: 'Dar «${unit.title(session.language)}» en otro tema',
+    title: tr('Dar «{0}» en otro tema', [unit.title(session.language)]),
     fromCourse: unit.usedBy.firstOrNull?.course ?? '',
   );
   if (target == null || !context.mounted) return;
@@ -2468,10 +3695,27 @@ Future<void> _useUnit(BuildContext context, Session session, Unit unit) async {
       duplicate: target.duplicate,
     ),
     done: target.duplicate
-        ? 'Copiada en «${target.document}». Son dos lecciones a partir de ahora.'
-        : 'Añadida a «${target.document}». Es la misma lección: corregirla '
-              'sigue siendo corregirla una vez.',
+        ? tr('Copiada en «{0}». Son dos lecciones a partir de ahora.', [
+            target.document,
+          ])
+        : tr(
+            'Añadida a «{0}». Es la misma lección: corregirla '
+            'sigue siendo corregirla una vez.',
+            [target.document],
+          ),
     repo: unit.repo,
   );
   if (ok) await session.reloadCatalogue();
+}
+
+/// Dónde empieza la línea [line] (desde 1) de [text]; el final, si no hay
+/// tantas.
+int offsetOfLine(String text, int line) {
+  var offset = 0;
+  for (var current = 1; current < line; current += 1) {
+    final next = text.indexOf('\n', offset);
+    if (next < 0) return text.length;
+    offset = next + 1;
+  }
+  return offset;
 }

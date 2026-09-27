@@ -637,19 +637,10 @@ Map<String, dynamic> lessonIn(String block, {String path = 'content/a/b/c'}) =>
 /// llamara a `save` noventa veces dejaría noventa commits diciendo lo mismo.
 /// Con la pasarela de verdad eso es un solo commit, y lo único que se puede
 /// comprobar aquí es que se pide así.
+/// La pasarela de prueba, que ya apunta lo que se guarda junto en
+/// [FakeGateway.batches].
 class BatchGateway extends FakeGateway {
   BatchGateway({super.files});
-
-  final List<List<String>> batches = [];
-
-  @override
-  Future<void> saveAll({
-    required List<({String path, String text, String sha})> files,
-    required String message,
-  }) async {
-    batches.add([for (final file in files) file.path]);
-    await super.saveAll(files: files, message: message);
-  }
 }
 
 /// Una sesión con una pasarela por repositorio.

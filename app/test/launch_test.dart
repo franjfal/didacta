@@ -187,6 +187,17 @@ void main() {
       );
     });
 
+    test('el botón dice el explorador de cada sistema', () {
+      // Decía «Finder» también en Windows y en Linux.
+      expect(openFolderLabel(Host.macos), 'Abrir en el Finder');
+      expect(openFolderLabel(Host.windows), 'Abrir en el Explorador');
+      expect(revealInLabel(Host.windows), 'en el Explorador');
+      for (final host in [Host.windows, Host.linux]) {
+        expect(openFolderLabel(host), isNot(contains('Finder')));
+        expect(revealInLabel(host), isNot(contains('Finder')));
+      }
+    });
+
     test('a la Papelera: nunca con rm, ni en ningún sistema', () {
       for (final host in Host.values) {
         final commands = trashFolderLaunches(folder: '/x/curso', host: host);

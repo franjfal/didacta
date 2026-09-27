@@ -1,0 +1,36 @@
+# Dos límites calculados con la definición.
+#
+# Es un ejemplo trabajado y por eso es `kind: example`, no `theory`: se guarda
+# aparte de la definición para poder reutilizarlo --en otro tema, en una hoja
+# de repaso-- sin arrastrar la teoría con él.
+
+id: u-6431387efe7b
+kind: example
+block: theory
+
+title:
+  es: Límites por la definición
+  va: Límits per la definició
+  en: Limits from the definition
+
+category: calculo
+topic: limites
+tags: [limite, epsilon-delta, ejemplo]
+
+reference: es
+
+# Castellano y valenciano. El inglés no está, y la aplicación lo sabe sin que
+# nadie lo escriba: no hay `en.tex`.
+languages:
+  es: {status: source}
+  va: {status: translated}
+
+# Una referencia a otra lección, por su ruta. `didacta check` avisa si deja de
+# existir.
+prerequisites: [calculo/limites/definicion-de-limite]
+objectives:
+  - Encontrar un δ adecuado para un ε dado
+  - Acotar un factor para que δ no dependa de x
+
+duration_minutes: 20
+difficulty: introductory

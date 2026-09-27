@@ -29,13 +29,34 @@ marzo?», y ésa solo la contesta el texto completo. Las marcas de verde y rojo
 van dentro, así que la primera pregunta también se sigue contestando.
 
 **El commit se mira aparte.** Quién lo hizo, cuándo exactamente, con qué
-mensaje y con qué hash están detrás de un botón y no delante del texto.
+mensaje y con qué hash están detrás de un botón y no delante del texto. En la
+lista, el hash de cada versión solo sale con la interfaz completa (Ajustes →
+Apariencia): a quien no usa git no le dice nada.
+
+**Dentro de cada línea cambiada se marcan las palabras que cambiaron.** En un
+párrafo de trescientos caracteres, un color más fuerte sobre «real» o sobre
+`\keyterm{…}` ahorra leer las dos versiones enteras buscando la diferencia.
 
 **Se puede copiar de una versión anterior.** Recuperar tres líneas que se
 quitaron es seleccionarlas y copiarlas, no revertir un commit.
 
 **Es del fichero, no del repositorio.** Lo que interesa es la historia de esta
 unidad en este idioma, no todo lo que ha pasado alrededor.
+
+## Comparar con ahora
+
+En la barra de una versión antigua, **Comparar con ahora** cambia la pregunta:
+en lugar de «¿qué cambió aquel día?», **«¿qué ha cambiado desde entonces?»**,
+con lo de entonces en rojo y lo de ahora en verde. Es la que se hace antes de
+una clase: qué ha tocado alguien en este tema desde el curso pasado.
+
+## Recuperar una versión
+
+**Recuperar esta versión** enseña primero qué cambiaría respecto a lo de
+ahora, y si se confirma pone el texto de entonces en el editor **como un
+cambio sin guardar**. No se toca nada hasta pulsar Guardar --que pide su
+mensaje y enseña el diff, como siempre-- y **Descartar** lo deja como estaba.
+No hay «revertir» que deshaga meses de trabajo de un clic.
 
 ## Dónde está
 

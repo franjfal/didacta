@@ -17,6 +17,7 @@
 /// * **restaurar no reescribe la historia**: deja un cambio pendiente, como
 ///   cualquier edición.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -349,6 +350,27 @@ void main() {
         File('${root.path}/clone/$unitFile').readAsStringSync(),
         'La versión de noviembre.\n',
       );
+    });
+
+    test('una figura vuelve byte a byte', () async {
+      // Todos los valores de byte, un CR y un LF sueltos incluidos: lo que
+      // tiene un PNG o un PDF, y lo que rompía la restauración cuando se
+      // leía como texto.
+      const figure = 'content/analysis/normed/definition/bola.png';
+      final original = List<int>.generate(512, (i) => i % 256);
+      File('$seed/$figure').writeAsBytesSync(original);
+      await _git(['add', '.'], seed);
+      await _git(_asSomeone(['commit', '-m', 'La figura']), seed);
+      final frozen = await _sha(seed);
+      File('$seed/$figure').writeAsBytesSync([1, 2, 3]);
+      await _git(['add', '.'], seed);
+      await _git(_asSomeone(['commit', '-m', 'Otra figura']), seed);
+      await _git(['push'], seed);
+      await _git(['pull'], '${root.path}/clone');
+
+      await clone.restoreFrom(sha: frozen, paths: const ['content']);
+
+      expect(File('${root.path}/clone/$figure').readAsBytesSync(), original);
     });
 
     test('ningún commit se pierde por restaurar', () async {

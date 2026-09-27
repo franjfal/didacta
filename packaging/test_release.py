@@ -869,5 +869,84 @@ class WorkflowTest(unittest.TestCase):
             )
 
 
+class PrereleaseTest(unittest.TestCase):
+    """Las versiones de prueba: `prerelease: true` en `release.yaml`."""
+
+    def setUp(self):
+        self.temp = tempfile.mkdtemp()
+        self.originals = (release.PLAN, release.PUBSPEC, release.CHANGELOG)
+        release.PLAN = os.path.join(self.temp, "release.yaml")
+        release.PUBSPEC = os.path.join(self.temp, "pubspec.yaml")
+        release.CHANGELOG = os.path.join(self.temp, "CHANGELOG.md")
+        self.version("1.4.2+9")
+
+    def tearDown(self):
+        release.PLAN, release.PUBSPEC, release.CHANGELOG = self.originals
+        shutil.rmtree(self.temp, ignore_errors=True)
+
+    def version(self, text):
+        with open(release.PUBSPEC, "w", encoding="utf-8") as handle:
+            handle.write("name: didacta_app\nversion: %s\n" % text)
+
+    def plan(self, text):
+        with open(release.PLAN, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+    def changelog(self, text):
+        with open(release.CHANGELOG, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+    def test_una_prueba_de_la_siguiente_y_otra_prueba_de_la_misma(self):
+        self.assertEqual(release.next_version("1.4.2", "minor", True), "1.5.0-rc.1")
+        self.assertEqual(release.next_version("1.4.2", "patch", True), "1.4.3-rc.1")
+        # Otra prueba es otro intento de la misma versión, suba lo que suba.
+        self.assertEqual(release.next_version("1.5.0-rc.1", "major", True), "1.5.0-rc.2")
+        self.assertEqual(release.next_version("1.5.0-beta", "minor", True), "1.5.0-rc.1")
+        # Y la final después de las pruebas es la suya.
+        self.assertEqual(release.next_version("1.5.0-rc.2", "minor"), "1.5.0")
+
+    def test_se_pide_en_release_yaml(self):
+        self.assertFalse(release.planned_prerelease())
+        self.plan("bump: minor\nprerelease: true\n")
+        self.assertTrue(release.planned_prerelease())
+        before, after, build = release.bump()
+        self.assertEqual((before, after, build), ("1.4.2", "1.5.0-rc.1", 10))
+        self.assertEqual(release.read_version(), ("1.5.0-rc.1", 10))
+
+    def test_un_valor_que_no_es_si_ni_no_para(self):
+        self.plan("prerelease: quizá\n")
+        with self.assertRaises(release.Problem):
+            release.read_plan()
+
+    def test_reset_vuelve_a_una_final(self):
+        self.plan("bump: major\nprerelease: true\n")
+        release.write_plan("bump", release.DEFAULT_PART)
+        release.write_plan("prerelease", "false")
+        self.assertEqual(release.read_plan(), {"bump": "minor", "prerelease": False})
+
+    def test_las_notas_de_una_prueba_son_las_de_arriba_sin_renombrarla(self):
+        self.changelog("# Cambios\n\n## Próxima\n\n- Algo nuevo.\n\n## 1.4.2\n\n- Lo de antes.\n")
+        self.assertEqual(release.read_notes("1.5.0-rc.1"), "- Algo nuevo.")
+        with open(release.CHANGELOG, encoding="utf-8") as handle:
+            self.assertIn("## Próxima", handle.read())
+        # Con la final ya titulada, la suya.
+        self.changelog("## 1.5.0\n\n- La final.\n\n## 1.4.2\n\n- Antes.\n")
+        self.assertEqual(release.read_notes("1.5.0-rc.3"), "- La final.")
+        # Sin nada pendiente, no hay notas que dar.
+        self.changelog("## 1.4.2\n\n- Antes.\n")
+        with self.assertRaises(release.Problem):
+            release.read_notes("1.5.0-rc.1")
+
+    def test_el_manifiesto_de_una_prueba_lo_dice(self):
+        uploaded = [{"name": "Didacta-1.5.0-rc.1-macos-universal.zip",
+                     "size": 3, "id": 7, "sha256": "ab"}]
+        manifest = release.build_manifest("1.5.0-rc.1", 10, "- x", uploaded)
+        self.assertTrue(manifest["prerelease"])
+        self.assertEqual(manifest["tag"], "v1.5.0-rc.1")
+        final = release.build_manifest("1.5.0", 11, "- x", [
+            dict(uploaded[0], name="Didacta-1.5.0-macos-universal.zip")])
+        self.assertNotIn("prerelease", final)
+
+
 if __name__ == "__main__":
     unittest.main()

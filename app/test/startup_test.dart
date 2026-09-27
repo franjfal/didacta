@@ -11,6 +11,7 @@
 /// justo el paso al que no se llegaba. Así que estos montan [DidactaApp], que
 /// es lo que monta `main`.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -104,7 +105,7 @@ void main() {
     });
   }
 
-  testWidgets('con clon pero sin índice, el consejo es `didacta index`', (
+  testWidgets('con clon pero sin índice, el consejo es regenerarlo', (
     tester,
   ) async {
     // El otro fallo, que sí es el que el consejo arregla: la carpeta está
@@ -139,12 +140,84 @@ void main() {
 
     expect(find.text('No se pudo cargar el catálogo'), findsOneWidget);
     expect(find.textContaining('${clone.path}/generated'), findsWidgets);
-    expect(find.text('didacta index'), findsOneWidget);
+    // Con el motor a mano, un botón que lo hace; sin él, la orden para el
+    // terminal. Las dos dicen lo mismo: lo que falta es el índice.
+    expect(
+      find.byKey(const Key('rebuild-index')).evaluate().isNotEmpty ||
+          find.text('didacta index').evaluate().isNotEmpty,
+      isTrue,
+    );
     expect(
       find.textContaining('No hay ninguna carpeta del repositorio'),
       findsNothing,
     );
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('con el motor, el índice se regenera desde aquí', (tester) async {
+    // Mandaba al terminal a escribir `didacta index`, cuando la aplicación
+    // sabe hacerlo sola.
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final engine = Directory.current.path.endsWith('/app')
+        ? Directory.current.parent.path
+        : Directory.current.path;
+    final work = Directory.systemTemp.createTempSync('didacta-reindex-');
+    addTearDown(() => work.deleteSync(recursive: true));
+    final clone = '${work.path}/repo';
+    await tester.runAsync(() async {
+      final copy = await Process.run('cp', [
+        '-R',
+        '$engine/examples/demo-course',
+        clone,
+      ]);
+      expect(copy.exitCode, 0, reason: '${copy.stderr}');
+      final generated = Directory('$clone/generated');
+      if (generated.existsSync()) generated.deleteSync(recursive: true);
+    });
+
+    final session = LocalSession(
+      catalogueSource: StaticCatalogueSource(catalogueWith(defaultUnits())),
+      tokenStore: StubStore(),
+      preferences: MemoryPreferences(
+        path: clone,
+        engine: engine,
+        repos: Workspace([
+          ContentRepo(owner: 'x', name: 'repo', directory: clone),
+        ]).toJson(),
+      ),
+    );
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        DidactaApp(session: session, updates: offlineUpdates()),
+      );
+      for (var i = 0; i < 8; i += 1) {
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        await tester.pump();
+      }
+    });
+    await settle(tester);
+    expect(find.text('No se pudo cargar el catálogo'), findsOneWidget);
+    expect(find.text('didacta index'), findsNothing);
+
+    // Dentro de `runAsync`: regenerar lanza el motor de verdad, y con el
+    // reloj falso del test ese proceso no termina nunca.
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('rebuild-index')));
+      for (var i = 0; i < 100; i += 1) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await tester.pump();
+        if (File('$clone/generated/manifest.json').existsSync() &&
+            find.text('No se pudo cargar el catálogo').evaluate().isEmpty) {
+          break;
+        }
+      }
+    });
+    await settle(tester);
+    expect(File('$clone/generated/manifest.json').existsSync(), isTrue);
+    expect(find.text('No se pudo cargar el catálogo'), findsNothing);
   });
 
   group('sin repositorios, la aplicación abre y dice qué falta', () {

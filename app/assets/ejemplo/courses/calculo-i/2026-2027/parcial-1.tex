@@ -1,0 +1,29 @@
+% Primer parcial.
+%
+% Un examen es una composición como cualquier otra: una lista de problemas que
+% ya existen en la biblioteca. Aquí son dos de la hoja 1, y no son copias: si
+% se corrige una errata en uno, queda corregida en la hoja y en el examen.
+%
+%   exam           el enunciado, sin pistas y con espacio para contestar
+%   exam-marking   la corrección: resultados, soluciones y criterios
+
+\input{didacta-bootstrap}
+\usepackage{didacta}
+
+%% Solo un respaldo: Didacta inyecta estos datos desde `course.yaml` y
+%% `year.yaml`, en el idioma que se compila. Ver tema-1.tex.
+\DidactaCourse{
+  title   = {Cálculo I},
+  teacher = {Tu nombre},
+}
+\DidactaDocument{Primer parcial}
+
+\begin{document}
+\DidactaSheetHeader
+
+%% La composición, que el motor escribe a partir de `year.yaml`.
+
+\DidactaProblem{calculo/continuidad/discontinuidades-evitables}
+\DidactaProblem{calculo/continuidad/tres-raices-por-bolzano}
+
+\end{document}

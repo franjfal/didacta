@@ -27,12 +27,16 @@ import 'package:didacta_app/ui/composition_editor.dart';
 import 'package:didacta_app/ui/freezes.dart';
 import 'package:didacta_app/ui/reuse.dart';
 import 'package:didacta_app/ui/shell.dart';
+import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/year_page.dart';
 
 import '../test/fixture.dart';
 import 'generate_screenshots.dart' show loadFonts, shotTheme;
 
-const String outputDir = '../web/docs/img/app';
+/// Como en `generate_screenshots.dart`: `DIDACTA_SHOTS_OUT` cambia dónde, y
+/// `DIDACTA_SHOTS_DARK=1` las pinta en oscuro para repasarlas.
+final String outputDir =
+    Platform.environment['DIDACTA_SHOTS_OUT'] ?? '../web/docs/img/app';
 const Size window = Size(1280, 820);
 const double density = 2.0;
 
@@ -230,7 +234,11 @@ void main() {
         key: _frame,
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: shotTheme(),
+          theme: shotTheme(
+            Platform.environment['DIDACTA_SHOTS_DARK'] == '1'
+                ? DidactaPalette.dark
+                : DidactaPalette.light,
+          ),
           home: child,
         ),
       ),

@@ -1,0 +1,7 @@
+# Los PDF compilados. Se generan a partir de los `.tex` que hay al lado, así
+# que versionarlos sería guardar la misma información dos veces y dejar que
+# las dos copias discrepen.
+.didacta-build/
+
+# macOS deja uno en cada carpeta que se abre con el Finder.
+.DS_Store

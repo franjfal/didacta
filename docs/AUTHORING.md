@@ -213,6 +213,14 @@ iba. En Didacta no: migrar es renombrar, no reescribir.
 
 Para la ecuación de la diapositiva que importa. (`nformula` es el alias antiguo.)
 
+### Las funciones con nombre castellano
+
+`\sen`, `\tg`, `\arcsen`, `\arctg`, `\cotg`, `\cosec`, `\senh` y `\tgh` se
+pueden usar en cualquier idioma: una traducción que copia las fórmulas tal cual
+compila. Cada idioma las escribe a su manera --en castellano *sen* y *arc sen*,
+en valenciano *sin* y *tg*, en inglés *sin* y *tan*--, y el nombre lo decide su
+`latex/lang/didacta-lang-XX.def`.
+
 ---
 
 ## Problemas
@@ -364,8 +372,15 @@ content/trigonometria/tales/teorema-tales/
 ```
 
 ```latex
-\includegraphics[width=.85\textwidth]{figures/corte1.png}
+\includegraphics[width=.85\textwidth,alt={Un triángulo cortado por dos
+  paralelas}]{figures/corte1.png}
 ```
+
+`alt={…}` dice lo que se ve en la figura, para quien no la ve: lo lee un lector
+de pantalla en el PDF accesible (`didacta build --accessible`) y en el HTML
+(`didacta html`). Sin etiquetado no hace nada. En un dibujo va en sus
+opciones, `\begin{tikzpicture}[alt={…}]`; Didacta acepta la clave aunque pgf no
+la conozca. `didacta check --with accessible` dice qué figuras no lo tienen.
 
 La figura viaja con la unidad: moverla, renombrarla o reutilizarla en otra
 asignatura no rompe la referencia. Es lo contrario del sistema anterior, donde

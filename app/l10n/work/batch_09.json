@@ -1,0 +1,1430 @@
+[
+ {
+  "key": "Ver y filtrar",
+  "where": [
+   "ui/library_page.dart:1006"
+  ]
+ },
+ {
+  "key": "Ver {0}",
+  "where": [
+   "data/file_manager.dart:29"
+  ]
+ },
+ {
+  "key": "Ver {0} {1}",
+  "where": [
+   "ui/pdf_tab.dart:732"
+  ]
+ },
+ {
+  "key": "Verde (proposición)",
+  "where": [
+   "ui/manage_snippets.dart:53"
+  ]
+ },
+ {
+  "key": "Verlos",
+  "where": [
+   "ui/manage_snippets.dart:511"
+  ]
+ },
+ {
+  "key": "Versiones congeladas",
+  "where": [
+   "ui/compare_view.dart:276",
+   "ui/info_menu.dart:188"
+  ]
+ },
+ {
+  "key": "Versiones congeladas · {0} {1}",
+  "where": [
+   "ui/freezes.dart:75"
+  ]
+ },
+ {
+  "key": "Versiones de prueba",
+  "where": [
+   "ui/update_section.dart:138"
+  ]
+ },
+ {
+  "key": "Versión congelada quitada. El historial sigue entero.",
+  "where": [
+   "ui/freezes.dart:479"
+  ]
+ },
+ {
+  "key": "Versión congelada renombrada.",
+  "where": [
+   "ui/freezes.dart:427"
+  ]
+ },
+ {
+  "key": "Versión congelada «{0}» ({1}). Solo lectura.",
+  "where": [
+   "data/frozen.dart:359"
+  ]
+ },
+ {
+  "key": "Versión corta en diapositivas, larga en los apuntes",
+  "where": [
+   "model/tex_vocabulary.dart:60"
+  ]
+ },
+ {
+  "key": "Versión del {0}",
+  "where": [
+   "ui/history_tab.dart:682"
+  ]
+ },
+ {
+  "key": "Versión instalada",
+  "where": [
+   "ui/update_section.dart:39",
+   "ui/update_section.dart:303"
+  ]
+ },
+ {
+  "key": "Vinculación",
+  "where": [
+   "ui/info_menu.dart:266"
+  ]
+ },
+ {
+  "key": "Vinculación dividida. Cada grupo sigue sincronizado por dentro.",
+  "where": [
+   "ui/document_links.dart:126",
+   "ui/unit_page.dart:3642"
+  ]
+ },
+ {
+  "key": "Violeta (axioma)",
+  "where": [
+   "ui/manage_snippets.dart:59"
+  ]
+ },
+ {
+  "key": "Visor del sistema",
+  "where": [
+   "ui/unit_preview.dart:1223"
+  ]
+ },
+ {
+  "key": "Vista rápida",
+  "where": [
+   "ui/unit_preview.dart:786",
+   "ui/settings_page.dart:2651"
+  ]
+ },
+ {
+  "key": "Vista rápida · {0} versiones",
+  "where": [
+   "ui/unit_preview.dart:787"
+  ]
+ },
+ {
+  "key": "Vista rápida: una sola pasada. El índice, las referencias y el total de diapositivas pueden no estar al día; para repartirlo, «Compilar entero».",
+  "where": [
+   "ui/unit_preview.dart:1245",
+   "ui/pdf_tab.dart:666"
+  ]
+ },
+ {
+  "key": "Volver a abrir Didacta",
+  "where": [
+   "ui/start_over.dart:90"
+  ]
+ },
+ {
+  "key": "Volver a compilar esta versión",
+  "where": [
+   "ui/unit_preview.dart:1123"
+  ]
+ },
+ {
+  "key": "Volver a compilar {0}",
+  "where": [
+   "ui/pdf_tab.dart:701"
+  ]
+ },
+ {
+  "key": "Volver a comprobar",
+  "where": [
+   "ui/toolchain_check.dart:418",
+   "ui/toolchain_check.dart:974"
+  ]
+ },
+ {
+  "key": "Volver a enseñar {0}",
+  "where": [
+   "ui/sync_bar.dart:897"
+  ]
+ },
+ {
+  "key": "Volver a enseñar «{0}» en esta lista",
+  "where": [
+   "ui/courses_page.dart:1774"
+  ]
+ },
+ {
+  "key": "Volver a entrar",
+  "where": [
+   "ui/problem.dart:60"
+  ]
+ },
+ {
+  "key": "Volver a la versión actual",
+  "where": [
+   "ui/shell.dart:423"
+  ]
+ },
+ {
+  "key": "Volver a la versión de hoy",
+  "where": [
+   "ui/command_palette.dart:238"
+  ]
+ },
+ {
+  "key": "Volver a las carpetas",
+  "where": [
+   "ui/composition_editor.dart:1269"
+  ]
+ },
+ {
+  "key": "Volver a revisar",
+  "where": [
+   "ui/review_panel.dart:359"
+  ]
+ },
+ {
+  "key": "Volver a un idioma a la vez",
+  "where": [
+   "ui/unit_page.dart:3088"
+  ]
+ },
+ {
+  "key": "Volver a ver la presentación",
+  "where": [
+   "ui/settings_page.dart:1022"
+  ]
+ },
+ {
+  "key": "Volver al de Didacta",
+  "where": [
+   "ui/manage_snippets.dart:910"
+  ]
+ },
+ {
+  "key": "Vuelve lo que había antes en {0}, como un cambio nuevo. El que se deshace sigue en la historia.",
+  "where": [
+   "ui/recent_changes.dart:177"
+  ]
+ },
+ {
+  "key": "Windows",
+  "where": [
+   "model/toolchain.dart:47",
+   "data/app_info.dart:67"
+  ]
+ },
+ {
+  "key": "Windows descargará e instalará Git para Windows.",
+  "where": [
+   "model/toolchain.dart:419"
+  ]
+ },
+ {
+  "key": "Windows descargará e instalará MiKTeX.",
+  "where": [
+   "model/toolchain.dart:718"
+  ]
+ },
+ {
+  "key": "Windows descargará e instalará Python 3.",
+  "where": [
+   "model/toolchain.dart:500"
+  ]
+ },
+ {
+  "key": "Y el resto",
+  "where": [
+   "ui/tour.dart:343"
+  ]
+ },
+ {
+  "key": "Y en Ajustes → Compilar, «Elegir el motor» y señalar esa carpeta.",
+  "where": [
+   "model/toolchain.dart:380"
+  ]
+ },
+ {
+  "key": "Y en {0}, todo junto.",
+  "where": [
+   "ui/export_actions.dart:87"
+  ]
+ },
+ {
+  "key": "Y estas escriben en el repositorio",
+  "where": [
+   "ui/mcp_page.dart:411"
+  ]
+ },
+ {
+  "key": "Y los de siempre al escribir: Ctrl+Z, Ctrl+C, Ctrl+V…",
+  "where": [
+   "ui/shortcuts.dart:166"
+  ]
+ },
+ {
+  "key": "Y los de siempre al escribir: ⌘Z, ⌘C, ⌘V…",
+  "where": [
+   "ui/shortcuts.dart:165"
+  ]
+ },
+ {
+  "key": "Y otra lección que la tiene de prerrequisito.",
+  "where": [
+   "ui/new_unit.dart:683"
+  ]
+ },
+ {
+  "key": "Y para acabar",
+  "where": [
+   "ui/tour.dart:333",
+   "ui/tour.dart:342"
+  ]
+ },
+ {
+  "key": "Y se envía a GitHub",
+  "where": [
+   "ui/settings_page.dart:2859"
+  ]
+ },
+ {
+  "key": "Y {0} lecciones que la tienen de prerrequisito.",
+  "where": [
+   "ui/new_unit.dart:684"
+  ]
+ },
+ {
+  "key": "Ya compiladas",
+  "where": [
+   "ui/unit_preview.dart:923"
+  ]
+ },
+ {
+  "key": "Ya definido",
+  "where": [
+   "ui/manage_snippets.dart:1710"
+  ]
+ },
+ {
+  "key": "Ya estaba ordenado.",
+  "where": [
+   "ui/unit_page.dart:1838"
+  ]
+ },
+ {
+  "key": "Ya estaba todo: no se ha traído nada.",
+  "where": [
+   "ui/settings_page.dart:2088"
+  ]
+ },
+ {
+  "key": "Ya está descargada y comprobada. Al continuar, Didacta se cerrará un momento y volverá a abrirse con la versión nueva.",
+  "where": [
+   "ui/update_section.dart:337"
+  ]
+ },
+ {
+  "key": "Ya está en tu disco",
+  "where": [
+   "ui/welcome.dart:886"
+  ]
+ },
+ {
+  "key": "Ya existe",
+  "where": [
+   "ui/course_admin_ui.dart:573",
+   "ui/course_admin_ui.dart:768"
+  ]
+ },
+ {
+  "key": "Ya has entrado",
+  "where": [
+   "ui/welcome.dart:775"
+  ]
+ },
+ {
+  "key": "Ya hay un grupo con ese identificador",
+  "where": [
+   "ui/new_document.dart:123"
+  ]
+ },
+ {
+  "key": "Ya hay un tema con ese identificador",
+  "where": [
+   "ui/new_document.dart:274"
+  ]
+ },
+ {
+  "key": "Ya hay un tema con ese nombre en el destino.",
+  "where": [
+   "ui/reuse.dart:288"
+  ]
+ },
+ {
+  "key": "Ya hay una copia en {0}. No se vuelve a descargar: encima de él se perdería lo que tenga sin enviar, que puede ser el trabajo de otra persona de esta máquina.\n\nPuedo abrir ese y ponerlo al día con GitHub.",
+  "where": [
+   "ui/add_repository.dart:129"
+  ]
+ },
+ {
+  "key": "Ya hay una lección en {0}.",
+  "where": [
+   "ui/new_unit.dart:148",
+   "ui/new_unit.dart:394",
+   "ui/new_unit.dart:553"
+  ]
+ },
+ {
+  "key": "Ya hay uno así en este curso",
+  "where": [
+   "ui/problem_set.dart:271"
+  ]
+ },
+ {
+  "key": "Ya lo tengo clonado",
+  "where": [
+   "ui/welcome.dart:895"
+  ]
+ },
+ {
+  "key": "Ya tenías el ejemplo: {0} está abierto.",
+  "where": [
+   "ui/add_repository.dart:253"
+  ]
+ },
+ {
+  "key": "Ya tenías {0}/{1}: lo abro…",
+  "where": [
+   "state/repositories.dart:463"
+  ]
+ },
+ {
+  "key": "Ya tienes un repositorio que se llama {0}.",
+  "where": [
+   "data/github.dart:546"
+  ]
+ },
+ {
+  "key": "Ya traduce a todos los que Didacta sabe imprimir.",
+  "where": [
+   "ui/language_settings.dart:353"
+  ]
+ },
+ {
+  "key": "[Título]  o  {red}",
+  "where": [
+   "ui/manage_snippets.dart:1668"
+  ]
+ },
+ {
+  "key": "\\begin{itemize}\n\\item Uno\n\\end{itemize}\n",
+  "where": [
+   "data/indenter_io.dart:28"
+  ]
+ },
+ {
+  "key": "\\begin{{0}}{1} … \\end{{2}}",
+  "where": [
+   "model/latex_snippets.dart:269"
+  ]
+ },
+ {
+  "key": "\\newenvironment{{0}}\n  {\\par\\medskip\\noindent\\textbf{{1}.}\\ }\n  {\\par\\medskip}",
+  "where": [
+   "ui/manage_snippets.dart:1844"
+  ]
+ },
+ {
+  "key": "`{0}` tiene un valor escalar, así que no puede contener `{1}`",
+  "where": [
+   "model/yaml_patch.dart:359"
+  ]
+ },
+ {
+  "key": "a mano",
+  "where": [
+   "state/catalogue_store.dart:336"
+  ]
+ },
+ {
+  "key": "activar {0}",
+  "where": [
+   "ui/composition_editor.dart:585"
+  ]
+ },
+ {
+  "key": "ahora está vinculado",
+  "where": [
+   "ui/compare_view.dart:330"
+  ]
+ },
+ {
+  "key": "ahora está vinculado a otro tema",
+  "where": [
+   "ui/compare_view.dart:329"
+  ]
+ },
+ {
+  "key": "ahí no hay plantillas: falta el templates.yaml",
+  "where": [
+   "data/template_store_io.dart:83"
+  ]
+ },
+ {
+  "key": "al día",
+  "where": [
+   "ui/settings_page.dart:1564"
+  ]
+ },
+ {
+  "key": "alemán",
+  "where": [
+   "model/library_tree.dart:216"
+  ]
+ },
+ {
+  "key": "another git process",
+  "where": [
+   "data/local_clone.dart:176"
+  ]
+ },
+ {
+  "key": "application/json; charset=utf-8",
+  "where": [
+   "data/translator_http.dart:102",
+   "data/translator_http.dart:193"
+  ]
+ },
+ {
+  "key": "apuntes",
+  "where": [
+   "ui/welcome_art.dart:449"
+  ]
+ },
+ {
+  "key": "aquí",
+  "where": [
+   "ui/reuse.dart:796"
+  ]
+ },
+ {
+  "key": "aquí no se puede guardar",
+  "where": [
+   "data/translation_secrets.dart:139"
+  ]
+ },
+ {
+  "key": "article, book, beamer",
+  "where": [
+   "ui/manage_templates.dart:998"
+  ]
+ },
+ {
+  "key": "asignatura curso {0}",
+  "where": [
+   "ui/command_palette.dart:403"
+  ]
+ },
+ {
+  "key": "automatic merge failed",
+  "where": [
+   "data/local_clone.dart:209"
+  ]
+ },
+ {
+  "key": "avanzado simple modo",
+  "where": [
+   "ui/command_palette.dart:257"
+  ]
+ },
+ {
+  "key": "añadir crear",
+  "where": [
+   "ui/year_page.dart:1396",
+   "ui/year_page.dart:1403"
+  ]
+ },
+ {
+  "key": "añadir crear prueba ejercicios",
+  "where": [
+   "ui/year_page.dart:1410"
+  ]
+ },
+ {
+  "key": "añadir unidades composición",
+  "where": [
+   "ui/document_page.dart:384"
+  ]
+ },
+ {
+  "key": "añadir {0}",
+  "where": [
+   "ui/composition_editor.dart:582"
+  ]
+ },
+ {
+  "key": "bad credentials",
+  "where": [
+   "data/local_clone.dart:188"
+  ]
+ },
+ {
+  "key": "blocks: []",
+  "where": [
+   "model/taxonomy_file.dart:259"
+  ]
+ },
+ {
+  "key": "buscar en el texto",
+  "where": [
+   "data/local_clone_io.dart:1110"
+  ]
+ },
+ {
+  "key": "cada uno en su idioma",
+  "where": [
+   "ui/build_button.dart:204"
+  ]
+ },
+ {
+  "key": "cambiar el orden",
+  "where": [
+   "ui/composition_editor.dart:592"
+  ]
+ },
+ {
+  "key": "carpeta del programa",
+  "where": [
+   "ui/settings_page.dart:2030"
+  ]
+ },
+ {
+  "key": "carpeta nombre",
+  "where": [
+   "ui/unit_page.dart:537"
+  ]
+ },
+ {
+  "key": "castellano",
+  "where": [
+   "model/tex_check.dart:87"
+  ]
+ },
+ {
+  "key": "catalán",
+  "where": [
+   "model/library_tree.dart:211"
+  ]
+ },
+ {
+  "key": "catalán y valenciano",
+  "where": [
+   "model/tex_check.dart:89"
+  ]
+ },
+ {
+  "key": "categoría",
+  "where": [
+   "ui/metadata_editor.dart:644",
+   "ui/unit_page.dart:2720"
+  ]
+ },
+ {
+  "key": "categoría nueva",
+  "where": [
+   "model/metadata_suggestions.dart:73"
+  ]
+ },
+ {
+  "key": "categoría/tema/nombre",
+  "where": [
+   "ui/new_unit.dart:616"
+  ]
+ },
+ {
+  "key": "clonar {0}/{1}",
+  "where": [
+   "data/local_clone_io.dart:167",
+   "data/local_clone_io.dart:225"
+  ]
+ },
+ {
+  "key": "como {0} <{1}>",
+  "where": [
+   "data/content_gateway.dart:264"
+  ]
+ },
+ {
+  "key": "comparar {0} con {1}",
+  "where": [
+   "data/local_clone_io.dart:1072"
+  ]
+ },
+ {
+  "key": "compilada {0}",
+  "where": [
+   "ui/unit_preview.dart:1092"
+  ]
+ },
+ {
+  "key": "compilando…",
+  "where": [
+   "ui/pdf_tab.dart:682"
+  ]
+ },
+ {
+  "key": "con cabecera propia",
+  "where": [
+   "ui/manage_templates.dart:816"
+  ]
+ },
+ {
+  "key": "con {0}",
+  "where": [
+   "model/library_filter.dart:147"
+  ]
+ },
+ {
+  "key": "congelada salir actual",
+  "where": [
+   "ui/command_palette.dart:239"
+  ]
+ },
+ {
+  "key": "connection reset",
+  "where": [
+   "data/local_clone.dart:225"
+  ]
+ },
+ {
+  "key": "connection timed out",
+  "where": [
+   "data/local_clone.dart:222"
+  ]
+ },
+ {
+  "key": "consultar {0}",
+  "where": [
+   "data/local_clone_io.dart:301"
+  ]
+ },
+ {
+  "key": "copiar copia",
+  "where": [
+   "ui/unit_page.dart:531"
+  ]
+ },
+ {
+  "key": "could not read username",
+  "where": [
+   "data/local_clone.dart:183"
+  ]
+ },
+ {
+  "key": "crear añadir curso",
+  "where": [
+   "ui/courses_page.dart:119"
+  ]
+ },
+ {
+  "key": "curso académico",
+  "where": [
+   "ui/course_admin_ui.dart:385"
+  ]
+ },
+ {
+  "key": "cursos académicos",
+  "where": [
+   "ui/course_admin_ui.dart:389"
+  ]
+ },
+ {
+  "key": "cursos ir",
+  "where": [
+   "ui/command_palette.dart:333"
+  ]
+ },
+ {
+  "key": "declaradas por tus repositorios",
+  "where": [
+   "ui/settings_page.dart:1968"
+  ]
+ },
+ {
+  "key": "degrees: []",
+  "where": [
+   "model/degrees_file.dart:213"
+  ]
+ },
+ {
+  "key": "dejar el índice como en el último commit",
+  "where": [
+   "data/local_clone_io.dart:818"
+  ]
+ },
+ {
+  "key": "del profesor",
+  "where": [
+   "ui/welcome_art.dart:453"
+  ]
+ },
+ {
+  "key": "dentro está otro repositorio ({0})",
+  "where": [
+   "model/folder_safety.dart:52"
+  ]
+ },
+ {
+  "key": "dentro está {0}",
+  "where": [
+   "model/folder_safety.dart:41"
+  ]
+ },
+ {
+  "key": "desactivar {0}",
+  "where": [
+   "ui/composition_editor.dart:588"
+  ]
+ },
+ {
+  "key": "diapositivas",
+  "where": [
+   "ui/welcome_art.dart:448"
+  ]
+ },
+ {
+  "key": "difícil",
+  "where": [
+   "ui/metadata_editor.dart:718"
+  ]
+ },
+ {
+  "key": "display notification {0} with title \"Didacta\" subtitle {1}",
+  "where": [
+   "model/notification.dart:69"
+  ]
+ },
+ {
+  "key": "divergent branches",
+  "where": [
+   "data/local_clone.dart:214"
+  ]
+ },
+ {
+  "key": "dividir editores comparar",
+  "where": [
+   "ui/unit_page.dart:517"
+  ]
+ },
+ {
+  "key": "duración",
+  "where": [
+   "ui/metadata_editor.dart:365",
+   "ui/metadata_editor.dart:704",
+   "ui/unit_page.dart:2724"
+  ]
+ },
+ {
+  "key": "el año no tiene clave `documents`",
+  "where": [
+   "model/composition_file.dart:598"
+  ]
+ },
+ {
+  "key": "el curso {0} {1}",
+  "where": [
+   "ui/freezes.dart:990"
+  ]
+ },
+ {
+  "key": "el documento `{0}` no está en {1}. Puede que el catálogo esté desactualizado: se regenera con `didacta index`.",
+  "where": [
+   "ui/composition_editor.dart:138"
+  ]
+ },
+ {
+  "key": "el estado «{0}» lo calcula el motor; no se puede declarar",
+  "where": [
+   "state/catalogue_editor.dart:1511"
+  ]
+ },
+ {
+  "key": "el fichero que compila",
+  "where": [
+   "model/course_diff.dart:406"
+  ]
+ },
+ {
+  "key": "el motor",
+  "where": [
+   "model/folder_safety.dart:37"
+  ]
+ },
+ {
+  "key": "el nuevo",
+  "where": [
+   "ui/course_admin_ui.dart:661"
+  ]
+ },
+ {
+  "key": "el orden nuevo no tiene los mismos documentos: {0} contra {1}",
+  "where": [
+   "model/composition_file.dart:494"
+  ]
+ },
+ {
+  "key": "el original no se revisa: es de donde se traduce",
+  "where": [
+   "state/catalogue_editor.dart:1570"
+  ]
+ },
+ {
+  "key": "el programa",
+  "where": [
+   "ui/document_properties.dart:325"
+  ]
+ },
+ {
+  "key": "el que se encuentre",
+  "where": [
+   "ui/settings_page.dart:1080"
+  ]
+ },
+ {
+  "key": "el repositorio",
+  "where": [
+   "ui/library_page.dart:898",
+   "ui/review_panel.dart:104",
+   "ui/course_admin_ui.dart:136"
+  ]
+ },
+ {
+  "key": "el tema compartido `{0}` dice vivir en {1}, y ahí no hay ninguna composición. Puede que el fichero esté en otro repositorio que no tienes abierto.",
+  "where": [
+   "ui/composition_editor.dart:131"
+  ]
+ },
+ {
+  "key": "el tema «{0}»",
+  "where": [
+   "ui/freezes.dart:995"
+  ]
+ },
+ {
+  "key": "el texto en {0}",
+  "where": [
+   "model/course_diff.dart:457"
+  ]
+ },
+ {
+  "key": "el título original",
+  "where": [
+   "ui/metadata_editor.dart:597"
+  ]
+ },
+ {
+  "key": "el valor de `{0}` no es un mapa que se pueda editar campo a campo: {1}",
+  "where": [
+   "model/yaml_patch.dart:198"
+  ]
+ },
+ {
+  "key": "elegidas para esta lección",
+  "where": [
+   "ui/metadata_editor.dart:1108"
+  ]
+ },
+ {
+  "key": "elegir la rama {0}",
+  "where": [
+   "data/local_clone_io.dart:233"
+  ]
+ },
+ {
+  "key": "en algún momento",
+  "where": [
+   "ui/theme.dart:1134"
+  ]
+ },
+ {
+  "key": "en el Explorador",
+  "where": [
+   "model/launch.dart:147"
+  ]
+ },
+ {
+  "key": "en el Finder",
+  "where": [
+   "model/launch.dart:146"
+  ]
+ },
+ {
+  "key": "en el programa · sin copia de seguridad",
+  "where": [
+   "ui/manage_templates.dart:734"
+  ]
+ },
+ {
+  "key": "en su carpeta",
+  "where": [
+   "model/launch.dart:148",
+   "data/file_manager_stub.dart:10"
+  ]
+ },
+ {
+  "key": "en un repositorio",
+  "where": [
+   "ui/manage_snippets.dart:309",
+   "ui/manage_snippets.dart:1422"
+  ]
+ },
+ {
+  "key": "en {0}",
+  "where": [
+   "ui/build_button.dart:206",
+   "ui/build_button.dart:207"
+  ]
+ },
+ {
+  "key": "en {0} cambios, uno por repositorio",
+  "where": [
+   "ui/translate_unit.dart:757"
+  ]
+ },
+ {
+  "key": "en {0} documentos",
+  "where": [
+   "ui/source_view.dart:1051"
+  ]
+ },
+ {
+  "key": "en {0} repositorios",
+  "where": [
+   "ui/manage_snippets.dart:309",
+   "ui/manage_snippets.dart:1423"
+  ]
+ },
+ {
+  "key": "enunciados y resultados",
+  "where": [
+   "ui/manage_templates.dart:811",
+   "model/catalogue.dart:1573",
+   "data/compiler.dart:57"
+  ]
+ },
+ {
+  "key": "enunciados, resultados y solución",
+  "where": [
+   "ui/manage_templates.dart:812",
+   "model/catalogue.dart:1574",
+   "data/compiler.dart:58"
+  ]
+ },
+ {
+  "key": "enviar el primer cambio a GitHub",
+  "where": [
+   "data/local_clone_io.dart:283"
+  ]
+ },
+ {
+  "key": "enviar los cambios a GitHub",
+  "where": [
+   "data/local_clone_io.dart:830"
+  ]
+ },
+ {
+  "key": "es la raíz del disco",
+  "where": [
+   "model/folder_safety.dart:31"
+  ]
+ },
+ {
+  "key": "es {0}",
+  "where": [
+   "model/folder_safety.dart:40"
+  ]
+ },
+ {
+  "key": "esperado {0}, obtenido {1}",
+  "where": [
+   "data/update_installer_io.dart:137"
+  ]
+ },
+ {
+  "key": "esperados {0} bytes, recibidos {1}",
+  "where": [
+   "data/update_installer_io.dart:148"
+  ]
+ },
+ {
+  "key": "esta asignatura",
+  "where": [
+   "ui/courses_page.dart:1366"
+  ]
+ },
+ {
+  "key": "esta unidad",
+  "where": [
+   "ui/unit_preview.dart:149"
+  ]
+ },
+ {
+  "key": "estado de {0}",
+  "where": [
+   "ui/metadata_editor.dart:388"
+  ]
+ },
+ {
+  "key": "estado: {0}",
+  "where": [
+   "ui/tabs.dart:114"
+  ]
+ },
+ {
+  "key": "este año no tiene documentos",
+  "where": [
+   "model/composition_file.dart:489"
+  ]
+ },
+ {
+  "key": "este documento no tiene composición en year.yaml",
+  "where": [
+   "ui/source_view.dart:485"
+  ]
+ },
+ {
+  "key": "este fichero",
+  "where": [
+   "ui/recent_changes.dart:184"
+  ]
+ },
+ {
+  "key": "este fichero tiene {0} entornos `{1}`, y el campo es uno. Se edita como texto.",
+  "where": [
+   "model/problem_file.dart:168"
+  ]
+ },
+ {
+  "key": "este fichero tiene {0} problemas, y los campos son de uno. Se edita como texto, y se parte en varios cuando toque.",
+  "where": [
+   "model/problem_file.dart:157"
+  ]
+ },
+ {
+  "key": "este repositorio",
+  "where": [
+   "ui/problem_set.dart:401"
+  ]
+ },
+ {
+  "key": "este repositorio no declara el grado `{0}`",
+  "where": [
+   "model/degrees_file.dart:198"
+  ]
+ },
+ {
+  "key": "este repositorio ya declara `{0}`",
+  "where": [
+   "model/templates_file.dart:154"
+  ]
+ },
+ {
+  "key": "este repositorio ya declara el bloque `{0}`",
+  "where": [
+   "model/taxonomy_file.dart:168"
+  ]
+ },
+ {
+  "key": "este repositorio ya declara el grado `{0}`",
+  "where": [
+   "model/degrees_file.dart:136"
+  ]
+ },
+ {
+  "key": "este tema",
+  "where": [
+   "ui/unit_preview.dart:232",
+   "ui/year_page.dart:1981"
+  ]
+ },
+ {
+  "key": "estos repositorios",
+  "where": [
+   "ui/problem_set.dart:400"
+  ]
+ },
+ {
+  "key": "estos {0} ficheros",
+  "where": [
+   "ui/recent_changes.dart:185"
+  ]
+ },
+ {
+  "key": "está dentro de otro repositorio ({0})",
+  "where": [
+   "model/folder_safety.dart:55"
+  ]
+ },
+ {
+  "key": "está dentro del motor",
+  "where": [
+   "model/folder_safety.dart:46"
+  ]
+ },
+ {
+  "key": "está en",
+  "where": [
+   "ui/between_repos_page.dart:350"
+  ]
+ },
+ {
+  "key": "está vinculado",
+  "where": [
+   "ui/course_admin_ui.dart:657"
+  ]
+ },
+ {
+  "key": "están vinculados",
+  "where": [
+   "ui/course_admin_ui.dart:658"
+  ]
+ },
+ {
+  "key": "etiqueta nueva",
+  "where": [
+   "model/metadata_suggestions.dart:104"
+  ]
+ },
+ {
+  "key": "examen",
+  "where": [
+   "ui/welcome_art.dart:452"
+  ]
+ },
+ {
+  "key": "examen {0}{1}",
+  "where": [
+   "ui/problem_set.dart:503"
+  ]
+ },
+ {
+  "key": "existe en {0}",
+  "where": [
+   "ui/library_page.dart:1589"
+  ]
+ },
+ {
+  "key": "failed to connect",
+  "where": [
+   "data/local_clone.dart:221"
+  ]
+ },
+ {
+  "key": "falta en {0}",
+  "where": [
+   "ui/library_page.dart:1590"
+  ]
+ },
+ {
+  "key": "falta {0}",
+  "where": [
+   "ui/translate_tab.dart:199"
+  ]
+ },
+ {
+  "key": "fetch first",
+  "where": [
+   "data/local_clone.dart:194"
+  ]
+ },
+ {
+  "key": "filtrar lecciones",
+  "where": [
+   "ui/library_page.dart:311"
+  ]
+ },
+ {
+  "key": "filtro lista",
+  "where": [
+   "ui/courses_page.dart:138"
+  ]
+ },
+ {
+  "key": "francés",
+  "where": [
+   "model/tex_check.dart:90",
+   "model/library_tree.dart:215"
+  ]
+ },
+ {
+  "key": "fácil",
+  "where": [
+   "ui/metadata_editor.dart:716"
+  ]
+ },
+ {
+  "key": "gallego",
+  "where": [
+   "model/tex_check.dart:88"
+  ]
+ },
+ {
+  "key": "gratis con {0}",
+  "where": [
+   "ui/translate_unit.dart:688"
+  ]
+ },
+ {
+  "key": "guardada {0}",
+  "where": [
+   "ui/translation_settings.dart:171"
+  ]
+ },
+ {
+  "key": "guardar commit",
+  "where": [
+   "ui/unit_page.dart:477"
+  ]
+ },
+ {
+  "key": "guardar composición",
+  "where": [
+   "ui/year_page.dart:1371"
+  ]
+ },
+ {
+  "key": "guardar el correo del autor",
+  "where": [
+   "data/local_clone_io.dart:444"
+  ]
+ },
+ {
+  "key": "guardar el nombre del autor",
+  "where": [
+   "data/local_clone_io.dart:438"
+  ]
+ },
+ {
+  "key": "guardar el primer cambio",
+  "where": [
+   "data/local_clone_io.dart:267"
+  ]
+ },
+ {
+  "key": "guardar en el historial",
+  "where": [
+   "data/local_clone_io.dart:738"
+  ]
+ },
+ {
+  "key": "guardar {0} en el historial",
+  "where": [
+   "data/local_clone_io.dart:653"
+  ]
+ },
+ {
+  "key": "guía",
+  "where": [
+   "ui/theme.dart:414"
+  ]
+ },
+ {
+  "key": "hace falta haber entrado en GitHub",
+  "where": [
+   "ui/settings_page.dart:1199"
+  ]
+ },
+ {
+  "key": "hace un momento",
+  "where": [
+   "ui/theme.dart:1136"
+  ]
+ },
+ {
+  "key": "hace {0} días",
+  "where": [
+   "ui/theme.dart:1141"
+  ]
+ },
+ {
+  "key": "hace {0} h",
+  "where": [
+   "ui/theme.dart:1140"
+  ]
+ },
+ {
+  "key": "hace {0} min",
+  "where": [
+   "ui/theme.dart:1138"
+  ]
+ },
+ {
+  "key": "hash del contenido",
+  "where": [
+   "ui/settings_page.dart:2137"
+  ]
+ },
+ {
+  "key": "historial últimos deshacer",
+  "where": [
+   "ui/courses_page.dart:126"
+  ]
+ },
+ {
+  "key": "id: {0}",
+  "where": [
+   "ui/manage_snippets.dart:1902"
+  ]
+ },
+ {
+  "key": "id: {0} · de Didacta: lo que cambies se guarda como un retoque",
+  "where": [
+   "ui/manage_snippets.dart:1897"
+  ]
+ },
+ {
+  "key": "idioma pestaña {0}",
+  "where": [
+   "ui/unit_page.dart:487"
+  ]
+ },
+ {
+  "key": "idioma {0}",
+  "where": [
+   "ui/year_page.dart:92",
+   "ui/command_palette.dart:248"
+  ]
+ },
+ {
+  "key": "inglés",
+  "where": [
+   "model/library_tree.dart:214"
+  ]
+ },
+ {
+  "key": "invalid username or password",
+  "where": [
+   "data/local_clone.dart:184"
+  ]
+ },
+ {
+  "key": "la carpeta donde se clonan todos",
+  "where": [
+   "model/folder_safety.dart:36"
+  ]
+ }
+]

@@ -10,6 +10,8 @@
 /// Sin `dart:io`: la decisión se prueba sin tocar ningún disco.
 library;
 
+import '../l10n/tr.dart';
+
 /// Por qué no se debe mandar [folder] a la Papelera, o `null` si se puede.
 ///
 /// [home] es la carpeta de usuario, [cloneBase] donde se clonan los
@@ -24,31 +26,33 @@ String? whyNotTrash(
 }) {
   final target = _normal(folder);
   if (target.isEmpty || !_absolute(target)) {
-    return 'no es una ruta completa ($folder)';
+    return tr('no es una ruta completa ({0})', [folder]);
   }
-  if (_isRoot(target)) return 'es la raíz del disco';
+  if (_isRoot(target)) return tr('es la raíz del disco');
 
   final protected = <String, String>{
-    if (home.isNotEmpty) _normal(home): 'tu carpeta de usuario',
+    if (home.isNotEmpty) _normal(home): tr('tu carpeta de usuario'),
     if (cloneBase.isNotEmpty)
-      _normal(cloneBase): 'la carpeta donde se clonan todos',
-    if (engine != null && engine.isNotEmpty) _normal(engine): 'el motor',
+      _normal(cloneBase): tr('la carpeta donde se clonan todos'),
+    if (engine != null && engine.isNotEmpty) _normal(engine): tr('el motor'),
   };
   for (final MapEntry(key: path, value: what) in protected.entries) {
-    if (path == target) return 'es $what';
-    if (_inside(path, target)) return 'dentro está $what';
+    if (path == target) return tr('es {0}', [what]);
+    if (_inside(path, target)) return tr('dentro está {0}', [what]);
   }
   // Dentro de la carpeta de usuario o de la de los clones es lo normal;
   // dentro del motor o de otro repositorio, no: sería llevarse un trozo suyo.
   if (engine != null && engine.isNotEmpty && _inside(target, _normal(engine))) {
-    return 'está dentro del motor';
+    return tr('está dentro del motor');
   }
   for (final other in others) {
     final path = _normal(other);
     if (path.isEmpty || path == target) continue;
-    if (_inside(path, target)) return 'dentro está otro repositorio ($other)';
+    if (_inside(path, target)) {
+      return tr('dentro está otro repositorio ({0})', [other]);
+    }
     if (_inside(target, path)) {
-      return 'está dentro de otro repositorio ($other)';
+      return tr('está dentro de otro repositorio ({0})', [other]);
     }
   }
   return null;

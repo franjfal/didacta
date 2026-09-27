@@ -31,13 +31,15 @@ import 'package:path_provider/path_provider.dart';
 import '../model/update_manifest.dart';
 import 'release_channel.dart';
 import 'update_installer.dart';
+import 'diagnostics.dart';
+import '../l10n/tr.dart';
 
 UpdateInstaller createInstaller({String? installedAt}) {
   if (Platform.isMacOS) return _MacInstaller(installedAt);
   if (Platform.isWindows) return _WindowsInstaller(installedAt);
   if (Platform.isLinux) return _LinuxInstaller(installedAt);
   return _Unsupported(
-    'Didacta solo se actualiza sola en macOS, Windows y Linux.',
+    tr('Didacta solo se actualiza sola en macOS, Windows y Linux.'),
   );
 }
 
@@ -89,9 +91,9 @@ abstract class _DesktopInstaller implements UpdateInstaller {
     try {
       await for (final chunk in response.stream) {
         if (stopped) {
-          throw const UpdateException(
+          throw UpdateException(
             UpdateProblem.cancelled,
-            'Descarga cancelada.',
+            tr('Descarga cancelada.'),
           );
         }
         out.add(chunk);
@@ -105,7 +107,13 @@ abstract class _DesktopInstaller implements UpdateInstaller {
       // Cerrar antes de borrar: en Windows no se borra un fichero abierto.
       try {
         await out.close();
-      } catch (_) {}
+      } catch (caught, trace) {
+        Diagnostics.instance.note(
+          'update_installer.download.close',
+          caught,
+          trace,
+        );
+      }
       await _quietlyDelete(staging);
       if (thrown is UpdateException) rethrow;
       throw _mapWriteFailure(thrown);
@@ -121,10 +129,12 @@ abstract class _DesktopInstaller implements UpdateInstaller {
       await _quietlyDelete(staging);
       throw UpdateException(
         UpdateProblem.checksumMismatch,
-        'La descarga no coincide con lo que anunciaba el release, así que no '
-        'se va a instalar. Vuelve a intentarlo; si sigue pasando, avisa a '
-        'quien publica Didacta.',
-        detail: 'esperado ${asset.sha256}, obtenido $digest',
+        tr(
+          'La descarga no coincide con lo que anunciaba el release, así que no '
+          'se va a instalar. Vuelve a intentarlo; si sigue pasando, avisa a '
+          'quien publica Didacta.',
+        ),
+        detail: tr('esperado {0}, obtenido {1}', [asset.sha256, digest]),
       );
     }
 
@@ -134,8 +144,11 @@ abstract class _DesktopInstaller implements UpdateInstaller {
       await _quietlyDelete(staging);
       throw UpdateException(
         UpdateProblem.downloadInterrupted,
-        'La descarga se quedó a medias.',
-        detail: 'esperados ${asset.size} bytes, recibidos $received',
+        tr('La descarga se quedó a medias.'),
+        detail: tr('esperados {0} bytes, recibidos {1}', [
+          asset.size,
+          received,
+        ]),
       );
     }
 
@@ -146,18 +159,20 @@ abstract class _DesktopInstaller implements UpdateInstaller {
   Never applyAndExit() {
     final script = _prepared;
     if (script == null) {
-      throw const UpdateException(
+      throw UpdateException(
         UpdateProblem.installFailed,
-        'No hay ninguna actualización preparada.',
+        tr('No hay ninguna actualización preparada.'),
       );
     }
     // Desligado del proceso: en cuanto Didacta termine, el script tiene que
     // seguir vivo. Es toda la razón por la que la sustitución la hace otro.
-    Process.start(
-      _runner.first,
-      [..._runner.skip(1), script],
-      mode: ProcessStartMode.detached,
-      runInShell: false,
+    unawaited(
+      Process.start(
+        _runner.first,
+        [..._runner.skip(1), script],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      ),
     );
     // `exit` y no `SystemNavigator.pop()`: hay que cerrar de verdad y ya, que
     // es lo que el script está esperando.
@@ -177,7 +192,8 @@ abstract class _DesktopInstaller implements UpdateInstaller {
     final Directory base;
     try {
       base = await getTemporaryDirectory();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('update_installer.staging', caught, trace);
       return Directory.systemTemp.createTempSync('didacta-update-');
     }
     final dir = Directory(
@@ -193,7 +209,8 @@ abstract class _DesktopInstaller implements UpdateInstaller {
   Future<void> _quietlyDelete(FileSystemEntity entity) async {
     try {
       if (await entity.exists()) await entity.delete(recursive: true);
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('update_installer.delete', caught, trace);
       // Un temporal que no se deja borrar no es motivo para fallar nada.
     }
   }
@@ -207,22 +224,24 @@ abstract class _DesktopInstaller implements UpdateInstaller {
           code == 112 ||
           message.contains('no space') ||
           message.contains('espacio')) {
-        return const UpdateException(
+        return UpdateException(
           UpdateProblem.noSpace,
-          'No hay espacio suficiente en el disco para descargar la '
-          'actualización.',
+          tr(
+            'No hay espacio suficiente en el disco para descargar la '
+            'actualización.',
+          ),
         );
       }
       if (code == 13 || code == 5 || message.contains('permission')) {
-        return const UpdateException(
+        return UpdateException(
           UpdateProblem.noPermission,
-          'No hay permiso para escribir la descarga.',
+          tr('No hay permiso para escribir la descarga.'),
         );
       }
     }
     return UpdateException(
       UpdateProblem.downloadInterrupted,
-      'Se cortó la descarga.',
+      tr('Se cortó la descarga.'),
       detail: '$thrown',
     );
   }
@@ -289,17 +308,22 @@ class _MacInstaller extends _DesktopInstaller {
   String? get unsupportedReason {
     final bundle = bundlePath();
     if (bundle == null) {
-      return 'Didacta no se está ejecutando desde un paquete .app, así que no '
-          'puede sustituirse a sí misma. Descarga el DMG e instálala.';
+      return tr(
+        'Didacta no se está ejecutando desde un paquete .app, así que no '
+        'puede sustituirse a sí misma. Descarga el DMG e instálala.',
+      );
     }
     // Sustituir un `.app` es escribir en la carpeta que lo contiene. Si está
     // en `/Applications` y esta cuenta no es administradora, no se puede, y
     // eso hay que saberlo **antes** de descargar 90 MB para nada.
     if (!_canWriteInto(File(bundle).parent.path)) {
-      return 'Didacta está instalada en ${File(bundle).parent.path}, donde '
-          'esta cuenta no puede escribir, así que no puede actualizarse sola. '
-          'Descarga el DMG e instálala, o mueve Didacta a tu propia carpeta '
-          'de Aplicaciones.';
+      return tr(
+        'Didacta está instalada en {0}, donde '
+        'esta cuenta no puede escribir, así que no puede actualizarse sola. '
+        'Descarga el DMG e instálala, o mueve Didacta a tu propia carpeta '
+        'de Aplicaciones.',
+        [File(bundle).parent.path],
+      );
     }
     return null;
   }
@@ -315,7 +339,8 @@ class _MacInstaller extends _DesktopInstaller {
       probe.writeAsStringSync('');
       probe.deleteSync();
       return true;
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('update_installer.canWrite', caught, trace);
       return false;
     }
   }
@@ -346,7 +371,7 @@ class _MacInstaller extends _DesktopInstaller {
     if (unzip.exitCode != 0) {
       throw UpdateException(
         UpdateProblem.brokenRelease,
-        'El paquete descargado no se pudo abrir.',
+        tr('El paquete descargado no se pudo abrir.'),
         detail: '${unzip.stderr}',
       );
     }
@@ -357,9 +382,9 @@ class _MacInstaller extends _DesktopInstaller {
         .where((entry) => entry.path.endsWith('.app'))
         .firstOrNull;
     if (newBundle == null) {
-      throw const UpdateException(
+      throw UpdateException(
         UpdateProblem.brokenRelease,
-        'El paquete descargado no contiene ninguna aplicación.',
+        tr('El paquete descargado no contiene ninguna aplicación.'),
       );
     }
 
@@ -367,30 +392,30 @@ class _MacInstaller extends _DesktopInstaller {
     // bundle vacío pasaría el checksum y dejaría una Didacta que no abre.
     final executable = File('${newBundle.path}/Contents/MacOS/Didacta');
     if (!executable.existsSync()) {
-      throw const UpdateException(
+      throw UpdateException(
         UpdateProblem.brokenRelease,
-        'La aplicación descargada está incompleta.',
+        tr('La aplicación descargada está incompleta.'),
       );
     }
 
     await _checkSignature(newBundle.path, target);
 
-    final script =
-        '''
+    final script = tr(
+      '''
 #!/bin/sh
-# Sustituye Didacta cuando el proceso $pid termine. Lo escribe la propia
+# Sustituye Didacta cuando el proceso {0} termine. Lo escribe la propia
 # aplicación y lo ejecuta fuera de ella: un .app no puede reemplazarse a sí
 # mismo mientras corre.
 set -u
 
-TARGET=${_DesktopInstaller.sh(target)}
-NEW=${_DesktopInstaller.sh(newBundle.path)}
+TARGET={1}
+NEW={2}
 BACKUP="\$TARGET.didacta-anterior"
-STAGING=${_DesktopInstaller.sh(staging)}
+STAGING={3}
 
 # Esperar a que cierre, con tope: si no termina en 60 s, no se toca nada.
 i=0
-while kill -0 $pid 2>/dev/null; do
+while kill -0 {4} 2>/dev/null; do
   i=\$((i + 1))
   [ \$i -gt 600 ] && exit 1
   sleep 0.1
@@ -409,7 +434,15 @@ fi
 
 open "\$TARGET"
 rm -rf "\$STAGING"
-''';
+''',
+      [
+        pid,
+        _DesktopInstaller.sh(target),
+        _DesktopInstaller.sh(newBundle.path),
+        _DesktopInstaller.sh(staging),
+        pid,
+      ],
+    );
     await _writeScript(staging, 'instalar.sh', script);
   }
 
@@ -436,8 +469,10 @@ rm -rf "\$STAGING"
     if (next.exitCode != 0) {
       throw UpdateException(
         UpdateProblem.installFailed,
-        'La actualización no está firmada correctamente y la versión que '
-        'tienes instalada sí lo está, así que no se va a instalar.',
+        tr(
+          'La actualización no está firmada correctamente y la versión que '
+          'tienes instalada sí lo está, así que no se va a instalar.',
+        ),
         detail: '${next.stderr}',
       );
     }
@@ -469,20 +504,20 @@ class _WindowsInstaller extends _DesktopInstaller {
     // El instalador es un ejecutable firmado (cuando haya certificado) y ya
     // sabe sustituir ficheros en uso. Lo único que hace falta de este lado es
     // esperar a que Didacta cierre y volver a abrirla después.
-    final script =
-        '''
+    final script = tr(
+      '''
 @echo off
-rem Actualiza Didacta cuando el proceso $pid termine.
+rem Actualiza Didacta cuando el proceso {0} termine.
 setlocal
 
-set "INSTALADOR=${update.path}"
-set "APP=$executable"
-set "REGISTRO=$staging\\instalacion.log"
+set "INSTALADOR={1}"
+set "APP={2}"
+set "REGISTRO={3}\\instalacion.log"
 
 rem Esperar a que cierre, con tope de 60 s.
 set /a intentos=0
 :esperar
-tasklist /FI "PID eq $pid" 2>nul | find "$pid" >nul
+tasklist /FI "PID eq {4}" 2>nul | find "{5}" >nul
 if errorlevel 1 goto instalar
 set /a intentos+=1
 if %intentos% GEQ 60 goto abrir
@@ -496,7 +531,9 @@ rem /SILENT: sin preguntas. Instalación por usuario, sin administrador.
 :abrir
 start "" "%APP%"
 endlocal
-''';
+''',
+      [pid, update.path, executable, staging, pid, pid],
+    );
     await _writeScript(staging, 'instalar.cmd', script);
   }
 }
@@ -524,9 +561,11 @@ class _LinuxInstaller extends _DesktopInstaller {
 
   @override
   String? get unsupportedReason => appImage() == null
-      ? 'Didacta no se está ejecutando desde un AppImage, así que la '
-            'actualización la gobierna tu gestor de paquetes. Descarga el '
-            'AppImage si quieres que se actualice sola.'
+      ? tr(
+          'Didacta no se está ejecutando desde un AppImage, así que la '
+          'actualización la gobierna tu gestor de paquetes. Descarga el '
+          'AppImage si quieres que se actualice sola.',
+        )
       : null;
 
   @override
@@ -547,25 +586,25 @@ class _LinuxInstaller extends _DesktopInstaller {
         head[1] != 0x45 ||
         head[2] != 0x4C ||
         head[3] != 0x46) {
-      throw const UpdateException(
+      throw UpdateException(
         UpdateProblem.brokenRelease,
-        'Lo descargado no es un AppImage.',
+        tr('Lo descargado no es un AppImage.'),
       );
     }
 
     final staging = File(update.path).parent.path;
-    final script =
-        '''
+    final script = tr(
+      '''
 #!/bin/sh
-# Sustituye el AppImage cuando el proceso $pid termine.
+# Sustituye el AppImage cuando el proceso {0} termine.
 set -u
 
-TARGET=${_DesktopInstaller.sh(target)}
-NEW=${_DesktopInstaller.sh(update.path)}
-STAGING=${_DesktopInstaller.sh(staging)}
+TARGET={1}
+NEW={2}
+STAGING={3}
 
 i=0
-while kill -0 $pid 2>/dev/null; do
+while kill -0 {4} 2>/dev/null; do
   i=\$((i + 1))
   [ \$i -gt 600 ] && exit 1
   sleep 0.1
@@ -590,7 +629,15 @@ fi
 
 "\$TARGET" >/dev/null 2>&1 &
 rm -rf "\$STAGING"
-''';
+''',
+      [
+        pid,
+        _DesktopInstaller.sh(target),
+        _DesktopInstaller.sh(update.path),
+        _DesktopInstaller.sh(staging),
+        pid,
+      ],
+    );
     await _writeScript(staging, 'instalar.sh', script);
   }
 }

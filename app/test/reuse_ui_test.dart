@@ -197,10 +197,23 @@ void main() {
         find.textContaining('se ve desde el otro, porque es un solo fichero'),
         findsWidgets,
       );
+      // Y duplicar dice la verdad: las lecciones siguen siendo las mismas.
       expect(
-        find.textContaining('Una copia con identidad propia'),
+        find.textContaining('Las lecciones siguen siendo las mismas'),
         findsWidgets,
       );
+    });
+
+    testWidgets('duplicar ofrece duplicar también las lecciones', (
+      tester,
+    ) async {
+      await openTarget(tester);
+      expect(find.byKey(const Key('reuse-with-units')), findsNothing);
+      await tester.tap(find.byKey(const Key('reuse-mode-duplicate')));
+      await tester.pumpAndSettle();
+      final box = find.byKey(const Key('reuse-with-units'));
+      expect(box, findsOneWidget);
+      expect(tester.widget<CheckboxListTile>(box).value, isFalse);
     });
 
     testWidgets('elegir duplicar cambia lo que dice el botón', (tester) async {

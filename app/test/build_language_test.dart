@@ -107,6 +107,7 @@ void main() {
   group('el botón de compilar', () {
     testWidgets('pulsar compila el idioma en el que se está', (tester) async {
       final asked = <List<String>>[];
+      void ask(BuildChoice choice) => asked.add(choice.languages);
       await pump(
         tester,
         BuildButton(
@@ -114,7 +115,7 @@ void main() {
           what: 'esto',
           options: tres,
           current: 'va',
-          onBuild: asked.add,
+          onBuild: ask,
         ),
       );
 
@@ -128,6 +129,7 @@ void main() {
 
     testWidgets('mantener pulsado ofrece el actual o todos', (tester) async {
       final asked = <List<String>>[];
+      void ask(BuildChoice choice) => asked.add(choice.languages);
       await pump(
         tester,
         BuildButton(
@@ -135,7 +137,7 @@ void main() {
           what: 'esto',
           options: tres,
           current: 'va',
-          onBuild: asked.add,
+          onBuild: ask,
         ),
       );
 
@@ -155,9 +157,11 @@ void main() {
       ]);
     });
 
-    testWidgets('con un solo idioma no hay menú', (tester) async {
-      // Un menú de una opción es un clic de más.
+    testWidgets('con un solo idioma no pregunta el idioma', (tester) async {
+      // Una opción de idioma que no se puede elegir es un clic de más; lo
+      // que queda en el menú es la pregunta de las versiones.
       final asked = <List<String>>[];
+      void ask(BuildChoice choice) => asked.add(choice.languages);
       await pump(
         tester,
         BuildButton(
@@ -165,7 +169,7 @@ void main() {
           what: 'esto',
           options: const [LanguageOption(code: 'es', name: 'Castellano')],
           current: 'es',
-          onBuild: asked.add,
+          onBuild: ask,
         ),
       );
 
@@ -173,6 +177,33 @@ void main() {
       await settle(tester);
 
       expect(find.byKey(const Key('build-all-languages')), findsNothing);
+      expect(find.byKey(const Key('build-every-version')), findsOneWidget);
+    });
+
+    testWidgets('«todas las versiones» se pide en el menú', (tester) async {
+      final asked = <BuildChoice>[];
+      await pump(
+        tester,
+        BuildButton(
+          id: 'x',
+          what: 'esto',
+          options: tres,
+          current: 'va',
+          onBuild: asked.add,
+        ),
+      );
+
+      // Pulsar: las del documento.
+      await tester.tap(find.byKey(const Key('build-x')));
+      await settle(tester);
+      expect(asked.single.everyVersion, isFalse);
+
+      await tester.longPress(find.byKey(const Key('build-x')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('build-every-version')));
+      await settle(tester);
+      expect(asked.last.everyVersion, isTrue);
+      expect(asked.last.languages, ['va']);
     });
 
     testWidgets('si la asignatura no da el idioma actual, compila el suyo', (
@@ -182,6 +213,7 @@ void main() {
       // darlo. Compilar «el actual» y sacar otra cosa sin avisar sería peor
       // que no ofrecerlo.
       final asked = <List<String>>[];
+      void ask(BuildChoice choice) => asked.add(choice.languages);
       await pump(
         tester,
         BuildButton(
@@ -192,7 +224,7 @@ void main() {
             LanguageOption(code: 'en', name: 'English'),
           ],
           current: 'es',
-          onBuild: asked.add,
+          onBuild: ask,
         ),
       );
 

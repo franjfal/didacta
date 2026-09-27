@@ -165,6 +165,7 @@ class ArgumentTests(unittest.TestCase):
                 self.assertEqual(raised.exception.code, 0)
 
 
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 
@@ -595,3 +596,414 @@ class BuildInterfaceTests(unittest.TestCase):
             json.loads(printed)
         self.assertNotIn("=== ", printed)
 
+
+
+class ExportTests(unittest.TestCase):
+    """Lo que se reparte al exportar un curso.
+
+    Una carpeta exportada acaba en el aula virtual. Antes salía todo lo que
+    estuviera compilado, y eso incluye la plantilla de corrección del examen
+    y las copias del profesor: nadie las pedía, pero estaban ahí. Ahora sale
+    lo del estudiante salvo que se pida más, y lo que se queda fuera se dice.
+    """
+
+    PROFILES = ["slides", "handout-answers", "notes-solutions",
+                "slides-teacher"]
+
+    # El mismo repositorio de juguete que los de compilar, sin sus tests.
+    run_cli = BuildInterfaceTests.run_cli
+    capture = BuildInterfaceTests.capture
+
+    def setUp(self):
+        BuildInterfaceTests.setUp(self)
+        year = os.path.join(self.root, "courses", "mates", "2024-2025",
+                            "year.yaml")
+        with open(year, encoding="utf-8") as handle:
+            text = handle.read()
+        with open(year, "w", encoding="utf-8") as handle:
+            handle.write(text.replace(
+                "profiles: [slides]",
+                "profiles: [%s]" % ", ".join(self.PROFILES)))
+        # PDF de mentira donde los dejaría una compilación: exportar solo
+        # copia, así que no hace falta TeX para probarlo.
+        all_profiles = self.cli.profiles_mod.load(self.cli.LATEX_DIR)
+        engine = self.cli.build_mod.Engine(
+            latex_dir=self.cli.LATEX_DIR,
+            build_dir=os.path.join(self.root, ".build"),
+            template_dirs=[self.root],
+            settings=self.cli.repo_mod.Settings.load(self.root),
+        )
+        for name in self.PROFILES:
+            folder = engine.output_dir("mates@2024-2025/tema-1", name, "es")
+            os.makedirs(folder, exist_ok=True)
+            pdf = all_profiles[name].output_name("Tema 1", "es") + ".pdf"
+            with open(os.path.join(folder, pdf), "wb") as handle:
+                handle.write(b"%PDF-1.4\n")
+        self.to = os.path.join(self.root, "reparto")
+
+    def export(self, *extra):
+        code, output = self.capture(
+            "export", "mates@2024-2025", "--to", self.to, "-l", "es",
+            "--json", *extra)
+        self.assertEqual(code, 0, output)
+        return json.loads(output)
+
+    def profiles_in(self, report):
+        return sorted(output["profile"] for output in report["outputs"])
+
+    def test_by_default_only_what_a_student_may_see(self):
+        report = self.export()
+        self.assertEqual(self.profiles_in(report),
+                         ["handout-answers", "slides"])
+        self.assertEqual(
+            sorted(report["withheld"]),
+            ["tema-1 · notes-solutions · es", "tema-1 · slides-teacher · es"])
+        self.assertEqual(report["missing"], [])
+
+    def test_the_solutions_have_to_be_asked_for(self):
+        report = self.export("--reveal-up-to", "solutions")
+        self.assertEqual(self.profiles_in(report),
+                         ["handout-answers", "notes-solutions", "slides"])
+        self.assertEqual(report["withheld"],
+                         ["tema-1 · slides-teacher · es"])
+
+    def test_the_teacher_s_copies_too(self):
+        report = self.export("--reveal-up-to", "teacher")
+        self.assertEqual(self.profiles_in(report),
+                         sorted(self.PROFILES))
+        self.assertEqual(report["withheld"], [])
+
+    def test_withheld_is_not_missing(self):
+        # Lo que se deja fuera a propósito no es «sin compilar»: mezclarlo
+        # haría creer que falta compilar la plantilla de corrección.
+        report = self.export()
+        self.assertTrue(all("teacher" not in name and "solutions" not in name
+                            for name in report["missing"]))
+
+    def test_the_way_the_app_asks_for_one_document(self):
+        # Los posicionales juntos detrás de `--`. Con el curso delante de las
+        # opciones y los documentos detrás, argparse rechazaba los segundos,
+        # y exportar desde la aplicación fallaba siempre.
+        code, output = self.capture(
+            "export", "--to", self.to, "--language", "es",
+            "--reveal-up-to", "answers", "--json",
+            "--", "mates@2024-2025", "tema-1")
+        self.assertEqual(code, 0, output)
+        self.assertEqual(len(json.loads(output)["copied"]), 2)
+
+    def test_nothing_withheld_ends_up_in_the_folder(self):
+        self.export()
+        found = []
+        for _, _, files in os.walk(self.to):
+            found.extend(files)
+        self.assertFalse([name for name in found
+                          if "profesor" in name or "soluciones" in name],
+                         found)
+
+    def test_the_names_are_said_in_the_language_of_the_export(self):
+        # «Tema 1 - Diapositivas.pdf» y no «Tema 1 - slides - es.pdf»: lo lee
+        # un estudiante, y el idioma ya lo dice la carpeta.
+        report = self.export("--reveal-up-to", "teacher")
+        names = sorted(os.path.basename(path) for path in report["copied"])
+        self.assertIn("Tema 1 - Diapositivas.pdf", names)
+        self.assertIn("Tema 1 - Diapositivas (profesor).pdf", names)
+        self.assertIn("Tema 1 - Apuntes (con soluciones).pdf", names)
+        self.assertFalse([name for name in names if " - es" in name], names)
+
+    def test_a_zip_with_everything_for_the_virtual_classroom(self):
+        import zipfile
+
+        archive = os.path.join(self.root, "Mates 2024-2025.zip")
+        report = self.export("--zip", archive)
+        self.assertEqual(report["zip"], archive)
+        with zipfile.ZipFile(archive) as opened:
+            self.assertEqual(sorted(opened.namelist()),
+                             sorted(path.replace(os.sep, "/")
+                                    for path in report["copied"]))
+        # Una segunda pasada --otro repositorio de la misma asignatura-- se
+        # añade sin repetir; sin `--zip-append`, se rehace.
+        self.export("--zip", archive, "--zip-append",
+                    "--reveal-up-to", "teacher")
+        with zipfile.ZipFile(archive) as opened:
+            self.assertEqual(len(opened.namelist()), len(self.PROFILES))
+        self.export("--zip", archive)
+        with zipfile.ZipFile(archive) as opened:
+            self.assertEqual(len(opened.namelist()), 2)
+
+
+class StaleDocumentTests(unittest.TestCase):
+    """Cuándo `built` da por viejo el PDF de un documento.
+
+    Antes solo miraba la composición --el `.tex` del documento y el
+    `year.yaml`--, así que corregir una lección dejaba el PDF del tema que la
+    lleva «al día» y se podía proyectar el de antes sin que nada lo dijera. Lo
+    que se comprueba es que las lecciones cuentan, en su idioma y con sus
+    figuras, y que lo que no cambia el PDF no lo deja viejo.
+    """
+
+    run_cli = BuildInterfaceTests.run_cli
+    capture = BuildInterfaceTests.capture
+
+    def setUp(self):
+        BuildInterfaceTests.setUp(self)
+        self.lesson = os.path.join(self.root, "content", "a", "b", "c")
+        year = os.path.join(self.root, "courses", "mates", "2024-2025")
+        all_profiles = self.cli.profiles_mod.load(self.cli.LATEX_DIR)
+        engine = self.cli.build_mod.Engine(
+            latex_dir=self.cli.LATEX_DIR,
+            build_dir=os.path.join(self.root, ".build"),
+            template_dirs=[self.root],
+            settings=self.cli.repo_mod.Settings.load(self.root),
+        )
+        folder = engine.output_dir("mates@2024-2025/tema-1", "slides", "es")
+        os.makedirs(folder, exist_ok=True)
+        self.pdf = os.path.join(
+            folder, all_profiles["slides"].output_name("Tema 1", "es") + ".pdf")
+        with open(self.pdf, "wb") as handle:
+            handle.write(b"%PDF-1.4\n")
+
+        # Todo lo de antes, de hace una hora; el PDF, de hace media.
+        self.before = 1_700_000_000
+        for directory in (self.lesson, year):
+            for name in os.listdir(directory):
+                os.utime(os.path.join(directory, name),
+                         (self.before, self.before))
+        os.utime(self.pdf, (self.before + 1800, self.before + 1800))
+
+    def later(self, path):
+        """Como si se hubiera guardado después de compilar."""
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        if not os.path.exists(path):
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write("x\n")
+        os.utime(path, (self.before + 3600, self.before + 3600))
+
+    def stale(self):
+        code, output = self.capture("built", "mates@2024-2025", "--json")
+        self.assertEqual(code, 0, output)
+        outputs = json.loads(output)["documents"][0]["outputs"]
+        return [o["stale"] for o in outputs if o["language"] == "es"][0]
+
+    def test_recien_compilado_esta_al_dia(self):
+        self.assertFalse(self.stale())
+
+    def test_corregir_una_leccion_lo_deja_viejo(self):
+        self.later(os.path.join(self.lesson, "es.tex"))
+        self.assertTrue(self.stale())
+
+    def test_una_figura_nueva_tambien(self):
+        self.later(os.path.join(self.lesson, "figures", "norma.pdf"))
+        self.assertTrue(self.stale())
+
+    def test_otro_idioma_de_la_leccion_no(self):
+        # El PDF en castellano no lleva el valenciano.
+        self.later(os.path.join(self.lesson, "va.tex"))
+        self.assertFalse(self.stale())
+
+    def test_aprobar_una_traduccion_no(self):
+        # `unit.yaml` cambia de estado, no de texto: el PDF es el mismo.
+        self.later(os.path.join(self.lesson, "unit.yaml"))
+        self.assertFalse(self.stale())
+
+    def test_una_leccion_llamada_por_id_tambien_cuenta(self):
+        year = os.path.join(self.root, "courses", "mates", "2024-2025",
+                            "year.yaml")
+        with open(year, encoding="utf-8") as handle:
+            text = handle.read()
+        with open(year, "w", encoding="utf-8") as handle:
+            handle.write(text.replace("- unit: a/b/c", "- unit: a.b.c"))
+        os.utime(year, (self.before, self.before))
+        self.later(os.path.join(self.lesson, "es.tex"))
+        self.assertTrue(self.stale())
+
+    def test_la_composicion_sigue_contando(self):
+        self.later(os.path.join(self.root, "courses", "mates", "2024-2025",
+                                "year.yaml"))
+        self.assertTrue(self.stale())
+
+
+class DuplicateUnitTests(unittest.TestCase):
+    """`new unit --from`: una lección que empieza siendo una copia de otra.
+
+    Lo que importa es que sean dos lecciones --id propio, carpeta propia-- y
+    que el título nuevo quede puesto en su idioma sin tocar los demás ni el
+    resto del `unit.yaml`.
+    """
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        self.cli = load_cli()
+        self.root = tempfile.mkdtemp(prefix="didacta-duplicate-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+        self.source = os.path.join(self.root, "content", "a", "b", "c")
+        os.makedirs(os.path.join(self.source, "figures"))
+        self.write("es.tex", "%% Uno\n\\begin{frame}\n\\didactatitle{Uno}\n"
+                   "Texto.\n\\end{frame}\n")
+        self.write("va.tex", "\\didactatitle{U}\nText.\n")
+        self.write("figures/f.pdf", "pdf")
+        self.write("unit.yaml",
+                   "# Uno\n\n# Un comentario que no se pierde.\n"
+                   "id: a.b.c\nkind: theory\ntitle:\n  es: Uno\n  va: U\n\n"
+                   "category: a\ntopic: b\nreference: es\n"
+                   "languages:\n  es: {status: draft}\n"
+                   "  va: {status: translated}\n")
+        with open(os.path.join(self.root, "didacta.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write("name: Prueba\nlanguages: [es, va, en]\n"
+                         "default_language: es\nbuild_dir: .build\n")
+
+    def write(self, name, text):
+        with open(os.path.join(self.source, name), "w",
+                  encoding="utf-8") as handle:
+            handle.write(text)
+
+    def read(self, *parts):
+        with open(os.path.join(self.root, *parts), encoding="utf-8") as handle:
+            return handle.read()
+
+    def run_cli(self, *args):
+        return self.cli.main(["--root", self.root, *args])
+
+    def test_copia_la_carpeta_con_un_id_nuevo(self):
+        self.assertEqual(
+            self.run_cli("new", "unit", "--from", "content/a/b/c",
+                         "--title", "Dos", "--", "a/b/dos"), 0)
+        copy = ("content", "a", "b", "dos")
+        self.assertTrue(os.path.isfile(os.path.join(self.root, *copy,
+                                                    "figures", "f.pdf")))
+        meta = self.read(*copy, "unit.yaml")
+        self.assertNotIn("id: a.b.c", meta)
+        self.assertRegex(meta, r"(?m)^id: u-[0-9a-f]+$")
+        # La original, intacta.
+        self.assertIn("id: a.b.c", self.read("content", "a", "b", "c",
+                                             "unit.yaml"))
+
+    def test_el_titulo_nuevo_en_su_idioma_y_nada_mas(self):
+        self.run_cli("new", "unit", "--from", "content/a/b/c",
+                     "--title", "Dos: la vuelta", "--", "a/b/dos")
+        meta = self.read("content", "a", "b", "dos", "unit.yaml")
+        self.assertIn('  es: "Dos: la vuelta"\n  va: U\n', meta)
+        self.assertTrue(meta.startswith("# Dos: la vuelta\n"))
+        self.assertIn("# Un comentario que no se pierde.", meta)
+        self.assertIn("va: {status: translated}", meta)
+        tex = self.read("content", "a", "b", "dos", "es.tex")
+        self.assertIn("\\didactatitle{Dos: la vuelta}", tex)
+        self.assertTrue(tex.startswith("%% Dos: la vuelta\n"))
+        self.assertIn("\\didactatitle{U}",
+                      self.read("content", "a", "b", "dos", "va.tex"))
+
+    def test_por_id_tambien(self):
+        self.assertEqual(
+            self.run_cli("new", "unit", "--from", "a.b.c", "--", "a/b/tres"), 0)
+        self.assertIn("es: Uno", self.read("content", "a", "b", "tres",
+                                          "unit.yaml"))
+
+    def test_no_pisa_lo_que_ya_hay(self):
+        self.assertEqual(
+            self.run_cli("new", "unit", "--from", "content/a/b/c", "--",
+                         "a/b/c"), 1)
+
+    def test_una_leccion_que_no_existe(self):
+        self.assertEqual(
+            self.run_cli("new", "unit", "--from", "content/x/y/z", "--",
+                         "a/b/dos"), 1)
+
+
+class TitleEditingTests(unittest.TestCase):
+    """Los dos editores por líneas que usa `new unit --from`."""
+
+    def setUp(self):
+        from didacta import identity
+
+        self.identity = identity
+
+    def test_un_titulo_en_bloque_se_edita_en_su_sitio(self):
+        text = "title:\n  es: Uno\n  va: U\n\ncategory: a\n"
+        self.assertEqual(
+            self.identity.set_unit_title(text, "va", "Dos"),
+            "title:\n  es: Uno\n  va: Dos\n\ncategory: a\n")
+
+    def test_un_idioma_que_no_tenia_titulo_se_anade(self):
+        text = "title:\n  es: Uno\ncategory: a\n"
+        self.assertEqual(
+            self.identity.set_unit_title(text, "en", "One"),
+            "title:\n  es: Uno\n  en: One\ncategory: a\n")
+
+    def test_un_escalar_se_reescribe_en_bloque_sin_perder_los_demas(self):
+        text = "title: Uno\ncategory: a\n"
+        self.assertEqual(
+            self.identity.set_unit_title(text, "es", "Dos",
+                                         {"es": "Uno", "va": "Uno"}),
+            "title:\n  es: Dos\n  va: Uno\ncategory: a\n")
+
+    def test_sin_titulo_va_delante_de_la_categoria(self):
+        self.assertEqual(
+            self.identity.set_unit_title("id: x\ncategory: a\n", "es", "Uno"),
+            "id: x\ntitle:\n  es: Uno\n\ncategory: a\n")
+
+    def test_las_barras_de_latex_se_escapan(self):
+        self.assertIn(
+            'es: "El espacio \\\\(L^p\\\\)"',
+            self.identity.set_unit_title("title:\n  es: X\n", "es",
+                                         "El espacio \\(L^p\\)"))
+
+    def test_el_tex_solo_donde_aparece_tal_cual(self):
+        retitle = self.identity.retitle_tex
+        self.assertEqual(
+            retitle("\\begin{exercise}[Uno]\nUno.\n", "Uno", "Dos"),
+            "\\begin{exercise}[Dos]\nUno.\n")
+        self.assertEqual(retitle("Sin título.\n", "Uno", "Dos"),
+                         "Sin título.\n")
+
+
+class MoveUnitCliTests(unittest.TestCase):
+    """`move --unit`: la orden, con el `.tex` del documento puesto al día."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        self.cli = load_cli()
+        self.root = tempfile.mkdtemp(prefix="didacta-move-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+        files = {
+            "didacta.yaml": "name: P\nlanguages: [es]\ndefault_language: es\n",
+            "content/a/b/c/unit.yaml": "kind: theory\ntitle:\n  es: C\n",
+            "content/a/b/c/es.tex": "texto\n",
+            "courses/m/course.yaml": "id: m\ntitle:\n  es: M\n",
+            "courses/m/2025-2026/year.yaml":
+                "course: m\nyear: 2025-2026\nlanguage: es\n\n"
+                "documents:\n  - id: t1\n    kind: theory\n"
+                "    title:\n      es: T1\n    structure:\n"
+                "      - unit: a/b/c\n",
+            "courses/m/2025-2026/t1.tex":
+                "\\input{didacta-bootstrap}\n\\usepackage{didacta}\n"
+                "\\DidactaDocument{T1}\n\\begin{document}\n"
+                "\\DidactaUnit{a/b/c}\n\\end{document}\n",
+        }
+        for relpath, text in files.items():
+            path = os.path.join(self.root, relpath)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(text)
+
+    def read(self, relpath):
+        with open(os.path.join(self.root, relpath), encoding="utf-8") as handle:
+            return handle.read()
+
+    def test_mueve_y_recompone(self):
+        self.assertEqual(
+            self.cli.main(["--root", self.root, "move", "--unit", "a/b/c",
+                           "--to", "a/nuevo/c"]), 0)
+        self.assertIn("- unit: a/nuevo/c",
+                      self.read("courses/m/2025-2026/year.yaml"))
+        master = self.read("courses/m/2025-2026/t1.tex")
+        self.assertIn("a/nuevo/c", master)
+        self.assertNotIn("{a/b/c}", master)
+
+    def test_sin_from_ni_unit(self):
+        self.assertEqual(
+            self.cli.main(["--root", self.root, "move", "--to", "m@2026-2027"]),
+            1)

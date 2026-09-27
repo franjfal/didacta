@@ -1,0 +1,31 @@
+# Análisis -- 2025-2026
+
+course: analisis
+year: 2025-2026
+
+documents:
+  - id: tema-1
+    kind: theory
+    title:
+      es: Tema 1. Números reales
+    profiles: [slides, notes]
+    structure:
+      - section:
+          es: Axiomas
+          # TODO: va
+      - unit: analisis/reales/axiomas
+      # - unit: analisis/reales/dedekind
+
+  - id: tema-2
+    kind: theory
+    title:
+      es: Tema 2. Sucesiones
+    structure:
+      - unit: analisis/sucesiones/definicion
+
+  - id: hoja-1
+    kind: problems
+    title:
+      es: Hoja 1
+    structure:
+      - problem: analisis/reales/ejercicios

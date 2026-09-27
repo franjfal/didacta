@@ -1,0 +1,41 @@
+# La web del curso en GitHub Pages.
+#
+# `didacta site calculo-i@2026-2027` deja en `site/` los PDF que se reparten
+# y un index.html que los enseña por idioma y por tema. Este workflow publica
+# esa carpeta cada vez que cambia: se ejecuta `didacta site`, se hace commit
+# de `site/` y se sube. Nada se compila aquí; los PDF salen de tu ordenador.
+#
+# Para encenderlo, una vez: Settings → Pages → Build and deployment →
+# Source: GitHub Actions. La dirección de la web sale ahí mismo.
+name: Web del curso
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Una publicación a la vez: la de después espera a que acabe la de antes.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: despliegue
+        uses: actions/deploy-pages@v4

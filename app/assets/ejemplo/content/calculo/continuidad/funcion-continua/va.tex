@@ -1,0 +1,58 @@
+% Lliçó: funcions contínues (valencià).
+
+\begin{frame}
+\didactatitle{Funcions contínues}
+
+\begin{definition}[Continuïtat]
+Siga $f$ una funció definida en un interval $I$ i siga $a \in I$. Diem que
+$f$ és \keyterm{contínua en $a$} si per a cada $\varepsilon > 0$ existeix un
+$\delta > 0$ tal que
+\[
+  x \in I, \ |x - a| < \delta \implies |f(x) - f(a)| < \varepsilon .
+\]
+És \keyterm{contínua en $I$} si ho és en tots els seus punts.
+\end{definition}
+
+Si $a$ no és un extrem de $I$, la condició diu exactament que
+\begin{keyformula}
+  \lim_{x \to a} f(x) = f(a) ,
+\end{keyformula}
+\bymedium{%
+  és a dir: el límit existeix i val el mateix que la funció.
+}{%
+  és a dir: el límit existeix, $f$ està definida en $a$, i els dos valors
+  coincideixen. Si falla qualsevol de les tres coses, $f$ no és contínua en
+  $a$.
+}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Operacions i discontinuïtats}
+
+\begin{remark}
+Per l'àlgebra de límits, la suma, el producte i el quocient (on el
+denominador no s'anul·la) de funcions contínues són continus. En particular,
+els polinomis i les funcions racionals són continus allà on estan definits.
+\end{remark}
+
+\dpause
+
+\begin{example}
+\begin{itemize}
+  \item $f(x) = \dfrac{x^2 - 1}{x - 1}$ per a $x \neq 1$, amb $f(1) = 0$. El
+        límit en $1$ existeix i val $2$, però no coincideix amb $f(1)$. La
+        discontinuïtat és \keyterm{evitable}: n'hi ha prou de redefinir
+        $f(1) = 2$.
+  \item $H(x) = 0$ per a $x < 0$ i $H(x) = 1$ per a $x \geq 0$. No és
+        contínua en $0$: amb $\varepsilon = 1/2$, qualsevol interval al
+        voltant de $0$ conté punts $x < 0$, on $|H(x) - H(0)| = 1$. És un
+        \keyterm{salt}, i cap valor de $H(0)$ no l'arregla.
+\end{itemize}
+\end{example}
+
+\begin{commonmistake}
+Confonen «contínua» amb «es dibuixa sense alçar el llapis», i no saben què
+fer amb $1/x$, que és contínua en $(-\infty, 0)$ i en $(0, +\infty)$ encara
+que la seua gràfica tinga dues branques.
+\end{commonmistake}
+\end{frame}

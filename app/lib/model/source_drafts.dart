@@ -16,6 +16,8 @@
 /// solo viven los borradores, que es la parte que se puede probar.
 library;
 
+import '../l10n/tr.dart';
+
 /// Un fichero abierto en la vista.
 class SourceDraft {
   SourceDraft({
@@ -98,11 +100,14 @@ class SourceDrafts {
     final touched = dirty;
     if (touched.isEmpty) return '';
     if (touched.length == 1) {
-      return 'Editar ${_unitOf(touched.single.path)} '
-          '(${_languageOf(touched.single.path)})';
+      return tr(
+        'Editar {0} '
+        '({1})',
+        [_unitOf(touched.single.path), _languageOf(touched.single.path)],
+      );
     }
     final units = <String>{for (final draft in touched) _unitOf(draft.path)};
-    return 'Editar ${units.length} unidades de $documentTitle';
+    return tr('Editar {0} unidades de {1}', [units.length, documentTitle]);
   }
 
   static String _unitOf(String path) {

@@ -10,6 +10,13 @@
 #   minor   mediana   1.4.2 → 1.5.0   lo de siempre: lo hecho desde la anterior
 #   patch   pequeña   1.4.2 → 1.4.3   sólo arreglos
 #
-# Vale para UNA publicación: al publicar, el workflow lo vuelve a dejar en
-# minor. Así una grande no se queda puesta y la siguiente no salta otra vez.
+# prerelease: true publica una VERSIÓN DE PRUEBA de esa versión --1.5.0-rc.1,
+# y la siguiente prueba 1.5.0-rc.2--. Solo la reciben quienes lo piden en
+# Ajustes → Actualizaciones → Versiones de prueba; la final se publica
+# después, con prerelease: false, y es la que llega a todos.
+#
+# Las dos valen para UNA publicación: al publicar, el workflow las vuelve a
+# dejar en minor y false. Así una grande no se queda puesta y la siguiente no
+# salta otra vez.
 bump: minor
+prerelease: false

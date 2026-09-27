@@ -18,6 +18,7 @@ import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/main.dart';
+import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/sign_in.dart';
 
@@ -59,6 +60,28 @@ Future<void> pump(WidgetTester tester, Session session) async {
 }
 
 final Finder gate = find.byType(SignInGate);
+
+/// Un catálogo que no termina de llegar.
+class _Endless extends CatalogueSource {
+  @override
+  String get describe => 'nunca';
+
+  @override
+  Future<Catalogue> load() => Completer<Catalogue>().future;
+}
+
+/// Una sesión cuyo GitHub no contesta nunca: ni sí ni no.
+class _Silent extends Session {
+  _Silent({required super.tokenStore, required super.preferences})
+    : super(
+        catalogueSource: StaticCatalogueSource(catalogueWith(defaultUnits())),
+      );
+
+  final Completer<GitHubUser> never = Completer<GitHubUser>();
+
+  @override
+  Future<GitHubUser> whoIs(String token) => never.future;
+}
 
 void main() {
   testWidgets('sin credencial, la aplicación no se abre', (tester) async {
@@ -120,6 +143,35 @@ void main() {
     expect(session.signInState, SignInState.signedIn);
     expect(session.user?.login, 'profe');
     expect(session.cloneAuthor?.email, 'p@uv.es');
+  });
+
+  testWidgets('la pantalla de carga dice qué está haciendo', (tester) async {
+    // Una rueda sola no dice si falta un segundo o si algo se ha colgado.
+    final session = Session(
+      tokenStore: StubStore(),
+      preferences: MemoryPreferences(githubUserJson: '{"login":"profe"}'),
+      catalogueSource: _Endless(),
+    );
+    await tester.pumpWidget(
+      DidactaApp(session: session, updates: offlineUpdates()),
+    );
+    await settle(tester);
+    expect(
+      tester.widget<Text>(find.byKey(const Key('splash-step'))).data,
+      'Leyendo el catálogo',
+    );
+  });
+
+  test('con quien entró apuntado, arrancar no espera a GitHub', () async {
+    // Esperaba hasta seis segundos en cada arranque para saber lo que ya
+    // estaba apuntado. Se le pregunta después, sin parar a nadie.
+    final session = _Silent(
+      tokenStore: StubStore(),
+      preferences: MemoryPreferences(githubUserJson: '{"login":"profe"}'),
+    );
+    await session.start().timeout(const Duration(seconds: 2));
+    expect(session.signInState, SignInState.signedIn);
+    expect(session.user?.login, 'profe');
   });
 
   testWidgets('sin red y sin saber quién, se abre pero no inventa un nombre', (
@@ -186,6 +238,53 @@ void main() {
     expect(gate, findsNothing);
     expect(session.signInState, SignInState.signedIn);
     expect(store.token, isNotNull);
+  });
+
+  testWidgets('un 403 --el límite de peticiones-- tampoco echa', (
+    tester,
+  ) async {
+    // GitHub contesta 403 cuando se pasan las peticiones de la hora, o
+    // cuando una organización pide SSO. La credencial sigue valiendo, y
+    // borrarla obligaba a volver a entrar por algo que se pasa solo.
+    final store = StubStore();
+    final session = _Session(
+      tokenStore: store,
+      preferences: MemoryPreferences(githubUserJson: '{"login":"profe"}'),
+      answer: const GitHubException(
+        'Se ha pasado el límite de peticiones (403).',
+        status: 403,
+      ),
+    );
+    await pump(tester, session);
+
+    expect(gate, findsNothing);
+    expect(session.signInState, SignInState.signedIn);
+    expect(store.token, isNotNull);
+    // Con el nombre de la última vez: basta para firmar los cambios.
+    expect(session.user?.login, 'profe');
+  });
+
+  testWidgets('un llavero que no contesta lleva a la puerta, no a la espera', (
+    tester,
+  ) async {
+    // Linux sin servicio de secretos, o el aviso del llavero de macOS
+    // denegado. Antes, la excepción salía de `start` --que nadie espera-- y
+    // la aplicación se quedaba en la pantalla de carga para siempre.
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final session = _Session(
+      tokenStore: _BrokenStore(),
+      preferences: MemoryPreferences(),
+    );
+    await pump(tester, session);
+
+    expect(gate, findsOneWidget);
+    expect(session.signInState, SignInState.signedOut);
+    expect(session.signInProblem, isA<KeychainProblem>());
+    expect(find.textContaining('llavero del sistema'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('salir devuelve a la puerta', (tester) async {
@@ -305,4 +404,11 @@ void main() {
     expect(find.byKey(const Key('github-client-id')), findsOneWidget);
     expect(find.byKey(const Key('show-client-id')), findsNothing);
   });
+}
+
+/// Un llavero que falla al leer, como el de un Linux sin servicio de secretos.
+class _BrokenStore extends StubStore {
+  @override
+  Future<String?> read() async =>
+      throw const FileSystemException('no hay servicio de secretos');
 }

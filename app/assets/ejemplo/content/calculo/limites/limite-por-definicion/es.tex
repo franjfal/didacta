@@ -1,0 +1,51 @@
+% Ejemplo: dos límites calculados con la definición (castellano).
+%
+% Dos frames, dos diapositivas. En los apuntes salen seguidos, cada uno con su
+% título como subapartado.
+
+\begin{frame}
+\didactatitle{Un límite por la definición}
+
+\begin{example}
+Probemos que $\lim_{x \to 2} (3x - 1) = 5$. Dado $\varepsilon > 0$, buscamos
+$\delta > 0$ tal que $0 < |x - 2| < \delta$ implique
+$|(3x - 1) - 5| < \varepsilon$. Como
+\[
+  |(3x - 1) - 5| = |3x - 6| = 3\,|x - 2| ,
+\]
+basta tomar $\delta = \varepsilon / 3$: si $0 < |x - 2| < \varepsilon/3$,
+entonces $|(3x - 1) - 5| = 3\,|x - 2| < \varepsilon$.
+\end{example}
+
+\onlynotes{%
+  El método es siempre el mismo: escribir $|f(x) - L|$ en términos de
+  $|x - a|$ y leer de ahí cuánto hay que acercarse.
+}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Acotar antes de elegir}
+
+\begin{example}
+Probemos que $\lim_{x \to 1} x^2 = 1$. Ahora
+\[
+  |x^2 - 1| = |x - 1|\,|x + 1| ,
+\]
+y el factor $|x + 1|$ depende de $x$. Lo acotamos: si $|x - 1| < 1$, entonces
+$0 < x < 2$ y $|x + 1| < 3$, así que $|x^2 - 1| < 3\,|x - 1|$.
+
+\dpause
+
+Tomamos
+\begin{keyformula}
+  \delta = \min\{1, \varepsilon/3\} .
+\end{keyformula}
+Si $0 < |x - 1| < \delta$, se cumplen a la vez $|x - 1| < 1$ y
+$|x - 1| < \varepsilon/3$, luego $|x^2 - 1| < 3\,|x - 1| < \varepsilon$.
+\end{example}
+
+\begin{commonmistake}
+Toman $\delta = \varepsilon / |x + 1|$. Pero $\delta$ se elige antes que $x$:
+puede depender de $\varepsilon$ y de $a$, nunca de $x$.
+\end{commonmistake}
+\end{frame}

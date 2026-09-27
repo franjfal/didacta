@@ -34,6 +34,8 @@ library;
 import 'dart:convert';
 
 import '../model/file_history.dart';
+import '../model/text_search.dart';
+import '../l10n/tr.dart';
 import 'local_clone_stub.dart'
     if (dart.library.io) 'local_clone_io.dart'
     as platform;
@@ -133,8 +135,103 @@ enum FetchDepth {
   everything,
 }
 
+/// Qué clase de fallo de git es: lo que decide qué se le dice a quien lo ve
+/// y qué botón se le ofrece.
+enum CloneFailure {
+  /// En GitHub hay commits que aquí no están: hay que traerlos primero.
+  behind,
+
+  /// GitHub no acepta la credencial: caducada, revocada o sin permiso.
+  unauthenticated,
+
+  /// No se llega a GitHub.
+  offline,
+
+  /// Dos cambios chocan en el mismo sitio.
+  conflict,
+
+  /// Otro proceso tiene el repositorio cogido: un `index.lock`.
+  locked,
+
+  /// GitHub rechaza el envío por una regla suya: rama protegida, un hook.
+  rejected,
+
+  /// No existe lo que se pedía.
+  missing,
+
+  other,
+}
+
+/// La clase de fallo que describe lo que dijo git.
+///
+/// En **un solo sitio**. Antes cada pantalla buscaba sus frases en el
+/// mensaje --«no existe», «rejected»-- y cada una buscaba unas distintas, así
+/// que el mismo fallo se contaba de tres maneras según dónde pasara. git
+/// escribe en inglés y estas son sus frases, no las nuestras.
+CloneFailure classifyGit(String said) {
+  final text = said.toLowerCase();
+  bool has(List<String> any) => any.any(text.contains);
+  if (has([
+    'index.lock',
+    tr('another git process'),
+    tr('.lock\': file exists'),
+  ])) {
+    return CloneFailure.locked;
+  }
+  if (has([
+    'authentication failed',
+    tr('could not read username'),
+    tr('invalid username or password'),
+    tr('returned error: 401'),
+    tr('returned error: 403'),
+    tr('permission to'),
+    tr('bad credentials'),
+  ])) {
+    return CloneFailure.unauthenticated;
+  }
+  if (has([
+    'non-fast-forward',
+    tr('fetch first'),
+    tr('tip of your current branch is behind'),
+    tr('updates were rejected because the remote contains'),
+  ])) {
+    return CloneFailure.behind;
+  }
+  if (has([
+    'protected branch',
+    tr('pre-receive hook declined'),
+    tr('remote rejected'),
+  ])) {
+    return CloneFailure.rejected;
+  }
+  if (has([
+    'conflict (',
+    tr('automatic merge failed'),
+    tr('would be overwritten by merge'),
+    tr('unmerged files'),
+    tr('needs merge'),
+    tr('not possible to fast-forward'),
+    tr('divergent branches'),
+  ])) {
+    return CloneFailure.conflict;
+  }
+  if (has([
+    'could not resolve host',
+    tr('unable to access'),
+    tr('failed to connect'),
+    tr('connection timed out'),
+    tr('network is unreachable'),
+    tr('operation timed out'),
+    tr('connection reset'),
+    tr('suele ser la red'),
+  ])) {
+    return CloneFailure.offline;
+  }
+  return CloneFailure.other;
+}
+
 class CloneException implements Exception {
-  const CloneException(this.message, {this.stderr = ''});
+  const CloneException(this.message, {this.stderr = '', this._kind});
 
   final String message;
 
@@ -142,8 +239,38 @@ class CloneException implements Exception {
   /// most useful thing anyone could be shown.
   final String stderr;
 
+  final CloneFailure? _kind;
+
+  /// Qué clase de fallo es: la que se dijo al lanzarlo, o la que se deduce
+  /// de lo que dijo git.
+  CloneFailure get kind => _kind ?? classifyGit('$message\n$stderr');
+
   @override
   String toString() => stderr.isEmpty ? message : '$message\n\n$stderr';
+}
+
+/// El commit se hizo, pero el envío a GitHub falló.
+///
+/// Aparte de cualquier otro fallo porque **no es un fallo de guardar**: lo
+/// escrito está en el historial del clon, a salvo, y se enviará con el
+/// siguiente envío. Tratarlo como un guardado fallido --como pasaba-- dejaba
+/// el editor con el `sha` de antes, y el siguiente guardado daba un falso
+/// «ha cambiado desde que lo abriste» sobre algo que solo había cambiado él.
+class UnsentException extends CloneException {
+  UnsentException({required this.sha, required this.cause})
+    : super(
+        tr(
+          'Guardado en tu ordenador, pero no se ha podido enviar a GitHub. Se '
+          'enviará la próxima vez que envíes.',
+        ),
+        stderr: cause.toString(),
+      );
+
+  /// El hash del fichero tal como quedó guardado, para seguir editando.
+  final String sha;
+
+  /// Por qué no se pudo enviar.
+  final CloneException cause;
 }
 
 /// El repositorio de GitHub no tiene ningún commit, así que no hay nada que
@@ -155,8 +282,11 @@ class CloneException implements Exception {
 class EmptyRepositoryException extends CloneException {
   EmptyRepositoryException({required this.owner, required this.repo})
     : super(
-        '$owner/$repo está vacío en GitHub: todavía no tiene ningún commit, '
-        'así que no hay nada que clonar.',
+        tr(
+          '{0}/{1} está vacío en GitHub: todavía no tiene nada, '
+          'así que no hay nada que descargar.',
+          [owner, repo],
+        ),
       );
 
   final String owner;
@@ -248,6 +378,10 @@ abstract class LocalClone {
   ///
   /// Si mientras tanto alguien ha empujado algo, no se toca y se dice:
   /// preparar encima sería competir con la historia de otra persona.
+  ///
+  /// Con [files], lo que se escribe es eso --ruta relativa y texto-- en lugar
+  /// del esqueleto de dos ficheros, y el commit lleva [message]. Es cómo se
+  /// siembra el repositorio de ejemplo: el mismo camino, con más dentro.
   static Future<LocalClone> initialize({
     required String directory,
     required String owner,
@@ -258,6 +392,8 @@ abstract class LocalClone {
     required String authorName,
     required String authorEmail,
     String? url,
+    Map<String, String>? files,
+    String? message,
     void Function(String line)? onProgress,
   }) => platform.initializeInto(
     directory: directory,
@@ -269,6 +405,8 @@ abstract class LocalClone {
     authorName: authorName,
     authorEmail: authorEmail,
     url: url,
+    files: files,
+    message: message,
     onProgress: onProgress,
   );
 
@@ -279,15 +417,15 @@ abstract class LocalClone {
   /// entiende sin ir a buscar la documentación. El nombre va entre comillas
   /// de JSON, que YAML lee igual, para que unos dos puntos o una almohadilla
   /// en el título no rompan el fichero.
-  static String settingsFor(String title) =>
-      '''
+  static String settingsFor(String title) => tr(
+    '''
 # Un repositorio de contenido de Didacta.
 #
 # Todo tiene un valor por defecto que funciona. El fichero existe sobre todo
 # para marcar la raíz del repositorio: el motor sube buscándolo, igual que git
 # busca .git.
 
-name: ${jsonEncode(title)}
+name: {0}
 
 # Los idiomas que mantiene este repositorio. Didacta trae es, va y en.
 languages: [es, va, en]
@@ -298,6 +436,28 @@ default_language: es
 # Dónde van los PDF. Relativo a la raíz del repositorio, y fuera de git: lo
 # compilado no se versiona.
 build_dir: .didacta-build
+''',
+    [jsonEncode(title)],
+  );
+
+  /// El `.gitattributes` de un repositorio recién preparado.
+  ///
+  /// Todo el texto con fin de línea `\n`, en cualquier sistema: un `.tex`
+  /// guardado en Windows con `\r\n` sale entero en cada diff, y la
+  /// comparación de versiones deja de decir qué cambió. Y los binarios,
+  /// marcados, para que nadie intente juntarlos ni convertirlos.
+  static const String textAttributes = '''
+# Fin de línea LF en todo el texto, en cualquier sistema.
+* text=auto eol=lf
+
+# Lo que no es texto.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.eps binary
+*.zip binary
 ''';
 
   /// El `.gitignore` de un repositorio recién preparado.
@@ -349,6 +509,11 @@ build_dir: .didacta-build
   /// [limit] porque un historial se lee por arriba: nadie baja hasta el
   /// commit 400, y pedirlos todos es tiempo de git por nada.
   Future<List<FileCommit>> history(String path, {int limit});
+
+  /// Los últimos commits del repositorio entero, del más reciente al más
+  /// antiguo. Es la lista de «Cambios recientes»: lo que se ha guardado
+  /// estos días, sea del fichero que sea.
+  Future<List<FileCommit>> recent({int limit = 20});
 
   /// Qué le hizo [sha] a [path], con [context] líneas alrededor de cada
   /// cambio.
@@ -441,7 +606,11 @@ build_dir: .didacta-build
   /// son dos decisiones distintas, y la primera se puede hacer sola mientras
   /// alguien trabaja. Después de esto, `status()` sabe cuántos commits hay
   /// detrás sin volver a la red.
-  Future<void> fetch({required String token});
+  ///
+  /// Con [timeout], se para al vencer y lanza. Es lo que usa la comprobación
+  /// de antes de guardar: esperar cinco minutos a la red para guardar una
+  /// coma sería peor que no comprobar.
+  Future<void> fetch({required String token, Duration? timeout});
 
   /// [onProgress] recibe lo que git va diciendo, línea a línea.
   ///
@@ -526,6 +695,12 @@ build_dir: .didacta-build
 
   /// Las rutas que existen bajo [under] en ese commit.
   Future<List<String>> pathsAt({required String sha, String under = ''});
+
+  /// Las líneas de los `.tex` que casan con [pattern], una expresión
+  /// extendida (ver `accentPattern`). Como mucho [perFile] por fichero: lo
+  /// que se quiere saber es qué lecciones lo dicen, no contar cuántas veces.
+  /// Vacía si no hay ninguna, que para git es un error y aquí no.
+  Future<List<TextHit>> grep(String pattern, {int perFile = 3});
 
   /// Escribe en el árbol de trabajo el contenido que [sha] tenía bajo
   /// [paths], y borra lo que en ese commit no existía.

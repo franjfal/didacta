@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Una pieza del documento que no existe en el idioma pedido.
 class MissingPiece {
@@ -81,13 +82,15 @@ class MissingTranslations extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.translate, size: 18, color: didactaTeacher),
+            Icon(Icons.translate, size: 18, color: context.palette.teacher),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 languages.length == 1
-                    ? 'No se puede compilar en ${languages.single}'
-                    : 'No se puede compilar en ${languages.join(' ni ')}',
+                    ? tr('No se puede compilar en {0}', [languages.single])
+                    : tr('No se puede compilar en {0}', [
+                        languages.join(' ni '),
+                      ]),
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -99,12 +102,17 @@ class MissingTranslations extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           total == 1
-              ? 'Falta por traducir una de las unidades del documento. '
-                    'Compilarlo daría un tema con una parte en otro idioma, '
-                    'que no es algo que se pueda llevar a clase.'
-              : 'Faltan por traducir $total unidades del documento. '
-                    'Compilarlo daría un tema con partes en otro idioma, que '
-                    'no es algo que se pueda llevar a clase.',
+              ? tr(
+                  'Falta por traducir una de las unidades del documento. '
+                  'Compilarlo daría un tema con una parte en otro idioma, '
+                  'que no es algo que se pueda llevar a clase.',
+                )
+              : tr(
+                  'Faltan por traducir {0} unidades del documento. '
+                  'Compilarlo daría un tema con partes en otro idioma, que '
+                  'no es algo que se pueda llevar a clase.',
+                  [total],
+                ),
           style: const TextStyle(fontSize: 13, height: 1.45),
         ),
         const SizedBox(height: 16),
@@ -113,18 +121,18 @@ class MissingTranslations extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(
-                'En $language',
-                style: const TextStyle(
+                tr('En {0}', [language]),
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
               ),
             ),
           DecoratedBox(
             decoration: BoxDecoration(
-              color: didactaCard,
-              border: Border.all(color: didactaRule),
+              color: context.palette.card,
+              border: Border.all(color: context.palette.rule),
               borderRadius: BorderRadius.circular(Radii.card),
             ),
             child: Column(
@@ -159,14 +167,18 @@ class _MissingRow extends StatelessWidget {
           ? null
           : () => context.go(Routes.unit(unit.path, language: piece.language)),
       builder: (context, hovering) => Container(
-        color: hovering ? didactaHover : null,
+        color: hovering ? context.palette.hover : null,
         padding: const EdgeInsets.fromLTRB(12, 9, 10, 9),
         child: Row(
           children: [
             if (unit == null)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(right: 8),
-                child: Icon(Icons.link_off, size: 15, color: didactaTeacher),
+                child: Icon(
+                  Icons.link_off,
+                  size: 15,
+                  color: context.palette.teacher,
+                ),
               )
             else ...[
               KindChip(kind: unit.kind),
@@ -178,14 +190,14 @@ class _MissingRow extends StatelessWidget {
                 children: [
                   Text(
                     unit == null
-                        ? '${piece.reference} (no existe)'
+                        ? tr('{0} (no existe)', [piece.reference])
                         : unit.title(unit.reference),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: unit == null ? didactaTeacher : null,
+                      color: unit == null ? context.palette.teacher : null,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -193,10 +205,10 @@ class _MissingRow extends StatelessWidget {
                     piece.reference,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10.5,
                       fontFamily: 'monospace',
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     ),
                   ),
                 ],
@@ -204,15 +216,15 @@ class _MissingRow extends StatelessWidget {
             ),
             if (unit != null) ...[
               Text(
-                'traducir a ${piece.language}',
-                style: const TextStyle(
+                tr('traducir a {0}', [piece.language]),
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
-                  color: didactaTeacher,
+                  color: context.palette.teacher,
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, size: 16, color: didactaMuted),
+              Icon(Icons.chevron_right, size: 16, color: context.palette.muted),
             ],
           ],
         ),

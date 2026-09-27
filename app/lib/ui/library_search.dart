@@ -27,9 +27,11 @@ import 'package:go_router/go_router.dart';
 
 import '../model/catalogue.dart';
 import '../model/library_filter.dart';
+import '../model/text_search.dart';
 import '../router.dart';
 import 'quick_look.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class SortMenu extends StatelessWidget {
   const SortMenu({super.key, required this.sort, required this.onChanged});
@@ -37,11 +39,11 @@ class SortMenu extends StatelessWidget {
   final LibrarySort sort;
   final ValueChanged<LibrarySort> onChanged;
 
-  static const Map<LibrarySort, String> _names = {
-    LibrarySort.path: 'ruta',
-    LibrarySort.title: 'título',
-    LibrarySort.usage: 'más usadas',
-    LibrarySort.needsWork: 'por traducir',
+  static Map<LibrarySort, String> get _names => {
+    LibrarySort.path: tr('ruta'),
+    LibrarySort.title: tr('título'),
+    LibrarySort.usage: tr('más usadas'),
+    LibrarySort.needsWork: tr('por traducir'),
   };
 
   @override
@@ -55,7 +57,7 @@ class SortMenu extends StatelessWidget {
           DropdownMenuItem(
             value: entry.key,
             child: Text(
-              'orden: ${entry.value}',
+              tr('orden: {0}', [entry.value]),
               style: const TextStyle(fontSize: 12.5),
             ),
           ),
@@ -93,7 +95,7 @@ class FilterPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: didactaPanel,
+      color: context.palette.panel,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 20),
         children: [
@@ -102,14 +104,14 @@ class FilterPanel extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.filter_alt_off_outlined, size: 15),
-                label: const Text('Quitar filtros'),
+                label: Text(tr('Quitar filtros')),
                 onPressed: () => onChanged(
                   LibraryFilter(language: filter.language, sort: filter.sort),
                 ),
               ),
             ),
           if (withLanguageAndSort) ...[
-            const SectionLabel('Idioma'),
+            SectionLabel(tr('Idioma')),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               child: Wrap(
@@ -124,7 +126,7 @@ class FilterPanel extends StatelessWidget {
                 ],
               ),
             ),
-            const SectionLabel('Orden'),
+            SectionLabel(tr('Orden')),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               child: SortMenu(
@@ -136,7 +138,7 @@ class FilterPanel extends StatelessWidget {
           // Con uno solo no aparece: un filtro cuyo único valor es todo lo
           // que hay no contesta ninguna pregunta.
           if (blocks.length > 1) ...[
-            const SectionLabel('Bloque'),
+            SectionLabel(tr('Bloque')),
             for (final block in blocks)
               _Facet(
                 label: block.title(filter.language),
@@ -150,11 +152,11 @@ class FilterPanel extends StatelessWidget {
               ),
           ],
 
-          SectionLabel('Traducción · ${filter.language}'),
-          for (final (status, label) in const [
+          SectionLabel(tr('Traducción · {0}', [filter.language])),
+          for (final (status, label) in [
             (StatusFilter.present, 'existe'),
             (StatusFilter.missing, 'falta'),
-            (StatusFilter.needsWork, 'por revisar'),
+            (StatusFilter.needsWork, tr('por revisar')),
           ])
             _Facet(
               label: label,
@@ -167,19 +169,19 @@ class FilterPanel extends StatelessWidget {
               ),
             ),
           _Facet(
-            label: 'sin usar en ninguna asignatura',
+            label: tr('sin usar en ninguna asignatura'),
             count: null,
             selected: filter.unusedOnly,
             onTap: () =>
                 onChanged(filter.copyWith(unusedOnly: !filter.unusedOnly)),
           ),
 
-          const SectionLabel('Tipo'),
+          SectionLabel(tr('Tipo')),
           for (final kind in facets.byKind.keys.toList()..sort())
             _Facet(
               label: kindName(kind),
               count: facets.byKind[kind],
-              colour: kindColour(kind),
+              colour: context.palette.kind(kind),
               selected: filter.kind == kind,
               onTap: () => onChanged(
                 filter.kind == kind
@@ -188,7 +190,7 @@ class FilterPanel extends StatelessWidget {
               ),
             ),
 
-          const SectionLabel('Categoría'),
+          SectionLabel(tr('Categoría')),
           for (final category in facets.categoriesByCount)
             _Facet(
               label: category,
@@ -246,7 +248,7 @@ class _Facet extends StatelessWidget {
     return InkWell(
       onTap: empty && !selected ? null : onTap,
       child: Container(
-        color: selected ? didactaAccent.withValues(alpha: 0.14) : null,
+        color: selected ? context.palette.accent.withValues(alpha: 0.14) : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         child: Row(
           children: [
@@ -268,16 +270,16 @@ class _Facet extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  color: empty && !selected ? didactaMuted : null,
+                  color: empty && !selected ? context.palette.muted : null,
                 ),
               ),
             ),
             if (count != null)
               Text(
                 '$count',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
@@ -289,10 +291,18 @@ class _Facet extends StatelessWidget {
 }
 
 class UnitList extends StatelessWidget {
-  const UnitList({super.key, required this.units, required this.filter});
+  const UnitList({
+    super.key,
+    required this.units,
+    required this.filter,
+    this.lines = const {},
+  });
 
   final List<Unit> units;
   final LibraryFilter filter;
+
+  /// Lo que cada lección dice de lo buscado, si se buscó en el texto.
+  final Map<Unit, List<TextHit>> lines;
 
   @override
   Widget build(BuildContext context) {
@@ -303,16 +313,16 @@ class UnitList extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search_off, size: 30, color: didactaMuted),
+              Icon(Icons.search_off, size: 30, color: context.palette.muted),
               const SizedBox(height: 12),
               // Names the filters responsible, so "nothing here" is
               // actionable rather than a dead end.
               Text(
                 filter.isNarrowed
-                    ? 'Nada con ${filter.describe()}'
-                    : 'La biblioteca está vacía',
+                    ? tr('Nada con {0}', [filter.describe()])
+                    : tr('La biblioteca está vacía'),
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: didactaMuted),
+                style: TextStyle(color: context.palette.muted),
               ),
             ],
           ),
@@ -323,26 +333,46 @@ class UnitList extends StatelessWidget {
     return ListView.separated(
       itemCount: units.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) =>
-          UnitRow(unit: units[index], language: filter.language),
+      itemBuilder: (context, index) => UnitRow(
+        unit: units[index],
+        language: filter.language,
+        lines: lines[units[index]] ?? const [],
+      ),
     );
   }
 }
 
 class UnitRow extends StatelessWidget {
-  const UnitRow({super.key, required this.unit, required this.language});
+  const UnitRow({
+    super.key,
+    required this.unit,
+    required this.language,
+    this.lines = const [],
+  });
 
   final Unit unit;
   final String language;
+
+  /// Las líneas donde dice lo buscado. La primera se enseña, y pulsar la fila
+  /// abre la lección en el idioma de esa línea.
+  final List<TextHit> lines;
 
   @override
   Widget build(BuildContext context) {
     final fallback = unit.titleIsFallback(language);
 
+    final line = lines.firstOrNull;
     return Hoverable(
-      onTap: () => context.go(Routes.unit(unit.path)),
+      onTap: () => context.go(
+        Routes.unit(
+          unit.path,
+          language: line == null || line.language.isEmpty
+              ? null
+              : line.language,
+        ),
+      ),
       builder: (context, hovering) => Container(
-        color: hovering ? didactaHover : null,
+        color: hovering ? context.palette.hover : null,
         padding: const EdgeInsets.fromLTRB(14, 7, 12, 7),
         child: Row(
           children: [
@@ -350,7 +380,7 @@ class UnitRow extends StatelessWidget {
               width: 3,
               height: 30,
               decoration: BoxDecoration(
-                color: kindColour(unit.kind),
+                color: context.palette.kind(unit.kind),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -375,7 +405,7 @@ class UnitRow extends StatelessWidget {
                             fontStyle: fallback
                                 ? FontStyle.italic
                                 : FontStyle.normal,
-                            color: fallback ? didactaMuted : null,
+                            color: fallback ? context.palette.muted : null,
                           ),
                         ),
                       ),
@@ -383,10 +413,10 @@ class UnitRow extends StatelessWidget {
                         const SizedBox(width: 6),
                         Tooltip(
                           message: unit.warnings.join('\n'),
-                          child: const Icon(
+                          child: Icon(
                             Icons.warning_amber_rounded,
                             size: 14,
-                            color: didactaEx,
+                            color: context.palette.ex,
                           ),
                         ),
                       ],
@@ -397,12 +427,36 @@ class UnitRow extends StatelessWidget {
                     unit.path,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: didactaMuted,
+                      color: context.palette.muted,
                       fontFamily: 'monospace',
                     ),
                   ),
+                  if (line != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      tr(
+                        '{0} · línea {1} · '
+                        '{2}'
+                        '{3}',
+                        [
+                          line.language,
+                          line.line,
+                          line.text.trim(),
+                          lines.length > 1 ? '  (+${lines.length - 1})' : '',
+                        ],
+                      ),
+                      key: Key('search-line-${unit.path}'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.palette.ink,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -416,13 +470,13 @@ class UnitRow extends StatelessWidget {
                   padding: const EdgeInsets.only(right: 10),
                   child: Row(
                     children: [
-                      const Icon(Icons.link, size: 12, color: didactaMuted),
+                      Icon(Icons.link, size: 12, color: context.palette.muted),
                       const SizedBox(width: 2),
                       Text(
                         '${unit.usedBy.length}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ],

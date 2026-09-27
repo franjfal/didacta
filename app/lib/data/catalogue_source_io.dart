@@ -8,9 +8,11 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import '../model/catalogue.dart';
 import 'catalogue_source.dart';
+import '../l10n/tr.dart';
 
 CatalogueSource? fileSource(String directory, String repo) =>
     FileCatalogueSource(directory: directory, repo: repo);
@@ -28,29 +30,42 @@ class FileCatalogueSource extends CatalogueSource {
   @override
   String get describe => '$directory/generated';
 
+  /// En otro hilo. Leer y descodificar dos megas de JSON y construir dos mil
+  /// unidades son cientos de milisegundos, y en el hilo de la interfaz eran
+  /// cientos de milisegundos de ventana congelada después de cada guardado.
   @override
-  Future<Catalogue> load() async {
-    return Catalogue.fromIndex(
-      manifest: await _read('manifest.json'),
-      units: await _read('units.json'),
-      courses: await _read('courses.json'),
-      repo: repo,
-    );
+  Future<Catalogue> load() {
+    final directory = this.directory;
+    final repo = this.repo;
+    return Isolate.run(() => _loadNow(directory, repo));
   }
 
-  Future<Map<String, dynamic>> _read(String name) async {
+  static Catalogue _loadNow(String directory, String repo) =>
+      Catalogue.fromIndex(
+        manifest: _read(directory, 'manifest.json'),
+        units: _read(directory, 'units.json'),
+        courses: _read(directory, 'courses.json'),
+        repo: repo,
+      );
+
+  static Map<String, dynamic> _read(String directory, String name) {
     final file = File('$directory/generated/$name');
-    if (!await file.exists()) {
+    if (!file.existsSync()) {
       throw CatalogueFormatException(
-        'no existe ${file.path}. El índice lo genera el motor: '
-        '`didacta index` desde el repositorio de contenido.',
+        tr(
+          'no existe {0}. El índice lo genera el motor: '
+          '`didacta index` desde el repositorio de contenido.',
+          [file.path],
+        ),
       );
     }
     // Read as bytes and decoded explicitly: these titles are Valencian and
     // Castilian, and guessing the encoding turns every accent into mojibake.
-    final decoded = jsonDecode(utf8.decode(await file.readAsBytes()));
+    final decoded = jsonDecode(utf8.decode(file.readAsBytesSync()));
     if (decoded is! Map) {
-      throw CatalogueFormatException('${file.path} no contiene un objeto JSON');
+      throw CatalogueFormatException(
+        tr('{0} no contiene un objeto JSON', [file.path]),
+      );
     }
     return decoded.cast<String, dynamic>();
   }

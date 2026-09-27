@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import '../model/catalogue.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Lo que devuelve el diálogo.
 class DocumentProperties {
@@ -130,13 +131,13 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
     final inherited = _inherited.toSet();
 
     return AlertDialog(
-      title: const Text('Propiedades del documento'),
+      title: Text(tr('Propiedades del documento')),
       content: SizedBox(
         width: 560,
         height: 560,
         child: ListView(
           children: [
-            const SectionLabel('Título'),
+            SectionLabel(tr('Título')),
             for (final code in widget.languages)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -148,28 +149,32 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
                     labelText: languageNameOf(session, code),
                     isDense: true,
                     helperText: (widget.document.titles[code] ?? '').isEmpty
-                        ? 'sin traducir'
+                        ? tr('sin traducir')
                         : null,
-                    helperStyle: const TextStyle(
+                    helperStyle: TextStyle(
                       fontSize: 11.5,
-                      color: didactaTeacher,
+                      color: context.palette.teacher,
                     ),
                   ),
                 ),
               ),
-            const Note(
-              'Un idioma en blanco se queda marcado como pendiente en el '
-              'fichero, no se borra el documento.',
+            Note(
+              tr(
+                'Un idioma en blanco se queda marcado como pendiente en el '
+                'fichero, no se borra el documento.',
+              ),
             ),
             const SizedBox(height: 12),
 
-            const SectionLabel('Qué se puede compilar'),
-            const Padding(
+            SectionLabel(tr('Qué se puede compilar')),
+            Padding(
               padding: EdgeInsets.only(bottom: 6),
               child: Text(
-                'Esto limita las versiones de este documento. Al compilar se '
-                'elige entre las que queden, para esa vez.',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                tr(
+                  'Esto limita las versiones de este documento. Al compilar se '
+                  'elige entre las que queden, para esa vez.',
+                ),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ),
             RadioGroup<bool>(
@@ -183,24 +188,32 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: true,
-                    title: const Text(
-                      'Las de sus bloques',
+                    title: Text(
+                      tr('Las de sus bloques'),
                       style: TextStyle(fontSize: 12.5),
                     ),
                     subtitle: Text(
                       inherited.isEmpty
-                          ? 'Todavía no lleva lecciones, así que valen todas '
-                                'las encendidas.'
-                          : '${inherited.length} versión(es)',
-                      style: const TextStyle(fontSize: 11, color: didactaMuted),
+                          ? tr(
+                              'Todavía no lleva lecciones, así que valen todas '
+                              'las encendidas.',
+                            )
+                          : tr('{0} versión(es)', [inherited.length]),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.palette.muted,
+                      ),
                     ),
                   ),
-                  const RadioListTile<bool>(
+                  RadioListTile<bool>(
                     key: Key('document-templates-pick'),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: false,
-                    title: Text('Solo estas', style: TextStyle(fontSize: 12.5)),
+                    title: Text(
+                      tr('Solo estas'),
+                      style: TextStyle(fontSize: 12.5),
+                    ),
                   ),
                 ],
               ),
@@ -209,14 +222,17 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Note(
-                  'Además está restringido a ${_invisible.join(', ')}, que no '
-                  'se pueden enseñar aquí --están apagadas, o las declara un '
-                  'repositorio que no está abierto--. Se quedan como están.',
-                  tone: didactaTeacher,
+                  tr(
+                    'Además está restringido a {0}, que no '
+                    'se pueden enseñar aquí --están apagadas, o las declara un '
+                    'repositorio que no está abierto--. Se quedan como están.',
+                    [_invisible.join(', ')],
+                  ),
+                  tone: context.palette.teacher,
                 ),
               ),
             if (available.isEmpty)
-              const Note('No hay ninguna plantilla encendida.')
+              Note(tr('No hay ninguna plantilla encendida.'))
             else
               for (final template in available)
                 CheckboxListTile(
@@ -234,7 +250,10 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
                   ),
                   subtitle: Text(
                     _describe(session, template),
-                    style: const TextStyle(fontSize: 11, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.palette.muted,
+                    ),
                   ),
                   onChanged: (on) => setState(() {
                     if (on ?? false) {
@@ -245,9 +264,11 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
                   }),
                 ),
             const SizedBox(height: 6),
-            const Note(
-              'Las plantillas se escriben en Ajustes. Aquí solo se dice '
-              'cuáles valen para este documento.',
+            Note(
+              tr(
+                'Las plantillas se escriben en Ajustes. Aquí solo se dice '
+                'cuáles valen para este documento.',
+              ),
             ),
           ],
         ),
@@ -255,7 +276,7 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('document-properties-save'),
@@ -279,7 +300,7 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
                           ],
                   ),
                 ),
-          child: const Text('Aceptar'),
+          child: Text(tr('Aceptar')),
         ),
       ],
     );
@@ -301,11 +322,11 @@ class _DocumentPropertiesDialogState extends State<_DocumentPropertiesDialog> {
       final who = template.sources.keys
           .map(
             (repo) => repo == Session.programTemplates
-                ? 'el programa'
+                ? tr('el programa')
                 : (session.workspace.byId(repo)?.label ?? repo),
           )
           .join(', ');
-      parts.add('la declara $who');
+      parts.add(tr('la declara {0}', [who]));
     }
     return parts.join(' · ');
   }

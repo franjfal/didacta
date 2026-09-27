@@ -15,6 +15,7 @@ library;
 
 import 'catalogue.dart';
 import 'library_tree.dart' show humaniseSlug;
+import 'slug.dart';
 
 class PathNode {
   PathNode({required this.name, required this.path});
@@ -31,19 +32,14 @@ class PathNode {
   /// Las carpetas de dentro, en orden alfabético por su nombre visible.
   List<PathNode> get children {
     final list = _children.values.toList()
-      ..sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+      ..sort((a, b) => compareTitles(a.label, b.label));
     return List.unmodifiable(list);
   }
 
   /// Las unidades que cuelgan directamente de aquí, por título.
   List<Unit> units(String language) {
     final list = [..._units]
-      ..sort(
-        (a, b) => a
-            .title(language)
-            .toLowerCase()
-            .compareTo(b.title(language).toLowerCase()),
-      );
+      ..sort((a, b) => compareTitles(a.title(language), b.title(language)));
     return List.unmodifiable(list);
   }
 

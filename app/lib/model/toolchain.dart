@@ -31,6 +31,8 @@
 /// interfaz pregunta.
 library;
 
+import '../l10n/tr.dart';
+
 /// Sobre qué sistema se está decidiendo.
 ///
 /// Un enum y no `Platform.isMacOS` porque este fichero no importa `dart:io`:
@@ -42,8 +44,8 @@ enum Host {
 
   String get name => switch (this) {
     Host.macos => 'macOS',
-    Host.windows => 'Windows',
-    Host.linux => 'Linux',
+    Host.windows => tr('Windows'),
+    Host.linux => tr('Linux'),
   };
 }
 
@@ -67,10 +69,10 @@ class Tool {
   const Tool({
     required this.id,
     required this.name,
-    required this.what,
+    required this._what,
     required this.executables,
     required this.guide,
-    required this.missing,
+    required this._missing,
     this.onlyToCompile = true,
     this.versionArguments = const ['--version'],
   });
@@ -83,7 +85,8 @@ class Tool {
   /// Para qué la usa Didacta, en una frase. Se enseña siempre, esté o no:
   /// una lista de requisitos sin el porqué de cada uno es una lista de
   /// obstáculos.
-  final String what;
+  String get what => tr(_what);
+  final String _what;
 
   /// Los nombres del ejecutable, en orden de preferencia.
   ///
@@ -104,7 +107,8 @@ class Tool {
   /// **es distinto** en cada caso: sin git no hay nada que abrir, y sin LaTeX
   /// se trabaja igual y solo falta el PDF. Una lista de cuatro avisos
   /// idénticos no dice cuál de los cuatro es el urgente.
-  final String missing;
+  String get missing => tr(_missing);
+  final String _missing;
 
   /// Si faltando se puede seguir trabajando.
   ///
@@ -325,6 +329,11 @@ const List<String> didactaTexPackages = [
   'sansmath',
   'cm-super',
   'lm',
+  // Las citas: `didacta-bibliography` carga biblatex cuando el repositorio
+  // tiene un .bib, y latexmk llama a biber al ver el .bcf. Sin los dos, un
+  // documento que cita se queda sin bibliografía.
+  'biblatex',
+  'biber',
   // Los diez idiomas de `latex/lang/`: babel carga el suyo por nombre, y sin
   // el fichero del idioma la compilación para en seco aunque el texto sea
   // correcto.
@@ -358,54 +367,56 @@ const String _texLiveWindows =
 /// uno que no depende de nada --manual, si hace falta-- para que nunca se
 /// acabe la lista sin tener nada que decir.
 List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
-  ToolId.engine => const [
+  ToolId.engine => [
     InstallPlan(
       kind: InstallKind.own,
-      label: 'Descargar el motor',
-      explains:
-          'Didacta clona su propio repositorio al lado de los tuyos. Son unos '
-          'megas y no hace falta cuenta: es público.',
+      label: tr('Descargar el motor'),
+      explains: tr(
+        'Didacta clona su propio repositorio al lado de los tuyos. Son unos '
+        'megas y no hace falta cuenta: es público.',
+      ),
       manualSteps: [
         'git clone https://github.com/franjfal/didacta.git',
-        'Y en Ajustes → Compilar, «Elegir el motor» y señalar esa carpeta.',
+        tr('Y en Ajustes → Compilar, «Elegir el motor» y señalar esa carpeta.'),
       ],
     ),
   ],
   ToolId.git => switch (host) {
-    Host.macos => const [
+    Host.macos => [
       InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar con Homebrew',
-        explains: 'Homebrew descargará git e instalará en tu carpeta.',
+        label: tr('Instalar con Homebrew'),
+        explains: tr('Homebrew descargará git e instalará en tu carpeta.'),
         program: 'brew',
         arguments: ['install', 'git'],
         needs: 'brew',
         manualSteps: [
           'En el Terminal: brew install git',
-          'O, sin Homebrew: xcode-select --install',
+          tr('O, sin Homebrew: xcode-select --install'),
         ],
       ),
       InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar las herramientas de Apple',
-        explains:
-            'Se abrirá el instalador de Apple: git y Python vienen en las '
-            'Herramientas de Línea de Órdenes. Acepta ahí y vuelve a '
-            'comprobar cuando termine.',
+        label: tr('Instalar las herramientas de Apple'),
+        explains: tr(
+          'Se abrirá el instalador de Apple: git y Python vienen en las '
+          'Herramientas de Línea de Órdenes. Acepta ahí y vuelve a '
+          'comprobar cuando termine.',
+        ),
         program: 'xcode-select',
         arguments: ['--install'],
         handsOver: true,
         manualSteps: [
           'Abre el Terminal y escribe: xcode-select --install',
-          'Acepta el instalador que aparece. Tarda unos minutos.',
+          tr('Acepta el instalador que aparece. Tarda unos minutos.'),
         ],
       ),
     ],
-    Host.windows => const [
+    Host.windows => [
       InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar con winget',
-        explains: 'Windows descargará e instalará Git para Windows.',
+        label: tr('Instalar con winget'),
+        explains: tr('Windows descargará e instalará Git para Windows.'),
         program: 'winget',
         arguments: [
           'install',
@@ -420,68 +431,73 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         needs: 'winget',
         manualSteps: [
           'En una consola: winget install --id Git.Git -e',
-          'O descarga el instalador de git-scm.com/downloads/win',
+          tr('O descarga el instalador de git-scm.com/downloads/win'),
         ],
       ),
       InstallPlan.manual(
-        label: 'Descargar Git para Windows',
-        explains:
-            'Este Windows no tiene winget, así que la instalación es a mano.',
+        label: tr('Descargar Git para Windows'),
+        explains: tr(
+          'Este Windows no tiene winget, así que la instalación es a mano.',
+        ),
         manualSteps: [
           'Descarga el instalador de git-scm.com/downloads/win',
-          'Ejecútalo y acepta las opciones por defecto.',
-          'Cierra Didacta y vuelve a abrirla para que vea el PATH nuevo.',
+          tr('Ejecútalo y acepta las opciones por defecto.'),
+          tr('Cierra Didacta y vuelve a abrirla para que vea el PATH nuevo.'),
         ],
       ),
     ],
-    Host.linux => const [
+    Host.linux => [
       InstallPlan.manual(
-        label: 'Instalarlo con tu gestor de paquetes',
-        explains:
-            'Instalar en Linux pide la contraseña de administrador, y eso se '
-            'teclea en un terminal y no en una ventana de Didacta.',
+        label: tr('Instalarlo con tu gestor de paquetes'),
+        explains: tr(
+          'Instalar en Linux pide la contraseña de administrador, y eso se '
+          'teclea en un terminal y no en una ventana de Didacta.',
+        ),
         manualSteps: [
           'Debian o Ubuntu: sudo apt install git',
-          'Fedora: sudo dnf install git',
-          'Arch: sudo pacman -S git',
+          tr('Fedora: sudo dnf install git'),
+          tr('Arch: sudo pacman -S git'),
         ],
       ),
     ],
   },
   ToolId.python => switch (host) {
-    Host.macos => const [
+    Host.macos => [
       InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar con Homebrew',
-        explains: 'Homebrew instalará la última versión estable de Python 3.',
+        label: tr('Instalar con Homebrew'),
+        explains: tr(
+          'Homebrew instalará la última versión estable de Python 3.',
+        ),
         program: 'brew',
         arguments: ['install', 'python'],
         needs: 'brew',
         manualSteps: [
           'En el Terminal: brew install python',
-          'O, sin Homebrew: xcode-select --install',
+          tr('O, sin Homebrew: xcode-select --install'),
         ],
       ),
       InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar las herramientas de Apple',
-        explains:
-            'Se abrirá el instalador de Apple: Python 3 viene en las '
-            'Herramientas de Línea de Órdenes, junto con git.',
+        label: tr('Instalar las herramientas de Apple'),
+        explains: tr(
+          'Se abrirá el instalador de Apple: Python 3 viene en las '
+          'Herramientas de Línea de Órdenes, junto con git.',
+        ),
         program: 'xcode-select',
         arguments: ['--install'],
         handsOver: true,
         manualSteps: [
           'Abre el Terminal y escribe: xcode-select --install',
-          'O descarga Python de python.org/downloads.',
+          tr('O descarga Python de python.org/downloads.'),
         ],
       ),
     ],
-    Host.windows => const [
+    Host.windows => [
       InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar con winget',
-        explains: 'Windows descargará e instalará Python 3.',
+        label: tr('Instalar con winget'),
+        explains: tr('Windows descargará e instalará Python 3.'),
         program: 'winget',
         arguments: [
           'install',
@@ -496,31 +512,35 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         needs: 'winget',
         manualSteps: [
           'En una consola: winget install --id Python.Python.3.12 -e',
-          'O descarga Python 3 de python.org/downloads/windows, marcando '
-              '«Add python.exe to PATH».',
+          tr(
+            'O descarga Python 3 de python.org/downloads/windows, marcando '
+            '«Add python.exe to PATH».',
+          ),
         ],
       ),
       InstallPlan.manual(
-        label: 'Descargar Python',
-        explains:
-            'Este Windows no tiene winget, así que la instalación es a mano.',
+        label: tr('Descargar Python'),
+        explains: tr(
+          'Este Windows no tiene winget, así que la instalación es a mano.',
+        ),
         manualSteps: [
           'Descarga Python 3 de python.org/downloads/windows',
-          'En el instalador, marca «Add python.exe to PATH».',
-          'Cierra Didacta y vuelve a abrirla.',
+          tr('En el instalador, marca «Add python.exe to PATH».'),
+          tr('Cierra Didacta y vuelve a abrirla.'),
         ],
       ),
     ],
-    Host.linux => const [
+    Host.linux => [
       InstallPlan.manual(
-        label: 'Instalarlo con tu gestor de paquetes',
-        explains:
-            'Casi todas las distribuciones lo traen puesto; si no, lo instala '
-            'el gestor de paquetes con la contraseña de administrador.',
+        label: tr('Instalarlo con tu gestor de paquetes'),
+        explains: tr(
+          'Casi todas las distribuciones lo traen puesto; si no, lo instala '
+          'el gestor de paquetes con la contraseña de administrador.',
+        ),
         manualSteps: [
           'Debian o Ubuntu: sudo apt install python3',
-          'Fedora: sudo dnf install python3',
-          'Arch: sudo pacman -S python',
+          tr('Fedora: sudo dnf install python3'),
+          tr('Arch: sudo pacman -S python'),
         ],
       ),
     ],
@@ -574,29 +594,33 @@ class LatexOption {
 /// La lista y el orden son los de `web/docs/empezar/latex.md`: primero la
 /// ligera que no pide contraseña, después las completas.
 List<LatexOption> latexOptions(Host host) => switch (host) {
-  Host.macos => const [
+  Host.macos => [
     LatexOption(
       id: 'tinytex',
       name: 'TinyTeX',
       size: '~100 MB',
-      what:
-          'Lo justo para compilar, sin contraseña de administrador y en tu '
-          'carpeta personal. Didacta le añade después los paquetes que usa.',
+      what: tr(
+        'Lo justo para compilar, sin contraseña de administrador y en tu '
+        'carpeta personal. Didacta le añade después los paquetes que usa.',
+      ),
       guide: 'https://yihui.org/tinytex/',
       recommended: true,
       plan: InstallPlan(
         kind: InstallKind.script,
-        label: 'Instalar TinyTeX',
-        explains:
-            'Se descarga el instalador oficial de TinyTeX y se ejecuta. '
-            'Instala en ~/Library/TinyTeX y no pide contraseña. Después '
-            'Didacta le pide a tlmgr los paquetes que el preámbulo necesita.',
+        label: tr('Instalar TinyTeX'),
+        explains: tr(
+          'Se descarga el instalador oficial de TinyTeX y se ejecuta. '
+          'Instala en ~/Library/TinyTeX y no pide contraseña. Después '
+          'Didacta le pide a tlmgr los paquetes que el preámbulo necesita.',
+        ),
         url: _tinytexUnix,
         filename: 'install-tinytex.sh',
         texPackages: true,
         manualSteps: [
           'En el Terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh',
-          'Después: ~/Library/TinyTeX/bin/universal-darwin/tlmgr install latexmk beamer pgfplots tcolorbox',
+          tr(
+            'Después: ~/Library/TinyTeX/bin/universal-darwin/tlmgr install latexmk beamer pgfplots tcolorbox biblatex biber',
+          ),
         ],
       ),
     ),
@@ -604,23 +628,25 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
       id: 'basictex',
       name: 'BasicTeX',
       size: '~100 MB',
-      what:
-          'La versión reducida de MacTeX, instalada en el sistema. Los '
-          'paquetes que falten se añaden luego con `sudo tlmgr install`.',
+      what: tr(
+        'La versión reducida de MacTeX, instalada en el sistema. Los '
+        'paquetes que falten se añaden luego con `sudo tlmgr install`.',
+      ),
       guide: 'https://tug.org/mactex/morepackages.html',
       needsAdmin: true,
       plan: InstallPlan(
         kind: InstallKind.installer,
-        label: 'Descargar BasicTeX',
-        explains:
-            'Se descarga el paquete oficial de CTAN y se abre el instalador '
-            'de macOS, que te pedirá la contraseña de administrador.',
+        label: tr('Descargar BasicTeX'),
+        explains: tr(
+          'Se descarga el paquete oficial de CTAN y se abre el instalador '
+          'de macOS, que te pedirá la contraseña de administrador.',
+        ),
         url: _basicTex,
         filename: 'BasicTeX.pkg',
         handsOver: true,
         manualSteps: [
           'Descarga BasicTeX.pkg de tug.org/mactex/morepackages.html',
-          'Ábrelo y sigue el instalador.',
+          tr('Ábrelo y sigue el instalador.'),
         ],
       ),
     ),
@@ -628,43 +654,47 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
       id: 'mactex',
       name: 'MacTeX',
       size: '~6 GB',
-      what:
-          'TeX Live entera, con todo lo de CTAN. La que no te va a faltar '
-          'nunca, si tienes el disco y la tarde.',
+      what: tr(
+        'TeX Live entera, con todo lo de CTAN. La que no te va a faltar '
+        'nunca, si tienes el disco y la tarde.',
+      ),
       guide: 'https://tug.org/mactex/',
       needsAdmin: true,
       plan: InstallPlan(
         kind: InstallKind.installer,
-        label: 'Descargar MacTeX',
-        explains:
-            'Son unos 6 GB desde CTAN. Al terminar se abre el instalador de '
-            'macOS, que te pedirá la contraseña de administrador.',
+        label: tr('Descargar MacTeX'),
+        explains: tr(
+          'Son unos 6 GB desde CTAN. Al terminar se abre el instalador de '
+          'macOS, que te pedirá la contraseña de administrador.',
+        ),
         url: _macTex,
         filename: 'MacTeX.pkg',
         handsOver: true,
         manualSteps: [
           'Descarga MacTeX.pkg de tug.org/mactex',
-          'Ábrelo y sigue el instalador. Tarda un rato largo.',
+          tr('Ábrelo y sigue el instalador. Tarda un rato largo.'),
         ],
       ),
     ),
   ],
-  Host.windows => const [
+  Host.windows => [
     LatexOption(
       id: 'tinytex',
       name: 'TinyTeX',
       size: '~100 MB',
-      what:
-          'Lo justo para compilar, en tu carpeta de usuario y sin permisos de '
-          'administrador.',
+      what: tr(
+        'Lo justo para compilar, en tu carpeta de usuario y sin permisos de '
+        'administrador.',
+      ),
       guide: 'https://yihui.org/tinytex/',
       recommended: true,
       plan: InstallPlan(
         kind: InstallKind.script,
-        label: 'Instalar TinyTeX',
-        explains:
-            'Se descarga el instalador oficial de TinyTeX y se ejecuta. '
-            'Después Didacta le pide a tlmgr los paquetes que usa.',
+        label: tr('Instalar TinyTeX'),
+        explains: tr(
+          'Se descarga el instalador oficial de TinyTeX y se ejecuta. '
+          'Después Didacta le pide a tlmgr los paquetes que usa.',
+        ),
         url: _tinytexWindows,
         filename: 'install-tinytex.bat',
         texPackages: true,
@@ -677,14 +707,15 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
       id: 'miktex',
       name: 'MiKTeX',
       size: '~200 MB',
-      what:
-          'La de siempre en Windows. Instala cada paquete la primera vez que '
-          'un documento lo pide, así que empieza pequeña y crece sola.',
+      what: tr(
+        'La de siempre en Windows. Instala cada paquete la primera vez que '
+        'un documento lo pide, así que empieza pequeña y crece sola.',
+      ),
       guide: 'https://miktex.org/download',
       plan: InstallPlan(
         kind: InstallKind.command,
-        label: 'Instalar con winget',
-        explains: 'Windows descargará e instalará MiKTeX.',
+        label: tr('Instalar con winget'),
+        explains: tr('Windows descargará e instalará MiKTeX.'),
         program: 'winget',
         arguments: [
           'install',
@@ -699,7 +730,7 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         needs: 'winget',
         manualSteps: [
           'Descarga el instalador básico de miktex.org/download',
-          'Ejecútalo y acepta las opciones por defecto.',
+          tr('Ejecútalo y acepta las opciones por defecto.'),
         ],
       ),
     ),
@@ -707,41 +738,44 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
       id: 'texlive',
       name: 'TeX Live',
       size: '~5 GB',
-      what: 'TeX Live oficial, con su instalador gráfico. La completa.',
+      what: tr('TeX Live oficial, con su instalador gráfico. La completa.'),
       guide: 'https://tug.org/texlive/windows.html',
       needsAdmin: true,
       plan: InstallPlan(
         kind: InstallKind.installer,
-        label: 'Descargar TeX Live',
-        explains:
-            'Se descarga el instalador oficial de CTAN y se abre. La '
-            'instalación se hace en su ventana y tarda un rato largo.',
+        label: tr('Descargar TeX Live'),
+        explains: tr(
+          'Se descarga el instalador oficial de CTAN y se abre. La '
+          'instalación se hace en su ventana y tarda un rato largo.',
+        ),
         url: _texLiveWindows,
         filename: 'install-tl-windows.exe',
         handsOver: true,
         manualSteps: [
           'Descarga install-tl-windows.exe de tug.org/texlive/windows.html',
-          'Ejecútalo y sigue el instalador.',
+          tr('Ejecútalo y sigue el instalador.'),
         ],
       ),
     ),
   ],
-  Host.linux => const [
+  Host.linux => [
     LatexOption(
       id: 'tinytex',
       name: 'TinyTeX',
       size: '~100 MB',
-      what:
-          'Lo justo para compilar, en tu carpeta personal y sin sudo. La '
-          'opción que funciona en una máquina donde no eres administrador.',
+      what: tr(
+        'Lo justo para compilar, en tu carpeta personal y sin sudo. La '
+        'opción que funciona en una máquina donde no eres administrador.',
+      ),
       guide: 'https://yihui.org/tinytex/',
       recommended: true,
       plan: InstallPlan(
         kind: InstallKind.script,
-        label: 'Instalar TinyTeX',
-        explains:
-            'Se descarga el instalador oficial de TinyTeX y se ejecuta. '
-            'Instala en ~/.TinyTeX y no pide sudo.',
+        label: tr('Instalar TinyTeX'),
+        explains: tr(
+          'Se descarga el instalador oficial de TinyTeX y se ejecuta. '
+          'Instala en ~/.TinyTeX y no pide sudo.',
+        ),
         url: _tinytexUnix,
         filename: 'install-tinytex.sh',
         texPackages: true,
@@ -754,25 +788,54 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
       id: 'distro',
       name: 'El TeX Live de tu distribución',
       size: '1-5 GB',
-      what:
-          'El que mantiene tu sistema, con sus actualizaciones. Pide la '
-          'contraseña de administrador, así que se instala en un terminal.',
+      what: tr(
+        'El que mantiene tu sistema, con sus actualizaciones. Pide la '
+        'contraseña de administrador, así que se instala en un terminal.',
+      ),
       guide: 'https://tug.org/texlive/quickinstall.html',
       needsAdmin: true,
       plan: InstallPlan.manual(
-        label: 'Ver las órdenes',
-        explains:
-            'Instalar paquetes del sistema pide la contraseña de '
-            'administrador, y eso se teclea en un terminal.',
+        label: tr('Ver las órdenes'),
+        explains: tr(
+          'Instalar paquetes del sistema pide la contraseña de '
+          'administrador, y eso se teclea en un terminal.',
+        ),
         manualSteps: [
           'Debian o Ubuntu: sudo apt install texlive-latex-extra texlive-science latexmk',
-          'Fedora: sudo dnf install texlive-scheme-medium latexmk',
-          'Arch: sudo pacman -S texlive-latexextra texlive-binextra',
+          tr('Fedora: sudo dnf install texlive-scheme-medium latexmk'),
+          tr('Arch: sudo pacman -S texlive-latexextra texlive-binextra'),
         ],
       ),
     ),
   ],
 };
+
+/// Lo que se dice cuando hay LaTeX pero no `biber`.
+///
+/// No es un «falta»: sin biber se compila todo lo que no cita, que es casi
+/// todo. Pero el documento que cita un `.bib` se queda sin bibliografía, y
+/// eso es mejor saberlo aquí que la víspera de repartirlo. Con la orden de
+/// cada sistema, porque la instalación de TeX ya está y no hace falta otra.
+String missingBiber(Host host) {
+  final how = switch (host) {
+    Host.macos => tr(
+      'Con TinyTeX: tlmgr install biblatex biber. MacTeX ya lo trae.',
+    ),
+    Host.windows => tr(
+      'Con TinyTeX: tlmgr install biblatex biber. MiKTeX lo instala solo la '
+      'primera vez que hace falta.',
+    ),
+    Host.linux => tr(
+      'Con TinyTeX: tlmgr install biblatex biber. En Debian o Ubuntu: sudo '
+      'apt install biber.',
+    ),
+  };
+  return tr(
+    'Falta biber, que es lo que compone la bibliografía: los documentos '
+    'que citan un .bib saldrán sin ella. {0}',
+    [how],
+  );
+}
 
 // ------------------------------------------------------- leer una versión ---
 

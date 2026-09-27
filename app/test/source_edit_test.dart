@@ -256,7 +256,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('source-save')));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('source-commit-save')));
+    await tapIfShown(tester, find.byKey(const Key('source-commit-save')));
     await settle(tester);
 
     expect(gateway.commits.length, 1);
@@ -274,7 +274,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('source-save')));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('source-commit-save')));
+    await tapIfShown(tester, find.byKey(const Key('source-commit-save')));
     await settle(tester);
 
     // En orden de ruta, que es el mismo que enseñó el diálogo: el commit no
@@ -304,7 +304,7 @@ void main() {
 
     await tester.tap(find.byKey(const Key('source-save')));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('source-commit-save')));
+    await tapIfShown(tester, find.byKey(const Key('source-commit-save')));
     await settle(tester);
 
     // Ni el que chocaba ni el que no: un conflicto en el segundo fichero no

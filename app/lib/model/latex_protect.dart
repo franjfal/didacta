@@ -36,6 +36,7 @@
 library;
 
 import 'tex_scan.dart';
+import '../l10n/tr.dart';
 
 /// Comandos cuyo argumento es prosa que se lee en el PDF.
 ///
@@ -272,7 +273,7 @@ class ProtectedSegment {
 
   static final RegExp _tag = RegExp(r'<x id="(\d+)"/>');
 
-  static String tagFor(int index) => '<x id="$index"/>';
+  static String tagFor(int index) => tr('<x id="{0}"/>', [index]);
 }
 
 /// Si una pieza iba pegada o separada de lo que tenía a cada lado.
@@ -383,6 +384,20 @@ List<TexPiece> splitLatex(String text) {
       opaque(i, math);
       i = math;
       continue;
+    }
+
+    // El texto alternativo de una figura es prosa --lo lee un lector de
+    // pantalla, en el idioma del documento-- aunque la figura entera viaje
+    // protegida: se traduce lo de dentro de `alt={…}` y nada más.
+    if (masked[i] == r'\') {
+      final alt = _altAt(text, masked, i);
+      if (alt != null) {
+        opaque(i, alt.start);
+        pieces.addAll(splitLatex(text.substring(alt.start, alt.end)));
+        opaque(alt.end, alt.whole);
+        i = alt.whole;
+        continue;
+      }
     }
 
     if (masked[i] == r'\') {
@@ -510,6 +525,37 @@ _Command? _commandAt(String text, String masked, int at) {
     );
   }
   return _Command(end: close + 1, prose: false);
+}
+
+/// El `alt={…}` de la figura que empieza en [at] --`\includegraphics[…]` o
+/// `\begin{tikzpicture}[…]`--: dónde empieza y acaba su texto, y dónde acaba
+/// la figura. Null si no es una figura o no lo lleva.
+({int start, int end, int whole})? _altAt(String text, String masked, int at) {
+  final figure = RegExp(
+    r'^\\(?:includegraphics|begin\s*\{tikzpicture\})\s*\[',
+  ).firstMatch(masked.substring(at));
+  if (figure == null) return null;
+  final options = at + figure.end - 1;
+  // Hasta el `]` que cierra las opciones, saltando lo que va entre llaves.
+  var close = options + 1;
+  var depth = 0;
+  while (close < masked.length) {
+    final char = masked[close];
+    if (char == '{') depth += 1;
+    if (char == '}') depth -= 1;
+    if (char == ']' && depth == 0) break;
+    close += 1;
+  }
+  final key = RegExp(
+    r'(?:^|[\[,\s])alt\s*=\s*\{',
+  ).firstMatch(masked.substring(options, close));
+  if (key == null) return null;
+  final brace = options + key.end - 1;
+  final end = matchBrace(masked, brace);
+  if (end == null || end > close) return null;
+  final command = _commandAt(text, masked, at);
+  if (command == null || command.end <= end) return null;
+  return (start: brace + 1, end: end, whole: command.end);
 }
 
 int? _nextBrace(String masked, int from, {bool sameLine = false}) {

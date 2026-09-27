@@ -18,8 +18,17 @@ on:
 
 jobs:
   engine:
-    name: el motor (Python)
-    runs-on: ubuntu-latest
+    name: el motor (Python, ${{ matrix.os }})
+    # En los tres sistemas en que se instala Didacta. Windows todavía no
+    # bloquea: hay pruebas del motor que dan por hecho POSIX --un pty, grupos
+    # de procesos-- y hasta que lleven su `skipUnless` se miran sin parar un
+    # pull request. Cuando salga en verde, fuera el `continue-on-error`.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -30,24 +39,33 @@ jobs:
           python-version: '3.9'
 
       - name: los tests
-        run: python3 -m unittest discover -s tests -v
+        run: python -m unittest discover -s tests -v
 
       - name: la herramienta de publicación
         # También aquí y no sólo al publicar: una errata en `release.yaml`, o
         # un `publish.py` roto, tienen que verse en el pull request y no el
         # día que alguien quiere sacar una versión.
-        run: python3 -m unittest discover -s packaging -p 'test_*.py' -v
+        run: python -m unittest discover -s packaging -p "test_*.py" -v
 
       - name: la herramienta arranca
         # Cheap, and catches the failure that no unit test would: a syntax
-        # error or a bad import in the entry point itself.
+        # error or a bad import in the entry point itself. Con `python`
+        # delante y no por su `#!`, que en Windows no vale.
         run: |
-          ./cli/didacta --help
-          ./cli/didacta profiles
+          python cli/didacta --help
+          python cli/didacta profiles
 
   app:
-    name: la aplicación (Flutter)
-    runs-on: ubuntu-latest
+    name: la aplicación (Flutter, ${{ matrix.os }})
+    # Lo mismo que el motor: Windows, sin bloquear hasta que salga en verde,
+    # y sin las pruebas `integration` (git, Python, LaTeX), que en Windows
+    # necesitan su propia pasada. El analizador, el formato y la web, una vez.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     defaults:
       run:
         working-directory: app
@@ -64,15 +82,25 @@ jobs:
       - name: el analizador, sin excepciones
         # `--fatal-infos`: an info-level lint that nobody fixes becomes noise
         # that hides the next real one.
+        if: matrix.os == 'ubuntu-latest'
         run: flutter analyze --fatal-infos
 
       - name: el formato
-        run: dart format --output=none --set-exit-if-changed lib test
+        if: matrix.os == 'ubuntu-latest'
+        run: dart format --output=none --set-exit-if-changed lib test tool
 
       - name: los tests
+        # Las `real` se saltan solas (dart_test.yaml): leen el material de
+        # alguien, que aquí no está.
+        if: matrix.os != 'windows-latest'
         run: flutter test
+
+      - name: los tests, sin git ni Python
+        if: matrix.os == 'windows-latest'
+        run: flutter test -x integration
 
       - name: compila para web
         # The build is part of the test: a screen that compiles for the VM and
         # not for web is a screen that does not exist.
+        if: matrix.os == 'ubuntu-latest'
         run: flutter build web --release --dart-define=DIDACTA_INDEX=generated

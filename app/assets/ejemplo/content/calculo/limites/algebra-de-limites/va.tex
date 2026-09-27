@@ -1,0 +1,41 @@
+% Lliçó: àlgebra de límits (valencià).
+
+\begin{frame}
+\didactatitle{Àlgebra de límits}
+
+\begin{proposition}[Àlgebra de límits]
+Si $\lim_{x \to a} f(x) = L$ i $\lim_{x \to a} g(x) = M$, aleshores
+\begin{itemize}
+  \item $\lim_{x \to a} \bigl(f(x) + g(x)\bigr) = L + M$;
+  \item $\lim_{x \to a} f(x)\,g(x) = L M$;
+  \item $\lim_{x \to a} \dfrac{f(x)}{g(x)} = \dfrac{L}{M}$, si $M \neq 0$.
+\end{itemize}
+\end{proposition}
+
+\begin{notesonly}
+\begin{proof}
+Provem la primera; les altres dues segueixen la mateixa idea amb alguna
+fitació més. Donat $\varepsilon > 0$, existeixen $\delta_1, \delta_2 > 0$
+tals que $|f(x) - L| < \varepsilon/2$ si $0 < |x - a| < \delta_1$, i
+$|g(x) - M| < \varepsilon/2$ si $0 < |x - a| < \delta_2$. Prenent
+$\delta = \min\{\delta_1, \delta_2\}$, per a $0 < |x - a| < \delta$ la
+desigualtat triangular dona
+\[
+  \bigl|\bigl(f(x) + g(x)\bigr) - (L + M)\bigr|
+  \le |f(x) - L| + |g(x) - M|
+  < \tfrac{\varepsilon}{2} + \tfrac{\varepsilon}{2} = \varepsilon .
+\]
+\end{proof}
+\end{notesonly}
+
+\dpause
+
+\begin{remark}
+Com que $\lim_{x \to a} x = a$ i el límit d'una constant és ella mateixa, la
+proposició dona el límit d'un polinomi avaluant: $\lim_{x \to a} p(x) =
+p(a)$. I el d'una funció racional, $\lim_{x \to a} p(x)/q(x) = p(a)/q(a)$,
+sempre que $q(a) \neq 0$.
+\end{remark}
+
+\timing{15 min}
+\end{frame}

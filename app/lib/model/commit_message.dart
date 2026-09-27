@@ -9,6 +9,8 @@
 /// varias, y el repositorio cuando hay más de uno por medio.
 library;
 
+import '../l10n/tr.dart';
+
 /// El mensaje que se propone para lo que está sin guardar.
 String proposedCommitMessage(List<String> paths) {
   if (paths.isEmpty) return '';
@@ -20,15 +22,17 @@ String proposedCommitMessage(List<String> paths) {
       for (final path in paths)
         if (_languageOf(path) != null) _languageOf(path)!,
     };
-    if (languages.length == 1) return 'Editar $unit (${languages.single})';
-    return 'Editar $unit';
+    if (languages.length == 1) {
+      return tr('Editar {0} ({1})', [unit, languages.single]);
+    }
+    return tr('Editar {0}', [unit]);
   }
 
   final areas = <String>{for (final unit in units) _areaOf(unit)};
   if (areas.length == 1 && areas.single.isNotEmpty) {
-    return 'Editar ${units.length} cosas de ${areas.single}';
+    return tr('Editar {0} cosas de {1}', [units.length, areas.single]);
   }
-  return 'Editar ${units.length} ficheros';
+  return tr('Editar {0} ficheros', [units.length]);
 }
 
 /// `content/a/b/es.tex` → `content/a/b`. Un `year.yaml` es su carpeta.

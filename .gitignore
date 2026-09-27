@@ -32,5 +32,3 @@ web/docs/img/app/
 # compilar. Aquí no va material docente: este repositorio es la plataforma, es
 # público, y unos apuntes commiteados por descuido no se desandan.
 didacta_db*/
-/build.command
-/Compilar Didacta.app/

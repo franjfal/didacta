@@ -41,6 +41,13 @@
 
 \newcounter{didactathm}
 \@addtoreset{didactathm}{section}
+%% Beamer compone un frame con pausas una vez por diapositiva, y un contador
+%% que se incrementa dentro sube una vez en cada una: el ejemplo de después de
+%% un \dpause salía 1.3 en la segunda diapositiva y todo lo que venía detrás,
+%% uno más. \resetcounteronoverlays lo devuelve en cada diapositiva a lo que
+%% valía al entrar en el frame. Solo existe en beamer: en apuntes no hay nada
+%% que arreglar.
+\@ifundefined{resetcounteronoverlays}{}{\resetcounteronoverlays{didactathm}}
 \renewcommand{\thedidactathm}{%
   \ifnum\c@section>0 \thesection.\fi\arabic{didactathm}}
 
@@ -277,7 +284,16 @@
 \newenvironment{keyformula}{%
   \begin{didacta@formulabox}\begin{equation*}
 }{%
-  \end{equation*}\end{didacta@formulabox}
+  \end{equation*}\end{didacta@formulabox}%
+  %% Lo que sigue sin línea en blanco continúa el párrafo, como detrás de
+  %% una ecuación: sin esto, la frase que explica la fórmula empezaba
+  %% sangrada, como si fuera un párrafo nuevo.
+  %% Salvo en el PDF etiquetado: allí el núcleo lleva la cuenta de los
+  %% párrafos para el árbol de estructura, y este truco se la descuadra --la
+  %% compilación acababa con «the number of automatic begin and end para
+  %% hooks differ»--. Lo que se pierde es solo la sangría de la línea de
+  %% después.
+  \@ifundefined{DidactaTagged}{\@endpetrue}{}%
 }
 %% Legacy name.
 \newenvironment{nformula}{\begin{keyformula}}{\end{keyformula}}

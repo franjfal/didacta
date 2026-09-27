@@ -20,8 +20,10 @@ import 'package:flutter/material.dart';
 import '../model/catalogue.dart';
 import '../model/slug.dart';
 import '../state/session.dart';
+import 'problem.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 Future<void> showTemplates(BuildContext context, Session session) =>
     showDialog<void>(
@@ -35,24 +37,44 @@ Future<void> showTemplates(BuildContext context, Session session) =>
 /// que una plantilla declare fuera de esta lista **se conserva**: la versión
 /// del profesor de las diapositivas lleva un `notes=show` que no sale aquí, y
 /// editarle el margen no puede quitárselo por el camino.
-const List<(String, String, List<(String, String)>)> templateAxes = [
-  ('medium', 'Medio', [('slides', 'Diapositivas'), ('document', 'Documento')]),
-  ('detail', 'Detalle', [('brief', 'Lo que cabe'), ('full', 'Todo')]),
-  ('audience', 'Audiencia', [('student', 'Alumno'), ('teacher', 'Profesor')]),
+List<(String, String, List<(String, String)>)> get templateAxes => [
+  (
+    'medium',
+    tr('Medio'),
+    [('slides', tr('Diapositivas')), ('document', tr('Documento'))],
+  ),
+  (
+    'detail',
+    tr('Detalle'),
+    [('brief', tr('Lo que cabe')), ('full', tr('Todo'))],
+  ),
+  (
+    'audience',
+    tr('Audiencia'),
+    [('student', tr('Alumno')), ('teacher', tr('Profesor'))],
+  ),
   (
     'solutions',
-    'Soluciones',
+    tr('Soluciones'),
     [
-      ('hidden', 'Ninguna'),
-      ('answers', 'Los resultados'),
-      ('full', 'La solución entera'),
+      ('hidden', tr('Ninguna')),
+      ('answers', tr('Los resultados')),
+      ('full', tr('La solución entera')),
     ],
   ),
-  ('pauses', 'Pausas', [('on', 'Se respetan'), ('off', 'Se colapsan')]),
+  (
+    'pauses',
+    tr('Pausas'),
+    [('on', tr('Se respetan')), ('off', tr('Se colapsan'))],
+  ),
   (
     'layout',
-    'Maqueta',
-    [('normal', 'Normal'), ('compact', 'Compacta'), ('exam', 'Examen')],
+    tr('Maqueta'),
+    [
+      ('normal', tr('Normal')),
+      ('compact', tr('Compacta')),
+      ('exam', tr('Examen')),
+    ],
   ),
 ];
 
@@ -157,21 +179,24 @@ class _ChooseTemplatesDialogState extends State<_ChooseTemplatesDialog> {
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: true,
-                    title: const Text(
-                      'Lo que toque',
+                    title: Text(
+                      tr('Lo que toque'),
                       style: TextStyle(fontSize: 12.5),
                     ),
                     subtitle: Text(
                       widget.inherited,
-                      style: const TextStyle(fontSize: 11, color: didactaMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.palette.muted,
+                      ),
                     ),
                   ),
-                  const RadioListTile<bool>(
+                  RadioListTile<bool>(
                     key: Key('templates-pick'),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: false,
-                    title: Text('Estas', style: TextStyle(fontSize: 12.5)),
+                    title: Text(tr('Estas'), style: TextStyle(fontSize: 12.5)),
                   ),
                 ],
               ),
@@ -181,14 +206,17 @@ class _ChooseTemplatesDialogState extends State<_ChooseTemplatesDialog> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Note(
-                  'Esto se compila además en ${_invisible.join(', ')}, que no '
-                  'se pueden enseñar aquí --están apagadas, o las declara un '
-                  'repositorio que no está abierto--. Se quedan como están.',
-                  tone: didactaTeacher,
+                  tr(
+                    'Esto se compila además en {0}, que no '
+                    'se pueden enseñar aquí --están apagadas, o las declara un '
+                    'repositorio que no está abierto--. Se quedan como están.',
+                    [_invisible.join(', ')],
+                  ),
+                  tone: context.palette.teacher,
                 ),
               ),
             if (available.isEmpty)
-              const Note('No hay ninguna plantilla encendida.')
+              Note(tr('No hay ninguna plantilla encendida.'))
             else
               for (final template in available)
                 CheckboxListTile(
@@ -206,9 +234,9 @@ class _ChooseTemplatesDialogState extends State<_ChooseTemplatesDialog> {
                   ),
                   subtitle: Text(
                     template.id,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
-                      color: didactaMuted,
+                      color: context.palette.muted,
                       fontFamily: 'monospace',
                     ),
                   ),
@@ -226,7 +254,7 @@ class _ChooseTemplatesDialogState extends State<_ChooseTemplatesDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('templates-choose-save'),
@@ -244,7 +272,7 @@ class _ChooseTemplatesDialogState extends State<_ChooseTemplatesDialog> {
                           ..._invisible,
                         ],
                 ),
-          child: const Text('Aceptar'),
+          child: Text(tr('Aceptar')),
         ),
       ],
     );
@@ -275,17 +303,19 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
     ];
 
     return AlertDialog(
-      title: const Text('Plantillas'),
+      title: Text(tr('Plantillas')),
       content: SizedBox(
         width: 720,
         height: 560,
         child: ListView(
           children: [
-            const Text(
-              'Una plantilla es una salida: qué PDF sale de una lección o de '
-              'un tema. Las que trae Didacta se pueden editar, y editar una '
-              'es escribirla en un repositorio: a partir de ahí manda la '
-              'tuya, y la de serie se queda intacta.',
+            Text(
+              tr(
+                'Una plantilla es una salida: qué PDF sale de una lección o de '
+                'un tema. Las que trae Didacta se pueden editar, y editar una '
+                'es escribirla en un repositorio: a partir de ahí manda la '
+                'tuya, y la de serie se queda intacta.',
+              ),
               style: TextStyle(fontSize: 12.5, height: 1.45),
             ),
             const SizedBox(height: 12),
@@ -303,18 +333,24 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
               ),
             if (missing.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Nombradas y sin declarar',
-                style: TextStyle(fontSize: 11.5, color: didactaTeacher),
+              Text(
+                tr('Nombradas y sin declarar'),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.palette.teacher,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
-                'Algún bloque, tema o lección se compila con estas y no las '
-                'declara ningún repositorio abierto: ${missing.join(', ')}. '
-                'No se compilan --pedirle a LaTeX una salida que no existe es '
-                'un error, no un PDF raro-- así que falta abrir el '
-                'repositorio donde estén, o declararlas aquí.',
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                tr(
+                  'Algún bloque, tema o lección se compila con estas y no las '
+                  'declara ningún repositorio abierto: {0}. '
+                  'No se compilan --pedirle a LaTeX una salida que no existe es '
+                  'un error, no un PDF raro-- así que falta abrir el '
+                  'repositorio donde estén, o declararlas aquí.',
+                  [missing.join(', ')],
+                ),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ],
           ],
@@ -325,12 +361,12 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
           TextButton.icon(
             key: const Key('new-template'),
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('Nueva plantilla'),
+            label: Text(tr('Nueva plantilla')),
             onPressed: () => _create(writable),
           ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(tr('Cerrar')),
         ),
       ],
     );
@@ -342,7 +378,7 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
     try {
       await work();
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -422,8 +458,10 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
         SnackBar(
           content: Text(
             sameId
-                ? 'Ahora manda tu «${answer.id}». La de Didacta sigue igual.'
-                : 'Plantilla «${answer.id}» declarada.',
+                ? tr('Ahora manda tu «{0}». La de Didacta sigue igual.', [
+                    answer.id,
+                  ])
+                : tr('Plantilla «{0}» declarada.', [answer.id]),
           ),
         ),
       );
@@ -482,7 +520,9 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Quitar «${template.title(widget.session.language)}»'),
+        title: Text(
+          tr('Quitar «{0}»', [template.title(widget.session.language)]),
+        ),
         content: SizedBox(
           width: 460,
           child: Column(
@@ -491,25 +531,34 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
             children: [
               Text(
                 used == 0
-                    ? 'No la nombra nada, así que quitarla solo borra su '
-                          'declaración.'
-                    : 'La nombran $used cosa(s) --bloques, temas o '
-                          'lecciones--. Dejarán de compilarla, y saldrán en '
-                          '«Entre repositorios» hasta que se arreglen.',
+                    ? tr(
+                        'No la nombra nada, así que quitarla solo borra su '
+                        'declaración.',
+                      )
+                    : tr(
+                        'La nombran {0} cosa(s) --bloques, temas o '
+                        'lecciones--. Dejarán de compilarla, y saldrán en '
+                        '«Entre repositorios» hasta que se arreglen.',
+                        [used],
+                      ),
                 style: const TextStyle(fontSize: 12.5, height: 1.45),
               ),
               const SizedBox(height: 10),
-              const Note(
-                'Su cabecera se queda donde está. Es LaTeX que alguien '
-                'escribió, y volver a declararla con el mismo id la recupera '
-                'entera. Si de verdad sobra, bórrala del repositorio.',
+              Note(
+                tr(
+                  'Su cabecera se queda donde está. Es LaTeX que alguien '
+                  'escribió, y volver a declararla con el mismo id la recupera '
+                  'entera. Si de verdad sobra, bórrala del repositorio.',
+                ),
               ),
               const SizedBox(height: 6),
-              const Note(
-                'Si solo quieres dejar de sacar esta versión, apágala en vez '
-                'de quitarla: se queda declarada y fuera de lo que se '
-                'compila.',
-                tone: didactaTeacher,
+              Note(
+                tr(
+                  'Si solo quieres dejar de sacar esta versión, apágala en vez '
+                  'de quitarla: se queda declarada y fuera de lo que se '
+                  'compila.',
+                ),
+                tone: context.palette.teacher,
               ),
             ],
           ),
@@ -517,12 +566,12 @@ class _TemplatesDialogState extends State<TemplatesDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             key: const Key('template-remove-confirm'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Quitar'),
+            child: Text(tr('Quitar')),
           ),
         ],
       ),
@@ -586,8 +635,8 @@ class _TemplateRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: didactaSurface,
-        border: Border.all(color: didactaRule),
+        color: context.palette.surface,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
@@ -603,12 +652,18 @@ class _TemplateRow extends StatelessWidget {
               Tooltip(
                 message: template.declared
                     ? (template.active
-                          ? 'Se compila. Púlsala para dejar de sacar esta '
-                                'versión.'
-                          : 'Apagada: no se compila, y sigue declarada con su '
-                                'cabecera.')
-                    : 'Las que trae Didacta no se apagan: edítala y pasa a '
-                          'estar en tu repositorio.',
+                          ? tr(
+                              'Se compila. Púlsala para dejar de sacar esta '
+                              'versión.',
+                            )
+                          : tr(
+                              'Apagada: no se compila, y sigue declarada con su '
+                              'cabecera.',
+                            ))
+                    : tr(
+                        'Las que trae Didacta no se apagan: edítala y pasa a '
+                        'estar en tu repositorio.',
+                      ),
                 child: Checkbox(
                   key: Key('template-active-${template.id}'),
                   value: template.active,
@@ -626,15 +681,17 @@ class _TemplateRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
-                        color: template.active ? didactaInk : didactaMuted,
+                        color: template.active
+                            ? context.palette.ink
+                            : context.palette.muted,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _describe(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
-                        color: didactaMuted,
+                        color: context.palette.muted,
                       ),
                     ),
                   ],
@@ -658,21 +715,27 @@ class _TemplateRow extends StatelessWidget {
               // protege nadie-- o ninguna de las dos, que es una de las
               // quince que trae Didacta.
               if (!template.declared)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(right: 4),
                   child: Text(
-                    'viene con Didacta',
-                    style: TextStyle(fontSize: 11, color: didactaMuted),
+                    tr('viene con Didacta'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.palette.muted,
+                    ),
                   ),
                 )
               else
                 for (final repo in template.sources.keys)
                   if (repo == Session.programTemplates)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(right: 4),
                       child: Text(
-                        'en el programa · sin copia de seguridad',
-                        style: TextStyle(fontSize: 11, color: didactaTeacher),
+                        tr('en el programa · sin copia de seguridad'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.palette.teacher,
+                        ),
                       ),
                     )
                   else if (session.colourOf(repo) != null)
@@ -689,9 +752,9 @@ class _TemplateRow extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 4),
                       child: Text(
                         session.workspace.byId(repo)?.label ?? repo,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ),
@@ -702,25 +765,27 @@ class _TemplateRow extends StatelessWidget {
                     key: Key('template-preamble-${template.id}'),
                     onPressed: onPreamble,
                     child: Text(
-                      template.hasPreamble ? 'Cabecera ·' : 'Cabecera',
+                      template.hasPreamble ? tr('Cabecera ·') : tr('Cabecera'),
                     ),
                   ),
                 if (writable.isNotEmpty || canWrite)
                   TextButton(
                     key: Key('template-edit-${template.id}'),
                     onPressed: template.declared && !canWrite ? null : onEdit,
-                    child: Text(template.declared ? 'Editar' : 'Editar aquí'),
+                    child: Text(
+                      template.declared ? tr('Editar') : tr('Editar aquí'),
+                    ),
                   ),
                 if (writable.isNotEmpty)
                   TextButton(
                     key: Key('template-copy-${template.id}'),
                     onPressed: onCopy,
-                    child: const Text('Duplicar'),
+                    child: Text(tr('Duplicar')),
                   ),
                 if (template.declared && canWrite)
                   IconButton(
                     key: Key('template-remove-${template.id}'),
-                    tooltip: 'Quitar esta plantilla',
+                    tooltip: tr('Quitar esta plantilla'),
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(Icons.delete_outline, size: 15),
                     onPressed: onRemove,
@@ -741,14 +806,14 @@ class _TemplateRow extends StatelessWidget {
   String _describe() {
     final parts = <String>[
       template.id,
-      template.documentClass.isEmpty ? 'sin clase' : template.documentClass,
+      template.documentClass.isEmpty ? tr('sin clase') : template.documentClass,
       switch (template.reveals) {
-        'answers' => 'enunciados y resultados',
-        'solutions' => 'enunciados, resultados y solución',
-        'teacher' => 'todo, con la solución paso a paso',
-        _ => 'solo los enunciados',
+        'answers' => tr('enunciados y resultados'),
+        'solutions' => tr('enunciados, resultados y solución'),
+        'teacher' => tr('todo, con la solución paso a paso'),
+        _ => tr('solo los enunciados'),
       },
-      if (template.hasPreamble) 'con cabecera propia',
+      if (template.hasPreamble) tr('con cabecera propia'),
       if (!template.active) 'apagada',
     ];
     return parts.join(' · ');
@@ -859,23 +924,25 @@ class _TemplateDialogState extends State<_TemplateDialog> {
         );
 
     return AlertDialog(
-      title: Text(_editing ? 'Editar la plantilla' : 'La plantilla'),
+      title: Text(_editing ? tr('Editar la plantilla') : tr('La plantilla')),
       content: SizedBox(
         width: 520,
         height: 480,
         child: ListView(
           children: [
             if (widget.fixedId != null)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 10),
                 child: Note(
-                  'Esta viene con Didacta. Al guardar se escribe en tu '
-                  'repositorio con el mismo id, y a partir de ahí manda la '
-                  'tuya; la de serie se queda como está.',
-                  tone: didactaTeacher,
+                  tr(
+                    'Esta viene con Didacta. Al guardar se escribe en tu '
+                    'repositorio con el mismo id, y a partir de ahí manda la '
+                    'tuya; la de serie se queda como está.',
+                  ),
+                  tone: context.palette.teacher,
                 ),
               ),
-            const SectionLabel('Nombre'),
+            SectionLabel(tr('Nombre')),
             for (final code in _languages)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -891,14 +958,16 @@ class _TemplateDialogState extends State<_TemplateDialog> {
                   ),
                 ),
               ),
-            const Note(
-              'Sin nombre no pasa nada: se enseña por lo que hace, '
-              '«Diapositivas (sin pausas)».',
+            Note(
+              tr(
+                'Sin nombre no pasa nada: se enseña por lo que hace, '
+                '«Diapositivas (sin pausas)».',
+              ),
             ),
             const SizedBox(height: 12),
 
             if (!_editing) ...[
-              const SectionLabel('Identificador'),
+              SectionLabel(tr('Identificador')),
               TextField(
                 key: const Key('template-id'),
                 controller: _id,
@@ -907,23 +976,26 @@ class _TemplateDialogState extends State<_TemplateDialog> {
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: _identifier.isEmpty ? 'apuntes-a5' : _identifier,
-                  errorText: taken ? 'ya hay una plantilla con este id' : null,
-                  helperText:
-                      'Es lo que escriben los bloques y los temas que se '
-                      'compilan con ella. No se traduce y no se cambia.',
+                  errorText: taken
+                      ? tr('ya hay una plantilla con este id')
+                      : null,
+                  helperText: tr(
+                    'Es lo que escriben los bloques y los temas que se '
+                    'compilan con ella. No se traduce y no se cambia.',
+                  ),
                   helperMaxLines: 3,
                 ),
               ),
               const SizedBox(height: 12),
             ],
 
-            const SectionLabel('Qué produce'),
+            SectionLabel(tr('Qué produce')),
             TextField(
               key: const Key('template-class'),
               controller: _class,
-              decoration: const InputDecoration(
-                labelText: 'Clase de documento',
-                hintText: 'article, book, beamer',
+              decoration: InputDecoration(
+                labelText: tr('Clase de documento'),
+                hintText: tr('article, book, beamer'),
                 isDense: true,
               ),
             ),
@@ -931,15 +1003,15 @@ class _TemplateDialogState extends State<_TemplateDialog> {
             TextField(
               key: const Key('template-options'),
               controller: _options,
-              decoration: const InputDecoration(
-                labelText: 'Opciones de la clase',
+              decoration: InputDecoration(
+                labelText: tr('Opciones de la clase'),
                 hintText: '12pt,oneside',
                 isDense: true,
               ),
             ),
             const SizedBox(height: 12),
 
-            const SectionLabel('Ejes'),
+            SectionLabel(tr('Ejes')),
             for (final (key, label, values) in templateAxes)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -961,7 +1033,7 @@ class _TemplateDialogState extends State<_TemplateDialog> {
               ),
 
             if (widget.repos.length > 1) ...[
-              const SectionLabel('Dónde se guarda'),
+              SectionLabel(tr('Dónde se guarda')),
               DropdownButtonFormField<String>(
                 key: const Key('template-repo'),
                 initialValue: _repo,
@@ -979,18 +1051,22 @@ class _TemplateDialogState extends State<_TemplateDialog> {
               ),
               const SizedBox(height: 4),
               if (_repo == Session.programTemplates)
-                const Note(
-                  'En el programa no la protege nadie: no está en git, no se '
-                  'sincroniza y se va con este ordenador. Hazte copias desde '
-                  'Ajustes, y si la plantilla es de la asignatura y no tuya, '
-                  'guárdala en su repositorio.',
-                  tone: didactaTeacher,
+                Note(
+                  tr(
+                    'En el programa no la protege nadie: no está en git, no se '
+                    'sincroniza y se va con este ordenador. Hazte copias desde '
+                    'Ajustes, y si la plantilla es de la asignatura y no tuya, '
+                    'guárdala en su repositorio.',
+                  ),
+                  tone: context.palette.teacher,
                 )
               else
-                const Note(
-                  'En uno. Una plantilla es un fichero con su cabecera, y '
-                  'tenerla en dos es tener dos versiones que pueden '
-                  'discrepar. Los demás repositorios la usan sin declararla.',
+                Note(
+                  tr(
+                    'En uno. Una plantilla es un fichero con su cabecera, y '
+                    'tenerla en dos es tener dos versiones que pueden '
+                    'discrepar. Los demás repositorios la usan sin declararla.',
+                  ),
                 ),
             ],
           ],
@@ -999,7 +1075,7 @@ class _TemplateDialogState extends State<_TemplateDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('template-save'),
@@ -1023,7 +1099,7 @@ class _TemplateDialogState extends State<_TemplateDialog> {
                     ),
                   );
                 },
-          child: Text(_editing ? 'Guardar' : 'Declarar'),
+          child: Text(_editing ? tr('Guardar') : tr('Declarar')),
         ),
       ],
     );
@@ -1057,26 +1133,28 @@ class _PreambleDialogState extends State<_PreambleDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Cabecera de «${widget.template.id}»'),
+    title: Text(tr('Cabecera de «{0}»', [widget.template.id])),
     content: SizedBox(
       width: 640,
       height: 460,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Se lee al final del preámbulo de Didacta, así que aquí se puede '
-            'redefinir lo que Didacta acaba de definir: los márgenes, los '
-            'colores, un entorno. No lleva `\\documentclass` ni '
-            '`\\begin{document}`: de eso ya se encarga la plantilla.',
+          Text(
+            tr(
+              'Se lee al final del preámbulo de Didacta, así que aquí se puede '
+              'redefinir lo que Didacta acaba de definir: los márgenes, los '
+              'colores, un entorno. No lleva `\\documentclass` ni '
+              '`\\begin{document}`: de eso ya se encarga la plantilla.',
+            ),
             style: TextStyle(fontSize: 12, height: 1.45),
           ),
           const SizedBox(height: 10),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border.all(color: didactaRule),
+                color: context.palette.card,
+                border: Border.all(color: context.palette.rule),
               ),
               child: TextField(
                 key: const Key('template-preamble-text'),
@@ -1103,12 +1181,12 @@ class _PreambleDialogState extends State<_PreambleDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('template-preamble-save'),
         onPressed: () => Navigator.of(context).pop(_controller.text),
-        child: const Text('Guardar'),
+        child: Text(tr('Guardar')),
       ),
     ],
   );

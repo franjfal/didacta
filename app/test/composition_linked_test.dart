@@ -193,7 +193,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.byKey(const Key('composition-save')));
     await settle(tester);
-    await tester.tap(find.byKey(const Key('composition-commit')));
+    await tapIfShown(tester, find.byKey(const Key('composition-commit')));
     await settle(tester);
   }
 

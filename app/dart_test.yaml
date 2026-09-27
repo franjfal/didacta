@@ -1,0 +1,15 @@
+# Las etiquetas de las pruebas.
+#
+#   flutter test                          lo de siempre: todo menos `real`
+#   flutter test -x integration           rápido: sin git, Python ni LaTeX
+#   flutter test --run-skipped -t real    contra el material de verdad
+tags:
+  # Leen el material de verdad --~/didacta_db, didacta_db_teoria-- y fallan
+  # por cómo esté el contenido ese día, no por el código. Saltadas de salida.
+  # Lo que comprueban contra la forma de los ficheros lo comprueban también
+  # las muestras fijas de test/fixtures, que sí se pasan siempre.
+  real:
+    skip: "lee el material de verdad: flutter test --run-skipped -t real"
+  # Lanzan git, Python o LaTeX. Se pasan siempre; `-x integration` las quita
+  # para una pasada rápida.
+  integration:

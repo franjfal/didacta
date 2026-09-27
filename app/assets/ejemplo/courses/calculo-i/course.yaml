@@ -1,0 +1,43 @@
+# Una asignatura, a lo largo de todos los cursos en que se da.
+#
+# Aquí va lo que no cambia de un año a otro. Lo que sí cambia --qué se da y en
+# qué orden-- vive en la carpeta de cada año, al lado de este fichero. Esa
+# separación es la clave: empezar un curso nuevo copia un fichero pequeño de
+# estructura, nunca el contenido.
+
+# El id de la asignatura. Es el nombre de su carpeta.
+id: calculo-i
+
+# Lo que se lee, en cada idioma. Todo texto visible se puede traducir: el PDF
+# en valenciano sale con la cabecera en valenciano.
+title:
+  es: Cálculo I
+  va: Càlcul I
+  en: Calculus I
+
+# El código oficial, entre comillas para que no se lea como un número.
+code: "10001"
+
+degree:
+  es: Grado en Matemáticas
+  va: Grau en Matemàtiques
+  en: BSc in Mathematics
+
+institution: Universidad de ejemplo
+
+department:
+  es: Departamento de Matemáticas
+  va: Departament de Matemàtiques
+  en: Department of Mathematics
+
+# Cámbialo por tu nombre: sale en la portada y en la cabecera de las hojas.
+teacher: Tu nombre
+
+# El idioma en que se da la asignatura. Es el de cada documento que no diga
+# otro, y el de la compilación cuando no se pide ninguno.
+language: es
+
+# Los idiomas en que se ofrece, de entre los del repositorio (`didacta.yaml`).
+# Una asignatura no puede darse en un idioma que su repositorio no mantiene:
+# no habría dónde poner su `.tex`.
+languages: [es, va, en]

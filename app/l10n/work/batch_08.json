@@ -1,0 +1,1442 @@
+[
+ {
+  "key": "Sus idiomas",
+  "where": [
+   "ui/tour.dart:294"
+  ]
+ },
+ {
+  "key": "Símbolos",
+  "where": [
+   "ui/tex_toolbar.dart:264"
+  ]
+ },
+ {
+  "key": "Tamaño del texto",
+  "where": [
+   "ui/settings_page.dart:558"
+  ]
+ },
+ {
+  "key": "Tamaño normal",
+  "where": [
+   "ui/settings_page.dart:690"
+  ]
+ },
+ {
+  "key": "Tamaño real",
+  "where": [
+   "ui/pdf_controls.dart:189"
+  ]
+ },
+ {
+  "key": "También las copias del profesor",
+  "where": [
+   "ui/export_year.dart:343"
+  ]
+ },
+ {
+  "key": "También se cambia con el botón del sol y la luna, abajo del todo en la columna de la izquierda. Los PDF no cambian: un PDF se imprime, y se compila siempre en claro.",
+  "where": [
+   "ui/settings_page.dart:609"
+  ]
+ },
+ {
+  "key": "También se lleva {0}. Siguen en el historial, pero dejan de tener nombre y ya no se pueden abrir desde Didacta.",
+  "where": [
+   "ui/course_admin_ui.dart:414"
+  ]
+ },
+ {
+  "key": "También:",
+  "where": [
+   "ui/export_year.dart:426"
+  ]
+ },
+ {
+  "key": "Tampoco se pudo traer: {0}",
+  "where": [
+   "ui/problem.dart:205"
+  ]
+ },
+ {
+  "key": "Tangente hiperbólica",
+  "where": [
+   "model/tex_vocabulary.dart:93"
+  ]
+ },
+ {
+  "key": "Tangente, con su nombre en cada idioma",
+  "where": [
+   "model/tex_vocabulary.dart:87"
+  ]
+ },
+ {
+  "key": "TeX Live entera, con todo lo de CTAN. La que no te va a faltar nunca, si tienes el disco y la tarde.",
+  "where": [
+   "model/toolchain.dart:657"
+  ]
+ },
+ {
+  "key": "TeX Live oficial, con su instalador gráfico. La completa.",
+  "where": [
+   "model/toolchain.dart:741"
+  ]
+ },
+ {
+  "key": "Tema",
+  "where": [
+   "ui/new_unit.dart:200",
+   "ui/year_page.dart:1003"
+  ]
+ },
+ {
+  "key": "Tema 1",
+  "where": [
+   "ui/welcome_art.dart:580"
+  ]
+ },
+ {
+  "key": "Tema 1: el número y la recta real",
+  "where": [
+   "ui/new_document.dart:262"
+  ]
+ },
+ {
+  "key": "Tema 3. Series de funciones",
+  "where": [
+   "ui/new_document.dart:109"
+  ]
+ },
+ {
+  "key": "Tema nuevo: ninguna otra lección lo usa.",
+  "where": [
+   "ui/metadata_editor.dart:666"
+  ]
+ },
+ {
+  "key": "Tema «{0}» creado.",
+  "where": [
+   "ui/year_page.dart:800"
+  ]
+ },
+ {
+  "key": "Tema, dentro de {0}",
+  "where": [
+   "ui/new_unit.dart:201"
+  ]
+ },
+ {
+  "key": "Temas del curso",
+  "where": [
+   "ui/compare_view.dart:250"
+  ]
+ },
+ {
+  "key": "Temas y documentos",
+  "where": [
+   "ui/tour.dart:202"
+  ]
+ },
+ {
+  "key": "Teorema",
+  "where": [
+   "model/tex_vocabulary.dart:102",
+   "model/tex_wrap.dart:258"
+  ]
+ },
+ {
+  "key": "Teoría",
+  "where": [
+   "ui/new_document.dart:46"
+  ]
+ },
+ {
+  "key": "Teoría, Problema, Propios…",
+  "where": [
+   "ui/manage_snippets.dart:1569"
+  ]
+ },
+ {
+  "key": "Terminada con errores en {0} s",
+  "where": [
+   "ui/build_console.dart:545"
+  ]
+ },
+ {
+  "key": "Terminada en {0} s",
+  "where": [
+   "ui/build_console.dart:544"
+  ]
+ },
+ {
+  "key": "Texto de ejemplo",
+  "where": [
+   "ui/manage_snippets.dart:1797"
+  ]
+ },
+ {
+  "key": "Texto del tamaño normal",
+  "where": [
+   "ui/platform_menus.dart:264",
+   "ui/shortcuts.dart:40",
+   "ui/command_palette.dart:309"
+  ]
+ },
+ {
+  "key": "Texto más grande",
+  "where": [
+   "ui/platform_menus.dart:254",
+   "ui/shortcuts.dart:38",
+   "ui/command_palette.dart:293"
+  ]
+ },
+ {
+  "key": "Texto más pequeño",
+  "where": [
+   "ui/platform_menus.dart:259",
+   "ui/shortcuts.dart:39",
+   "ui/command_palette.dart:301"
+  ]
+ },
+ {
+  "key": "Tiene {0}. Si mandas la carpeta a la Papelera, ese trabajo se va con ella.",
+  "where": [
+   "ui/remove_repository.dart:110"
+  ]
+ },
+ {
+  "key": "Tienes la versión {0}.",
+  "where": [
+   "ui/update_section.dart:279"
+  ]
+ },
+ {
+  "key": "Tienes {0}. Al entrar verás tus asignaturas; la biblioteca es todo el material junto.",
+  "where": [
+   "ui/welcome.dart:1088"
+  ]
+ },
+ {
+  "key": "Tipo",
+  "where": [
+   "ui/new_unit.dart:215",
+   "ui/library_page.dart:1063",
+   "ui/new_document.dart:132"
+  ]
+ },
+ {
+  "key": "Titulación",
+  "where": [
+   "ui/edit_course.dart:223"
+  ]
+ },
+ {
+  "key": "Todas",
+  "where": [
+   "ui/translate_tab.dart:129",
+   "ui/problem_set.dart:346",
+   "ui/tex_find_bar.dart:399"
+  ]
+ },
+ {
+  "key": "Todas las asignaturas  ·  {0}",
+  "where": [
+   "ui/courses_page.dart:1078"
+  ]
+ },
+ {
+  "key": "Todas las asignaturas están ocultas",
+  "where": [
+   "ui/courses_page.dart:901"
+  ]
+ },
+ {
+  "key": "Todas las lecciones tienen su bloque declarado.",
+  "where": [
+   "ui/between_repos_page.dart:138"
+  ]
+ },
+ {
+  "key": "Todas las plantillas encendidas: {0}",
+  "where": [
+   "ui/manage_blocks.dart:387"
+  ]
+ },
+ {
+  "key": "Todas las versiones, en {0}",
+  "where": [
+   "ui/build_button.dart:107"
+  ]
+ },
+ {
+  "key": "Todavía no hay cambios guardados, o no hay ninguna copia del repositorio en este ordenador.",
+  "where": [
+   "ui/recent_changes.dart:263"
+  ]
+ },
+ {
+  "key": "Todavía no hay material del que sacar idiomas.",
+  "where": [
+   "ui/language_settings.dart:153"
+  ]
+ },
+ {
+  "key": "Todavía no hay ninguna asignatura",
+  "where": [
+   "ui/courses_page.dart:908"
+  ]
+ },
+ {
+  "key": "Todavía no hay ninguna lección",
+  "where": [
+   "ui/library_page.dart:673"
+  ]
+ },
+ {
+  "key": "Todavía no hay ninguno declarado.",
+  "where": [
+   "ui/manage_degrees.dart:75",
+   "ui/manage_blocks.dart:168"
+  ]
+ },
+ {
+  "key": "Todavía no hay ninguno. Añade los repositorios de contenido con los que trabajes: se clonan en tu disco y se ven juntos, aunque una asignatura esté repartida entre varios.\n\nSi ya tienes uno clonado en el disco, añádelo como carpeta: para eso no hace falta entrar en GitHub.",
+  "where": [
+   "ui/settings_page.dart:1403"
+  ]
+ },
+ {
+  "key": "Todavía no hay ningún repositorio abierto. Añade uno en Ajustes: desde GitHub, o eligiendo una carpeta que ya tengas clonada en el disco.",
+  "where": [
+   "main.dart:732"
+  ]
+ },
+ {
+  "key": "Todavía no hay ningún repositorio de contenido abierto. Añade uno: si ya lo tienes clonado en el disco, elige su carpeta; si no, entra en GitHub desde Ajustes y añádelo desde allí.",
+  "where": [
+   "main.dart:952"
+  ]
+ },
+ {
+  "key": "Todavía no lleva lecciones, así que valen todas las encendidas.",
+  "where": [
+   "ui/document_properties.dart:197"
+  ]
+ },
+ {
+  "key": "Todavía no se ha comprobado",
+  "where": [
+   "ui/update_section.dart:161"
+  ]
+ },
+ {
+  "key": "Todavía no se puede compilar aquí",
+  "where": [
+   "ui/unit_preview.dart:1325"
+  ]
+ },
+ {
+  "key": "Todo",
+  "where": [
+   "ui/library_page.dart:1116",
+   "ui/library_page.dart:1891",
+   "ui/manage_templates.dart:49"
+  ]
+ },
+ {
+  "key": "Todo a la vista, también lo de quien mantiene el repositorio: Bloques y plantillas y el servidor MCP aquí en Ajustes, las rutas de las herramientas y el registro entero al compilar, reemplazar en el editor, mover temas y gestionar su vinculación, y «Entre repos» siempre en la columna de la izquierda.",
+  "where": [
+   "ui/settings_page.dart:769"
+  ]
+ },
+ {
+  "key": "Todo coincide.",
+  "where": [
+   "ui/between_repos_page.dart:403"
+  ]
+ },
+ {
+  "key": "Todo cuadra",
+  "where": [
+   "ui/between_repos_page.dart:74"
+  ]
+ },
+ {
+  "key": "Todo el material, por materias",
+  "where": [
+   "ui/tour.dart:283"
+  ]
+ },
+ {
+  "key": "Todo en orden",
+  "where": [
+   "ui/review_panel.dart:276"
+  ]
+ },
+ {
+  "key": "Todo lo que dice git, según lo dice.",
+  "where": [
+   "state/repo_sync.dart:49"
+  ]
+ },
+ {
+  "key": "Todo lo que escribe LaTeX, según lo escribe.",
+  "where": [
+   "state/build_console.dart:59"
+  ]
+ },
+ {
+  "key": "Todo lo que ha cambiado desde esta versión hasta hoy",
+  "where": [
+   "ui/history_tab.dart:716"
+  ]
+ },
+ {
+  "key": "Todo menos el profesor, con párrafos",
+  "where": [
+   "model/tex_vocabulary.dart:132"
+  ]
+ },
+ {
+  "key": "Todo menos las copias del profesor",
+  "where": [
+   "model/tex_vocabulary.dart:45"
+  ]
+ },
+ {
+  "key": "Todo sale de la memoria: no hay que mandar nada al proveedor, y no cuesta nada.",
+  "where": [
+   "ui/translate_unit.dart:666"
+  ]
+ },
+ {
+  "key": "Todo vive en GitHub",
+  "where": [
+   "ui/welcome.dart:495"
+  ]
+ },
+ {
+  "key": "Todos",
+  "where": [
+   "ui/course_admin_ui.dart:1044",
+   "ui/export_year.dart:278",
+   "ui/translate_unit.dart:347"
+  ]
+ },
+ {
+  "key": "Todos los grados",
+  "where": [
+   "ui/courses_page.dart:1107"
+  ]
+ },
+ {
+  "key": "Todos los grupos",
+  "where": [
+   "ui/manage_snippets.dart:596"
+  ]
+ },
+ {
+  "key": "Todos los repositorios",
+  "where": [
+   "ui/manage_snippets.dart:585"
+  ]
+ },
+ {
+  "key": "Todos los snippets dicen lo mismo en todas partes.",
+  "where": [
+   "ui/between_repos_page.dart:587"
+  ]
+ },
+ {
+  "key": "Trabajo",
+  "where": [
+   "ui/translations_page.dart:143"
+  ]
+ },
+ {
+  "key": "Traducción",
+  "where": [
+   "ui/library_page.dart:1055",
+   "ui/platform_menus.dart:243",
+   "ui/shell.dart:113"
+  ]
+ },
+ {
+  "key": "Traducción automática",
+  "where": [
+   "ui/settings_page.dart:131"
+  ]
+ },
+ {
+  "key": "Traducción · {0}",
+  "where": [
+   "ui/library_search.dart:155"
+  ]
+ },
+ {
+  "key": "Traducida como borrador. Revísala antes de darla por buena.",
+  "where": [
+   "ui/unit_page.dart:1867"
+  ]
+ },
+ {
+  "key": "Traducir",
+  "where": [
+   "ui/translations_page.dart:385",
+   "ui/translate_unit.dart:521"
+  ]
+ },
+ {
+  "key": "Traducir ({0})",
+  "where": [
+   "ui/document_page.dart:789"
+  ]
+ },
+ {
+  "key": "Traducir 1",
+  "where": [
+   "ui/translate_tab.dart:144"
+  ]
+ },
+ {
+  "key": "Traducir a va",
+  "where": [
+   "ui/welcome_art.dart:582"
+  ]
+ },
+ {
+  "key": "Traducir a {0} con la máquina",
+  "where": [
+   "ui/translations_page.dart:523"
+  ]
+ },
+ {
+  "key": "Traducir el valenciano con Apertium",
+  "where": [
+   "ui/translation_settings.dart:448"
+  ]
+ },
+ {
+  "key": "Traducir {0}",
+  "where": [
+   "ui/translate_tab.dart:145",
+   "ui/translate_unit.dart:522"
+  ]
+ },
+ {
+  "key": "Traducir {0} lecciones",
+  "where": [
+   "ui/translate_unit.dart:293"
+  ]
+ },
+ {
+  "key": "Traducir {0} lecciones a {1} (borrador)",
+  "where": [
+   "state/translation_service.dart:392"
+  ]
+ },
+ {
+  "key": "Traducir «{0}»",
+  "where": [
+   "ui/translate_unit.dart:290"
+  ]
+ },
+ {
+  "key": "Traducir «{0}» a {1} (borrador)",
+  "where": [
+   "state/translation_service.dart:387"
+  ]
+ },
+ {
+  "key": "Traducirla a {0} con la máquina",
+  "where": [
+   "ui/unit_page.dart:1492"
+  ]
+ },
+ {
+  "key": "Trae el material de GitHub y guarda cada cambio con tu nombre. Es lo que hace que puedas ver cómo estaba un fichero el mes pasado.",
+  "where": [
+   "model/toolchain.dart:131"
+  ]
+ },
+ {
+  "key": "Traer",
+  "where": [
+   "ui/problem.dart:59"
+  ]
+ },
+ {
+  "key": "Traer cambios",
+  "where": [
+   "ui/platform_menus.dart:298"
+  ]
+ },
+ {
+  "key": "Traer de GitHub",
+  "where": [
+   "ui/sync_bar.dart:310",
+   "state/repo_sync.dart:401"
+  ]
+ },
+ {
+  "key": "Traer de GitHub ({0} por traer)",
+  "where": [
+   "ui/sync_bar.dart:309"
+  ]
+ },
+ {
+  "key": "Traer de aquí",
+  "where": [
+   "ui/settings_page.dart:2077"
+  ]
+ },
+ {
+  "key": "Traer de una carpeta",
+  "where": [
+   "ui/settings_page.dart:2022"
+  ]
+ },
+ {
+  "key": "Traer los cambios de GitHub",
+  "where": [
+   "ui/shortcuts.dart:36",
+   "ui/command_palette.dart:220"
+  ]
+ },
+ {
+  "key": "Traerla como estaba, sin reescribir nada",
+  "where": [
+   "ui/info_menu.dart:236"
+  ]
+ },
+ {
+  "key": "Traerlos",
+  "where": [
+   "ui/shell.dart:775"
+  ]
+ },
+ {
+  "key": "Traído de GitHub y actualizado.",
+  "where": [
+   "ui/sync_bar.dart:120",
+   "ui/platform_menus.dart:438",
+   "ui/shell.dart:794"
+  ]
+ },
+ {
+  "key": "Traído, con problemas",
+  "where": [
+   "ui/platform_menus.dart:439"
+  ]
+ },
+ {
+  "key": "Traído, con problemas:\n{0}",
+  "where": [
+   "ui/sync_bar.dart:121"
+  ]
+ },
+ {
+  "key": "Traído. Vuelve a intentarlo.",
+  "where": [
+   "ui/problem.dart:204"
+  ]
+ },
+ {
+  "key": "Tu cuenta, los repositorios abiertos, los idiomas, dónde está LaTeX, la traducción automática y las actualizaciones. Desde aquí se vuelve a ver esta presentación, y se abre el ejemplo si no lo tienes.",
+  "where": [
+   "ui/tour.dart:345"
+  ]
+ },
+ {
+  "key": "Tu cuenta, tus repositorios y cómo trabaja Didacta",
+  "where": [
+   "ui/settings_page.dart:251"
+  ]
+ },
+ {
+  "key": "Tu material",
+  "where": [
+   "ui/welcome.dart:820"
+  ]
+ },
+ {
+  "key": "Tu material vive en repositorios de GitHub y cada cambio se guarda en el historial con tu nombre, así que hace falta una cuenta.\n\nLa contraseña se teclea en github.com y en ningún otro sitio: Didacta te dará un código corto para autorizarla allí.",
+  "where": [
+   "ui/welcome.dart:788"
+  ]
+ },
+ {
+  "key": "Tu primer material",
+  "where": [
+   "ui/welcome.dart:820"
+  ]
+ },
+ {
+  "key": "Tu versión ({0}) es demasiado antigua para actualizarse sola a la {1}. Descarga el instalador e instálala encima.",
+  "where": [
+   "state/update_service.dart:335"
+  ]
+ },
+ {
+  "key": "Tu versión sigue instalada y funciona igual.",
+  "where": [
+   "ui/update_section.dart:355"
+  ]
+ },
+ {
+  "key": "Turquesa (cuestión)",
+  "where": [
+   "ui/manage_snippets.dart:57"
+  ]
+ },
+ {
+  "key": "Tus clases en LaTeX, en piezas pequeñas que se reúnen en cada curso.",
+  "where": [
+   "ui/welcome.dart:525"
+  ]
+ },
+ {
+  "key": "Término que se define",
+  "where": [
+   "model/tex_wrap.dart:190"
+  ]
+ },
+ {
+  "key": "Título",
+  "where": [
+   "ui/new_unit.dart:169",
+   "ui/manage_snippets.dart:1850",
+   "ui/document_properties.dart:140"
+  ]
+ },
+ {
+  "key": "Título ({0})",
+  "where": [
+   "ui/new_unit.dart:426"
+  ]
+ },
+ {
+  "key": "Título cambiado en {0} repositorio(s).",
+  "where": [
+   "ui/manage_degrees.dart:242"
+  ]
+ },
+ {
+  "key": "Título cambiado.",
+  "where": [
+   "ui/year_page.dart:1073"
+  ]
+ },
+ {
+  "key": "Título de la caja",
+  "where": [
+   "ui/manage_snippets.dart:1766"
+  ]
+ },
+ {
+  "key": "Título de la diapositiva o del apartado",
+  "where": [
+   "model/tex_vocabulary.dart:38"
+  ]
+ },
+ {
+  "key": "Título de {0}",
+  "where": [
+   "state/catalogue_editor.dart:330"
+  ]
+ },
+ {
+  "key": "Título de {0} en todos los idiomas",
+  "where": [
+   "ui/heading_title.dart:168"
+  ]
+ },
+ {
+  "key": "Título de {0} en {1} {2}",
+  "where": [
+   "state/catalogue_editor.dart:389"
+  ]
+ },
+ {
+  "key": "Título del grado",
+  "where": [
+   "ui/manage_degrees.dart:222"
+  ]
+ },
+ {
+  "key": "Título del grado {0}",
+  "where": [
+   "state/catalogue_editor.dart:549"
+  ]
+ },
+ {
+  "key": "Título del tema cambiado.",
+  "where": [
+   "ui/year_page.dart:1024"
+  ]
+ },
+ {
+  "key": "Título del tema {0} en {1} {2}",
+  "where": [
+   "state/catalogue_editor.dart:361"
+  ]
+ },
+ {
+  "key": "Título del {0}",
+  "where": [
+   "ui/heading_title.dart:94"
+  ]
+ },
+ {
+  "key": "Título en todos los idiomas",
+  "where": [
+   "ui/manage_degrees.dart:360"
+  ]
+ },
+ {
+  "key": "Título en {0}",
+  "where": [
+   "ui/new_document.dart:108",
+   "ui/problem_set.dart:251"
+  ]
+ },
+ {
+  "key": "Títulos",
+  "where": [
+   "ui/metadata_editor.dart:590"
+  ]
+ },
+ {
+  "key": "Un bloque del curso, con todo lo suyo dentro: la teoría, los problemas, la bibliografía. Se crea vacío y los documentos se añaden desde él.",
+  "where": [
+   "ui/new_document.dart:248"
+  ]
+ },
+ {
+  "key": "Un bloque es una parte de la asignatura, y cada lección dice a cuál pertenece. Lo declara un repositorio y las lecciones de cualquier otro lo nombran: con que uno lo declare, todos lo ven con su nombre.",
+  "where": [
+   "ui/manage_blocks.dart:158"
+  ]
+ },
+ {
+  "key": "Un bloque lo nombra alguna lección y no lo declara ningún repositorio abierto. Sus lecciones se ven igual, pero el bloque sale por su id.",
+  "where": [
+   "ui/settings_page.dart:1836"
+  ]
+ },
+ {
+  "key": "Un cambio por repositorio, no uno por lección: es una sola decisión, y noventa cambios seguidos diciendo lo mismo dejan el historial sin servir para ver qué cambió de verdad.",
+  "where": [
+   "ui/manage_blocks.dart:1118"
+  ]
+ },
+ {
+  "key": "Un curso académico",
+  "where": [
+   "ui/tour.dart:171"
+  ]
+ },
+ {
+  "key": "Un curso académico suele ser {0}-{1}. Se puede crear así, pero comprueba que es lo que quieres.",
+  "where": [
+   "ui/course_admin_ui.dart:537"
+  ]
+ },
+ {
+  "key": "Un curso por dentro",
+  "where": [
+   "ui/tour.dart:200",
+   "ui/tour.dart:210",
+   "ui/tour.dart:220"
+  ]
+ },
+ {
+  "key": "Un dibujo, con [alt={…}]: lo que se ve en él",
+  "where": [
+   "model/tex_vocabulary.dart:116"
+  ]
+ },
+ {
+  "key": "Un documento",
+  "where": [
+   "ui/tour.dart:212",
+   "ui/tour.dart:230",
+   "ui/tour.dart:241"
+  ]
+ },
+ {
+  "key": "Un documento tiene",
+  "where": [
+   "ui/export_year.dart:368"
+  ]
+ },
+ {
+  "key": "Un documento y las unidades que compone tienen que estar en el mismo repositorio. LaTeX las busca bajo una sola raíz, así que esto compila en tu máquina --que tiene los dos-- y no compila en la de quien solo tenga uno.",
+  "where": [
+   "ui/between_repos_page.dart:266"
+  ]
+ },
+ {
+  "key": "Un elemento de una lista o un apartado",
+  "where": [
+   "model/tex_vocabulary.dart:72"
+  ]
+ },
+ {
+  "key": "Un fichero",
+  "where": [
+   "ui/sync_bar.dart:601"
+  ]
+ },
+ {
+  "key": "Un grado lo declara un repositorio y las asignaturas de cualquier otro lo nombran. Con que uno lo declare, todos lo ven agrupado; un grado que no declara nadie no agrupa, y sus asignaturas salen sueltas.",
+  "where": [
+   "ui/manage_degrees.dart:65"
+  ]
+ },
+ {
+  "key": "Un idioma cada vez",
+  "where": [
+   "ui/unit_page.dart:515"
+  ]
+ },
+ {
+  "key": "Un idioma en blanco se queda marcado como pendiente en el fichero, no se borra el apartado.",
+  "where": [
+   "ui/heading_title.dart:42"
+  ]
+ },
+ {
+  "key": "Un idioma en blanco se queda marcado como pendiente en el fichero, no se borra el bloque. Y el cambio va a todos los repositorios que lo declaren: si solo se cambiara en uno, los dos dejarían de decir lo mismo.",
+  "where": [
+   "ui/manage_blocks.dart:1029"
+  ]
+ },
+ {
+  "key": "Un idioma en blanco se queda marcado como pendiente en el fichero, no se borra el documento.",
+  "where": [
+   "ui/document_properties.dart:162"
+  ]
+ },
+ {
+  "key": "Un idioma en blanco se queda marcado como pendiente en el fichero, no se borra el grado.",
+  "where": [
+   "ui/manage_degrees.dart:650"
+  ]
+ },
+ {
+  "key": "Un idioma en blanco se queda marcado como pendiente en el fichero, no se borra el tema.",
+  "where": [
+   "ui/year_page.dart:1007"
+  ]
+ },
+ {
+  "key": "Un navegador no puede compilar LaTeX. Usa la aplicación de escritorio, o el comando que da la pantalla del documento.",
+  "where": [
+   "data/compiler_stub.dart:25"
+  ]
+ },
+ {
+  "key": "Un navegador no puede guardar un token de forma segura. En web el acceso va por la API, que lo guarda por ti.",
+  "where": [
+   "data/repository_access.dart:83"
+  ]
+ },
+ {
+  "key": "Un navegador no puede guardar una clave de API de forma segura. Usa la aplicación de escritorio.",
+  "where": [
+   "data/translation_secrets.dart:88"
+  ]
+ },
+ {
+  "key": "Un navegador no puede tener una copia del repositorio: no hay sistema de ficheros ni forma de ejecutar git. En web el acceso va por la API.",
+  "where": [
+   "data/local_clone_stub.dart:16"
+  ]
+ },
+ {
+  "key": "Un párrafo volvió con la sintaxis cambiada y se ha dejado sin traducir. Empieza por «{0}».",
+  "where": [
+   "model/translation_run.dart:264"
+  ]
+ },
+ {
+  "key": "Un snippet declarado en dos repositorios tiene que decir lo mismo en los dos: si no, el mismo \\begin sale distinto según dónde se compile. Elige cuál es el bueno y se copia en los demás.",
+  "where": [
+   "ui/between_repos_page.dart:577"
+  ]
+ },
+ {
+  "key": "Un snippet es lo que la barra del editor escribe alrededor de lo que marcas --un teorema, un «solo diapositivas», una caja tuya-- y lo que sabe quitar después sin tocar lo de dentro. Cada repositorio ofrece los suyos, en este orden: se guardan en su snippets.yaml, y un snippet que está en dos repositorios tiene que decir lo mismo en los dos.",
+  "where": [
+   "ui/manage_snippets.dart:173"
+  ]
+ },
+ {
+  "key": "Un snippet no dice lo mismo en todos los repositorios que lo tienen: el mismo \\begin puede salir distinto según dónde se compile.",
+  "where": [
+   "ui/manage_snippets.dart:493"
+  ]
+ },
+ {
+  "key": "Un solo cambio con todos. Lo que no has tocado no se escribe.",
+  "where": [
+   "ui/source_view.dart:1250"
+  ]
+ },
+ {
+  "key": "Un tema nuevo, un documento suelto y «Compilar el curso», que saca de una vez todos los PDF de todos los documentos.",
+  "where": [
+   "ui/tour.dart:224"
+  ]
+ },
+ {
+  "key": "Un término por fila. Una fila con un solo idioma no dice nada y no se guarda.",
+  "where": [
+   "ui/glossary_editor.dart:257"
+  ]
+ },
+ {
+  "key": "Una",
+  "where": [
+   "ui/settings_page.dart:2634"
+  ]
+ },
+ {
+  "key": "Una asignatura",
+  "where": [
+   "ui/tour.dart:161"
+  ]
+ },
+ {
+  "key": "Una asignatura --o un grado, o un bloque-- declarada en dos repositorios tiene que decir lo mismo en los dos. Si no, lo que se enseña depende de en qué orden se abrieron.",
+  "where": [
+   "ui/between_repos_page.dart:394"
+  ]
+ },
+ {
+  "key": "Una asignatura pequeña con un tema, una hoja de problemas y lecciones en varios idiomas. Se crea en tu cuenta, privada, para que la toques sin miedo.",
+  "where": [
+   "ui/welcome.dart:847"
+  ]
+ },
+ {
+  "key": "Una asignatura pequeña para ver Didacta con algo dentro: Cálculo I, con un tema, una hoja de problemas, lecciones traducidas y otras por traducir, y un README que cuenta cómo está organizado y por qué.",
+  "where": [
+   "ui/add_repository.dart:576"
+  ]
+ },
+ {
+  "key": "Una caja como las de Didacta: con su pestaña, su número y el mismo aspecto en apuntes y en diapositivas.",
+  "where": [
+   "ui/manage_snippets.dart:1752"
+  ]
+ },
+ {
+  "key": "Una caja como un teorema es un entorno: elige «Entorno».",
+  "where": [
+   "ui/manage_snippets.dart:1270"
+  ]
+ },
+ {
+  "key": "Una carpeta que sincroniza OneDrive, Drive o Nextcloud, y que ven tus estudiantes. Con ella, cada curso académico tiene «Publicar» en su «…»: exporta lo del estudiante a una carpeta con su nombre dentro de esta, sin preguntar dónde, y el programa de sincronización hace el resto.",
+  "where": [
+   "ui/publish_folder.dart:90"
+  ]
+ },
+ {
+  "key": "Una copia de la composición, con identidad propia: a partir de ahí son dos temas, y cambiar el orden o los apartados de uno no toca el otro. Las lecciones siguen siendo las mismas --corregir una se ve en los dos-- salvo que se dupliquen también.",
+  "where": [
+   "ui/reuse.dart:58"
+  ]
+ },
+ {
+  "key": "Una diapositiva",
+  "where": [
+   "model/tex_vocabulary.dart:101"
+  ]
+ },
+ {
+  "key": "Una figura de figures/, con lo que se ve en ella",
+  "where": [
+   "model/tex_vocabulary.dart:79"
+  ]
+ },
+ {
+  "key": "Una fuente, quince salidas",
+  "where": [
+   "ui/welcome.dart:485"
+  ]
+ },
+ {
+  "key": "Una fórmula no coincide con el original",
+  "where": [
+   "ui/tex_warnings.dart:79"
+  ]
+ },
+ {
+  "key": "Una lección",
+  "where": [
+   "ui/tour.dart:292",
+   "ui/tour.dart:302",
+   "ui/tour.dart:312"
+  ]
+ },
+ {
+  "key": "Una lección es una carpeta dentro de content/ o problems/ del repositorio, con un .tex por idioma. La guía cuenta cómo es una.",
+  "where": [
+   "ui/library_page.dart:687"
+  ]
+ },
+ {
+  "key": "Una lección nueva que empieza siendo una copia de «{0}»: sus idiomas, sus figuras y sus metadatos. Desde ese momento son dos, y cambiar una no cambia la otra.",
+  "where": [
+   "ui/new_unit.dart:411"
+  ]
+ },
+ {
+  "key": "Una llave «{» que no se cierra.",
+  "where": [
+   "model/tex_check.dart:237"
+  ]
+ },
+ {
+  "key": "Una llave «}» que no abre nada.",
+  "where": [
+   "model/tex_check.dart:210"
+  ]
+ },
+ {
+  "key": "Una pestaña por idioma. El punto relleno dice que ese idioma existe y su color, en qué estado está; el anillo rojo, que falta. Abrir el que falta es empezar a traducirlo.",
+  "where": [
+   "ui/tour.dart:296"
+  ]
+ },
+ {
+  "key": "Una plantilla es una salida: qué PDF sale de una lección o de un tema. Las que trae Didacta se pueden editar, y editar una es escribirla en un repositorio: a partir de ahí manda la tuya, y la de serie se queda intacta.",
+  "where": [
+   "ui/manage_templates.dart:313"
+  ]
+ },
+ {
+  "key": "Una plantilla es una salida: qué PDF sale de una lección o de un tema. Trae la clase de documento, sus opciones y --si quieres-- tu propia cabecera de LaTeX.",
+  "where": [
+   "ui/settings_page.dart:1957"
+  ]
+ },
+ {
+  "key": "Una regla del repositorio no lo permite: una rama protegida o una comprobación. Lo tuyo sigue guardado en tu ordenador.",
+  "where": [
+   "ui/problem.dart:135"
+  ]
+ },
+ {
+  "key": "Una sola pasada: tarda la mitad, y el índice y las referencias pueden no estar al día.",
+  "where": [
+   "ui/unit_preview.dart:806"
+  ]
+ },
+ {
+  "key": "Unidad no encontrada",
+  "where": [
+   "ui/unit_page.dart:3012"
+  ]
+ },
+ {
+  "key": "Unidad, encima…",
+  "where": [
+   "ui/composition_editor.dart:868"
+  ]
+ },
+ {
+  "key": "Uno tuyo de GitHub",
+  "where": [
+   "ui/welcome.dart:867"
+  ]
+ },
+ {
+  "key": "Usar esta carpeta",
+  "where": [
+   "ui/publish_folder.dart:66"
+  ]
+ },
+ {
+  "key": "Usar este",
+  "where": [
+   "ui/between_repos_page.dart:480"
+  ]
+ },
+ {
+  "key": "Usar este TeX",
+  "where": [
+   "ui/settings_page.dart:2430"
+  ]
+ },
+ {
+  "key": "Usar este motor",
+  "where": [
+   "ui/settings_page.dart:2414"
+  ]
+ },
+ {
+  "key": "Usar este repositorio",
+  "where": [
+   "main.dart:884"
+  ]
+ },
+ {
+  "key": "Va al preámbulo de todo lo que se compila en los repositorios elegidos, antes del de la plantilla.",
+  "where": [
+   "ui/manage_snippets.dart:1788"
+  ]
+ },
+ {
+  "key": "Vaciando…",
+  "where": [
+   "ui/build_folder.dart:182"
+  ]
+ },
+ {
+  "key": "Vaciar",
+  "where": [
+   "ui/build_folder.dart:182"
+  ]
+ },
+ {
+  "key": "Vaciar la caché",
+  "where": [
+   "ui/freezes.dart:151"
+  ]
+ },
+ {
+  "key": "Vaciarla",
+  "where": [
+   "ui/build_folder.dart:127"
+  ]
+ },
+ {
+  "key": "Valor absoluto",
+  "where": [
+   "model/tex_snippets.dart:85"
+  ]
+ },
+ {
+  "key": "Varias citas",
+  "where": [
+   "model/tex_vocabulary.dart:83"
+  ]
+ },
+ {
+  "key": "Ventana",
+  "where": [
+   "ui/platform_menus.dart:326"
+  ]
+ },
+ {
+  "key": "Ver",
+  "where": [
+   "ui/build_strip.dart:72",
+   "ui/build_strip.dart:99",
+   "ui/platform_menus.dart:194"
+  ]
+ },
+ {
+  "key": "Ver cambios",
+  "where": [
+   "ui/save_review.dart:98"
+  ]
+ },
+ {
+  "key": "Ver detalles",
+  "where": [
+   "ui/build_console.dart:320",
+   "ui/toolchain_check.dart:483"
+  ]
+ },
+ {
+  "key": "Ver el LaTeX",
+  "where": [
+   "ui/unit_page.dart:1606"
+  ]
+ },
+ {
+  "key": "Ver el PDF",
+  "where": [
+   "ui/year_page.dart:2761"
+  ]
+ },
+ {
+  "key": "Ver el PDF (de antes del último cambio)",
+  "where": [
+   "ui/year_page.dart:2759"
+  ]
+ },
+ {
+  "key": "Ver el fichero",
+  "where": [
+   "ui/metadata_editor.dart:190",
+   "ui/metadata_editor.dart:475"
+  ]
+ },
+ {
+  "key": "Ver el formulario",
+  "where": [
+   "ui/metadata_editor.dart:474"
+  ]
+ },
+ {
+  "key": "Ver el fuente",
+  "where": [
+   "ui/document_page.dart:390"
+  ]
+ },
+ {
+  "key": "Ver el historial",
+  "where": [
+   "ui/document_page.dart:391",
+   "ui/unit_page.dart:507"
+  ]
+ },
+ {
+  "key": "Ver el recorrido guiado",
+  "where": [
+   "ui/settings_page.dart:1028"
+  ]
+ },
+ {
+  "key": "Ver el terminal",
+  "where": [
+   "ui/unit_preview.dart:830"
+  ]
+ },
+ {
+  "key": "Ver estos atajos",
+  "where": [
+   "ui/shortcuts.dart:41"
+  ]
+ },
+ {
+  "key": "Ver la composición",
+  "where": [
+   "ui/document_page.dart:389"
+  ]
+ },
+ {
+  "key": "Ver las asignaturas",
+  "where": [
+   "ui/document_page.dart:1490",
+   "ui/year_page.dart:2722"
+  ]
+ },
+ {
+  "key": "Ver las asignaturas ocultas",
+  "where": [
+   "ui/courses_page.dart:135"
+  ]
+ },
+ {
+  "key": "Ver las asignaturas que doy",
+  "where": [
+   "ui/courses_page.dart:134"
+  ]
+ },
+ {
+  "key": "Ver las ocultas",
+  "where": [
+   "ui/courses_page.dart:966"
+  ]
+ },
+ {
+  "key": "Ver las órdenes",
+  "where": [
+   "model/toolchain.dart:798"
+  ]
+ },
+ {
+  "key": "Ver los atajos de teclado",
+  "where": [
+   "ui/command_palette.dart:318"
+  ]
+ },
+ {
+  "key": "Ver los campos",
+  "where": [
+   "ui/unit_page.dart:1606"
+  ]
+ },
+ {
+  "key": "Ver los idiomas uno al lado del otro",
+  "where": [
+   "ui/unit_page.dart:3089"
+  ]
+ },
+ {
+  "key": "Ver los metadatos",
+  "where": [
+   "ui/unit_page.dart:500"
+  ]
+ },
+ {
+  "key": "Ver los {0}",
+  "where": [
+   "ui/diagnostic_list.dart:65"
+  ]
+ },
+ {
+  "key": "Ver los {0} PDF",
+  "where": [
+   "ui/year_page.dart:2762"
+  ]
+ },
+ {
+  "key": "Ver qué está haciendo",
+  "where": [
+   "ui/settings_page.dart:3017"
+  ]
+ },
+ {
+  "key": "Ver qué ha cambiado",
+  "where": [
+   "ui/unit_page.dart:2260"
+  ]
+ },
+ {
+  "key": "Ver solo las asignaturas de un grado",
+  "where": [
+   "ui/courses_page.dart:1072"
+  ]
+ },
+ {
+  "key": "Ver todas las asignaturas",
+  "where": [
+   "ui/courses_page.dart:136"
+  ]
+ },
+ {
+  "key": "Ver todos",
+  "where": [
+   "main.dart:791"
+  ]
+ },
+ {
+  "key": "Ver ubicaciones vinculadas ({0})",
+  "where": [
+   "ui/year_page.dart:2898"
+  ]
+ },
+ {
+  "key": "Ver versiones congeladas ({0})…",
+  "where": [
+   "ui/courses_page.dart:1729"
+  ]
+ },
+ {
+  "key": "Ver versiones congeladas…",
+  "where": [
+   "ui/year_page.dart:124",
+   "ui/courses_page.dart:1728",
+   "ui/info_menu.dart:209"
+  ]
+ }
+]

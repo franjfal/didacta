@@ -51,8 +51,13 @@ curso, ni otra versión congelada — tampoco las que apunten al mismo commit.
 En el menú de un curso académico, **Crear versión congelada…**. Pide un nombre
 y, si quieres, una descripción.
 
-Apunta al commit que hay en ese momento. Y ahí está la única regla que hay que
-tener en cuenta:
+Apunta al commit que hay en ese momento. En una asignatura repartida entre dos
+repositorios --la teoría en uno, los problemas en otro-- se congelan **los
+dos**, desde el menú del curso o desde la lista de versiones, con el mismo
+nombre y cada uno en su commit, y en la lista cada una
+lleva la etiqueta de su repositorio.
+
+Y ahí está la única regla que hay que tener en cuenta:
 
 !!! warning "Lo que está sin guardar no entra"
 
@@ -74,6 +79,12 @@ arriba está en todas las pantallas para que sea imposible olvidarlo.
 
 **Es de solo lectura.** Los editores no dejan escribir, y lo dicen con esas
 palabras en lugar de fallar al pulsar guardar.
+
+**Lo que se compila también es de aquel día.** «Compilar» y «Ver PDF» trabajan
+sobre la carpeta de la versión congelada, con su propia carpeta de salida: el
+PDF que sale es el que se repartió entonces, y uno compilado hoy no aparece
+como si fuera de aquella versión. La primera vez no hay nada compilado; se
+compila allí como en cualquier curso.
 
 En la misma banda, **Volver a la versión actual** y, detrás de **Qué puedo
 hacer**, las dos cosas que tienen sentido desde una foto:
@@ -110,6 +121,12 @@ LECCIONES
   · countable                   los metadatos de la lección
   → cantor-diagonalization      movido desde analisis/viejo/…
 ```
+
+Solo salen **las lecciones que usa el curso**, en cualquiera de las dos
+versiones --las de su `year.yaml` y las de sus temas vinculados, también las
+desactivadas--. El repositorio puede tener dos mil y el curso cuarenta: los
+cambios en el resto se cuentan abajo, «y 312 en lecciones que este curso no
+usa», pero no se listan.
 
 Un fichero movido sale **como movido**, que es la diferencia entre
 «reorganizaron la carpeta» y «perdimos treinta lecciones». Y un tema que entra

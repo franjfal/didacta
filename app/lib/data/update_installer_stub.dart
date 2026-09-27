@@ -8,6 +8,7 @@ library;
 import '../model/update_manifest.dart';
 import 'release_channel.dart';
 import 'update_installer.dart';
+import '../l10n/tr.dart';
 
 class WebInstaller implements UpdateInstaller {
   const WebInstaller();
@@ -16,9 +17,10 @@ class WebInstaller implements UpdateInstaller {
   bool get supported => false;
 
   @override
-  String? get unsupportedReason =>
-      'En el navegador no hace falta actualizar: recarga la página y ya '
-      'tienes la última versión.';
+  String? get unsupportedReason => tr(
+    'En el navegador no hace falta actualizar: recarga la página y ya '
+    'tienes la última versión.',
+  );
 
   @override
   Future<DownloadedUpdate> download({
@@ -27,22 +29,21 @@ class WebInstaller implements UpdateInstaller {
     required UpdateManifest manifest,
     void Function(DownloadProgress)? onProgress,
     Future<void>? cancelled,
-  }) async => throw const UpdateException(
+  }) async => throw UpdateException(
     UpdateProblem.installFailed,
-    'En el navegador no hay nada que descargar.',
+    tr('En el navegador no hay nada que descargar.'),
   );
 
   @override
-  Future<void> stage(DownloadedUpdate update) async =>
-      throw const UpdateException(
-        UpdateProblem.installFailed,
-        'En el navegador no hay nada que instalar.',
-      );
+  Future<void> stage(DownloadedUpdate update) async => throw UpdateException(
+    UpdateProblem.installFailed,
+    tr('En el navegador no hay nada que instalar.'),
+  );
 
   @override
-  Never applyAndExit() => throw const UpdateException(
+  Never applyAndExit() => throw UpdateException(
     UpdateProblem.installFailed,
-    'En el navegador no hay nada que instalar.',
+    tr('En el navegador no hay nada que instalar.'),
   );
 
   @override

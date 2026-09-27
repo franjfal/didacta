@@ -78,8 +78,102 @@ Future<FakeSession> session(RecordingCompiler compiler) async {
   return made;
 }
 
+/// Uno cuyas diapositivas compilan y se salen por abajo.
+class _Overflowing extends RecordingCompiler {
+  @override
+  Future<List<CompileOutput>> compileDocument({
+    required String document,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+    void Function(String line)? onOutput,
+  }) async => [
+    for (final profile in profiles)
+      CompileOutput(
+        profile: profile,
+        language: 'es',
+        ok: true,
+        diagnostics: [
+          if (profile == 'slides')
+            const CompileDiagnostic(
+              severity: 'warning',
+              message: 'La diapositiva se sale por abajo 12 pt',
+              code: 'overfull-slide',
+              points: 12,
+            ),
+        ],
+      ),
+  ];
+}
+
+/// Uno que admite tres versiones y declara una, y apunta cuáles le piden.
+class ChoosyCompiler extends RecordingCompiler {
+  final List<List<String>> asked = [];
+
+  @override
+  Future<List<BuildableProfile>> documentProfiles(String document) async =>
+      const [
+        BuildableProfile(
+          id: 'slides',
+          label: 'Diapositivas',
+          family: 'slides',
+          byDefault: true,
+        ),
+        BuildableProfile(id: 'book', label: 'Libro', family: 'notes'),
+        BuildableProfile(
+          id: 'notes-teacher',
+          label: 'Apuntes (profesor)',
+          family: 'notes',
+          reveals: 'teacher',
+        ),
+      ];
+
+  @override
+  Future<List<CompileOutput>> compileDocument({
+    required String document,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+    void Function(String line)? onOutput,
+  }) {
+    asked.add(profiles);
+    return super.compileDocument(
+      document: document,
+      profiles: profiles,
+      languages: languages,
+      fast: fast,
+      onOutput: onOutput,
+    );
+  }
+}
+
 void main() {
-  test('compila cada documento, con todas sus versiones', () async {
+  group('qué versiones', () {
+    test('las que declara el documento, no las siete que admite', () async {
+      // Un tema que se da en diapositivas no quiere esperar por el libro.
+      final compiler = ChoosyCompiler();
+      final it = await session(compiler);
+      await it.buildDocuments([job('tema-1')], title: 'Uno');
+      expect(compiler.asked, [
+        ['slides'],
+      ]);
+    });
+
+    test('todas, si se piden', () async {
+      final compiler = ChoosyCompiler();
+      final it = await session(compiler);
+      await it.buildDocuments(
+        [job('tema-1')],
+        title: 'Uno',
+        everyVersion: true,
+      );
+      expect(compiler.asked, [
+        ['slides', 'book', 'notes-teacher'],
+      ]);
+    });
+  });
+
+  test('compila cada documento, con sus versiones', () async {
     final compiler = RecordingCompiler();
     final it = await session(compiler);
 
@@ -107,6 +201,8 @@ void main() {
       job('b'),
       job('c'),
     ], title: 'Tema 1');
+    // Empieza en su turno de la cola, que sin nada delante es enseguida.
+    await Future<void>.delayed(Duration.zero);
     expect(console.total, 3);
     await work;
     expect(console.done, 3);
@@ -129,6 +225,24 @@ void main() {
     expect(ok, 2);
     expect(it.buildConsole.ok, isFalse);
   });
+
+  test(
+    'lo que compila pero se sale de la página va con los problemas',
+    () async {
+      // Una diapositiva cortada no falla: el lote acaba bien y, sin esto, nadie
+      // se entera hasta que la proyecta.
+      final compiler = _Overflowing();
+      final it = await session(compiler);
+
+      final ok = await it.buildDocuments([job('tema-1')], title: 'Uno');
+
+      expect(ok, 1);
+      expect(it.buildConsole.ok, isTrue);
+      final [problem] = it.buildConsole.problems;
+      expect(problem.what, 'El tema-1 · slides · es');
+      expect(problem.diagnostic.code, 'overfull-slide');
+    },
+  );
 
   test('lo que escribe el motor va al registro', () async {
     final compiler = RecordingCompiler();

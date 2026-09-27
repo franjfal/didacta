@@ -1,0 +1,49 @@
+% Exemple: dos límits calculats amb la definició (valencià).
+
+\begin{frame}
+\didactatitle{Un límit per la definició}
+
+\begin{example}
+Provem que $\lim_{x \to 2} (3x - 1) = 5$. Donat $\varepsilon > 0$, busquem
+$\delta > 0$ tal que $0 < |x - 2| < \delta$ implique
+$|(3x - 1) - 5| < \varepsilon$. Com que
+\[
+  |(3x - 1) - 5| = |3x - 6| = 3\,|x - 2| ,
+\]
+n'hi ha prou de prendre $\delta = \varepsilon / 3$: si
+$0 < |x - 2| < \varepsilon/3$, aleshores $|(3x - 1) - 5| = 3\,|x - 2| <
+\varepsilon$.
+\end{example}
+
+\onlynotes{%
+  El mètode és sempre el mateix: escriure $|f(x) - L|$ en termes de
+  $|x - a|$ i llegir-hi quant cal acostar-se.
+}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Fitar abans de triar}
+
+\begin{example}
+Provem que $\lim_{x \to 1} x^2 = 1$. Ara
+\[
+  |x^2 - 1| = |x - 1|\,|x + 1| ,
+\]
+i el factor $|x + 1|$ depén de $x$. El fitem: si $|x - 1| < 1$, aleshores
+$0 < x < 2$ i $|x + 1| < 3$, de manera que $|x^2 - 1| < 3\,|x - 1|$.
+
+\dpause
+
+Prenem
+\begin{keyformula}
+  \delta = \min\{1, \varepsilon/3\} .
+\end{keyformula}
+Si $0 < |x - 1| < \delta$, es compleixen alhora $|x - 1| < 1$ i
+$|x - 1| < \varepsilon/3$, per tant $|x^2 - 1| < 3\,|x - 1| < \varepsilon$.
+\end{example}
+
+\begin{commonmistake}
+Prenen $\delta = \varepsilon / |x + 1|$. Però $\delta$ es tria abans que $x$:
+pot dependre de $\varepsilon$ i de $a$, mai de $x$.
+\end{commonmistake}
+\end{frame}

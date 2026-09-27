@@ -23,6 +23,7 @@ library;
 import 'dart:convert';
 
 import 'app_version.dart';
+import '../data/diagnostics.dart';
 
 /// Los sistemas para los que se publica.
 enum UpdatePlatform {
@@ -221,7 +222,8 @@ class UpdateManifest {
       final decoded = jsonDecode(body);
       if (decoded is! Map) return null;
       return fromJson(decoded.cast<String, dynamic>());
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('update_manifest.tryParse', caught, trace);
       // Un manifiesto que no se entiende es un release roto, y la aplicación
       // tiene que seguir funcionando con la versión que ya tiene.
       return null;

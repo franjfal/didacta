@@ -19,6 +19,7 @@ import '../model/catalogue.dart';
 import '../state/session.dart';
 import 'theme.dart';
 import 'translate_unit.dart';
+import '../l10n/tr.dart';
 
 /// Un hueco: una lección que no está en un idioma.
 class TranslationGap {
@@ -93,9 +94,9 @@ class _TranslateTabState extends State<TranslateTab> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
-          decoration: const BoxDecoration(
-            color: didactaPanel,
-            border: Border(bottom: BorderSide(color: didactaRule)),
+          decoration: BoxDecoration(
+            color: context.palette.panel,
+            border: Border(bottom: BorderSide(color: context.palette.rule)),
           ),
           padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
           child: Row(
@@ -103,9 +104,12 @@ class _TranslateTabState extends State<TranslateTab> {
               Expanded(
                 child: Text(
                   widget.gaps.length == 1
-                      ? 'A una lección de este tema le falta algún idioma'
-                      : 'A ${widget.gaps.length} lecciones de este tema les '
-                            'falta algún idioma',
+                      ? tr('A una lección de este tema le falta algún idioma')
+                      : tr(
+                          'A {0} lecciones de este tema les '
+                          'falta algún idioma',
+                          [widget.gaps.length],
+                        ),
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -122,14 +126,14 @@ class _TranslateTabState extends State<TranslateTab> {
                             for (final gap in _writable) gap.unit.path,
                           };
                         }),
-                  child: const Text('Todas'),
+                  child: Text(tr('Todas')),
                 ),
                 TextButton(
                   key: const Key('gaps-none'),
                   onPressed: _picked.isEmpty
                       ? null
                       : () => setState(_picked.clear),
-                  child: const Text('Ninguna'),
+                  child: Text(tr('Ninguna')),
                 ),
                 const SizedBox(width: 4),
                 FilledButton.icon(
@@ -137,8 +141,8 @@ class _TranslateTabState extends State<TranslateTab> {
                   icon: const Icon(Icons.auto_awesome_outlined, size: 15),
                   label: Text(
                     _picked.length == 1
-                        ? 'Traducir 1'
-                        : 'Traducir ${_picked.length}',
+                        ? tr('Traducir 1')
+                        : tr('Traducir {0}', [_picked.length]),
                   ),
                   onPressed: _picked.isEmpty ? null : _translate,
                 ),
@@ -181,10 +185,10 @@ class _TranslateTabState extends State<TranslateTab> {
                         gap.unit.path,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontFamily: 'monospace',
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ),
@@ -192,11 +196,13 @@ class _TranslateTabState extends State<TranslateTab> {
                     // «2 idiomas» y ocupa lo mismo.
                     Text(
                       canWrite
-                          ? 'falta ${gap.languages.join(', ')}'
-                          : 'solo lectura',
+                          ? tr('falta {0}', [gap.languages.join(', ')])
+                          : tr('solo lectura'),
                       style: TextStyle(
                         fontSize: 11,
-                        color: canWrite ? didactaTeacher : didactaMuted,
+                        color: canWrite
+                            ? context.palette.teacher
+                            : context.palette.muted,
                       ),
                     ),
                   ],
@@ -224,8 +230,14 @@ class _TranslateTabState extends State<TranslateTab> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          '${result.done} traducidos'
-          '${result.failed > 0 ? ', ${result.failed} sin hacer' : ''}',
+          tr(
+            '{0} traducidos'
+            '{1}',
+            [
+              result.done,
+              result.failed > 0 ? tr(', {0} sin hacer', [result.failed]) : '',
+            ],
+          ),
         ),
       ),
     );

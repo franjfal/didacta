@@ -15,6 +15,7 @@ import 'package:provider/provider.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/build_console.dart';
+import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/build_console.dart';
 import 'package:didacta_app/ui/theme.dart';
@@ -101,7 +102,13 @@ Future<void> settle(WidgetTester tester) async {
   }
 }
 
-Future<Session> pumpPreview(WidgetTester tester, FakeCompiler compiler) async {
+/// Con la interfaz Completa por defecto: el registro entero es lo que se
+/// prueba aquí. Con la Esencial sale detrás de «Ver detalles».
+Future<Session> pumpPreview(
+  WidgetTester tester,
+  FakeCompiler compiler, {
+  bool complete = true,
+}) async {
   tester.view.physicalSize = const Size(1000, 1200);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
@@ -111,6 +118,7 @@ Future<Session> pumpPreview(WidgetTester tester, FakeCompiler compiler) async {
     gatewayOverride: FakeGateway(),
     catalogue: catalogue,
     compilerOverride: compiler,
+    preferencesOverride: MemoryPreferences()..complete = complete,
   );
   await session.primeForTest(catalogue);
 
@@ -281,7 +289,11 @@ void main() {
     await settle(tester);
 
     expect(consoleLines, findsOneWidget);
-    expect(find.textContaining('Terminada en'), findsOneWidget);
+    // Con la marca de error, no la verde: el motor arrancó bien y lo que
+    // falló fue LaTeX, que para quien mira es exactamente «no ha salido».
+    expect(find.textContaining('Terminada con errores en'), findsOneWidget);
+    expect(find.byKey(const Key('console-failed')), findsOneWidget);
+    expect(find.byKey(const Key('console-ok')), findsNothing);
     expect(find.textContaining('Output written on'), findsOneWidget);
   });
 
@@ -307,6 +319,50 @@ void main() {
     // Y consultarlo no lo cierra solo, aunque la compilación fuera bien.
     await settle(tester);
     expect(consoleLines, findsOneWidget);
+  });
+
+  group('con la interfaz Esencial', () {
+    final plain = find.byKey(const Key('console-plain'));
+
+    testWidgets('lo que está haciendo, y el registro detrás de un botón', (
+      tester,
+    ) async {
+      final compiler = _SlowCompiler();
+      await pumpPreview(tester, compiler, complete: false);
+
+      await tester.tap(compile);
+      await settle(tester);
+
+      expect(plain, findsOneWidget);
+      expect(consoleLines, findsNothing);
+      // La última línea, que es lo que dice que no se ha colgado.
+      expect(find.textContaining(r'$ latexmk'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('console-details')));
+      await settle(tester);
+      expect(plain, findsNothing);
+      expect(consoleLines, findsOneWidget);
+      expect(find.textContaining(r'$ latexmk'), findsOneWidget);
+
+      compiler.gate.complete();
+      await settle(tester);
+    });
+
+    testWidgets('y si ha fallado, el registro sin pedirlo', (tester) async {
+      // Ahí el porqué está en el registro: esconderlo sería esconder el
+      // error.
+      final compiler = _SlowCompiler(fails: true);
+      await pumpPreview(tester, compiler, complete: false);
+
+      await tester.tap(compile);
+      await settle(tester);
+      expect(plain, findsOneWidget);
+      compiler.gate.complete();
+      await settle(tester);
+
+      expect(plain, findsNothing);
+      expect(consoleLines, findsOneWidget);
+    });
   });
 
   testWidgets('sin ninguna compilación todavía no ofrece registro', (

@@ -1,0 +1,44 @@
+% Lliçó: límit d'una funció en un punt (valencià).
+%
+% El mateix contingut que es.tex, frase a frase i fórmula a fórmula. Els noms
+% dels entorns (Definició, Nota, Demostració...) no s'escriuen: els posa
+% l'idioma en què es compila.
+
+\begin{frame}
+\didactatitle{Límit d'una funció en un punt}
+
+\bymedium{%
+  $f(x)$ s'acosta a $L$ quan $x$ s'acosta a $a$. La definició diu què vol
+  dir «s'acosta».
+}{%
+  La idea intuïtiva és que $f(x)$ s'acosta tant com es vulga a $L$ quan $x$
+  s'acosta prou a $a$. La definició converteix aquesta frase en una
+  desigualtat que es pot comprovar.
+}
+
+\begin{definition}[Límit]
+Siga $f$ una funció definida en un interval obert que conté $a$, excepte
+potser en el mateix $a$. Diem que $f$ té \keyterm{límit} $L$ en $a$, i
+escrivim $\lim_{x \to a} f(x) = L$, si per a cada $\varepsilon > 0$ existeix
+un $\delta > 0$ tal que
+\begin{keyformula}
+  0 < |x - a| < \delta \implies |f(x) - L| < \varepsilon .
+\end{keyformula}
+\end{definition}
+
+\begin{notesonly}
+La condició $0 < |x - a|$ deixa fora el mateix punt $a$: el límit no depén
+del valor de $f$ en $a$, ni tan sols de si hi està definida. Només mira què
+passa \emph{a prop} de $a$. Per això té sentit preguntar-se pel límit de
+$(x^2 - 1)/(x - 1)$ en $x = 1$, on el quocient no està definit.
+
+A més, el límit, si existeix, és únic: dos valors diferents $L \neq L'$ no
+poden estar alhora a menys de $\varepsilon = |L - L'|/2$ de $f(x)$.
+\end{notesonly}
+
+\begin{teaching}[Ritme]
+Vint minuts. Dibuixa la banda $(L - \varepsilon, L + \varepsilon)$ abans
+d'escriure la fórmula: l'ordre dels quantificadors (primer et donen
+$\varepsilon$, després tries $\delta$) s'entén millor a la pissarra.
+\end{teaching}
+\end{frame}

@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 
 import '../model/catalogue.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Lo que la pantalla decide.
 class CourseEdit {
@@ -133,7 +134,7 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Editar ${widget.course.title(widget.language)}'),
+      title: Text(tr('Editar {0}', [widget.course.title(widget.language)])),
       content: SizedBox(
         width: 520,
         height: 560,
@@ -142,13 +143,15 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
             // Los idiomas primero: deciden en cuántos se pide el nombre, así
             // que preguntarlo después dejaba el diálogo enseñando campos que
             // no hacían falta.
-            const _Label('Idiomas'),
-            const Text(
-              'A cuáles se traduce. Lo que no esté marcado no se pide y no '
-              'cuenta como pendiente; quitarlo no borra ningún fichero. '
-              'Solo salen los que mantiene su repositorio: para ofrecer otro, '
-              'añádelo antes en Ajustes.',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            _Label(tr('Idiomas')),
+            Text(
+              tr(
+                'A cuáles se traduce. Lo que no esté marcado no se pide y no '
+                'cuenta como pendiente; quitarlo no borra ningún fichero. '
+                'Solo salen los que mantiene su repositorio: para ofrecer otro, '
+                'añádelo antes en Ajustes.',
+              ),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 6),
             Wrap(
@@ -179,13 +182,15 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
             ),
 
             const SizedBox(height: 14),
-            const _Label('Nombre'),
+            _Label(tr('Nombre')),
             Text(
               _shown.length == 1
                   ? 'En ${_shown.single.name.toLowerCase()}.'
-                  : 'En cada idioma de los de arriba. El que se deja en blanco '
-                        'no se enseña, y la asignatura se ve por el que tenga.',
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  : tr(
+                      'En cada idioma de los de arriba. El que se deja en blanco '
+                      'no se enseña, y la asignatura se ve por el que tenga.',
+                    ),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 6),
             for (final option in _shown)
@@ -204,22 +209,24 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
                     // misma trampa que copiar el original en el editor.
                     helperText:
                         (widget.course.titles[option.code] ?? '').isEmpty
-                        ? 'sin traducir'
+                        ? tr('sin traducir')
                         : null,
-                    helperStyle: const TextStyle(
+                    helperStyle: TextStyle(
                       fontSize: 11,
-                      color: didactaTeacher,
+                      color: context.palette.teacher,
                     ),
                   ),
                 ),
               ),
 
             const SizedBox(height: 8),
-            const _Label('Titulación'),
-            const Text(
-              'En qué grado se da. Sirve para agruparlas y para filtrar; sin '
-              'grado la asignatura se ve igual, suelta.',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            _Label(tr('Titulación')),
+            Text(
+              tr(
+                'En qué grado se da. Sirve para agruparlas y para filtrar; sin '
+                'grado la asignatura se ve igual, suelta.',
+              ),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 6),
             DropdownButtonFormField<String?>(
@@ -230,9 +237,9 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
               isExpanded: true,
               decoration: const InputDecoration(isDense: true),
               items: [
-                const DropdownMenuItem<String?>(
+                DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('Sin grado'),
+                  child: Text(tr('Sin grado')),
                 ),
                 for (final degree in widget.degrees)
                   DropdownMenuItem<String?>(
@@ -247,10 +254,13 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Note(
-                  'Pertenece a «$_degree», que no declara ningún repositorio '
-                  'abierto. Se sigue viendo entera, pero sin agrupar. Al '
-                  'aceptar se queda sin grado.',
-                  tone: didactaTeacher,
+                  tr(
+                    'Pertenece a «{0}», que no declara ningún repositorio '
+                    'abierto. Se sigue viendo entera, pero sin agrupar. Al '
+                    'aceptar se queda sin grado.',
+                    [_degree],
+                  ),
+                  tone: context.palette.teacher,
                 ),
               ),
           ],
@@ -259,7 +269,7 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('course-save'),
@@ -285,7 +295,7 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
                   ),
                 )
               : null,
-          child: const Text('Guardar'),
+          child: Text(tr('Guardar')),
         ),
       ],
     );

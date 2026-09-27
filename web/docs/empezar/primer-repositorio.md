@@ -39,8 +39,18 @@ Al pulsar **Entrar en GitHub** pasa esto:
     en el llavero del sistema --Keychain en macOS, Credential Manager en
     Windows, Secret Service en Linux-- y nunca en un fichero ni en un log.
 
-    El permiso que se pide es `repo`, y nada más. Sin `delete_repo`, sin
-    `admin`, sin `user`.
+    Los permisos que se piden son `repo` y `workflow`, y nada más: leer y
+    escribir tus repositorios, y poder añadirles el workflow que compila el
+    material en GitHub. Sin `delete_repo`, sin `admin`, sin `user`.
+
+!!! note "Si Didacta entra como GitHub App"
+
+    Entonces GitHub te pide también **instalarla** la primera vez, y eliges a
+    qué repositorios llega: solo a esos, y no a todos los tuyos. Para añadir
+    otro después, *Dar acceso a otro* al añadir un repositorio, o *Elegir
+    repositorios en GitHub* en Ajustes → Cuenta y repositorios. La sesión
+    caduca cada ocho horas y se renueva sola; solo hay que volver a entrar
+    si pasan seis meses sin abrir Didacta.
 
 Una vez dentro, **Didacta se abre también sin conexión**. Lo que se exige es
 haber entrado alguna vez, no estar conectado ahora: un aula sin wifi no puede
@@ -54,7 +64,23 @@ Didacta dentro: un `didacta.yaml` en la raíz, y las carpetas `content/`,
 
 ![El paso del asistente donde se abre el primer repositorio](../img/app/bienvenida-repositorio.png)
 
-Hay tres caminos, y el asistente de bienvenida los ofrece los tres:
+Hay cuatro caminos, y el asistente de bienvenida los ofrece todos:
+
+=== "Quiero probar con un ejemplo"
+
+    **Probar con un ejemplo** crea en tu cuenta un repositorio privado,
+    `didacta-ejemplo`, con una asignatura pequeña dentro: Cálculo I, con un
+    tema de teoría, una hoja de problemas y un parcial, lecciones traducidas
+    y otras por traducir, y un `README.md` que cuenta cómo está organizado y
+    por qué. Lo clona y lo abre, y el recorrido guiado de después lo usa para
+    enseñarte cada pantalla.
+
+    Es tuyo: puedes compilarlo, cambiarlo y romperlo sin miedo. Si vuelves a
+    pulsar el botón, abre el que ya tenías en lugar de crear otro. Para
+    quitarlo, bórralo desde GitHub: Didacta no pide permiso para borrar
+    repositorios.
+
+    También está en **Ajustes → Cuenta y repositorios**.
 
 === "Ya tengo uno en GitHub"
 
@@ -92,11 +118,17 @@ el que lleva `cli/didacta` y el sistema LaTeX.
 
 El asistente de bienvenida lo ofrece con un botón --lo clona al lado de tus
 repositorios y lo deja configurado-- y también está en **Ajustes →
-Compilación**. A mano es esto:
+Herramientas**. Clona **la versión de tu aplicación**, no la última de
+`main`, y al actualizar la aplicación lo pone en la nueva: un motor que va
+por delante o por detrás de la aplicación puede no entender lo que ella le
+pide. A mano es esto (con tu versión en lugar de `v0.2.1`):
 
 ```bash
-git clone https://github.com/franjfal/didacta.git ~/Didacta/didacta
+git clone --branch v0.2.1 https://github.com/franjfal/didacta.git ~/Didacta/didacta
 ```
+
+Uno clonado a mano no se mueve solo: Ajustes dice de qué versión es y ofrece
+ponerlo en la de la aplicación.
 
 Didacta lo busca solo al lado de tus clones, en `~/didacta` y en el PATH; si
 está en otro sitio, se le dice en Ajustes.

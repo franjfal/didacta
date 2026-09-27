@@ -38,6 +38,7 @@ import os
 from . import identity as identity_mod
 from . import profiles as profiles_mod
 from . import repo as repo_mod
+from . import snippets as snippets_mod
 from . import templates as templates_mod
 from . import yamlio
 
@@ -85,6 +86,16 @@ def build(root, settings=None, latex_dir=None):
     except (templates_mod.TemplateError, yamlio.YamlError) as exc:
         declared_templates = []
         template_errors = [str(exc)]
+    # Los snippets, con la misma regla: un `snippets.yaml` roto se cuenta y
+    # no impide indexar lo demás. Roto cuenta como «no hay fichero», que es
+    # ofrecer los de serie: dejar la barra vacía porque falta una comilla
+    # sería peor que ofrecer lo de siempre.
+    try:
+        declared_snippets = snippets_mod.load(root)
+        snippet_errors = []
+    except (snippets_mod.SnippetError, yamlio.YamlError) as exc:
+        declared_snippets = None
+        snippet_errors = [str(exc)]
 
     profiles = {}
     if latex_dir and os.path.isdir(latex_dir):
@@ -114,8 +125,10 @@ def build(root, settings=None, latex_dir=None):
         MANIFEST: _manifest(root, settings, unit_records, course_records,
                             profiles,
                             unit_errors + course_errors + taxonomy_errors
-                            + degree_errors + template_errors + freeze_errors,
-                            taxonomy=taxonomy, templates=declared_templates),
+                            + degree_errors + template_errors + snippet_errors
+                            + freeze_errors,
+                            taxonomy=taxonomy, templates=declared_templates,
+                            snippets=declared_snippets),
         UNITS: {"schemaVersion": SCHEMA_VERSION, "units": unit_records},
         COURSES: {
             "schemaVersion": SCHEMA_VERSION,
@@ -181,9 +194,10 @@ def survey(root, settings):
     queda no es más nuevo que nada.
 
     Los ficheros de la raíz cuentan también, y no por completitud: lo que hay
-    en `didacta.yaml`, `taxonomy.yaml`, `degrees.yaml` y `templates.yaml`
-    **sale en el índice** --los idiomas del repositorio, las categorías, los
-    bloques, las titulaciones, las plantillas-- y no está debajo de ninguno de
+    en `didacta.yaml`, `taxonomy.yaml`, `degrees.yaml`, `templates.yaml` y
+    `snippets.yaml` **sale en el índice** --los idiomas del repositorio, las
+    categorías, los bloques, las titulaciones, las plantillas, los snippets--
+    y no está debajo de ninguno de
     los tres directorios. Sin mirarlos, añadir un idioma y regenerar no
     cambiaba nada, porque el índice no se daba por viejo.
     """
@@ -193,7 +207,7 @@ def survey(root, settings):
     shared = 0
 
     for name in (repo_mod.SETTINGS, repo_mod.TAXONOMY, repo_mod.DEGREES_META,
-                 templates_mod.TEMPLATES_META):
+                 templates_mod.TEMPLATES_META, snippets_mod.SNIPPETS_META):
         try:
             newest = max(newest, os.path.getmtime(os.path.join(root, name)))
         except OSError:
@@ -319,8 +333,8 @@ def _unit_record(unit, settings, usage):
     read -- because that is what the library view colours its rows by, and
     computing it per row in a browser would mean hashing every file there.
     """
-    reference = unit.languages.get(unit.reference)
-    reference_hash = reference.source_hash if reference else None
+    # La del fichero, no una declarada: ver `Unit.reference_hash`.
+    reference_hash = unit.reference_hash()
 
     languages = {}
     for code in settings.languages:
@@ -531,7 +545,7 @@ def _categories(unit_records):
 
 
 def _manifest(root, settings, unit_records, course_records, profiles, errors,
-              taxonomy=None, templates=()):
+              taxonomy=None, templates=(), snippets=None):
     by_kind = {}
     by_status = {}
     for record in unit_records:
@@ -604,6 +618,12 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
         # teoría y los problemas están repartidos, y el bloque de uno puede
         # compilarse con la plantilla que declara el otro.
         "templates": [template.as_dict() for template in templates],
+        # Los snippets que ofrece la barra del editor en este repositorio, en
+        # su orden y con lo que cada entrada dice de verdad. None cuando no
+        # hay `snippets.yaml`, que la aplicación lee como «los de serie»; una
+        # lista vacía es un repositorio que ha quitado todos.
+        "snippets": (None if snippets is None
+                     else [snippet.as_dict() for snippet in snippets]),
         "files": sorted([UNITS, COURSES, CATEGORIES]),
         # Whatever `scan_*` complained about, so a reader is not silently
         # served an index built from a repository that does not load cleanly.

@@ -25,8 +25,10 @@ import '../model/library_tree.dart' show languageName;
 import '../model/slug.dart';
 import '../state/session.dart';
 import 'manage_templates.dart';
+import 'problem.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 Future<void> showBlocks(BuildContext context, Session session) =>
     showDialog<void>(
@@ -71,11 +73,11 @@ Future<bool> declareNamedBlock(
       );
     }
     messenger.showSnackBar(
-      SnackBar(content: Text('Bloque «${answer.id}» declarado.')),
+      SnackBar(content: Text(tr('Bloque «{0}» declarado.', [answer.id]))),
     );
     return true;
   } catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text('$error')));
+    showProblemIn(messenger, error);
     return false;
   }
 }
@@ -111,11 +113,13 @@ Future<int?> moveBlockLessons(
   try {
     final moved = await session.moveUnitsBetweenBlocks(from: from, to: to);
     messenger.showSnackBar(
-      SnackBar(content: Text('${_lessons(moved)} movidas a «$to».')),
+      SnackBar(
+        content: Text(tr('{0} movidas a «{1}».', [_lessons(moved), to])),
+      ),
     );
     return moved;
   } catch (error) {
-    messenger.showSnackBar(SnackBar(content: Text('$error')));
+    showProblemIn(messenger, error);
     return null;
   }
 }
@@ -144,22 +148,24 @@ class _BlocksDialogState extends State<BlocksDialog> {
     ];
 
     return AlertDialog(
-      title: const Text('Bloques'),
+      title: Text(tr('Bloques')),
       content: SizedBox(
         width: 620,
         height: 520,
         child: ListView(
           children: [
-            const Text(
-              'Un bloque es una parte de la asignatura, y cada lección dice a '
-              'cuál pertenece. Lo declara un repositorio y las lecciones de '
-              'cualquier otro lo nombran: con que uno lo declare, todos lo '
-              'ven con su nombre.',
+            Text(
+              tr(
+                'Un bloque es una parte de la asignatura, y cada lección dice a '
+                'cuál pertenece. Lo declara un repositorio y las lecciones de '
+                'cualquier otro lo nombran: con que uno lo declare, todos lo '
+                'ven con su nombre.',
+              ),
               style: TextStyle(fontSize: 12.5, height: 1.45),
             ),
             const SizedBox(height: 12),
             if (blocks.isEmpty && missing.isEmpty)
-              const Note('Todavía no hay ninguno declarado.')
+              Note(tr('Todavía no hay ninguno declarado.'))
             else
               for (final block in blocks)
                 _BlockRow(
@@ -175,17 +181,22 @@ class _BlocksDialogState extends State<BlocksDialog> {
                 ),
             if (missing.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Nombrados y sin declarar',
-                style: TextStyle(fontSize: 11.5, color: didactaTeacher),
+              Text(
+                tr('Nombrados y sin declarar'),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.palette.teacher,
+                ),
               ),
               const SizedBox(height: 2),
-              const Text(
-                'Alguna lección dice pertenecer a estos y ningún repositorio '
-                'abierto los declara. Se ven enteras, con el bloque enseñado '
-                'por su id. Decláralos aquí, o abre el repositorio donde '
-                'estén.',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              Text(
+                tr(
+                  'Alguna lección dice pertenecer a estos y ningún repositorio '
+                  'abierto los declara. Se ven enteras, con el bloque enseñado '
+                  'por su id. Decláralos aquí, o abre el repositorio donde '
+                  'estén.',
+                ),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
               const SizedBox(height: 6),
               for (final id in missing)
@@ -206,7 +217,7 @@ class _BlocksDialogState extends State<BlocksDialog> {
                         TextButton(
                           key: Key('declare-block-$id'),
                           onPressed: () => _create(writable, id: id),
-                          child: const Text('Declarar'),
+                          child: Text(tr('Declarar')),
                         ),
                     ],
                   ),
@@ -220,12 +231,12 @@ class _BlocksDialogState extends State<BlocksDialog> {
           TextButton.icon(
             key: const Key('new-block'),
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('Nuevo bloque'),
+            label: Text(tr('Nuevo bloque')),
             onPressed: () => _create(writable),
           ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(tr('Cerrar')),
         ),
       ],
     );
@@ -257,13 +268,21 @@ class _BlocksDialogState extends State<BlocksDialog> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Bloque «${answer.id}» declarado en '
-            '${written == 1 ? 'un repositorio' : '$written repositorios'}.',
+            tr(
+              'Bloque «{0}» declarado en '
+              '{1}.',
+              [
+                answer.id,
+                written == 1
+                    ? tr('un repositorio')
+                    : tr('{0} repositorios', [written]),
+              ],
+            ),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -292,13 +311,13 @@ class _BlocksDialogState extends State<BlocksDialog> {
         SnackBar(
           content: Text(
             written == 0
-                ? 'No ha cambiado nada.'
-                : 'Nombre cambiado en $written repositorio(s).',
+                ? tr('No ha cambiado nada.')
+                : tr('Nombre cambiado en {0} repositorio(s).', [written]),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -338,15 +357,21 @@ class _BlocksDialogState extends State<BlocksDialog> {
         SnackBar(
           content: Text(
             answer.moveTo == null
-                ? 'Bloque «${block.id}» quitado. Sus lecciones quedan sin '
-                      'bloque declarado; salen en Entre repositorios.'
-                : 'Bloque «${block.id}» quitado y '
-                      '${_lessons(moved)} movidas a «${answer.moveTo}».',
+                ? tr(
+                    'Bloque «{0}» quitado. Sus lecciones quedan sin '
+                    'bloque declarado; salen en Entre repositorios.',
+                    [block.id],
+                  )
+                : tr(
+                    'Bloque «{0}» quitado y '
+                    '{1} movidas a «{2}».',
+                    [block.id, _lessons(moved), answer.moveTo],
+                  ),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -358,10 +383,12 @@ class _BlocksDialogState extends State<BlocksDialog> {
     final chosen = await chooseTemplates(
       context,
       widget.session,
-      title: 'Plantillas de «${block.title(widget.session.language)}»',
-      inherited:
-          'Todas las plantillas encendidas: '
-          '${catalogue.activeTemplates.length}',
+      title: tr('Plantillas de «{0}»', [block.title(widget.session.language)]),
+      inherited: tr(
+        'Todas las plantillas encendidas: '
+        '{0}',
+        [catalogue.activeTemplates.length],
+      ),
       chosen: block.templates,
       byDefault: catalogue.templatesOfBlock(block.id),
     );
@@ -378,13 +405,13 @@ class _BlocksDialogState extends State<BlocksDialog> {
         SnackBar(
           content: Text(
             written == 0
-                ? 'No ha cambiado nada.'
-                : 'Guardado en $written repositorio(s).',
+                ? tr('No ha cambiado nada.')
+                : tr('Guardado en {0} repositorio(s).', [written]),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -418,14 +445,15 @@ class _BlocksDialogState extends State<BlocksDialog> {
         );
       }
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
   }
 }
 
-String _lessons(int count) => count == 1 ? '1 lección' : '$count lecciones';
+String _lessons(int count) =>
+    count == 1 ? tr('1 lección') : tr('{0} lecciones', [count]);
 
 class _BlockRow extends StatelessWidget {
   const _BlockRow({
@@ -457,8 +485,8 @@ class _BlockRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: didactaSurface,
-        border: Border.all(color: didactaRule),
+        color: context.palette.surface,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
@@ -481,9 +509,9 @@ class _BlockRow extends StatelessWidget {
                     Text(
                       '${block.id} · ${_lessons(lessons)} · '
                       '${_outputs(session, block)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
-                        color: didactaMuted,
+                        color: context.palette.muted,
                       ),
                     ),
                   ],
@@ -499,9 +527,11 @@ class _BlockRow extends StatelessWidget {
                 IconButton(
                   key: Key('rename-block-${block.id}'),
                   tooltip: canWrite
-                      ? 'Nombre en todos los idiomas'
-                      : 'Solo lectura: lo declara un repositorio en el que no '
-                            'puedes escribir',
+                      ? tr('Nombre en todos los idiomas')
+                      : tr(
+                          'Solo lectura: lo declara un repositorio en el que no '
+                          'puedes escribir',
+                        ),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.edit_outlined, size: 15),
                   onPressed: canWrite ? onRename : null,
@@ -509,9 +539,11 @@ class _BlockRow extends StatelessWidget {
                 IconButton(
                   key: Key('block-templates-${block.id}'),
                   tooltip: canWrite
-                      ? 'Con qué plantillas se compila lo de este bloque'
-                      : 'Solo lectura: lo declara un repositorio en el que no '
-                            'puedes escribir',
+                      ? tr('Con qué plantillas se compila lo de este bloque')
+                      : tr(
+                          'Solo lectura: lo declara un repositorio en el que no '
+                          'puedes escribir',
+                        ),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.description_outlined, size: 15),
                   onPressed: canWrite ? onTemplates : null,
@@ -519,9 +551,11 @@ class _BlockRow extends StatelessWidget {
                 IconButton(
                   key: Key('remove-block-${block.id}'),
                   tooltip: canWrite
-                      ? 'Quitar este bloque'
-                      : 'Solo lectura: lo declara un repositorio en el que no '
-                            'puedes escribir',
+                      ? tr('Quitar este bloque')
+                      : tr(
+                          'Solo lectura: lo declara un repositorio en el que no '
+                          'puedes escribir',
+                        ),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.delete_outline, size: 15),
                   onPressed: canWrite ? onRemove : null,
@@ -537,9 +571,9 @@ class _BlockRow extends StatelessWidget {
           // a quién le llega el cambio si se renombra.
           if (writable.length > 1 || block.sources.length > 1) ...[
             const SizedBox(height: 8),
-            const Text(
-              'Declarado en',
-              style: TextStyle(fontSize: 11, color: didactaMuted),
+            Text(
+              tr('Declarado en'),
+              style: TextStyle(fontSize: 11, color: context.palette.muted),
             ),
             const SizedBox(height: 4),
             Wrap(
@@ -572,9 +606,11 @@ class _BlockRow extends StatelessWidget {
   String _outputs(Session session, CourseBlock block) {
     final count = session.catalogue.templatesOfBlock(block.id).length;
     if (block.templates.isEmpty) {
-      return count == 1 ? 'todas: 1 versión' : 'todas: $count versiones';
+      return count == 1
+          ? tr('todas: 1 versión')
+          : tr('todas: {0} versiones', [count]);
     }
-    return count == 1 ? '1 versión' : '$count versiones';
+    return count == 1 ? tr('1 versión') : tr('{0} versiones', [count]);
   }
 
   /// Los que se ofrecen: en los que se puede escribir, más aquellos donde ya
@@ -612,8 +648,8 @@ class _RepoToggle extends StatelessWidget {
       onTap: enabled ? onTap : null,
       builder: (context, hovering) => Tooltip(
         message: declared
-            ? 'Lo declara. Púlsalo para dejar de declararlo aquí.'
-            : 'No lo declara. Púlsalo para declararlo aquí también.',
+            ? tr('Lo declara. Púlsalo para dejar de declararlo aquí.')
+            : tr('No lo declara. Púlsalo para declararlo aquí también.'),
         child: Row(
           key: Key(id),
           mainAxisSize: MainAxisSize.min,
@@ -621,7 +657,9 @@ class _RepoToggle extends StatelessWidget {
             Icon(
               declared ? Icons.check_box : Icons.check_box_outline_blank,
               size: 14,
-              color: declared ? Color(colour) : didactaMuted,
+              color: declared
+                  ? context.palette.repo(colour)
+                  : context.palette.muted,
             ),
             const SizedBox(width: 4),
             RepoChip(colour: colour, label: label, compact: true),
@@ -698,7 +736,7 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
       (block) => block.id == _identifier,
     );
     return AlertDialog(
-      title: const Text('Nuevo bloque'),
+      title: Text(tr('Nuevo bloque')),
       content: SizedBox(
         width: 480,
         child: Column(
@@ -711,8 +749,8 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
               autofocus: true,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: 'Nombre en ${languageName(language)}',
-                hintText: 'Prácticas de ordenador',
+                labelText: tr('Nombre en {0}', [languageName(language)]),
+                hintText: tr('Prácticas de ordenador'),
                 isDense: true,
               ),
             ),
@@ -723,23 +761,24 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
               enabled: widget.fixedId == null,
               onChanged: (value) => setState(() => _touchedId = true),
               decoration: InputDecoration(
-                labelText: 'Identificador',
+                labelText: tr('Identificador'),
                 hintText: _identifier.isEmpty ? 'practicas' : _identifier,
                 isDense: true,
                 errorText: taken && widget.fixedId == null
-                    ? 'ya hay un bloque con este id'
+                    ? tr('ya hay un bloque con este id')
                     : null,
-                helperText:
-                    'Es lo que escribe cada lección en su `unit.yaml` y lo '
-                    'que junta los repositorios. No se traduce.',
+                helperText: tr(
+                  'Es lo que escribe cada lección en su `unit.yaml` y lo '
+                  'que junta los repositorios. No se traduce.',
+                ),
                 helperMaxLines: 3,
               ),
             ),
             if (widget.repos.length > 1) ...[
               const SizedBox(height: 12),
-              const Text(
-                'En qué repositorios se declara',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              Text(
+                tr('En qué repositorios se declara'),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
               const SizedBox(height: 4),
               for (final repo in widget.repos)
@@ -761,11 +800,13 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
                     }
                   }),
                 ),
-              const Note(
-                'En todos los que vayan a tener lecciones de este bloque. '
-                'Declararlo en varios no rompe nada --se juntan por id-- pero '
-                'entonces el nombre hay que cambiarlo en todos a la vez, y de '
-                'eso se encarga el botón de renombrar.',
+              Note(
+                tr(
+                  'En todos los que vayan a tener lecciones de este bloque. '
+                  'Declararlo en varios no rompe nada --se juntan por id-- pero '
+                  'entonces el nombre hay que cambiarlo en todos a la vez, y de '
+                  'eso se encarga el botón de renombrar.',
+                ),
               ),
             ],
           ],
@@ -774,7 +815,7 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('block-create'),
@@ -794,7 +835,7 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
                     titles: {language: _name.text.trim()},
                   ),
                 ),
-          child: const Text('Declarar'),
+          child: Text(tr('Declarar')),
         ),
       ],
     );
@@ -832,7 +873,7 @@ class _RemoveBlockDialogState extends State<_RemoveBlockDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Quitar «${widget.block.title(widget.language)}»'),
+    title: Text(tr('Quitar «{0}»', [widget.block.title(widget.language)])),
     content: SizedBox(
       width: 480,
       child: Column(
@@ -841,18 +882,23 @@ class _RemoveBlockDialogState extends State<_RemoveBlockDialog> {
         children: [
           Text(
             widget.lessons == 0
-                ? 'No lo usa ninguna lección, así que quitarlo solo borra su '
-                      'declaración.'
-                : 'Lo usan ${_lessons(widget.lessons)}. Quitar el bloque no '
-                      'las borra ni las esconde: se ven igual. Pero dejarían '
-                      'de tener un bloque declarado al que pertenecer.',
+                ? tr(
+                    'No lo usa ninguna lección, así que quitarlo solo borra su '
+                    'declaración.',
+                  )
+                : tr(
+                    'Lo usan {0}. Quitar el bloque no '
+                    'las borra ni las esconde: se ven igual. Pero dejarían '
+                    'de tener un bloque declarado al que pertenecer.',
+                    [_lessons(widget.lessons)],
+                  ),
             style: const TextStyle(fontSize: 12.5, height: 1.45),
           ),
           if (widget.lessons > 0) ...[
             const SizedBox(height: 12),
-            const Text(
-              'Qué se hace con ellas',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('Qué se hace con ellas'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 4),
             RadioGroup<String?>(
@@ -868,23 +914,28 @@ class _RemoveBlockDialogState extends State<_RemoveBlockDialog> {
                       contentPadding: EdgeInsets.zero,
                       value: other.id,
                       title: Text(
-                        'Moverlas a «${other.title(widget.language)}»',
+                        tr('Moverlas a «{0}»', [other.title(widget.language)]),
                         style: const TextStyle(fontSize: 12.5),
                       ),
                     ),
-                  const RadioListTile<String?>(
+                  RadioListTile<String?>(
                     key: Key('move-to-nowhere'),
                     dense: true,
                     contentPadding: EdgeInsets.zero,
                     value: null,
                     title: Text(
-                      'Dejarlas sin bloque declarado',
+                      tr('Dejarlas sin bloque declarado'),
                       style: TextStyle(fontSize: 12.5),
                     ),
                     subtitle: Text(
-                      'Salen en Entre repositorios, para arreglarlas cuando '
-                      'toque.',
-                      style: TextStyle(fontSize: 11, color: didactaMuted),
+                      tr(
+                        'Salen en Entre repositorios, para arreglarlas cuando '
+                        'toque.',
+                      ),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.palette.muted,
+                      ),
                     ),
                   ),
                 ],
@@ -892,10 +943,12 @@ class _RemoveBlockDialogState extends State<_RemoveBlockDialog> {
             ),
           ],
           const SizedBox(height: 8),
-          const Note(
-            'Se quita de todos los repositorios que lo declaren y en los que '
-            'se pueda escribir. Uno de solo lectura se queda como está, y '
-            'entonces el bloque sigue existiendo por él.',
+          Note(
+            tr(
+              'Se quita de todos los repositorios que lo declaren y en los que '
+              'se pueda escribir. Uno de solo lectura se queda como está, y '
+              'entonces el bloque sigue existiendo por él.',
+            ),
           ),
         ],
       ),
@@ -903,13 +956,13 @@ class _RemoveBlockDialogState extends State<_RemoveBlockDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('block-remove'),
         onPressed: () =>
             Navigator.of(context).pop(_RemoveBlock(moveTo: _moveTo)),
-        child: const Text('Quitar'),
+        child: Text(tr('Quitar')),
       ),
     ],
   );
@@ -947,7 +1000,7 @@ class _BlockTitlesDialogState extends State<_BlockTitlesDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Nombre del bloque'),
+    title: Text(tr('Nombre del bloque')),
     content: SizedBox(
       width: 460,
       height: 400,
@@ -963,20 +1016,22 @@ class _BlockTitlesDialogState extends State<_BlockTitlesDialog> {
                   labelText: widget.names[code] ?? code,
                   isDense: true,
                   helperText: (widget.titles[code] ?? '').isEmpty
-                      ? 'sin traducir'
+                      ? tr('sin traducir')
                       : null,
-                  helperStyle: const TextStyle(
+                  helperStyle: TextStyle(
                     fontSize: 11.5,
-                    color: didactaTeacher,
+                    color: context.palette.teacher,
                   ),
                 ),
               ),
             ),
-          const Note(
-            'Un idioma en blanco se queda marcado como pendiente en el '
-            'fichero, no se borra el bloque. Y el cambio va a todos los '
-            'repositorios que lo declaren: si solo se cambiara en uno, los '
-            'dos dejarían de decir lo mismo.',
+          Note(
+            tr(
+              'Un idioma en blanco se queda marcado como pendiente en el '
+              'fichero, no se borra el bloque. Y el cambio va a todos los '
+              'repositorios que lo declaren: si solo se cambiara en uno, los '
+              'dos dejarían de decir lo mismo.',
+            ),
           ),
         ],
       ),
@@ -984,7 +1039,7 @@ class _BlockTitlesDialogState extends State<_BlockTitlesDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('block-titles-save'),
@@ -992,7 +1047,7 @@ class _BlockTitlesDialogState extends State<_BlockTitlesDialog> {
           for (final entry in _fields.entries)
             entry.key: entry.value.text.trim(),
         }),
-        child: const Text('Aceptar'),
+        child: Text(tr('Aceptar')),
       ),
     ],
   );
@@ -1021,7 +1076,7 @@ class _MoveLessonsDialogState extends State<_MoveLessonsDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Mover las lecciones de «${widget.from}»'),
+    title: Text(tr('Mover las lecciones de «{0}»', [widget.from])),
     content: SizedBox(
       width: 460,
       child: Column(
@@ -1029,9 +1084,12 @@ class _MoveLessonsDialogState extends State<_MoveLessonsDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${_lessons(widget.lessons)} nombran «${widget.from}», que no '
-            'declara ningún repositorio abierto. Moverlas les cambia el '
-            '`block:` de su `unit.yaml`.',
+            tr(
+              '{0} nombran «{1}», que no '
+              'declara ningún repositorio abierto. Moverlas les cambia el '
+              '`block:` de su `unit.yaml`.',
+              [_lessons(widget.lessons), widget.from],
+            ),
             style: const TextStyle(fontSize: 12.5, height: 1.45),
           ),
           const SizedBox(height: 12),
@@ -1056,10 +1114,12 @@ class _MoveLessonsDialogState extends State<_MoveLessonsDialog> {
               ],
             ),
           ),
-          const Note(
-            'Un commit por repositorio, no uno por lección: es un solo '
-            'cambio, y noventa commits seguidos diciendo lo mismo dejan el '
-            'historial sin servir para ver qué cambió de verdad.',
+          Note(
+            tr(
+              'Un cambio por repositorio, no uno por lección: es una sola '
+              'decisión, y noventa cambios seguidos diciendo lo mismo dejan el '
+              'historial sin servir para ver qué cambió de verdad.',
+            ),
           ),
         ],
       ),
@@ -1067,12 +1127,12 @@ class _MoveLessonsDialogState extends State<_MoveLessonsDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('move-lessons'),
         onPressed: () => Navigator.of(context).pop(_to),
-        child: const Text('Mover'),
+        child: Text(tr('Mover')),
       ),
     ],
   );

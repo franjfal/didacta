@@ -762,3 +762,98 @@ def set_unit_id(text, identifier):
     if at + 1 < len(lines) and lines[at + 1].strip():
         lines.insert(at + 1, "")
     return "\n".join(lines)
+
+
+def _yaml_text(text):
+    """Un escalar de YAML, entre comillas solo cuando hace falta.
+
+    Las barras se escapan porque entre comillas dobles YAML las lee como
+    escapes, y un título con una macro de LaTeX se convertiría en otra cosa.
+    """
+    if re.match(r"^[A-Za-z0-9À-ÿ][^:#\n\\\"]*$", text):
+        return text
+    return '"%s"' % text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+_TITLE_KEY = re.compile(r"^title\s*:\s*(.*)$")
+_CHILD = re.compile(r"^(\s+)([A-Za-z_-]+)\s*:")
+
+
+def set_unit_title(text, language, title, current=None):
+    """Pone el título de un idioma en un `unit.yaml`, sin tocar lo demás.
+
+    Por líneas, como `set_unit_id`. Un `title:` en bloque se edita en su
+    sitio; uno escrito de otra forma --un escalar para todos los idiomas, un
+    mapa entre llaves-- se reescribe en bloque con [current], que son los
+    títulos que tenía en cada idioma, porque cambiar uno no puede cambiar los
+    demás.
+    """
+    lines = text.split("\n")
+    line = "%s: %s" % (language, _yaml_text(title))
+    for index, candidate in enumerate(lines):
+        match = _TITLE_KEY.match(candidate)
+        if not match:
+            continue
+        rest = match.group(1).split(" #")[0].strip()
+        if rest:
+            titles = dict(current or {})
+            titles[language] = title
+            lines[index:index + 1] = ["title:"] + [
+                "  %s: %s" % (code, _yaml_text(value))
+                for code, value in titles.items()
+            ]
+            return "\n".join(lines)
+        # En bloque: sus líneas son las sangradas que siguen.
+        end = index + 1
+        indent = "  "
+        while end < len(lines):
+            child = _CHILD.match(lines[end])
+            if child is None:
+                break
+            indent = child.group(1)
+            if child.group(2) == language:
+                lines[end] = indent + line
+                return "\n".join(lines)
+            end += 1
+        lines.insert(end, indent + line)
+        return "\n".join(lines)
+
+    # Sin `title:`: delante de la categoría, que es donde lo escribe `new
+    # unit`, o al final.
+    at = next(
+        (i for i, candidate in enumerate(lines)
+         if re.match(r"^category\s*:", candidate)),
+        None,
+    )
+    block = ["title:", "  " + line, ""]
+    if at is None:
+        if lines and lines[-1] == "":
+            lines[-1:] = block
+        else:
+            lines.extend([""] + block)
+    else:
+        lines[at:at] = block
+    return "\n".join(lines)
+
+
+def retitle_tex(text, old, new):
+    """Cambia el título que el `.tex` de una lección lleva escrito.
+
+    Solo donde aparece tal cual: en `\\didactatitle{…}`, en el título de un
+    ejercicio y en el comentario de la primera línea. Un título que el `.tex`
+    escribe de otra forma se deja, porque adivinar es reescribir material.
+    """
+    if not old or old == new:
+        return text
+    text = text.replace("\\didactatitle{%s}" % old,
+                        "\\didactatitle{%s}" % new, 1)
+    text = re.sub(
+        r"(\\begin\{(?:exercise|problem)\}\[)%s\]" % re.escape(old),
+        lambda match: match.group(1) + new + "]",
+        text,
+        count=1,
+    )
+    lines = text.split("\n")
+    if lines and re.match(r"^%+ " + re.escape(old) + r"\s*$", lines[0]):
+        lines[0] = re.sub(r"^(%+ ).*$", lambda m: m.group(1) + new, lines[0])
+    return "\n".join(lines)

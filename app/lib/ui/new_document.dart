@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../model/slug.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Lo que el diálogo devuelve.
 class NewDocument {
@@ -41,12 +42,13 @@ class NewDocument {
 /// Son los del esquema, no una lista nueva: el motor decide con `kind` qué
 /// perfiles puede compilar un documento, así que inventarse uno aquí daría un
 /// documento que no compila en nada.
-const List<(String, String)> documentKinds = [
-  ('theory', 'Teoría'),
-  ('problems', 'Problemas'),
-  ('seminar', 'Seminario'),
-  ('practical', 'Práctica'),
-  ('handout', 'Guía'),
+List<(String, String)> get documentKinds => [
+  ('theory', tr('Teoría')),
+  ('problems', tr('Problemas')),
+  ('exam', tr('Examen')),
+  ('seminar', tr('Seminario')),
+  ('practical', tr('Práctica')),
+  ('handout', tr('Guía')),
 ];
 
 class NewDocumentDialog extends StatefulWidget {
@@ -91,7 +93,7 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
     final id = _id.text.trim();
     final taken = widget.taken.contains(id);
     return AlertDialog(
-      title: const Text('Nuevo grupo'),
+      title: Text(tr('Nuevo grupo')),
       content: SizedBox(
         width: 460,
         child: Column(
@@ -103,8 +105,8 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
               controller: _title,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Título en ${widget.language}',
-                hintText: 'Tema 3. Series de funciones',
+                labelText: tr('Título en {0}', [widget.language]),
+                hintText: tr('Tema 3. Series de funciones'),
               ),
               onChanged: (value) => setState(() {
                 if (!_idTyped) _id.text = slugify(value);
@@ -115,20 +117,20 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
               key: const Key('new-document-id'),
               controller: _id,
               decoration: InputDecoration(
-                labelText: 'Identificador',
-                helperText: 'Lo que se escribe en year.yaml y en la URL',
+                labelText: tr('Identificador'),
+                helperText: tr('Lo que se escribe en year.yaml y en la URL'),
                 errorText: taken
-                    ? 'Ya hay un grupo con ese identificador'
+                    ? tr('Ya hay un grupo con ese identificador')
                     : (id.isEmpty || _valid
                           ? null
-                          : 'Minúsculas, dígitos y guiones'),
+                          : tr('Minúsculas, dígitos y guiones')),
               ),
               onChanged: (_) => setState(() => _idTyped = true),
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Tipo',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('Tipo'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 5),
             Wrap(
@@ -145,9 +147,11 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
               ],
             ),
             const SizedBox(height: 12),
-            const Note(
-              'Se crea vacío. El paso siguiente es abrirlo y elegir qué '
-              'unidades lleva y en qué orden.',
+            Note(
+              tr(
+                'Se crea vacío. El paso siguiente es abrirlo y elegir qué '
+                'unidades lleva y en qué orden.',
+              ),
             ),
           ],
         ),
@@ -155,7 +159,7 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('confirm-new-document'),
@@ -175,7 +179,7 @@ class _NewDocumentDialogState extends State<NewDocumentDialog> {
                   ),
                 )
               : null,
-          child: const Text('Crear'),
+          child: Text(tr('Crear')),
         ),
       ],
     );
@@ -233,27 +237,29 @@ class _NewThemeDialogState extends State<NewThemeDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Nuevo tema'),
+    title: Text(tr('Nuevo tema')),
     content: SizedBox(
       width: 460,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Un bloque del curso, con todo lo suyo dentro: la teoría, los '
-            'problemas, la bibliografía. Se crea vacío y los documentos se '
-            'añaden desde él.',
-            style: TextStyle(fontSize: 12.5, color: didactaMuted),
+          Text(
+            tr(
+              'Un bloque del curso, con todo lo suyo dentro: la teoría, los '
+              'problemas, la bibliografía. Se crea vacío y los documentos se '
+              'añaden desde él.',
+            ),
+            style: TextStyle(fontSize: 12.5, color: context.palette.muted),
           ),
           const SizedBox(height: 14),
           TextField(
             key: const Key('new-theme-title'),
             controller: _title,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Cómo se llama',
-              hintText: 'Tema 1: el número y la recta real',
+            decoration: InputDecoration(
+              labelText: tr('Cómo se llama'),
+              hintText: tr('Tema 1: el número y la recta real'),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -262,9 +268,11 @@ class _NewThemeDialogState extends State<NewThemeDialog> {
             key: const Key('new-theme-id'),
             controller: _idTyped ? _id : (TextEditingController(text: _slug)),
             decoration: InputDecoration(
-              labelText: 'Identificador',
-              helperText: 'Lo que escriben los documentos en `themes:`',
-              errorText: _taken ? 'Ya hay un tema con ese identificador' : null,
+              labelText: tr('Identificador'),
+              helperText: tr('Lo que escriben los documentos en `themes:`'),
+              errorText: _taken
+                  ? tr('Ya hay un tema con ese identificador')
+                  : null,
             ),
             onChanged: (value) => setState(() {
               _idTyped = true;
@@ -277,7 +285,7 @@ class _NewThemeDialogState extends State<NewThemeDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('confirm-new-theme'),
@@ -286,7 +294,7 @@ class _NewThemeDialogState extends State<NewThemeDialog> {
                 context,
               ).pop(NewTheme(id: _slug, title: _title.text.trim()))
             : null,
-        child: const Text('Crear'),
+        child: Text(tr('Crear')),
       ),
     ],
   );

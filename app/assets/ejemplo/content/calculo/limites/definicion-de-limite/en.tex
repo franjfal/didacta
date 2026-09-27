@@ -1,0 +1,41 @@
+% Lesson: the limit of a function at a point (English).
+
+\begin{frame}
+\didactatitle{The limit of a function at a point}
+
+\bymedium{%
+  $f(x)$ gets close to $L$ as $x$ gets close to $a$. The definition says what
+  ``gets close'' means.
+}{%
+  The intuitive idea is that $f(x)$ gets as close as we like to $L$ as long as
+  $x$ is close enough to $a$. The definition turns that sentence into an
+  inequality that can be checked.
+}
+
+\begin{definition}[Limit]
+Let $f$ be a function defined on an open interval containing $a$, except
+possibly at $a$ itself. We say that $f$ has \keyterm{limit} $L$ at $a$, and
+write $\lim_{x \to a} f(x) = L$, if for every $\varepsilon > 0$ there is a
+$\delta > 0$ such that
+\begin{keyformula}
+  0 < |x - a| < \delta \implies |f(x) - L| < \varepsilon .
+\end{keyformula}
+\end{definition}
+
+\begin{notesonly}
+The condition $0 < |x - a|$ leaves out the point $a$ itself: the limit does
+not depend on the value of $f$ at $a$, nor even on $f$ being defined there. It
+only looks at what happens \emph{near} $a$. That is why it makes sense to ask
+for the limit of $(x^2 - 1)/(x - 1)$ at $x = 1$, where the quotient is not
+defined.
+
+Moreover, the limit, if it exists, is unique: two different values
+$L \neq L'$ cannot both be within $\varepsilon = |L - L'|/2$ of $f(x)$.
+\end{notesonly}
+
+\begin{teaching}[Pacing]
+Twenty minutes. Draw the band $(L - \varepsilon, L + \varepsilon)$ before
+writing the formula: the order of the quantifiers (first you are given
+$\varepsilon$, then you choose $\delta$) is easier to see on the board.
+\end{teaching}
+\end{frame}

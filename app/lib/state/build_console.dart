@@ -33,6 +33,9 @@ import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 
+import '../data/compiler.dart';
+import '../l10n/tr.dart';
+
 /// Cuántas líneas se guardan.
 ///
 /// Una compilación normal escribe unos cientos; un tema entero en tres
@@ -51,16 +54,16 @@ class BuildConsole extends ChangeNotifier {
   /// Se dice al empezar porque depende del trabajo: «Arrancando el motor…»
   /// delante de un `git push` sería mentira, y esa mentira se lee justo en el
   /// momento en que alguien mira la ventana porque no sabe qué está pasando.
-  static const String openingBuild = 'Arrancando el motor…';
-  static const String aboutBuild =
-      'Todo lo que escribe LaTeX, según lo escribe.';
+  static String get openingBuild => tr('Arrancando el motor…');
+  static String get aboutBuild =>
+      tr('Todo lo que escribe LaTeX, según lo escribe.');
 
-  String get opening => _opening;
-  String _opening = openingBuild;
+  String get opening => _opening ?? openingBuild;
+  String? _opening;
 
   /// Qué es esta ventana, para el pie mientras está vacía.
-  String get about => _about;
-  String _about = aboutBuild;
+  String get about => _about ?? aboutBuild;
+  String? _about;
 
   /// Cuántas líneas se han caído por arriba al llegar al tope.
   int _dropped = 0;
@@ -71,6 +74,10 @@ class BuildConsole extends ChangeNotifier {
   DateTime? _startedAt;
   Duration? _took;
   Object? _failure;
+  bool _stopped = false;
+  String? _summary;
+
+  final List<({String what, CompileDiagnostic diagnostic})> _problems = [];
 
   bool _disposed = false;
   Timer? _pulse;
@@ -110,17 +117,34 @@ class BuildConsole extends ChangeNotifier {
 
   bool get isEmpty => _lines.isEmpty;
 
+  /// Si se paró a medias, con «Detener».
+  bool get stopped => _stopped;
+
+  /// Los errores de lo que no salió en un lote, con qué documento era, y lo
+  /// que salió pero se sale de la página (diapositivas que no caben).
+  ///
+  /// Se guardan aparte del registro: en treinta y ocho documentos, el error
+  /// del tercero queda enterrado bajo miles de líneas, y antes se tiraba.
+  List<({String what, CompileDiagnostic diagnostic})> get problems =>
+      UnmodifiableListView(_problems);
+
+  void addProblems(String what, Iterable<CompileDiagnostic> diagnostics) {
+    for (final diagnostic in diagnostics) {
+      _problems.add((what: what, diagnostic: diagnostic));
+    }
+    _schedule();
+  }
+
+  /// Cómo acabó un lote, en pocas palabras: «36 bien, 2 con errores». Null
+  /// en lo que es una sola cosa, que ya lo dice con que salga o no.
+  String? get summary => _summary;
+
   /// Empieza una compilación: se tira lo de la anterior.
   ///
   /// Se tira a propósito. Lo que interesa es lo que está pasando ahora, y un
   /// registro acumulado entre compilaciones obliga a buscar dónde empieza la
   /// que se está mirando.
-  void start(
-    String title, {
-    int total = 0,
-    String opening = openingBuild,
-    String about = aboutBuild,
-  }) {
+  void start(String title, {int total = 0, String? opening, String? about}) {
     _lines.clear();
     _dropped = 0;
     _title = title;
@@ -131,6 +155,9 @@ class BuildConsole extends ChangeNotifier {
     _startedAt = DateTime.now();
     _took = null;
     _failure = null;
+    _stopped = false;
+    _summary = null;
+    _problems.clear();
     _total = total;
     _done = 0;
     _step = '';
@@ -194,14 +221,22 @@ class BuildConsole extends ChangeNotifier {
   /// [ok] es si salió lo que se pedía; [failure], solo cuando no se pudo ni
   /// lanzar el motor. Son dos cosas distintas: que LaTeX no compile es un
   /// resultado, y que el proceso no arranque no lo es.
-  void finish({bool ok = true, Object? failure}) {
+  void finish({
+    bool ok = true,
+    Object? failure,
+    bool stopped = false,
+    String? summary,
+  }) {
     _running = false;
-    _ok = ok && failure == null;
+    _stopped = stopped;
+    _summary = summary;
+    _ok = ok && failure == null && !stopped;
     _took = _startedAt == null
         ? Duration.zero
         : DateTime.now().difference(_startedAt!);
     _failure = failure;
     if (failure != null) add('--- $failure');
+    if (stopped) add('--- Detenida.');
     _notifyNow();
   }
 

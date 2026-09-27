@@ -6,7 +6,7 @@ description: Lo que solo puede ir mal cuando hay más de un repositorio abierto.
 # Entre repositorios
 
 Esta pantalla aparece **solo cuando hay más de un repositorio abierto**, y
-hace tres comprobaciones que ninguna otra cosa puede hacer: `didacta check`
+hace cuatro comprobaciones que ninguna otra cosa puede hacer: `didacta check`
 mira un repositorio, y desde allí el de al lado sencillamente no existe. Quien
 tiene los dos delante es la aplicación.
 
@@ -70,6 +70,19 @@ que llama al de al lado:
 
 Eso no se descubre editando. Se descubre cuando otra persona va a dar la
 clase.
+
+## Los snippets que no coinciden
+
+Un snippet que está en dos repositorios es **el mismo**: el mismo
+`\begin{resumen}` tiene que salir igual compile quien compile. Si en uno se
+cambió la definición y en el otro no, sale distinto según la máquina, y eso no
+lo ve nadie mirando un solo PDF.
+
+La pantalla enseña en qué no coinciden --la definición, los argumentos, el
+rótulo-- y qué dice cada repositorio. Se iguala **entero**, no campo a campo:
+**Quedarse con el de…** copia ese snippet en los demás que lo tienen. Quedarse
+con el rótulo de uno y la definición de otro daría un snippet que no ha
+escrito nadie.
 
 ## Nada se arregla solo
 

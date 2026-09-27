@@ -21,6 +21,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../model/tex_outline.dart';
+import 'tex_completion.dart';
 import 'tex_highlight.dart';
 import 'theme.dart';
 
@@ -39,9 +40,14 @@ class TexField extends StatelessWidget {
     this.onChanged,
     this.padding = EdgeInsets.zero,
     this.lineNumbers = false,
+    this.scrollController,
   });
 
   final TexEditingController controller;
+
+  /// El desplazamiento del texto, para quien lo tenga que seguir: el modo lado
+  /// a lado lleva a la vez el original y la traducción.
+  final ScrollController? scrollController;
   final FocusNode? focusNode;
   final bool readOnly;
   final int? minLines;
@@ -95,34 +101,42 @@ class TexField extends StatelessWidget {
                     numbers: numbers,
                     guidesAt: controller.guidesAt,
                     scaler: MediaQuery.textScalerOf(context),
+                    palette: context.palette,
                   ),
                 ),
               ),
               Padding(
                 padding: EdgeInsets.only(left: gutter),
-                child: TextField(
+                // Completar órdenes y entornos al escribirlos. En las tres
+                // pantallas donde se escribe LaTeX, por estar aquí.
+                child: TexCompletion(
                   controller: controller,
-                  focusNode: focusNode,
-                  readOnly: readOnly,
-                  minLines: minLines,
-                  maxLines: null,
-                  // LaTeX es código: monoespaciada, sin autocorrección y sin
-                  // mayúscula automática, que sobre un `\begin` es un error de
-                  // compilación.
-                  style: style,
-                  strutStyle: monoStrut,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.none,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  cursorColor: didactaAccentDark,
-                  onChanged: onChanged,
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    filled: false,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                    hintText: hintText,
+                  enabled: !readOnly,
+                  child: TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    scrollController: scrollController,
+                    readOnly: readOnly,
+                    minLines: minLines,
+                    maxLines: null,
+                    // LaTeX es código: monoespaciada, sin autocorrección y sin
+                    // mayúscula automática, que sobre un `\begin` es un error de
+                    // compilación.
+                    style: style,
+                    strutStyle: monoStrut,
+                    keyboardType: TextInputType.multiline,
+                    textCapitalization: TextCapitalization.none,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    cursorColor: context.palette.accentDark,
+                    onChanged: onChanged,
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: hintText,
+                    ),
                   ),
                 ),
               ),
@@ -174,6 +188,7 @@ class _GuidePainter extends CustomPainter {
     required this.numbers,
     required this.guidesAt,
     required this.scaler,
+    required this.palette,
   });
 
   final String text;
@@ -190,6 +205,7 @@ class _GuidePainter extends CustomPainter {
 
   final List<TexBlock> Function(int line) guidesAt;
   final TextScaler scaler;
+  final DidactaPalette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -228,6 +244,7 @@ class _GuidePainter extends CustomPainter {
           Paint()
             ..color = didactaBlockColour(
               block,
+              palette,
             ).withValues(alpha: block.closed ? 0.55 : 1.0),
         );
       }
@@ -252,7 +269,7 @@ class _GuidePainter extends CustomPainter {
       text: TextSpan(
         text: '$line',
         style: style.copyWith(
-          color: didactaMuted.withValues(alpha: 0.55),
+          color: palette.muted.withValues(alpha: 0.55),
           fontWeight: FontWeight.w400,
         ),
       ),
@@ -289,5 +306,6 @@ class _GuidePainter extends CustomPainter {
       old.gutter != gutter ||
       old.numbers != numbers ||
       old.guidesAt != guidesAt ||
-      old.style != style;
+      old.style != style ||
+      !identical(old.palette, palette);
 }

@@ -14,6 +14,8 @@
 /// misma pregunta.
 library;
 
+import '../l10n/tr.dart';
+
 /// Lo que no se puede hacer con este fichero.
 class DegreesException implements Exception {
   const DegreesException(this.message);
@@ -64,15 +66,17 @@ class DegreesFile {
   /// título: un grado sin ninguno se enseñaría por su id, que es un slug.
   void setTitles(String id, Map<String, String> titles) {
     final degree = _degrees().where((t) => t.id == id).firstOrNull;
-    if (degree == null) throw DegreesException('no se declara el grado `$id`');
+    if (degree == null) {
+      throw DegreesException(tr('no se declara el grado `{0}`', [id]));
+    }
 
     final kept = <String, String>{
       for (final entry in titles.entries)
         if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
     };
     if (kept.isEmpty) {
-      throw const DegreesException(
-        'un grado sin título en ningún idioma se enseñaría por su id',
+      throw DegreesException(
+        tr('un grado sin título en ningún idioma se enseñaría por su id'),
       );
     }
     final pending = [
@@ -128,15 +132,17 @@ class DegreesFile {
     required List<String> languages,
   }) {
     if (ids.contains(id)) {
-      throw DegreesException('este repositorio ya declara el grado `$id`');
+      throw DegreesException(
+        tr('este repositorio ya declara el grado `{0}`', [id]),
+      );
     }
     final kept = <String, String>{
       for (final entry in titles.entries)
         if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
     };
     if (kept.isEmpty) {
-      throw const DegreesException(
-        'un grado sin título en ningún idioma se enseñaría por su id',
+      throw DegreesException(
+        tr('un grado sin título en ningún idioma se enseñaría por su id'),
       );
     }
 
@@ -148,7 +154,7 @@ class DegreesFile {
       for (final code in languages)
         if (!kept.containsKey(code)) '      # TODO: $code',
       if ((institution ?? '').trim().isNotEmpty)
-        '    institution: ${_quote(institution!.trim())}',
+        tr('    institution: {0}', [_quote(institution!.trim())]),
     ];
 
     final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'degrees');
@@ -188,7 +194,9 @@ class DegreesFile {
   void remove(String id) {
     final degree = _degrees().where((d) => d.id == id).firstOrNull;
     if (degree == null) {
-      throw DegreesException('este repositorio no declara el grado `$id`');
+      throw DegreesException(
+        tr('este repositorio no declara el grado `{0}`', [id]),
+      );
     }
     var end = degree.lastLine;
     // Las líneas en blanco de debajo se van con él; si no, cada grado
@@ -202,7 +210,7 @@ class DegreesFile {
     // lista vacía: un error de lectura del repositorio entero.
     if (ids.isEmpty) {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'degrees');
-      if (at >= 0) _lines[at] = 'degrees: []';
+      if (at >= 0) _lines[at] = tr('degrees: []');
     }
   }
 

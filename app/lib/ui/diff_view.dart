@@ -15,18 +15,13 @@ import 'package:flutter/material.dart';
 
 import '../model/file_history.dart';
 import '../model/line_diff.dart';
+import '../model/word_diff.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
-/// Los verdes y los rojos de lo que cambió.
-///
-/// Claros a propósito: lo que tiene que leerse es el texto, y un fondo
-/// saturado detrás de LaTeX en monoespaciada cansa a los diez segundos. El
-/// margen va un punto más fuerte que la fila, que es lo que deja seguir la
-/// columna de cambios sin leer línea a línea.
-const Color diffAddedBack = Color(0xFFE9F6EC);
-const Color diffAddedGutter = Color(0xFFCFEAD8);
-const Color diffRemovedBack = Color(0xFFFBECEC);
-const Color diffRemovedGutter = Color(0xFFF2D4D4);
+// Los verdes y los rojos de lo que cambió están en la paleta
+// (`diffAddedBack`, `diffAddedWord`…): claros a propósito, porque lo que
+// tiene que leerse es el texto, y el margen un punto más fuerte que la fila.
 
 /// Un fichero tal como quedó, con lo que cambió marcado dentro.
 class DiffView extends StatelessWidget {
@@ -44,11 +39,12 @@ class DiffView extends StatelessWidget {
       return const DiffPlaceholder(icon: Icons.difference_outlined, text: '');
     }
     if (found.isBinary) {
-      return const DiffPlaceholder(
+      return DiffPlaceholder(
         icon: Icons.image_outlined,
-        text:
-            'Es un fichero binario: git no guarda sus líneas, así que no hay '
-            'contenido que enseñar.',
+        text: tr(
+          'Es un fichero binario: git no guarda sus líneas, así que no hay '
+          'contenido que enseñar.',
+        ),
       );
     }
 
@@ -75,20 +71,34 @@ class DiffView extends StatelessWidget {
     }
 
     if (lines.isEmpty) {
-      return const DiffPlaceholder(
+      return DiffPlaceholder(
         icon: Icons.help_outline,
-        text:
-            'De esta versión no se puede sacar el contenido: en este commit '
-            'el fichero todavía estaba en otro sitio o con otro nombre.',
+        text: tr(
+          'De esta versión no se puede sacar el contenido: en ese momento '
+          'el fichero todavía estaba en otro sitio o con otro nombre.',
+        ),
       );
     }
 
+    // Cada línea cambiada con la que ocupaba su sitio, para marcar dentro
+    // las palabras que cambiaron.
+    final pairs = pairChangedLines([
+      for (final line in lines)
+        (
+          removed: line.kind == ChangeKind.removed,
+          added: line.kind == ChangeKind.added,
+          text: line.text,
+        ),
+    ]);
     return SelectionArea(
       child: ListView.builder(
         padding: const EdgeInsets.only(bottom: 28),
         itemCount: lines.length,
-        itemBuilder: (context, index) =>
-            DiffRow(line: lines[index], gap: gaps.contains(index)),
+        itemBuilder: (context, index) => DiffRow(
+          line: lines[index],
+          gap: gaps.contains(index),
+          pair: pairs[index],
+        ),
       ),
     );
   }
@@ -96,9 +106,13 @@ class DiffView extends StatelessWidget {
 
 /// Una línea del fichero: dos números, un signo y el texto.
 class DiffRow extends StatelessWidget {
-  const DiffRow({super.key, required this.line, this.gap = false});
+  const DiffRow({super.key, required this.line, this.gap = false, this.pair});
 
   final DiffLine line;
+
+  /// La línea del otro lado con la que se compara, cuando la hay: la que se
+  /// quitó para poner esta, o la que se puso en lugar de esta.
+  final String? pair;
 
   /// Si delante de esta línea el texto se corta.
   final bool gap;
@@ -106,9 +120,17 @@ class DiffRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color background, Color gutter, String sign) = switch (line.kind) {
-      ChangeKind.added => (diffAddedBack, diffAddedGutter, '+'),
-      ChangeKind.removed => (diffRemovedBack, diffRemovedGutter, '−'),
-      ChangeKind.kept => (Colors.white, didactaPanel, ' '),
+      ChangeKind.added => (
+        context.palette.diffAddedBack,
+        context.palette.diffAddedGutter,
+        '+',
+      ),
+      ChangeKind.removed => (
+        context.palette.diffRemovedBack,
+        context.palette.diffRemovedGutter,
+        '−',
+      ),
+      ChangeKind.kept => (context.palette.card, context.palette.panel, ' '),
     };
 
     final row = Container(
@@ -131,20 +153,26 @@ class DiffRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 1),
               child: Text(
                 sign,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontFamily: 'monospace',
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
               ),
             ),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(8, 1.5, 8, 1.5),
-                child: Text(
+                child: Text.rich(
                   // Una línea vacía sigue siendo una línea: sin esto la fila se
                   // encoge y el texto se lee como si faltara algo.
-                  line.text.isEmpty ? ' ' : line.text,
+                  wordMarked(
+                    line.text.isEmpty ? ' ' : line.text,
+                    pair,
+                    line.kind == ChangeKind.added
+                        ? context.palette.diffAddedWord
+                        : context.palette.diffRemovedWord,
+                  ),
                   style: const TextStyle(
                     fontSize: 12,
                     height: 1.45,
@@ -164,17 +192,35 @@ class DiffRow extends StatelessWidget {
       children: [
         Container(
           height: 22,
-          color: didactaPanel,
+          color: context.palette.panel,
           alignment: Alignment.center,
-          child: const Text(
+          child: Text(
             '⋯',
-            style: TextStyle(fontSize: 12, color: didactaMuted),
+            style: TextStyle(fontSize: 12, color: context.palette.muted),
           ),
         ),
         row,
       ],
     );
   }
+}
+
+/// [text] con las palabras que no están en [pair] sobre [colour].
+///
+/// Sin pareja, o si las dos líneas no se parecen lo bastante como para que la
+/// marca diga algo, el texto tal cual.
+TextSpan wordMarked(String text, String? pair, Color colour) {
+  final spans = pair == null ? null : wordSpans(text, pair);
+  if (spans == null) return TextSpan(text: text);
+  return TextSpan(
+    children: [
+      for (final span in spans)
+        TextSpan(
+          text: span.text,
+          style: span.changed ? TextStyle(backgroundColor: colour) : null,
+        ),
+    ],
+  );
 }
 
 class _Gutter extends StatelessWidget {
@@ -191,11 +237,11 @@ class _Gutter extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(0, 1.5, 7, 1.5),
     child: Text(
       number?.toString() ?? '',
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
         height: 1.45,
         fontFamily: 'monospace',
-        color: didactaMuted,
+        color: context.palette.muted,
       ),
     ),
   );
@@ -217,13 +263,13 @@ class DiffPlaceholder extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 28, color: didactaMuted),
+            Icon(icon, size: 28, color: context.palette.muted),
             if (text.isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(
                 text,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: didactaMuted),
+                style: TextStyle(fontSize: 13, color: context.palette.muted),
               ),
             ],
           ],

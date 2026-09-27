@@ -38,6 +38,13 @@ abstract class McpSession {
   /// Dónde escucha.
   String get url;
 
+  /// Lo que hay que mandar como `Authorization: Bearer` en cada petición.
+  ///
+  /// Cambia cada vez que se enciende. Sin él no contesta: escuchar solo en
+  /// esta máquina no basta, porque en esta máquina también está el navegador
+  /// y una página web puede mandarle peticiones a `localhost`.
+  String get token;
+
   /// El diario, línea a línea, según lo va escribiendo.
   Stream<String> get journal;
 

@@ -199,10 +199,10 @@ class BuildTests(unittest.TestCase):
         self.profile = profiles_mod.load(LATEX_DIR)["notes"]
 
     def command(self, bibliography=None):
-        return " ".join(self.engine._command(
-            "doc.tex", "doc", self.build_dir, self.profile, "es",
-            "../../", None, bibliography,
-        ))
+        # Lo que va delante del documento: ahora en un fichero y no en la
+        # orden, pero es lo mismo.
+        return self.engine._pretex(self.profile, "es", "../../", None,
+                                   bibliography)
 
     def test_it_travels_as_a_definition(self):
         self.assertIn(

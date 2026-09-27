@@ -1,0 +1,77 @@
+% Lección: el teorema de Bolzano (castellano).
+%
+% Teorema, demostración, corolario y ejemplo. La demostración va en
+% `notesonly`: en las diapositivas se enuncia y en los apuntes se demuestra.
+
+\begin{frame}
+\didactatitle{El teorema de Bolzano}
+
+\begin{theorem}[Bolzano]
+Si $f$ es continua en $[a, b]$ y $f(a)$ y $f(b)$ tienen signos opuestos,
+existe $c \in (a, b)$ tal que $f(c) = 0$.
+\end{theorem}
+
+% \bymedium{corto}{largo}: la primera versión en las diapositivas y la
+% segunda en los apuntes. Casi siempre es mejor que esconder la frase.
+\bymedium{%
+  Una función continua que empieza por debajo del eje y acaba por encima
+  tiene que cruzarlo.
+}{%
+  Una función continua que empieza por debajo del eje y acaba por encima
+  tiene que cruzarlo. Lo que el teorema añade a la intuición es que eso no
+  depende del dibujo, sino de que la recta real no tiene huecos: el axioma
+  del supremo.
+}
+
+\begin{notesonly}
+\begin{proof}
+Supongamos $f(a) < 0 < f(b)$; el otro caso se reduce a éste cambiando $f$ por
+$-f$. El conjunto $A = \{x \in [a, b] : f(x) < 0\}$ contiene a $a$ y está
+acotado por $b$, así que tiene supremo $c \in [a, b]$. Veamos que $f(c) = 0$.
+
+Si fuera $f(c) \neq 0$, tomando $\varepsilon = |f(c)|$ en la definición de
+continuidad habría un $\delta > 0$ tal que $f(x)$ tiene el mismo signo que
+$f(c)$ para todo $x \in [a, b]$ con $|x - c| < \delta$. Si $f(c) < 0$,
+entonces $c < b$ y habría puntos de $A$ mayores que $c$. Si $f(c) > 0$,
+entonces $c > a$ y ningún punto de $(c - \delta, c]$ estaría en $A$, así que
+$c - \delta$ sería una cota superior de $A$ menor que $c$. Las dos cosas
+contradicen que $c$ sea el supremo.
+
+Por tanto $f(c) = 0$, y $c \neq a, b$ porque ni $f(a)$ ni $f(b)$ se anulan.
+\end{proof}
+\end{notesonly}
+
+\begin{teaching}[Para discutir]
+¿Qué falla si $f$ no es continua? (El salto $H(x) - \tfrac12$ en $[-1, 1]$.)
+¿Y si solo
+existieran los racionales? ($x^2 - 2$ en $[0, 2]$ cambia de signo y no tiene
+ninguna raíz racional.)
+\end{teaching}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Valores intermedios}
+
+\begin{corollary}[Valores intermedios]
+Si $f$ es continua en $[a, b]$, toma todos los valores comprendidos entre
+$f(a)$ y $f(b)$.
+\end{corollary}
+
+\onlynotes{%
+  Si $k$ está estrictamente entre $f(a)$ y $f(b)$, basta aplicar el teorema de
+  Bolzano a $g(x) = f(x) - k$, que es continua y cambia de signo en $[a, b]$.
+}
+
+\dpause
+
+\begin{example}
+La ecuación $x^3 + x - 1 = 0$ tiene una solución en $(0, 1)$: el polinomio es
+continuo, vale $-1$ en $0$ y $1$ en $1$.
+\onlynotes{%
+  Repitiendo el argumento en la mitad del intervalo donde cambia el signo, y
+  luego en la mitad de esa mitad, se obtiene el \keyterm{método de
+  bisección}: cada paso divide por dos la longitud del intervalo en que está
+  la raíz.
+}
+\end{example}
+\end{frame}

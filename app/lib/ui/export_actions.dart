@@ -21,10 +21,14 @@ library;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../data/compiler.dart';
 import '../data/file_copy.dart';
 import '../model/catalogue.dart';
 import '../state/session.dart';
+import 'problem.dart';
+import 'review_panel.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Guarda una copia del PDF que se está mirando.
 ///
@@ -40,7 +44,7 @@ Future<void> savePdfCopy(
   final messenger = ScaffoldMessenger.of(context);
   if (!canCopyFiles) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('Aquí no se pueden guardar ficheros.')),
+      SnackBar(content: Text(tr('Aquí no se pueden guardar ficheros.'))),
     );
     return;
   }
@@ -52,27 +56,62 @@ Future<void> savePdfCopy(
     acceptedTypeGroups: const [
       XTypeGroup(label: 'PDF', extensions: ['pdf']),
     ],
-    confirmButtonText: 'Guardar',
+    confirmButtonText: tr('Guardar'),
   );
   if (where == null) return;
   try {
     await copyFile(path, where.path);
     messenger.showSnackBar(
-      SnackBar(content: Text('Guardado en ${where.path}.')),
+      SnackBar(content: Text(tr('Guardado en {0}.', [where.path]))),
     );
   } catch (error) {
-    messenger.showSnackBar(
-      SnackBar(content: Text('$error'), backgroundColor: didactaTeacher),
-    );
+    showProblemIn(messenger, error);
   }
+}
+
+/// Lo que se dice al acabar de exportar: cuánto ha salido, y qué no y por
+/// qué. Lo que faltaba por compilar y lo que se ha dejado fuera a propósito
+/// son dos cosas distintas y se cuentan aparte.
+String exportSummary({
+  required int copied,
+  required int missing,
+  required int withheld,
+  required String to,
+  String? zip,
+}) {
+  final parts = [
+    copied == 0
+        ? tr('No se ha exportado nada.')
+        : tr('{0} fichero(s) exportados a {1}.', [copied, to]),
+    if (zip != null && copied > 0)
+      tr('Y en {0}, todo junto.', [zip.split('/').last]),
+    if (missing > 0) tr('{0} sin compilar se han quedado fuera.', [missing]),
+    if (withheld > 0)
+      tr('{0} con soluciones o del profesor no se han incluido.', [withheld]),
+  ];
+  return parts.join(' ');
+}
+
+/// El nombre del .zip de un curso: «Análisis Matemático III 2025-2026.zip».
+///
+/// Sin lo que un sistema de ficheros no admite, que es lo único que se quita:
+/// las tildes y los espacios se quedan, porque es lo que se lee al subirlo.
+String zipNameFor(String courseTitle, String year) {
+  final clean = courseTitle
+      .replaceAll(RegExp(r'[/\\:*?"<>|]'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+  return tr('{0} {1}.zip', [clean.isEmpty ? 'curso' : clean, year]);
 }
 
 /// Saca a una carpeta lo que hay compilado de un documento.
 ///
-/// Sin preguntar nada más que dónde: todas sus versiones y todos sus idiomas.
-/// Elegir cuáles es lo que hace el diálogo de exportar un curso, que es donde
-/// esa pregunta tiene sentido --treinta documentos-- ; aquí sería un diálogo
-/// para responder «sí» a un documento.
+/// Sin preguntar nada más que dónde: todas sus versiones para estudiantes y
+/// todos sus idiomas. Elegir cuáles es lo que hace el diálogo de exportar un
+/// curso, que es donde esa pregunta tiene sentido --treinta documentos-- ;
+/// aquí sería un diálogo para responder «sí» a un documento. Las copias del
+/// profesor y las resueltas no salen de un clic: si las hay, el aviso lo dice
+/// y ofrece llevárselas también.
 Future<void> exportDocument(
   BuildContext context, {
   required Session session,
@@ -84,44 +123,73 @@ Future<void> exportDocument(
   final compiler = session.compiler(repo: document.repo);
   if (compiler == null) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('No hay motor para este repositorio.')),
+      SnackBar(content: Text(tr('No hay motor para este repositorio.'))),
     );
     return;
   }
 
+  // Revisar antes, como al exportar el curso entero.
+  final go = await reviewBeforeExport(
+    context,
+    session,
+    repo: document.repo,
+    within: ['${course.id}@$year/${document.id}'],
+  );
+  if (!go || !context.mounted) return;
+
+  // La misma carpeta que al exportar el curso entero: es el mismo sitio.
+  final remembered = await session.preferences.exportFolder(course.id);
   final destination = await getDirectoryPath(
-    confirmButtonText: 'Exportar aquí',
+    initialDirectory: remembered,
+    confirmButtonText: tr('Exportar aquí'),
   );
   if (destination == null) return;
+  await session.preferences.setExportFolder(course.id, destination);
 
-  try {
+  Future<void> export(ExportReach reach) async {
     // Sin idiomas: los que declare la asignatura. Pasar aquí los que la
     // aplicación tenga encendidos exportaría de menos sin decirlo.
     final result = await compiler.exportCourse(
       where: '${course.id}@$year',
       to: destination,
       documents: [document.id],
+      reach: reach,
     );
+    final nothing = result.copied.isEmpty && result.withheld.isEmpty;
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          result.copied.isEmpty
-              ? 'No había nada compilado de este documento.'
-              : result.missing.isEmpty
-              ? '${result.copied.length} fichero(s) exportados a $destination.'
-              : '${result.copied.length} exportados; ${result.missing.length} '
-                    'sin compilar se han quedado fuera.',
+          nothing
+              ? tr('No había nada compilado de este documento.')
+              : exportSummary(
+                  copied: result.copied.length,
+                  missing: result.missing.length,
+                  withheld: result.withheld.length,
+                  to: destination,
+                ),
         ),
-        duration: const Duration(seconds: 7),
+        duration: const Duration(seconds: 9),
+        action: result.withheld.isEmpty
+            ? null
+            : SnackBarAction(
+                label: tr('Incluirlas'),
+                textColor: messenger.context.palette.teacher,
+                onPressed: () => export(ExportReach.teacher).catchError(
+                  (Object error) => messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('$error'),
+                      backgroundColor: messenger.context.palette.teacher,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
+  }
+
+  try {
+    await export(ExportReach.students);
   } catch (error) {
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('$error'),
-        backgroundColor: didactaTeacher,
-        duration: const Duration(seconds: 8),
-      ),
-    );
+    showProblemIn(messenger, error);
   }
 }

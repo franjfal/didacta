@@ -1,0 +1,38 @@
+# Cálculo I -- 2026-2027
+#
+# Con las formas que tienen los `year.yaml` de verdad: documentos que son un
+# vínculo de una sola línea y van pegados al siguiente, sin línea en blanco;
+# títulos con comillas y TODO por idioma; entradas comentadas; apartados.
+
+course: calculo-i
+year: 2026-2027
+language: es
+
+documents:
+  - id: practica-1
+    link: d-000000000001
+  - id: practica-2
+    kind: practical
+    themes: [tema-2]
+    title:
+      es: "Práctica 2: sucesiones"
+      va: "Pràctica 2: successions"
+      # TODO: en
+    structure:
+      - section:
+          es: Límites
+      - problem: calculo/sucesiones/limite-de-un-cociente
+      # - problem: calculo/sucesiones/pendiente
+      - problem: calculo/sucesiones/monotona-y-acotada
+  - id: practica-3
+    link: d-000000000003
+
+
+  - id: practica-4
+    kind: practical
+    title:
+      es: Práctica 4
+    structure: []
+
+# Lo que va detrás de los documentos se queda donde está.
+themes_file: themes.yaml

@@ -13,6 +13,7 @@
 ///
 /// Se salta solo si los repositorios no están delante.
 @TestOn('vm')
+@Tags(['real'])
 library;
 
 import 'dart:convert';

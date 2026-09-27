@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// El número de página, escribible.
 ///
@@ -117,9 +118,9 @@ class _PdfPageFieldState extends State<PdfPageField> {
           padding: const EdgeInsets.only(left: 4),
           child: Text(
             '/ ${widget.pages}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: didactaMuted,
+              color: context.palette.muted,
               fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
@@ -174,7 +175,7 @@ class PdfZoomControls extends StatelessWidget {
     children: [
       IconButton(
         key: const Key('pdf-zoom-out'),
-        tooltip: 'Alejar',
+        tooltip: tr('Alejar'),
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.zoom_out, size: 18),
         onPressed: onZoomOut,
@@ -185,15 +186,15 @@ class PdfZoomControls extends StatelessWidget {
           onTap: onActualSize,
           borderRadius: BorderRadius.circular(4),
           child: Tooltip(
-            message: 'Tamaño real',
+            message: tr('Tamaño real'),
             child: SizedBox(
               width: 44,
               child: Text(
                 zoom == null ? '—' : '${(zoom! * 100).round()}%',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
@@ -202,7 +203,7 @@ class PdfZoomControls extends StatelessWidget {
         ),
       IconButton(
         key: const Key('pdf-zoom-in'),
-        tooltip: 'Acercar',
+        tooltip: tr('Acercar'),
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.zoom_in, size: 18),
         onPressed: onZoomIn,
@@ -212,7 +213,7 @@ class PdfZoomControls extends StatelessWidget {
         MenuAnchor(
           builder: (context, controller, child) => IconButton(
             key: const Key('pdf-fit-menu'),
-            tooltip: 'Ajustar',
+            tooltip: tr('Ajustar'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.fit_screen, size: 17),
             onPressed: onFitWidth == null
@@ -225,38 +226,38 @@ class PdfZoomControls extends StatelessWidget {
             MenuItemButton(
               key: const Key('pdf-fit-width'),
               onPressed: onFitWidth,
-              child: const Text('Ajustar al ancho'),
+              child: Text(tr('Ajustar al ancho')),
             ),
             MenuItemButton(
               key: const Key('pdf-fit-height'),
               onPressed: onFitHeight,
-              child: const Text('Ajustar al alto'),
+              child: Text(tr('Ajustar al alto')),
             ),
             MenuItemButton(
               key: const Key('pdf-fit-page'),
               onPressed: onFitPage,
-              child: const Text('Página entera'),
+              child: Text(tr('Página entera')),
             ),
           ],
         )
       else ...[
         IconButton(
           key: const Key('pdf-fit-width'),
-          tooltip: 'Ajustar al ancho',
+          tooltip: tr('Ajustar al ancho'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.swap_horiz, size: 18),
           onPressed: onFitWidth,
         ),
         IconButton(
           key: const Key('pdf-fit-height'),
-          tooltip: 'Ajustar al alto',
+          tooltip: tr('Ajustar al alto'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.swap_vert, size: 18),
           onPressed: onFitHeight,
         ),
         IconButton(
           key: const Key('pdf-fit-page'),
-          tooltip: 'Página entera',
+          tooltip: tr('Página entera'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.fit_screen, size: 17),
           onPressed: onFitPage,
@@ -321,9 +322,9 @@ class PdfViewerBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: didactaSurface,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.surface,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     child: LayoutBuilder(
@@ -341,10 +342,12 @@ class PdfViewerBar extends StatelessWidget {
           children: [
             IconButton(
               key: const Key('pdf-sidebar-toggle'),
-              tooltip: sidebar ? 'Ocultar el lateral' : 'Índice y páginas',
+              tooltip: sidebar
+                  ? tr('Ocultar el lateral')
+                  : tr('Índice y páginas'),
               visualDensity: VisualDensity.compact,
               isSelected: sidebar,
-              color: sidebar ? didactaAccentDark : null,
+              color: sidebar ? context.palette.accentDark : null,
               icon: const Icon(Icons.vertical_split_outlined, size: 17),
               onPressed: onSidebar,
             ),
@@ -352,14 +355,14 @@ class PdfViewerBar extends StatelessWidget {
             if (roomy)
               IconButton(
                 key: const Key('pdf-first-page'),
-                tooltip: 'Primera página',
+                tooltip: tr('Primera página'),
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.first_page, size: 18),
                 onPressed: pages > 1 && page > 1 ? () => onGoToPage(1) : null,
               ),
             IconButton(
               key: const Key('pdf-previous-page'),
-              tooltip: 'Anterior',
+              tooltip: tr('Anterior'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.chevron_left, size: 18),
               onPressed: page > 1 ? () => onGoToPage(page - 1) : null,
@@ -372,7 +375,7 @@ class PdfViewerBar extends StatelessWidget {
             ),
             IconButton(
               key: const Key('pdf-next-page'),
-              tooltip: 'Siguiente',
+              tooltip: tr('Siguiente'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.chevron_right, size: 18),
               onPressed: page < pages ? () => onGoToPage(page + 1) : null,
@@ -399,9 +402,9 @@ class PdfViewerBar extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         softWrap: false,
                         textDirection: labelDirection,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ),

@@ -1,0 +1,221 @@
+# Compilar el material de un repositorio de contenido, en GitHub.
+#
+# Lo llama el workflow de cada repositorio de contenido --el que trae el
+# ejemplo, o el que Ajustes añade a uno que ya existe--, con dos líneas:
+#
+#   jobs:
+#     compilar:
+#       uses: franjfal/didacta/.github/workflows/material.yml@v0.2.1
+#       with:
+#         engine-ref: v0.2.1
+#
+# Aquí y no copiado en cada repositorio porque lo que hay que saber para
+# compilar --qué paquetes de TeX, qué órdenes del motor, cómo se separa lo
+# que se reparte de lo del profesor-- es del motor y cambia con él. Cada
+# repositorio fija la versión que usa, igual que fija la del motor: una
+# versión nueva de Didacta no le cambia el CI a nadie hasta que la pide.
+#
+# Qué hace, en este orden:
+#
+# 1. **El índice.** Si `generated/` no describe el disco, lo regenera. En un
+#    push a la rama principal, además, lo guarda con un commit: es un fichero
+#    derivado y nadie tendría que acordarse de hacerlo. En una pull request
+#    solo lo dice.
+# 2. **Comprobar.** `didacta check`: lo que no va a compilar, dicho con su
+#    lección y su línea, antes de gastar diez minutos en compilarlo.
+# 3. **Compilar** todo, con las salidas de cada documento.
+# 4. **Separar**, con `didacta export`, igual que la aplicación al repartir:
+#    «PDF para repartir» lleva como mucho los resultados --y los apuntes en
+#    HTML, con `didacta html` y la misma regla--; «PDF del profesor», todo
+#    --soluciones, notas didácticas, exámenes con su corrección--. Son dos
+#    paquetes distintos a propósito: quien descarga el primero para colgarlo
+#    en el aula virtual no puede llevarse una solución sin querer.
+#
+# Los PDF no se versionan: se generan aquí a partir del origen, y se
+# descargan desde la pestaña Actions durante treinta días.
+name: Compilar el material (reutilizable)
+
+on:
+  workflow_call:
+    inputs:
+      engine-ref:
+        description: >-
+          La versión del motor con la que se compila: una etiqueta (v0.2.1),
+          o main.
+        type: string
+        default: main
+      engine-repository:
+        description: De dónde se descarga el motor.
+        type: string
+        default: franjfal/didacta
+      tex-packages:
+        description: >-
+          Paquetes de TeX Live de más, de Ubuntu (texlive-…), para lo que use
+          el material además de lo que pide Didacta.
+        type: string
+        default: ''
+      commit-index:
+        description: Guardar el índice regenerado con un commit, en la rama principal.
+        type: boolean
+        default: true
+      retention-days:
+        description: Cuántos días se guardan los PDF.
+        type: number
+        default: 30
+
+jobs:
+  compilar:
+    name: compilar el material
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: el material
+        uses: actions/checkout@v7
+
+      - name: el motor (${{ inputs.engine-repository }}@${{ inputs.engine-ref }})
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ inputs.engine-repository }}
+          ref: ${{ inputs.engine-ref }}
+          path: .didacta-engine
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      # Lo que piden `latex/didacta*.sty` y los diez idiomas, sin la
+      # distribución entera: `texlive-full` son cinco gigas y veinte minutos
+      # de cada ejecución.
+      - name: TeX Live
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            latexmk biber \
+            texlive-latex-recommended texlive-latex-extra \
+            texlive-science texlive-pictures texlive-fonts-recommended \
+            texlive-bibtex-extra texlive-plain-generic \
+            texlive-lang-spanish texlive-lang-european texlive-lang-english \
+            texlive-lang-french texlive-lang-german texlive-lang-italian \
+            texlive-lang-portuguese \
+            ${{ inputs.tex-packages }}
+
+      - name: el índice
+        id: indice
+        run: |
+          didacta() { python .didacta-engine/cli/didacta "$@"; }
+          if didacta index --check; then
+            echo "El índice está al día." >> "$GITHUB_STEP_SUMMARY"
+            echo "cambiado=no" >> "$GITHUB_OUTPUT"
+          else
+            didacta index
+            echo "cambiado=sí" >> "$GITHUB_OUTPUT"
+            echo "El índice no describía el disco: regenerado." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: guardar el índice
+        if: >-
+          steps.indice.outputs.cambiado == 'sí' && inputs.commit-index &&
+          github.event_name == 'push' &&
+          github.ref_name == github.event.repository.default_branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated
+          git commit -m "Poner el índice al día [skip ci]"
+          git push
+
+      # Lo que falle aquí hace fallar el workflow, pero al final: lo que sí
+      # compila se sigue compilando y repartiendo.
+      - name: comprobar
+        id: comprobar
+        continue-on-error: true
+        run: python .didacta-engine/cli/didacta check
+
+      - name: compilar
+        id: compilar
+        run: python .didacta-engine/cli/didacta build --all --json -j 0
+
+      # Por asignatura y curso, con la misma regla que al repartir desde la
+      # aplicación. Aunque haya fallado algo: lo que sí compiló se reparte.
+      - name: separar lo que se reparte de lo del profesor
+        if: always() && steps.compilar.outcome != 'skipped'
+        run: |
+          python - <<'PY' > .didacta-cursos
+          import json
+          with open("generated/courses.json", encoding="utf-8") as f:
+              data = json.load(f)
+          for course in data.get("courses", []):
+              years = course.get("years", {})
+              for year in (years if isinstance(years, dict) else []):
+                  print(f"{course['id']}@{year}")
+          PY
+          while read -r curso; do
+            [ -n "$curso" ] || continue
+            carpeta="${curso/@//}"
+            python .didacta-engine/cli/didacta export "$curso" \
+              --to "salida/repartir/$carpeta" || true
+            python .didacta-engine/cli/didacta export "$curso" \
+              --reveal-up-to teacher --to "salida/profesor/$carpeta" || true
+            # Y los apuntes en HTML, para leerlos con un lector de pantalla:
+            # con la misma regla que lo de repartir.
+            python .didacta-engine/cli/didacta html "$curso" \
+              --to "salida/repartir/$carpeta/html" || true
+          done < .didacta-cursos
+
+      - name: el resumen
+        if: always() && steps.compilar.outcome != 'skipped'
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json, os
+          path = ".didacta-build/summary.json"
+          if not os.path.exists(path):
+              print("No se ha compilado nada.")
+              raise SystemExit
+          with open(path, encoding="utf-8") as f:
+              outputs = json.load(f)
+          ok = [o for o in outputs if o.get("ok")]
+          bad = [o for o in outputs if not o.get("ok")]
+          print(f"### {len(ok)} PDF bien, {len(bad)} con errores\n")
+          if bad:
+              print("| Documento | Versión | Idioma |")
+              print("|---|---|---|")
+              for o in bad:
+                  print(f"| {o['document']} | {o['profile']} | {o['language']} |")
+          print("\nLos PDF, en «PDF para repartir» (sin soluciones) y «PDF del "
+                "profesor» (todo), abajo en esta página.")
+          PY
+
+      - name: PDF para repartir
+        if: always() && steps.compilar.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PDF para repartir
+          path: salida/repartir
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: PDF del profesor
+        if: always() && steps.compilar.outcome != 'skipped'
+        uses: actions/upload-artifact@v7
+        with:
+          name: PDF del profesor
+          path: salida/profesor
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.retention-days }}
+
+      # Los registros de lo que falló, para leerlos sin volver a compilar.
+      - name: registros de LaTeX
+        if: failure() && steps.compilar.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: registros de LaTeX
+          path: .didacta-build/**/*.log
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: si la comprobación falló, el workflow también
+        if: steps.comprobar.outcome == 'failure'
+        run: |
+          echo "::error::didacta check ha encontrado problemas: míralos en el paso «comprobar»."
+          exit 1

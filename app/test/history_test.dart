@@ -110,4 +110,19 @@ void main() {
     history.back();
     expect(avisos, 3);
   });
+
+  test('cambiar solo la consulta es el mismo sitio', () {
+    // Escribir en el buscador de la biblioteca cambia la dirección a cada
+    // letra; «atrás» tiene que volver a la pantalla de antes, no deshacer la
+    // búsqueda letra a letra.
+    final history = NavigationHistory()
+      ..record('/courses')
+      ..record('/')
+      ..record('/?q=n')
+      ..record('/?q=no');
+    expect(history.backStack, ['/courses']);
+    expect(history.current, '/?q=no');
+    history.record('/unit/content/a/b/c');
+    expect(history.backStack, ['/courses', '/?q=no']);
+  });
 }

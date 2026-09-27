@@ -26,6 +26,7 @@
 library;
 
 import 'catalogue.dart';
+import '../l10n/tr.dart';
 
 /// How much of a group is translated into one language.
 ///
@@ -207,14 +208,14 @@ class CategoryNode {
 String languageName(String code) => switch (code) {
   'es' => 'castellano',
   'va' => 'valenciano',
-  'ca' => 'catalán',
+  'ca' => tr('catalán'),
   'gl' => 'gallego',
   'eu' => 'euskera',
-  'en' => 'inglés',
-  'fr' => 'francés',
-  'de' => 'alemán',
+  'en' => tr('inglés'),
+  'fr' => tr('francés'),
+  'de' => tr('alemán'),
   'it' => 'italiano',
-  'pt' => 'portugués',
+  'pt' => tr('portugués'),
   // Lo que Didacta no traiga se dice por su código. Preferible a inventarse
   // un nombre: el código es exactamente lo que hay en el nombre del fichero.
   _ => code,

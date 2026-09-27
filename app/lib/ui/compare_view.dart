@@ -13,8 +13,11 @@
 /// siempre en la misma frase que la anterior.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../data/diagnostics.dart';
 import '../data/local_clone.dart';
 import '../model/catalogue.dart';
 import '../model/course_diff.dart';
@@ -22,6 +25,7 @@ import '../model/file_history.dart';
 import '../state/session.dart';
 import 'diff_view.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Compara dos versiones. [to] nulo es la versión actual.
 Future<void> showComparison(
@@ -78,18 +82,22 @@ class _CompareDialogState extends State<CompareDialog> {
   String get _left => widget.from.commit;
   String get _right => widget.to?.commit ?? 'HEAD';
 
-  String get _rightName => widget.to?.name ?? 'la versión actual';
+  String get _rightName => widget.to?.name ?? tr('la versión actual');
 
   @override
   void initState() {
     super.initState();
-    _look();
+    unawaited(_look());
   }
 
   Future<void> _look() async {
     final service = widget.session.frozenIn(_repo);
     if (service == null) {
-      setState(() => _problem = 'Esto necesita el clon del repositorio.');
+      setState(
+        () => _problem = tr(
+          'Esto necesita la copia del repositorio en tu ordenador.',
+        ),
+      );
       return;
     }
     try {
@@ -103,6 +111,9 @@ class _CompareDialogState extends State<CompareDialog> {
         to: _right,
         course: widget.course.id,
         year: widget.year,
+        lessonOf: (reference) => widget.session.catalogue
+            .unitByReference(reference, repo: _repo)
+            ?.path,
       );
       if (!mounted) return;
       setState(() => _diff = found);
@@ -132,7 +143,8 @@ class _CompareDialogState extends State<CompareDialog> {
         _file = diff;
         _loadingFile = false;
       });
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('compare_view._openFile', caught, trace);
       if (!mounted) return;
       setState(() => _loadingFile = false);
     }
@@ -142,7 +154,7 @@ class _CompareDialogState extends State<CompareDialog> {
   Widget build(BuildContext context) {
     final diff = _diff;
     return AlertDialog(
-      title: Text('«${widget.from.name}» frente a $_rightName'),
+      title: Text(tr('«{0}» frente a {1}', [widget.from.name, _rightName])),
       content: SizedBox(
         width: 1000,
         height: 560,
@@ -150,7 +162,10 @@ class _CompareDialogState extends State<CompareDialog> {
             ? Center(
                 child: Text(
                   '$_problem',
-                  style: const TextStyle(fontSize: 12.5, color: didactaTeacher),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: context.palette.teacher,
+                  ),
                 ),
               )
             : diff == null
@@ -166,14 +181,15 @@ class _CompareDialogState extends State<CompareDialog> {
                       onChoose: _openFile,
                     ),
                   ),
-                  const VerticalDivider(width: 1, color: didactaRule),
+                  VerticalDivider(width: 1, color: context.palette.rule),
                   Expanded(
                     child: _chosen == null
-                        ? const DiffPlaceholder(
+                        ? DiffPlaceholder(
                             icon: Icons.difference_outlined,
-                            text:
-                                'Elige una fila para ver exactamente qué '
-                                'cambió dentro.',
+                            text: tr(
+                              'Elige una fila para ver exactamente qué '
+                              'cambió dentro.',
+                            ),
                           )
                         : _loadingFile
                         ? const Center(child: CircularProgressIndicator())
@@ -187,13 +203,20 @@ class _CompareDialogState extends State<CompareDialog> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: Text(
-              diff.summary,
-              style: const TextStyle(fontSize: 12, color: didactaMuted),
+              diff.hiddenLessons == 0
+                  ? diff.summary
+                  : tr(
+                      '{0} · y {1} en lecciones '
+                      'que este curso no usa',
+                      [diff.summary, diff.hiddenLessons],
+                    ),
+              key: const Key('compare-summary'),
+              style: TextStyle(fontSize: 12, color: context.palette.muted),
             ),
           ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(tr('Cerrar')),
         ),
       ],
     );
@@ -215,22 +238,22 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (diff.isEmpty) {
-      return const DiffPlaceholder(
+      return DiffPlaceholder(
         icon: Icons.check,
-        text: 'No hay ninguna diferencia entre las dos versiones.',
+        text: tr('No hay ninguna diferencia entre las dos versiones.'),
       );
     }
     return ListView(
       padding: const EdgeInsets.only(right: 12),
       children: [
         if (diff.documents.isNotEmpty) ...[
-          const _GroupTitle('Temas del curso'),
+          _GroupTitle(tr('Temas del curso')),
           for (final change in diff.documents) _DocumentRow(change: change),
           const SizedBox(height: Space.medium),
         ],
         for (final thing in ChangedThing.values)
           if (diff.of(thing).isNotEmpty) ...[
-            _GroupTitle(_names[thing]!),
+            _GroupTitle(tr(_names[thing]!)),
             for (final change in diff.of(thing))
               _FileRow(
                 change: change,
@@ -265,11 +288,11 @@ class _GroupTitle extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(0, 6, 0, 6),
     child: Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 10.5,
         letterSpacing: 0.7,
         fontWeight: FontWeight.w700,
-        color: didactaMuted,
+        color: context.palette.muted,
       ),
     ),
   );
@@ -288,15 +311,23 @@ class _DocumentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (IconData icon, Color colour, String what) = switch (change.kind) {
-      TreeChangeKind.added => (Icons.add, didactaProp, 'tema nuevo'),
-      TreeChangeKind.removed => (Icons.remove, didactaTeacher, 'ya no está'),
-      _ => (Icons.edit_outlined, didactaThm, 'cambiado'),
+      TreeChangeKind.added => (
+        Icons.add,
+        context.palette.prop,
+        tr('tema nuevo'),
+      ),
+      TreeChangeKind.removed => (
+        Icons.remove,
+        context.palette.teacher,
+        tr('ya no está'),
+      ),
+      _ => (Icons.edit_outlined, context.palette.thm, 'cambiado'),
     };
     final link = change.linkChanged
         ? change.isLinked
               ? change.wasLinked
-                    ? 'ahora está vinculado a otro tema'
-                    : 'ahora está vinculado'
+                    ? tr('ahora está vinculado a otro tema')
+                    : tr('ahora está vinculado')
               : 'ya no está vinculado'
         : '';
     return Padding(
@@ -343,17 +374,20 @@ class _FileRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (IconData icon, Color colour) = switch (change.kind) {
-      TreeChangeKind.added => (Icons.add, didactaProp),
-      TreeChangeKind.removed => (Icons.remove, didactaTeacher),
-      TreeChangeKind.modified => (Icons.edit_outlined, didactaThm),
-      TreeChangeKind.renamed => (Icons.drive_file_move_outlined, didactaEx),
+      TreeChangeKind.added => (Icons.add, context.palette.prop),
+      TreeChangeKind.removed => (Icons.remove, context.palette.teacher),
+      TreeChangeKind.modified => (Icons.edit_outlined, context.palette.thm),
+      TreeChangeKind.renamed => (
+        Icons.drive_file_move_outlined,
+        context.palette.ex,
+      ),
     };
     return InkWell(
       key: Key('compare-${change.path}'),
       onTap: onTap,
       borderRadius: BorderRadius.circular(Radii.small),
       child: Container(
-        color: selected ? didactaSelected : null,
+        color: selected ? context.palette.selected : null,
         padding: const EdgeInsets.fromLTRB(4, 5, 4, 5),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,9 +407,12 @@ class _FileRow extends StatelessWidget {
                   ),
                   Text(
                     change.isMove && change.from.isNotEmpty
-                        ? 'movido desde ${change.from}'
+                        ? tr('movido desde {0}', [change.from])
                         : change.detail,
-                    style: const TextStyle(fontSize: 11, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.palette.muted,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],

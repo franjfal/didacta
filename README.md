@@ -179,12 +179,21 @@ didacta translations
 # Validar: referencias que no resuelven, perfiles inexistentes,
 # documentos que compilan en un idioma que su contenido no tiene
 didacta check
+didacta check --in am-iii@2025-2026          # solo lo de ese curso
+didacta check --with formulas,unused --json  # más comprobaciones, en JSON
+didacta check --strict                       # los avisos también fallan
 
 # Compilar
 didacta build tema-1
 didacta build tema-1 -p slides -l va
 didacta build --all
 didacta build --all --list          # qué haría, sin hacerlo
+didacta preview analysis/normed/definition   # una unidad suelta
+didacta clean --size                # cuánto ocupa lo compilado
+
+# Repartir: los PDF de un curso a una carpeta, o una web para GitHub Pages
+didacta export am-iii@2025-2026 --to ~/Aula
+didacta site am-iii@2025-2026
 
 # Crear
 didacta new unit analysis/normed-spaces/dual-space
@@ -205,6 +214,10 @@ didacta migrate ~/Teaching ~/didacta-content --year 2025-2026 --apply
 # que no salen, con fichero, línea y la macro culpable
 didacta migrate ~/Teaching ~/didacta-content --year 2025-2026 --apply --verify
 ```
+
+Hay más --congelar un curso, dar un tema en otro, mover una lección, el
+servidor MCP--, y `didacta --help` las lista todas. Cada una, con ejemplos, en
+[la página de la herramienta](https://franjfal.github.io/didacta/cli/).
 
 Se ejecuta desde cualquier sitio dentro de un repositorio de contenido: la raíz
 se localiza subiendo hasta encontrar `didacta.yaml`, como hace git con `.git`.
@@ -276,7 +289,9 @@ Pregunta si es grande, mediana o pequeña --1.0.0, 0.2.0 o 0.1.1 desde la
 0.1.0-- y si se publica o se ensaya; le pone el número a la sección, avisa de
 lo que no va a entrar, hace el commit, lo sube y lanza **Publish Didacta
 Release** en GitHub. Lo que elige lo deja en [`release.yaml`](release.yaml),
-que también se puede editar a mano y pulsar el botón en Actions.
+que también se puede editar a mano y pulsar el botón en Actions. Con
+`--prueba` sale una **versión de prueba** --`1.5.0-rc.1`-- que solo reciben
+quienes las piden en Ajustes → Actualizaciones.
 
 Compila macOS, Windows y Linux, calcula los SHA-256, publica el release aquí
 mismo y dispara el despliegue de la web, que reescribe su página de descarga
@@ -297,6 +312,8 @@ didacta/
 │   ├── didacta-theme.sty       el tema beamer
 │   ├── didacta-page.sty        maquetación de documento
 │   ├── didacta-colours.sty     la paleta
+│   ├── didacta-bibliography.sty  las citas, con biblatex si hay .bib
+│   ├── didacta-legacy.sty      las macros del sistema anterior
 │   └── lang/                   es · va · en
 ├── engine/didacta/         Python: modelo, perfiles, compilación
 ├── cli/didacta             la herramienta
@@ -306,8 +323,8 @@ didacta/
 ├── docs/
 │   ├── AUTHORING.md        ← referencia de escritura
 │   └── ...
-├── tests/
-├── app/  api/  schemas/    (siguiente fase: la interfaz web)
+├── tests/                  los del motor y la herramienta
+├── app/                    la aplicación (Flutter), con sus tests
 └── ARCHITECTURE.md
 ```
 
@@ -407,8 +424,11 @@ Lo que funciona hoy, verificado compilando de verdad:
 - respaldo al idioma de referencia cuando falta una traducción, con aviso;
 - inyección de metadatos desde `course.yaml` y `year.yaml`;
 - compilación fuera del árbol, con SyncTeX;
-- `didacta status | units | translations | check | build | new | migrate | index`;
-- la biblioteca de la aplicación, sobre el material migrado de verdad.
+- las citas con biblatex, desde un `.bib` del repositorio;
+- `didacta`, con treinta órdenes: de `status`, `check` y `build` a `freeze`,
+  `export`, `site` y `mcp`;
+- la aplicación entera sobre el material migrado de verdad: la biblioteca,
+  editar y traducir, recomponer, compilar y repartir.
 
 La migración del sistema anterior está hecha y medida sobre el material real:
 2147 unidades a partir de 2438 ficheros, y 784 documentos en 17 asignaturas y
@@ -422,10 +442,11 @@ comprobado con un test que compara cada fichero seguido por git antes y después
 — e inventar los metadatos que el material anterior no guardaba.
 `MIGRATION-REPORT.md` dice qué falta y dónde.
 
-253 tests de Python y 33 de Dart.
+Unos 800 tests de Python y unos 2100 de Dart, en Linux, macOS y Windows en cada
+push; `./build.command todo` los pasa en local.
 
-Siguiente fase: la bibliografía (5 unidades no compilan sin biblatex) y `api/`,
-que es lo que bloquea editar y compilar desde la interfaz.
+Lo que queda está en [`NEXT.md`](NEXT.md), y con detalle en
+[`PLAN-DE-MEJORAS.md`](PLAN-DE-MEJORAS.md).
 
 ---
 

@@ -21,6 +21,8 @@ import 'package:http/http.dart' as http;
 import '../model/toolchain.dart';
 import 'compiler_io.dart' show pythonDirectories, texAwarePath, texDirectories;
 import 'toolchain.dart';
+import 'diagnostics.dart';
+import '../l10n/tr.dart';
 
 bool get supported => true;
 
@@ -70,7 +72,7 @@ List<String> toolDirectories({String? texPath}) {
     final local = Platform.environment['LOCALAPPDATA'] ?? '';
     found.addAll([
       r'C:\Program Files\Git\cmd',
-      r'C:\Program Files\Git\bin',
+      tr(r'C:\Program Files\Git\bin'),
       if (local.isNotEmpty) ...[
         '$local\\Programs\\Git\\cmd',
         '$local\\Microsoft\\WindowsApps',
@@ -153,9 +155,11 @@ class _ProcessToolchain implements Toolchain {
         tool: tool,
         path: found.path,
         searched: directories,
-        problem:
-            'Está en ${found.path} pero no contesta. Puede ser una '
-            'instalación a medias o un enlace roto.',
+        problem: tr(
+          'Está en {0} pero no contesta. Puede ser una '
+          'instalación a medias o un enlace roto.',
+          [found.path],
+        ),
       );
     }
 
@@ -165,9 +169,11 @@ class _ProcessToolchain implements Toolchain {
         path: found.path,
         version: version,
         searched: directories,
-        problem:
-            'El motor necesita Python $minimumPython o posterior, y esta es '
-            'la $version.',
+        problem: tr(
+          'El motor necesita Python {0} o posterior, y esta es '
+          'la {1}.',
+          [minimumPython, version],
+        ),
       );
     }
 
@@ -176,6 +182,10 @@ class _ProcessToolchain implements Toolchain {
       path: found.path,
       version: version,
       searched: directories,
+      notes: [
+        if (id == ToolId.latex && findIn(['biber'], directories) == null)
+          missingBiber(host),
+      ],
     );
   }
 
@@ -189,9 +199,11 @@ class _ProcessToolchain implements Toolchain {
       return ToolState(
         tool: tool,
         searched: [root],
-        problem:
-            'La carpeta configurada --$root-- ya no tiene cli/didacta '
-            'dentro. Se ha movido o se ha borrado.',
+        problem: tr(
+          'La carpeta configurada --{0}-- ya no tiene cli/didacta '
+          'dentro. Se ha movido o se ha borrado.',
+          [root],
+        ),
       );
     }
     return ToolState(tool: tool, path: root, searched: [root]);
@@ -251,7 +263,7 @@ class _ProcessToolchain implements Toolchain {
         // porque un plan que se ejecuta en silencio y no instala nada es el
         // fallo más difícil de encontrar de todos.
         throw ToolInstallException(
-          'Este paso no lo puede hacer Didacta por ti.',
+          tr('Este paso no lo puede hacer Didacta por ti.'),
           plan: plan,
         );
 
@@ -282,8 +294,8 @@ class _ProcessToolchain implements Toolchain {
     final found = findIn([program], directories);
     if (found == null) {
       throw ToolInstallException(
-        'No encuentro $program en esta máquina.',
-        detail: 'He mirado en: ${directories.join(', ')}.',
+        tr('No encuentro {0} en esta máquina.', [program]),
+        detail: tr('He mirado en: {0}.', [directories.join(', ')]),
         plan: plan,
       );
     }
@@ -314,7 +326,7 @@ class _ProcessToolchain implements Toolchain {
       );
     } on ProcessException catch (error) {
       throw ToolInstallException(
-        'No se pudo lanzar $program.',
+        tr('No se pudo lanzar {0}.', [program]),
         detail: error.message,
         plan: plan,
       );
@@ -325,8 +337,9 @@ class _ProcessToolchain implements Toolchain {
     // en lugar de un error.
     try {
       await process.stdin.close();
-    } catch (_) {
+    } catch (caught, trace) {
       // Ya había terminado.
+      Diagnostics.instance.note('toolchain_io.install', caught, trace);
     }
 
     const decoder = Utf8Decoder(allowMalformed: true);
@@ -354,7 +367,7 @@ class _ProcessToolchain implements Toolchain {
 
     if (code != 0) {
       throw ToolInstallException(
-        'La instalación terminó con un error (código $code).',
+        tr('La instalación terminó con un error (código {0}).', [code]),
         detail: tail.join('\n').trim(),
         plan: plan,
       );
@@ -372,7 +385,7 @@ class _ProcessToolchain implements Toolchain {
         final result = await Process.run('open', [file]);
         if (result.exitCode != 0) {
           throw ToolInstallException(
-            'No se pudo abrir el instalador.',
+            tr('No se pudo abrir el instalador.'),
             detail: '${result.stderr}'.trim(),
             plan: plan,
           );
@@ -384,14 +397,14 @@ class _ProcessToolchain implements Toolchain {
         return;
       }
       throw ToolInstallException(
-        'Aquí los instaladores se abren a mano.',
-        detail: 'Está descargado en $file.',
+        tr('Aquí los instaladores se abren a mano.'),
+        detail: tr('Está descargado en {0}.', [file]),
         plan: plan,
       );
     } on ProcessException catch (error) {
       throw ToolInstallException(
-        'No se pudo abrir el instalador.',
-        detail: '${error.message}\nEstá descargado en $file.',
+        tr('No se pudo abrir el instalador.'),
+        detail: tr('{0}\nEstá descargado en {1}.', [error.message, file]),
         plan: plan,
       );
     }
@@ -410,19 +423,19 @@ class _ProcessToolchain implements Toolchain {
     final uri = Uri.tryParse(url);
     if (uri == null || uri.scheme != 'https') {
       throw ToolInstallException(
-        'La dirección de descarga no es válida.',
+        tr('La dirección de descarga no es válida.'),
         detail: url,
         plan: plan,
       );
     }
 
-    onOutput?.call('Descargando $url');
+    onOutput?.call(tr('Descargando {0}', [url]));
     final client = http.Client();
     try {
       final response = await client.send(http.Request('GET', uri));
       if (response.statusCode != 200) {
         throw ToolInstallException(
-          'La descarga falló (HTTP ${response.statusCode}).',
+          tr('La descarga falló (HTTP {0}).', [response.statusCode]),
           detail: url,
           plan: plan,
         );
@@ -445,17 +458,20 @@ class _ProcessToolchain implements Toolchain {
           announced = received;
           onOutput?.call(
             total > 0
-                ? 'Descargado ${_megabytes(received)} de ${_megabytes(total)}'
-                : 'Descargado ${_megabytes(received)}',
+                ? tr('Descargado {0} de {1}', [
+                    _megabytes(received),
+                    _megabytes(total),
+                  ])
+                : tr('Descargado {0}', [_megabytes(received)]),
           );
         }
       });
       await sink.close();
-      onOutput?.call('Descargado en ${file.path}');
+      onOutput?.call(tr('Descargado en {0}', [file.path]));
       return file.path;
     } on http.ClientException catch (error) {
       throw ToolInstallException(
-        'No se pudo descargar el instalador.',
+        tr('No se pudo descargar el instalador.'),
         detail: '${error.message}\n$url',
         plan: plan,
       );
@@ -475,7 +491,7 @@ class _ProcessToolchain implements Toolchain {
   /// instalación por «inválida» porque un nombre de paquete cambió en CTAN
   /// sería tirar el trabajo hecho.
   Future<void> _addTexPackages({void Function(String line)? onOutput}) async {
-    onOutput?.call('Buscando tlmgr…');
+    onOutput?.call(tr('Buscando tlmgr…'));
     // Los directorios se recalculan: TinyTeX acaba de aparecer, y la lista
     // que se leyó antes de instalarlo no lo tiene.
     final directories = [
@@ -485,12 +501,16 @@ class _ProcessToolchain implements Toolchain {
     final tlmgr = findIn(['tlmgr'], directories);
     if (tlmgr == null) {
       onOutput?.call(
-        'No encuentro tlmgr, así que los paquetes se añadirán cuando hagan '
-        'falta: el log de la primera compilación dice cuál.',
+        tr(
+          'No encuentro tlmgr, así que los paquetes se añadirán cuando hagan '
+          'falta: el log de la primera compilación dice cuál.',
+        ),
       );
       return;
     }
-    onOutput?.call('Añadiendo los paquetes que Didacta usa. Tarda un poco.');
+    onOutput?.call(
+      tr('Añadiendo los paquetes que Didacta usa. Tarda un poco.'),
+    );
     try {
       await _run(
         tlmgr.path,
@@ -500,8 +520,11 @@ class _ProcessToolchain implements Toolchain {
       );
     } on ToolInstallException catch (error) {
       onOutput?.call(
-        'Algún paquete no se pudo añadir (${error.message}). LaTeX ya está '
-        'instalado; lo que falte lo dirá el log al compilar.',
+        tr(
+          'Algún paquete no se pudo añadir ({0}). LaTeX ya está '
+          'instalado; lo que falte lo dirá el log al compilar.',
+          [error.message],
+        ),
       );
     }
   }

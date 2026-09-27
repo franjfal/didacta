@@ -5,6 +5,7 @@
 /// se eligió y no otra cosa, que un fallo se lea, y --lo que más importa--
 /// que **cuando no se puede compilar la pantalla lo diga** en lugar de
 /// ofrecer un botón que falla.
+@Tags(['integration'])
 library;
 
 import 'package:flutter/material.dart';

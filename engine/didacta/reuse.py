@@ -894,3 +894,155 @@ def _append_reference(path, document_id, keyword, reference):
     lines.insert(at + 1, "%s- %s: %s" % (" " * indent, keyword, reference))
     with open(path, "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines).rstrip("\n") + "\n")
+
+
+# --------------------------------------------------------------------------
+# Mover o renombrar una lección
+# --------------------------------------------------------------------------
+
+
+def move_unit(root, settings, reference, new_path, *, courses=None,
+              units=None):
+    """Cambia de carpeta una lección y reescribe todo lo que la nombra.
+
+    Es la misma lección --el mismo id, el mismo historial de traducciones--
+    en otro sitio. Lo que la nombra por su ruta se reescribe: cada
+    composición, los temas compartidos y los prerrequisitos de las demás. Lo
+    que la nombra por su id no hace falta tocarlo, y no se toca.
+
+    [new_path] va sin el área: `categoría/tema/nombre`. Una lección no cambia
+    de área al moverla, porque el área la decide lo que es.
+    """
+    if units is None:
+        units, _ = repo_mod.scan_units(root, settings)
+    courses = courses if courses is not None else _scan(root, settings)
+
+    unit = find_unit(root, units, reference)
+    area = unit.relpath.split("/")[0]
+    new_path = new_path.strip("/")
+    if not new_path or ".." in new_path.split("/"):
+        raise ReuseError("`%s` no es una ruta de lección" % new_path)
+    new_relpath = "%s/%s" % (area, new_path)
+    if new_relpath == unit.relpath:
+        raise ReuseError("la lección ya está en %s" % new_relpath)
+    if os.path.exists(os.path.join(root, new_relpath)):
+        raise ReuseError("%s ya existe" % new_relpath)
+
+    plan = Plan("mover lección", content=unit.id)
+    old_refs = {unit.relpath, _reference_for(unit.relpath)}
+    new_ref = _reference_for(new_relpath)
+
+    # Las composiciones, antes de mover nada: si alguna no se deja reescribir
+    # la lección se queda donde estaba y no hay nada a medias.
+    rewrites = []
+    for place in unit_places(courses, units, root, unit.id):
+        if place.ref is None or place.ref.strip("/") not in old_refs:
+            continue
+        path, document_id = _composition_of(root, place)
+        rewrites.append((path, document_id, place.index))
+
+    source = os.path.join(root, unit.relpath)
+    target = os.path.join(root, new_relpath)
+
+    # Sin `id:` escrito, el id sale de la ruta y cambiaría al moverla: lo que
+    # la nombra por id dejaría de encontrarla. Se deja escrito el de siempre.
+    meta = os.path.join(source, repo_mod.UNIT_META)
+    text = ""
+    if os.path.isfile(meta):
+        with open(meta, encoding="utf-8") as handle:
+            text = handle.read()
+    if not re.search(r"(?m)^id\s*:\s*\S", text):
+        text = identity_mod.set_unit_id(text, unit.id)
+
+    # La categoría y el tema, si seguían a la carpeta, la siguen siguiendo.
+    old_parts = unit.relpath.split("/")[1:]
+    new_parts = new_path.split("/")
+    for key, position in (("category", 0), ("topic", 1)):
+        if len(old_parts) <= position + 1 or len(new_parts) <= position + 1:
+            continue
+        if getattr(unit, key) == old_parts[position]:
+            text = _set_scalar(text, key, new_parts[position])
+
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    shutil.move(source, target)
+    with open(os.path.join(target, repo_mod.UNIT_META), "w",
+              encoding="utf-8") as handle:
+        handle.write(text)
+    plan.created.append(new_relpath)
+    plan.add(unit.relpath)
+    _prune_empty(root, os.path.dirname(source))
+
+    for path, document_id, index in rewrites:
+        identity_mod.repoint_reference(path, document_id, index, new_ref)
+        plan.add(path)
+
+    for other in units.values():
+        if other.id == unit.id or not other.prerequisites:
+            continue
+        if not old_refs.intersection(p.strip("/") for p in other.prerequisites):
+            continue
+        path = os.path.join(root, other.relpath, repo_mod.UNIT_META)
+        with open(path, encoding="utf-8") as handle:
+            before = handle.read()
+        after = _repoint_prerequisites(before, old_refs, new_ref)
+        if after != before:
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(after)
+            plan.add(path)
+
+    plan.notes.append("%s -> %s" % (unit.relpath, new_relpath))
+    return plan
+
+
+def _set_scalar(text, key, value):
+    """`clave: valor` en su línea, o al final si no está."""
+    pattern = re.compile(r"(?m)^%s\s*:.*$" % re.escape(key))
+    if pattern.search(text):
+        return pattern.sub(lambda _: "%s: %s" % (key, value), text, count=1)
+    return text.rstrip("\n") + "\n%s: %s\n" % (key, value)
+
+
+def _repoint_prerequisites(text, old_refs, new_ref):
+    """Los prerrequisitos que nombran la ruta vieja, con la nueva.
+
+    Por líneas: en la lista entre corchetes y en la de guiones.
+    """
+    lines = text.split("\n")
+    inside = False
+    for index, line in enumerate(lines):
+        match = re.match(r"^prerequisites\s*:\s*(.*)$", line)
+        if match:
+            rest = match.group(1).strip()
+            if rest.startswith("["):
+                items = [item.strip() for item in rest.strip("[]").split(",")]
+                items = [new_ref if item.strip("\"'/") in old_refs else item
+                         for item in items if item]
+                lines[index] = "prerequisites: [%s]" % ", ".join(items)
+                inside = False
+            else:
+                inside = not rest
+            continue
+        if inside:
+            item = re.match(r"^(\s*-\s*)(.*?)\s*$", line)
+            if item is None:
+                if line.strip():
+                    inside = False
+                continue
+            if item.group(2).strip("\"'/") in old_refs:
+                lines[index] = item.group(1) + new_ref
+    return "\n".join(lines)
+
+
+def _prune_empty(root, directory):
+    """Quita las carpetas que se han quedado vacías, hasta el área."""
+    root = os.path.abspath(root)
+    directory = os.path.abspath(directory)
+    while directory.startswith(root + os.sep):
+        relative = os.path.relpath(directory, root)
+        if "/" not in relative.replace(os.sep, "/"):
+            break
+        try:
+            os.rmdir(directory)
+        except OSError:
+            break
+        directory = os.path.dirname(directory)

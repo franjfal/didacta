@@ -1,0 +1,1424 @@
+[
+ {
+  "key": "Qué hacer con esta versión",
+  "where": [
+   "ui/freezes.dart:275"
+  ]
+ },
+ {
+  "key": "Qué has cambiado",
+  "where": [
+   "ui/sync_bar.dart:559",
+   "ui/source_view.dart:1297"
+  ]
+ },
+ {
+  "key": "Qué has cambiado, para guardar lo que falta",
+  "where": [
+   "ui/sync_bar.dart:1122"
+  ]
+ },
+ {
+  "key": "Qué lleva dentro",
+  "where": [
+   "ui/course_admin_ui.dart:586"
+  ]
+ },
+ {
+  "key": "Qué operación",
+  "where": [
+   "ui/reuse.dart:202"
+  ]
+ },
+ {
+  "key": "Qué pasa al guardar un cambio, y dónde viajan tus preferencias de un ordenador a otro.",
+  "where": [
+   "ui/settings_page.dart:117"
+  ]
+ },
+ {
+  "key": "Qué produce",
+  "where": [
+   "ui/manage_templates.dart:992"
+  ]
+ },
+ {
+  "key": "Qué puedo hacer",
+  "where": [
+   "ui/shell.dart:401"
+  ]
+ },
+ {
+  "key": "Qué sabe hacer",
+  "where": [
+   "ui/mcp_page.dart:64"
+  ]
+ },
+ {
+  "key": "Qué sabe hacer alguien después de esta unidad",
+  "where": [
+   "ui/metadata_editor.dart:784"
+  ]
+ },
+ {
+  "key": "Qué se copia",
+  "where": [
+   "ui/course_admin_ui.dart:1025"
+  ]
+ },
+ {
+  "key": "Qué se exporta",
+  "where": [
+   "ui/export_year.dart:260"
+  ]
+ },
+ {
+  "key": "Qué se hace con ellas",
+  "where": [
+   "ui/manage_blocks.dart:900"
+  ]
+ },
+ {
+  "key": "Qué se puede compilar",
+  "where": [
+   "ui/document_properties.dart:169"
+  ]
+ },
+ {
+  "key": "Qué versión se abre al ojear una lección",
+  "where": [
+   "ui/library_page.dart:1328"
+  ]
+ },
+ {
+  "key": "Qué versión tienes y si hay una más nueva.",
+  "where": [
+   "ui/settings_page.dart:191"
+  ]
+ },
+ {
+  "key": "Raíz",
+  "where": [
+   "model/tex_snippets.dart:77"
+  ]
+ },
+ {
+  "key": "Recargar el catálogo",
+  "where": [
+   "ui/settings_page.dart:2144"
+  ]
+ },
+ {
+  "key": "Recibir cada versión antes de publicarla para todos --la 1.5.0-rc.1 antes que la 1.5.0--, para probarla. Pueden traer fallos; la final llega después igual.",
+  "where": [
+   "ui/update_section.dart:142"
+  ]
+ },
+ {
+  "key": "Recientes",
+  "where": [
+   "model/palette.dart:37"
+  ]
+ },
+ {
+  "key": "Recuadro",
+  "where": [
+   "model/tex_wrap.dart:360"
+  ]
+ },
+ {
+  "key": "Recuadro sin número ni etiqueta",
+  "where": [
+   "model/tex_vocabulary.dart:114"
+  ]
+ },
+ {
+  "key": "Recuperar esta versión",
+  "where": [
+   "ui/history_tab.dart:730"
+  ]
+ },
+ {
+  "key": "Recuperar esta versión en el editor",
+  "where": [
+   "ui/history_tab.dart:736"
+  ]
+ },
+ {
+  "key": "Recuperarlo",
+  "where": [
+   "ui/unit_page.dart:3505"
+  ]
+ },
+ {
+  "key": "Reemplazar",
+  "where": [
+   "ui/tex_find_bar.dart:354",
+   "ui/tex_find_bar.dart:394"
+  ]
+ },
+ {
+  "key": "Reemplazar por",
+  "where": [
+   "ui/tex_find_bar.dart:385"
+  ]
+ },
+ {
+  "key": "Regenerando…",
+  "where": [
+   "main.dart:1041"
+  ]
+ },
+ {
+  "key": "Regenerar el índice",
+  "where": [
+   "main.dart:1042"
+  ]
+ },
+ {
+  "key": "Registro copiado.",
+  "where": [
+   "ui/build_console.dart:667"
+  ]
+ },
+ {
+  "key": "Región",
+  "where": [
+   "ui/translation_settings.dart:203"
+  ]
+ },
+ {
+  "key": "Rehacer",
+  "where": [
+   "ui/platform_menus.dart:135"
+  ]
+ },
+ {
+  "key": "Rehacer también la que ya tiene texto",
+  "where": [
+   "ui/translate_unit.dart:393"
+  ]
+ },
+ {
+  "key": "Rehacer también las {0} que ya tienen texto",
+  "where": [
+   "ui/translate_unit.dart:394"
+  ]
+ },
+ {
+  "key": "Reintentar",
+  "where": [
+   "main.dart:1025",
+   "main.dart:1049",
+   "ui/composition_editor.dart:1660"
+  ]
+ },
+ {
+  "key": "Relaciones",
+  "where": [
+   "model/tex_snippets.dart:126"
+  ]
+ },
+ {
+  "key": "Renombrar la versión congelada",
+  "where": [
+   "ui/freezes.dart:410"
+  ]
+ },
+ {
+  "key": "Renombrar una versión congelada de {0} {1} a «{2}»",
+  "where": [
+   "data/course_admin.dart:665"
+  ]
+ },
+ {
+  "key": "Renombrar…",
+  "where": [
+   "ui/freezes.dart:318"
+  ]
+ },
+ {
+  "key": "Repositorio",
+  "where": [
+   "ui/new_unit.dart:238",
+   "ui/platform_menus.dart:295"
+  ]
+ },
+ {
+  "key": "Repositorios",
+  "where": [
+   "ui/settings_page.dart:293"
+  ]
+ },
+ {
+  "key": "Resaltado",
+  "where": [
+   "model/tex_vocabulary.dart:64",
+   "model/tex_wrap.dart:196"
+  ]
+ },
+ {
+  "key": "Responde y acepta la clave.",
+  "where": [
+   "data/translator_http.dart:223"
+  ]
+ },
+ {
+  "key": "Responde, pero este servidor no traduce al valenciano.",
+  "where": [
+   "data/translator_http.dart:383"
+  ]
+ },
+ {
+  "key": "Responde, y traduce del castellano al valenciano.",
+  "where": [
+   "data/translator_http.dart:382"
+  ]
+ },
+ {
+  "key": "Responde. Dice traducir a {0} idiomas.",
+  "where": [
+   "data/translator_http.dart:127"
+  ]
+ },
+ {
+  "key": "Respuesta",
+  "where": [
+   "model/tex_wrap.dart:230"
+  ]
+ },
+ {
+  "key": "Restablecer Didacta",
+  "where": [
+   "ui/start_over.dart:128"
+  ]
+ },
+ {
+  "key": "Restablecer Didacta…",
+  "where": [
+   "ui/start_over.dart:60"
+  ]
+ },
+ {
+  "key": "Restablecer y volver a abrir",
+  "where": [
+   "ui/start_over.dart:222"
+  ]
+ },
+ {
+  "key": "Restablecido",
+  "where": [
+   "ui/manage_snippets.dart:370"
+  ]
+ },
+ {
+  "key": "Restaurados {0} fichero(s) desde «{1}». Están sin guardar: revísalos y guárdalos como un cambio más.",
+  "where": [
+   "ui/freezes.dart:1113"
+  ]
+ },
+ {
+  "key": "Restaurar",
+  "where": [
+   "ui/freezes.dart:1082"
+  ]
+ },
+ {
+  "key": "Restaurar esta lección…",
+  "where": [
+   "ui/info_menu.dart:235"
+  ]
+ },
+ {
+  "key": "Restaurar este curso desde aquí…",
+  "where": [
+   "ui/shell.dart:410"
+  ]
+ },
+ {
+  "key": "Restaurar este tema como estaba en esta versión",
+  "where": [
+   "ui/year_page.dart:2458"
+  ]
+ },
+ {
+  "key": "Restaurar trae el contenido de aquel momento al de ahora y lo deja como un cambio pendiente. No se reescribe el historial ni se pierde nada de lo que hay publicado: lo que sale es un cambio más, encima.",
+  "where": [
+   "ui/freezes.dart:1007"
+  ]
+ },
+ {
+  "key": "Restaurar {0} desde «{1}»",
+  "where": [
+   "ui/freezes.dart:999"
+  ]
+ },
+ {
+  "key": "Restaurar {0} fichero(s)",
+  "where": [
+   "ui/freezes.dart:1083"
+  ]
+ },
+ {
+  "key": "Restaurar «{0}» de {1} {2} desde «{3}»",
+  "where": [
+   "data/course_admin.dart:688"
+  ]
+ },
+ {
+  "key": "Restaurar…",
+  "where": [
+   "ui/freezes.dart:311"
+  ]
+ },
+ {
+  "key": "Resultado",
+  "where": [
+   "model/tex_vocabulary.dart:121",
+   "model/problem_file.dart:35"
+  ]
+ },
+ {
+  "key": "Resumen",
+  "where": [
+   "ui/manage_snippets.dart:1767",
+   "model/tex_vocabulary.dart:128"
+  ]
+ },
+ {
+  "key": "Resumen, Solo en clase, Caja de fórmulas…",
+  "where": [
+   "ui/manage_snippets.dart:1545"
+  ]
+ },
+ {
+  "key": "Retitular un apartado de {0}",
+  "where": [
+   "ui/source_view.dart:527"
+  ]
+ },
+ {
+  "key": "Retocado",
+  "where": [
+   "ui/manage_snippets.dart:764"
+  ]
+ },
+ {
+  "key": "Revisar",
+  "where": [
+   "ui/library_page.dart:889"
+  ]
+ },
+ {
+  "key": "Revisar los cambios antes de guardar",
+  "where": [
+   "ui/settings_page.dart:2833"
+  ]
+ },
+ {
+  "key": "Revisar necesita el motor.",
+  "where": [
+   "ui/review_panel.dart:140"
+  ]
+ },
+ {
+  "key": "Revisar {0}",
+  "where": [
+   "ui/review_panel.dart:216"
+  ]
+ },
+ {
+  "key": "Revisar {0} de «{1}»",
+  "where": [
+   "state/catalogue_editor.dart:1592"
+  ]
+ },
+ {
+  "key": "Rojo (profesor)",
+  "where": [
+   "ui/manage_snippets.dart:61"
+  ]
+ },
+ {
+  "key": "Rótulo",
+  "where": [
+   "ui/manage_snippets.dart:1544"
+  ]
+ },
+ {
+  "key": "Saca los PDF a una carpeta, ordenados por tema. Con más de un idioma, cada uno va en su propia carpeta. Sin tocar nada, solo sale lo que puede ver un estudiante.",
+  "where": [
+   "ui/export_year.dart:218"
+  ]
+ },
+ {
+  "key": "Sale al pasar por encima en la barra",
+  "where": [
+   "ui/manage_snippets.dart:1581"
+  ]
+ },
+ {
+  "key": "Sale de la lista de su didacta.yaml, así que cambia para todo el que use este repositorio y se verá en el historial. Sus unidades dejan de pedir la traducción a {0}; no se borra ningún .tex, y lo que ya esté traducido vuelve a contar si lo añades otra vez.",
+  "where": [
+   "ui/language_settings.dart:86"
+  ]
+ },
+ {
+  "key": "Sale en la barra de {0}. Púlsalo para quitarlo de ahí.",
+  "where": [
+   "ui/manage_snippets.dart:998"
+  ]
+ },
+ {
+  "key": "Salen en Entre repositorios, para arreglarlas cuando toque.",
+  "where": [
+   "ui/manage_blocks.dart:931"
+  ]
+ },
+ {
+  "key": "Salen los repositorios a los que Didacta tiene acceso.",
+  "where": [
+   "ui/add_repository.dart:364"
+  ]
+ },
+ {
+  "key": "Salida de la plantilla {0}",
+  "where": [
+   "state/catalogue_editor.dart:1259"
+  ]
+ },
+ {
+  "key": "Salidas",
+  "where": [
+   "ui/metadata_editor.dart:677"
+  ]
+ },
+ {
+  "key": "Salidas ({0})",
+  "where": [
+   "ui/document_page.dart:1261",
+   "ui/document_page.dart:1341"
+  ]
+ },
+ {
+  "key": "Salidas de esta lección",
+  "where": [
+   "ui/metadata_editor.dart:1121"
+  ]
+ },
+ {
+  "key": "Salidas de «{0}»",
+  "where": [
+   "ui/document_page.dart:700"
+  ]
+ },
+ {
+  "key": "Salir",
+  "where": [
+   "ui/settings_page.dart:1264"
+  ]
+ },
+ {
+  "key": "Salir cierra la sesión en esta máquina. Las copias de los repositorios se quedan: son carpetas con el trabajo dentro.",
+  "where": [
+   "ui/settings_page.dart:1271"
+  ]
+ },
+ {
+  "key": "Salir del recorrido",
+  "where": [
+   "ui/tour.dart:923"
+  ]
+ },
+ {
+  "key": "Salir sin guardar",
+  "where": [
+   "ui/unsaved_dialog.dart:50"
+  ]
+ },
+ {
+  "key": "Salió en: {0}",
+  "where": [
+   "ui/problem_set.dart:491"
+  ]
+ },
+ {
+  "key": "Saltar la presentación",
+  "where": [
+   "ui/welcome.dart:384"
+  ]
+ },
+ {
+  "key": "Se abrirá el instalador de Apple: Python 3 viene en las Herramientas de Línea de Órdenes, junto con git.",
+  "where": [
+   "model/toolchain.dart:483"
+  ]
+ },
+ {
+  "key": "Se abrirá el instalador de Apple: git y Python vienen en las Herramientas de Línea de Órdenes. Acepta ahí y vuelve a comprobar cuando termine.",
+  "where": [
+   "model/toolchain.dart:401"
+  ]
+ },
+ {
+  "key": "Se arregla moviendo la unidad al repositorio del documento, o el documento al de la unidad. Las dos cosas cambian dónde vive material que puede estar usando otra persona, así que no se hacen desde aquí.",
+  "where": [
+   "ui/between_repos_page.dart:281"
+  ]
+ },
+ {
+  "key": "Se borra de este ordenador:",
+  "where": [
+   "ui/start_over.dart:135"
+  ]
+ },
+ {
+  "key": "Se borran los PDF y lo que LaTeX dejó al lado. No se toca ningún fichero del repositorio: se rehacen compilando otra vez.",
+  "where": [
+   "ui/unit_preview.dart:991"
+  ]
+ },
+ {
+  "key": "Se borran {0} en {1} ficheros de {2}: los PDF compilados, sus registros y lo que LaTeX guarda para ir más rápido. El material no se toca; los PDF vuelven a salir al compilar, y la primera vez tardan un poco más.",
+  "where": [
+   "ui/build_folder.dart:111"
+  ]
+ },
+ {
+  "key": "Se clonan en {0}",
+  "where": [
+   "ui/settings_page.dart:1471"
+  ]
+ },
+ {
+  "key": "Se colapsan",
+  "where": [
+   "ui/manage_templates.dart:68"
+  ]
+ },
+ {
+  "key": "Se compila. Púlsala para dejar de sacar esta versión.",
+  "where": [
+   "ui/manage_templates.dart:655"
+  ]
+ },
+ {
+  "key": "Se copia la composición a otra asignatura. Las unidades siguen siendo las mismas, así que tienen que estar en el mismo repositorio que el curso de destino: un documento y lo que llama viven juntos.",
+  "where": [
+   "ui/course_admin_ui.dart:1085"
+  ]
+ },
+ {
+  "key": "Se copia la composición tal como estaba en esa versión: qué temas lleva y en qué orden. Las lecciones son las de ahora, no copias de las de entonces -- para eso está restaurar.",
+  "where": [
+   "ui/freezes.dart:836"
+  ]
+ },
+ {
+  "key": "Se copia la composición: qué unidades lleva y en qué orden. Las unidades no se duplican --siguen siendo las mismas-- así que corregirlas sigue siendo corregirlas una vez.",
+  "where": [
+   "ui/course_admin_ui.dart:1079"
+  ]
+ },
+ {
+  "key": "Se cortó la descarga.",
+  "where": [
+   "data/update_installer_io.dart:244"
+  ]
+ },
+ {
+  "key": "Se crea sin cursos académicos. El siguiente paso es añadir uno, copiándolo del de otra asignatura o del de otro año.",
+  "where": [
+   "ui/course_admin_ui.dart:821"
+  ]
+ },
+ {
+  "key": "Se crea vacío. El paso siguiente es abrirlo y elegir qué unidades lleva y en qué orden.",
+  "where": [
+   "ui/new_document.dart:151"
+  ]
+ },
+ {
+  "key": "Se creará en {0}",
+  "where": [
+   "ui/new_unit.dart:257",
+   "ui/new_unit.dart:442"
+  ]
+ },
+ {
+  "key": "Se da en",
+  "where": [
+   "ui/document_page.dart:452",
+   "ui/unit_page.dart:586"
+  ]
+ },
+ {
+  "key": "Se da en {0} cursos",
+  "where": [
+   "ui/unit_page.dart:3574"
+  ]
+ },
+ {
+  "key": "Se dan en {0}: {1}. Quítalo de sus fichas y luego de aquí.",
+  "where": [
+   "ui/language_settings.dart:290"
+  ]
+ },
+ {
+  "key": "Se descarga el instalador oficial de CTAN y se abre. La instalación se hace en su ventana y tarda un rato largo.",
+  "where": [
+   "model/toolchain.dart:747"
+  ]
+ },
+ {
+  "key": "Se descarga el instalador oficial de TinyTeX y se ejecuta. Después Didacta le pide a tlmgr los paquetes que usa.",
+  "where": [
+   "model/toolchain.dart:694"
+  ]
+ },
+ {
+  "key": "Se descarga el instalador oficial de TinyTeX y se ejecuta. Instala en ~/.TinyTeX y no pide sudo.",
+  "where": [
+   "model/toolchain.dart:775"
+  ]
+ },
+ {
+  "key": "Se descarga el instalador oficial de TinyTeX y se ejecuta. Instala en ~/Library/TinyTeX y no pide contraseña. Después Didacta le pide a tlmgr los paquetes que el preámbulo necesita.",
+  "where": [
+   "model/toolchain.dart:611"
+  ]
+ },
+ {
+  "key": "Se descarga el paquete oficial de CTAN y se abre el instalador de macOS, que te pedirá la contraseña de administrador.",
+  "where": [
+   "model/toolchain.dart:640"
+  ]
+ },
+ {
+  "key": "Se escribe 2026-2027",
+  "where": [
+   "ui/course_admin_ui.dart:576"
+  ]
+ },
+ {
+  "key": "Se escribirá una línea `id:` en {0} `unit.yaml` de {1}, y nada más: ni se mueve una carpeta, ni se renombra un fichero, ni se toca una línea de LaTeX.\n\nQueda como un cambio aparte en el historial, así que se puede leer y deshacer de una pieza.",
+  "where": [
+   "ui/settings_page.dart:2296"
+  ]
+ },
+ {
+  "key": "Se está instalando fuera de Didacta. Cuando termine, pulsa «Volver a comprobar».",
+  "where": [
+   "ui/toolchain_check.dart:595"
+  ]
+ },
+ {
+  "key": "Se guarda con el mensaje que propone Didacta, que dice qué se cambió. Lo que cambió se ve en «Ver cambios», en el aviso, y en el historial.",
+  "where": [
+   "ui/settings_page.dart:2842"
+  ]
+ },
+ {
+  "key": "Se guardan en el llavero del sistema, en esta máquina. No entran en ningún repositorio, ni en git, ni en las copias que exportes: son configuración tuya, no contenido.",
+  "where": [
+   "ui/translation_settings.dart:63"
+  ]
+ },
+ {
+  "key": "Se ha conectado {0}",
+  "where": [
+   "model/mcp.dart:154"
+  ]
+ },
+ {
+  "key": "Se ha denegado el acceso desde GitHub.",
+  "where": [
+   "data/github.dart:293"
+  ]
+ },
+ {
+  "key": "Se intentó: {0}.",
+  "where": [
+   "ui/toolchain_check.dart:878"
+  ]
+ },
+ {
+  "key": "Se lee al final del preámbulo de Didacta, así que aquí se puede redefinir lo que Didacta acaba de definir: los márgenes, los colores, un entorno. No lleva `\\documentclass` ni `\\begin{document}`: de eso ya se encarga la plantilla.",
+  "where": [
+   "ui/manage_templates.dart:1144"
+  ]
+ },
+ {
+  "key": "Se pega en {0}",
+  "where": [
+   "ui/sign_in.dart:365"
+  ]
+ },
+ {
+  "key": "Se perderá lo que has escrito desde que abriste el fichero.",
+  "where": [
+   "ui/unit_page.dart:2193"
+  ]
+ },
+ {
+  "key": "Se preguntan al servidor cuando arranca. Enciéndelo para verlas.",
+  "where": [
+   "ui/mcp_page.dart:400"
+  ]
+ },
+ {
+  "key": "Se puede deshacer justo después, desde el aviso, y más tarde desde «Cambios recientes». Lo que había no se pierde: sigue en la historia del repositorio.",
+  "where": [
+   "ui/course_admin_ui.dart:434"
+  ]
+ },
+ {
+  "key": "Se puede empezar en blanco o copiando la selección y el orden de un curso que ya existe. Las unidades no se copian nunca: el curso nuevo referencia las mismas, que es la razón de que el material y las asignaturas estén separados.",
+  "where": [
+   "ui/course_admin_ui.dart:556"
+  ]
+ },
+ {
+  "key": "Se quita de todos los repositorios que lo declaren y en los que se pueda escribir. Uno de solo lectura se queda como está, y entonces el bloque sigue existiendo por él.",
+  "where": [
+   "ui/manage_blocks.dart:947"
+  ]
+ },
+ {
+  "key": "Se quita su entrada y su carpeta de la caché, y nada más.\n\nEse momento sigue en el historial, que no se toca; el curso no cambia y las demás versiones congeladas siguen igual, también las que apunten al mismo momento.",
+  "where": [
+   "ui/freezes.dart:444"
+  ]
+ },
+ {
+  "key": "Se quita «{0}» de este documento. La unidad no se borra: sigue en la biblioteca y en los demás documentos que la usen.\n\nSi es que este año no se da, desactívala en lugar de quitarla: queda en su sitio, comentada, y se vuelve a activar en un toque.",
+  "where": [
+   "ui/composition_editor.dart:390"
+  ]
+ },
+ {
+  "key": "Se reescribirá{0} {1} documento{2} que la usa{3}, en el mismo cambio. Su id y sus traducciones no cambian.",
+  "where": [
+   "ui/new_unit.dart:644"
+  ]
+ },
+ {
+  "key": "Se regenera el índice del catálogo, que es lo que hace que el cambio se vea. Tarda unos segundos.",
+  "where": [
+   "ui/course_admin_ui.dart:235"
+  ]
+ },
+ {
+  "key": "Se respetan",
+  "where": [
+   "ui/manage_templates.dart:68"
+  ]
+ },
+ {
+  "key": "Se salen de la página: {0}",
+  "where": [
+   "ui/build_console.dart:352"
+  ]
+ },
+ {
+  "key": "Se sigue editando como texto, con el botón de arriba. Los campos vuelven en cuanto el fichero tenga un solo problema.",
+  "where": [
+   "ui/problem_editor.dart:267"
+  ]
+ },
+ {
+  "key": "Se usa en {0} ubicación(es)",
+  "where": [
+   "ui/unit_page.dart:2750"
+  ]
+ },
+ {
+  "key": "Se utiliza en 1 ubicación:",
+  "where": [
+   "ui/reuse.dart:741"
+  ]
+ },
+ {
+  "key": "Se utiliza en {0} ubicaciones:",
+  "where": [
+   "ui/reuse.dart:742"
+  ]
+ },
+ {
+  "key": "Se va el grupo y su composición: qué unidades llevaba y en qué orden. Las unidades no se tocan, siguen en la biblioteca y en los demás grupos que las usen.\n\nNo se guarda hasta que pulses Guardar: hasta entonces, Descartar lo trae de vuelta.",
+  "where": [
+   "ui/year_page.dart:1121"
+  ]
+ },
+ {
+  "key": "Seguir editando",
+  "where": [
+   "ui/unsaved_dialog.dart:56",
+   "ui/manage_snippets.dart:1393",
+   "ui/unit_page.dart:2198"
+  ]
+ },
+ {
+  "key": "Seguir el final",
+  "where": [
+   "ui/build_console.dart:646"
+  ]
+ },
+ {
+  "key": "Seleccionar todo",
+  "where": [
+   "ui/platform_menus.dart:180"
+  ]
+ },
+ {
+  "key": "Seminario",
+  "where": [
+   "ui/new_document.dart:49"
+  ]
+ },
+ {
+  "key": "Seno hiperbólico",
+  "where": [
+   "model/tex_vocabulary.dart:92"
+  ]
+ },
+ {
+  "key": "Seno, con su nombre en cada idioma",
+  "where": [
+   "model/tex_vocabulary.dart:86"
+  ]
+ },
+ {
+  "key": "Separado. A partir de ahora es un tema aparte.",
+  "where": [
+   "ui/year_page.dart:3000"
+  ]
+ },
+ {
+  "key": "Separar",
+  "where": [
+   "ui/year_page.dart:2986"
+  ]
+ },
+ {
+  "key": "Separar una copia…",
+  "where": [
+   "ui/unit_page.dart:3591"
+  ]
+ },
+ {
+  "key": "Separar una versión en otra pestaña",
+  "where": [
+   "ui/pdf_tab.dart:860"
+  ]
+ },
+ {
+  "key": "Separar unos sitios del resto",
+  "where": [
+   "ui/info_menu.dart:284"
+  ]
+ },
+ {
+  "key": "Separar {0}",
+  "where": [
+   "ui/pdf_tab.dart:871"
+  ]
+ },
+ {
+  "key": "Separar {0} en otra pestaña",
+  "where": [
+   "ui/pdf_tab.dart:851"
+  ]
+ },
+ {
+  "key": "Separar «{0}» de {1} {2} del tema compartido",
+  "where": [
+   "data/course_admin.dart:575"
+  ]
+ },
+ {
+  "key": "Servidor",
+  "where": [
+   "ui/shell.dart:92"
+  ]
+ },
+ {
+  "key": "Servidor (opcional)",
+  "where": [
+   "ui/translation_settings.dart:470"
+  ]
+ },
+ {
+  "key": "Servidor MCP",
+  "where": [
+   "ui/mcp_page.dart:43",
+   "ui/settings_page.dart:170",
+   "ui/settings_page.dart:2985"
+  ]
+ },
+ {
+  "key": "Servidor detenido",
+  "where": [
+   "model/mcp.dart:153"
+  ]
+ },
+ {
+  "key": "Servidor en marcha",
+  "where": [
+   "model/mcp.dart:152"
+  ]
+ },
+ {
+  "key": "Sesión iniciada",
+  "where": [
+   "ui/welcome.dart:782"
+  ]
+ },
+ {
+  "key": "Sesión iniciada en GitHub",
+  "where": [
+   "ui/settings_page.dart:1256"
+  ]
+ },
+ {
+  "key": "Si algo falla, el informe de diagnóstico cuenta lo que ha pasado por dentro --qué versión, qué contestaron el motor, git y GitHub-- sin tus claves ni tus contraseñas. Se copia para pegarlo en una incidencia.",
+  "where": [
+   "ui/settings_page.dart:1050"
+  ]
+ },
+ {
+  "key": "Si el bloque es de otra persona, lo que falta es abrir su repositorio: declararlo aquí crea un segundo sitio donde vive el mismo nombre, y entonces pueden discrepar.",
+  "where": [
+   "ui/between_repos_page.dart:144"
+  ]
+ },
+ {
+  "key": "Si sales ahora, se pierden. «Seguir editando» te deja donde estabas, con todo lo escrito, para guardarlo.",
+  "where": [
+   "ui/unsaved_dialog.dart:36"
+  ]
+ },
+ {
+  "key": "Si solo quieres dejar de sacar esta versión, apágala en vez de quitarla: se queda declarada y fuera de lo que se compila.",
+  "where": [
+   "ui/manage_templates.dart:556"
+  ]
+ },
+ {
+  "key": "Si ya lo tienes clonado, ábrelo desde su carpeta: no se vuelve a descargar.",
+  "where": [
+   "ui/welcome.dart:887"
+  ]
+ },
+ {
+  "key": "Siempre",
+  "where": [
+   "ui/settings_page.dart:594",
+   "ui/settings_page.dart:595"
+  ]
+ },
+ {
+  "key": "Siempre como entorno, aunque marques una frase",
+  "where": [
+   "ui/manage_snippets.dart:1696"
+  ]
+ },
+ {
+  "key": "Siguiente",
+  "where": [
+   "ui/pdf_controls.dart:378",
+   "ui/quick_look.dart:270",
+   "ui/tour.dart:972"
+  ]
+ },
+ {
+  "key": "Siguiente  ↩",
+  "where": [
+   "ui/tex_find_bar.dart:322"
+  ]
+ },
+ {
+  "key": "Siguiente (Intro)",
+  "where": [
+   "ui/pdf_search.dart:275"
+  ]
+ },
+ {
+  "key": "Siguiente al buscar en el texto (con Mayús, la anterior)",
+  "where": [
+   "ui/shortcuts.dart:32"
+  ]
+ },
+ {
+  "key": "Sin acceso configurado: no se puede leer ni escribir.",
+  "where": [
+   "data/content_gateway.dart:174"
+  ]
+ },
+ {
+  "key": "Sin carpeta de reparto.",
+  "where": [
+   "ui/publish_folder.dart:103"
+  ]
+ },
+ {
+  "key": "Sin compilar",
+  "where": [
+   "ui/manage_snippets.dart:2216",
+   "ui/manage_snippets.dart:2222"
+  ]
+ },
+ {
+  "key": "Sin conexión con GitHub no puedo comprobar si llegas a {0}/{1}. Añadir un repositorio se hace una vez y con red; lo que ya está añadido sigue abriéndose sin ella.",
+  "where": [
+   "state/repositories.dart:611"
+  ]
+ },
+ {
+  "key": "Sin diferencias.",
+  "where": [
+   "model/course_diff.dart:177"
+  ]
+ },
+ {
+  "key": "Sin dirección: el servidor está parado.",
+  "where": [
+   "ui/mcp_page.dart:97"
+  ]
+ },
+ {
+  "key": "Sin grado",
+  "where": [
+   "ui/edit_course.dart:242"
+  ]
+ },
+ {
+  "key": "Sin guardar · +{0} −{1} en year.yaml",
+  "where": [
+   "ui/year_page.dart:2136"
+  ]
+ },
+ {
+  "key": "Sin los que ya salieron en un examen de {0}",
+  "where": [
+   "ui/problem_set.dart:371"
+  ]
+ },
+ {
+  "key": "Sin marcar ninguno solo lee, que ya es casi todo el valor y no puede estropear nada. Lo que escriba queda en disco y lo envías tú, viendo qué cambia: no hay ninguna herramienta que guarde en el historial.",
+  "where": [
+   "ui/settings_page.dart:3028"
+  ]
+ },
+ {
+  "key": "Sin motor. Compilar una unidad usa `didacta preview`, que vive en el repositorio de la aplicación: el que tiene `cli/didacta`.",
+  "where": [
+   "ui/settings_page.dart:2471"
+  ]
+ },
+ {
+  "key": "Sin ningún repositorio, guardar lo quita de todas las barras.",
+  "where": [
+   "ui/manage_snippets.dart:1826"
+  ]
+ },
+ {
+  "key": "Sin nombre no pasa nada: se enseña por lo que hace, «Diapositivas (sin pausas)».",
+  "where": [
+   "ui/manage_templates.dart:962"
+  ]
+ },
+ {
+  "key": "Sin repositorios abiertos no hay didacta.yaml que editar.",
+  "where": [
+   "ui/language_settings.dart:192"
+  ]
+ },
+ {
+  "key": "Sin repositorios abiertos no hay dónde guardarlas. Se quedan en esta máquina.",
+  "where": [
+   "ui/settings_page.dart:1159"
+  ]
+ },
+ {
+  "key": "Sin resultados",
+  "where": [
+   "ui/tex_find_bar.dart:255"
+  ]
+ },
+ {
+  "key": "Sin revisar",
+  "where": [
+   "ui/translations_page.dart:276"
+  ]
+ },
+ {
+  "key": "Sin tema",
+  "where": [
+   "ui/export_year.dart:513"
+  ]
+ },
+ {
+  "key": "Sin traducir",
+  "where": [
+   "ui/translations_page.dart:275"
+  ]
+ },
+ {
+  "key": "Sin versión en {0}: se compilará con la de {1} y un aviso.",
+  "where": [
+   "ui/document_page.dart:1159"
+  ]
+ },
+ {
+  "key": "Snippet «{0}»",
+  "where": [
+   "state/catalogue_editor.dart:918"
+  ]
+ },
+ {
+  "key": "Snippet «{0}» · {1}",
+  "where": [
+   "ui/between_repos_page.dart:624"
+  ]
+ },
+ {
+  "key": "Snippets",
+  "where": [
+   "ui/tex_toolbar.dart:742"
+  ]
+ },
+ {
+  "key": "Snippets de LaTeX",
+  "where": [
+   "ui/settings_page.dart:149"
+  ]
+ },
+ {
+  "key": "Snippets que no coinciden",
+  "where": [
+   "ui/between_repos_page.dart:90"
+  ]
+ },
+ {
+  "key": "Solo alumno",
+  "where": [
+   "model/tex_wrap.dart:162"
+  ]
+ },
+ {
+  "key": "Solo apuntes",
+  "where": [
+   "model/tex_wrap.dart:146"
+  ]
+ },
+ {
+  "key": "Solo con el detalle completo (no en un examen)",
+  "where": [
+   "model/tex_vocabulary.dart:48"
+  ]
+ },
+ {
+  "key": "Solo con el detalle completo, con párrafos",
+  "where": [
+   "model/tex_vocabulary.dart:133"
+  ]
+ },
+ {
+  "key": "Solo con el detalle reducido",
+  "where": [
+   "model/tex_vocabulary.dart:51"
+  ]
+ },
+ {
+  "key": "Solo diapositivas",
+  "where": [
+   "model/tex_wrap.dart:139"
+  ]
+ },
+ {
+  "key": "Solo en este ordenador",
+  "where": [
+   "ui/settings_page.dart:1177"
+  ]
+ },
+ {
+  "key": "Solo en las copias del profesor",
+  "where": [
+   "model/tex_vocabulary.dart:44"
+  ]
+ },
+ {
+  "key": "Solo en las diapositivas",
+  "where": [
+   "model/tex_vocabulary.dart:42"
+  ]
+ },
+ {
+  "key": "Solo en las diapositivas, con párrafos",
+  "where": [
+   "model/tex_vocabulary.dart:130"
+  ]
+ },
+ {
+  "key": "Solo en los apuntes",
+  "where": [
+   "model/tex_vocabulary.dart:43"
+  ]
+ },
+ {
+  "key": "Solo en los apuntes, con párrafos",
+  "where": [
+   "model/tex_vocabulary.dart:129"
+  ]
+ },
+ {
+  "key": "Solo estas",
+  "where": [
+   "ui/document_properties.dart:214"
+  ]
+ },
+ {
+  "key": "Solo las que no usa ninguna asignatura",
+  "where": [
+   "ui/library_page.dart:1195"
+  ]
+ },
+ {
+  "key": "Solo lectura · {0}",
+  "where": [
+   "ui/unit_page.dart:1761"
+  ]
+ },
+ {
+  "key": "Solo lectura: aquí no se puede guardar",
+  "where": [
+   "ui/shell.dart:713"
+  ]
+ },
+ {
+  "key": "Solo lectura: lo declara un repositorio en el que no puedes escribir",
+  "where": [
+   "ui/manage_degrees.dart:361",
+   "ui/manage_blocks.dart:531",
+   "ui/manage_blocks.dart:543"
+  ]
+ },
+ {
+  "key": "Solo para el profesor, con párrafos",
+  "where": [
+   "model/tex_vocabulary.dart:131"
+  ]
+ },
+ {
+  "key": "Solo profesor",
+  "where": [
+   "model/tex_wrap.dart:155"
+  ]
+ },
+ {
+  "key": "Solo si usas un recurso privado",
+  "where": [
+   "ui/translation_settings.dart:217"
+  ]
+ },
+ {
+  "key": "Soluciones",
+  "where": [
+   "ui/manage_templates.dart:58"
+  ]
+ },
+ {
+  "key": "Solución",
+  "where": [
+   "model/tex_wrap.dart:237"
+  ]
+ },
+ {
+  "key": "Solución detallada",
+  "where": [
+   "model/tex_vocabulary.dart:122",
+   "model/problem_file.dart:36"
+  ]
+ },
+ {
+  "key": "Son unos 6 GB desde CTAN. Al terminar se abre el instalador de macOS, que te pedirá la contraseña de administrador.",
+  "where": [
+   "model/toolchain.dart:666"
+  ]
+ },
+ {
+  "key": "Son {0} documentos, {1}. Puede tardar un buen rato, y mientras tanto el ordenador va más lento. Abajo se ve por cuál va, y se puede detener en cualquier momento.",
+  "where": [
+   "ui/build_button.dart:216"
+  ]
+ },
+ {
+  "key": "Su cabecera se queda donde está. Es LaTeX que alguien escribió, y volver a declararla con el mismo id la recupera entera. Si de verdad sobra, bórrala del repositorio.",
+  "where": [
+   "ui/manage_templates.dart:548"
+  ]
+ },
+ {
+  "key": "Su original ha cambiado desde que se tradujeron, así que dicen algo que ya no es cierto — y compilan sin queja. Por eso van primero.",
+  "where": [
+   "ui/translations_page.dart:186"
+  ]
+ },
+ {
+  "key": "Su texto va al editor como un cambio sin guardar. No se toca nada hasta que pulses Guardar, y Descartar lo deja como está ahora. Esto es lo que cambiaría:",
+  "where": [
+   "ui/history_tab.dart:391"
+  ]
+ },
+ {
+  "key": "Su tipo, sus etiquetas y, debajo, todos los documentos que la incluyen. Es lo que hay que mirar antes de cambiarla: corregirla aquí la corrige en todos ellos.",
+  "where": [
+   "ui/tour.dart:326"
+  ]
+ },
+ {
+  "key": "Subapartado",
+  "where": [
+   "ui/composition_editor.dart:1056",
+   "ui/composition_editor.dart:1101",
+   "ui/source_view.dart:470"
+  ]
+ },
+ {
+  "key": "Subapartado, encima",
+  "where": [
+   "ui/composition_editor.dart:861"
+  ]
+ },
+ {
+  "key": "Subiendo el ejemplo a {0}/{1}…",
+  "where": [
+   "state/repositories.dart:501"
+  ]
+ },
+ {
+  "key": "Subir",
+  "where": [
+   "ui/manage_snippets.dart:915"
+  ]
+ },
+ {
+  "key": "Subíndice",
+  "where": [
+   "model/tex_snippets.dart:79"
+  ]
+ },
+ {
+  "key": "Sumatorio",
+  "where": [
+   "model/tex_snippets.dart:80"
+  ]
+ },
+ {
+  "key": "Sus datos, y dónde se usa",
+  "where": [
+   "ui/tour.dart:324"
+  ]
+ }
+]

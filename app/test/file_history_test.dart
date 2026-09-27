@@ -6,6 +6,7 @@
 /// sí se prueba contra git de verdad, porque lo que se está afirmando es que
 /// `git log --follow` y `git show` contestan lo que esta pantalla espera.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -276,6 +277,22 @@ index 1234567..89abcde 100644
       // Y sigue contando solo lo que cambió: el contexto no es un cambio.
       expect(diff.added, 1);
       expect(diff.removed, 0);
+    });
+
+    test('los cambios recientes son de todo el repositorio', () async {
+      // «Cambios recientes» no es el historial de un fichero: sale lo que se
+      // guardó, sea de lo que sea, lo último primero.
+      File('${root.path}/otro.tex').writeAsStringSync('Otra cosa.\n');
+      await git(['add', '.'], root.path);
+      await git(['commit', '-m', 'Otro fichero'], root.path);
+
+      final recent = await clone.recent(limit: 10);
+      expect(recent.map((c) => c.subject), [
+        'Otro fichero',
+        'Añadir una línea',
+        'La primera versión',
+      ]);
+      expect((await clone.recent(limit: 1)).single.subject, 'Otro fichero');
     });
 
     test('el contenido de una versión se lee tal cual', () async {

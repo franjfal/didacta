@@ -18,10 +18,17 @@
 /// depuración o dentro del mensaje de una excepción sin que nadie lo decida.
 library;
 
+import '../l10n/tr.dart';
+
 /// Quién traduce.
 enum TranslationProvider {
   google('google', 'Google Cloud Translation'),
-  azure('azure', 'Azure AI Translator');
+  azure('azure', 'Azure AI Translator'),
+
+  /// Libre y gratuito, sin clave, y el único que distingue el valenciano del
+  /// catalán central. Traduce menos pares que los otros dos --ver
+  /// [supportsPair]-- pero justo los que más se usan aquí.
+  apertium('apertium', 'Apertium');
 
   const TranslationProvider(this.id, this.label);
 
@@ -59,6 +66,8 @@ class Credentials {
   /// Si se puede intentar una llamada con esto.
   bool complete(TranslationProvider provider) => switch (provider) {
     TranslationProvider.google => key.trim().isNotEmpty,
+    // Sin clave: lo que se guarda es que está encendido.
+    TranslationProvider.apertium => key.trim().isNotEmpty,
     // Azure rechaza la petición sin región y el error que devuelve habla de
     // la suscripción, no de la región: mejor decirlo aquí.
     TranslationProvider.azure =>
@@ -67,10 +76,15 @@ class Credentials {
 
   /// Qué falta, para poder decirlo antes de llamar.
   String? missing(TranslationProvider provider) {
-    if (key.trim().isEmpty) return 'Falta la clave.';
+    if (provider == TranslationProvider.apertium) {
+      return key.trim().isEmpty ? tr('Está apagado.') : null;
+    }
+    if (key.trim().isEmpty) return tr('Falta la clave.');
     if (provider == TranslationProvider.azure && region.trim().isEmpty) {
-      return 'Falta la región. Azure la pide, y sin ella el error que '
-          'devuelve habla de la suscripción y despista.';
+      return tr(
+        'Falta la región. Azure la pide, y sin ella el error que '
+        'devuelve habla de la suscripción y despista.',
+      );
     }
     return null;
   }
@@ -113,7 +127,7 @@ class Credentials {
   /// de fuga que no se ve al escribirla y se ve en el log de otra persona.
   @override
   String toString() =>
-      'Credentials(${isEmpty ? 'sin clave' : hint}'
+      'Credentials(${isEmpty ? tr('sin clave') : hint}'
       '${region.isEmpty ? '' : ', $region'})';
 }
 
@@ -143,18 +157,73 @@ const Map<String, String> _asCatalan = {'va': 'ca'};
 const Map<TranslationProvider, Set<String>> _unsupported = {
   TranslationProvider.google: {},
   TranslationProvider.azure: {},
+  TranslationProvider.apertium: {},
+};
+
+/// Los códigos de Apertium, que son de tres letras y distinguen la variante:
+/// `cat_valencia` es el valenciano, con «seua» y «duració».
+const Map<String, String> _apertiumCodes = {
+  'es': 'spa',
+  'va': 'cat_valencia',
+  'ca': 'cat',
+  'gl': 'glg',
+  'en': 'eng',
+  'fr': 'fra',
+  'pt': 'por',
+  'it': 'ita',
+  'eu': 'eus',
+};
+
+/// Los pares que traduce el servidor público de Apertium entre los idiomas
+/// de Didacta, tal como los lista `listPairs`.
+const Set<String> _apertiumPairs = {
+  'cat>eng', 'cat>fra', 'cat>ita', 'cat>por', 'cat>spa', //
+  'eng>cat', 'eng>cat_valencia', 'eng>glg', 'eng>spa', //
+  'eus>eng', 'eus>spa', 'fra>cat', 'fra>spa', //
+  'glg>eng', 'glg>por', 'glg>spa', 'ita>cat', 'ita>spa', //
+  'por>cat', 'por>glg', 'por>spa', //
+  'spa>cat', 'spa>cat_valencia', 'spa>eng', 'spa>fra', 'spa>glg', //
+  'spa>ita', 'spa>por',
 };
 
 /// El código que entiende [provider], o null si no conoce este idioma.
-String? providerCodeFor(TranslationProvider provider, String language) {
+///
+/// [asSource] porque en Apertium el valenciano como **origen** es catalán:
+/// traduce hacia la variante, no desde ella.
+String? providerCodeFor(
+  TranslationProvider provider,
+  String language, {
+  bool asSource = false,
+}) {
   if ((_unsupported[provider] ?? const {}).contains(language)) return null;
+  if (provider == TranslationProvider.apertium) {
+    if (asSource && language == 'va') return 'cat';
+    return _apertiumCodes[language];
+  }
   return _asCatalan[language] ?? language;
+}
+
+/// Si [provider] traduce de [from] a [to]. Google y Azure, todo lo de
+/// Didacta; Apertium, lo que diga su lista.
+bool supportsPair(TranslationProvider provider, String from, String to) {
+  if (provider != TranslationProvider.apertium) {
+    return providerCodeFor(provider, from) != null &&
+        providerCodeFor(provider, to) != null;
+  }
+  final source = providerCodeFor(provider, from, asSource: true);
+  final target = providerCodeFor(provider, to);
+  return source != null &&
+      target != null &&
+      _apertiumPairs.contains('$source>$target');
 }
 
 /// Si lo que se le va a pedir no es exactamente el idioma que se pidió.
 ///
 /// Para poder decirlo antes de traducir en vez de después de revisarlo.
 String? approximationFor(TranslationProvider provider, String language) {
+  // Los códigos de Apertium son otros, pero dicen el mismo idioma: el
+  // valenciano es valenciano.
+  if (provider == TranslationProvider.apertium) return null;
   final code = providerCodeFor(provider, language);
   if (code == null || code == language) return null;
   return code;

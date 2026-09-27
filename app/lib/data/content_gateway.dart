@@ -22,7 +22,9 @@
 library;
 
 import '../model/catalogue.dart';
+import 'diagnostics.dart';
 import 'local_clone.dart';
+import '../l10n/tr.dart';
 
 /// A file as it exists in the repository right now.
 class ContentFile {
@@ -44,10 +46,18 @@ class ContentFile {
 
 /// What went wrong, in terms a person can act on.
 class ContentException implements Exception {
-  const ContentException(this.message, {this.kind = ContentFailure.other});
+  const ContentException(
+    this.message, {
+    this.kind = ContentFailure.other,
+    this.cause,
+  });
 
   final String message;
   final ContentFailure kind;
+
+  /// El fallo de debajo, si lo hubo: casi siempre uno de git. Lo lee quien
+  /// tiene que explicar qué ha pasado, que con el de git sabe más.
+  final Object? cause;
 
   @override
   String toString() => message;
@@ -161,7 +171,7 @@ class UnconfiguredGateway extends ContentGateway {
 
   @override
   String describe() =>
-      reason ?? 'Sin acceso configurado: no se puede leer ni escribir.';
+      reason ?? tr('Sin acceso configurado: no se puede leer ni escribir.');
 
   @override
   Future<ContentFile> read(String path) async {
@@ -188,6 +198,7 @@ class CloneGateway extends ContentGateway {
     this.pushOnCommit = true,
     this.commitOnSave = true,
     this.beforeWrite,
+    this.onUnsent,
   });
 
   /// Si guardar confirma el cambio, o solo lo escribe.
@@ -225,6 +236,12 @@ class CloneGateway extends ContentGateway {
   /// hará después sería el peor cambio posible.
   final Future<void> Function()? beforeWrite;
 
+  /// Qué hacer cuando se guardó pero no se pudo enviar.
+  ///
+  /// Guardar sale bien --lo guardado está a salvo en el clon-- y esto lo
+  /// cuenta aparte, donde se ve si un repositorio está al día con GitHub.
+  final void Function(UnsentException unsent)? onUnsent;
+
   @override
   GatewayKind get kind => GatewayKind.clone;
 
@@ -243,12 +260,18 @@ class CloneGateway extends ContentGateway {
   @override
   String describe() {
     final who = author == null
-        ? 'sin autor: pon un nombre y un correo para poder hacer commits'
-        : 'como ${author!.name} <${author!.email}>';
+        ? tr('sin autor: pon un nombre y un correo para poder guardar')
+        : tr('como {0} <{1}>', [author!.name, author!.email]);
     final push = token.isEmpty
-        ? ', sin enviar a GitHub: falta el token'
-        : (pushOnCommit ? ', enviando cada commit' : ', sin enviar al guardar');
-    return 'Clon local en ${clone.directory}, $who$push';
+        ? tr(', sin enviar a GitHub: falta entrar')
+        : (pushOnCommit
+              ? tr(', enviando cada cambio')
+              : tr(', sin enviar al guardar'));
+    return tr('Copia en tu ordenador, en {0}, {1}{2}', [
+      clone.directory,
+      who,
+      push,
+    ]);
   }
 
   @override
@@ -259,9 +282,10 @@ class CloneGateway extends ContentGateway {
     } on CloneException catch (thrown) {
       throw ContentException(
         thrown.message,
-        kind: thrown.message.contains('no existe')
+        kind: thrown.kind == CloneFailure.missing
             ? ContentFailure.missing
             : ContentFailure.other,
+        cause: thrown,
       );
     }
   }
@@ -282,18 +306,25 @@ class CloneGateway extends ContentGateway {
     if (!commitOnSave) {
       try {
         await beforeWrite?.call();
-      } catch (_) {
+      } catch (caught, trace) {
+        Diagnostics.instance.note('content_gateway.save', caught, trace);
         // Ya lo cuenta quien puso la llamada.
       }
       try {
         return await clone.writeFile(path: path, text: text, expectedSha: sha);
       } on CloneException catch (thrown) {
-        throw ContentException(thrown.message, kind: _kindOf(thrown));
+        throw ContentException(
+          thrown.message,
+          kind: _kindOf(thrown),
+          cause: thrown,
+        );
       }
     }
     if (author == null) {
-      throw const ContentException(
-        'Un commit necesita un autor. Inicia sesión antes de guardar.',
+      throw ContentException(
+        tr(
+          'Para guardar en el historial hace falta un autor. Entra en GitHub antes de guardar.',
+        ),
         kind: ContentFailure.unauthenticated,
       );
     }
@@ -301,7 +332,8 @@ class CloneGateway extends ContentGateway {
     // se avisa por otro lado, y el trabajo se queda a salvo en el clon.
     try {
       await beforeWrite?.call();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('content_gateway.save', caught, trace);
       // Ya lo cuenta quien puso la llamada.
     }
     try {
@@ -318,12 +350,17 @@ class CloneGateway extends ContentGateway {
         // was lost when it is committed and safe.
         push: willPush,
       );
+    } on UnsentException catch (unsent) {
+      // Guardado. Lo que falló es el envío, y eso se dice aparte.
+      onUnsent?.call(unsent);
+      return unsent.sha;
     } on CloneException catch (thrown) {
       throw ContentException(
         thrown.stderr.isEmpty
             ? thrown.message
             : '${thrown.message}\n${thrown.stderr}',
         kind: _kindOf(thrown),
+        cause: thrown,
       );
     }
   }
@@ -342,14 +379,17 @@ class CloneGateway extends ContentGateway {
   }) async {
     if (files.isEmpty) return;
     if (commitOnSave && author == null) {
-      throw const ContentException(
-        'Un commit necesita un autor. Inicia sesión antes de guardar.',
+      throw ContentException(
+        tr(
+          'Para guardar en el historial hace falta un autor. Entra en GitHub antes de guardar.',
+        ),
         kind: ContentFailure.unauthenticated,
       );
     }
     try {
       await beforeWrite?.call();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('content_gateway.saveAll', caught, trace);
       // Ya lo cuenta quien puso la llamada.
     }
     try {
@@ -369,23 +409,29 @@ class CloneGateway extends ContentGateway {
         token: token,
         push: willPush,
       );
+    } on UnsentException catch (unsent) {
+      // Guardado. Lo que falló es el envío, y eso se dice aparte.
+      onUnsent?.call(unsent);
     } on CloneException catch (thrown) {
       throw ContentException(
         thrown.stderr.isEmpty
             ? thrown.message
             : '${thrown.message}\n${thrown.stderr}',
         kind: _kindOf(thrown),
+        cause: thrown,
       );
     }
   }
 
   /// Qué clase de fallo es, para que la pantalla sepa si ofrecer recargar.
-  static ContentFailure _kindOf(CloneException thrown) =>
-      thrown.message.contains('ha cambiado') ||
-          thrown.message.contains('ya existe') ||
-          thrown.message.contains('desaparecido')
-      ? ContentFailure.conflict
-      : ContentFailure.other;
+  /// Por su tipo y no buscando frases en el mensaje, que era como se hacía:
+  /// cambiar una palabra de un mensaje cambiaba qué hacía la pantalla.
+  static ContentFailure _kindOf(CloneException thrown) => switch (thrown.kind) {
+    CloneFailure.conflict => ContentFailure.conflict,
+    CloneFailure.missing => ContentFailure.missing,
+    CloneFailure.unauthenticated => ContentFailure.unauthenticated,
+    _ => ContentFailure.other,
+  };
 }
 
 /// Dónde vive cada fichero de una unidad.

@@ -19,12 +19,29 @@ library;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../data/browser.dart';
 import '../data/github.dart';
 import '../data/local_clone.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// El camino de abrir un repositorio, sin interfaz propia.
+/// Lo que se dice cuando donde iría el clon de [repo] ya hay otra cosa.
+///
+/// Remitía a un botón «Abrir una carpeta» que no existe. Lo que se puede
+/// hacer es vaciarla o clonar en otro sitio, y eso último se elige en la
+/// sección de Ajustes que nombra.
+String occupiedFolderMessage({
+  required String directory,
+  required String repo,
+}) => tr(
+  'En {0} hay algo que no es una copia de {1}. '
+  'No lo he tocado: vacía esa carpeta, o cambia dónde se clonan los '
+  'repositorios en Ajustes → Cuenta y repositorios.',
+  [directory, repo],
+);
+
 class RepositoryAdder {
   const RepositoryAdder({
     required this.session,
@@ -56,7 +73,7 @@ class RepositoryAdder {
   /// Elegir repositorios de GitHub y abrirlos.
   Future<void> fromGitHub(BuildContext context) async {
     if (!session.signedIn) {
-      onProblem('Entra en GitHub primero.');
+      onProblem(tr('Entra en GitHub primero.'));
       return;
     }
     final chosen = await showDialog<List<GitHubRepo>>(
@@ -69,7 +86,9 @@ class RepositoryAdder {
       if (!context.mounted) return;
       // Con varios, cuál va: tres clones seguidos sin decirlo parecen uno
       // que no acaba nunca.
-      final of = chosen.length > 1 ? ' (${index + 1} de ${chosen.length})' : '';
+      final of = chosen.length > 1
+          ? tr(' ({0} de {1})', [index + 1, chosen.length])
+          : '';
       if (!await _addOne(context, repo, of: of)) break;
     }
     onBusy(false);
@@ -94,9 +113,7 @@ class RepositoryAdder {
 
     if (target.state == CloneTarget.occupied) {
       onProblem(
-        'En ${target.directory} hay algo que no es un clon de ${chosen.id}. '
-        'No lo he tocado: vacía esa carpeta o elige otra con «Abrir una '
-        'carpeta».',
+        occupiedFolderMessage(directory: target.directory, repo: chosen.id),
       );
       return false;
     }
@@ -105,26 +122,29 @@ class RepositoryAdder {
       final reuse = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('${chosen.id} ya está clonado'),
+          title: Text(tr('{0} ya está en tu ordenador', [chosen.id])),
           content: SizedBox(
             width: 460,
             child: Text(
-              'Ya hay un clon en ${target.directory}. No se vuelve a clonar: '
-              'encima de él se perdería lo que tenga sin enviar, que puede '
-              'ser el trabajo de otra persona de esta máquina.\n\n'
-              'Puedo abrir ese y ponerlo al día con GitHub.',
+              tr(
+                'Ya hay una copia en {0}. No se vuelve a descargar: '
+                'encima de él se perdería lo que tenga sin enviar, que puede '
+                'ser el trabajo de otra persona de esta máquina.\n\n'
+                'Puedo abrir ese y ponerlo al día con GitHub.',
+                [target.directory],
+              ),
               style: const TextStyle(fontSize: 12.5, height: 1.45),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Dejarlo'),
+              child: Text(tr('Dejarlo')),
             ),
             FilledButton(
               key: const Key('reuse-clone'),
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Abrir el que hay'),
+              child: Text(tr('Abrir el que hay')),
             ),
           ],
         ),
@@ -136,8 +156,8 @@ class RepositoryAdder {
     onProblem(null);
     onStep(
       target.state == CloneTarget.alreadyCloned
-          ? 'Abriendo ${chosen.id}$of…'
-          : 'Clonando ${chosen.id}$of…',
+          ? tr('Abriendo {0}{1}…', [chosen.id, of])
+          : tr('Clonando {0}{1}…', [chosen.id, of]),
     );
     try {
       await session.addRepository(
@@ -172,19 +192,22 @@ class RepositoryAdder {
   ) async {
     if (!chosen.canWrite) {
       onProblem(
-        '${empty.message} Prepararlo es escribir en él, y con esta cuenta es '
-        'de solo lectura: pídeselo a quien lo creó.',
+        tr(
+          '{0} Prepararlo es escribir en él, y con esta cuenta es '
+          'de solo lectura: pídeselo a quien lo creó.',
+          [empty.message],
+        ),
       );
       return;
     }
-    onStep('${chosen.id} está vacío.');
+    onStep(tr('{0} está vacío.', [chosen.id]));
     final title = await showDialog<String>(
       context: context,
       builder: (context) => InitializeRepositoryDialog(repo: chosen),
     );
     if (title == null) return;
 
-    onStep('Preparando ${chosen.id}…');
+    onStep(tr('Preparando {0}…', [chosen.id]));
     try {
       await session.initializeRepository(
         owner: chosen.owner,
@@ -199,6 +222,49 @@ class RepositoryAdder {
     }
   }
 
+  /// Crear el repositorio de ejemplo en la cuenta de quien ha entrado.
+  ///
+  /// Se pregunta antes, con el nombre delante, porque escribe en GitHub: el
+  /// repositorio se queda en la cuenta hasta que alguien lo borre. Devuelve
+  /// si quedó abierto.
+  Future<bool> example(BuildContext context) async {
+    if (!session.signedIn) {
+      onProblem(tr('Entra en GitHub primero.'));
+      return false;
+    }
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => ExampleRepositoryDialog(
+        owner: session.user?.login ?? tr('tu cuenta'),
+      ),
+    );
+    if (go != true || !context.mounted) return false;
+
+    onBusy(true);
+    onProblem(null);
+    onStep(tr('Preparando el ejemplo…'));
+    try {
+      final opened = await session.createExampleRepository(
+        onStep: onStep,
+        onProgress: onProgress,
+      );
+      onStep(
+        opened.reused
+            ? tr('Ya tenías el ejemplo: {0} está abierto.', [opened.repo.id])
+            : tr('Listo: {0} está en tu GitHub y abierto aquí.', [
+                opened.repo.id,
+              ]),
+      );
+      return true;
+    } catch (thrown) {
+      onStep('');
+      onProblem(thrown);
+      return false;
+    } finally {
+      onBusy(false);
+    }
+  }
+
   /// Añadir una carpeta que ya está en el disco.
   ///
   /// De qué repositorio es lo dice su propio remoto, y si esta cuenta llega a
@@ -207,14 +273,14 @@ class RepositoryAdder {
   /// cuenta tampoco.
   Future<void> fromFolder(BuildContext context) async {
     if (!session.signedIn) {
-      onProblem('Entra en GitHub primero.');
+      onProblem(tr('Entra en GitHub primero.'));
       return;
     }
     final chosen = await getDirectoryPath();
     if (chosen == null) return;
     onBusy(true);
     onProblem(null);
-    onStep('Comprobando $chosen en GitHub…');
+    onStep(tr('Comprobando {0} en GitHub…', [chosen]));
     try {
       await session.addExistingRepository(chosen);
       onStep('');
@@ -250,7 +316,7 @@ class _RepoPickerState extends State<RepoPicker> {
   final Set<String> _chosen = {};
 
   Future<List<GitHubRepo>> _load() async {
-    final token = await widget.session.tokenStore.read() ?? '';
+    final token = await widget.session.currentToken();
     final api = GitHubApi(token: token);
     try {
       final all = await api.repositories();
@@ -268,7 +334,7 @@ class _RepoPickerState extends State<RepoPicker> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Añadir repositorios'),
+    title: Text(tr('Añadir repositorios')),
     content: SizedBox(
       width: 520,
       height: 440,
@@ -277,21 +343,53 @@ class _RepoPickerState extends State<RepoPicker> {
           TextField(
             key: const Key('repo-filter'),
             autofocus: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               prefixIcon: Icon(Icons.search, size: 18),
-              hintText: 'Buscar',
+              hintText: tr('Buscar'),
               isDense: true,
               border: OutlineInputBorder(),
             ),
             onChanged: (value) => setState(() => _filter = value.toLowerCase()),
           ),
+          // Con la GitHub App, la lista trae solo los repositorios a los que
+          // se le ha dado acceso: el que falta se añade en GitHub, y vuelve
+          // a salir aquí sin entrar otra vez.
+          if (widget.session.auth.credential?.fromApp ?? false)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      tr(
+                        'Salen los repositorios a los que Didacta tiene acceso.',
+                      ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.palette.muted,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    key: const Key('repo-app-access'),
+                    icon: const Icon(Icons.open_in_new, size: 15),
+                    label: Text(tr('Dar acceso a otro')),
+                    onPressed: () =>
+                        openLink(githubAppInstallUrl(didactaAppSlug)),
+                  ),
+                ],
+              ),
+            ),
           const SizedBox(height: 10),
           Expanded(
             child: FutureBuilder<List<GitHubRepo>>(
               future: _repos,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Note('${snapshot.error}', tone: didactaTeacher);
+                  return Note(
+                    '${snapshot.error}',
+                    tone: context.palette.teacher,
+                  );
                 }
                 final repos = snapshot.data;
                 if (repos == null) {
@@ -304,8 +402,8 @@ class _RepoPickerState extends State<RepoPicker> {
                       repo,
                 ];
                 if (shown.isEmpty) {
-                  return const Center(
-                    child: Text('Ninguno que no esté ya abierto.'),
+                  return Center(
+                    child: Text(tr('Ninguno que no esté ya abierto.')),
                   );
                 }
                 return ListView.builder(
@@ -329,7 +427,7 @@ class _RepoPickerState extends State<RepoPicker> {
                         [
                           repo.defaultBranch,
                           if (repo.private) 'privado',
-                          if (!repo.canWrite) 'solo lectura',
+                          if (!repo.canWrite) tr('solo lectura'),
                         ].join(' · '),
                         style: const TextStyle(fontSize: 11.5),
                       ),
@@ -345,7 +443,7 @@ class _RepoPickerState extends State<RepoPicker> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FutureBuilder<List<GitHubRepo>>(
         future: _repos,
@@ -358,7 +456,9 @@ class _RepoPickerState extends State<RepoPicker> {
                     if (_chosen.contains(repo.id)) repo,
                 ]),
           child: Text(
-            _chosen.length <= 1 ? 'Añadir' : 'Añadir ${_chosen.length}',
+            _chosen.length <= 1
+                ? tr('Añadir')
+                : tr('Añadir {0}', [_chosen.length]),
           ),
         ),
       ),
@@ -401,7 +501,7 @@ class _InitializeRepositoryDialogState
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Este repositorio está vacío'),
+    title: Text(tr('Este repositorio está vacío')),
     content: SizedBox(
       width: 480,
       child: Column(
@@ -409,25 +509,31 @@ class _InitializeRepositoryDialogState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${widget.repo.id} todavía no tiene ningún commit, así que no hay '
-            'nada que clonar. Didacta puede prepararlo como repositorio de '
-            'contenido:',
+            tr(
+              '{0} todavía está vacío, así que no hay '
+              'nada que descargar. Didacta puede prepararlo como repositorio de '
+              'contenido:',
+              [widget.repo.id],
+            ),
           ),
           const SizedBox(height: 10),
           Text(
-            '• didacta.yaml, con el nombre y los idiomas es, va y en\n'
-            '• .gitignore, para que lo compilado no entre en git\n'
-            '• el primer commit en ${widget.repo.defaultBranch}, enviado a '
-            'GitHub',
-            style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+            tr(
+              '• didacta.yaml, con el nombre y los idiomas es, va y en\n'
+              '• .gitignore, para que lo compilado no entre en git\n'
+              '• el primer cambio en {0}, enviado a '
+              'GitHub',
+              [widget.repo.defaultBranch],
+            ),
+            style: TextStyle(fontSize: 12.5, color: context.palette.muted),
           ),
           const SizedBox(height: 14),
           TextField(
             key: const Key('initialize-title'),
             controller: _title,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Nombre del repositorio de contenido',
+            decoration: InputDecoration(
+              labelText: tr('Nombre del repositorio de contenido'),
               isDense: true,
               border: OutlineInputBorder(),
             ),
@@ -439,12 +545,64 @@ class _InitializeRepositoryDialogState
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('initialize-repository'),
         onPressed: _accept,
-        child: const Text('Preparar y añadir'),
+        child: Text(tr('Preparar y añadir')),
+      ),
+    ],
+  );
+}
+
+/// Qué se va a hacer al pedir el ejemplo, antes de hacerlo.
+class ExampleRepositoryDialog extends StatelessWidget {
+  const ExampleRepositoryDialog({super.key, required this.owner});
+
+  /// La cuenta en la que se crea.
+  final String owner;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(tr('Probar con un ejemplo')),
+    content: SizedBox(
+      width: 480,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr(
+              'Una asignatura pequeña para ver Didacta con algo dentro: Cálculo I, '
+              'con un tema, una hoja de problemas, lecciones traducidas y otras '
+              'por traducir, y un README que cuenta cómo está organizado y por '
+              'qué.',
+            ),
+            style: TextStyle(fontSize: 13, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            tr(
+              'Lo creo en tu cuenta como {0}/didacta-ejemplo, privado, y lo '
+              'abro aquí. Es tuyo: puedes compilarlo, cambiarlo y romperlo sin '
+              'miedo, y borrarlo desde GitHub cuando ya no lo quieras.',
+              [owner],
+            ),
+            style: const TextStyle(fontSize: 12.5, height: 1.5),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(false),
+        child: Text(tr('Cancelar')),
+      ),
+      FilledButton(
+        key: const Key('create-example'),
+        onPressed: () => Navigator.of(context).pop(true),
+        child: Text(tr('Crear el ejemplo')),
       ),
     ],
   );

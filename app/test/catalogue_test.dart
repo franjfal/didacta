@@ -237,6 +237,25 @@ void main() {
       expect(viejo.isProblem, isTrue);
     });
 
+    test('sin tildes ni mayúsculas, en los dos lados', () {
+      // «limite» encuentra «Límite», y «METRICA» encuentra «Métrica»: quien
+      // busca no tiene por qué saber cómo lo escribió otro.
+      final limite = Unit.fromJson(
+        unitJson(
+          path: 'content/analysis/limits/definition',
+          title: const {'es': 'Límite de una función', 'va': 'Límit'},
+        ),
+      );
+      expect(const LibraryFilter(query: 'limite').apply([limite]), [limite]);
+      expect(const LibraryFilter(query: 'LÍMITE funcion').apply([limite]), [
+        limite,
+      ]);
+      expect(
+        const LibraryFilter(query: 'METRICA').apply(units).single.title('es'),
+        'Métrica inducida',
+      );
+    });
+
     test('by block', () {
       final problems = const LibraryFilter(block: 'problems').apply(units);
       expect(problems.length, 1);
@@ -351,6 +370,28 @@ void main() {
         sorted.map((unit) => unit.title('va')),
         containsAllInOrder(['Axiomas de norma', 'Espais normats']),
       );
+    });
+
+    test('sorting by title folds accents, so Álgebra is not after the Z', () {
+      // Comparando los caracteres a secas, la «Á» (225) va detrás de la «z»
+      // (122), y una lista ordenada por título con Álgebra al final parece
+      // rota.
+      final sorted = const LibraryFilter(sort: LibrarySort.title).apply([
+        Unit.fromJson(
+          unitJson(path: 'content/z/z/zoo', title: const {'es': 'Zoología'}),
+        ),
+        Unit.fromJson(
+          unitJson(path: 'content/a/a/alg', title: const {'es': 'Álgebra'}),
+        ),
+        Unit.fromJson(
+          unitJson(path: 'content/b/b/bio', title: const {'es': 'Biología'}),
+        ),
+      ]);
+      expect(sorted.map((unit) => unit.title('es')), [
+        'Álgebra',
+        'Biología',
+        'Zoología',
+      ]);
     });
 
     test('copyWith can clear a facet as well as set one', () {

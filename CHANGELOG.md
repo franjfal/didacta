@@ -40,6 +40,485 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **Crear una lección sin salir de la aplicación.** En la biblioteca, «Nueva
+  lección en…» el tema que se está mirando; en la composición de un
+  documento, «Crear una nueva…» al añadir, que la crea y la deja puesta. Se
+  pide el título, el tema y el tipo, y enseña dónde va a quedar antes de
+  crearla. Antes había que ir al terminal a escribir `didacta new unit`.
+- **Duplicar una lección** para empezar otra a partir de ella, desde su icono
+  de información: la copia lleva sus idiomas, sus figuras y sus metadatos con
+  el título nuevo, y desde ese momento son dos lecciones.
+- **Mover o renombrar una lección** sin romper nada, con cualquiera de las
+  dos interfaces: cada documento que la usa, los temas vinculados y los
+  prerrequisitos de otras lecciones se reescriben en el mismo cambio, y su id
+  y sus traducciones siguen siendo los mismos. Antes de confirmar dice de qué
+  cursos son esos documentos, y avisa cuando hay más de uno.
+- **Lo que no va a compilar se dice antes de compilar.** Debajo del editor,
+  con su línea y un clic para ir allí: una llave o una fórmula sin cerrar, un
+  entorno que no se cierra y las órdenes que en ese idioma no existen, como
+  `\lgem` fuera del catalán y del valenciano.
+- **Los símbolos de la paleta ya no rompen la compilación.** Pulsar «α» en
+  mitad de un párrafo escribía `\alpha` suelto; ahora lo mete en `$…$`, con el
+  cursor dentro para seguir con la fórmula. Dentro de una fórmula, va tal cual.
+- **Completar al escribir.** `\didac` ofrece `\didactatitle` y `\begin{`
+  enseña los entornos de Didacta, y al elegir uno escribe también su `\end`.
+  Con las flechas se elige y con Intro o Tab se acepta.
+- **Más entornos en la barra**: Propiedad, Cuestión, Axioma, Notación,
+  Algoritmo, el título de la diapositiva y, para el profesor, Nota didáctica y
+  Error frecuente.
+- **Buscar en la lección que se edita.** ⌘F (Ctrl+F) abre una barra encima
+  del texto que pinta las coincidencias y salta de una a otra con Intro o ⌘G.
+  También reemplaza, una o todas, y acepta expresiones regulares.
+- **Los metadatos sugieren lo que ya existe.** La categoría, el tema, las
+  etiquetas y los prerrequisitos ofrecen lo que usan las demás lecciones, y
+  avisan cuando lo escrito es nuevo: una errata ya no crea una categoría sin
+  que nadie lo note.
+- **Guardar ya no pregunta el mensaje.** Se guarda con el que propone
+  Didacta, y el aviso ofrece «Ver cambios» con lo que se quitó y lo que se
+  puso. Quien quiera revisar cada cambio antes lo enciende en Ajustes →
+  Guardar y sincronizar.
+- **Una barra del editor más corta, y una interfaz Esencial o Completa.**
+  Para corregir una errata se ven el estado, Descartar, Guardar y la barra de
+  formato básica; las pestañas dicen «Castellano» y «Valencià» en lugar de
+  «es» y «va», y «Beautify» pasa a llamarse «Ordenar» y sale una vez. La
+  ruta, el contador, la sangría de cada fichero, reemplazar, copiar la
+  referencia y mover lecciones están en la interfaz Completa, en Ajustes →
+  Apariencia.
+- **La biblioteca vuelve donde estabas.** Lo abierto, los filtros y lo
+  buscado se conservan al abrir una lección y volver, y van en la dirección:
+  un enlace abre la biblioteca igual.
+- **Buscar sin tildes.** «limite» encuentra «Límite» en la biblioteca.
+- **Buscar dentro de las lecciones.** «En el texto», al lado del buscador de
+  la biblioteca, encuentra lo que una lección dice aunque no lo diga su
+  título, y enseña la línea.
+- **Añadir a una composición busca como la biblioteca**: cada palabra en
+  cualquier orden, en todos los idiomas y sin tildes.
+- **Abiertas hace poco**, en la raíz de la biblioteca: las últimas lecciones
+  abiertas, a un clic. Y en la interfaz Completa, **búsquedas guardadas** con
+  nombre.
+- **Compilar se puede parar.** Una tira abajo, en todas las pantallas, dice
+  qué se compila y por cuál va --«9/38»--, con **Detener**, que para también
+  LaTeX. Lo que se pulsa mientras otra cosa compila espera su turno en lugar
+  de pisarla, un curso entero pregunta antes de empezar, y al acabar un lote
+  se dice cómo fue: «36 bien, 2 con errores».
+- **Los errores de compilación llevan a la lección y a la línea.** Cada uno
+  dice en qué lección está, en qué idioma y en qué línea, con **Abrir**, que la
+  abre con el cursor ahí. Salen todos, y en un lote se guardan aparte con su
+  documento en lugar de perderse en el registro.
+- **Recompilar lo que no ha cambiado es inmediato**, y lo que sí ha cambiado
+  tarda menos: se aprovecha lo que LaTeX ya había hecho. Recompilar un curso
+  después de corregir dos erratas es compilar dos documentos, no cuarenta.
+- **Las versiones de un documento se compilan a la vez**: un tema en tres
+  versiones y dos idiomas tarda la mitad o menos. Cuántas a la vez, en Ajustes
+  → Herramientas.
+- **Viejo de verdad, y compilar solo lo viejo.** Un PDF se da por viejo si ha
+  cambiado el contenido de algo de lo que entró en él, no su fecha: traer
+  cambios de GitHub ya no deja todo viejo. Cada tema dice cuántos documentos
+  tiene desactualizados, y «Compilar lo desactualizado» rehace solo eso, en el
+  tema o en el curso entero.
+- **Diapositivas que se salen.** Una diapositiva con más de lo que cabe se
+  cortaba por abajo sin que nadie lo dijera. Ahora se avisa de las que se
+  salen más de 5 pt, con su lección y la línea donde empieza, y **Abrir** lleva
+  allí. En un lote salen junto a los errores. Las líneas de los apuntes que
+  pasan del margen, si se piden en Ajustes → Herramientas.
+- **Vista rápida**, en Ajustes → Herramientas: compilar un documento desde su
+  pantalla en una sola pasada, para ver cómo queda un cambio en la mitad de
+  tiempo. El PDF dice que es una vista rápida, al lado queda «Compilar
+  entero», y lo que sale así cuenta como desactualizado hasta compilarlo
+  entero.
+- **Buscar en el PDF**, con la lupa del visor o ⌘F: sin mirar tildes ni
+  mayúsculas, resaltado, e Intro para ir al siguiente. Con dos idiomas lado a
+  lado se busca en los dos.
+- **Del PDF a la lección con ⌘+clic** (Ctrl+clic): se abre la lección de donde
+  sale lo pulsado, en su idioma y con el cursor en su línea. En las
+  diapositivas también, aunque LaTeX lo apunte todo al final de cada una.
+- **Mejor contraste.** Los colores de cada repositorio se leen en claro y en
+  oscuro (el ámbar se quedaba corto en claro y todos en oscuro), la acción de
+  los avisos ya no es verde claro sobre claro en oscuro, y el número del carril
+  ya no es blanco sobre ámbar.
+- **El menú de cortar, copiar y pegar, en castellano**, como el resto de la
+  aplicación. Salía en inglés.
+- **Se puede usar sin ratón.** Las filas y las tarjetas se alcanzan con el
+  tabulador, se pulsan con Intro o Espacio y enseñan dónde está el foco; un
+  lector de pantalla las anuncia como botones, las cruces de cerrar dicen qué
+  cierran y el estado de cada idioma se dice con palabras, no solo con color.
+  Los botones más pequeños crecen hasta 32 píxeles.
+- **Los atajos, en todos los sistemas.** En Windows y Linux funcionan los
+  mismos que en el Mac, con Ctrl en lugar de ⌘, y los tooltips los escriben
+  como toca en cada sistema. ⌘/ (Ctrl+/) enseña la lista entera, que también
+  está en Ajustes → Ayuda. El menú del Mac gana Edición, Ventana y Ayuda.
+- **Las pantallas vacías dicen por qué y ofrecen la salida.** Sin
+  asignaturas, «Nueva asignatura» y «Probar con un ejemplo»; con todas
+  ocultas, «Ver las ocultas»; la biblioteca sin repositorio, «Añadir un
+  repositorio». Y si el índice falta o no se puede leer, un botón lo
+  regenera, en lugar de mandar al terminal a escribir `didacta index`.
+- **La aplicación habla sin git.** Un commit es un *cambio guardado*,
+  confirmar es *guardar en el historial* y el clon es *la copia en tu
+  ordenador*. La barra de abajo dice «Guardado en GitHub · al día» o lo que
+  falte, en lugar de «Clon local en /Users/…, enviando cada commit».
+- **Los fallos se entienden y dicen qué hacer.** En lugar del mensaje de git
+  en inglés, el aviso dice qué ha pasado --hay cambios nuevos en GitHub, la
+  sesión ha caducado, no hay red, dos cambios chocan, la carpeta está
+  ocupada, GitHub rechaza el envío-- con el botón que lo arregla cuando lo
+  hay, y lo que dijo el programa en «Detalles», con Copiar y Contar el
+  problema. Ya no se va a los cuatro segundos.
+- **Lo escrito sobrevive a un cierre de golpe.** Si Didacta se cuelga o se va
+  la luz con texto sin guardar en una lección, al volver a abrirla se ofrece
+  recuperarlo. Se guarda fuera del repositorio, y se borra al guardar o al
+  descartar.
+- **⌘S (Ctrl+S en Windows y Linux) guarda** en el editor de una lección, en
+  sus metadatos, en la composición de un documento y en la lista de un
+  curso. Hace lo mismo que el botón: pide el mensaje y enseña el diff.
+- **Irse con cambios sin guardar pregunta antes.** Cambiar de lección o de
+  pantalla, o cerrar Didacta, con algo escrito y sin guardar dice qué es y
+  deja volver a guardarlo. Antes se perdía sin avisar.
+- **La guía de escritura enseña lo que existe**: los problemas se escriben con
+  `exercise` y los entornos `hint`, `answer`, `solution` y `marking`, y las
+  figuras con `\includegraphics{figures/…}`. Copiar el ejemplo de la
+  documentación ya compila, y un test comprueba que siga siendo así.
+- **«Atrás» vuelve a donde estabas de verdad**: a la sección de Ajustes en la
+  que estabas y a la lección en el idioma que mirabas, no solo a la pantalla.
+- **El menú Repositorio dice la verdad.** «Enviar commits» (⌘⇧U) envía solo
+  lo que ya está guardado, en lugar de cerrar lo demás con el mensaje
+  «Enviar»; y ni «Enviado» ni «Traído» salen cuando algo ha fallado: dicen en
+  qué repositorio y por qué.
+- **«Desactualizada» funciona.** Al traducir y al revisar se guarda la huella
+  del original; si luego el original cambia, la traducción se marca como
+  desactualizada. Antes no pasaba nunca. Re-sangrar el original no cuenta.
+- **Lo que traduce la máquina queda como borrador de verdad.** Se escribía
+  solo el texto, y el motor lo contaba como traducido: desaparecía de «Sin
+  revisar» aunque no lo hubiera leído nadie. Ahora el estado va en el mismo
+  commit.
+- **Erratas**: en valenciano el entorno de cuestión dice «Qüestió»; ordenar por
+  título ya no deja «Álgebra» detrás de la Z; «Ver en el Finder» se llama
+  como toca en Windows y en Linux; y dos textos corregidos, uno que remitía a
+  un botón que no existe.
+- **`\sen`, `\tg`, `\arcsen` y compañía compilan en todos los idiomas.** Solo
+  existían en castellano, y una traducción que copiaba las fórmulas no
+  compilaba en valenciano. Cada idioma las escribe con su nombre.
+- **En diapositivas con pausas, los teoremas ya no se numeran de más.** El
+  ejemplo de después de una pausa salía 1.3 en lugar de 1.2, y todo lo que
+  venía detrás, uno más.
+- **Compilar un tema desde la lista del curso saca sus versiones, no las
+  siete.** Las que declara cada documento; todas, manteniendo pulsado.
+- **La consola de compilación ya no enseña la marca verde cuando LaTeX
+  falla**: dice «Terminada con errores», en rojo.
+- **Los filtros de la biblioteca funcionan también sin buscar nada.**
+  Traducción, Tipo y Orden se ponían en verde pero solo actuaban con texto en
+  el buscador; ahora recortan y ordenan el árbol, y la cabecera dice cuántas
+  quedan.
+- **Traducir con la máquina ya no pisa lo corregido a mano.** De salida solo
+  traduce lo que no tiene texto, y en el idioma que estás mirando; rehacer
+  borradores y desactualizadas es una casilla aparte que avisa de lo que
+  sustituye.
+- **Quitar una asignatura o un curso ya no promete que se puede revertir**,
+  que desde la aplicación no se puede, y avisa de que se lleva sus versiones
+  congeladas.
+- **Una asignatura repartida entre dos repositorios se duplica, se quita y se
+  congela entera.** Las tres cosas actuaban solo en el primero: el curso nuevo
+  salía sin los problemas, o la asignatura quitada seguía en la lista por la
+  otra mitad.
+- **Mirando una versión congelada, lo que se compila es de aquella versión.**
+  «Compilar» y «Ver PDF» usaban lo de hoy mientras la pantalla enseñaba el
+  material de entonces; ahora trabajan sobre su árbol, con sus propios PDF.
+- **Corregir una lección deja viejo el PDF del tema que la lleva.** Antes solo
+  contaba la composición, y se podía proyectar un tema de antes de la
+  corrección sin que la pestaña lo marcara.
+- **Una lección que se da en varios cursos lo dice encima del texto**: «Se da
+  en 2 cursos: lo que guardes aquí cambia en todos», con cuáles, y un botón
+  para separar una copia si solo quieres cambiarla en uno.
+- **Exportar ya no reparte las soluciones.** De salida solo sale lo que puede
+  ver un estudiante: los enunciados y, como mucho, los resultados. Las
+  resoluciones completas se piden con una casilla, y las copias del profesor
+  --la plantilla de corrección del examen, las diapositivas con notas-- con
+  otra aparte y en rojo. Lo que se queda fuera se dice. Y exportar desde la
+  aplicación vuelve a funcionar: fallaba siempre con «El motor falló».
+- **Modo oscuro.** El sol y la luna, abajo en la columna de la izquierda,
+  pasan de claro a oscuro; en Ajustes → Apariencia se elige también «como el
+  sistema», que es lo que viene. Los colores de los entornos son los mismos
+  del PDF, aclarados para leerse sobre oscuro, y los PDF se siguen
+  compilando en claro.
+- **Ajustes, por secciones.** Una columna a la izquierda con cada sección
+  --la cuenta y los repositorios, los idiomas, las herramientas, la
+  apariencia…-- y se ve una a la vez, en lugar de una lista de catorce
+  apartados. Los avisos que mandan a Ajustes llevan a la sección que toca.
+- **Una interfaz más cuidada**: los filtros de la biblioteca son botones que
+  dicen cuál está puesto, la flecha de volver ya no ocupa una fila para ella
+  sola, y los menús y los diálogos tienen sombras más suaves.
+- **Un repositorio de ejemplo para probar Didacta.** «Probar con un ejemplo»,
+  en la bienvenida y en Ajustes, crea en tu cuenta de GitHub un repositorio
+  privado con una asignatura pequeña: un tema, una hoja de problemas, un
+  parcial, lecciones traducidas y otras por traducir, y un README que cuenta
+  cómo está organizado. Es tuyo para tocarlo sin miedo.
+- **El recorrido guiado enseña la aplicación entera**, no solo el carril: una
+  asignatura y su curso por dentro --con dónde se congela una versión--, un
+  documento con sus pestañas y sus salidas, la biblioteca con sus filtros, y
+  una lección con sus idiomas y lo que se compila. Va de pantalla en
+  pantalla, se puede ir hacia atrás y al acabar te deja donde estabas.
+- **La bienvenida, renovada**: centrada, con los dibujos en movimiento y un
+  paso para elegir cómo empezar. Si el sistema pide menos movimiento, se
+  queda quieta.
+- **Los idiomas de cada repositorio, más claros en Ajustes.** Los que tiene se
+  ven como etiquetas, los demás se añaden desde un desplegable, y quitar uno
+  pregunta antes. Los que no se pueden quitar llevan un candado y dicen por
+  qué.
+- **Snippets de LaTeX, en Ajustes.** Lo que la barra del editor escribe
+  alrededor de lo que marcas --un teorema, un «solo diapositivas», una caja
+  tuya-- tiene ahora su propio gestor: se buscan, se filtran, se ordenan
+  arrastrando y cada uno dice en qué repositorios se ofrece. Los de Didacta
+  siguen ahí y se pueden retocar; los tuyos se crean con un editor que
+  **compila la vista previa mientras escribes**, en apuntes o en diapositivas,
+  y avisa antes de guardar una definición que no compila.
+- **Cajas propias sin escribir LaTeX.** «Caja de teorema» crea un entorno con
+  el mismo aspecto que los de Didacta --su pestaña, su número, su color--
+  eligiendo solo el título y el color. Lo que define un snippet llega a todo
+  lo que se compila en su repositorio, y en ningún otro.
+- **El desplegable de entornos es un selector con buscador.** Se escribe para
+  filtrar, se elige con las flechas y se aplica con Intro. Ofrece los snippets
+  del repositorio del fichero, y arriba del todo, **quitar** el que rodea al
+  cursor sin tocar lo de dentro.
+- **Un snippet que deja de cuadrar se avisa en la barra**: uno de otro
+  repositorio, que ahí compila y aquí no, o uno que ha perdido los argumentos
+  que lleva.
+- **Los snippets que no coinciden entre dos repositorios** salen en «Entre
+  repositorios», con en qué difieren y un botón para quedarse con uno.
+- **Traducir en tanda cuesta lo que dice antes de pulsar.** El diálogo
+  cuenta los caracteres que se van a mandar y lo que costarían a la tarifa del
+  proveedor, sin contar lo que ya está en la memoria. **Detener** para antes
+  de la siguiente lección y guarda lo ya traducido, y toda la tanda queda en
+  un solo cambio por repositorio (antes, dos por lección). También traduce el
+  título de cada lección.
+- **Dos estados a la vista**: una traducción está **sin revisar** o
+  **revisada**. «Traducida» y «original» se eligen solo con la interfaz
+  completa.
+- **Aprobar y siguiente.** Encima de una traducción sin revisar, un botón la
+  da por revisada --con lo corregido, en un solo cambio-- y abre la siguiente
+  sin revisar en el mismo idioma.
+- **Lado a lado, el original no se toca por error**: mientras se revisa una
+  traducción es de solo lectura, y se desplaza a la vez que ella.
+- **Las fórmulas que no coinciden con el original se avisan** en la traducción,
+  con su línea. Es lo único que tiene que ser idéntico en los dos idiomas, y un
+  error ahí compila y dice otra cosa.
+- **Una traducción desactualizada dice qué ha cambiado en el original**:
+  encima del texto, un botón enseña la diferencia entre el original que se
+  revisó y el de ahora.
+- **Valenciano de verdad, y gratis, con Apertium.** Google y Azure traducen
+  a catalán central; Apertium distingue el valenciano («seua», «duració»), no
+  pide clave y no cuesta nada. Se enciende en Ajustes → Traducción
+  automática.
+- **Un glosario de traducción**, en Ajustes → Traducción automática: los
+  términos que una traducción tiene que respetar. Lo que no sale así se avisa
+  al traducir con la máquina.
+- **La memoria de traducción aprende de quien revisa**: al aprobar una
+  traducción corregida, lo corregido sale corregido la próxima vez.
+- **Los PDF dicen qué son**: el título, el autor, la asignatura y el idioma
+  van en sus propiedades, que es lo que enseña el lector de PDF, lo que indexa
+  un buscador y lo que necesita un lector de pantalla para pronunciar bien.
+- **La letra, siempre nítida.** Latin Modern en lugar de Computer Modern: es la
+  misma letra, pero en una máquina sin el paquete cm-super ya no sale en mapas
+  de bits borrosos.
+- **Una lección que falta en un idioma sale en su original.** Si no existe en
+  el idioma que se compila, se usa el suyo --el `reference:` de la lección-- y
+  no el primero de una lista fija, y se prueban todos los idiomas de Didacta.
+- **La frase que sigue a una fórmula destacada ya no empieza sangrada**: sin
+  línea en blanco, continúa el párrafo, como detrás de una ecuación.
+- **La coma decimal en todos los idiomas que la usan.** El castellano y el
+  gallego ya escribían «3,14»; el valenciano, el catalán, el francés, el
+  alemán, el italiano, el portugués y el euskera salían con «3.14». Ahora
+  solo el inglés lleva punto. Y «25 %», con su espacio, donde la norma lo
+  pide. El punto entre letras --«$f.g$»-- sigue siendo un punto.
+- **La comprobación de herramientas avisa si falta `biber`**, que es lo que
+  compone la bibliografía de un documento que cita, con la orden para
+  añadirlo. Y al instalar TinyTeX, Didacta ya se lo pide a `tlmgr`.
+- **Un curso nuevo sin sorpresas.** Al crearlo copiando otro, una casilla
+  marcada congela antes el de origen «tal como quedó», en todos sus
+  repositorios; y si tiene documentos vinculados, el diálogo avisa de que el
+  nuevo los comparte y de que lo que se cambie en uno cambia en los dos.
+- **Copiar un curso académico se lleva sus temas.** Antes los documentos del
+  curso nuevo llegaban sueltos, fuera de los temas en que estaban.
+- **Un examen o una hoja, a partir de los problemas, de una vez.** En el curso,
+  «Examen u hoja de problemas»: el título, el tema y los problemas --solo
+  problemas, por carpeta, con los que ya salieron en un examen de la asignatura
+  marcados y, si se quiere, fuera de la lista-- y un solo guardado. Antes eran
+  más de quince pasos y dos commits.
+- **Los documentos creados desde Didacta compilan.** Al guardarlos se escribe
+  también su `.tex`, en el mismo cambio; sin él el motor los saltaba y no
+  salía ningún PDF.
+- **«Examen» es un tipo de documento**, con sus dos salidas: el examen y la
+  hoja de corrección.
+- **Congelar desde el menú del curso congela todos sus repositorios.** Antes,
+  desde ahí, solo el primero, y la otra mitad de una asignatura repartida
+  seguía cambiando por debajo.
+- **Comparar dos versiones enseña solo las lecciones del curso.** Antes metía
+  las de todo el repositorio, y lo que había cambiado en las del curso se
+  perdía; las demás se cuentan al pie.
+- **Añadir una lección a un tema sin abrir el editor.** Debajo de la
+  composición, «Añadir una lección» la pone al final en un solo guardado.
+- **«Compilar ahora» al guardar una composición**, en el aviso de guardado:
+  abre la pestaña de compilar y compila el tema.
+- **Exportar avisa de lo que está viejo**, con sus nombres, y compila antes
+  solo eso: repartir un PDF de antes de la última corrección ya no pasa sin
+  que se note.
+- **Exportar recuerda la carpeta de cada asignatura**, y la abre ahí la
+  próxima vez.
+- **Un .zip para el aula virtual** al exportar, que Moodle descomprime en un
+  recurso Carpeta. También desde la terminal, con `--zip`.
+- **Los PDF exportados se llaman en el idioma del reparto**: «Tema 1 -
+  Apunts.pdf», y no «Tema 1 - notes - va.pdf». La carpeta de lo que no tiene
+  tema, también: «Sense tema».
+- **Menos iconos por fila.** Un documento enseña el PDF, ▶ y «…»; exportarlo,
+  cambiarle el título, darlo en otro sitio y quitarlo están en «…». Ocultar
+  una asignatura o un curso, también en su «…»; el ojo solo se ve en lo que
+  está oculto, para volver a enseñarlo. Y la papelera de la cabecera de un
+  curso académico pasa a su «…», junto a congelarlo.
+- **«Duplicar» cumple lo que dice.** Un tema vinculado deja de estarlo en la
+  copia, que antes seguía siendo el mismo tema; «Duplicar también las
+  lecciones» le da las suyas; y el nombre que se elige para la copia se usa.
+- **El historial, para quien no usa git.** «Recuperar esta versión» enseña qué
+  cambiaría y lleva el texto de entonces al editor como un cambio sin
+  guardar; «Comparar con ahora» dice qué ha cambiado desde entonces; dentro de
+  cada línea cambiada se marcan las palabras que cambiaron --también al
+  guardar--; y el hash de cada versión solo sale con la interfaz completa.
+- **Deshacer.** Quitar una asignatura, un curso académico o un documento, y
+  cualquier otro guardado de un curso, se deshace desde el aviso de después.
+  Y «Cambios recientes», en la cabecera de Asignaturas, lista lo último que se
+  ha guardado con un «Deshacer» en cada cambio, que solo actúa si nadie ha
+  vuelto a tocar esos ficheros.
+- **Una carpeta de reparto**, opcional, en Ajustes → Guardar y sincronizar:
+  una de OneDrive, Drive o Nextcloud. Con ella, cada curso académico tiene
+  «Publicar» en su «…», que exporta lo del estudiante a su carpeta dentro de
+  esa sin preguntar dónde.
+- **El motor va con la versión de la aplicación.** El que descarga Didacta
+  es el de su misma versión, y al actualizar la aplicación se pone en la
+  nueva: los arreglos de LaTeX llegan con ella. Ajustes dice de qué versión es
+  el motor y, si es uno propio que no coincide, ofrece ponerlo en la de la
+  aplicación.
+- **Revisar**, en la biblioteca y antes de exportar: busca lo que compila mal
+  o no compila --una orden del castellano en el valenciano, un entorno que no
+  define nadie, una figura que falta, un «??», una diapositiva que se sale,
+  una traducción desactualizada-- y lleva a cada cosa con **Abrir**. Se
+  pueden pedir más: fórmulas distintas entre idiomas, lecciones sin usar,
+  líneas que se salen y coma decimal.
+- **Guardar y traer, más ligeros.** El catálogo se recarga una vez aunque lo
+  pidan varios a la vez, y sin volver a comprobar el índice que la operación
+  acaba de dejar hecho: es un proceso del motor menos por repositorio en cada
+  guardado. Y después de traer de GitHub ya no se regeneran a la fuerza todos
+  los índices ni se lee el catálogo dos veces.
+- **La ventana ya no se congela al leer el catálogo.** El índice se lee en otro
+  hilo, y con varios repositorios, todos a la vez: se tarda lo que el más
+  grande y no la suma.
+- **Arrancar sin esperas.** Con quien entró la última vez apuntado, Didacta
+  abre sin esperar a GitHub --esperaba hasta seis segundos en cada arranque--
+  y se lo pregunta después; si dice que la credencial ya no vale, se cierra la
+  sesión entonces. Los repositorios se abren todos a la vez. Y la pantalla de
+  carga dice qué está haciendo.
+- **Menos trabajo en cada redibujado.** La aplicación ya no se reconstruye
+  entera con cada aviso de la sesión, el tema se hace una vez por paleta, el
+  contador de Traducción no reordena dos mil lecciones cada vez, y buscar una
+  lección por su ruta va por un índice en lugar de recorrerlas todas. Y lo
+  que solo le importa a una parte de la pantalla ya no redibuja las demás:
+  plegar un tema, marcar una asignatura, cambiar un ajuste, guardar o que
+  empiece y acabe una compilación repintan lo que lo enseña y nada más.
+- **Preparada para entrar como GitHub App**: llegar solo a los repositorios
+  que elijas, con una sesión que se renueva sola cada ocho horas. Las
+  sesiones de ahora siguen valiendo tal cual. Ajustes → Cuenta y
+  repositorios dice además, por fin, qué repositorio no se pudo abrir y por
+  qué.
+- **Apuntes accesibles.** Con *PDF accesibles* en Ajustes, los apuntes, las
+  hojas y los exámenes salen etiquetados (PDF/UA): con su estructura, su
+  idioma y el texto alternativo de las figuras, para leerlos con un lector de
+  pantalla. Y al exportar un curso, *También: los apuntes en HTML* deja al lado
+  de cada PDF una página que se agranda y se lee en voz alta, fórmulas
+  incluidas, con lo mismo que lleva su PDF y nada más. Los PDF muestran su
+  título en la barra del visor, y no el nombre del fichero.
+- **El texto alternativo de las figuras**, `alt={…}`, en una imagen o en un
+  dibujo de TikZ: el editor lo propone al escribir `\includegraphics`, se
+  traduce con la lección, y la revisión dice qué figuras no lo tienen.
+- **Compilar en GitHub en cada cambio.** Desde Ajustes → Cuenta y
+  repositorios, un clic hace que GitHub compile todo el material de un
+  repositorio en cada envío, lo compruebe y ponga el índice al día, y deje los
+  PDF en dos paquetes separados: lo que se reparte, sin soluciones, y lo del
+  profesor. El repositorio de ejemplo lo trae de salida.
+- **Crear el repositorio de ejemplo ya no falla al enviarlo.** GitHub
+  rechazaba su primer envío porque trae un workflow, y Didacta no pedía el
+  permiso para eso. Ahora lo pide al entrar; con una sesión de antes, el
+  ejemplo se crea sin sus workflows, y para añadirlos basta con volver a
+  entrar.
+- **La paleta de órdenes: ⌘K (Ctrl+K).** Escribe y ve a una lección, a un
+  curso, a un documento o a una sección de Ajustes, o lanza una orden
+  --actualizar, enviar, la apariencia, el tamaño del texto-- sin buscar el
+  botón. Lo de la pantalla en la que estás sale primero: en una lección,
+  guardar, compilar, editar en otro idioma o moverla; en un curso, compilar
+  lo desactualizado o crear un tema.
+- **Buscar con una errata.** «nomrados» o «difrenciales» encuentran lo mismo
+  que bien escritas, en la biblioteca y al añadir lecciones o problemas: una
+  letra de más, de menos, cambiada o dos intercambiadas, en palabras de cinco
+  letras o más que no estén tal cual en ningún sitio. Lo parecido va al
+  final, y se cuenta aparte.
+- **La biblioteca, más fluida al buscar.** El texto de búsqueda de cada lección
+  se prepara una vez, la lista espera 120 ms a que se deje de teclear, y un
+  tema con cuatrocientos problemas construye solo las tarjetas que se ven.
+- **La carpeta de compilación, a la vista**: Ajustes → Herramientas dice cuánto
+  ocupa la de cada repositorio y la vacía de un botón. En el material de
+  Análisis eran 440 MB. Y `didacta clean`, lo mismo desde el terminal.
+- **Versiones de prueba**, en Ajustes → Actualizaciones: quien las pide recibe
+  cada versión antes de publicarla para todos, marcada como de prueba, y pasa
+  a la final en cuanto sale.
+- **Una web del curso**: `didacta site curso@año` deja en una carpeta los PDF
+  que se reparten y una página que los enseña por idioma y por tema, lista
+  para GitHub Pages. El repositorio de ejemplo trae el workflow que la
+  publica.
+- **Mejor en Windows y en Linux.** Los ficheros guardan siempre el fin de
+  línea `\n`, así que un cambio hecho en Windows ya no sale como si hubiera
+  cambiado la lección entera; Didacta usa el git que encuentra la
+  comprobación de herramientas y no el primero del PATH; y en Linux se entera
+  de los cambios hechos en otro programa también dentro de las subcarpetas.
+- **Un informe de diagnóstico**, en Ajustes → Ayuda: la versión, el sistema,
+  cada orden del motor y de git con su resultado, lo que contestó GitHub y los
+  errores que Didacta se tragó para seguir, sin claves ni contraseñas, listo
+  para pegar en una incidencia. También queda en un fichero, dos de un mega
+  como mucho.
+- **Reordenar los documentos de un curso ya no cambia de más el
+  `year.yaml`.** Un documento de una línea pegado al siguiente ganaba una línea
+  en blanco al moverlo, y el cambio guardado enseñaba algo que nadie había
+  hecho.
+- **Ayuda en la web**: una página, «Cuando algo falla», con los errores que
+  más se ven y qué hacer con cada uno --«Undefined control sequence», un
+  `.sty` que falta con la orden de cada distribución, MiKTeX sin Perl, la
+  carpeta ocupada, OneDrive, los cambios que chocan--, y un glosario de las
+  palabras de Didacta para quien no es técnico. La página de Ajustes sigue
+  ahora las secciones de la aplicación, en el mismo orden y con las mismas
+  direcciones.
+- **La ortografía, en «Revisar».** Una comprobación más de las que se piden:
+  las palabras que el diccionario de cada idioma no conoce, con su lección, su
+  línea y la sugerencia, sin mirar dentro de las fórmulas ni de las órdenes de
+  LaTeX. Usa hunspell y los diccionarios que haya en el sistema --el
+  valenciano, con el suyo o con el catalán--, y si faltan lo dice. Las
+  palabras buenas que el diccionario no sabe, como «Banach», se apuntan en
+  `shared/palabras.txt`. Desde el terminal, `didacta check --with spelling`.
+- **El tamaño del texto**, en Ajustes → Apariencia: del 85 % al 150 %, para
+  el proyector del aula o una pantalla pequeña. Y desde cualquier pantalla con
+  ⌘+ y ⌘− (Ctrl en Windows y Linux, y también el «+» de un teclado español);
+  ⌘0 lo deja en el normal.
+- **Un aviso al terminar de compilar**, si se enciende en Ajustes →
+  Herramientas: una notificación del sistema cuando acaba, con si ha salido
+  bien o cuántos documentos tienen errores. Solo si mientras tanto estabas en
+  otra ventana.
+- **La interfaz Esencial, más ligera.** Lo de quien mantiene el repositorio
+  del departamento pasa a la Completa (Ajustes → Apariencia → Interfaz): los
+  apartados Bloques y plantillas y Servidor MCP, poner los ids, mover un tema
+  y gestionar su vinculación, copiar el comando de compilar y «Entre repos» en
+  la columna de la izquierda, que con la Esencial sale solo cuando hay algo
+  que mirar. Las herramientas, si están todas, se enseñan en una línea; y la
+  ventana de compilar y sincronizar dice qué está haciendo y cómo ha acabado,
+  con el registro entero detrás de «Ver detalles» --y a la vista si algo
+  falla sin decir por qué--.
+- **Las barras de la biblioteca enseñan lo traducido.** Salían siempre grises,
+  como si no hubiera nada hecho, aunque la leyenda de al lado dijera «58 al
+  día»: el tramo verde y el ámbar medían cero de alto.
+
 ## 0.2.1
 
 - **Quitar un repositorio pregunta qué hacer con su carpeta.** Se puede dejar

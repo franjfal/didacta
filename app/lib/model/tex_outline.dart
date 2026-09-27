@@ -22,6 +22,7 @@ library;
 
 import 'tex_scan.dart';
 import 'tex_wrap.dart';
+import '../l10n/tr.dart';
 
 /// De dónde sale un trozo del texto.
 enum TexSourceKind {
@@ -184,9 +185,11 @@ class TexIssue {
   final int lineInSource;
 
   String get message => switch (kind) {
-    TexIssueKind.unclosed => '«$name» se abre y no se cierra',
-    TexIssueKind.unopened => '«$name» se cierra sin haberse abierto',
-    TexIssueKind.crossed => '«$name» se cierra por fuera de otro entorno',
+    TexIssueKind.unclosed => tr('«{0}» se abre y no se cierra', [name]),
+    TexIssueKind.unopened => tr('«{0}» se cierra sin haberse abierto', [name]),
+    TexIssueKind.crossed => tr('«{0}» se cierra por fuera de otro entorno', [
+      name,
+    ]),
   };
 }
 

@@ -17,6 +17,8 @@
 /// escribe un número de versión a mano.
 library;
 
+import '../l10n/tr.dart';
+
 /// Una versión semántica.
 class AppVersion implements Comparable<AppVersion> {
   const AppVersion(
@@ -98,7 +100,7 @@ class AppVersion implements Comparable<AppVersion> {
   static AppVersion parse(String text) {
     final parsed = tryParse(text);
     if (parsed == null) {
-      throw FormatException('No es una versión semántica', text);
+      throw FormatException(tr('No es una versión semántica'), text);
     }
     return parsed;
   }

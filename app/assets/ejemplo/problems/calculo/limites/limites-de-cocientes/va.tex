@@ -1,0 +1,52 @@
+% Problema: límits de quocients (valencià).
+
+\begin{exercise}[Límits de quocients]
+Calcula els límits següents:
+\[
+  \text{(i)}\ \lim_{x \to 2} \frac{x^2 - 4}{x - 2} ,
+  \qquad
+  \text{(ii)}\ \lim_{x \to 1} \frac{x^3 - 1}{x^2 - 1} ,
+  \qquad
+  \text{(iii)}\ \lim_{x \to 0} \frac{\sqrt{1 + x} - 1}{x} .
+\]
+
+\dmarks{3}
+
+\begin{hint}
+En els tres, el numerador i el denominador s'anul·len en el punt. Factoritza
+per a simplificar el factor comú; en l'últim, multiplica i divideix per
+$\sqrt{1 + x} + 1$.
+\end{hint}
+
+\begin{answer}
+(i) $4$; (ii) $3/2$; (iii) $1/2$.
+\end{answer}
+
+\begin{solution}
+Com que el límit no depén del valor en el punt, es pot simplificar per a $x$
+diferent d'ell i avaluar després.
+\begin{parts}
+  \item Per a $x \neq 2$, $\dfrac{x^2 - 4}{x - 2} = x + 2$, així que el
+        límit és $4$.
+  \item Per a $x \neq \pm 1$,
+        \[
+          \frac{x^3 - 1}{x^2 - 1}
+          = \frac{(x - 1)(x^2 + x + 1)}{(x - 1)(x + 1)}
+          = \frac{x^2 + x + 1}{x + 1} ,
+        \]
+        que tendeix a $3/2$.
+  \item Per a $x \neq 0$,
+        \[
+          \frac{\sqrt{1 + x} - 1}{x}
+          = \frac{(1 + x) - 1}{x\,\bigl(\sqrt{1 + x} + 1\bigr)}
+          = \frac{1}{\sqrt{1 + x} + 1} ,
+        \]
+        que tendeix a $1/2$.
+\end{parts}
+\end{solution}
+
+\begin{marking}
+Un punt per apartat. Escriure «$0/0$» com a resultat no puntua; simplificar
+bé i equivocar-se en avaluar, mig punt.
+\end{marking}
+\end{exercise}

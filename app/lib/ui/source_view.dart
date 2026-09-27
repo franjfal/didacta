@@ -48,6 +48,8 @@
 /// saca un PDF de una página que parece correcto.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/content_gateway.dart';
@@ -59,10 +61,13 @@ import '../model/source_drafts.dart';
 import '../model/tex_outline.dart';
 import '../state/session.dart';
 import 'heading_title.dart';
+import 'problem.dart';
 import 'tex_field.dart';
 import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
 import 'theme.dart';
+import 'save_review.dart';
+import '../l10n/tr.dart';
 
 class SourceTab extends StatefulWidget {
   const SourceTab({
@@ -128,7 +133,7 @@ class _SourceTabState extends State<SourceTab> {
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   @override
@@ -335,9 +340,7 @@ class _SourceTabState extends State<SourceTab> {
       );
     } catch (thrown) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$thrown')));
+      showProblem(context, thrown);
     }
   }
 
@@ -368,16 +371,17 @@ class _SourceTabState extends State<SourceTab> {
     final touched = _drafts.dirty;
     if (touched.isEmpty) return;
 
-    final message = await showDialog<String>(
-      context: context,
-      builder: (context) => _SaveDialog(
-        drafts: touched,
-        suggested: _drafts.suggestedMessage(
-          widget.document.title(_viewLanguage),
-        ),
-      ),
+    final suggested = _drafts.suggestedMessage(
+      widget.document.title(_viewLanguage),
+    );
+    final message = await askSaveMessage(
+      context,
+      widget.session,
+      suggested: suggested,
+      dialog: (context) => _SaveDialog(drafts: touched, suggested: suggested),
     );
     if (message == null || !mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     setState(() {
       _saving = true;
@@ -421,22 +425,31 @@ class _SourceTabState extends State<SourceTab> {
         _saving = false;
         _rebuild();
       });
+      final only = touched.length == 1 ? touched.single : null;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            touched.length == 1
-                ? 'Guardado como un commit.'
-                : '${touched.length} ficheros guardados como un commit.',
-          ),
-        ),
+        only == null
+            ? SnackBar(
+                content: Text(
+                  widget.session.saveNotice(
+                    widget.document.repo,
+                    files: touched.length,
+                  ),
+                ),
+              )
+            : savedNotice(
+                notice: widget.session.saveNotice(widget.document.repo),
+                message: message,
+                before: only.loaded,
+                after: only.text,
+                what: only.path,
+                navigator: navigator,
+              ),
       );
       await widget.session.reloadCatalogue();
     } catch (thrown) {
       if (!mounted) return;
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$thrown'), backgroundColor: didactaTeacher),
-      );
+      showProblem(context, thrown);
     }
   }
 
@@ -454,7 +467,7 @@ class _SourceTabState extends State<SourceTab> {
     );
     final titles = await editHeadingTitles(
       context,
-      heading: heading.kind == 'section' ? 'Apartado' : 'Subapartado',
+      heading: heading.kind == 'section' ? tr('Apartado') : tr('Subapartado'),
       languages: languages,
       titles: heading.titles,
       reference: _viewLanguage,
@@ -468,8 +481,8 @@ class _SourceTabState extends State<SourceTab> {
       final composition = CompositionFile(file.text);
       final block = composition.blockFor(widget.document.id);
       if (block == null) {
-        throw const CompositionException(
-          'este documento no tiene composición en year.yaml',
+        throw CompositionException(
+          tr('este documento no tiene composición en year.yaml'),
         );
       }
 
@@ -483,16 +496,16 @@ class _SourceTabState extends State<SourceTab> {
           if (entry.enabled) index,
       ];
       if (heading.partIndex >= activeIndexes.length) {
-        throw const CompositionException(
-          'no se ha encontrado el apartado en year.yaml',
+        throw CompositionException(
+          tr('no se ha encontrado el apartado en year.yaml'),
         );
       }
       final at = activeIndexes[heading.partIndex];
       final entry = entries[at];
       if (entry.kind != EntryKind.section &&
           entry.kind != EntryKind.subsection) {
-        throw const CompositionException(
-          'la entrada de year.yaml no es un apartado',
+        throw CompositionException(
+          tr('la entrada de year.yaml no es un apartado'),
         );
       }
 
@@ -511,18 +524,16 @@ class _SourceTabState extends State<SourceTab> {
             path: widget.yearPath,
             text: composition.text,
             sha: file.sha,
-            message: 'Retitular un apartado de ${widget.document.id}',
+            message: tr('Retitular un apartado de {0}', [widget.document.id]),
           );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('year.yaml guardado como un commit.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(tr('Guardado en el historial.'))));
       await widget.session.reloadCatalogue();
     } catch (thrown) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$thrown'), backgroundColor: didactaTeacher),
-      );
+      showProblem(context, thrown);
     }
   }
 
@@ -535,8 +546,8 @@ class _SourceTabState extends State<SourceTab> {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'No se ha podido leer el documento:\n\n$_error',
-            style: const TextStyle(color: didactaTeacher),
+            tr('No se ha podido leer el documento:\n\n{0}', [_error]),
+            style: TextStyle(color: context.palette.teacher),
           ),
         ),
       );
@@ -573,22 +584,26 @@ class _SourceTabState extends State<SourceTab> {
           controller: focused == null ? _idle : _controllerFor(focused),
           focusNode: focused == null ? null : _focusFor(focused),
           enabled: canWrite && focused != null,
+          repo: widget.document.repo,
         ),
         if (_conflicts.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
             child: Note(
-              'Han cambiado en el repositorio desde que los abriste: '
-              '${_conflicts.join(', ')}. No se ha escrito nada. Vuelve a '
-              'abrir el documento; lo que has escrito sigue aquí mientras '
-              'decides.',
-              tone: didactaTeacher,
+              tr(
+                'Han cambiado en el repositorio desde que los abriste: '
+                '{0}. No se ha escrito nada. Vuelve a '
+                'abrir el documento; lo que has escrito sigue aquí mientras '
+                'decides.',
+                [_conflicts.join(', ')],
+              ),
+              tone: context.palette.teacher,
             ),
           ),
         if (_outline.issues.isNotEmpty) _IssueBanner(issues: _outline.issues),
         Expanded(
           child: Container(
-            color: didactaCard,
+            color: context.palette.card,
             child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 40),
               itemCount: _rows.length,
@@ -703,9 +718,9 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Row(
@@ -713,9 +728,9 @@ class _Header extends StatelessWidget {
           // El idioma del documento, a la izquierda del todo: es lo primero
           // que se decide al mirar un tema --«¿esto en valenciano cómo va?»--
           // y cambia lo que se ve en todos los fragmentos a la vez.
-          const Text(
-            'Idioma',
-            style: TextStyle(fontSize: 11.5, color: didactaMuted),
+          Text(
+            tr('Idioma'),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
           const SizedBox(width: 6),
           for (final code in languages)
@@ -730,22 +745,24 @@ class _Header extends StatelessWidget {
               [
                 '${reading.files.length} ficheros',
                 if (outline.slideCount > 0)
-                  '${outline.slideCount} diapositivas',
+                  tr('{0} diapositivas', [outline.slideCount]),
                 if (outline.issues.isNotEmpty)
-                  '${outline.issues.length} avisos',
+                  tr('{0} avisos', [outline.issues.length]),
                 if (dirty > 0)
-                  dirty == 1 ? '1 fichero tocado' : '$dirty ficheros tocados',
+                  dirty == 1
+                      ? tr('1 fichero tocado')
+                      : tr('{0} ficheros tocados', [dirty]),
               ].join(' · '),
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ),
           if (canDim) ...[
             // «Lo que no se proyecta, en gris» es una lectura del documento,
             // no una propiedad suya: en unos apuntes no significa nada.
-            const Text(
-              'Marcar lo que no se proyecta',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('Marcar lo que no se proyecta'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(width: 6),
             Switch(key: const Key('source-dim'), value: dim, onChanged: onDim),
@@ -755,7 +772,7 @@ class _Header extends StatelessWidget {
             TextButton(
               key: const Key('source-discard'),
               onPressed: onDiscard,
-              child: const Text('Descartar'),
+              child: Text(tr('Descartar')),
             ),
           const SizedBox(width: 4),
           FilledButton.icon(
@@ -767,7 +784,7 @@ class _Header extends StatelessWidget {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.check, size: 16),
-            label: Text(saving ? 'Guardando…' : 'Guardar'),
+            label: Text(saving ? tr('Guardando…') : tr('Guardar')),
             onPressed: canSave ? onSave : null,
           ),
         ],
@@ -797,13 +814,13 @@ class _DocumentLanguage extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: selected
-            ? didactaAccentDark.withValues(alpha: 0.14)
+            ? context.palette.accentDark.withValues(alpha: 0.14)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(3),
         border: Border.all(
           color: selected
-              ? didactaAccentDark.withValues(alpha: 0.4)
-              : didactaRule,
+              ? context.palette.accentDark.withValues(alpha: 0.4)
+              : context.palette.rule,
         ),
       ),
       child: Text(
@@ -811,7 +828,7 @@ class _DocumentLanguage extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          color: selected ? didactaAccentDark : didactaMuted,
+          color: selected ? context.palette.accentDark : context.palette.muted,
         ),
       ),
     ),
@@ -828,7 +845,7 @@ class _IssueBanner extends StatelessWidget {
     final shown = issues.take(4).toList();
     return Container(
       width: double.infinity,
-      color: didactaTeacher.withValues(alpha: 0.08),
+      color: context.palette.teacher.withValues(alpha: 0.08),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,13 +857,16 @@ class _IssueBanner extends StatelessWidget {
                 // El fichero y la línea de *ese* fichero: es lo que LaTeX no
                 // sabe decir y lo único que sirve para ir a arreglarlo.
                 '${issue.message} — ${issue.sourceId}:${issue.lineInSource}',
-                style: const TextStyle(fontSize: 11.5, color: didactaTeacher),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.palette.teacher,
+                ),
               ),
             ),
           if (issues.length > shown.length)
             Text(
-              'y ${issues.length - shown.length} más',
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              tr('y {0} más', [issues.length - shown.length]),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
         ],
       ),
@@ -879,7 +899,7 @@ class _Heading extends StatelessWidget {
               style: TextStyle(
                 fontSize: subsection ? 13 : 15,
                 fontWeight: FontWeight.w700,
-                color: didactaInk,
+                color: context.palette.ink,
               ),
             ),
           ),
@@ -888,7 +908,7 @@ class _Heading extends StatelessWidget {
           if (onEdit != null)
             IconButton(
               key: Key('source-heading-${heading.partIndex}'),
-              tooltip: 'Editar el título en todos los idiomas',
+              tooltip: tr('Editar el título en todos los idiomas'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.edit_outlined, size: 15),
               onPressed: onEdit,
@@ -900,28 +920,33 @@ class _Heading extends StatelessWidget {
 }
 
 class _Tag extends StatelessWidget {
-  const _Tag(this.text, {this.colour = didactaMuted});
+  const _Tag(this.text, {this.colour});
 
   final String text;
-  final Color colour;
+
+  /// Sin él, el gris del texto secundario.
+  final Color? colour;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-    decoration: BoxDecoration(
-      color: colour.withValues(alpha: 0.10),
-      borderRadius: BorderRadius.circular(3),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontSize: 9.5,
-        fontWeight: FontWeight.w700,
-        color: colour,
-        letterSpacing: 0.4,
+  Widget build(BuildContext context) {
+    final tint = colour ?? context.palette.muted;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(3),
       ),
-    ),
-  );
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9.5,
+          fontWeight: FontWeight.w700,
+          color: tint,
+          letterSpacing: 0.4,
+        ),
+      ),
+    );
+  }
 }
 
 /// Un fichero: su línea de puntos y su texto, editable desde el principio.
@@ -976,10 +1001,13 @@ class _Fragment extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
             child: Note(
-              'No existe la versión en $language de esta unidad. Lo que se '
-              'escriba aquí la crea, y hasta entonces ningún documento que la '
-              'use se puede compilar en $language.',
-              tone: didactaTeacher,
+              tr(
+                'No existe la versión en {0} de esta unidad. Lo que se '
+                'escriba aquí la crea, y hasta entonces ningún documento que la '
+                'use se puede compilar en {1}.',
+                [language, language],
+              ),
+              tone: context.palette.teacher,
             ),
           ),
         TexField(
@@ -987,7 +1015,7 @@ class _Fragment extends StatelessWidget {
           controller: controller,
           focusNode: focusNode,
           readOnly: !canWrite,
-          hintText: 'El fichero está vacío.',
+          hintText: tr('El fichero está vacío.'),
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
         ),
       ],
@@ -1007,20 +1035,20 @@ class _Fragment extends StatelessWidget {
             style: TextStyle(
               fontSize: 10.5,
               fontFamily: 'monospace',
-              color: dirty ? didactaAccentDark : didactaMuted,
+              color: dirty ? context.palette.accentDark : context.palette.muted,
               fontWeight: dirty ? FontWeight.w700 : FontWeight.w400,
             ),
           ),
         ),
         if (dirty) ...[
           const SizedBox(width: 6),
-          const _Tag('sin guardar', colour: didactaEx),
+          _Tag(tr('sin guardar'), colour: context.palette.ex),
         ],
         if (file.unit.usedBy.length > 1) ...[
           const SizedBox(width: 6),
           // Editar aquí es cómodo justo porque no parece que estés abriendo un
           // fichero que usan doce documentos.
-          _Tag('en ${file.unit.usedBy.length} documentos'),
+          _Tag(tr('en {0} documentos', [file.unit.usedBy.length])),
         ],
         const SizedBox(width: 8),
         for (final code in languages)
@@ -1059,12 +1087,14 @@ class _LanguageTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colour = selected
-        ? didactaAccentDark
-        : (exists ? didactaMuted : didactaMuted.withValues(alpha: 0.45));
+        ? context.palette.accentDark
+        : (exists
+              ? context.palette.muted
+              : context.palette.muted.withValues(alpha: 0.45));
     return Tooltip(
       // Un idioma que no existe se puede abrir igual: escribir ahí es como se
       // empieza una traducción.
-      message: exists ? path : 'No existe todavía: $path',
+      message: exists ? path : tr('No existe todavía: {0}', [path]),
       child: InkWell(
         key: Key('source-language-$path'),
         onTap: onTap,
@@ -1073,13 +1103,13 @@ class _LanguageTab extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
           decoration: BoxDecoration(
             color: selected
-                ? didactaAccentDark.withValues(alpha: 0.12)
+                ? context.palette.accentDark.withValues(alpha: 0.12)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(3),
             border: Border.all(
               color: selected
-                  ? didactaAccentDark.withValues(alpha: 0.35)
-                  : didactaRule,
+                  ? context.palette.accentDark.withValues(alpha: 0.35)
+                  : context.palette.rule,
             ),
           ),
           child: Row(
@@ -1099,8 +1129,8 @@ class _LanguageTab extends StatelessWidget {
                 Container(
                   width: 5,
                   height: 5,
-                  decoration: const BoxDecoration(
-                    color: didactaEx,
+                  decoration: BoxDecoration(
+                    color: context.palette.ex,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -1123,15 +1153,19 @@ class _Dots extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     height: 1,
     width: width,
-    child: CustomPaint(painter: _DotsPainter()),
+    child: CustomPaint(painter: _DotsPainter(context.palette.rule)),
   );
 }
 
 class _DotsPainter extends CustomPainter {
+  const _DotsPainter(this.colour);
+
+  final Color colour;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = didactaRule
+      ..color = colour
       ..strokeWidth = 1;
     for (var x = 0.0; x < size.width; x += 5) {
       canvas.drawLine(Offset(x, 0), Offset(x + 2, 0), paint);
@@ -1139,7 +1173,7 @@ class _DotsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter old) => false;
+  bool shouldRepaint(covariant _DotsPainter old) => old.colour != colour;
 }
 
 class _Gap extends StatelessWidget {
@@ -1153,16 +1187,18 @@ class _Gap extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: didactaTeacher.withValues(alpha: 0.06),
-        border: Border.all(color: didactaTeacher.withValues(alpha: 0.3)),
+        color: context.palette.teacher.withValues(alpha: 0.06),
+        border: Border.all(
+          color: context.palette.teacher.withValues(alpha: 0.3),
+        ),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         '${gap.reference} — ${gap.reason}',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11.5,
           fontFamily: 'monospace',
-          color: didactaTeacher,
+          color: context.palette.teacher,
         ),
       ),
     ),
@@ -1201,8 +1237,8 @@ class _SaveDialogState extends State<_SaveDialog> {
     return AlertDialog(
       title: Text(
         widget.drafts.length == 1
-            ? 'Guardar un fichero'
-            : 'Guardar ${widget.drafts.length} ficheros',
+            ? tr('Guardar un fichero')
+            : tr('Guardar {0} ficheros', [widget.drafts.length]),
       ),
       content: SizedBox(
         width: 560,
@@ -1210,9 +1246,11 @@ class _SaveDialogState extends State<_SaveDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Un commit con todos. Lo que no has tocado no se escribe.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr(
+                'Un solo cambio con todos. Lo que no has tocado no se escribe.',
+              ),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             const SizedBox(height: 10),
             for (final draft in widget.drafts)
@@ -1235,17 +1273,17 @@ class _SaveDialogState extends State<_SaveDialog> {
                         final size = diffSize(draft.loaded, draft.text);
                         return Text(
                           '+${size.added} −${size.removed}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             fontFamily: 'monospace',
-                            color: didactaMuted,
+                            color: context.palette.muted,
                           ),
                         );
                       },
                     ),
                     if (!draft.exists) ...[
                       const SizedBox(width: 8),
-                      const _Tag('nuevo', colour: didactaAccentDark),
+                      _Tag('nuevo', colour: context.palette.accentDark),
                     ],
                   ],
                 ),
@@ -1255,8 +1293,8 @@ class _SaveDialogState extends State<_SaveDialog> {
               key: const Key('source-commit-message'),
               controller: _controller,
               autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Mensaje del commit',
+              decoration: InputDecoration(
+                labelText: tr('Qué has cambiado'),
                 border: OutlineInputBorder(),
               ),
             ),
@@ -1266,7 +1304,7 @@ class _SaveDialogState extends State<_SaveDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('source-commit-save'),
@@ -1275,7 +1313,7 @@ class _SaveDialogState extends State<_SaveDialog> {
             if (message.isEmpty) return;
             Navigator.of(context).pop(message);
           },
-          child: const Text('Guardar'),
+          child: Text(tr('Guardar')),
         ),
       ],
     );

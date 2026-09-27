@@ -1,0 +1,57 @@
+% Lección: funciones continuas (castellano).
+
+\begin{frame}
+\didactatitle{Funciones continuas}
+
+\begin{definition}[Continuidad]
+Sea $f$ una función definida en un intervalo $I$ y sea $a \in I$. Decimos que
+$f$ es \keyterm{continua en $a$} si para cada $\varepsilon > 0$ existe un
+$\delta > 0$ tal que
+\[
+  x \in I, \ |x - a| < \delta \implies |f(x) - f(a)| < \varepsilon .
+\]
+Es \keyterm{continua en $I$} si lo es en todos sus puntos.
+\end{definition}
+
+Si $a$ no es un extremo de $I$, la condición dice exactamente que
+\begin{keyformula}
+  \lim_{x \to a} f(x) = f(a) ,
+\end{keyformula}
+\bymedium{%
+  es decir: el límite existe y vale lo mismo que la función.
+}{%
+  es decir: el límite existe, $f$ está definida en $a$, y los dos valores
+  coinciden. Si falla cualquiera de las tres cosas, $f$ no es continua en $a$.
+}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Operaciones y discontinuidades}
+
+\begin{remark}
+Por el álgebra de límites, la suma, el producto y el cociente (donde el
+denominador no se anula) de funciones continuas son continuos. En particular,
+los polinomios y las funciones racionales son continuos allí donde están
+definidos.
+\end{remark}
+
+\dpause
+
+\begin{example}
+\begin{itemize}
+  \item $f(x) = \dfrac{x^2 - 1}{x - 1}$ para $x \neq 1$, con $f(1) = 0$. El
+        límite en $1$ existe y vale $2$, pero no coincide con $f(1)$. La
+        discontinuidad es \keyterm{evitable}: basta redefinir $f(1) = 2$.
+  \item $H(x) = 0$ para $x < 0$ y $H(x) = 1$ para $x \geq 0$. No es continua
+        en $0$: con $\varepsilon = 1/2$, cualquier intervalo alrededor de $0$
+        contiene puntos $x < 0$, donde $|H(x) - H(0)| = 1$. Es un
+        \keyterm{salto}, y ningún valor de $H(0)$ lo arregla.
+\end{itemize}
+\end{example}
+
+\begin{commonmistake}
+Confunden «continua» con «se dibuja sin levantar el lápiz», y no saben qué
+hacer con $1/x$, que es continua en $(-\infty, 0)$ y en $(0, +\infty)$ aunque
+su gráfica tenga dos ramas.
+\end{commonmistake}
+\end{frame}

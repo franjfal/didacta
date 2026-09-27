@@ -15,6 +15,7 @@
 /// un test que exige el material de una persona concreta no es un test que
 /// pueda correr nadie más.
 @TestOn('vm')
+@Tags(['real'])
 library;
 
 import 'dart:convert';

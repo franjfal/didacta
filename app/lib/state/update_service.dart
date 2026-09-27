@@ -25,6 +25,7 @@ import '../data/release_channel.dart';
 import '../data/update_installer.dart';
 import '../model/app_version.dart';
 import '../model/update_manifest.dart';
+import '../l10n/tr.dart';
 
 /// El repositorio desde el que se distribuye.
 ///
@@ -183,7 +184,7 @@ class UpdateService extends ChangeNotifier {
   /// Por qué no, cuando no.
   String? get cannotInstallReason => info.canUpdate
       ? installer.unsupportedReason
-      : 'En el navegador no hay nada que actualizar.';
+      : tr('En el navegador no hay nada que actualizar.');
 
   /// Lee cuándo se miró por última vez, y cómo fue la última actualización.
   ///
@@ -194,6 +195,7 @@ class UpdateService extends ChangeNotifier {
   /// preferencias, y la versión que se está ejecutando ahora.
   Future<void> load() async {
     _lastCheck = await preferences.lastUpdateCheck();
+    _tests = await preferences.testVersions();
 
     final pending = AppVersion.tryParse(await preferences.pendingUpdate());
     if (pending != null) {
@@ -209,6 +211,21 @@ class UpdateService extends ChangeNotifier {
             );
     }
     notifyListeners();
+  }
+
+  bool _tests = false;
+
+  /// Si se reciben también las versiones de prueba: las que salen antes de
+  /// la final, para probarlas. Apagado de salida.
+  bool get testVersions => _tests;
+
+  /// Cambiarlo, y mirar otra vez: quien las pide quiere saber ya si hay una.
+  Future<void> setTestVersions(bool value) async {
+    if (_tests == value) return;
+    _tests = value;
+    await preferences.setTestVersions(value);
+    notifyListeners();
+    if (info.canUpdate) await checkForUpdates(silent: true);
   }
 
   /// Quitar el aviso de cómo fue la última actualización.
@@ -246,7 +263,7 @@ class UpdateService extends ChangeNotifier {
     ReleaseChannel? channel;
     try {
       channel = _openChannel();
-      final published = await channel.latest();
+      final published = await channel.latest(tests: _tests);
 
       // Se apunta la fecha aunque no hubiera nada: lo que se está evitando es
       // volver a preguntar mañana, y eso vale igual si la respuesta fue «no
@@ -283,7 +300,7 @@ class UpdateService extends ChangeNotifier {
       }
       _problem = UpdateException(
         UpdateProblem.offline,
-        'No se pudo comprobar si hay una versión nueva.',
+        tr('No se pudo comprobar si hay una versión nueva.'),
         detail: '$thrown',
       );
       _set(UpdateStage.failed);
@@ -297,9 +314,9 @@ class UpdateService extends ChangeNotifier {
     final published = _manifest;
     final wanted = asset;
     if (published == null || wanted == null) {
-      _problem = const UpdateException(
+      _problem = UpdateException(
         UpdateProblem.noAssetForPlatform,
-        'Esta versión de Didacta no trae un paquete para tu sistema.',
+        tr('Esta versión de Didacta no trae un paquete para tu sistema.'),
       );
       _set(UpdateStage.failed);
       return;
@@ -307,7 +324,7 @@ class UpdateService extends ChangeNotifier {
     if (!canInstall) {
       _problem = UpdateException(
         UpdateProblem.installFailed,
-        cannotInstallReason ?? 'Aquí no se puede instalar automáticamente.',
+        cannotInstallReason ?? tr('Aquí no se puede instalar automáticamente.'),
       );
       _set(UpdateStage.failed);
       return;
@@ -315,9 +332,12 @@ class UpdateService extends ChangeNotifier {
     if (published.needsFullReinstallFrom(info.version)) {
       _problem = UpdateException(
         UpdateProblem.installFailed,
-        'Tu versión (${info.version}) es demasiado antigua para actualizarse '
-        'sola a la ${published.version}. Descarga el instalador e instálala '
-        'encima.',
+        tr(
+          'Tu versión ({0}) es demasiado antigua para actualizarse '
+          'sola a la {1}. Descarga el instalador e instálala '
+          'encima.',
+          [info.version, published.version],
+        ),
       );
       _set(UpdateStage.failed);
       return;
@@ -356,7 +376,7 @@ class UpdateService extends ChangeNotifier {
     } catch (thrown) {
       _problem = UpdateException(
         UpdateProblem.downloadInterrupted,
-        'No se pudo descargar la actualización.',
+        tr('No se pudo descargar la actualización.'),
         detail: '$thrown',
       );
       _set(UpdateStage.failed);
@@ -373,9 +393,9 @@ class UpdateService extends ChangeNotifier {
   Future<void> installUpdate() async {
     final ready = _downloaded;
     if (ready == null) {
-      _problem = const UpdateException(
+      _problem = UpdateException(
         UpdateProblem.installFailed,
-        'No hay ninguna actualización descargada.',
+        tr('No hay ninguna actualización descargada.'),
       );
       _set(UpdateStage.failed);
       return;
@@ -397,7 +417,7 @@ class UpdateService extends ChangeNotifier {
       await preferences.setPendingUpdate(null);
       _problem = UpdateException(
         UpdateProblem.installFailed,
-        'No se pudo lanzar la actualización. Tu versión sigue intacta.',
+        tr('No se pudo lanzar la actualización. Tu versión sigue intacta.'),
         detail: '$thrown',
       );
       _set(UpdateStage.failed);

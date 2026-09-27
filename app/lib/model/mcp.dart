@@ -8,6 +8,7 @@
 library;
 
 import 'dart:convert';
+import '../l10n/tr.dart';
 
 /// Una herramienta del servidor, tal como la declara el motor.
 class McpTool {
@@ -148,11 +149,13 @@ class McpEvent {
 
   /// Una línea para leer de un vistazo.
   String get summary => switch (kind) {
-    McpEventKind.started => 'Servidor en marcha',
-    McpEventKind.stopped => 'Servidor detenido',
-    McpEventKind.connected => 'Se ha conectado ${client ?? 'un cliente'}',
+    McpEventKind.started => tr('Servidor en marcha'),
+    McpEventKind.stopped => tr('Servidor detenido'),
+    McpEventKind.connected => tr('Se ha conectado {0}', [
+      client ?? tr('un cliente'),
+    ]),
     McpEventKind.call =>
-      ok ? (tool ?? 'llamada') : '${tool ?? 'llamada'}: falló',
+      ok ? (tool ?? 'llamada') : tr('{0}: falló', [tool ?? 'llamada']),
     McpEventKind.other => detail ?? 'suceso',
   };
 

@@ -250,7 +250,7 @@ void main() {
   });
 
   group('contra los problemas de verdad', () {
-    test('el que encaja se lee y se vuelve a escribir igual', () {
+    test('el que encaja se lee y se vuelve a escribir igual', tags: 'real', () {
       final files = realProblems();
       if (files.isEmpty) {
         markTestSkipped('sin didacta_db al lado');
@@ -281,7 +281,7 @@ void main() {
       );
     });
 
-    test('ya llevan resultado y solución, que era el punto', () {
+    test('ya llevan resultado y solución, que era el punto', tags: 'real', () {
       final files = realProblems();
       if (files.isEmpty) {
         markTestSkipped('sin didacta_db al lado');

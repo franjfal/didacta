@@ -29,6 +29,7 @@
 library;
 
 import 'dart:convert';
+import '../data/diagnostics.dart';
 
 /// El formato del fichero. Si algún día cambia, esto es lo que dirá desde
 /// cuándo: un fichero de una versión que no se entiende se ignora entero en
@@ -89,7 +90,8 @@ class SyncedPrefs {
         enabledLanguages: _names(data['enabledLanguages']),
         coursesView: data['coursesView']?.toString() ?? 'visible',
       );
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('synced_prefs:92', caught, trace);
       return const SyncedPrefs();
     }
   }

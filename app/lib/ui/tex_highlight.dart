@@ -30,15 +30,16 @@ import 'theme.dart';
 ///
 /// Sobrios a propósito: lo que tiene que destacar en un fichero de Didacta es
 /// dónde empieza y acaba cada entorno, no cada llave.
-Color? colourForToken(TexTokenKind kind) => switch (kind) {
-  TexTokenKind.text => null,
-  TexTokenKind.comment => didactaMuted.withValues(alpha: 0.75),
-  TexTokenKind.command => didactaAlgo,
-  TexTokenKind.environment => didactaInk,
-  TexTokenKind.delimiter => didactaMuted.withValues(alpha: 0.8),
-  TexTokenKind.math => didactaProp,
-  TexTokenKind.special => didactaCor,
-};
+Color? colourForToken(TexTokenKind kind, DidactaPalette palette) =>
+    switch (kind) {
+      TexTokenKind.text => null,
+      TexTokenKind.comment => palette.muted.withValues(alpha: 0.75),
+      TexTokenKind.command => palette.algo,
+      TexTokenKind.environment => palette.ink,
+      TexTokenKind.delimiter => palette.muted.withValues(alpha: 0.8),
+      TexTokenKind.math => palette.prop,
+      TexTokenKind.special => palette.cor,
+    };
 
 /// Cómo se pinta cada trozo del texto de un fichero.
 ///
@@ -52,6 +53,9 @@ TextSpan highlightFragment({
   required TexSlice slice,
   required bool dim,
   required Color Function(TexBlock block) colourOf,
+  required DidactaPalette palette,
+  List<TextRange> found = const [],
+  int current = -1,
 }) {
   if (text.isEmpty) return TextSpan(text: text, style: base);
 
@@ -67,7 +71,7 @@ TextSpan highlightFragment({
 
   // 1. La sintaxis.
   for (final token in scanLatex(text)) {
-    final colour = colourForToken(token.kind);
+    final colour = colourForToken(token.kind, palette);
     if (colour == null) continue;
     paint(
       token.start,
@@ -82,7 +86,7 @@ TextSpan highlightFragment({
   // 2. Los delimitadores, del color de su entorno.
   for (final block in outline.blocks) {
     if (block.start < slice.start || block.start >= slice.end) continue;
-    final colour = block.closed ? colourOf(block) : didactaTeacher;
+    final colour = block.closed ? colourOf(block) : palette.teacher;
     final style = base.copyWith(color: colour, fontWeight: FontWeight.w700);
     final open = block.start - slice.start;
     paint(open, open + '\\begin{${block.name}}'.length, style);
@@ -94,7 +98,7 @@ TextSpan highlightFragment({
 
   // 3. Lo que no se proyecta, en gris, por encima de lo demás.
   if (dim) {
-    final faded = base.copyWith(color: didactaMuted.withValues(alpha: 0.55));
+    final faded = base.copyWith(color: palette.muted.withValues(alpha: 0.55));
     for (var line = slice.startLine; line <= slice.endLine; line += 1) {
       if (outline.projectedAt(line)) continue;
       final from = outline.lineStarts[line] - slice.start;
@@ -102,6 +106,18 @@ TextSpan highlightFragment({
           ? outline.lineStarts[line + 1] - slice.start
           : text.length;
       paint(from, to, faded);
+    }
+  }
+
+  // 4. Lo que se está buscando, con fondo: todas, y la actual más fuerte.
+  for (final (index, range) in found.indexed) {
+    final background = index == current
+        ? palette.ex.withValues(alpha: 0.5)
+        : palette.ex.withValues(alpha: 0.28);
+    final start = range.start.clamp(0, text.length);
+    final end = range.end.clamp(0, text.length);
+    for (var i = start; i < end; i += 1) {
+      styles[i] = styles[i].copyWith(backgroundColor: background);
     }
   }
 
@@ -131,6 +147,24 @@ class TexEditingController extends TextEditingController {
   TexOutline? _outline;
   TexSlice? _slice;
   bool _dim = false;
+
+  /// Lo que se está buscando: dónde está y cuál es la actual.
+  List<TextRange> _found = const [];
+  int _current = -1;
+
+  /// Pinta [found] en el texto, con [current] destacada. Vacía, lo quita.
+  void showFound(List<TextRange> found, int current) {
+    _found = found;
+    _current = current;
+    notifyListeners();
+  }
+
+  /// Lo mismo que `showFound` vacío, sin avisar a nadie: para quien se
+  /// desmonta, cuando el árbol no deja pedir que se pinte.
+  void forgetFound() {
+    _found = const [];
+    _current = -1;
+  }
 
   /// Un fichero suelto: el árbol es el suyo y se rehace cuando cambia.
   TexOutline? _own;
@@ -207,7 +241,10 @@ class TexEditingController extends TextEditingController {
       outline: _tree,
       slice: piece,
       dim: _dim,
-      colourOf: didactaBlockColour,
+      colourOf: (block) => didactaBlockColour(block, context.palette),
+      palette: context.palette,
+      found: _found,
+      current: _current,
     );
   }
 }
@@ -217,22 +254,23 @@ class TexEditingController extends TextEditingController {
 /// Por nombre antes que por clase en lo que se revela: una respuesta, una
 /// solución y una corrección tienen tres colores distintos en el PDF, y
 /// juntarlos aquí en uno perdería justo la distinción que se mira.
-Color didactaBlockColour(TexBlock block) => switch (block.name) {
-  'answer' => didactaProp,
-  'solution' => didactaThm,
-  'marking' => didactaTeacher,
-  'hint' => didactaEx,
-  _ => switch (block.kind) {
-    TexBlockKind.slide => didactaAccentDark,
-    TexBlockKind.channel => didactaQues,
-    TexBlockKind.exercise => didactaEx,
-    TexBlockKind.reveal => didactaThm,
-    TexBlockKind.theorem => didactaThm,
-    TexBlockKind.teaching => didactaTeacher,
-    TexBlockKind.list => didactaMuted,
-    TexBlockKind.math => didactaDefn,
-    TexBlockKind.figure => didactaDefn,
-    TexBlockKind.document => didactaMuted,
-    TexBlockKind.other => didactaMuted,
-  },
-};
+Color didactaBlockColour(TexBlock block, DidactaPalette palette) =>
+    switch (block.name) {
+      'answer' => palette.prop,
+      'solution' => palette.thm,
+      'marking' => palette.teacher,
+      'hint' => palette.ex,
+      _ => switch (block.kind) {
+        TexBlockKind.slide => palette.accentDark,
+        TexBlockKind.channel => palette.ques,
+        TexBlockKind.exercise => palette.ex,
+        TexBlockKind.reveal => palette.thm,
+        TexBlockKind.theorem => palette.thm,
+        TexBlockKind.teaching => palette.teacher,
+        TexBlockKind.list => palette.muted,
+        TexBlockKind.math => palette.defn,
+        TexBlockKind.figure => palette.defn,
+        TexBlockKind.document => palette.muted,
+        TexBlockKind.other => palette.muted,
+      },
+    };

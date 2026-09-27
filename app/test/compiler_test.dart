@@ -5,6 +5,7 @@
 /// que hace falta, y entienda lo que le devuelve-- y que **cuando no se
 /// pueda compilar lo diga en lugar de ofrecer un botón que falla**.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -86,7 +87,7 @@ void main() {
       final compiler = Compiler(enginePath: root, repositoryPath: '');
       final status = await compiler.status();
       expect(status.ready, isFalse);
-      expect(status.problem, contains('clon'));
+      expect(status.problem, contains('copia del repositorio'));
     });
 
     test('un motor que no arranca sale como CompileException', () async {
@@ -182,6 +183,15 @@ void main() {
         // llega aquí mientras todavía se está compilando. Los tres trozos
         // están probados por su cuenta; esto prueba que encajan.
         final compiler = Compiler(enginePath: root, repositoryPath: repository);
+        // Sin lo de la prueba anterior: latexmk ya no recompila lo que no ha
+        // cambiado, y aquí se quiere una compilación entera que mirar.
+        final before = await compiler.outputsFor(
+          'content/analysis/normed-spaces/definition',
+        );
+        await compiler.deleteOutputs([
+          for (final output in before)
+            if (output.profile == 'slides') output.pdf,
+        ]);
         final lines = <String>[];
         final when = <Duration>[];
         final clock = Stopwatch()..start();

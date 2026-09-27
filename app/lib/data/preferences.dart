@@ -63,6 +63,58 @@ abstract class Preferences {
   Future<bool> commitOnSave();
   Future<void> setCommitOnSave(bool value);
 
+  /// Si guardar enseña el diff y pide el mensaje antes, o guarda con el
+  /// mensaje propuesto y deja el diff detrás de «Ver cambios».
+  ///
+  /// Apagado de salida: para corregir una errata, un diálogo que se acepta
+  /// sin leer treinta veces al día no revisa nada. Quien sí quiere mirar cada
+  /// cambio antes de que quede en el historial lo enciende.
+  Future<bool> reviewBeforeSave();
+  Future<void> setReviewBeforeSave(bool value);
+
+  /// Si la interfaz enseña todo (Completa) o lo de todos los días
+  /// (Esencial). Esencial de salida: rutas, contadores y la sangría de un
+  /// fichero son de quien mantiene el repositorio, y a quien corrige una
+  /// errata le llenan la pantalla.
+  Future<bool> completeInterface();
+  Future<void> setCompleteInterface(bool value);
+
+  /// Las últimas lecciones abiertas, `repositorio|ruta`, la más reciente
+  /// primero. De esta máquina: lo que se abrió en el despacho no es lo que
+  /// se quiere a mano en el aula.
+  Future<List<String>> recentUnits();
+  Future<void> setRecentUnits(List<String> value);
+
+  /// Las búsquedas de la biblioteca guardadas con nombre, en JSON (ver
+  /// `SavedSearch`).
+  Future<String?> savedSearches();
+  Future<void> setSavedSearches(String value);
+
+  /// Cuántas salidas de un documento compilar a la vez. 0 es «lo que diga el
+  /// motor»: la mitad de los núcleos y no más de cuatro.
+  Future<int> buildJobs();
+  Future<void> setBuildJobs(int value);
+
+  /// Si avisar de las líneas que se salen por la derecha en los apuntes y lo
+  /// demás que no son diapositivas. Apagado de salida.
+  Future<bool> overfullLines();
+  Future<void> setOverfullLines(bool value);
+
+  /// PDF accesibles: lo que no son diapositivas, etiquetado y con LuaLaTeX
+  /// (`didacta build --accessible`). Apagado de salida: compila más despacio.
+  Future<bool> accessiblePdf();
+  Future<void> setAccessiblePdf(bool value);
+
+  /// La vista rápida: compilar un documento desde su panel en una sola
+  /// pasada. Apagado de salida.
+  Future<bool> quickBuild();
+  Future<void> setQuickBuild(bool value);
+
+  /// Un aviso del sistema al terminar de compilar, si Didacta no está
+  /// delante. Apagado de salida.
+  Future<bool> notifyWhenBuilt();
+  Future<void> setNotifyWhenBuilt(bool value);
+
   /// Si el panel de la derecha de una unidad está desplegado.
   ///
   /// Guardado y no un estado de la pantalla: es una decisión sobre el sitio
@@ -111,6 +163,10 @@ abstract class Preferences {
   /// actualización falló y hay que decirlo en vez de dejar a alguien creyendo
   /// que tiene una versión que no tiene.
   Future<String?> pendingUpdate();
+
+  /// Si se reciben también las versiones de prueba. Apagado de salida.
+  Future<bool> testVersions();
+  Future<void> setTestVersions(bool value);
   Future<void> setPendingUpdate(String? version);
 
   /// Las preferencias que viajan entre ordenadores, tal como se guardaron.
@@ -135,6 +191,20 @@ abstract class Preferences {
   Future<bool> tourDone();
   Future<void> setTourDone(bool value);
 
+  /// Claro, oscuro o lo que diga el sistema: `light`, `dark` o `system`.
+  ///
+  /// De esta máquina y no de las que viajan: la pantalla del despacho y la
+  /// del portátil en el aula no tienen por qué querer lo mismo.
+  Future<String> appearance();
+  Future<void> setAppearance(String value);
+
+  /// Cuánto más grande o más pequeño se ve el texto: 1 es el normal.
+  ///
+  /// De esta máquina, por lo mismo que [appearance]: el proyector del aula
+  /// pide más que la pantalla del despacho.
+  Future<double> textScale();
+  Future<void> setTextScale(double value);
+
   /// Si el servidor MCP está encendido.
   ///
   /// Apagado de salida, y eso no es prudencia de más: encendido, un modelo
@@ -157,6 +227,20 @@ abstract class Preferences {
   /// máquina, que es lo que hacían todas hasta ahora.
   Future<String?> prefsRepo();
   Future<void> setPrefsRepo(String? repo);
+
+  /// La carpeta a la que se exportó por última vez una asignatura.
+  ///
+  /// Por asignatura, porque cada una va a su sitio --el aula virtual de
+  /// Análisis no es la de Álgebra-- y de esta máquina, porque es una ruta:
+  /// no viaja con las preferencias sincronizadas.
+  Future<String?> exportFolder(String courseId);
+  Future<void> setExportFolder(String courseId, String path);
+
+  /// La carpeta de reparto: una que sincroniza OneDrive, Drive o Nextcloud,
+  /// donde «Publicar» deja lo de cada curso. Null si no se usa, que es lo de
+  /// salida. De esta máquina, como toda ruta.
+  Future<String?> publishFolder();
+  Future<void> setPublishFolder(String? path);
 }
 
 class StoredPreferences implements Preferences {
@@ -164,11 +248,19 @@ class StoredPreferences implements Preferences {
     this.defaultClonePath = '',
     this.defaultEnginePath = '',
     this.defaultClientId = '',
+    this.replacedClientIds = const [],
   });
 
   /// El Client ID que traiga la compilación, si trae alguno. Lo que se haya
   /// guardado manda por encima.
   final String defaultClientId;
+
+  /// Client ID guardados que ya no se usan: los que se guardaron al entrar
+  /// cuando eran el de salida. Leídos, valen [defaultClientId]. Es lo que hace
+  /// que quien entró con la OAuth App de Didacta entre con su GitHub App la
+  /// próxima vez, sin tocar Ajustes; un Client ID propio no está aquí y se
+  /// respeta.
+  final List<String> replacedClientIds;
 
   /// Where the clone is when nothing has been chosen yet.
   ///
@@ -200,9 +292,23 @@ class StoredPreferences implements Preferences {
   static const String _prefsRepo = 'didacta.synced.repo';
   static const String _welcome = 'didacta.welcome.done';
   static const String _tour = 'didacta.tour.done';
+  static const String _appearance = 'didacta.appearance';
+  static const String _textScale = 'didacta.textScale';
   static const String _mcp = 'didacta.mcp.enabled';
   static const String _commitOnSave = 'didacta.clone.commitOnSave';
+  static const String _review = 'didacta.save.review';
+  static const String _complete = 'didacta.interface.complete';
+  static const String _recent = 'didacta.library.recent';
+  static const String _searches = 'didacta.library.searches';
+  static const String _jobs = 'didacta.build.jobs';
+  static const String _overfullLines = 'didacta.build.overfullLines';
+  static const String _accessiblePdf = 'didacta.build.accessiblePdf';
+  static const String _testVersions = 'didacta.updates.tests';
+  static const String _quickBuild = 'didacta.build.quick';
+  static const String _notifyWhenBuilt = 'didacta.build.notify';
   static const String _mcpWritable = 'didacta.mcp.writable';
+  static const String _exportFolder = 'didacta.export.folder.';
+  static const String _publishFolder = 'didacta.publish.folder';
 
   /// Las claves de Didacta, y ninguna más: `clear()` se llevaría también lo
   /// que guardara cualquier otro plugin en el mismo fichero.
@@ -236,6 +342,115 @@ class StoredPreferences implements Preferences {
       (await SharedPreferences.getInstance()).setBool(_commitOnSave, value);
 
   @override
+  Future<bool> reviewBeforeSave() async =>
+      (await SharedPreferences.getInstance()).getBool(_review) ?? false;
+
+  @override
+  Future<void> setReviewBeforeSave(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_review, value);
+
+  @override
+  Future<bool> completeInterface() async =>
+      (await SharedPreferences.getInstance()).getBool(_complete) ?? false;
+
+  @override
+  Future<void> setCompleteInterface(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_complete, value);
+
+  @override
+  Future<List<String>> recentUnits() async =>
+      (await SharedPreferences.getInstance()).getStringList(_recent) ??
+      const [];
+
+  @override
+  Future<void> setRecentUnits(List<String> value) async =>
+      (await SharedPreferences.getInstance()).setStringList(_recent, value);
+
+  @override
+  Future<String?> savedSearches() async =>
+      (await SharedPreferences.getInstance()).getString(_searches);
+
+  @override
+  Future<void> setSavedSearches(String value) async =>
+      (await SharedPreferences.getInstance()).setString(_searches, value);
+
+  @override
+  Future<int> buildJobs() async =>
+      (await SharedPreferences.getInstance()).getInt(_jobs) ?? 0;
+
+  @override
+  Future<void> setBuildJobs(int value) async =>
+      (await SharedPreferences.getInstance()).setInt(_jobs, value);
+
+  @override
+  Future<bool> overfullLines() async =>
+      (await SharedPreferences.getInstance()).getBool(_overfullLines) ?? false;
+
+  @override
+  Future<bool> testVersions() async =>
+      (await SharedPreferences.getInstance()).getBool(_testVersions) ?? false;
+
+  @override
+  Future<void> setTestVersions(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_testVersions, value);
+
+  @override
+  Future<void> setOverfullLines(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_overfullLines, value);
+
+  @override
+  Future<bool> accessiblePdf() async =>
+      (await SharedPreferences.getInstance()).getBool(_accessiblePdf) ?? false;
+
+  @override
+  Future<void> setAccessiblePdf(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_accessiblePdf, value);
+
+  @override
+  Future<bool> quickBuild() async =>
+      (await SharedPreferences.getInstance()).getBool(_quickBuild) ?? false;
+
+  @override
+  Future<void> setQuickBuild(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_quickBuild, value);
+
+  @override
+  Future<bool> notifyWhenBuilt() async =>
+      (await SharedPreferences.getInstance()).getBool(_notifyWhenBuilt) ??
+      false;
+
+  @override
+  Future<void> setNotifyWhenBuilt(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_notifyWhenBuilt, value);
+
+  @override
+  Future<String?> exportFolder(String courseId) async =>
+      (await SharedPreferences.getInstance()).getString(
+        '$_exportFolder$courseId',
+      );
+
+  @override
+  Future<void> setExportFolder(String courseId, String path) async =>
+      (await SharedPreferences.getInstance()).setString(
+        '$_exportFolder$courseId',
+        path,
+      );
+
+  @override
+  Future<String?> publishFolder() async =>
+      (await SharedPreferences.getInstance()).getString(_publishFolder);
+
+  @override
+  Future<void> setPublishFolder(String? path) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (path == null || path.isEmpty) {
+      await prefs.remove(_publishFolder);
+    } else {
+      await prefs.setString(_publishFolder, path);
+    }
+  }
+
+  @override
   Future<bool> mcpEnabled() async =>
       (await SharedPreferences.getInstance()).getBool(_mcp) ?? false;
 
@@ -260,6 +475,23 @@ class StoredPreferences implements Preferences {
       (await SharedPreferences.getInstance()).setBool(_tour, value);
 
   @override
+  Future<String> appearance() async =>
+      (await SharedPreferences.getInstance()).getString(_appearance) ??
+      'system';
+
+  @override
+  Future<void> setAppearance(String value) async =>
+      (await SharedPreferences.getInstance()).setString(_appearance, value);
+
+  @override
+  Future<double> textScale() async =>
+      (await SharedPreferences.getInstance()).getDouble(_textScale) ?? 1;
+
+  @override
+  Future<void> setTextScale(double value) async =>
+      (await SharedPreferences.getInstance()).setDouble(_textScale, value);
+
+  @override
   Future<List<String>> mcpWritable() async =>
       (await SharedPreferences.getInstance()).getStringList(_mcpWritable) ??
       const [];
@@ -280,9 +512,11 @@ class StoredPreferences implements Preferences {
       (await SharedPreferences.getInstance()).setString(_workspace, value);
 
   @override
-  Future<String?> githubClientId() async =>
-      (await SharedPreferences.getInstance()).getString(_clientId) ??
-      (defaultClientId.isEmpty ? null : defaultClientId);
+  Future<String?> githubClientId() async {
+    final stored = (await SharedPreferences.getInstance()).getString(_clientId);
+    if (stored != null && !replacedClientIds.contains(stored)) return stored;
+    return defaultClientId.isEmpty ? null : defaultClientId;
+  }
 
   @override
   Future<String?> githubUser() async =>
@@ -505,11 +739,111 @@ class MemoryPreferences implements Preferences {
   bool commit = true;
   bool mcp = false;
 
+  /// Las carpetas de exportar, por asignatura.
+  final Map<String, String> exportFolders = {};
+
+  @override
+  Future<String?> exportFolder(String courseId) async =>
+      exportFolders[courseId];
+
+  @override
+  Future<void> setExportFolder(String courseId, String path) async =>
+      exportFolders[courseId] = path;
+
+  String? publish;
+
+  @override
+  Future<String?> publishFolder() async => publish;
+
+  @override
+  Future<void> setPublishFolder(String? path) async =>
+      publish = path == null || path.isEmpty ? null : path;
+
   @override
   Future<bool> commitOnSave() async => commit;
 
   @override
   Future<void> setCommitOnSave(bool value) async => commit = value;
+
+  bool review = false;
+
+  @override
+  Future<bool> reviewBeforeSave() async => review;
+
+  @override
+  Future<void> setReviewBeforeSave(bool value) async => review = value;
+
+  bool complete = false;
+
+  @override
+  Future<bool> completeInterface() async => complete;
+
+  @override
+  Future<void> setCompleteInterface(bool value) async => complete = value;
+
+  List<String> recent = const [];
+
+  @override
+  Future<List<String>> recentUnits() async => recent;
+
+  @override
+  Future<void> setRecentUnits(List<String> value) async => recent = value;
+
+  String? searches;
+
+  @override
+  Future<String?> savedSearches() async => searches;
+
+  @override
+  Future<void> setSavedSearches(String value) async => searches = value;
+
+  int jobs = 0;
+
+  @override
+  Future<int> buildJobs() async => jobs;
+
+  @override
+  Future<void> setBuildJobs(int value) async => jobs = value;
+
+  bool overfull = false;
+
+  bool tests = false;
+
+  @override
+  Future<bool> testVersions() async => tests;
+
+  @override
+  Future<void> setTestVersions(bool value) async => tests = value;
+
+  @override
+  Future<bool> overfullLines() async => overfull;
+
+  @override
+  Future<void> setOverfullLines(bool value) async => overfull = value;
+
+  bool accessible = false;
+
+  @override
+  Future<bool> accessiblePdf() async => accessible;
+
+  @override
+  Future<void> setAccessiblePdf(bool value) async => accessible = value;
+
+  bool quick = false;
+
+  @override
+  Future<bool> quickBuild() async => quick;
+
+  @override
+  Future<void> setQuickBuild(bool value) async => quick = value;
+
+  bool notify = false;
+
+  @override
+  Future<bool> notifyWhenBuilt() async => notify;
+
+  @override
+  Future<void> setNotifyWhenBuilt(bool value) async => notify = value;
   List<String> mcpWrite = const [];
 
   /// Vista, por defecto: casi ningún test va de la bienvenida, y los que sí
@@ -528,6 +862,22 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setTourDone(bool value) async => tour = value;
+
+  String look = 'system';
+
+  @override
+  Future<String> appearance() async => look;
+
+  @override
+  Future<void> setAppearance(String value) async => look = value;
+
+  double scale = 1;
+
+  @override
+  Future<double> textScale() async => scale;
+
+  @override
+  Future<void> setTextScale(double value) async => scale = value;
 
   @override
   Future<bool> mcpEnabled() async => mcp;

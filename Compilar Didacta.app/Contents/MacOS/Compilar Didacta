@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Lanzador de la mini aplicación.
+#
+# Un doble clic en Finder ejecuta esto sin terminal, y el menú necesita una,
+# así que lo único que hace es abrir Terminal con el motor: `build.command`,
+# que sigue sirviendo por sí solo desde la línea de órdenes.
+
+set -u
+
+# El paquete vive en la raíz del repositorio: Contents/MacOS/<esto>.
+BUNDLE="$(cd "$(dirname "$0")/../../.." && pwd)"
+ENGINE="$BUNDLE/build.command"
+
+# Si alguien mueve la aplicación al Dock o a /Applications, el repositorio
+# sigue donde estaba: la ruta grabada al crearla es el plan B.
+FALLBACK="/Users/javier/didacta/build.command"
+
+if [[ ! -x "$ENGINE" ]]; then
+  ENGINE="$FALLBACK"
+fi
+
+if [[ ! -x "$ENGINE" ]]; then
+  osascript -e 'display alert "No encuentro el repositorio" message "Compilar Didacta.app tiene que estar en la carpeta del proyecto, junto a build.command." as critical' >/dev/null 2>&1
+  exit 1
+fi
+
+open -a Terminal "$ENGINE"

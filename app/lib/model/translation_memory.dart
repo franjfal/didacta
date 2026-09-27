@@ -25,6 +25,7 @@
 library;
 
 import 'dart:convert';
+import '../data/diagnostics.dart';
 
 /// Un segmento traducido, tal como quedó.
 class MemoryEntry {
@@ -104,6 +105,14 @@ class TranslationMemory {
   bool lookupSame(String source, String target) =>
       _bySource[source]?.target == target;
 
+  /// Añade lo recién aprendido, para que lo siguiente de la misma tanda lo
+  /// reutilice: la definición que sale en treinta lecciones se pide una vez.
+  void remember(Iterable<MemoryEntry> learned) {
+    for (final entry in learned) {
+      _bySource[entry.source] = entry;
+    }
+  }
+
   /// Todo lo que hay, en un orden estable.
   List<MemoryEntry> get entries {
     final all = _bySource.values.toList();
@@ -127,7 +136,8 @@ class TranslationMemory {
           (jsonDecode(trimmed) as Map).cast<String, dynamic>(),
         );
         if (entry != null) entries.add(entry);
-      } catch (_) {
+      } catch (caught, trace) {
+        Diagnostics.instance.note('translation_memory.entries', caught, trace);
         continue;
       }
     }

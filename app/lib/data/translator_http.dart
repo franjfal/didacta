@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 
 import '../model/translation.dart';
 import 'translator.dart';
+import '../l10n/tr.dart';
 
 /// El de esta credencial, o null si no está completa.
 Translator? translatorFor(
@@ -24,6 +25,10 @@ Translator? translatorFor(
   return switch (provider) {
     TranslationProvider.google => GoogleTranslator(credentials, client: client),
     TranslationProvider.azure => AzureTranslator(credentials, client: client),
+    TranslationProvider.apertium => ApertiumTranslator(
+      credentials,
+      client: client,
+    ),
   };
 }
 
@@ -36,7 +41,7 @@ String _codeOr(TranslationProvider provider, String language) {
   final code = providerCodeFor(provider, language);
   if (code == null) {
     throw TranslationException(
-      '${provider.label} no traduce a «$language».',
+      tr('{0} no traduce a «{1}».', [provider.label, language]),
       status: 400,
     );
   }
@@ -57,14 +62,17 @@ String _explain(int status, String body) {
     // El 400 más probable con diferencia es un idioma que el proveedor no
     // conoce. Su JSON no lo nombra --dice «Invalid Value» y ya-- así que se
     // dice aquí antes de pegar el volcado.
-    400 =>
+    400 => tr(
       'La petición no le gustó. Suele ser un idioma que no conoce.'
-          '\n\n$detail',
-    401 ||
-    403 => 'No aceptó la credencial. Revisa la clave y, en Azure, la región.',
-    404 => 'No encontró el servicio. Revisa el endpoint si has puesto uno.',
-    429 => 'Estás llamando más rápido de lo que admite. Prueba en un rato.',
-    _ => 'Contestó $status: $detail',
+      '\n\n{0}',
+      [detail],
+    ),
+    401 || 403 => tr(
+      'No aceptó la credencial. Revisa la clave y, en Azure, la región.',
+    ),
+    404 => tr('No encontró el servicio. Revisa el endpoint si has puesto uno.'),
+    429 => tr('Estás llamando más rápido de lo que admite. Prueba en un rato.'),
+    _ => tr('Contestó {0}: {1}', [status, detail]),
   };
 }
 
@@ -91,7 +99,7 @@ class GoogleTranslator implements Translator {
   /// ningún proxy por el que pase, ni en un mensaje de error que imprima la
   /// dirección.
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Type': tr('application/json; charset=utf-8'),
     'X-goog-api-key': credentials.key.trim(),
   };
 
@@ -116,7 +124,9 @@ class GoogleTranslator implements Translator {
       ];
       return ProviderCheck(
         ok: true,
-        message: 'Responde. Dice traducir a ${languages.length} idiomas.',
+        message: tr('Responde. Dice traducir a {0} idiomas.', [
+          languages.length,
+        ]),
         languages: languages,
       );
     } catch (error) {
@@ -180,7 +190,7 @@ class AzureTranslator implements Translator {
       : credentials.endpoint.trim();
 
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Type': tr('application/json; charset=utf-8'),
     'Ocp-Apim-Subscription-Key': credentials.key.trim(),
     // La región es obligatoria con un recurso de varios servicios, y sin ella
     // Azure contesta 401 hablando de la suscripción, que despista.
@@ -208,9 +218,9 @@ class AzureTranslator implements Translator {
           message: _explain(response.statusCode, response.body),
         );
       }
-      return const ProviderCheck(
+      return ProviderCheck(
         ok: true,
-        message: 'Responde y acepta la clave.',
+        message: tr('Responde y acepta la clave.'),
       );
     } catch (error) {
       return ProviderCheck(ok: false, message: _reach(error));
@@ -259,7 +269,7 @@ String _reach(Object error) {
   // nuestras no llevan la clave, un endpoint privado tampoco tiene por qué
   // salir en un mensaje que alguien va a pegar en un correo.
   final clean = text.contains('uri=') ? text.split('uri=').first.trim() : text;
-  return 'No se pudo hablar con el proveedor: $clean';
+  return tr('No se pudo hablar con el proveedor: {0}', [clean]);
 }
 
 /// Deshace el escapado HTML de lo que devuelve un traductor.
@@ -308,3 +318,138 @@ const Map<String, String> _named = {
   'apos': "'",
   'nbsp': ' ',
 };
+
+/// Apertium, por su servidor público o por el que se ponga en el endpoint.
+///
+/// Traduce un texto por petición, así que los trozos van juntos, separados
+/// por una etiqueta que respeta --la misma forma que las de las fórmulas--, y
+/// se parten a la vuelta. En tandas de unos miles de caracteres: el servidor
+/// público es de todos, y una petición de un megabyte no es una forma
+/// educada de usarlo.
+class ApertiumTranslator implements Translator {
+  ApertiumTranslator(this.credentials, {http.Client? client})
+    : _client = client ?? http.Client();
+
+  final Credentials credentials;
+  final http.Client _client;
+
+  /// Lo que separa un trozo del siguiente dentro de una petición.
+  static const String separator = '<hr class="didacta-sep"/>';
+
+  /// El separador a la vuelta, sin fiarse de mayúsculas ni de espacios.
+  static final RegExp _split = RegExp(
+    r'<hr\s+class\s*=\s*"didacta-sep"\s*/?>',
+    caseSensitive: false,
+  );
+
+  /// Cuánto se manda de una vez, como mucho.
+  static const int chunk = 6000;
+
+  @override
+  TranslationProvider get provider => TranslationProvider.apertium;
+
+  Uri _uri(String path) {
+    final base = credentials.endpoint.trim().isEmpty
+        ? 'https://apertium.org/apy'
+        : credentials.endpoint.trim().replaceAll(RegExp(r'/+$'), '');
+    return Uri.parse('$base$path');
+  }
+
+  @override
+  Future<ProviderCheck> check() async {
+    try {
+      final response = await _client
+          .get(_uri('/listPairs'))
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) {
+        return ProviderCheck(
+          ok: false,
+          message: _explain(response.statusCode, response.body),
+        );
+      }
+      final decoded = (jsonDecode(utf8.decode(response.bodyBytes)) as Map)
+          .cast<String, dynamic>();
+      final pairs = (decoded['responseData'] as List?) ?? const [];
+      final valencian = pairs.any(
+        (pair) =>
+            pair is Map &&
+            pair['sourceLanguage'] == 'spa' &&
+            pair['targetLanguage'] == 'cat_valencia',
+      );
+      return ProviderCheck(
+        ok: true,
+        message: valencian
+            ? tr('Responde, y traduce del castellano al valenciano.')
+            : tr('Responde, pero este servidor no traduce al valenciano.'),
+      );
+    } catch (error) {
+      return ProviderCheck(ok: false, message: _reach(error));
+    }
+  }
+
+  @override
+  Future<List<String>> translate(
+    List<String> pieces, {
+    required String from,
+    required String to,
+  }) async {
+    if (pieces.isEmpty) return const [];
+    if (!supportsPair(provider, from, to)) {
+      throw TranslationException(
+        tr('Apertium no traduce de «{0}» a «{1}».', [from, to]),
+        status: 400,
+      );
+    }
+    final pair =
+        '${providerCodeFor(provider, from, asSource: true)}|'
+        '${providerCodeFor(provider, to)}';
+
+    // En tandas que no pasen de [chunk] caracteres.
+    final batches = <List<String>>[[]];
+    var size = 0;
+    for (final piece in pieces) {
+      if (batches.last.isNotEmpty && size + piece.length > chunk) {
+        batches.add([]);
+        size = 0;
+      }
+      batches.last.add(piece);
+      size += piece.length + separator.length;
+    }
+
+    final out = <String>[];
+    for (final batch in batches) {
+      final response = await _client
+          .post(
+            _uri('/translate'),
+            body: {
+              'q': batch.join(separator),
+              'langpair': pair,
+              'markUnknown': 'no',
+              // HTML: es lo que hace que respete las etiquetas.
+              'format': 'html',
+            },
+          )
+          .timeout(const Duration(seconds: 60));
+      if (response.statusCode != 200) {
+        throw TranslationException(
+          _explain(response.statusCode, response.body),
+          status: response.statusCode,
+        );
+      }
+      final decoded = (jsonDecode(utf8.decode(response.bodyBytes)) as Map)
+          .cast<String, dynamic>();
+      final text =
+          '${(decoded['responseData'] as Map?)?['translatedText'] ?? ''}';
+      final parts = text.split(_split);
+      if (parts.length != batch.length) {
+        // Se ha comido o duplicado un separador: emparejar por posición
+        // pondría cada traducción en el párrafo de al lado.
+        throw TranslationException(
+          tr('Apertium devolvió los párrafos mezclados. No se aplica nada.'),
+        );
+      }
+      out.addAll([for (final part in parts) unescapeHtml(part)]);
+    }
+    return out;
+  }
+}

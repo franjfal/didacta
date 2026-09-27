@@ -21,6 +21,8 @@
 /// está congelando.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -28,6 +30,7 @@ import '../router.dart';
 import '../state/session.dart';
 import 'freezes.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Un sitio donde está lo que se mira: una asignatura, un curso académico y
 /// --cuando lo que se mira es una lección-- el tema que la llama.
@@ -55,6 +58,8 @@ class InfoMenu extends StatelessWidget {
     this.onSplit,
     this.splitLabel,
     this.onUse,
+    this.onDuplicate,
+    this.onMove,
     this.onRestore,
   });
 
@@ -86,6 +91,13 @@ class InfoMenu extends StatelessWidget {
   /// quiero también en Matemáticas»--, así que está donde se la mira.
   final VoidCallback? onUse;
 
+  /// Otra lección que empieza siendo una copia de esta. Aquí y no en la
+  /// biblioteca por lo mismo que [onUse]: se decide mirándola.
+  final VoidCallback? onDuplicate;
+
+  /// Llevarla a otra carpeta, o cambiarle el nombre de la suya.
+  final VoidCallback? onMove;
+
   /// Traerse esto tal como estaba. Sólo con una versión congelada abierta:
   /// es lo único que se puede hacer desde una foto, y no ofrecerlo dejaría a
   /// alguien con la versión buena delante y sin forma de recuperarla.
@@ -116,7 +128,7 @@ class InfoMenu extends StatelessWidget {
       ),
       builder: (context, controller, child) => IconButton(
         key: const Key('info-menu'),
-        tooltip: 'Dónde está y qué hay guardado',
+        tooltip: tr('Dónde está y qué hay guardado'),
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.info_outline, size: 18),
         onPressed: () =>
@@ -173,12 +185,14 @@ class InfoMenu extends StatelessWidget {
         ],
 
         const Divider(height: 9),
-        _Label('Versiones congeladas'),
+        _Label(tr('Versiones congeladas')),
         if (years.isEmpty)
-          const _Note(
+          _Note(
             key: Key('info-freezes-none'),
-            'Las versiones congeladas son de una asignatura, y esto no está '
-            'en ninguna todavía.',
+            tr(
+              'Las versiones congeladas son de una asignatura, y esto no está '
+              'en ninguna todavía.',
+            ),
           )
         else
           for (final place in years)
@@ -188,11 +202,11 @@ class InfoMenu extends StatelessWidget {
               onPressed: () {
                 final course = session.courseById(place.course);
                 if (course == null) return;
-                showFreezes(context, session, course, place.year);
+                unawaited(showFreezes(context, session, course, place.year));
               },
               child: _Line(
                 title: years.length == 1
-                    ? 'Ver versiones congeladas…'
+                    ? tr('Ver versiones congeladas…')
                     : '${_courseName(place.course)} · ${place.year}',
                 detail: _countOf(place),
               ),
@@ -207,9 +221,9 @@ class InfoMenu extends StatelessWidget {
               final place = years.single;
               final course = session.courseById(place.course);
               if (course == null) return;
-              createFreeze(context, session, course, place.year);
+              unawaited(createFreeze(context, session, course, place.year));
             },
-            child: const _Line(title: 'Crear versión congelada…'),
+            child: _Line(title: tr('Crear versión congelada…')),
           ),
 
         if (onRestore != null)
@@ -217,23 +231,47 @@ class InfoMenu extends StatelessWidget {
             key: const Key('info-restore'),
             leadingIcon: const Icon(Icons.restore, size: 15),
             onPressed: onRestore,
-            child: const _Line(
-              title: 'Restaurar esta lección…',
-              detail: 'Traerla como estaba, sin reescribir nada',
+            child: _Line(
+              title: tr('Restaurar esta lección…'),
+              detail: tr('Traerla como estaba, sin reescribir nada'),
             ),
           ),
 
+        if (onDuplicate != null || onMove != null) ...[
+          const Divider(height: 9),
+          if (onDuplicate != null)
+            MenuItemButton(
+              key: const Key('info-duplicate'),
+              leadingIcon: const Icon(Icons.copy_all_outlined, size: 15),
+              onPressed: onDuplicate,
+              child: _Line(
+                title: tr('Duplicar…'),
+                detail: tr('Otra lección a partir de esta, con vida propia'),
+              ),
+            ),
+          if (onMove != null)
+            MenuItemButton(
+              key: const Key('info-move'),
+              leadingIcon: const Icon(Icons.drive_file_move_outline, size: 15),
+              onPressed: onMove,
+              child: _Line(
+                title: tr('Mover o renombrar…'),
+                detail: tr('Otra carpeta; lo que la usa se reescribe'),
+              ),
+            ),
+        ],
+
         if (onSplit != null || onUse != null) ...[
           const Divider(height: 9),
-          _Label('Vinculación'),
+          _Label(tr('Vinculación')),
           if (onUse != null)
             MenuItemButton(
               key: const Key('info-use'),
               leadingIcon: const Icon(Icons.add_link, size: 15),
               onPressed: onUse,
-              child: const _Line(
-                title: 'Darla en otro tema…',
-                detail: 'La misma lección, también allí',
+              child: _Line(
+                title: tr('Darla en otro tema…'),
+                detail: tr('La misma lección, también allí'),
               ),
             ),
           if (onSplit != null)
@@ -242,8 +280,8 @@ class InfoMenu extends StatelessWidget {
               leadingIcon: const Icon(Icons.call_split, size: 15),
               onPressed: onSplit,
               child: _Line(
-                title: splitLabel ?? 'Gestionar vinculación…',
-                detail: 'Separar unos sitios del resto',
+                title: splitLabel ?? tr('Gestionar vinculación…'),
+                detail: tr('Separar unos sitios del resto'),
               ),
             ),
         ],
@@ -256,7 +294,9 @@ class InfoMenu extends StatelessWidget {
   /// diálogo que se va a abrir.
   String? _countOf(InfoPlace place) {
     final many = session.freezesOf(place.course, place.year).length;
-    return many == 0 ? null : '$many guardada${many == 1 ? '' : 's'}';
+    return many == 0
+        ? null
+        : tr('{0} guardada{1}', [many, many == 1 ? '' : 's']);
   }
 }
 
@@ -277,11 +317,11 @@ class _Label extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
     child: Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 10,
         letterSpacing: 0.6,
         fontWeight: FontWeight.w700,
-        color: didactaMuted,
+        color: context.palette.muted,
       ),
     ),
   );
@@ -298,7 +338,7 @@ class _Note extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
     child: Text(
       text,
-      style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+      style: TextStyle(fontSize: 11.5, color: context.palette.muted),
     ),
   );
 }
@@ -326,7 +366,7 @@ class _Line extends StatelessWidget {
           Text(
             detail!,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 11, color: didactaMuted),
+            style: TextStyle(fontSize: 11, color: context.palette.muted),
           ),
       ],
     ),

@@ -27,6 +27,8 @@
 /// raw text. Refusing beats corrupting a file that is the source of truth.
 library;
 
+import '../l10n/tr.dart';
+
 /// Why a patch could not be applied.
 class YamlPatchException implements Exception {
   const YamlPatchException(this.message);
@@ -193,8 +195,11 @@ class YamlPatch {
     }
     if (!inline.startsWith('{') || !inline.endsWith('}')) {
       throw YamlPatchException(
-        'el valor de `${path.join('.')}` no es un mapa que se pueda editar '
-        'campo a campo: $inline',
+        tr(
+          'el valor de `{0}` no es un mapa que se pueda editar '
+          'campo a campo: {1}',
+          [path.join('.'), inline],
+        ),
       );
     }
 
@@ -333,8 +338,11 @@ class YamlPatch {
     final parent = _find(parentPath);
     if (parent == null) {
       throw YamlPatchException(
-        'no existe `${parentPath.join('.')}`, así que no se puede añadir '
-        '`${path.last}` dentro',
+        tr(
+          'no existe `{0}`, así que no se puede añadir '
+          '`{1}` dentro',
+          [parentPath.join('.'), path.last],
+        ),
       );
     }
 
@@ -348,8 +356,11 @@ class YamlPatch {
       _lines[parent.line] = _rewriteValue(_lines[parent.line], '');
     } else if (inline.isNotEmpty) {
       throw YamlPatchException(
-        '`${parentPath.join('.')}` tiene un valor escalar, así que no puede '
-        'contener `${path.last}`',
+        tr(
+          '`{0}` tiene un valor escalar, así que no puede '
+          'contener `{1}`',
+          [parentPath.join('.'), path.last],
+        ),
       );
     }
 
@@ -377,7 +388,9 @@ class YamlPatch {
   static String _rewriteValue(String line, String value) {
     final match = _keyLine.firstMatch(line);
     if (match == null) {
-      throw YamlPatchException('no es una línea `clave: valor`: $line');
+      throw YamlPatchException(
+        tr('no es una línea `clave: valor`: {0}', [line]),
+      );
     }
     final rest = match.group(3)!;
     final comment = _trailingComment(rest);
@@ -455,7 +468,7 @@ class YamlPatch {
     for (final part in _splitFlow(inner)) {
       final at = part.indexOf(':');
       if (at < 0) {
-        throw YamlPatchException('no se entiende el mapa: $value');
+        throw YamlPatchException(tr('no se entiende el mapa: {0}', [value]));
       }
       entries[part.substring(0, at).trim()] = part.substring(at + 1).trim();
     }

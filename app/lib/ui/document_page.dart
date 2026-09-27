@@ -21,20 +21,28 @@ import 'package:go_router/go_router.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'command_palette.dart';
 import 'build_console.dart';
 import 'document_links.dart';
 import 'history_tab.dart';
 import 'info_menu.dart';
 import 'composition_editor.dart';
 import 'manage_templates.dart';
+import 'problem.dart';
 import 'shell.dart';
 import '../data/compiler.dart';
+import '../data/content_gateway.dart';
+import '../model/composition_file.dart';
+import 'commit_dialog.dart';
+import 'save_review.dart';
 import 'pdf_tab.dart';
 import 'source_view.dart';
 import 'tabs.dart';
 import 'theme.dart';
+import 'tour.dart';
 import 'translate_tab.dart';
 import 'unit_preview.dart';
+import '../l10n/tr.dart';
 
 class DocumentPage extends StatefulWidget {
   const DocumentPage({
@@ -158,6 +166,101 @@ class _DocumentPageState extends State<DocumentPage> {
     });
   }
 
+  /// Compila el documento, en la pestaña de compilar.
+  ///
+  /// Lo que se ofrece al guardar una composición: el cambio está hecho, y lo
+  /// siguiente que se quiere es verlo. La pestaña crea su estado al
+  /// dibujarse, así que se compila después de ese primer dibujo.
+  void _compileNow() {
+    if (!mounted) return;
+    setState(() => _active = buildTab);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final preview = _preview;
+      if (!mounted || preview == null) return;
+      await preview.ready;
+      if (mounted) await preview.compile();
+    });
+  }
+
+  /// Añade lecciones desde la vista de lectura, sin abrir el editor.
+  ///
+  /// Al final, que es donde va lo que se añade el 90% de las veces; el orden
+  /// se cambia después en «Editar la composición». Un solo guardado y un
+  /// commit, como desde el editor.
+  Future<void> _addUnits(Session session, Document document) async {
+    final picked = await pickUnits(
+      context,
+      session: session,
+      already: {...document.unitRefs},
+      repo: document.repo,
+    );
+    if (picked.isEmpty || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final place = compositionFileOf(document, courseId, year);
+    final gateway = session.gatewayFor(document.repo);
+    try {
+      final file = await gateway.read(place.path);
+      final composition = document.isLinked
+          ? CompositionFile.shared(file.text)
+          : CompositionFile(file.text);
+      final block = composition.blockFor(place.document);
+      if (block == null) {
+        throw CompositionException(
+          tr('no se encuentra «{0}» en {1}', [document.id, place.path]),
+        );
+      }
+      composition.setStructure(place.document, [
+        ...block.entries,
+        for (final unit in picked)
+          StructureEntry(kind: EntryKind.unit, value: unit.reference_),
+      ]);
+      final after = composition.text;
+      final title = document.title(session.language);
+      final suggested = picked.length == 1
+          ? tr('Añadir «{0}» a {1}', [
+              picked.single.title(session.language),
+              title,
+            ])
+          : tr('Añadir {0} lecciones a {1}', [picked.length, title]);
+      if (!mounted) return;
+      final message = await askSaveMessage(
+        context,
+        session,
+        suggested: suggested,
+        dialog: (context) =>
+            CommitDialog(before: file.text, after: after, suggested: suggested),
+      );
+      if (message == null || !mounted) return;
+      await gateway.save(
+        path: place.path,
+        text: after,
+        sha: file.sha,
+        message: message,
+      );
+      messenger.showSnackBar(
+        savedNotice(
+          notice: session.saveNotice(document.repo),
+          message: message,
+          before: file.text,
+          after: after,
+          what: place.path,
+          navigator: navigator,
+          followUp: (
+            label: tr('Compilar ahora'),
+            icon: Icons.play_circle_outline,
+            onPressed: _compileNow,
+          ),
+        ),
+      );
+      await session.reloadCatalogue();
+    } on CompositionException catch (thrown) {
+      showProblemIn(messenger, thrown.message);
+    } on ContentException catch (thrown) {
+      showProblemIn(messenger, thrown);
+    }
+  }
+
   /// Vuelve a compilar una sola versión: la del panel que se está mirando.
   Future<void> _recompilePane(
     Session session,
@@ -174,45 +277,48 @@ class _DocumentPageState extends State<DocumentPage> {
 
     setState(() => _open[at] = _open[at].replacing(pane.working()));
 
-    final console = session.buildConsole;
-    console.start('${pane.profile} · $language');
-    unawaited(showBuildConsole(context, console, autoClose: true));
+    unawaited(showBuildConsole(context, session.buildConsole, autoClose: true));
 
     try {
-      final results = await compiler.compileDocument(
-        // La referencia que usa el motor. Aquí no hace falta el documento
-        // entero: lo que falte por traducir ya lo bloqueó la pantalla de
-        // compilar, y este panel salió de una compilación que sí pudo.
-        document: '$courseId@$year/$documentId',
-        profiles: [pane.profile],
-        languages: [language],
-        onOutput: console.add,
-      );
-      console.finish(ok: results.every((result) => result.ok));
+      // Por la cola: si ya se compila otra cosa, espera su turno.
+      final results = await session.runBuild('${pane.profile} · $language', (
+        console,
+      ) async {
+        final made = await compiler.compileDocument(
+          // La referencia que usa el motor. Aquí no hace falta el
+          // documento entero: lo que falte por traducir ya lo bloqueó la
+          // pantalla de compilar, y este panel salió de una compilación
+          // que sí pudo.
+          document: '$courseId@$year/$documentId',
+          profiles: [pane.profile],
+          languages: [language],
+          // Rehacer el panel que se mira es justo para lo que está la vista
+          // rápida: ver cómo queda un cambio.
+          fast: session.quickBuild,
+          onOutput: console.add,
+        );
+        console.finish(ok: made.every((result) => result.ok));
+        return made;
+      });
       if (!mounted) return;
-      final made = results.where((r) => r.ok && r.pdf != null).firstOrNull;
+      final made = results?.where((r) => r.ok && r.pdf != null).firstOrNull;
       setState(() {
         final now = _open.indexWhere((group) => group.id == groupId);
         if (now < 0) return;
         _open[now] = _open[now].replacing(
-          made == null ? pane.idle() : pane.refreshed(pages: made.pages),
+          made == null
+              ? pane.idle()
+              : pane.refreshed(pages: made.pages, quick: made.quick),
         );
       });
       await _preview?.refreshExisting();
     } catch (error) {
-      console.finish(failure: error);
       if (!mounted) return;
       setState(() {
         final now = _open.indexWhere((group) => group.id == groupId);
         if (now >= 0) _open[now] = _open[now].replacing(pane.idle());
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$error'),
-          backgroundColor: didactaTeacher,
-          duration: const Duration(seconds: 8),
-        ),
-      );
+      showProblem(context, error);
     }
   }
 
@@ -229,14 +335,17 @@ class _DocumentPageState extends State<DocumentPage> {
       reveal ? await compiler.reveal(path) : await compiler.open(path);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('$error')));
+      showProblem(context, error);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final session = watchSession(context);
     final course = session.courseById(courseId);
     final document = session.documentIn(courseId, year, documentId);
@@ -244,7 +353,59 @@ class _DocumentPageState extends State<DocumentPage> {
     if (course == null || document == null) {
       return _Missing(courseId: courseId, year: year, documentId: documentId);
     }
+    return PaletteCommands(
+      commands: (context) => _paletteCommands(session, document),
+      child: _document(context, session, course, document),
+    );
+  }
 
+  /// Lo que ofrece la paleta de órdenes en un documento.
+  List<PaletteCommand> _paletteCommands(Session session, Document document) {
+    final writable =
+        !session.isFrozen && session.gatewayFor(document.repo).canWrite;
+    final title = document.title(document.language);
+    void show(String tab) {
+      if (mounted) setState(() => _active = tab);
+    }
+
+    return [
+      if (session.canCompile)
+        PaletteCommand(
+          title: tr('Compilar este documento'),
+          detail: title,
+          keywords: tr('pdf compilar ver'),
+          icon: Icons.play_arrow_outlined,
+          run: _compileNow,
+        ),
+      if (writable)
+        PaletteCommand(
+          title: tr('Añadir lecciones a este documento…'),
+          detail: title,
+          keywords: tr('añadir unidades composición'),
+          icon: Icons.playlist_add,
+          run: () => _addUnits(session, document),
+        ),
+      for (final (tab, name, icon) in [
+        (compositionTab, tr('Ver la composición'), Icons.list_alt_outlined),
+        (sourceTab, tr('Ver el fuente'), Icons.code),
+        (historyTab, tr('Ver el historial'), Icons.history),
+      ])
+        if (_active != tab)
+          PaletteCommand(
+            title: name,
+            detail: title,
+            icon: icon,
+            run: () => show(tab),
+          ),
+    ];
+  }
+
+  Widget _document(
+    BuildContext context,
+    Session session,
+    Course course,
+    Document document,
+  ) {
     final profiles = _profilesFor(document, session);
     final language = document.language;
 
@@ -252,11 +413,13 @@ class _DocumentPageState extends State<DocumentPage> {
       children: [
         PageHeader(
           title: document.title(language),
-          subtitle:
-              '${document.id} · ${kindName(document.kind)} · '
-              'idioma $language',
+          subtitle: tr(
+            '{0} · {1} · '
+            'idioma {2}',
+            [document.id, kindName(document.kind), language],
+          ),
           breadcrumbs: [
-            ('Asignaturas', Routes.courses()),
+            (tr('Asignaturas'), Routes.courses()),
             (course.title(language), Routes.year(courseId, year)),
             (year, Routes.year(courseId, year)),
           ],
@@ -265,35 +428,41 @@ class _DocumentPageState extends State<DocumentPage> {
             // declararlos otro repositorio-- y qué versiones congeladas hay
             // de su curso. Lo último estaba sólo en Asignaturas, que es donde
             // no estás cuando te lo preguntas.
-            InfoMenu(
-              session: session,
-              // Los sitios donde se da **este mismo tema**: vinculado en dos
-              // grupos son dos, no uno, y es lo que hay que ver antes de
-              // tocarlo. Sin vincular, el suyo.
-              places: () {
-                final linked = placementsOf(session, document);
-                if (linked.isEmpty) {
-                  return [InfoPlace(course: courseId, year: year)];
-                }
-                return [
-                  for (final place in linked)
-                    InfoPlace(
-                      course: place.course,
-                      year: place.year,
-                      document: place.document,
-                    ),
-                ];
-              }(),
-              placesLabel: 'Se da en',
-              belongsTo: document.themes,
-              belongsToLabel: 'Pertenece a',
-              splitLabel: 'Gestionar vinculación…',
-              onSplit:
-                  !session.isFrozen &&
-                      document.isLinked &&
-                      session.canWriteIn(document.repo)
-                  ? () => splitDocumentLinks(context, session, document)
-                  : null,
+            TourTarget(
+              id: 'document-info',
+              child: InfoMenu(
+                session: session,
+                // Los sitios donde se da **este mismo tema**: vinculado en dos
+                // grupos son dos, no uno, y es lo que hay que ver antes de
+                // tocarlo. Sin vincular, el suyo.
+                places: () {
+                  final linked = placementsOf(session, document);
+                  if (linked.isEmpty) {
+                    return [InfoPlace(course: courseId, year: year)];
+                  }
+                  return [
+                    for (final place in linked)
+                      InfoPlace(
+                        course: place.course,
+                        year: place.year,
+                        document: place.document,
+                      ),
+                  ];
+                }(),
+                placesLabel: tr('Se da en'),
+                belongsTo: document.themes,
+                belongsToLabel: tr('Pertenece a'),
+                splitLabel: tr('Gestionar vinculación…'),
+                // Dividir en grupos, en Completa; separarlo de los demás
+                // sigue en el menú del curso para todos.
+                onSplit:
+                    session.completeInterface &&
+                        !session.isFrozen &&
+                        document.isLinked &&
+                        session.canWriteIn(document.repo)
+                    ? () => splitDocumentLinks(context, session, document)
+                    : null,
+              ),
             ),
             // A toggle rather than a separate route: it is the same document,
             // and the URL of a document should not depend on whether someone
@@ -307,33 +476,38 @@ class _DocumentPageState extends State<DocumentPage> {
               IconButton(
                 key: const Key('toggle-composition-editor'),
                 tooltip: _editing
-                    ? 'Dejar de editar la composición'
-                    : 'Editar la composición',
+                    ? tr('Dejar de editar la composición')
+                    : tr('Editar la composición'),
                 isSelected: _editing,
                 icon: const Icon(Icons.reorder, size: 18),
                 selectedIcon: const Icon(Icons.reorder, size: 18),
                 onPressed: () => setState(() => _editing = !_editing),
               ),
-            IconButton(
-              tooltip: 'Copiar el comando para compilarlo',
-              icon: const Icon(Icons.terminal_outlined, size: 18),
-              onPressed: () {
-                final command = 'didacta build $documentId';
-                Clipboard.setData(ClipboardData(text: command));
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Copiado: $command')));
-              },
-            ),
+            // Para quien compila también desde el terminal: en Completa.
+            if (session.completeInterface)
+              IconButton(
+                tooltip: tr('Copiar el comando para compilarlo'),
+                icon: const Icon(Icons.terminal_outlined, size: 18),
+                onPressed: () {
+                  final command = 'didacta build $documentId';
+                  unawaited(Clipboard.setData(ClipboardData(text: command)));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(tr('Copiado: {0}', [command]))),
+                  );
+                },
+              ),
           ],
         ),
-        _TabBar(
-          active: _active,
-          units: document.unitRefs.length,
-          gaps: _gaps(session, document).length,
-          open: _open,
-          onSelect: (code) => setState(() => _active = code),
-          onClose: _closePdf,
+        TourTarget(
+          id: 'document-tabs',
+          child: _TabBar(
+            active: _active,
+            units: document.unitRefs.length,
+            gaps: _gaps(session, document).length,
+            open: _open,
+            onSelect: (code) => setState(() => _active = code),
+            onClose: _closePdf,
+          ),
         ),
         Expanded(child: _panel(session, course, document, profiles, language)),
       ],
@@ -435,6 +609,9 @@ class _DocumentPageState extends State<DocumentPage> {
       );
     }
 
+    final writable =
+        session.canWriteIn(document.repo) &&
+        session.gatewayFor(document.repo).canWrite;
     final Widget composition = _editing
         ? CompositionEditor(
             key: ValueKey('edit-$courseId-$year-$documentId'),
@@ -442,11 +619,13 @@ class _DocumentPageState extends State<DocumentPage> {
             year: year,
             documentId: documentId,
             session: session,
+            onCompile: _compileNow,
           )
         : _Composition(
             document: document,
             session: session,
             language: language,
+            onAdd: writable ? () => _addUnits(session, document) : null,
           );
 
     return LayoutBuilder(
@@ -456,15 +635,21 @@ class _DocumentPageState extends State<DocumentPage> {
             children: [
               Expanded(child: composition),
               const VerticalDivider(width: 1),
-              SizedBox(
-                width: 320,
-                child: _OutputsPanel(
-                  document: document,
-                  profiles: profiles,
-                  language: language,
-                  onChoose: session.canWriteIn(document.repo)
-                      ? () => _chooseTemplates(session, document)
-                      : null,
+              // Solo aquí, al lado: en una ventana estrecha el panel va en
+              // una pestaña escondida con `Offstage`, que tiene tamaño
+              // aunque no se vea, y el tour señalaría un hueco vacío.
+              TourTarget(
+                id: 'document-outputs',
+                child: SizedBox(
+                  width: 320,
+                  child: _OutputsPanel(
+                    document: document,
+                    profiles: profiles,
+                    language: language,
+                    onChoose: session.canWriteIn(document.repo)
+                        ? () => _chooseTemplates(session, document)
+                        : null,
+                  ),
                 ),
               ),
             ],
@@ -512,11 +697,13 @@ class _DocumentPageState extends State<DocumentPage> {
     final chosen = await chooseTemplates(
       context,
       session,
-      title: 'Salidas de «${document.title(document.language)}»',
+      title: tr('Salidas de «{0}»', [document.title(document.language)]),
       inherited: inherited.isEmpty
-          ? 'Las de los bloques de sus lecciones. Todavía no lleva ninguna, '
-                'así que salen todas las encendidas.'
-          : 'Las de los bloques de sus lecciones: ${inherited.length}',
+          ? tr(
+              'Las de los bloques de sus lecciones. Todavía no lleva ninguna, '
+              'así que salen todas las encendidas.',
+            )
+          : tr('Las de los bloques de sus lecciones: {0}', [inherited.length]),
       chosen: document.profiles,
       byDefault: catalogue.templatesForDocument(document),
     );
@@ -535,13 +722,13 @@ class _DocumentPageState extends State<DocumentPage> {
         SnackBar(
           content: Text(
             chosen.isEmpty
-                ? 'Este tema vuelve a compilar lo que digan sus bloques.'
-                : 'Guardado: ${chosen.length} salida(s).',
+                ? tr('Este tema vuelve a compilar lo que digan sus bloques.')
+                : tr('Guardado: {0} salida(s).', [chosen.length]),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     }
   }
 }
@@ -570,28 +757,28 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     height: 38,
-    decoration: const BoxDecoration(
-      color: didactaPanel,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.panel,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     child: ListView(
       scrollDirection: Axis.horizontal,
       children: [
         DidactaTab(
-          label: 'Composición ($units)',
+          label: tr('Composición ({0})', [units]),
           selected: active == compositionTab,
           dirty: false,
           onTap: () => onSelect(compositionTab),
         ),
         DidactaTab(
-          label: 'Fuente',
+          label: tr('Fuente'),
           icon: Icons.notes_outlined,
           selected: active == sourceTab,
           dirty: false,
           onTap: () => onSelect(sourceTab),
         ),
         DidactaTab(
-          label: 'Compilar',
+          label: tr('Compilar'),
           icon: Icons.play_arrow_outlined,
           selected: active == buildTab,
           dirty: false,
@@ -599,14 +786,14 @@ class _TabBar extends StatelessWidget {
         ),
         if (gaps > 0)
           DidactaTab(
-            label: 'Traducir ($gaps)',
+            label: tr('Traducir ({0})', [gaps]),
             icon: Icons.auto_awesome_outlined,
             selected: active == translateTab,
             dirty: false,
             onTap: () => onSelect(translateTab),
           ),
         DidactaTab(
-          label: 'Historial',
+          label: tr('Historial'),
           icon: Icons.history,
           selected: active == historyTab,
           dirty: false,
@@ -631,23 +818,54 @@ class _Composition extends StatelessWidget {
     required this.document,
     required this.session,
     required this.language,
+    this.onAdd,
   });
 
   final Document document;
   final Session session;
   final String language;
 
+  /// Añadir lecciones sin abrir el editor. Null si aquí no se puede escribir.
+  final VoidCallback? onAdd;
+
+  Widget _addButton() => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        key: const Key('read-add-unit'),
+        icon: const Icon(Icons.add, size: 16),
+        label: Text(tr('Añadir una lección')),
+        onPressed: onAdd,
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     if (document.unitRefs.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(28),
-          child: Note(
-            'Esta composición está vacía: no referencia ninguna unidad. En el '
-            'material migrado suele significar que el master antiguo apuntaba '
-            'a ficheros que no llegaron.',
-            tone: didactaEx,
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Note(
+                onAdd == null
+                    ? tr(
+                        'Esta composición está vacía: no referencia ninguna '
+                        'unidad. En el material migrado suele significar que '
+                        'el master antiguo apuntaba a ficheros que no '
+                        'llegaron.',
+                      )
+                    : tr(
+                        'Esta composición está vacía: todavía no lleva ninguna '
+                        'lección.',
+                      ),
+                tone: context.palette.ex,
+              ),
+              if (onAdd != null) _addButton(),
+            ],
           ),
         ),
       );
@@ -658,11 +876,13 @@ class _Composition extends StatelessWidget {
     // es lo primero que se mira al preparar una clase.
     final parts = document.structure;
     if (parts.isEmpty) {
+      final extra = onAdd == null ? 0 : 1;
       return ListView.separated(
         padding: EdgeInsets.zero,
-        itemCount: document.unitRefs.length,
+        itemCount: document.unitRefs.length + extra,
         separatorBuilder: (_, _) => const Divider(height: 1),
         itemBuilder: (context, index) {
+          if (index == document.unitRefs.length) return _addButton();
           final reference = document.unitRefs[index];
           return _CompositionRow(
             position: index + 1,
@@ -695,14 +915,16 @@ class _Composition extends StatelessWidget {
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 24),
-      itemCount: cards.length,
-      itemBuilder: (context, index) => _SectionCard(
-        heading: cards[index].heading,
-        items: cards[index].items,
-        numbers: numbered,
-        session: session,
-        language: language,
-      ),
+      itemCount: cards.length + (onAdd == null ? 0 : 1),
+      itemBuilder: (context, index) => index == cards.length
+          ? _addButton()
+          : _SectionCard(
+              heading: cards[index].heading,
+              items: cards[index].items,
+              numbers: numbered,
+              session: session,
+              language: language,
+            ),
     );
   }
 }
@@ -732,8 +954,8 @@ class _SectionCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: didactaCard,
-          border: Border.all(color: didactaRule),
+          color: context.palette.card,
+          border: Border.all(color: context.palette.rule),
           borderRadius: BorderRadius.circular(Radii.card),
         ),
         child: Column(
@@ -742,9 +964,11 @@ class _SectionCard extends StatelessWidget {
             if (heading != null)
               Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF3F6F1),
-                  border: Border(bottom: BorderSide(color: didactaRule)),
+                decoration: BoxDecoration(
+                  color: context.palette.tint(context.palette.accent, 0.05),
+                  border: Border(
+                    bottom: BorderSide(color: context.palette.rule),
+                  ),
                   borderRadius: BorderRadius.only(
                     topLeft: Radius.circular(Radii.card),
                     topRight: Radius.circular(Radii.card),
@@ -758,12 +982,12 @@ class _SectionCard extends StatelessWidget {
                           ? Icons.folder_outlined
                           : Icons.segment,
                       size: 15,
-                      color: didactaAccentDark,
+                      color: context.palette.accentDark,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        title.isEmpty ? 'Apartado sin título' : title,
+                        title.isEmpty ? tr('Apartado sin título') : title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -773,17 +997,17 @@ class _SectionCard extends StatelessWidget {
                           // de la aplicación.
                           fontStyle: borrowed ? FontStyle.italic : null,
                           color: borrowed || title.isEmpty
-                              ? didactaMuted
+                              ? context.palette.muted
                               : null,
                         ),
                       ),
                     ),
                     Text(
                       '${items.length}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: didactaMuted,
+                        color: context.palette.muted,
                       ),
                     ),
                   ],
@@ -799,11 +1023,11 @@ class _SectionCard extends StatelessWidget {
               ),
             ],
             if (items.isEmpty)
-              const Padding(
+              Padding(
                 padding: EdgeInsets.fromLTRB(14, 10, 14, 12),
                 child: Text(
-                  'Este apartado no lleva nada todavía.',
-                  style: TextStyle(fontSize: 12, color: didactaMuted),
+                  tr('Este apartado no lleva nada todavía.'),
+                  style: TextStyle(fontSize: 12, color: context.palette.muted),
                 ),
               ),
           ],
@@ -832,27 +1056,27 @@ class _CompositionRow extends StatelessWidget {
       // Shown in place, not skipped: a composition that omits what is missing
       // looks complete and compiles short.
       return Container(
-        color: didactaTeacher.withValues(alpha: 0.05),
+        color: context.palette.teacher.withValues(alpha: 0.05),
         padding: const EdgeInsets.fromLTRB(16, 9, 12, 9),
         child: Row(
           children: [
             _Position(position),
-            const Icon(Icons.link_off, size: 15, color: didactaTeacher),
+            Icon(Icons.link_off, size: 15, color: context.palette.teacher),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 reference,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   fontFamily: 'monospace',
-                  color: didactaTeacher,
+                  color: context.palette.teacher,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Text(
-              'no está en el catálogo',
-              style: TextStyle(fontSize: 11, color: didactaTeacher),
+            Text(
+              tr('no está en el catálogo'),
+              style: TextStyle(fontSize: 11, color: context.palette.teacher),
             ),
           ],
         ),
@@ -864,7 +1088,7 @@ class _CompositionRow extends StatelessWidget {
       onTap: () => context.go(Routes.unit(unit!.path)),
       builder: (context, hovering) => AnimatedContainer(
         duration: const Duration(milliseconds: 90),
-        color: hovering ? didactaHover : Colors.transparent,
+        color: hovering ? context.palette.hover : Colors.transparent,
         padding: const EdgeInsets.fromLTRB(16, 9, 12, 9),
         child: Row(
           children: [
@@ -877,7 +1101,7 @@ class _CompositionRow extends StatelessWidget {
               height: 28,
               margin: const EdgeInsets.only(right: 10),
               decoration: BoxDecoration(
-                color: kindColour(unit!.kind),
+                color: context.palette.kind(unit!.kind),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -911,7 +1135,7 @@ class _CompositionRow extends StatelessWidget {
                           ? FontStyle.italic
                           : FontStyle.normal,
                       color: unit!.titleIsFallback(language)
-                          ? didactaMuted
+                          ? context.palette.muted
                           : null,
                     ),
                   ),
@@ -920,10 +1144,10 @@ class _CompositionRow extends StatelessWidget {
                     reference,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 10.5,
                       fontFamily: 'monospace',
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     ),
                   ),
                 ],
@@ -932,20 +1156,25 @@ class _CompositionRow extends StatelessWidget {
             const SizedBox(width: 8),
             if (!status.exists)
               Tooltip(
-                message:
-                    'Sin versión en $language: se compilará con la de '
-                    '${unit!.reference} y un aviso.',
-                child: const Row(
+                message: tr(
+                  'Sin versión en {0}: se compilará con la de '
+                  '{1} y un aviso.',
+                  [language, unit!.reference],
+                ),
+                child: Row(
                   children: [
                     Icon(
                       Icons.subdirectory_arrow_right,
                       size: 13,
-                      color: didactaEx,
+                      color: context.palette.ex,
                     ),
                     SizedBox(width: 2),
                     Text(
                       'respaldo',
-                      style: TextStyle(fontSize: 10.5, color: didactaEx),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        color: context.palette.ex,
+                      ),
                     ),
                     SizedBox(width: 8),
                   ],
@@ -958,10 +1187,10 @@ class _CompositionRow extends StatelessWidget {
             SizedBox(
               width: 18,
               child: hovering
-                  ? const Icon(
+                  ? Icon(
                       Icons.chevron_right,
                       size: 16,
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     )
                   : null,
             ),
@@ -982,9 +1211,9 @@ class _Position extends StatelessWidget {
     width: 26,
     child: Text(
       '$value',
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 11,
-        color: didactaMuted,
+        color: context.palette.muted,
         fontFeatures: [FontFeature.tabularFigures()],
       ),
     ),
@@ -1017,19 +1246,19 @@ class _NarrowPanelsState extends State<_NarrowPanels> {
     return Column(
       children: [
         Container(
-          decoration: const BoxDecoration(
-            color: didactaPanel,
-            border: Border(bottom: BorderSide(color: didactaRule)),
+          decoration: BoxDecoration(
+            color: context.palette.panel,
+            border: Border(bottom: BorderSide(color: context.palette.rule)),
           ),
           child: Row(
             children: [
               _PanelTab(
-                label: 'Composición (${widget.unitCount})',
+                label: tr('Composición ({0})', [widget.unitCount]),
                 selected: !_showOutputs,
                 onTap: () => setState(() => _showOutputs = false),
               ),
               _PanelTab(
-                label: 'Salidas (${widget.outputCount})',
+                label: tr('Salidas ({0})', [widget.outputCount]),
                 selected: _showOutputs,
                 onTap: () => setState(() => _showOutputs = true),
               ),
@@ -1070,7 +1299,7 @@ class _PanelTab extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: selected ? didactaAccentDark : Colors.transparent,
+            color: selected ? context.palette.accentDark : Colors.transparent,
             width: 2,
           ),
         ),
@@ -1080,7 +1309,7 @@ class _PanelTab extends StatelessWidget {
         style: TextStyle(
           fontSize: 12.5,
           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          color: selected ? didactaInk : didactaMuted,
+          color: selected ? context.palette.ink : context.palette.muted,
         ),
       ),
     ),
@@ -1109,7 +1338,7 @@ class _OutputsPanel extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: [
-        SectionLabel('Salidas (${profiles.length})'),
+        SectionLabel(tr('Salidas ({0})', [profiles.length])),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Column(
@@ -1117,17 +1346,19 @@ class _OutputsPanel extends StatelessWidget {
             children: [
               Text(
                 document.profiles.isEmpty
-                    ? 'Este tema no elige: compila lo que digan los bloques '
-                          'de las lecciones que lleva dentro.'
-                    : 'Este tema elige sus salidas, en su `year.yaml`.',
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                    ? tr(
+                        'Este tema no elige: compila lo que digan los bloques '
+                        'de las lecciones que lleva dentro.',
+                      )
+                    : tr('Este tema elige sus salidas, en su `year.yaml`.'),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
               if (onChoose != null) ...[
                 const SizedBox(height: 6),
                 OutlinedButton.icon(
                   key: const Key('choose-document-templates'),
                   icon: const Icon(Icons.tune, size: 15),
-                  label: const Text('Elegir salidas'),
+                  label: Text(tr('Elegir salidas')),
                   onPressed: onChoose,
                 ),
               ],
@@ -1141,7 +1372,9 @@ class _OutputsPanel extends StatelessWidget {
                   ? Icons.slideshow_outlined
                   : Icons.article_outlined,
               size: 16,
-              color: profile.isSlides ? didactaThm : didactaDefn,
+              color: profile.isSlides
+                  ? context.palette.thm
+                  : context.palette.defn,
             ),
             title: Text(
               profile.title(language),
@@ -1153,12 +1386,14 @@ class _OutputsPanel extends StatelessWidget {
             ),
           ),
 
-        const SectionLabel('Compilar'),
-        const Padding(
+        SectionLabel(tr('Compilar')),
+        Padding(
           padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
           child: Note(
-            'Compilar necesita LaTeX, y un navegador no lo tiene. Desde el '
-            'repositorio de contenido:',
+            tr(
+              'Compilar necesita LaTeX, y un navegador no lo tiene. Desde el '
+              'repositorio de contenido:',
+            ),
           ),
         ),
         Padding(
@@ -1181,7 +1416,7 @@ class _Command extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(9),
     decoration: BoxDecoration(
-      color: didactaInk,
+      color: context.palette.terminal,
       borderRadius: BorderRadius.circular(4),
     ),
     child: Row(
@@ -1192,19 +1427,23 @@ class _Command extends StatelessWidget {
             style: const TextStyle(
               fontSize: 11.5,
               fontFamily: 'monospace',
-              color: Colors.white,
+              color: didactaOnTerminal,
             ),
           ),
         ),
         IconButton(
-          tooltip: 'Copiar',
+          tooltip: tr('Copiar'),
           visualDensity: VisualDensity.compact,
-          icon: const Icon(Icons.content_copy, size: 14, color: Colors.white70),
+          icon: Icon(
+            Icons.content_copy,
+            size: 14,
+            color: didactaOnTerminal.withValues(alpha: 0.7),
+          ),
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: text));
+            unawaited(Clipboard.setData(ClipboardData(text: text)));
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('Copiado.')));
+            ).showSnackBar(SnackBar(content: Text(tr('Copiado.'))));
           },
         ),
       ],
@@ -1228,8 +1467,8 @@ class _Missing extends StatelessWidget {
     return Column(
       children: [
         PageHeader(
-          title: 'Documento no encontrado',
-          breadcrumbs: [('Asignaturas', Routes.courses())],
+          title: tr('Documento no encontrado'),
+          breadcrumbs: [(tr('Asignaturas'), Routes.courses())],
         ),
         Expanded(
           child: Center(
@@ -1248,7 +1487,7 @@ class _Missing extends StatelessWidget {
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => context.go(Routes.courses()),
-                    child: const Text('Ver las asignaturas'),
+                    child: Text(tr('Ver las asignaturas')),
                   ),
                 ],
               ),

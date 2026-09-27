@@ -126,13 +126,22 @@ Future<void> pump(WidgetTester tester, Session session, Widget page) async {
 
 void main() {
   group('cuándo aparece en el carril', () {
-    Future<void> rail(WidgetTester tester, {required int repos}) async {
-      final catalogue = catalogueWith(const []);
-      final session = await sessionWith(catalogue, repos: repos);
+    Future<void> rail(
+      WidgetTester tester, {
+      required int repos,
+      bool complete = true,
+      Catalogue? catalogue,
+      String location = '/courses',
+    }) async {
+      final session = await sessionWith(
+        catalogue ?? catalogueWith(const []),
+        repos: repos,
+      );
+      await session.setCompleteInterface(complete);
       await pump(
         tester,
         session,
-        const DidactaShell(location: '/courses', child: SizedBox.shrink()),
+        DidactaShell(location: location, child: const SizedBox.shrink()),
       );
     }
 
@@ -142,8 +151,39 @@ void main() {
       expect(find.text('Entre repos'), findsNothing);
     });
 
-    testWidgets('con dos, sí', (tester) async {
+    testWidgets('con dos y la interfaz Completa, sí', (tester) async {
       await rail(tester, repos: 2);
+      expect(find.text('Entre repos'), findsOneWidget);
+    });
+
+    testWidgets('con dos y Esencial, solo si hay algo que mirar', (
+      tester,
+    ) async {
+      // Casi siempre diría «todo cuadra», y un apartado así se deja de
+      // abrir: el día que hay algo, no se ve.
+      await rail(tester, repos: 2, complete: false, catalogue: twoRepos());
+      expect(find.text('Entre repos'), findsNothing);
+
+      await rail(
+        tester,
+        repos: 2,
+        complete: false,
+        catalogue: twoRepos(
+          firstTitle: 'Análisis Matemático I',
+          secondTitle: 'Analisis Matematico I',
+        ),
+      );
+      expect(find.text('Entre repos'), findsOneWidget);
+    });
+
+    testWidgets('y mientras se está en él, aunque ya cuadre', (tester) async {
+      await rail(
+        tester,
+        repos: 2,
+        complete: false,
+        catalogue: twoRepos(),
+        location: '/between',
+      );
       expect(find.text('Entre repos'), findsOneWidget);
     });
 

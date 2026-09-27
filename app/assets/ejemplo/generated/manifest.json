@@ -1,0 +1,204 @@
+{
+  "availableLanguages": [
+    {
+      "code": "es",
+      "name": "Castellano"
+    },
+    {
+      "code": "va",
+      "name": "Valencià"
+    },
+    {
+      "code": "ca",
+      "name": "Català"
+    },
+    {
+      "code": "gl",
+      "name": "Galego"
+    },
+    {
+      "code": "eu",
+      "name": "Euskara"
+    },
+    {
+      "code": "en",
+      "name": "English"
+    },
+    {
+      "code": "fr",
+      "name": "Français"
+    },
+    {
+      "code": "de",
+      "name": "Deutsch"
+    },
+    {
+      "code": "it",
+      "name": "Italiano"
+    },
+    {
+      "code": "pt",
+      "name": "Português"
+    }
+  ],
+  "contentHash": "64722929cd7e2520",
+  "counts": {
+    "byKind": {
+      "example": 1,
+      "history": 1,
+      "problem": 3,
+      "theory": 4
+    },
+    "byLanguageStatus": {
+      "en:missing": 7,
+      "en:translated": 2,
+      "es:source": 9,
+      "va:missing": 2,
+      "va:translated": 7
+    },
+    "courses": 1,
+    "documents": 3,
+    "shared": 0,
+    "units": 9,
+    "years": 1
+  },
+  "defaultLanguage": "es",
+  "errors": [],
+  "files": [
+    "categories.json",
+    "courses.json",
+    "units.json"
+  ],
+  "languages": [
+    "es",
+    "va",
+    "en"
+  ],
+  "name": "Ejemplo de Didacta",
+  "profiles": [
+    {
+      "documentClass": "book",
+      "family": "notes",
+      "id": "book",
+      "label": "Libro"
+    },
+    {
+      "documentClass": "article",
+      "family": "exam",
+      "id": "exam",
+      "label": "Examen"
+    },
+    {
+      "documentClass": "article",
+      "family": "exam",
+      "id": "exam-marking",
+      "label": "Examen (profesor)"
+    },
+    {
+      "documentClass": "article",
+      "family": "handout",
+      "id": "handout",
+      "label": "Handout"
+    },
+    {
+      "documentClass": "article",
+      "family": "handout",
+      "id": "handout-answers",
+      "label": "Handout (con resultados)"
+    },
+    {
+      "documentClass": "article",
+      "family": "handout",
+      "id": "handout-teacher",
+      "label": "Handout (profesor)"
+    },
+    {
+      "documentClass": "article",
+      "family": "notes",
+      "id": "notes",
+      "label": "Apuntes"
+    },
+    {
+      "documentClass": "article",
+      "family": "notes",
+      "id": "notes-solutions",
+      "label": "Apuntes (con soluciones)"
+    },
+    {
+      "documentClass": "article",
+      "family": "notes",
+      "id": "notes-teacher",
+      "label": "Apuntes (profesor)"
+    },
+    {
+      "documentClass": "article",
+      "family": "problems",
+      "id": "problems",
+      "label": "Hoja de problemas"
+    },
+    {
+      "documentClass": "article",
+      "family": "problems",
+      "id": "problems-answers",
+      "label": "Hoja de problemas (con resultados)"
+    },
+    {
+      "documentClass": "article",
+      "family": "problems",
+      "id": "problems-teacher",
+      "label": "Hoja de problemas (profesor)"
+    },
+    {
+      "documentClass": "beamer",
+      "family": "slides",
+      "id": "slides",
+      "label": "Diapositivas"
+    },
+    {
+      "documentClass": "beamer",
+      "family": "slides",
+      "id": "slides-flat",
+      "label": "Diapositivas (sin pausas)"
+    },
+    {
+      "documentClass": "beamer",
+      "family": "slides",
+      "id": "slides-teacher",
+      "label": "Diapositivas (profesor)"
+    }
+  ],
+  "schemaVersion": 1,
+  "snippets": null,
+  "taxonomy": {
+    "blocks": [],
+    "categories": [
+      {
+        "id": "calculo",
+        "title": {
+          "en": "Calculus",
+          "es": "Cálculo",
+          "va": "Càlcul"
+        },
+        "topics": [
+          {
+            "id": "limites",
+            "title": {
+              "en": "Limits",
+              "es": "Límites",
+              "va": "Límits"
+            }
+          },
+          {
+            "id": "continuidad",
+            "title": {
+              "en": "Continuity",
+              "es": "Continuidad",
+              "va": "Continuïtat"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "templates": []
+}

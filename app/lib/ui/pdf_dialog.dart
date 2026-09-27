@@ -20,15 +20,24 @@
 /// preferencia no ayuda a nadie.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
 import '../model/catalogue.dart';
+import '../state/session.dart';
 import 'export_actions.dart';
 import 'pdf_controls.dart';
+import 'pdf_search.dart';
 import 'pdf_sidebar.dart';
+import 'pdf_synctex.dart';
+import 'shortcuts.dart';
 import 'theme.dart';
+import '../data/diagnostics.dart';
+import '../l10n/tr.dart';
 
 Future<void> showBuiltPdfs(
   BuildContext context, {
@@ -121,6 +130,49 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
   bool _sidebar = false;
   int? _zoom;
 
+  /// Buscar en el texto, como en la pestaña del PDF.
+  final PdfSearch _search = PdfSearch();
+  final GlobalKey<PdfSearchBarState> _searchBar = GlobalKey();
+  final FocusNode _focus = FocusNode(debugLabel: 'pdf-dialog');
+  bool _finding = false;
+
+  void _openFind() {
+    if (_finding) {
+      _searchBar.currentState?.focusQuery();
+      return;
+    }
+    setState(() => _finding = true);
+  }
+
+  void _closeFind() {
+    _search.clear();
+    setState(() => _finding = false);
+  }
+
+  /// ⌘+clic: a la lección, cerrando antes el diálogo.
+  final SourceClick _click = SourceClick();
+
+  void _openSource(SourceRequest request) {
+    if (!mounted) return;
+    final Session session;
+    try {
+      session = Provider.of<Session>(context, listen: false);
+    } on ProviderNotFoundException {
+      return;
+    }
+    final navigator = Navigator.of(context);
+    unawaited(
+      openSourceAt(context, session, request, onLeave: navigator.maybePop),
+    );
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
   List<ExistingOutput> get _shown => _byLanguage[_language] ?? const [];
 
   PdfViewerController _controllerFor(String path) =>
@@ -149,18 +201,21 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
 
   void _noteReady(String path, PdfDocument document) {
     if (!mounted) return;
+    final controller = _controllers[path];
+    if (controller != null) _search.attach(path, controller);
     setState(() {
       _pages[path] = document.pages.length;
       _documents[path] = document;
     });
-    _loadOutline(path, document);
+    unawaited(_loadOutline(path, document));
   }
 
   Future<void> _loadOutline(String path, PdfDocument document) async {
     List<PdfOutlineNode> outline;
     try {
       outline = await document.loadOutline();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('pdf_dialog.loadOutline', caught, trace);
       outline = const [];
     }
     if (!mounted || _documents[path] != document) return;
@@ -171,14 +226,17 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
     final path = _current?.pdf;
     if (path == null) return;
     final total = _pages[path] ?? 1;
-    _controllers[path]?.goToPage(pageNumber: page.clamp(1, total));
+    final controller = _controllers[path];
+    if (controller != null) {
+      unawaited(controller.goToPage(pageNumber: page.clamp(1, total)));
+    }
   }
 
   void _fit(Matrix4? Function(PdfViewerController controller, int page) how) {
     final controller = _controller;
     if (controller == null || !controller.isReady) return;
     final matrix = how(controller, controller.pageNumber ?? 1);
-    if (matrix != null) controller.goTo(matrix);
+    if (matrix != null) unawaited(controller.goTo(matrix));
   }
 
   String _nameOf(String code) {
@@ -191,70 +249,102 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
   @override
   Widget build(BuildContext context) {
     if (_shown.isEmpty) {
-      return const AlertDialog(
-        content: Text('No hay ningún PDF compilado de esto todavía.'),
+      return AlertDialog(
+        content: Text(tr('No hay ningún PDF compilado de esto todavía.')),
       );
     }
     final current = _shown[_at.clamp(0, _shown.length - 1)];
     final page = _page[current.pdf] ?? 1;
+    _search.order = [current.pdf];
 
     return Dialog(
       clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 820),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _header(context, current),
-            if (_codes.length > 1) _languages(),
-            if (_shown.length > 1) _tabs(),
-            _controls(current, page),
-            Expanded(
-              child: Row(
+      child: Listener(
+        onPointerDown: (event) {
+          _click.down(event);
+          if (!_focus.hasFocus) _focus.requestFocus();
+        },
+        child: CallbackShortcuts(
+          bindings: {activatorFor(AppShortcut.search): _openFind},
+          child: Focus(
+            focusNode: _focus,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 820),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (_sidebar)
-                    PdfSidebar(
-                      document: _documents[current.pdf],
-                      outline: _outlines[current.pdf] ?? const [],
-                      page: page,
-                      onGoToPage: _goTo,
-                      onGoToDest: (dest) =>
-                          _controllers[current.pdf]?.goToDest(dest),
+                  _header(context, current),
+                  if (_codes.length > 1) _languages(),
+                  if (_shown.length > 1) _tabs(),
+                  _controls(current, page),
+                  if (_finding)
+                    PdfSearchBar(
+                      key: _searchBar,
+                      search: _search,
+                      onStep: _search.step,
+                      onClose: _closeFind,
                     ),
                   Expanded(
-                    child: Container(
-                      color: didactaSurface,
-                      child: PdfViewer.file(
-                        current.pdf,
-                        // Con clave: cambiar de pestaña tiene que cargar el
-                        // otro fichero, y sin esto el visor se queda con el
-                        // primero.
-                        key: ValueKey(current.pdf),
-                        controller: _controllerFor(current.pdf),
-                        params: PdfViewerParams(
-                          margin: 10,
-                          viewerOverlayBuilder:
-                              (context, size, handleLinkTap) => [
-                                PdfViewerScrollThumb(
-                                  controller: _controllerFor(current.pdf),
-                                  orientation: ScrollbarOrientation.right,
-                                  thumbSize: const Size(38, 26),
+                    child: Row(
+                      children: [
+                        if (_sidebar)
+                          PdfSidebar(
+                            document: _documents[current.pdf],
+                            outline: _outlines[current.pdf] ?? const [],
+                            page: page,
+                            onGoToPage: _goTo,
+                            onGoToDest: (dest) =>
+                                _controllers[current.pdf]?.goToDest(dest),
+                          ),
+                        Expanded(
+                          child: Container(
+                            color: context.palette.surface,
+                            child: PdfViewer.file(
+                              current.pdf,
+                              // Con clave: cambiar de pestaña tiene que cargar el
+                              // otro fichero, y sin esto el visor se queda con el
+                              // primero.
+                              key: ValueKey(current.pdf),
+                              controller: _controllerFor(current.pdf),
+                              params: PdfViewerParams(
+                                margin: 10,
+                                pagePaintCallbacks: [
+                                  (canvas, rect, pdfPage) => _search.paint(
+                                    current.pdf,
+                                    canvas,
+                                    rect,
+                                    pdfPage,
+                                  ),
+                                ],
+                                viewerOverlayBuilder:
+                                    (context, size, handleLinkTap) => [
+                                      PdfViewerScrollThumb(
+                                        controller: _controllerFor(current.pdf),
+                                        orientation: ScrollbarOrientation.right,
+                                        thumbSize: const Size(38, 26),
+                                      ),
+                                    ],
+                                onViewerReady: (document, controller) =>
+                                    _noteReady(current.pdf, document),
+                                onGeneralTap: _click.handler(
+                                  current.pdf,
+                                  _openSource,
                                 ),
-                              ],
-                          onViewerReady: (document, controller) =>
-                              _noteReady(current.pdf, document),
-                          onPageChanged: (at) {
-                            if (at == null || !mounted) return;
-                            setState(() => _page[current.pdf] = at);
-                          },
+                                onPageChanged: (at) {
+                                  if (at == null || !mounted) return;
+                                  setState(() => _page[current.pdf] = at);
+                                },
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -282,12 +372,23 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
     onFitPage: _ready
         ? () => _fit((c, at) => c.calcMatrixForFit(pageNumber: at))
         : null,
+    trailing: [
+      IconButton(
+        key: const Key('pdf-search'),
+        tooltip: tr('Buscar en el PDF ({0})', [labelFor(AppShortcut.search)]),
+        visualDensity: VisualDensity.compact,
+        isSelected: _finding,
+        color: _finding ? context.palette.accentDark : null,
+        icon: const Icon(Icons.search, size: 17),
+        onPressed: _finding ? _closeFind : _openFind,
+      ),
+    ],
   );
 
   Widget _header(BuildContext context, ExistingOutput current) => Container(
-    decoration: const BoxDecoration(
-      color: didactaPanel,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.panel,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(14, 9, 8, 9),
     child: Row(
@@ -306,13 +407,24 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
               ),
               const SizedBox(height: 1),
               Text(
-                current.stale
-                    ? '${current.label} · ${_nameOf(current.language)} · de '
-                          'antes del último cambio'
+                current.quick
+                    ? tr(
+                        '{0} · {1} · '
+                        'vista rápida, sin compilar entero',
+                        [current.label, _nameOf(current.language)],
+                      )
+                    : current.stale
+                    ? tr(
+                        '{0} · {1} · de '
+                        'antes del último cambio',
+                        [current.label, _nameOf(current.language)],
+                      )
                     : '${current.label} · ${_nameOf(current.language)}',
                 style: TextStyle(
                   fontSize: 11.5,
-                  color: current.stale ? didactaEx : didactaMuted,
+                  color: current.stale
+                      ? context.palette.ex
+                      : context.palette.muted,
                 ),
               ),
             ],
@@ -323,7 +435,7 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
         // grande, esto es para que salga de aquí.
         IconButton(
           key: const Key('pdf-save-copy'),
-          tooltip: 'Guardar una copia',
+          tooltip: tr('Guardar una copia'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.file_download_outlined, size: 18),
           onPressed: () => savePdfCopy(context, path: current.pdf),
@@ -331,14 +443,14 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
         if (widget.onOpenExternally != null)
           IconButton(
             key: const Key('pdf-open-externally'),
-            tooltip: 'Abrir en el visor del sistema',
+            tooltip: tr('Abrir en el visor del sistema'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.open_in_new, size: 17),
             onPressed: () => widget.onOpenExternally!(current.pdf),
           ),
         IconButton(
           key: const Key('pdf-dialog-close'),
-          tooltip: 'Cerrar',
+          tooltip: tr('Cerrar'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.close, size: 18),
           onPressed: () => Navigator.of(context).pop(),
@@ -353,9 +465,9 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
   /// abierta: no tiene por qué existir ahí, y un índice que se sale de la
   /// lista es un visor en blanco.
   Widget _languages() => Container(
-    decoration: const BoxDecoration(
-      color: didactaPanel,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.panel,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
     child: SingleChildScrollView(
@@ -383,9 +495,9 @@ class _BuiltPdfsDialogState extends State<BuiltPdfsDialog> {
   );
 
   Widget _tabs() => Container(
-    decoration: const BoxDecoration(
-      color: didactaCard,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.card,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
     child: SingleChildScrollView(

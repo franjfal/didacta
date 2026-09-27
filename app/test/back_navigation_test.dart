@@ -9,6 +9,7 @@
 @TestOn('vm')
 library;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,20 +118,26 @@ void main() {
     expect(where(tester), '/courses');
   });
 
-  testWidgets('el atajo del teclado hace lo mismo que el botón', (
-    tester,
-  ) async {
-    await pumpApp(tester);
-    await goTo(tester, '/courses');
-    await goTo(tester, '/settings');
+  testWidgets(
+    'el atajo del teclado hace lo mismo que el botón',
+    (tester) async {
+      // ⌘[ en el Mac y Ctrl+[ en los demás, que no tienen ⌘.
+      final modifier = defaultTargetPlatform == TargetPlatform.macOS
+          ? LogicalKeyboardKey.meta
+          : LogicalKeyboardKey.control;
+      await pumpApp(tester);
+      await goTo(tester, '/courses');
+      await goTo(tester, '/settings');
 
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.meta);
-    await tester.sendKeyEvent(LogicalKeyboardKey.bracketLeft);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.meta);
-    await settle(tester);
+      await tester.sendKeyDownEvent(modifier);
+      await tester.sendKeyEvent(LogicalKeyboardKey.bracketLeft);
+      await tester.sendKeyUpEvent(modifier);
+      await settle(tester);
 
-    expect(where(tester), '/courses');
-  });
+      expect(where(tester), '/courses');
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.linux),
+  );
 
   group('el carril', railTests);
 

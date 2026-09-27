@@ -17,10 +17,15 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 
 import '../state/build_console.dart';
+import '../state/session.dart';
+import '../data/compiler.dart';
+import 'diagnostic_list.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Abre el terminal del trabajo que esté corriendo.
 ///
@@ -74,6 +79,9 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
   /// `latexmk` que no escribe nada.
   Timer? _tick;
 
+  /// Si se ha pedido el registro entero con la interfaz Esencial.
+  bool _details = false;
+
   @override
   void initState() {
     super.initState();
@@ -123,7 +131,7 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
     final console = widget.console;
     if (console.running || !console.ok) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) Navigator.of(context).maybePop();
+      if (mounted) unawaited(Navigator.of(context).maybePop());
     });
   }
 
@@ -141,6 +149,19 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
   Widget build(BuildContext context) {
     final console = widget.console;
     final size = MediaQuery.sizeOf(context);
+    // Con la interfaz Esencial, lo que está haciendo en una línea y cómo ha
+    // acabado; el registro entero, detrás de «Ver detalles». Salvo si ha
+    // fallado sin errores ya sacados --un `git pull` que no entra, un motor
+    // que no arranca--: entonces el porqué está en el registro, y se enseña.
+    final failedBare =
+        !console.running &&
+        !console.ok &&
+        !console.stopped &&
+        console.problems.isEmpty;
+    final plain =
+        !_details &&
+        !failedBare &&
+        !(_sessionIn(context)?.completeInterface ?? true);
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
@@ -152,40 +173,60 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
         child: Column(
           children: [
             _Header(console: console),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                color: _terminalBack,
-                child: console.isEmpty
-                    ? _Waiting(console.opening)
-                    : NotificationListener<ScrollNotification>(
-                        onNotification: _onScroll,
-                        child: SelectionArea(
-                          child: ListView.builder(
-                            key: const Key('build-console-lines'),
-                            controller: _scroll,
-                            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-                            itemCount:
-                                console.lines.length +
-                                (console.dropped > 0 ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (console.dropped > 0) {
-                                if (index == 0) {
-                                  return _ConsoleLine(
-                                    '… se han descartado las primeras '
-                                    '${console.dropped} líneas',
-                                    tone: _terminalDim,
-                                  );
+            // Los errores de un lote, cada uno con su documento y a dónde
+            // lleva, encima del registro: son lo que hay que arreglar.
+            if (!console.running && console.problems.isNotEmpty)
+              _Problems(console: console),
+            if (plain)
+              Expanded(
+                child: _Plain(
+                  console: console,
+                  onDetails: () => setState(() => _details = true),
+                ),
+              )
+            else
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  color: _terminalBack,
+                  child: console.isEmpty
+                      ? _Waiting(console.opening)
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: _onScroll,
+                          child: SelectionArea(
+                            child: ListView.builder(
+                              key: const Key('build-console-lines'),
+                              controller: _scroll,
+                              padding: const EdgeInsets.fromLTRB(
+                                14,
+                                10,
+                                14,
+                                14,
+                              ),
+                              itemCount:
+                                  console.lines.length +
+                                  (console.dropped > 0 ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (console.dropped > 0) {
+                                  if (index == 0) {
+                                    return _ConsoleLine(
+                                      tr(
+                                        '… se han descartado las primeras '
+                                        '{0} líneas',
+                                        [console.dropped],
+                                      ),
+                                      tone: _terminalDim,
+                                    );
+                                  }
+                                  index -= 1;
                                 }
-                                index -= 1;
-                              }
-                              return _ConsoleLine(console.lines[index]);
-                            },
+                                return _ConsoleLine(console.lines[index]);
+                              },
+                            ),
                           ),
                         ),
-                      ),
+                ),
               ),
-            ),
             _Footer(console: console, following: _follow, onFollow: _toBottom),
           ],
         ),
@@ -198,6 +239,183 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
     if (_scroll.hasClients) {
       _scroll.jumpTo(_scroll.position.maxScrollExtent);
     }
+  }
+}
+
+/// Lo que se ve con la interfaz Esencial en lugar del registro.
+///
+/// Contesta a «¿qué está haciendo?» sin las mil líneas: el paso en curso y la
+/// última línea que ha escrito, que es lo que dice que no se ha colgado. Por
+/// dónde va un lote ya lo dice la cabecera. Y al acabar, cómo ha ido.
+class _Plain extends StatelessWidget {
+  const _Plain({required this.console, required this.onDetails});
+
+  final BuildConsole console;
+  final VoidCallback onDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final last = console.lines.isEmpty ? console.opening : console.lines.last;
+    final String headline;
+    if (console.running) {
+      headline = console.step.isNotEmpty ? console.step : console.title;
+    } else if (console.stopped) {
+      headline = tr('Detenida.');
+    } else if (console.ok) {
+      headline = console.summary ?? tr('Ha salido bien.');
+    } else {
+      headline =
+          console.summary ?? tr('No ha salido: los errores están arriba.');
+    }
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            key: const Key('console-plain'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!console.running)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Icon(
+                    console.ok
+                        ? Icons.check_circle_outline
+                        : console.stopped
+                        ? Icons.stop_circle_outlined
+                        : Icons.error_outline,
+                    size: 28,
+                    color: console.ok
+                        ? context.palette.accentDark
+                        : context.palette.muted,
+                  ),
+                ),
+              Text(
+                headline,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (console.running) ...[
+                const SizedBox(height: 12),
+                Text(
+                  last,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontFamily: 'monospace',
+                    color: context.palette.muted,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              TextButton(
+                key: const Key('console-details'),
+                onPressed: onDetails,
+                child: Text(tr('Ver detalles')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Problems extends StatelessWidget {
+  const _Problems({required this.console});
+
+  final BuildConsole console;
+
+  static int _failed(Map<String, List<CompileDiagnostic>> groups) =>
+      groups.values.where((list) => list.any((d) => d.isError)).length;
+
+  /// «Con errores: 2 salidas · 3 que se salen de la página».
+  static String _heading(Map<String, List<CompileDiagnostic>> groups) {
+    final errors = _failed(groups);
+    final overflowing = groups.length - errors;
+    String outputs(int n) => n == 1 ? tr('1 salida') : tr('{0} salidas', [n]);
+    return [
+      if (errors > 0) tr('Con errores: {0}', [outputs(errors)]),
+      if (overflowing > 0)
+        errors > 0
+            ? tr(
+                '{0} que se {1} '
+                'de la página',
+                [overflowing, overflowing == 1 ? 'sale' : 'salen'],
+              )
+            : tr('Se salen de la página: {0}', [outputs(overflowing)]),
+    ].join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = _sessionIn(context);
+    final groups = <String, List<CompileDiagnostic>>{};
+    for (final problem in console.problems) {
+      (groups[problem.what] ??= []).add(problem.diagnostic);
+    }
+    return Container(
+      key: const Key('console-problems'),
+      width: double.infinity,
+      constraints: const BoxConstraints(maxHeight: 220),
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _heading(groups),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _failed(groups) > 0
+                    ? context.palette.teacher
+                    : context.palette.ex,
+              ),
+            ),
+            const SizedBox(height: 6),
+            for (final entry in groups.entries) ...[
+              Text(
+                entry.key,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              if (session == null)
+                for (final diagnostic in entry.value)
+                  SelectableText(
+                    diagnostic.plain,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontFamily: 'monospace',
+                      color: context.palette.teacher,
+                    ),
+                  )
+              else
+                DiagnosticList(
+                  diagnostics: entry.value,
+                  session: session,
+                  shown: 3,
+                  onOpen: () => Navigator.of(context).maybePop(),
+                ),
+              const SizedBox(height: 6),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -219,6 +437,8 @@ const Color _terminalWarn = Color(0xFFD9B26A);
 /// errores de LaTeX --que empiezan por `!`-- y los avisos. Todo lo demás sale
 /// tal cual. Interpretar más sería adivinar, y una línea teñida de rojo que
 /// no era un error hace que las que sí lo son dejen de creerse.
+final RegExp _fileLineError = RegExp(r'\.(tex|sty|cls|def):\d+: ');
+
 class _ConsoleLine extends StatelessWidget {
   const _ConsoleLine(this.text, {this.tone});
 
@@ -245,7 +465,11 @@ class _ConsoleLine extends StatelessWidget {
     if (line.startsWith('--- FAIL')) return _terminalBad;
     if (line.startsWith('---')) return _terminalDim;
     if (line.startsWith(r'$ ')) return _terminalDim;
-    if (line.startsWith('!') || line.contains('Emergency stop')) {
+    // Con `-file-line-error` un error ya no empieza por `!`: es
+    // `ruta.tex:42: mensaje`.
+    if (line.startsWith('!') ||
+        line.contains('Emergency stop') ||
+        _fileLineError.hasMatch(line)) {
       return _terminalBad;
     }
     if (line.contains('Warning:') || line.startsWith('Latexmk: ')) {
@@ -263,10 +487,13 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final seconds = console.elapsed.inMilliseconds / 1000;
+    // Parar desde aquí también: es donde se está mirando cuando se decide
+    // que no hacía falta.
+    final stopper = console.running ? _sessionIn(context) : null;
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
       child: Row(
@@ -278,14 +505,17 @@ class _Header extends StatelessWidget {
               child: CircularProgressIndicator(strokeWidth: 2),
             )
           else
+            // Por [BuildConsole.ok] y no por [BuildConsole.failure]: `failure`
+            // es que el motor no llegó a arrancar, y un LaTeX que falla
+            // termina «bien» en ese sentido. Mirando eso, la marca salía verde
+            // encima de un registro lleno de errores.
             Icon(
-              console.failure == null
-                  ? Icons.check_circle_outline
-                  : Icons.error_outline,
+              console.ok ? Icons.check_circle_outline : Icons.error_outline,
+              key: Key(console.ok ? 'console-ok' : 'console-failed'),
               size: 17,
-              color: console.failure == null
-                  ? didactaAccentDark
-                  : didactaTeacher,
+              color: console.ok
+                  ? context.palette.accentDark
+                  : context.palette.teacher,
             ),
           const SizedBox(width: 9),
           Expanded(
@@ -293,7 +523,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  console.title.isEmpty ? 'Compilación' : console.title,
+                  console.title.isEmpty ? tr('Compilación') : console.title,
                   style: const TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w700,
@@ -305,15 +535,30 @@ class _Header extends StatelessWidget {
                     // El estado primero: es lo que se mira de reojo mientras
                     // se hace otra cosa.
                     console.running
-                        ? 'En marcha · ${seconds.toStringAsFixed(0)} s'
-                        : 'Terminada en ${seconds.toStringAsFixed(1)} s',
-                    if (console.total > 0)
-                      '${console.done} de ${console.total}',
+                        ? tr('En marcha · {0} s', [seconds.toStringAsFixed(0)])
+                        : console.stopped
+                        ? tr('Detenida a los {0} s', [
+                            seconds.toStringAsFixed(0),
+                          ])
+                        : console.ok
+                        ? tr('Terminada en {0} s', [seconds.toStringAsFixed(1)])
+                        : tr(
+                            'Terminada con errores en '
+                            '{0} s',
+                            [seconds.toStringAsFixed(1)],
+                          ),
+                    if (!console.running && console.summary != null)
+                      console.summary!
+                    else if (console.total > 0)
+                      tr('{0} de {1}', [console.done, console.total]),
                     if (console.running && console.step.isNotEmpty)
                       console.step,
                   ].join(' · '),
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
                 // La barra solo cuando hay varias piezas que contar. Con una,
                 // un tramo entero que se llena de golpe al acabar no dice
@@ -326,19 +571,34 @@ class _Header extends StatelessWidget {
                       key: const Key('console-progress'),
                       minHeight: 4,
                       value: console.done / console.total,
-                      backgroundColor: didactaRule,
-                      color: console.ok ? didactaAccentDark : didactaTeacher,
+                      backgroundColor: context.palette.rule,
+                      color: console.ok
+                          ? context.palette.accentDark
+                          : context.palette.teacher,
                     ),
                   ),
                 ],
               ],
             ),
           ),
+          // Parar desde aquí también: es donde se está mirando cuando se
+          // decide que no hacía falta.
+          if (stopper != null)
+            TextButton(
+              key: const Key('console-stop'),
+              style: TextButton.styleFrom(
+                foregroundColor: context.palette.teacher,
+              ),
+              onPressed: stopper.stoppingBuild ? null : stopper.stopBuilds,
+              child: Text(
+                stopper.stoppingBuild ? tr('Deteniendo…') : tr('Detener'),
+              ),
+            ),
           IconButton(
             key: const Key('console-close'),
             tooltip: console.running
-                ? 'Ocultar. La compilación sigue'
-                : 'Cerrar',
+                ? tr('Ocultar. La compilación sigue')
+                : tr('Cerrar'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.close, size: 18),
             onPressed: () => Navigator.of(context).pop(),
@@ -362,17 +622,19 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: didactaPanel,
-      border: Border(top: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.panel,
+      border: Border(top: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(12, 7, 10, 7),
     child: Row(
       children: [
         Expanded(
           child: Text(
-            console.isEmpty ? console.about : '${console.lines.length} líneas',
-            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            console.isEmpty
+                ? console.about
+                : tr('{0} líneas', [console.lines.length]),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
         ),
         // Solo cuando se ha dejado de seguir: mientras va detrás de la
@@ -381,9 +643,9 @@ class _Footer extends StatelessWidget {
           TextButton.icon(
             key: const Key('console-follow'),
             icon: const Icon(Icons.vertical_align_bottom, size: 16),
-            label: const Text('Seguir el final'),
+            label: Text(tr('Seguir el final')),
             style: TextButton.styleFrom(
-              foregroundColor: didactaMuted,
+              foregroundColor: context.palette.muted,
               visualDensity: VisualDensity.compact,
             ),
             onPressed: onFollow,
@@ -391,9 +653,9 @@ class _Footer extends StatelessWidget {
         TextButton.icon(
           key: const Key('console-copy'),
           icon: const Icon(Icons.copy_all_outlined, size: 16),
-          label: const Text('Copiar'),
+          label: Text(tr('Copiar')),
           style: TextButton.styleFrom(
-            foregroundColor: didactaMuted,
+            foregroundColor: context.palette.muted,
             visualDensity: VisualDensity.compact,
           ),
           onPressed: console.isEmpty
@@ -402,14 +664,14 @@ class _Footer extends StatelessWidget {
                   await Clipboard.setData(ClipboardData(text: console.text));
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Registro copiado.')),
+                    SnackBar(content: Text(tr('Registro copiado.'))),
                   );
                 },
         ),
         const SizedBox(width: 4),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(console.running ? 'Ocultar' : 'Cerrar'),
+          child: Text(console.running ? tr('Ocultar') : tr('Cerrar')),
         ),
       ],
     ),
@@ -435,4 +697,14 @@ class _Waiting extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// La sesión, si la ventana está dentro de la aplicación: suelta, en una
+/// prueba, no la hay, y entonces no se ofrece parar.
+Session? _sessionIn(BuildContext context) {
+  try {
+    return Provider.of<Session>(context, listen: false);
+  } on ProviderNotFoundException {
+    return null;
+  }
 }

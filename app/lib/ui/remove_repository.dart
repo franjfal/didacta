@@ -9,10 +9,12 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../data/diagnostics.dart';
 import '../data/local_clone.dart';
 import '../model/workspace.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Qué se hace con la carpeta.
 enum RepositoryRemoval {
@@ -50,8 +52,13 @@ Future<void> removeRepositoryAsking(
       content: Text(
         problem ??
             (choice == RepositoryRemoval.trashFolder
-                ? '${repo.id} quitado, y su carpeta está en la Papelera.'
-                : '${repo.id} quitado. La carpeta sigue en ${repo.directory}.'),
+                ? tr('{0} quitado, y su carpeta está en la Papelera.', [
+                    repo.id,
+                  ])
+                : tr('{0} quitado. La carpeta sigue en {1}.', [
+                    repo.id,
+                    repo.directory,
+                  ])),
       ),
     ),
   );
@@ -63,7 +70,8 @@ Future<CloneStatus?> _freshStatus(Session session, ContentRepo repo) async {
   try {
     return await session.cloneFor(repo.id)?.status() ??
         session.statusOf(repo.id);
-  } catch (_) {
+  } catch (caught, trace) {
+    Diagnostics.instance.note('remove_repository._freshStatus', caught, trace);
     return session.statusOf(repo.id);
   }
 }
@@ -91,30 +99,33 @@ class RemoveRepositoryDialog extends StatelessWidget {
     final parts = [
       if (known.dirtyPaths.isNotEmpty)
         known.dirtyPaths.length == 1
-            ? 'un cambio sin guardar'
-            : '${known.dirtyPaths.length} cambios sin guardar',
+            ? tr('un cambio sin guardar')
+            : tr('{0} cambios sin guardar', [known.dirtyPaths.length]),
       if (known.ahead > 0)
         known.ahead == 1
-            ? 'un commit sin enviar a GitHub'
-            : '${known.ahead} commits sin enviar a GitHub',
+            ? tr('un cambio guardado sin enviar a GitHub')
+            : tr('{0} cambios guardados sin enviar a GitHub', [known.ahead]),
     ];
     if (parts.isEmpty) return null;
-    return 'Tiene ${parts.join(' y ')}. Si mandas la carpeta a la Papelera, '
-        'ese trabajo se va con ella.';
+    return tr(
+      'Tiene {0}. Si mandas la carpeta a la Papelera, '
+      'ese trabajo se va con ella.',
+      [parts.join(' y ')],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final risk = _atRisk;
     return AlertDialog(
-      title: Text('Quitar ${repo.id}'),
+      title: Text(tr('Quitar {0}', [repo.id])),
       content: SizedBox(
         width: 480,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Deja de aparecer en Didacta. Su carpeta es esta:'),
+            Text(tr('Deja de aparecer en Didacta. Su carpeta es esta:')),
             const SizedBox(height: 6),
             SelectableText(
               repo.directory,
@@ -122,16 +133,18 @@ class RemoveRepositoryDialog extends StatelessWidget {
             ),
             if (canTrash) ...[
               const SizedBox(height: 12),
-              const Text(
-                'Puedes dejarla en el disco o mandarla a la Papelera con todo '
-                'lo que tiene dentro. Desde la Papelera se recupera mientras no '
-                'la vacíes.',
-                style: TextStyle(fontSize: 12.5, color: didactaMuted),
+              Text(
+                tr(
+                  'Puedes dejarla en el disco o mandarla a la Papelera con todo '
+                  'lo que tiene dentro. Desde la Papelera se recupera mientras no '
+                  'la vacíes.',
+                ),
+                style: TextStyle(fontSize: 12.5, color: context.palette.muted),
               ),
             ],
             if (risk != null) ...[
               const SizedBox(height: 12),
-              Note(risk, tone: didactaTeacher),
+              Note(risk, tone: context.palette.teacher),
             ],
           ],
         ),
@@ -139,21 +152,23 @@ class RemoveRepositoryDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         OutlinedButton(
           key: const Key('remove-keep-folder'),
           onPressed: () =>
               Navigator.of(context).pop(RepositoryRemoval.keepFolder),
-          child: const Text('Quitar de la lista'),
+          child: Text(tr('Quitar de la lista')),
         ),
         if (canTrash)
           FilledButton(
             key: const Key('remove-trash-folder'),
-            style: FilledButton.styleFrom(backgroundColor: didactaTeacher),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.palette.teacher,
+            ),
             onPressed: () =>
                 Navigator.of(context).pop(RepositoryRemoval.trashFolder),
-            child: const Text('Quitar y mandar a la Papelera'),
+            child: Text(tr('Quitar y mandar a la Papelera')),
           ),
       ],
     );

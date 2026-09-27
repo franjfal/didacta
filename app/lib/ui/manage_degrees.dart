@@ -21,8 +21,10 @@ import '../model/catalogue.dart';
 import '../model/library_tree.dart' show languageName;
 import '../model/slug.dart';
 import '../state/session.dart';
+import 'problem.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 Future<void> showDegrees(BuildContext context, Session session) =>
     showDialog<void>(
@@ -53,22 +55,24 @@ class _DegreesDialogState extends State<DegreesDialog> {
     ];
 
     return AlertDialog(
-      title: const Text('Grados'),
+      title: Text(tr('Grados')),
       content: SizedBox(
         width: 560,
         height: 480,
         child: ListView(
           children: [
-            const Text(
-              'Un grado lo declara un repositorio y las asignaturas de '
-              'cualquier otro lo nombran. Con que uno lo declare, todos lo '
-              'ven agrupado; un grado que no declara nadie no agrupa, y sus '
-              'asignaturas salen sueltas.',
+            Text(
+              tr(
+                'Un grado lo declara un repositorio y las asignaturas de '
+                'cualquier otro lo nombran. Con que uno lo declare, todos lo '
+                'ven agrupado; un grado que no declara nadie no agrupa, y sus '
+                'asignaturas salen sueltas.',
+              ),
               style: TextStyle(fontSize: 12.5, height: 1.45),
             ),
             const SizedBox(height: 12),
             if (degrees.isEmpty)
-              const Note('Todavía no hay ninguno declarado.')
+              Note(tr('Todavía no hay ninguno declarado.'))
             else
               for (final degree in degrees)
                 _DegreeRow(
@@ -82,16 +86,21 @@ class _DegreesDialogState extends State<DegreesDialog> {
                 ),
             if (missing.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Nombrados y sin declarar',
-                style: TextStyle(fontSize: 11.5, color: didactaTeacher),
+              Text(
+                tr('Nombrados y sin declarar'),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: context.palette.teacher,
+                ),
               ),
               const SizedBox(height: 2),
-              const Text(
-                'Alguna asignatura dice pertenecer a estos y ningún '
-                'repositorio abierto los declara. Se ven enteras, sin '
-                'agrupar. Decláralos aquí, o abre el repositorio donde estén.',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              Text(
+                tr(
+                  'Alguna asignatura dice pertenecer a estos y ningún '
+                  'repositorio abierto los declara. Se ven enteras, sin '
+                  'agrupar. Decláralos aquí, o abre el repositorio donde estén.',
+                ),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
               const SizedBox(height: 6),
               for (final id in missing)
@@ -112,7 +121,7 @@ class _DegreesDialogState extends State<DegreesDialog> {
                         TextButton(
                           key: Key('declare-$id'),
                           onPressed: () => _create(writable, id: id),
-                          child: const Text('Declarar'),
+                          child: Text(tr('Declarar')),
                         ),
                     ],
                   ),
@@ -126,12 +135,12 @@ class _DegreesDialogState extends State<DegreesDialog> {
           TextButton.icon(
             key: const Key('new-degree'),
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('Nuevo grado'),
+            label: Text(tr('Nuevo grado')),
             onPressed: () => _create(writable),
           ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(tr('Cerrar')),
         ),
       ],
     );
@@ -158,10 +167,10 @@ class _DegreesDialogState extends State<DegreesDialog> {
         institution: answer.institution,
       );
       messenger.showSnackBar(
-        SnackBar(content: Text('Grado «${answer.id}» declarado.')),
+        SnackBar(content: Text(tr('Grado «{0}» declarado.', [answer.id]))),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -192,7 +201,7 @@ class _DegreesDialogState extends State<DegreesDialog> {
         );
       }
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -210,7 +219,7 @@ class _DegreesDialogState extends State<DegreesDialog> {
     final answer = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) => _TitlesDialog(
-        title: 'Título del grado',
+        title: tr('Título del grado'),
         languages: [for (final option in options) option.code],
         names: {for (final option in options) option.code: option.name},
         titles: degree.titles,
@@ -229,13 +238,13 @@ class _DegreesDialogState extends State<DegreesDialog> {
         SnackBar(
           content: Text(
             written == 0
-                ? 'No ha cambiado nada.'
-                : 'Título cambiado en $written repositorio(s).',
+                ? tr('No ha cambiado nada.')
+                : tr('Título cambiado en {0} repositorio(s).', [written]),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = null);
     }
@@ -281,8 +290,8 @@ class _DegreeRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: didactaSurface,
-        border: Border.all(color: didactaRule),
+        color: context.palette.surface,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -301,8 +310,11 @@ class _DegreeRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   '${degree.id} · '
-                  '${courses == 1 ? '1 asignatura' : '$courses asignaturas'}',
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  '${courses == 1 ? tr('1 asignatura') : tr('{0} asignaturas', [courses])}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
               ],
             ),
@@ -345,9 +357,11 @@ class _DegreeRow extends StatelessWidget {
             IconButton(
               key: Key('rename-degree-${degree.id}'),
               tooltip: canWrite
-                  ? 'Título en todos los idiomas'
-                  : 'Solo lectura: lo declara un repositorio en el que no '
-                        'puedes escribir',
+                  ? tr('Título en todos los idiomas')
+                  : tr(
+                      'Solo lectura: lo declara un repositorio en el que no '
+                      'puedes escribir',
+                    ),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.edit_outlined, size: 15),
               onPressed: canWrite ? onRename : null,
@@ -383,8 +397,8 @@ class _RepoToggle extends StatelessWidget {
       onTap: enabled ? onTap : null,
       builder: (context, hovering) => Tooltip(
         message: declared
-            ? 'Lo declara. Púlsalo para dejar de declararlo aquí.'
-            : 'No lo declara. Púlsalo para declararlo aquí también.',
+            ? tr('Lo declara. Púlsalo para dejar de declararlo aquí.')
+            : tr('No lo declara. Púlsalo para declararlo aquí también.'),
         child: Row(
           key: Key(id),
           mainAxisSize: MainAxisSize.min,
@@ -392,7 +406,9 @@ class _RepoToggle extends StatelessWidget {
             Icon(
               declared ? Icons.check_box : Icons.check_box_outline_blank,
               size: 14,
-              color: declared ? Color(colour) : didactaMuted,
+              color: declared
+                  ? context.palette.repo(colour)
+                  : context.palette.muted,
             ),
             const SizedBox(width: 4),
             RepoChip(colour: colour, label: label, compact: true),
@@ -467,7 +483,7 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
   Widget build(BuildContext context) {
     final language = widget.session.language;
     return AlertDialog(
-      title: const Text('Nuevo grado'),
+      title: Text(tr('Nuevo grado')),
       content: SizedBox(
         width: 460,
         child: Column(
@@ -480,8 +496,8 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
               autofocus: true,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: 'Nombre en ${languageName(language)}',
-                hintText: 'Grado en Matemáticas',
+                labelText: tr('Nombre en {0}', [languageName(language)]),
+                hintText: tr('Grado en Matemáticas'),
                 isDense: true,
               ),
             ),
@@ -491,12 +507,13 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
               controller: _id,
               onChanged: (value) => setState(() => _touchedId = true),
               decoration: InputDecoration(
-                labelText: 'Identificador',
+                labelText: tr('Identificador'),
                 hintText: _identifier.isEmpty ? 'matematicas' : _identifier,
                 isDense: true,
-                helperText:
-                    'Es lo que escriben las asignaturas y lo que junta los '
-                    'repositorios. No se traduce.',
+                helperText: tr(
+                  'Es lo que escriben las asignaturas y lo que junta los '
+                  'repositorios. No se traduce.',
+                ),
                 helperMaxLines: 3,
               ),
             ),
@@ -504,16 +521,16 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
             TextField(
               key: const Key('degree-institution'),
               controller: _institution,
-              decoration: const InputDecoration(
-                labelText: 'Institución (opcional)',
+              decoration: InputDecoration(
+                labelText: tr('Institución (opcional)'),
                 isDense: true,
               ),
             ),
             if (widget.repos.length > 1) ...[
               const SizedBox(height: 12),
-              const Text(
-                'En qué repositorio se declara',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              Text(
+                tr('En qué repositorio se declara'),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
               const SizedBox(height: 4),
               DropdownButtonFormField<String>(
@@ -534,9 +551,11 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
                     setState(() => _repo = value ?? widget.repos.first),
               ),
               const SizedBox(height: 4),
-              const Note(
-                'En uno solo. Declararlo en dos no rompe nada --se juntan por '
-                'id-- pero es lo que hace que luego discrepen.',
+              Note(
+                tr(
+                  'En uno solo. Declararlo en dos no rompe nada --se juntan por '
+                  'id-- pero es lo que hace que luego discrepen.',
+                ),
               ),
             ],
           ],
@@ -545,7 +564,7 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('degree-create'),
@@ -561,7 +580,7 @@ class _NewDegreeDialogState extends State<_NewDegreeDialog> {
                         : _institution.text.trim(),
                   ),
                 ),
-          child: const Text('Declarar'),
+          child: Text(tr('Declarar')),
         ),
       ],
     );
@@ -618,18 +637,20 @@ class _TitlesDialogState extends State<_TitlesDialog> {
                   labelText: widget.names[code] ?? code,
                   isDense: true,
                   helperText: (widget.titles[code] ?? '').isEmpty
-                      ? 'sin traducir'
+                      ? tr('sin traducir')
                       : null,
-                  helperStyle: const TextStyle(
+                  helperStyle: TextStyle(
                     fontSize: 11.5,
-                    color: didactaTeacher,
+                    color: context.palette.teacher,
                   ),
                 ),
               ),
             ),
-          const Note(
-            'Un idioma en blanco se queda marcado como pendiente en el '
-            'fichero, no se borra el grado.',
+          Note(
+            tr(
+              'Un idioma en blanco se queda marcado como pendiente en el '
+              'fichero, no se borra el grado.',
+            ),
           ),
         ],
       ),
@@ -637,7 +658,7 @@ class _TitlesDialogState extends State<_TitlesDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('degree-titles-save'),
@@ -645,7 +666,7 @@ class _TitlesDialogState extends State<_TitlesDialog> {
           for (final entry in _fields.entries)
             entry.key: entry.value.text.trim(),
         }),
-        child: const Text('Aceptar'),
+        child: Text(tr('Aceptar')),
       ),
     ],
   );

@@ -18,6 +18,8 @@
 /// se puede adivinar.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +28,7 @@ import '../model/mcp.dart';
 import '../state/mcp_service.dart';
 import 'shell.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class McpPage extends StatelessWidget {
   const McpPage({super.key});
@@ -37,26 +40,28 @@ class McpPage extends StatelessWidget {
     return Column(
       children: [
         PageHeader(
-          title: 'Servidor MCP',
+          title: tr('Servidor MCP'),
           subtitle: switch (service.state) {
-            McpState.running =>
-              '${service.calls} llamadas · ${service.writes} escrituras',
-            McpState.starting => 'Encendiendo…',
-            McpState.failed => 'No está en marcha',
-            McpState.off => 'Apagado',
+            McpState.running => tr('{0} llamadas · {1} escrituras', [
+              service.calls,
+              service.writes,
+            ]),
+            McpState.starting => tr('Encendiendo…'),
+            McpState.failed => tr('No está en marcha'),
+            McpState.off => tr('Apagado'),
           },
         ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.only(bottom: 28),
             children: [
-              const SectionLabel('Conexión'),
+              SectionLabel(tr('Conexión')),
               _ConnectionCard(service: service),
 
-              const SectionLabel('Qué está haciendo'),
+              SectionLabel(tr('Qué está haciendo')),
               _ActivityCard(service: service),
 
-              const SectionLabel('Qué sabe hacer'),
+              SectionLabel(tr('Qué sabe hacer')),
               _ToolsCard(service: service),
             ],
           ),
@@ -88,7 +93,8 @@ class _ConnectionCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      service.url ?? 'Sin dirección: el servidor está parado.',
+                      service.url ??
+                          tr('Sin dirección: el servidor está parado.'),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -99,7 +105,7 @@ class _ConnectionCard extends StatelessWidget {
                   if (service.url != null)
                     IconButton(
                       key: const Key('mcp-copy-url'),
-                      tooltip: 'Copiar la dirección',
+                      tooltip: tr('Copiar la dirección'),
                       visualDensity: VisualDensity.compact,
                       icon: const Icon(Icons.copy, size: 16),
                       onPressed: () => _copy(context, service.url!),
@@ -108,20 +114,25 @@ class _ConnectionCard extends StatelessWidget {
               ),
               if (service.problem != null) ...[
                 const SizedBox(height: 8),
-                Note(service.problem!, tone: didactaEx),
+                Note(service.problem!, tone: context.palette.ex),
               ],
               const SizedBox(height: 10),
-              const Text(
-                'Escucha solo en esta máquina. No pide contraseña, así que no '
-                'sale de aquí: un servidor que escribe en tus ficheros '
-                'escuchando en la red del departamento es una mala tarde.',
+              Text(
+                tr(
+                  'Escucha solo en esta máquina y pide un token que cambia cada '
+                  'vez que se enciende: así ni la red del departamento ni una '
+                  'página web abierta en tu navegador pueden hablarle.',
+                ),
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
               if (configuration != null) ...[
                 const SizedBox(height: 12),
-                const Text(
-                  'Para conectar un cliente',
-                  style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                Text(
+                  tr('Para conectar un cliente'),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 _Snippet(
@@ -129,10 +140,11 @@ class _ConnectionCard extends StatelessWidget {
                   onCopy: () => _copy(context, configuration),
                 ),
                 const SizedBox(height: 6),
-                const Note(
-                  'El puerto lo elige el sistema cada vez que se enciende, '
-                  'así que esto hay que volver a pegarlo tras reiniciar '
-                  'Didacta.',
+                Note(
+                  tr(
+                    'El puerto y el token cambian cada vez que se enciende, así '
+                    'que esto hay que volver a pegarlo tras reiniciar Didacta.',
+                  ),
                 ),
               ],
             ],
@@ -143,10 +155,10 @@ class _ConnectionCard extends StatelessWidget {
   }
 
   void _copy(BuildContext context, String what) {
-    Clipboard.setData(ClipboardData(text: what));
+    unawaited(Clipboard.setData(ClipboardData(text: what)));
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Copiado.')));
+    ).showSnackBar(SnackBar(content: Text(tr('Copiado.'))));
   }
 }
 
@@ -158,10 +170,10 @@ class _Light extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (colour, label) = switch (state) {
-      McpState.running => (didactaAccentDark, 'En marcha'),
-      McpState.starting => (didactaTeacher, 'Encendiendo'),
-      McpState.failed => (didactaEx, 'Con problemas'),
-      McpState.off => (didactaMuted, 'Apagado'),
+      McpState.running => (context.palette.accentDark, tr('En marcha')),
+      McpState.starting => (context.palette.teacher, tr('Encendiendo')),
+      McpState.failed => (context.palette.ex, tr('Con problemas')),
+      McpState.off => (context.palette.muted, tr('Apagado')),
     };
     return Tooltip(
       message: label,
@@ -184,8 +196,8 @@ class _Snippet extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: didactaSurface,
-      border: Border.all(color: didactaRule),
+      color: context.palette.surface,
+      border: Border.all(color: context.palette.rule),
       borderRadius: BorderRadius.circular(4),
     ),
     padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
@@ -200,7 +212,7 @@ class _Snippet extends StatelessWidget {
         ),
         IconButton(
           key: const Key('mcp-copy-config'),
-          tooltip: 'Copiar',
+          tooltip: tr('Copiar'),
           visualDensity: VisualDensity.compact,
           icon: const Icon(Icons.copy, size: 15),
           onPressed: onCopy,
@@ -226,19 +238,23 @@ class _ActivityCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Cada llamada que recibe, lo último arriba. Las que escriben '
-                'van marcadas: lo que hacen queda en disco y se envía desde '
-                'la barra de arriba, como cualquier otro cambio.',
+              Text(
+                tr(
+                  'Cada llamada que recibe, lo último arriba. Las que escriben '
+                  'van marcadas: lo que hacen queda en disco y se envía desde '
+                  'la barra de arriba, como cualquier otro cambio.',
+                ),
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
               const SizedBox(height: 10),
               if (activity.isEmpty)
                 Note(
                   service.running
-                      ? 'En marcha y esperando. Todavía no se ha conectado '
-                            'nadie.'
-                      : 'Nada todavía. Enciéndelo en Ajustes.',
+                      ? tr(
+                          'En marcha y esperando. Todavía no se ha conectado '
+                          'nadie.',
+                        )
+                      : tr('Nada todavía. Enciéndelo en Ajustes.'),
                 )
               else
                 for (final event in activity.take(120)) _EventRow(event: event),
@@ -267,9 +283,9 @@ class _EventRow extends StatelessWidget {
             width: 58,
             child: Text(
               _clock(event.at),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                color: didactaMuted,
+                color: context.palette.muted,
                 fontFamily: 'monospace',
               ),
             ),
@@ -282,13 +298,13 @@ class _EventRow extends StatelessWidget {
               _ => event.ok ? Icons.check : Icons.error_outline,
             },
             size: 13,
-            color: event.ok ? didactaMuted : didactaEx,
+            color: event.ok ? context.palette.muted : context.palette.ex,
           ),
           const SizedBox(width: 6),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 12.5, color: didactaInk),
+                style: TextStyle(fontSize: 12.5, color: context.palette.ink),
                 children: [
                   TextSpan(
                     text: event.summary,
@@ -296,29 +312,31 @@ class _EventRow extends StatelessWidget {
                       fontWeight: event.isCall
                           ? FontWeight.w600
                           : FontWeight.normal,
-                      color: event.ok ? didactaInk : didactaEx,
+                      color: event.ok
+                          ? context.palette.ink
+                          : context.palette.ex,
                     ),
                   ),
                   if (about != null)
                     TextSpan(
                       text: '  $about',
-                      style: const TextStyle(color: didactaMuted),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                 ],
               ),
             ),
           ),
           if (event.writes)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(left: 6),
-              child: _Pill(label: 'escribe', tone: didactaTeacher),
+              child: _Pill(label: 'escribe', tone: context.palette.teacher),
             ),
           if (event.milliseconds != null)
             Padding(
               padding: const EdgeInsets.only(left: 6),
               child: Text(
-                '${event.milliseconds} ms',
-                style: const TextStyle(fontSize: 11, color: didactaMuted),
+                tr('{0} ms', [event.milliseconds]),
+                style: TextStyle(fontSize: 11, color: context.palette.muted),
               ),
             ),
         ],
@@ -368,35 +386,44 @@ class _ToolsCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Lo que un modelo conectado puede pedirle. Sale del propio '
-                'servidor, así que es lo que hay de verdad, no una lista '
-                'escrita aparte.',
+              Text(
+                tr(
+                  'Lo que un modelo conectado puede pedirle. Sale del propio '
+                  'servidor, así que es lo que hay de verdad, no una lista '
+                  'escrita aparte.',
+                ),
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
               const SizedBox(height: 10),
               if (tools.isEmpty)
-                const Note(
-                  'Se preguntan al servidor cuando arranca. Enciéndelo para '
-                  'verlas.',
+                Note(
+                  tr(
+                    'Se preguntan al servidor cuando arranca. Enciéndelo para '
+                    'verlas.',
+                  ),
                 )
               else ...[
                 for (final tool in tools.where((t) => !t.writes))
                   _ToolTile(tool: tool),
                 if (tools.any((t) => t.writes)) ...[
                   const SizedBox(height: 8),
-                  const Text(
-                    'Y estas escriben en el repositorio',
-                    style: TextStyle(fontSize: 11.5, color: didactaTeacher),
+                  Text(
+                    tr('Y estas escriben en el repositorio'),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.palette.teacher,
+                    ),
                   ),
                   const SizedBox(height: 5),
                   for (final tool in tools.where((t) => t.writes))
                     _ToolTile(tool: tool),
                 ],
                 const SizedBox(height: 8),
-                const Note(
-                  'Ninguna toca git. Lo que un modelo escriba queda en disco '
-                  'y lo envías tú, viendo el diff.',
+                Note(
+                  tr(
+                    'Ninguna toca git. Lo que un modelo escriba queda en disco '
+                    'y lo envías tú, viendo qué cambia.',
+                  ),
                 ),
               ],
             ],
@@ -417,8 +444,8 @@ class _ToolTile extends StatelessWidget {
     key: Key('mcp-tool-${tool.name}'),
     margin: const EdgeInsets.only(bottom: 6),
     decoration: BoxDecoration(
-      color: didactaSurface,
-      border: Border.all(color: didactaRule),
+      color: context.palette.surface,
+      border: Border.all(color: context.palette.rule),
       borderRadius: BorderRadius.circular(4),
     ),
     child: ExpansionTile(
@@ -441,12 +468,13 @@ class _ToolTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          if (tool.writes) const _Pill(label: 'escribe', tone: didactaTeacher),
+          if (tool.writes)
+            _Pill(label: 'escribe', tone: context.palette.teacher),
         ],
       ),
       subtitle: Text(
         tool.title,
-        style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+        style: TextStyle(fontSize: 11.5, color: context.palette.muted),
       ),
       children: [
         Align(
@@ -463,20 +491,23 @@ class _ToolTile extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 3),
               child: RichText(
                 text: TextSpan(
-                  style: const TextStyle(fontSize: 12, color: didactaInk),
+                  style: TextStyle(fontSize: 12, color: context.palette.ink),
                   children: [
                     TextSpan(
                       text: argument.name,
                       style: const TextStyle(fontFamily: 'monospace'),
                     ),
                     if (argument.required)
-                      const TextSpan(
+                      TextSpan(
                         text: ' obligatorio',
-                        style: TextStyle(fontSize: 10, color: didactaTeacher),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: context.palette.teacher,
+                        ),
                       ),
                     TextSpan(
                       text: '  ${argument.description}',
-                      style: const TextStyle(color: didactaMuted),
+                      style: TextStyle(color: context.palette.muted),
                     ),
                   ],
                 ),

@@ -9,24 +9,28 @@ Un problema en Didacta es **un fichero con cuatro campos**, y las versiones
 que se reparten los revelan por niveles.
 
 ```latex
-\begin{problem}[Convergencia de una serie]
+\begin{exercise}[Convergencia de una serie]
 Estudia la convergencia de $\sum_{n\ge 1} \frac{1}{n^2}$.
 
-\hint{Compárala con una integral.}
+\begin{hint}
+Compárala con una integral.
+\end{hint}
 
-\answer{Converge, y su suma es $\pi^2/6$.}
+\begin{answer}
+Converge, y su suma es $\pi^2/6$.
+\end{answer}
 
-\solution{
-  La función $f(x)=1/x^2$ es positiva y decreciente en $[1,\infty)$,
-  así que\ldots
-}
+\begin{solution}
+La función $f(x)=1/x^2$ es positiva y decreciente en $[1,\infty)$,
+así que\ldots
+\end{solution}
 
-\marking{
-  1 punto por plantear el criterio integral, 1 por calcular la integral,
-  0{,}5 por concluir. Un error de cálculo con el método bien planteado
-  no baja de 1{,}5.
-}
-\end{problem}
+\begin{marking}
+1 punto por plantear el criterio integral, 1 por calcular la integral,
+0{,}5 por concluir. Un error de cálculo con el método bien planteado
+no baja de 1{,}5.
+\end{marking}
+\end{exercise}
 ```
 
 |  | `hint` | `answer` | `solution` | `marking` |

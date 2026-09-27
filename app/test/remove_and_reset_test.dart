@@ -6,6 +6,7 @@
 /// archivos de mentira ([RecordingFileManager]), porque tirar carpetas de
 /// verdad en una prueba no demuestra nada más que apuntar cuáles.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:convert';
@@ -220,7 +221,7 @@ void main() {
       }
     }
 
-    Future<Session> pumpSettings(WidgetTester tester) async {
+    Future<Session> pumpSettings(WidgetTester tester, {String? section}) async {
       final session = (await tester.runAsync(started))!;
       tester.view.physicalSize = const Size(1280, 2600);
       tester.view.devicePixelRatio = 1;
@@ -244,7 +245,7 @@ void main() {
           ],
           child: MaterialApp(
             theme: didactaTheme(),
-            home: const Scaffold(body: SettingsPage()),
+            home: Scaffold(body: SettingsPage(section: section)),
           ),
         ),
       );
@@ -303,14 +304,19 @@ void main() {
       expect(files.trashed, isEmpty);
     });
 
-    testWidgets('«Restablecer» está al final de Ajustes', (tester) async {
-      await pumpSettings(tester);
-      await tester.scrollUntilVisible(
-        find.byKey(const Key('start-over')),
-        400,
-        scrollable: find.byType(Scrollable).first,
-      );
+    testWidgets('«Restablecer» tiene su sección, la última de Ajustes', (
+      tester,
+    ) async {
+      await pumpSettings(tester, section: 'empezar');
       expect(find.byKey(const Key('start-over')), findsOneWidget);
+    });
+
+    testWidgets('y no está en las demás', (tester) async {
+      // Se busca a propósito: no puede estar a mano de quien solo venía a
+      // cambiar un ajuste.
+      await pumpSettings(tester);
+      expect(find.byKey(const Key('start-over')), findsNothing);
+      expect(find.byKey(const Key('settings-section-empezar')), findsOneWidget);
     });
   });
 

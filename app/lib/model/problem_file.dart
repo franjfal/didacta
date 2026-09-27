@@ -18,6 +18,8 @@
 /// exactamente donde estaba.
 library;
 
+import '../l10n/tr.dart';
+
 /// Uno de los tres campos.
 enum ProblemPart { statement, answer, solution }
 
@@ -29,18 +31,20 @@ String environmentFor(ProblemPart part) => switch (part) {
 };
 
 String labelFor(ProblemPart part) => switch (part) {
-  ProblemPart.statement => 'Enunciado',
-  ProblemPart.answer => 'Resultado',
-  ProblemPart.solution => 'Solución detallada',
+  ProblemPart.statement => tr('Enunciado'),
+  ProblemPart.answer => tr('Resultado'),
+  ProblemPart.solution => tr('Solución detallada'),
 };
 
 String hintFor(ProblemPart part) => switch (part) {
-  ProblemPart.statement => 'Lo que se pide. Sale en todas las versiones.',
-  ProblemPart.answer =>
+  ProblemPart.statement => tr('Lo que se pide. Sale en todas las versiones.'),
+  ProblemPart.answer => tr(
     'El resultado, en una línea. Sale en la hoja con resultados y en la '
-        'del profesor.',
-  ProblemPart.solution =>
+    'del profesor.',
+  ),
+  ProblemPart.solution => tr(
     'Cómo se llega. Sale en la hoja con soluciones y en la del profesor.',
+  ),
 };
 
 /// Por qué un fichero no se puede editar por campos.
@@ -150,16 +154,22 @@ class ProblemFile {
     }
     if (exercises > 1) {
       shape = ProblemShape._(
-        'este fichero tiene $exercises problemas, y los campos son de uno. '
-        'Se edita como texto, y se parte en varios cuando toque.',
+        tr(
+          'este fichero tiene {0} problemas, y los campos son de uno. '
+          'Se edita como texto, y se parte en varios cuando toque.',
+          [exercises],
+        ),
       );
       return;
     }
     for (final name in ['answer', 'solution']) {
       if ((counts[name] ?? 0) > 1) {
         shape = ProblemShape._(
-          'este fichero tiene ${counts[name]} entornos `$name`, y el campo '
-          'es uno. Se edita como texto.',
+          tr(
+            'este fichero tiene {0} entornos `{1}`, y el campo '
+            'es uno. Se edita como texto.',
+            [counts[name], name],
+          ),
         );
         return;
       }

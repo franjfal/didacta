@@ -9,6 +9,7 @@
 /// Es la prueba que sostiene la frase que repite toda la interfaz: una
 /// congelación no copia nada. Si eso fuera falso, se vería aquí.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -186,6 +187,25 @@ void main() {
       );
 
   group('abrir', () {
+    test('lo compilado hoy no es de aquella versión', () async {
+      // Compilar y «Ver PDF» miran en el árbol de la congelación, que tiene
+      // su propia carpeta de salida: un PDF de hoy no puede salir como si
+      // fuera el de aquel día.
+      final pdf = File(
+        '$work/.didacta-build/am-i@2026-2027_tema-1/notes-es/'
+        'Tema 1, revisado - notes - es.pdf',
+      )..createSync(recursive: true);
+      pdf.writeAsStringSync('%PDF-1.4\n');
+      expect(await engine.documentOutputs('am-i@2026-2027'), isNotEmpty);
+
+      final view = await service().open(freezeAt(first));
+      final there = Compiler(
+        enginePath: enginePath,
+        repositoryPath: view.directory,
+      );
+      expect(await there.documentOutputs('am-i@2026-2027'), isEmpty);
+    });
+
     test('da el catálogo de aquel commit', () async {
       final view = await service().open(freezeAt(first));
       final course = view.catalogue.courses.single;
@@ -332,6 +352,36 @@ void main() {
         diff.changes.where((c) => c.path.startsWith('generated/')),
         isEmpty,
       );
+    });
+
+    test('solo las lecciones que usa el curso, y cuenta las demás', () async {
+      // El repositorio tiene dos mil y el curso usa cuarenta: lo que cambió
+      // en una que el curso no da no es la respuesta a «¿qué ha cambiado?».
+      write(
+        'content/analisis/otra/unit.yaml',
+        'kind: theory\ntitle:\n  es: otra\n',
+      );
+      write('content/analisis/otra/es.tex', 'de otro curso\n');
+      await git(['add', '-A']);
+      await git([
+        '-c',
+        'user.name=Semilla',
+        '-c',
+        'user.email=semilla@example.com',
+        'commit',
+        '-m',
+        'Una lección de otro curso',
+      ]);
+      final diff = await service().compare(
+        from: first,
+        to: 'HEAD',
+        course: 'am-i',
+        year: '2026-2027',
+      );
+      final lessons = diff.of(ChangedThing.lesson).map((l) => l.title);
+      expect(lessons, contains('series'));
+      expect(lessons, isNot(contains('otra')));
+      expect(diff.hiddenLessons, greaterThanOrEqualTo(1));
     });
 
     test('dos congelaciones se comparan igual que una con HEAD', () async {

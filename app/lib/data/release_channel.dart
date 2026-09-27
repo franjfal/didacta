@@ -30,7 +30,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../model/app_version.dart';
 import '../model/update_manifest.dart';
+import 'diagnostics.dart';
+import '../l10n/tr.dart';
 
 /// Por qué no se pudo comprobar o traer una actualización.
 ///
@@ -115,11 +118,17 @@ class ReleaseChannel {
     'X-GitHub-Api-Version': '2022-11-28',
     // GitHub rechaza una petición sin `User-Agent`, así que no es cortesía:
     // es lo que hace que la API conteste.
-    'User-Agent': 'Didacta',
+    'User-Agent': tr('Didacta'),
   };
 
   /// El manifiesto del último release, o `null` si no hay ninguno.
-  Future<UpdateManifest?> latest() async {
+  ///
+  /// Con [tests], también las versiones de prueba: `releases/latest` no las
+  /// devuelve nunca, así que se mira la lista y se toma la más alta. Una
+  /// final es más alta que sus pruebas --`1.5.0` > `1.5.0-rc.2`--, así que
+  /// quien las recibe pasa a la final en cuanto sale.
+  Future<UpdateManifest?> latest({bool tests = false}) async {
+    if (tests) return _newestOfAll();
     final response = await _get('$base/repos/$owner/$repo/releases/latest');
     // Sin release publicado todavía. Con el repositorio público es el único
     // significado que puede tener un 404 aquí, que es justo lo que se ganó al
@@ -127,20 +136,58 @@ class ReleaseChannel {
     // faltaba era el release o el permiso.
     if (response.statusCode == 404) return null;
     if (response.statusCode != 200) throw _problemFor(response);
+    return _manifestOf(_decode(response.body));
+  }
 
-    final Map<String, dynamic> release;
+  Future<UpdateManifest?> _newestOfAll() async {
+    final response = await _get(
+      '$base/repos/$owner/$repo/releases?per_page=30',
+    );
+    if (response.statusCode == 404) return null;
+    if (response.statusCode != 200) throw _problemFor(response);
+    Object? listed;
     try {
-      release = (jsonDecode(response.body) as Map).cast<String, dynamic>();
-    } catch (_) {
-      throw const UpdateException(
+      listed = jsonDecode(response.body);
+    } catch (caught, trace) {
+      // Lo que no se entiende se trata igual que una lista rota: abajo.
+      Diagnostics.instance.note('release_channel.releases', caught, trace);
+    }
+    if (listed is! List) {
+      throw UpdateException(
         UpdateProblem.brokenRelease,
-        'GitHub devolvió algo que no se entiende.',
+        tr('GitHub devolvió algo que no se entiende.'),
       );
     }
+    Map<String, dynamic>? newest;
+    AppVersion? highest;
+    for (final item in listed) {
+      if (item is! Map || item['draft'] == true) continue;
+      final version = AppVersion.tryParse(item['tag_name'] as String?);
+      if (version == null) continue;
+      if (highest == null || version > highest) {
+        highest = version;
+        newest = item.cast<String, dynamic>();
+      }
+    }
+    return newest == null ? null : _manifestOf(newest);
+  }
 
-    // Un release marcado como borrador o prerelease no se ofrece: el
-    // workflow publica en borrador mientras sube los binarios, y ofrecer eso
-    // sería ofrecer un release a medio subir.
+  Map<String, dynamic> _decode(String body) {
+    try {
+      return (jsonDecode(body) as Map).cast<String, dynamic>();
+    } catch (caught, trace) {
+      Diagnostics.instance.note('release_channel.decode', caught, trace);
+      throw UpdateException(
+        UpdateProblem.brokenRelease,
+        tr('GitHub devolvió algo que no se entiende.'),
+      );
+    }
+  }
+
+  Future<UpdateManifest?> _manifestOf(Map<String, dynamic> release) async {
+    // Un borrador no se ofrece: el workflow publica en borrador mientras sube
+    // los binarios, y ofrecer eso sería ofrecer un release a medio subir. Una
+    // versión de prueba solo llega aquí si se pidieron (ver [latest]).
     if (release['draft'] == true) return null;
 
     final assets = (release['assets'] as List?) ?? const [];
@@ -154,16 +201,19 @@ class ReleaseChannel {
     if (manifestId == null) {
       throw UpdateException(
         UpdateProblem.brokenRelease,
-        'El último release de Didacta (${release['tag_name']}) no lleva '
-        'manifiesto, así que no se puede actualizar automáticamente.',
+        tr(
+          'El último release de Didacta ({0}) no lleva '
+          'manifiesto, así que no se puede actualizar automáticamente.',
+          [release['tag_name']],
+        ),
       );
     }
 
     final manifest = UpdateManifest.tryParse(await _assetText(manifestId));
     if (manifest == null) {
-      throw const UpdateException(
+      throw UpdateException(
         UpdateProblem.brokenRelease,
-        'El manifiesto del último release no se entiende.',
+        tr('El manifiesto del último release no se entiende.'),
       );
     }
     return manifest;
@@ -184,7 +234,7 @@ class ReleaseChannel {
     } catch (thrown) {
       throw UpdateException(
         UpdateProblem.offline,
-        'No se pudo conectar con GitHub.',
+        tr('No se pudo conectar con GitHub.'),
         detail: '$thrown',
       );
     }
@@ -193,7 +243,10 @@ class ReleaseChannel {
         response.statusCode == 403
             ? UpdateProblem.rateLimited
             : UpdateProblem.brokenRelease,
-        'No se pudo descargar ${asset.name} (${response.statusCode}).',
+        tr('No se pudo descargar {0} ({1}).', [
+          asset.name,
+          response.statusCode,
+        ]),
       );
     }
     return response;
@@ -205,7 +258,7 @@ class ReleaseChannel {
     } catch (thrown) {
       throw UpdateException(
         UpdateProblem.offline,
-        'No hay conexión con GitHub.',
+        tr('No hay conexión con GitHub.'),
         detail: '$thrown',
       );
     }
@@ -227,7 +280,7 @@ class ReleaseChannel {
     } catch (thrown) {
       throw UpdateException(
         UpdateProblem.offline,
-        'No hay conexión con GitHub.',
+        tr('No hay conexión con GitHub.'),
         detail: '$thrown',
       );
     }
@@ -245,32 +298,37 @@ class ReleaseChannel {
     // que alguien puede hacer, y «GitHub ha dicho que no» no lo es.
     if (status == 403 || status == 429) {
       if (response.headers['x-ratelimit-remaining'] == '0' || status == 429) {
-        return const UpdateException(
+        return UpdateException(
           UpdateProblem.rateLimited,
-          'GitHub está limitando las peticiones. Inténtalo dentro de un rato.',
+          tr(
+            'GitHub está limitando las peticiones. Inténtalo dentro de un rato.',
+          ),
         );
       }
-      return const UpdateException(
+      return UpdateException(
         UpdateProblem.githubDown,
-        'GitHub ha rechazado la petición.',
+        tr('GitHub ha rechazado la petición.'),
       );
     }
     if (status == 404) {
       return UpdateException(
         UpdateProblem.noRelease,
-        'No encuentro las versiones de Didacta en $owner/$repo.',
+        tr('No encuentro las versiones de Didacta en {0}/{1}.', [owner, repo]),
       );
     }
     if (status >= 500) {
       return UpdateException(
         UpdateProblem.githubDown,
-        'GitHub no está respondiendo bien ahora mismo ($status). Se volverá '
-        'a intentar más adelante.',
+        tr(
+          'GitHub no está respondiendo bien ahora mismo ({0}). Se volverá '
+          'a intentar más adelante.',
+          [status],
+        ),
       );
     }
     return UpdateException(
       UpdateProblem.brokenRelease,
-      'GitHub respondió $status.',
+      tr('GitHub respondió {0}.', [status]),
       detail: response.body,
     );
   }

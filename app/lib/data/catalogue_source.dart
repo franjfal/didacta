@@ -16,6 +16,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../model/catalogue.dart';
+import '../l10n/tr.dart';
 import 'catalogue_source_stub.dart'
     if (dart.library.io) 'catalogue_source_io.dart'
     as platform;
@@ -68,13 +69,25 @@ class MergedCatalogueSource extends CatalogueSource {
   Future<Catalogue> load() async {
     final loaded = <Catalogue>[];
     final failures = <String>[];
-    for (final part in parts) {
-      try {
-        loaded.add(await part.load());
-      } catch (thrown) {
+    // Todos a la vez: cada uno se lee en su propio hilo, así que con dos
+    // repositorios se tarda lo que tarda el más grande y no la suma. El
+    // orden de la lista se mantiene, que es el que decide quién gana al
+    // juntar.
+    final results = await Future.wait([
+      for (final part in parts)
+        part.load().then<Object>(
+          (catalogue) => catalogue,
+          onError: (Object e) => e,
+        ),
+    ]);
+    for (var i = 0; i < parts.length; i += 1) {
+      final result = results[i];
+      if (result is Catalogue) {
+        loaded.add(result);
+      } else {
         // Un repositorio que no carga no puede llevarse por delante a los
         // demás: quien tenga uno de los dos tiene que ver el suyo.
-        failures.add('${part.describe}: $thrown');
+        failures.add('${parts[i].describe}: $result');
       }
     }
     if (loaded.isEmpty && failures.isNotEmpty) {
@@ -144,8 +157,11 @@ class HttpCatalogueSource extends CatalogueSource {
     final response = await client.get(uri);
     if (response.statusCode != 200) {
       throw CatalogueFormatException(
-        'no se pudo leer $uri (HTTP ${response.statusCode}). '
-        '¿Se ha generado el índice con `didacta index`?',
+        tr(
+          'no se pudo leer {0} (HTTP {1}). '
+          '¿Se ha generado el índice con `didacta index`?',
+          [uri, response.statusCode],
+        ),
       );
     }
     // `bodyBytes` decoded explicitly as UTF-8: these titles are Valencian and
@@ -153,7 +169,9 @@ class HttpCatalogueSource extends CatalogueSource {
     // charset, which turns every accent into mojibake.
     final decoded = jsonDecode(utf8.decode(response.bodyBytes));
     if (decoded is! Map) {
-      throw CatalogueFormatException('$uri no contiene un objeto JSON');
+      throw CatalogueFormatException(
+        tr('{0} no contiene un objeto JSON', [uri]),
+      );
     }
     return decoded.cast<String, dynamic>();
   }

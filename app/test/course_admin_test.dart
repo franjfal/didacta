@@ -12,6 +12,7 @@
 /// no estaba probado es la costura --qué órdenes se le pasan, y qué se hace
 /// con lo que deja en el disco-- y eso es lo que hay aquí.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';

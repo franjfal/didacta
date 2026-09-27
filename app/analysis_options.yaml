@@ -24,5 +24,12 @@ linter:
     # avoid_print: false  # Uncomment to disable the `avoid_print` rule
     # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
 
+    # Un Future que nadie espera tiene que decirlo: con `await`, o con
+    # `unawaited(...)` cuando es a propósito. Sin esto, un error dentro de
+    # uno de ellos se pierde sin que nadie lo vea, y un orden que se daba
+    # por hecho --guardar y después recargar-- deja de cumplirse sin aviso.
+    unawaited_futures: true
+    discarded_futures: true
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

@@ -25,8 +25,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
+import '../data/file_manager.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
@@ -34,6 +36,8 @@ import 'build_console.dart';
 import 'pdf_tab.dart';
 import 'missing_translations.dart';
 import 'theme.dart';
+import 'diagnostic_list.dart';
+import '../l10n/tr.dart';
 
 /// El estado de compilar una unidad.
 ///
@@ -142,7 +146,7 @@ class UnitTarget implements PreviewTarget {
   String? get course => null;
 
   @override
-  String get what => 'esta unidad';
+  String get what => tr('esta unidad');
 
   @override
   String get repo => unit.repo;
@@ -225,7 +229,7 @@ class DocumentTarget implements PreviewTarget {
   String get defaultLanguage => language;
 
   @override
-  String get what => 'este tema';
+  String get what => tr('este tema');
 
   @override
   List<BuildableProfile> profilesFrom(Catalogue catalogue) =>
@@ -264,8 +268,15 @@ class PreviewState {
     // El idioma de referencia, marcado de entrada. Los demás se añaden: se
     // compila `es` y `va` juntos para ver si la traducción cabe.
     languages.add(target.defaultLanguage);
-    scheduleMicrotask(load);
+    scheduleMicrotask(() => _loaded.complete(load()));
   }
+
+  final Completer<void> _loaded = Completer<void>();
+
+  /// Cuando ya se sabe qué se puede compilar. Hasta entonces no hay versiones
+  /// elegidas y [compile] no haría nada, así que quien quiera compilar nada
+  /// más abrir la pestaña --«Compilar ahora» al guardar-- espera a esto.
+  Future<void> get ready => _loaded.future;
 
   final PreviewTarget target;
   final Session session;
@@ -304,10 +315,14 @@ class PreviewState {
         ready: false,
         enginePath: session.enginePath,
         problem: session.canCompile
-            ? 'Compilar necesita el motor y un clon del repositorio en '
-                  'disco. Los dos se eligen en Ajustes.'
-            : 'Compilar necesita LaTeX, y un navegador no lo tiene. Usa la '
-                  'aplicación de escritorio.',
+            ? tr(
+                'Compilar necesita el motor y la copia del repositorio en '
+                'disco. Los dos se eligen en Ajustes.',
+              )
+            : tr(
+                'Compilar necesita LaTeX, y un navegador no lo tiene. Usa la '
+                'aplicación de escritorio.',
+              ),
       );
       loading = false;
       onChanged();
@@ -410,6 +425,10 @@ class PreviewState {
   /// Cuántas salidas produciría compilar ahora: perfiles por idiomas.
   int get outputCount => chosen.length * languages.length;
 
+  /// Si compilar va a ser una sola pasada: un documento, con la vista rápida
+  /// encendida. Una lección suelta no: entera tarda lo mismo.
+  bool get quick => target is DocumentTarget && session.quickBuild;
+
   /// Borra lo que ya está compilado, y vuelve a preguntar qué queda.
   ///
   /// Sin confirmación cuando es una sola: vive en el directorio de
@@ -441,28 +460,38 @@ class PreviewState {
     building = true;
     problem = null;
     onChanged();
-    final console = session.buildConsole;
-    console.start('${output.label} · ${output.language}');
     try {
-      results = await target.buildWith(
-        compiler,
-        profiles: [output.profile],
-        languages: [output.language],
-        onOutput: console.add,
+      // Por la cola: si ya se compila otra cosa, espera su turno. Detenida,
+      // no deja nada que enseñar ni ningún error.
+      final made = await session.runBuild(
+        '${output.label} · ${output.language}',
+        (console) async {
+          final made = await target.buildWith(
+            compiler,
+            profiles: [output.profile],
+            languages: [output.language],
+            onOutput: console.add,
+          );
+          console.finish(ok: made.every((result) => result.ok));
+          return made;
+        },
       );
-      console.finish(ok: results.every((result) => result.ok));
-      onCompiled(results);
-      await _loadExisting(compiler);
+      if (made != null) {
+        results = made;
+        onCompiled(results);
+        await _loadExisting(compiler);
+      }
     } catch (error) {
       problem = error;
-      console.finish(failure: error);
     } finally {
       building = false;
       onChanged();
     }
   }
 
-  Future<void> compile() async {
+  /// Compila lo marcado. En una sola pasada si [quick], salvo que se pida
+  /// [full]: «Compilar entero», lo que se reparte.
+  Future<void> compile({bool full = false}) async {
     final compiler = session.compiler(repo: target.repo);
     if (compiler == null || chosen.isEmpty || languages.isEmpty) return;
     // Nunca a medias: si falta una traducción de las elegidas, no se compila
@@ -473,34 +502,40 @@ class PreviewState {
     problem = null;
     results = const [];
     onChanged();
-    final console = session.buildConsole;
-    console.start(
-      outputCount <= 1
-          ? 'Compilando ${target.what}'
-          : 'Compilando ${target.what}: $outputCount versiones',
-    );
     try {
-      results = await target.buildWith(
-        compiler,
-        profiles: profiles
-            .where((p) => chosen.contains(p.id))
-            .map((p) => p.id)
-            .toList(),
-        // En el orden del catálogo y no del conjunto, para que `es` quede
-        // siempre a la izquierda de `va`: comparar dos cosas que cambian de
-        // lado entre compilaciones es peor que no compararlas.
-        languages: [
-          for (final code in session.languagesIn(target.course))
-            if (languages.contains(code)) code,
-        ],
-        onOutput: console.add,
+      final made = await session.runBuild(
+        outputCount <= 1
+            ? tr('Compilando {0}', [target.what])
+            : tr('Compilando {0}: {1} versiones', [target.what, outputCount]),
+        (console) async {
+          final made = await target.buildWith(
+            compiler,
+            profiles: profiles
+                .where((p) => chosen.contains(p.id))
+                .map((p) => p.id)
+                .toList(),
+            // En el orden del catálogo y no del conjunto, para que `es`
+            // quede siempre a la izquierda de `va`: comparar dos cosas que
+            // cambian de lado entre compilaciones es peor que no
+            // compararlas.
+            languages: [
+              for (final code in session.languagesIn(target.course))
+                if (languages.contains(code)) code,
+            ],
+            fast: quick && !full,
+            onOutput: console.add,
+          );
+          console.finish(ok: made.every((result) => result.ok));
+          return made;
+        },
       );
-      console.finish(ok: results.every((result) => result.ok));
-      onCompiled(results);
-      await _loadExisting(compiler);
+      if (made != null) {
+        results = made;
+        onCompiled(results);
+        await _loadExisting(compiler);
+      }
     } catch (error) {
       problem = error;
-      console.finish(failure: error);
     } finally {
       building = false;
       onChanged();
@@ -547,7 +582,7 @@ class UnitPreview extends StatelessWidget {
 
     final status = state.status;
     if (status != null && !status.ready) {
-      return _NotReady(problem: status.problem ?? 'No se puede compilar.');
+      return _NotReady(problem: status.problem ?? tr('No se puede compilar.'));
     }
 
     return Column(
@@ -560,12 +595,17 @@ class UnitPreview extends StatelessWidget {
           languages: state.session.languagesIn(state.target.course),
           outputs: state.outputCount,
           building: state.building,
+          quick: state.quick,
           onToggle: state.toggle,
           onLanguage: state.toggleLanguage,
           onCompile:
               state.chosen.isEmpty || state.building || state.blocked.isNotEmpty
               ? null
               : () => _watch(context, state.compile),
+          onCompileFull:
+              state.chosen.isEmpty || state.building || state.blocked.isNotEmpty
+              ? null
+              : () => _watch(context, () => state.compile(full: true)),
           // Solo cuando hay algo que enseñar. El registro sobrevive a cerrar
           // la ventana, y esto es lo que permite volver a ella: se cierra
           // para ver el PDF, y el aviso que pasó volando sigue estando.
@@ -609,6 +649,8 @@ class _Controls extends StatelessWidget {
     required this.onLanguage,
     required this.onCompile,
     required this.onConsole,
+    this.quick = false,
+    this.onCompileFull,
   });
 
   /// «esta unidad» o «este tema».
@@ -632,6 +674,11 @@ class _Controls extends StatelessWidget {
   final ValueChanged<String> onLanguage;
   final VoidCallback? onCompile;
 
+  /// La vista rápida: el botón compila en una sola pasada, y al lado queda
+  /// [onCompileFull] para lo que se reparte.
+  final bool quick;
+  final VoidCallback? onCompileFull;
+
   /// Volver a abrir el terminal de la última compilación. Null cuando no
   /// hay ninguna todavía.
   final VoidCallback? onConsole;
@@ -639,9 +686,9 @@ class _Controls extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 10, 12, 12),
       child: Column(
@@ -651,7 +698,7 @@ class _Controls extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Compilar $what',
+                  tr('Compilar {0}', [what]),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -699,8 +746,8 @@ class _Controls extends StatelessWidget {
                           fontSize: 10.5,
                           height: 1.25,
                           color: profile.givesAway
-                              ? didactaTeacher
-                              : didactaMuted,
+                              ? context.palette.teacher
+                              : context.palette.muted,
                         ),
                       ),
                     ],
@@ -711,7 +758,7 @@ class _Controls extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _familyColour(profile.family),
+                      color: _familyColour(context.palette, profile.family),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -730,34 +777,60 @@ class _Controls extends StatelessWidget {
                         height: 13,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.play_arrow, size: 17),
+                    : Icon(quick ? Icons.bolt : Icons.play_arrow, size: 17),
                 label: Text(
                   building
-                      ? 'Compilando…'
+                      ? tr('Compilando…')
+                      : quick
+                      ? (outputs <= 1
+                            ? tr('Vista rápida')
+                            : tr('Vista rápida · {0} versiones', [outputs]))
                       : outputs <= 1
-                      ? 'Compilar'
-                      : 'Compilar $outputs versiones',
+                      ? tr('Compilar')
+                      : tr('Compilar {0} versiones', [outputs]),
                 ),
                 onPressed: onCompile,
               ),
+              if (quick && !building) ...[
+                const SizedBox(width: 6),
+                OutlinedButton(
+                  key: const Key('compile-full'),
+                  onPressed: onCompileFull,
+                  child: Text(tr('Compilar entero')),
+                ),
+              ],
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  chosenLanguages.length > 1
-                      ? 'Los idiomas de un mismo perfil se abren lado a lado, '
-                            'para comparar.'
-                      : 'El preámbulo lo pone Didacta al compilar; no está '
-                            'en el fichero.',
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  quick
+                      ? tr(
+                          'Una sola pasada: tarda la mitad, y el índice y las '
+                          'referencias pueden no estar al día.',
+                        )
+                      : chosenLanguages.length > 1
+                      ? tr(
+                          'Los idiomas de un mismo perfil se abren lado a lado, '
+                          'para comparar.',
+                        )
+                      : tr(
+                          'El preámbulo lo pone Didacta al compilar; no está '
+                          'en el fichero.',
+                        ),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
               ),
               if (onConsole != null)
                 TextButton.icon(
                   key: const Key('show-console'),
                   icon: const Icon(Icons.terminal, size: 16),
-                  label: Text(building ? 'Ver el terminal' : 'Último registro'),
+                  label: Text(
+                    building ? tr('Ver el terminal') : tr('Último registro'),
+                  ),
                   style: TextButton.styleFrom(
-                    foregroundColor: didactaMuted,
+                    foregroundColor: context.palette.muted,
                     visualDensity: VisualDensity.compact,
                   ),
                   onPressed: onConsole,
@@ -769,13 +842,14 @@ class _Controls extends StatelessWidget {
     );
   }
 
-  static Color _familyColour(String family) => switch (family) {
-    'slides' => didactaThm,
-    'problems' => didactaEx,
-    'handout' => didactaQues,
-    'exam' => didactaTeacher,
-    _ => didactaDefn,
-  };
+  static Color _familyColour(DidactaPalette palette, String family) =>
+      switch (family) {
+        'slides' => palette.thm,
+        'problems' => palette.ex,
+        'handout' => palette.ques,
+        'exam' => palette.teacher,
+        _ => palette.defn,
+      };
 }
 
 class _Results extends StatelessWidget {
@@ -817,17 +891,21 @@ class _Results extends StatelessWidget {
                       ? Icons.hourglass_top
                       : Icons.picture_as_pdf_outlined,
                   size: 30,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
                 const SizedBox(height: 12),
                 Text(
                   building
-                      ? 'Compilando. La primera vez tarda más: LaTeX está '
-                            'construyendo los formatos.'
-                      : 'Nada compilado todavía. Elige las versiones y pulsa '
-                            'compilar.',
+                      ? tr(
+                          'Compilando. La primera vez tarda más: LaTeX está '
+                          'construyendo los formatos.',
+                        )
+                      : tr(
+                          'Nada compilado todavía. Elige las versiones y pulsa '
+                          'compilar.',
+                        ),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13, color: didactaMuted),
+                  style: TextStyle(fontSize: 13, color: context.palette.muted),
                 ),
               ],
             ),
@@ -842,17 +920,17 @@ class _Results extends StatelessWidget {
         if (existing.isNotEmpty) ...[
           Row(
             children: [
-              const Expanded(child: _Label('Ya compiladas')),
+              Expanded(child: _Label(tr('Ya compiladas'))),
               TextButton.icon(
                 key: const Key('delete-all'),
                 icon: const Icon(Icons.delete_sweep_outlined, size: 16),
                 label: Text(
                   existing.length == 1
-                      ? 'Borrar la compilada'
-                      : 'Borrar las ${existing.length}',
+                      ? tr('Borrar la compilada')
+                      : tr('Borrar las {0}', [existing.length]),
                 ),
                 style: TextButton.styleFrom(
-                  foregroundColor: didactaMuted,
+                  foregroundColor: context.palette.muted,
                   visualDensity: VisualDensity.compact,
                 ),
                 onPressed: building
@@ -876,16 +954,18 @@ class _Results extends StatelessWidget {
           const SizedBox(height: 14),
         ],
         if (results.isNotEmpty) ...[
-          const _Label('Esta compilación'),
+          _Label(tr('Esta compilación')),
           for (final result in results)
             _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
           const SizedBox(height: 8),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 2),
             child: Note(
-              'Es una unidad sola, así que la numeración de apartados y las '
-              'referencias cruzadas serán las del documento donde se use, no '
-              'estas. Para verlas bien, compila el documento.',
+              tr(
+                'Es una unidad sola, así que la numeración de apartados y las '
+                'referencias cruzadas serán las del documento donde se use, no '
+                'estas. Para verlas bien, compila el documento.',
+              ),
             ),
           ),
         ],
@@ -904,22 +984,24 @@ class _Results extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: Text(
           count == 1
-              ? 'Borrar la versión compilada'
-              : 'Borrar las $count versiones compiladas',
+              ? tr('Borrar la versión compilada')
+              : tr('Borrar las {0} versiones compiladas', [count]),
         ),
-        content: const Text(
-          'Se borran los PDF y lo que LaTeX dejó al lado. No se toca ningún '
-          'fichero del repositorio: se rehacen compilando otra vez.',
+        content: Text(
+          tr(
+            'Se borran los PDF y lo que LaTeX dejó al lado. No se toca ningún '
+            'fichero del repositorio: se rehacen compilando otra vez.',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             key: const Key('delete-all-confirm'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Borrar'),
+            child: Text(tr('Borrar')),
           ),
         ],
       ),
@@ -938,11 +1020,11 @@ class _Label extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(2, 4, 2, 7),
     child: Text(
       text.toUpperCase(),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 10.5,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.7,
-        color: didactaMuted,
+        color: context.palette.muted,
       ),
     ),
   );
@@ -968,16 +1050,16 @@ class _ExistingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = output.stale ? didactaEx : didactaAccentDark;
+    final tone = output.stale ? context.palette.ex : context.palette.accentDark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 7),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.palette.card,
           border: Border.all(
             color: output.stale
-                ? didactaEx.withValues(alpha: 0.55)
-                : didactaRule,
+                ? context.palette.ex.withValues(alpha: 0.55)
+                : context.palette.rule,
           ),
           borderRadius: BorderRadius.circular(7),
         ),
@@ -1006,11 +1088,13 @@ class _ExistingCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     output.stale
-                        ? 'la unidad ha cambiado desde que se compiló'
-                        : 'compilada ${describeWhen(output.modified)}',
+                        ? tr('la unidad ha cambiado desde que se compiló')
+                        : tr('compilada {0}', [describeWhen(output.modified)]),
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: output.stale ? didactaEx : didactaMuted,
+                      color: output.stale
+                          ? context.palette.ex
+                          : context.palette.muted,
                       fontWeight: output.stale
                           ? FontWeight.w600
                           : FontWeight.w400,
@@ -1023,7 +1107,7 @@ class _ExistingCard extends StatelessWidget {
             FilledButton.icon(
               key: Key('open-${output.profile}-${output.language}'),
               icon: const Icon(Icons.visibility_outlined, size: 15),
-              label: const Text('Abrir'),
+              label: Text(tr('Abrir')),
               onPressed: () => onView(
                 OpenPdf(
                   path: output.pdf,
@@ -1036,26 +1120,26 @@ class _ExistingCard extends StatelessWidget {
             ),
             IconButton(
               key: Key('rebuild-${output.profile}-${output.language}'),
-              tooltip: 'Volver a compilar esta versión',
+              tooltip: tr('Volver a compilar esta versión'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.refresh, size: 17),
               onPressed: onRecompile,
             ),
             IconButton(
-              tooltip: 'Abrir en el visor del sistema',
+              tooltip: tr('Abrir en el visor del sistema'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.open_in_new, size: 15),
               onPressed: () => onOpen(output.pdf),
             ),
             IconButton(
-              tooltip: 'Ver en el Finder',
+              tooltip: const FileManager().revealLabel,
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.folder_open_outlined, size: 15),
               onPressed: () => onReveal(output.pdf),
             ),
             IconButton(
               key: Key('delete-${output.profile}-${output.language}'),
-              tooltip: 'Borrar este PDF. Se rehace compilando',
+              tooltip: tr('Borrar este PDF. Se rehace compilando'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.delete_outline, size: 16),
               onPressed: onDelete,
@@ -1080,13 +1164,15 @@ class _ResultCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = result.ok ? didactaAccentDark : didactaTeacher;
+    final tone = result.ok
+        ? context.palette.accentDark
+        : context.palette.teacher;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: didactaRule),
+          color: context.palette.card,
+          border: Border.all(color: context.palette.rule),
           borderRadius: BorderRadius.circular(7),
         ),
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
@@ -1113,9 +1199,12 @@ class _ResultCard extends StatelessWidget {
                 if (result.ok)
                   Text(
                     '${result.pages} '
-                    '${result.pages == 1 ? 'página' : 'páginas'} · '
+                    '${result.pages == 1 ? tr('página') : tr('páginas')} · '
                     '${result.seconds.toStringAsFixed(1)} s',
-                    style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.palette.muted,
+                    ),
                   ),
               ],
             ),
@@ -1131,37 +1220,58 @@ class _ResultCard extends StatelessWidget {
                   // para arrastrar el PDF a un correo.
                   OutlinedButton.icon(
                     icon: const Icon(Icons.open_in_new, size: 15),
-                    label: const Text('Visor del sistema'),
+                    label: Text(tr('Visor del sistema')),
                     onPressed: () => onOpen(result.pdf!),
                   ),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.folder_open_outlined, size: 15),
-                    label: const Text('Ver en el Finder'),
+                    label: Text(const FileManager().revealLabel),
                     onPressed: () => onReveal(result.pdf!),
                   ),
                 ],
               ),
             ],
-            if (result.errors.isNotEmpty) ...[
+            // Cada error con su lección, su línea y un botón para ir allí.
+            if (result.errorDiagnostics.isNotEmpty) ...[
               const SizedBox(height: 9),
-              for (final error in result.errors.take(6))
-                _Line(text: error, tone: didactaTeacher),
-              if (result.errors.length > 6)
-                _Line(
-                  text: '… y ${result.errors.length - 6} más',
-                  tone: didactaMuted,
+              DiagnosticList(
+                diagnostics: result.errorDiagnostics,
+                session: context.read<Session>(),
+              ),
+            ],
+            if (result.ok && result.quick) ...[
+              const SizedBox(height: 7),
+              Text(
+                tr(
+                  'Vista rápida: una sola pasada. El índice, las referencias y '
+                  'el total de diapositivas pueden no estar al día; para '
+                  'repartirlo, «Compilar entero».',
                 ),
+                key: const Key('quick-note'),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
+              ),
+            ],
+            // Lo que compila pero no cabe: una diapositiva que se sale por
+            // abajo se corta al proyectar, y en el PDF pequeño no se nota.
+            if (result.overflowDiagnostics.isNotEmpty) ...[
+              const SizedBox(height: 9),
+              DiagnosticList(
+                key: const Key('overflow-diagnostics'),
+                diagnostics: result.overflowDiagnostics,
+                session: context.read<Session>(),
+                shown: 4,
+              ),
             ],
             if (result.warnings.isNotEmpty) ...[
               const SizedBox(height: 7),
               // Los avisos de Didacta son los accionables: «esta unidad no
               // tiene valenciano, he usado el castellano».
               for (final warning in result.warnings.take(4))
-                _Line(text: warning, tone: didactaEx),
+                _Line(text: warning, tone: context.palette.ex),
               if (result.warnings.length > 4)
                 _Line(
-                  text: '… y ${result.warnings.length - 4} avisos más',
-                  tone: didactaMuted,
+                  text: tr('… y {0} avisos más', [result.warnings.length - 4]),
+                  tone: context.palette.muted,
                 ),
             ],
           ],
@@ -1202,13 +1312,17 @@ class _NotReady extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.build_outlined, size: 19, color: didactaMuted),
+                Icon(
+                  Icons.build_outlined,
+                  size: 19,
+                  color: context.palette.muted,
+                ),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Todavía no se puede compilar aquí',
+                    tr('Todavía no se puede compilar aquí'),
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -1219,8 +1333,9 @@ class _NotReady extends StatelessWidget {
             const SizedBox(height: 18),
             FilledButton.icon(
               icon: const Icon(Icons.settings, size: 16),
-              label: const Text('Ir a Ajustes'),
-              onPressed: () => context.go(Routes.settings()),
+              label: Text(tr('Ir a Ajustes')),
+              onPressed: () =>
+                  context.go(Routes.settings(section: 'herramientas')),
             ),
           ],
         ),
@@ -1244,8 +1359,8 @@ class _Failure extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'La compilación no se pudo lanzar',
+            Text(
+              tr('La compilación no se pudo lanzar'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 10),

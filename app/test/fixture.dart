@@ -9,6 +9,10 @@ library;
 
 import 'dart:io';
 
+import 'package:flutter/material.dart' show Scaffold;
+import 'package:flutter_test/flutter_test.dart' show Finder, WidgetTester, find;
+import 'package:provider/provider.dart';
+
 import 'package:didacta_app/data/app_info.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/data/translation_secrets.dart';
@@ -16,16 +20,20 @@ import 'package:didacta_app/data/secrets.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/data/content_gateway.dart';
+import 'package:didacta_app/data/draft_store.dart';
 import 'package:didacta_app/data/course_admin.dart';
 import 'package:didacta_app/data/file_manager.dart';
 import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/local_clone.dart';
+import 'package:didacta_app/data/notifier.dart';
 import 'package:didacta_app/data/toolchain.dart';
+import 'package:didacta_app/model/review.dart';
 import 'package:didacta_app/model/app_version.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/model/file_history.dart';
 import 'package:didacta_app/model/update_manifest.dart';
 import 'package:didacta_app/model/tex_indent.dart';
+import 'package:didacta_app/model/text_search.dart';
 import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
@@ -272,6 +280,10 @@ Catalogue catalogueWith(
   /// repositorios abiertos no tienen por qué mantener los mismos, y esa es
   /// justo la situación que decide qué se puede escribir en cada uno.
   List<String> languages = const ['es', 'va', 'en'],
+
+  /// Lo que el índice no pudo leer. Vacío es lo corriente; con algo, la
+  /// aplicación saca la franja roja de arriba.
+  List<String> errors = const [],
 }) => Catalogue.fromIndex(
   manifest: {
     'schemaVersion': supportedSchemaVersion,
@@ -332,7 +344,7 @@ Catalogue catalogueWith(
             'reveals': 'teacher',
           },
         ],
-    'errors': const <String>[],
+    'errors': errors,
   },
   units: {'schemaVersion': supportedSchemaVersion, 'units': units},
   courses: {
@@ -390,6 +402,19 @@ class FakeGateway extends ContentGateway {
     commits.add((path: path, text: text, message: message, sha: sha));
     files[path] = text;
     return 'nuevo-sha';
+  }
+
+  /// Lo que se guardó junto, por rutas. En un clon cada grupo es un solo
+  /// commit; aquí se apuntan por separado en [commits] y se agrupan aquí.
+  final List<List<String>> batches = [];
+
+  @override
+  Future<void> saveAll({
+    required List<({String path, String text, String sha})> files,
+    required String message,
+  }) async {
+    batches.add([for (final file in files) file.path]);
+    await super.saveAll(files: files, message: message);
   }
 
   /// Por defecto confirma, que es lo que hace la aplicación de salida.
@@ -644,6 +669,58 @@ class FakeCompiler implements Compiler {
   /// Lo borrado, para que un test pueda mirarlo.
   final List<String> deleted = [];
 
+  /// Cuántas veces se ha pedido parar.
+  int stops = 0;
+
+  @override
+  Future<void> stopCompiling() async => stops += 1;
+
+  /// Lo que contesta SyncTeX, y lo que se le preguntó.
+  SourceSpot? sourceSpot;
+  final List<({String pdf, int page, double x, double y, String? word})>
+  askedSource = [];
+
+  /// La carpeta de compilación, y cuántas veces se vació.
+  BuildFolder folder = const BuildFolder(path: '.didacta-build', bytes: 0);
+  int cleans = 0;
+
+  @override
+  Future<BuildFolder> buildFolder() async => folder;
+
+  @override
+  Future<BuildFolder> cleanBuild() async {
+    cleans += 1;
+    final before = folder;
+    folder = BuildFolder(path: before.path, bytes: 0);
+    return before;
+  }
+
+  /// Lo que contesta `didacta check`, y con qué se le preguntó.
+  ReviewReport reviewReport = const ReviewReport(findings: []);
+  final List<({List<String> within, List<String> extra})> reviews = [];
+
+  @override
+  Future<ReviewReport> review({
+    List<String> within = const [],
+    List<String> extra = const [],
+  }) async {
+    reviews.add((within: within, extra: extra));
+    return reviewReport;
+  }
+
+  @override
+  Future<SourceSpot?> sourceAt({
+    required String pdf,
+    required int page,
+    required double x,
+    required double y,
+    String? word,
+    String? text,
+  }) async {
+    askedSource.add((pdf: pdf, page: page, x: x, y: y, word: word));
+    return sourceSpot;
+  }
+
   @override
   Future<int> deleteOutputs(List<String> pdfs) async {
     deleted.addAll(pdfs);
@@ -670,7 +747,13 @@ class FakeCompiler implements Compiler {
 
   /// Lo que se pidió exportar, para poder comprobarlo.
   final List<
-    ({String where, String to, List<String> languages, List<String> documents})
+    ({
+      String where,
+      String to,
+      List<String> languages,
+      List<String> documents,
+      ExportReach reach,
+    })
   >
   exports = [];
 
@@ -686,15 +769,28 @@ class FakeCompiler implements Compiler {
     required String to,
     List<String> languages = const [],
     List<String> documents = const [],
+    ExportReach reach = ExportReach.students,
+    String? zip,
+    bool appendZip = false,
+    bool html = false,
   }) async {
+    exportsWithHtml.add(html);
     exports.add((
       where: where,
       to: to,
       languages: languages,
       documents: documents,
+      reach: reach,
     ));
+    zips.add((zip: zip, append: appendZip));
     return exportResult;
   }
+
+  /// El .zip que pidió cada exportación, en el mismo orden que [exports].
+  final List<({String? zip, bool append})> zips = [];
+
+  /// Si cada exportación pidió también el HTML, en el mismo orden.
+  final List<bool> exportsWithHtml = [];
 
   @override
   Future<List<CompileOutput>> compileDocument({
@@ -797,6 +893,13 @@ class FakeClone implements LocalClone {
     return (log[path] ?? const []).take(limit).toList();
   }
 
+  /// Los commits del repositorio entero, para «Cambios recientes».
+  List<FileCommit> recentCommits = const [];
+
+  @override
+  Future<List<FileCommit>> recent({int limit = 20}) async =>
+      recentCommits.take(limit).toList();
+
   @override
   Future<FileDiff> diffOf({
     required String sha,
@@ -897,7 +1000,7 @@ class FakeClone implements LocalClone {
   int fetches = 0;
 
   @override
-  Future<void> fetch({required String token}) async {
+  Future<void> fetch({required String token, Duration? timeout}) async {
     fetches += 1;
     if (failFetch) throw const CloneException('sin red');
   }
@@ -1015,6 +1118,16 @@ class FakeClone implements LocalClone {
     String under = '',
   }) async => const [];
 
+  /// Las líneas que `grep` puede encontrar: se filtran con la misma
+  /// expresión, que también vale como `RegExp` de Dart.
+  List<TextHit> lines = const [];
+
+  @override
+  Future<List<TextHit>> grep(String pattern, {int perFile = 3}) async => [
+    for (final hit in lines)
+      if (RegExp(pattern).hasMatch(hit.text)) hit,
+  ];
+
   @override
   Future<List<TreeChange>> previewRestore({
     required String sha,
@@ -1051,12 +1164,16 @@ class FakeSession extends Session {
     Preferences? preferencesOverride,
     TranslationSecrets? translationSecretsOverride,
     FileManager? filesOverride,
+    DraftStore? draftsOverride,
+    SystemNotifier? notifierOverride,
   }) : super(
          catalogueSource: StaticCatalogueSource(catalogue),
          tokenStore: StubStore(),
          preferences: preferencesOverride,
          files: filesOverride ?? RecordingFileManager(),
+         notifier: notifierOverride ?? RecordingNotifier(),
          forgetLegacy: _forgetNothing,
+         drafts: draftsOverride,
          // En memoria por defecto: un test que monta una pantalla no puede
          // ponerse a leer el llavero del sistema.
          translationSecrets:
@@ -1066,6 +1183,13 @@ class FakeSession extends Session {
   /// Sin red y sin preguntar: quien monta una pantalla ya ha entrado.
   @override
   Future<GitHubUser> whoIs(String token) async => testUser;
+
+  /// Si el token puede enviar workflows. Sí por defecto, que es lo de un
+  /// token nuevo; las pruebas del token de antes lo apagan.
+  bool? workflowsAllowed = true;
+
+  @override
+  Future<bool?> canPushWorkflows() async => workflowsAllowed;
 
   final ContentGateway gatewayOverride;
 
@@ -1151,6 +1275,9 @@ class FakeSession extends Session {
   Compiler? compiler({String? repo}) => compilerOverride;
 
   @override
+  Compiler? liveCompiler({String? repo}) => compilerOverride;
+
+  @override
   bool get canCompile => true;
 }
 
@@ -1169,6 +1296,31 @@ class FakeSession extends Session {
 /// antes»: nada. El de verdad borra en la carpeta de usuario de quien ejecuta
 /// las pruebas, y eso no lo puede hacer ninguna prueba.
 Future<void> _forgetNothing() async {}
+
+/// Los avisos del sistema, apuntados y sin enseñar ninguno.
+///
+/// Por defecto en [FakeSession]: una prueba que compila con el aviso
+/// encendido dejaría notificaciones en el ordenador de quien la ejecuta.
+/// [inFront] es si Didacta está delante, que es cuando no se avisa.
+class RecordingNotifier extends SystemNotifier {
+  RecordingNotifier({this.inFront = false});
+
+  bool inFront;
+
+  final List<({String title, String body})> shown = [];
+
+  @override
+  bool get supported => true;
+
+  @override
+  bool get appInFront => inFront;
+
+  @override
+  Future<bool> show({required String title, required String body}) async {
+    shown.add((title: title, body: body));
+    return true;
+  }
+}
 
 /// Un explorador de archivos que no abre nada ni tira nada: apunta.
 ///
@@ -1373,4 +1525,29 @@ class FakeToolchain implements Toolchain {
       }
     }
   }
+}
+
+/// Pulsa [finder] si está en pantalla.
+///
+/// Para el botón del diálogo del mensaje: solo sale con «Revisar los cambios
+/// antes de guardar» encendido, y la mayoría de las pruebas que guardan van
+/// de lo que se escribe, no de ese diálogo.
+Future<void> tapIfShown(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isNotEmpty) await tester.tap(finder);
+}
+
+/// Enciende «Revisar los cambios antes de guardar» en la sesión de la
+/// pantalla montada: para las pruebas que van del diálogo del mensaje.
+Future<void> reviewEachSave(WidgetTester tester) async {
+  final context = tester.element(find.byType(Scaffold).first);
+  await Provider.of<Session>(context, listen: false).setReviewBeforeSave(true);
+  await tester.pump();
+}
+
+/// La interfaz completa en la sesión de la pantalla montada: para las
+/// pruebas de lo que solo se enseña en ella.
+Future<void> useCompleteInterface(WidgetTester tester) async {
+  final context = tester.element(find.byType(Scaffold).first);
+  await Provider.of<Session>(context, listen: false).setCompleteInterface(true);
+  await tester.pump();
 }

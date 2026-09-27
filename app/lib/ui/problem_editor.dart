@@ -19,6 +19,7 @@ import 'tex_field.dart';
 import 'tex_highlight.dart';
 import 'tex_toolbar.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class ProblemFields extends StatefulWidget {
   const ProblemFields({
@@ -26,11 +27,15 @@ class ProblemFields extends StatefulWidget {
     required this.text,
     required this.readOnly,
     required this.onChanged,
+    this.repo,
   });
 
   /// El fichero entero. Sigue siendo la fuente de la verdad: los campos son
   /// una vista de él, y guardar guarda esto.
   final String text;
+
+  /// El repositorio del problema, que decide qué ofrece la barra.
+  final String? repo;
 
   final bool readOnly;
   final ValueChanged<String> onChanged;
@@ -120,6 +125,7 @@ class _ProblemFieldsState extends State<ProblemFields> {
           focusNode: _focus[_focused],
           enabled: !widget.readOnly,
           without: const {TexWrapGroup.problem},
+          repo: widget.repo,
         ),
         Expanded(child: _list(problem)),
       ],
@@ -146,10 +152,12 @@ class _ProblemFieldsState extends State<ProblemFields> {
           const SizedBox(height: 16),
         ],
         if (problem.bare)
-          const Note(
-            'Este fichero es solo el enunciado, sin entornos. Al escribir un '
-            'resultado o una solución se envuelve en `exercise`, que es lo '
-            'que los numera y los encuadra.',
+          Note(
+            tr(
+              'Este fichero es solo el enunciado, sin entornos. Al escribir un '
+              'resultado o una solución se envuelve en `exercise`, que es lo '
+              'que los numera y los encuadra.',
+            ),
           ),
       ],
     );
@@ -190,10 +198,10 @@ class _Field extends StatelessWidget {
           // permite volver al texto sin sorpresas.
           Text(
             '\\begin{${environmentFor(part)}}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontFamily: 'monospace',
-              color: didactaMuted,
+              color: context.palette.muted,
             ),
           ),
         ],
@@ -201,7 +209,7 @@ class _Field extends StatelessWidget {
       const SizedBox(height: 2),
       Text(
         hintFor(part),
-        style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+        style: TextStyle(fontSize: 11.5, color: context.palette.muted),
       ),
       const SizedBox(height: 6),
       // La misma caja que en todas partes: el LaTeX coloreado y una columna
@@ -209,8 +217,8 @@ class _Field extends StatelessWidget {
       // fórmulas, listas y entornos como en cualquier otro trozo del fichero.
       Container(
         decoration: BoxDecoration(
-          color: didactaCard,
-          border: Border.all(color: didactaRule),
+          color: context.palette.card,
+          border: Border.all(color: context.palette.rule),
           borderRadius: BorderRadius.circular(Radii.control),
         ),
         child: TexField(
@@ -222,9 +230,9 @@ class _Field extends StatelessWidget {
           onChanged: onChanged,
           padding: const EdgeInsets.all(10),
           hintText: switch (part) {
-            ProblemPart.statement => 'Derivar \$f(x) = x^2\$.',
+            ProblemPart.statement => tr('Derivar \$f(x) = x^2\$.'),
             ProblemPart.answer => '\$f\'(x) = 2x\$',
-            ProblemPart.solution => 'Por la regla de la potencia…',
+            ProblemPart.solution => tr('Por la regla de la potencia…'),
           },
         ),
       ),
@@ -248,16 +256,18 @@ class _DoesNotFit extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Este problema no son tres campos',
+            Text(
+              tr('Este problema no son tres campos'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(reason, style: const TextStyle(fontSize: 13, height: 1.45)),
             const SizedBox(height: 12),
-            const Note(
-              'Se sigue editando como texto, con el botón de arriba. Los '
-              'campos vuelven en cuanto el fichero tenga un solo problema.',
+            Note(
+              tr(
+                'Se sigue editando como texto, con el botón de arriba. Los '
+                'campos vuelven en cuanto el fichero tenga un solo problema.',
+              ),
             ),
           ],
         ),

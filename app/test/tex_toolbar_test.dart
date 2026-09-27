@@ -141,9 +141,11 @@ void main() {
     await tester.tap(find.byKey(const Key('snippet-√')));
     await tester.pumpAndSettle();
 
+    // En mitad del texto, dentro de una fórmula nueva: una raíz fuera de
+    // una fórmula no compila.
     expect(
       editing(tester).text,
-      'El \\sqrt{contenido} original en castellano.',
+      r'El $\sqrt{contenido}$ original en castellano.',
     );
   });
 
@@ -158,8 +160,40 @@ void main() {
     await tester.pumpAndSettle();
 
     // El fichero no lleva Unicode: lo que se busca es «≤» y lo que se escribe
-    // es la orden.
-    expect(editing(tester).text, startsWith('El\\leq '));
+    // es la orden. Y en mitad del texto, dentro de `$…$`, con el cursor antes
+    // del que cierra: lo siguiente que se pulse sigue en la fórmula.
+    expect(editing(tester).text, startsWith(r'El$\leq $'));
+    expect(editing(tester).selection.baseOffset, r'El$\leq '.length);
+
+    await tester.tap(find.byKey(const Key('palette-symbols')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('snippet-α')));
+    await tester.pumpAndSettle();
+    expect(editing(tester).text, startsWith(r'El$\leq \alpha $'));
+  });
+
+  testWidgets('dentro de una fórmula, un símbolo va tal cual', (tester) async {
+    await pumpUnit(tester, files: {'$unitPath/es.tex': r'Sea $x  y$.'});
+    select(tester, 7, 7);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('palette-symbols')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('snippet-≤')));
+    await tester.pumpAndSettle();
+    expect(editing(tester).text, r'Sea $x \leq  y$.');
+  });
+
+  testWidgets(r'«$x$» abre una fórmula, y no la mete en otra', (tester) async {
+    await pumpUnit(tester);
+    select(tester, 3, 3);
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('palette-math')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key(r'snippet-$x$')));
+    await tester.pumpAndSettle();
+    expect(editing(tester).text, startsWith(r'El $$contenido'));
   });
 
   testWidgets('sin permiso de escritura la barra se ve apagada', (
@@ -194,7 +228,7 @@ void main() {
 
     final span = controller.buildTextSpan(
       context: tester.element(find.byType(TextField)),
-      style: const TextStyle(color: didactaInk),
+      style: TextStyle(color: DidactaPalette.light.ink),
       withComposing: false,
     );
     final coloured = {
@@ -203,9 +237,9 @@ void main() {
     };
     // Un fichero suelto calcula su propio árbol, así que la orden va de su
     // color sin que nadie le pase nada.
-    expect(coloured['\\section'], didactaAlgo);
-    expect(coloured['% nota'], isNot(didactaInk));
-    expect(colourForToken(TexTokenKind.text), isNull);
+    expect(coloured['\\section'], DidactaPalette.light.algo);
+    expect(coloured['% nota'], isNot(DidactaPalette.light.ink));
+    expect(colourForToken(TexTokenKind.text, DidactaPalette.light), isNull);
   });
 
   testWidgets('sobre los campos de un problema es la misma barra', (

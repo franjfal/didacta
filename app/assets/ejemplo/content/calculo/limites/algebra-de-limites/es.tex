@@ -1,0 +1,45 @@
+% Lección: álgebra de límites (castellano).
+%
+% La demostración casi nunca cabe en una diapositiva, así que va en
+% `notesonly`: sale en los apuntes y desaparece de las diapositivas sin que
+% haga falta un segundo fichero.
+
+\begin{frame}
+\didactatitle{Álgebra de límites}
+
+\begin{proposition}[Álgebra de límites]
+Si $\lim_{x \to a} f(x) = L$ y $\lim_{x \to a} g(x) = M$, entonces
+\begin{itemize}
+  \item $\lim_{x \to a} \bigl(f(x) + g(x)\bigr) = L + M$;
+  \item $\lim_{x \to a} f(x)\,g(x) = L M$;
+  \item $\lim_{x \to a} \dfrac{f(x)}{g(x)} = \dfrac{L}{M}$, si $M \neq 0$.
+\end{itemize}
+\end{proposition}
+
+\begin{notesonly}
+\begin{proof}
+Probamos la primera; las otras dos siguen la misma idea con alguna acotación
+más. Dado $\varepsilon > 0$, existen $\delta_1, \delta_2 > 0$ tales que
+$|f(x) - L| < \varepsilon/2$ si $0 < |x - a| < \delta_1$, y
+$|g(x) - M| < \varepsilon/2$ si $0 < |x - a| < \delta_2$. Tomando
+$\delta = \min\{\delta_1, \delta_2\}$, para $0 < |x - a| < \delta$ la
+desigualdad triangular da
+\[
+  \bigl|\bigl(f(x) + g(x)\bigr) - (L + M)\bigr|
+  \le |f(x) - L| + |g(x) - M|
+  < \tfrac{\varepsilon}{2} + \tfrac{\varepsilon}{2} = \varepsilon .
+\]
+\end{proof}
+\end{notesonly}
+
+\dpause
+
+\begin{remark}
+Como $\lim_{x \to a} x = a$ y el límite de una constante es ella misma, la
+proposición da el límite de un polinomio evaluando: $\lim_{x \to a} p(x) =
+p(a)$. Y el de una función racional, $\lim_{x \to a} p(x)/q(x) = p(a)/q(a)$,
+siempre que $q(a) \neq 0$.
+\end{remark}
+
+\timing{15 min}
+\end{frame}

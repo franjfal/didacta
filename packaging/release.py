@@ -164,7 +164,7 @@ def canonical_part(value):
     return word
 
 
-def next_version(name, part=DEFAULT_PART):
+def next_version(name, part=DEFAULT_PART, prerelease=False):
     """La versión que asignará la próxima publicación.
 
     Función pura y probada aparte porque es la que decide el número que va a
@@ -176,11 +176,21 @@ def next_version(name, part=DEFAULT_PART):
     adivina: `1.5.0-rc.1` publica como **su propia final**, `1.5.0`. Subir la
     mediana ahí daría `1.6.0` y dejaría un `1.5.0` que nunca existió, que es
     justo lo que un número de versión no debe hacer.
+
+    Con [prerelease] sale una **versión de prueba** de la siguiente: tras la
+    `1.4.2`, una mediana de prueba es `1.5.0-rc.1`; y tras esa, otra prueba es
+    `1.5.0-rc.2` --la misma versión, otro intento, suba lo que suba--.
     """
     match = SEMVER.match(name)
     if not match:
         raise Problem("no es una versión semántica: %r" % name)
     major, minor, patch = (int(match.group(index)) for index in (1, 2, 3))
+    if prerelease:
+        if match.group(4):
+            tried = re.match(r"^rc\.(\d+)$", match.group(4))
+            attempt = int(tried.group(1)) + 1 if tried else 1
+            return "%d.%d.%d-rc.%d" % (major, minor, patch, attempt)
+        return "%s-rc.1" % next_version(name, part)
     if match.group(4):
         return "%d.%d.%d" % (major, minor, patch)
     if part == "major":
@@ -204,7 +214,7 @@ def bump(part=None):
     if part is None:
         part = planned_part()
     name, build = read_version()
-    new_name = next_version(name, part)
+    new_name = next_version(name, part, planned_prerelease())
     new_build = build + 1
     write_version(new_name, new_build)
     return name, new_name, new_build
@@ -218,8 +228,19 @@ def bump(part=None):
 #: Crecer es añadir una línea aquí. Lo que no está aquí es un error y no se
 #: ignora: una clave mal escrita --`bumb: major`-- que se ignorase publicaría
 #: una mediana creyendo que era una grande, y eso no tiene vuelta atrás.
+def canonical_flag(value):
+    """Sí o no, de cualquiera de sus formas."""
+    word = value.strip().lower()
+    if word in ("true", "yes", "sí", "si", "1", "on"):
+        return True
+    if word in ("false", "no", "0", "off"):
+        return False
+    raise Problem("%r no es sí ni no: pon true o false" % value.strip())
+
+
 PLAN_KEYS = {
     "bump": (canonical_part, DEFAULT_PART),
+    "prerelease": (canonical_flag, False),
 }
 
 #: Lo que se escribe si `release.yaml` no existe.
@@ -236,9 +257,16 @@ PLAN_TEMPLATE = """\
 #   minor   mediana   1.4.2 → 1.5.0   lo de siempre: lo hecho desde la anterior
 #   patch   pequeña   1.4.2 → 1.4.3   sólo arreglos
 #
-# Vale para UNA publicación: al publicar, el workflow lo vuelve a dejar en
-# minor. Así una grande no se queda puesta y la siguiente no salta otra vez.
+# prerelease: true publica una VERSIÓN DE PRUEBA de esa versión --1.5.0-rc.1,
+# y la siguiente prueba 1.5.0-rc.2--. Solo la reciben quienes lo piden en
+# Ajustes → Actualizaciones → Versiones de prueba; la final se publica
+# después, con prerelease: false, y es la que llega a todos.
+#
+# Las dos valen para UNA publicación: al publicar, el workflow las vuelve a
+# dejar en minor y false. Así una grande no se queda puesta y la siguiente no
+# salta otra vez.
 bump: minor
+prerelease: false
 """
 
 
@@ -297,6 +325,11 @@ def read_plan():
 def planned_part():
     """Lo que sube la próxima publicación, según `release.yaml`."""
     return read_plan()["bump"]
+
+
+def planned_prerelease():
+    """Si la próxima publicación es una versión de prueba."""
+    return read_plan()["prerelease"]
 
 
 def write_plan(key, value):
@@ -394,6 +427,21 @@ def notes_in(lines, version):
         if found == version:
             start = index + 1
             break
+    match = SEMVER.match(version)
+    if start is None and match and match.group(4):
+        # Una versión de prueba dice lo mismo que dirá su final: la sección
+        # de la final si ya tiene número, o la de arriba si todavía está sin
+        # publicar --`## Próxima`--, que **no** se renombra: la final la
+        # necesita con ese título para ponerle el suyo.
+        final = version.split("-", 1)[0]
+        for index, found in headings:
+            if found == final:
+                start = index + 1
+                break
+        if start is None and headings:
+            index, label = headings[0]
+            if not SEMVER.match(label) or version_key(label) >= version_key(version):
+                start = index + 1
     if start is None:
         raise Problem(
             "CHANGELOG.md no tiene una sección para %s.\n\n"
@@ -550,6 +598,10 @@ def build_manifest(version, build, notes, uploaded, minimum=None):
         "releaseNotes": notes,
         "assets": assets,
     }
+    # Una versión de prueba lo dice: la aplicación solo la ofrece a quien
+    # las ha pedido.
+    if SEMVER.match(version) and SEMVER.match(version).group(4):
+        manifest["prerelease"] = True
     if minimum:
         manifest["minimumSupportedVersion"] = minimum
     return manifest
@@ -585,7 +637,7 @@ def cmd_next(args):
     que titularla con el número que va a salir, y este lo dice.
     """
     name, _ = read_version()
-    print(next_version(name, _part_of(args)))
+    print(next_version(name, _part_of(args), planned_prerelease()))
 
 
 def cmd_plan(args):
@@ -597,13 +649,18 @@ def cmd_plan(args):
     """
     if args.set:
         write_plan("bump", canonical_part(args.set))
-    elif args.reset:
+    if args.test is not None:
+        write_plan("prerelease", "true" if canonical_flag(args.test) else "false")
+    if args.reset:
         write_plan("bump", DEFAULT_PART)
+        write_plan("prerelease", "false")
     part = planned_part()
+    test = planned_prerelease()
     name, _ = read_version()
     print(
-        "bump: %s (%s) · %s → %s"
-        % (part, PARTS[part], name, next_version(name, part))
+        "bump: %s (%s)%s · %s → %s"
+        % (part, PARTS[part], " · de prueba" if test else "", name,
+           next_version(name, part, test))
     )
 
 
@@ -641,8 +698,9 @@ def cmd_check(args):
     """
     name, build = read_version()
     part = planned_part()
+    test = bool(SEMVER.match(name).group(4))
     notes = read_notes(name)
-    print("versión:  %s" % name)
+    print("versión:  %s%s" % (name, " (de prueba)" if test else ""))
     print("sube:     %s (%s)" % (part, PARTS[part]))
     print("build:    %s" % build)
     print("tag:      v%s" % name)
@@ -653,6 +711,9 @@ def cmd_check(args):
             handle.write("part=%s\n" % part)
             handle.write("build=%s\n" % build)
             handle.write("tag=v%s\n" % name)
+            # Si es una versión de prueba: el release se marca como tal, y
+            # solo lo ve quien las pide.
+            handle.write("prerelease=%s\n" % ("true" if test else "false"))
             # Las notas **no** salen por aquí.
             #
             # Un valor multilínea en `GITHUB_OUTPUT` se delimita con una marca,
@@ -765,7 +826,9 @@ def main(argv=None):
     change = plan.add_mutually_exclusive_group()
     change.add_argument("--set", metavar="PARTE", help="major, minor o patch")
     change.add_argument("--reset", action="store_true",
-                        help="volver a minor, lo de siempre")
+                        help="volver a minor y a una final, lo de siempre")
+    plan.add_argument("--test", metavar="SÍ/NO",
+                      help="si la próxima es una versión de prueba")
     plan.set_defaults(run=cmd_plan)
 
     notes = sub.add_parser("notes", help="la sección del CHANGELOG")

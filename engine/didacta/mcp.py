@@ -704,6 +704,9 @@ def tool_build_document(workspace, arguments, latex_dir=None):
     engine = build_mod.Engine(
         latex_dir=latex_dir,
         build_dir=os.path.join(repository.root, repository.settings.build_dir),
+        # Con los ajustes, para que compile con los snippets del repositorio:
+        # un documento que usa un entorno propio no compila sin su definición.
+        settings=repository.settings,
     )
     language = arguments.get("language") or document.language
     profile = arguments.get("profile") or (document.profiles or ["notes"])[0]
@@ -1221,12 +1224,57 @@ def serve_stdio(server, stdin, stdout):
     return 0
 
 
-def http_handler_class(server):
-    """El manejador HTTP, construido alrededor de un servidor ya montado."""
+def http_handler_class(server, token=None):
+    """El manejador HTTP, construido alrededor de un servidor ya montado.
+
+    Con [token], cada petición tiene que traerlo como `Authorization: Bearer`.
+    Escuchar solo en `127.0.0.1` no bastaba: una página web abierta en el
+    navegador de la misma máquina puede mandar a `localhost` una petición
+    «simple» --un POST con `text/plain`, sin la consulta previa de CORS-- y
+    con eso llamar a las herramientas que escriben en los repositorios. Tres
+    cosas la paran, y van las tres porque cada una tapa un agujero distinto:
+
+      * **el token**, que una página no puede saber;
+      * **ninguna cabecera `Origin`**: un navegador la pone siempre en una
+        petición de otra página, y un cliente de verdad no la pone nunca;
+      * **el `Host`**, que tiene que ser esta máquina y este puerto. Es lo
+        que para el *DNS rebinding*: un dominio que primero resuelve a otra
+        parte y luego a `127.0.0.1`, para leer lo que contesta.
+    """
+    import hmac
     from http.server import BaseHTTPRequestHandler
+
+    expected = ("Bearer " + token) if token else None
 
     class Handler(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
+
+        def _refuse(self, status, message):
+            self._send(status, json.dumps({"error": message}, ensure_ascii=False))
+
+        def _allowed(self, body_expected=False):
+            """Si la petición puede pasar. Si no, ya se ha contestado."""
+            if self.headers.get("Origin"):
+                self._refuse(403, "no se aceptan peticiones de páginas web")
+                return False
+            port = self.server.server_address[1]
+            host = (self.headers.get("Host") or "").strip().lower()
+            if host not in ("127.0.0.1:%d" % port, "localhost:%d" % port,
+                            "[::1]:%d" % port):
+                self._refuse(403, "esta dirección no es la de esta máquina")
+                return False
+            if expected is not None:
+                given = self.headers.get("Authorization") or ""
+                if not hmac.compare_digest(given.encode("utf-8"),
+                                           expected.encode("utf-8")):
+                    self._refuse(401, "falta el token, o no es este")
+                    return False
+            if body_expected:
+                kind = (self.headers.get("Content-Type") or "").lower()
+                if not kind.startswith("application/json"):
+                    self._refuse(415, "el cuerpo tiene que ser application/json")
+                    return False
+            return True
 
         def _send(self, status, payload, content_type="application/json"):
             body = payload.encode("utf-8")
@@ -1237,6 +1285,8 @@ def http_handler_class(server):
             self.wfile.write(body)
 
         def do_GET(self):  # noqa: N802 - lo nombra la biblioteca
+            if not self._allowed():
+                return
             # Para poder comprobar desde la aplicación que está vivo sin
             # hablar el protocolo.
             if self.path in ("/health", "/"):
@@ -1283,6 +1333,11 @@ def http_handler_class(server):
             return self.rfile.read(length) if length else b""
 
         def do_POST(self):  # noqa: N802
+            if not self._allowed(body_expected=True):
+                # Leído igual: un cuerpo sin leer en una conexión que se
+                # mantiene viva se tomaría por la petición siguiente.
+                self._body()
+                return
             raw = self._body()
             try:
                 request = json.loads(raw.decode("utf-8"))
@@ -1315,16 +1370,17 @@ def http_handler_class(server):
     return Handler
 
 
-def serve_http(server, host="127.0.0.1", port=0, on_ready=None):
-    """En local y nada más.
+def serve_http(server, host="127.0.0.1", port=0, on_ready=None, token=None):
+    """En local y nada más, y con token.
 
     A `127.0.0.1` a propósito y sin opción de cambiarlo: esto escribe en los
-    ficheros de alguien sin pedir contraseña, y un servidor así escuchando en
-    la red de un departamento es una mala tarde.
+    ficheros de alguien, y un servidor así escuchando en la red de un
+    departamento es una mala tarde. Y con [token], porque en la misma máquina
+    está el navegador (ver `http_handler_class`).
     """
     from http.server import ThreadingHTTPServer
 
-    httpd = ThreadingHTTPServer((host, port), http_handler_class(server))
+    httpd = ThreadingHTTPServer((host, port), http_handler_class(server, token))
     if on_ready is not None:
         on_ready(httpd.server_address[1])
     try:

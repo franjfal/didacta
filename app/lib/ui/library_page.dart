@@ -28,6 +28,8 @@
 /// de 1000 px.
 library;
 
+import 'command_palette.dart';
+import 'shortcuts.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -35,15 +37,27 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../data/browser.dart';
 import '../model/catalogue.dart';
+import '../model/fuzzy.dart';
 import '../model/library_filter.dart';
+import '../model/library_place.dart';
 import '../model/library_tree.dart';
+import '../model/saved_search.dart';
+import '../model/text_search.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'add_repository.dart';
 import 'library_search.dart';
+import 'new_unit.dart';
+import 'problem.dart';
 import 'quick_look.dart';
+import 'review_panel.dart';
 import 'shell.dart';
 import 'theme.dart';
+import 'tour.dart';
+import 'working.dart';
+import '../l10n/tr.dart';
 
 /// El nombre de un bloque, de los que el catálogo ofrece.
 ///
@@ -98,7 +112,10 @@ class BrowsePath {
 }
 
 class LibraryPage extends StatefulWidget {
-  const LibraryPage({super.key});
+  const LibraryPage({super.key, this.place = const LibraryPlace()});
+
+  /// Dónde se abre: lo que dice la dirección.
+  final LibraryPlace place;
 
   @override
   State<LibraryPage> createState() => _LibraryPageState();
@@ -111,53 +128,204 @@ class _LibraryPageState extends State<LibraryPage> {
   BrowsePath _path = const BrowsePath();
   LibraryFilter? _filter;
 
+  /// Si lo buscado se busca también en el texto de las lecciones, y lo que
+  /// se ha encontrado ahí: null mientras se busca.
+  bool _inText = false;
+  List<TextHit>? _hits;
+  String _hitsFor = '';
+  Timer? _textTimer;
+  Timer? _queryTimer;
+
+  /// La búsqueda en curso: una respuesta que llega tarde, de una búsqueda
+  /// anterior, no pisa la de ahora.
+  int _textSearch = 0;
+
   /// El árbol se construye una vez por catálogo, no por frame: recorrer 2147
   /// unidades para contar una insignia es justo lo que hace que un scroll dé
   /// tirones sin que nadie sepa por qué.
   LibraryTree? _tree;
   Catalogue? _treeFor;
-  String? _treeBlock;
+  String? _treeKey;
 
   @override
   void initState() {
     super.initState();
+    _adopt(widget.place);
     // Qué hay compilado, una vez. Es lo que decide qué lecciones se pueden
     // ojear, y se pregunta aquí y no en cada tarjeta porque la respuesta es
     // una sola para las dos mil.
     scheduleMicrotask(() {
       final session = context.read<Session>();
-      if (!session.builtKnown) session.refreshBuilt();
+      if (!session.builtKnown) unawaited(session.refreshBuilt());
     });
   }
 
   @override
+  void didUpdateWidget(LibraryPage old) {
+    super.didUpdateWidget(old);
+    // Cuando la dirección cambia por fuera --atrás, adelante, un enlace--,
+    // manda ella. Cuando la cambia esta pantalla, ya coincide y no se toca:
+    // reescribir el buscador a mitad de palabra movería el cursor.
+    if (widget.place != _place) {
+      setState(() => _adopt(widget.place));
+    }
+  }
+
+  @override
   void dispose() {
+    _textTimer?.cancel();
+    _queryTimer?.cancel();
     _search.dispose();
     _searchFocus.dispose();
     super.dispose();
   }
 
-  /// El árbol, sobre las unidades del área elegida.
+  /// Busca en el texto lo que hay en el buscador, con un respiro: a cada
+  /// letra sería lanzar git veinte veces para una palabra.
+  void _searchText() {
+    _textTimer?.cancel();
+    final query = _search.text.trim();
+    if (!_inText || query.length < 3) {
+      _hits = null;
+      _hitsFor = '';
+      return;
+    }
+    if (query == _hitsFor && _hits != null) return;
+    _hits = null;
+    _hitsFor = query;
+    final ticket = ++_textSearch;
+    _textTimer = Timer(const Duration(milliseconds: 300), () async {
+      final found = await context.read<Session>().searchText(query);
+      if (!mounted || ticket != _textSearch) return;
+      setState(() => _hits = found);
+    });
+  }
+
+  /// Pone la pantalla en [place].
+  void _adopt(LibraryPlace place) {
+    final browse = place.browse;
+    _path = BrowsePath(
+      category: browse.isNotEmpty ? browse[0] : null,
+      topic: browse.length > 1 ? browse[1] : null,
+      tag: browse.length > 2 ? browse[2] : null,
+    );
+    _filter = place.filterIn(_filter?.language ?? 'es');
+    if (_search.text != place.query) _search.text = place.query;
+    _inText = place.inText;
+    _searchText();
+  }
+
+  /// Dónde está la pantalla ahora, para escribirlo en la dirección.
+  LibraryPlace get _place => LibraryPlace.of(
+    (_filter ?? const LibraryFilter()).copyWith(query: _search.text.trim()),
+    [?_path.category, ?_path.topic, ?_path.tag],
+    inText: _inText,
+  );
+
+  /// Lleva a la dirección lo que se acaba de cambiar.
   ///
-  /// Se reconstruye al cambiar de catálogo o de bloque, no por frame: es una
+  /// Con `go` y no con `replace`: la pantalla es la misma, y `go` la
+  /// conserva --con el cursor en el buscador-- mientras que `replace` la
+  /// crearía de nuevo. El historial no se llena por eso: una dirección que
+  /// solo cambia en la consulta es el mismo sitio (ver [NavigationHistory]).
+  void _publish() {
+    final place = _place;
+    if (place == widget.place) return;
+    GoRouter.maybeOf(context)?.go(Routes.library(place));
+  }
+
+  /// Guarda lo que se está mirando con un nombre, para volver a ello desde
+  /// la raíz de la biblioteca.
+  Future<void> _saveSearch(Session session) async {
+    final url = Routes.library(_place);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (context) => _NameSearch(suggested: _search.text.trim()),
+    );
+    if (name == null || name.trim().isEmpty || !mounted) return;
+    await session.saveSearch(name.trim(), url);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(tr('Guardada: «{0}».', [name.trim()]))),
+    );
+  }
+
+  void _change(VoidCallback change) {
+    setState(() {
+      change();
+      _searchText();
+    });
+    _publish();
+  }
+
+  /// El árbol, sobre las unidades que dejan pasar los filtros.
+  ///
+  /// **Todos** los filtros menos el texto, que es el que cambia de vista. Antes
+  /// solo contaba el bloque: Traducción, Tipo y «sin usar» se ponían en verde
+  /// y el árbol seguía enseñándolo todo, así que el filtro solo hacía algo
+  /// escribiendo en el buscador.
+  ///
+  /// Se reconstruye al cambiar de catálogo o de filtro, no por frame: es una
   /// pasada sobre 2147 unidades y ocurre cuando alguien pulsa un filtro.
-  LibraryTree _treeOf(Catalogue catalogue, String? block) {
-    if (_treeFor != catalogue || _treeBlock != block) {
-      _tree = LibraryTree.of(
-        block == null
-            ? catalogue.units
-            : catalogue.units.where((unit) => unit.block == block),
-      );
+  LibraryTree _treeOf(Catalogue catalogue, LibraryFilter browse) {
+    final key = [
+      browse.block,
+      browse.category,
+      browse.kind,
+      browse.tag,
+      browse.status,
+      browse.unusedOnly,
+      browse.language,
+    ].join('|');
+    if (_treeFor != catalogue || _treeKey != key) {
+      _tree = LibraryTree.of(catalogue.units.where(browse.matches));
       _treeFor = catalogue;
-      _treeBlock = block;
+      _treeKey = key;
     }
     return _tree!;
   }
 
   bool get _searching => _search.text.trim().isNotEmpty;
 
+  // Lo compilado, las recientes y la versión que se ojea avisan por su
+  // cuenta, no por la sesión.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([
+      sessionOf(context).settings,
+      sessionOf(context).builds,
+      sessionOf(context).libraryPrefs,
+    ]),
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) =>
+      PaletteCommands(commands: _paletteCommands, child: _library(context));
+
+  /// Lo que ofrece la paleta de órdenes en la biblioteca.
+  List<PaletteCommand> _paletteCommands(BuildContext context) {
+    final session = sessionOf(context);
+    return [
+      PaletteCommand(
+        title: tr('Buscar en la biblioteca'),
+        keywords: tr('filtrar lecciones'),
+        icon: Icons.search,
+        shortcut: AppShortcut.search,
+        run: _searchFocus.requestFocus,
+      ),
+      if (session.canSearchText)
+        PaletteCommand(
+          title: _inText
+              ? tr('Buscar solo en títulos y etiquetas')
+              : tr('Buscar también dentro de las lecciones'),
+          keywords: tr('texto contenido grep'),
+          icon: Icons.manage_search,
+          run: () => _change(() => _inText = !_inText),
+        ),
+    ];
+  }
+
+  Widget _library(BuildContext context) {
     final session = watchSession(context);
     final catalogue = session.catalogue;
 
@@ -168,9 +336,10 @@ class _LibraryPageState extends State<LibraryPage> {
       _filter = _filter!.copyWith(language: session.language);
     }
     final filter = _filter!.copyWith(query: _search.text.trim());
-    // El mismo filtro de área gobierna el árbol y la búsqueda, para que las
-    // dos vistas no puedan estar mirando material distinto.
-    final tree = _treeOf(catalogue, filter.block);
+    // Los mismos filtros gobiernan el árbol y la búsqueda, para que las dos
+    // vistas no puedan estar mirando material distinto.
+    final browse = filter.copyWith(query: '');
+    final tree = _treeOf(catalogue, browse);
 
     return CallbackShortcuts(
       bindings: {
@@ -180,9 +349,9 @@ class _LibraryPageState extends State<LibraryPage> {
             _searchFocus.requestFocus,
         const SingleActivator(LogicalKeyboardKey.escape): () {
           if (_searching) {
-            setState(_search.clear);
+            _change(_search.clear);
           } else if (!_path.isRoot) {
-            setState(() => _path = _path.up());
+            _change(() => _path = _path.up());
           }
         },
       },
@@ -197,31 +366,61 @@ class _LibraryPageState extends State<LibraryPage> {
             searchFocus: _searchFocus,
             searching: _searching,
             path: _path,
-            onFilter: (next) => setState(() => _filter = next),
-            onSearchChanged: () => setState(() {}),
-            onPath: (next) => setState(() => _path = next),
+            inText: _inText,
+            onInText: session.canSearchText
+                ? (on) => _change(() => _inText = on)
+                : null,
+            onFilter: (next) => _change(() => _filter = next),
+            // Con un respiro de 120 ms: el campo enseña cada letra por su
+            // cuenta, y lo que espera es rehacer la lista, que con dos mil
+            // unidades a cada letra se notaba.
+            onSearchChanged: () {
+              _queryTimer?.cancel();
+              _queryTimer = Timer(const Duration(milliseconds: 120), () {
+                if (mounted) _change(() {});
+              });
+            },
+            onPath: (next) => _change(() => _path = next),
           ),
+          // Lo abierto hace poco y las búsquedas guardadas, en la raíz: es
+          // de donde se sale a buscar, y lo que se buscó ayer es lo más
+          // probable que se busque hoy.
+          if (!_searching && _path.isRoot && catalogue.units.isNotEmpty)
+            _Shortcuts(
+              session: session,
+              onSearch: (url) => GoRouter.maybeOf(context)?.go(url),
+            ),
           Expanded(
-            child: _searching
+            child: catalogue.units.isEmpty
+                ? _EmptyLibrary(session: session)
+                : _searching
                 ? _SearchResults(
                     filter: filter,
                     units: catalogue.units,
+                    inText: _inText && session.canSearchText,
+                    hits: _hits,
+                    onSave: session.completeInterface
+                        ? () => _saveSearch(session)
+                        : null,
                     blocks: catalogue.blocksInUse,
-                    onFilter: (next) => setState(() => _filter = next),
+                    onFilter: (next) => _change(() => _filter = next),
                   )
-                : _Browser(
-                    tree: tree,
-                    path: _path,
-                    language: session.language,
-                    filter: filter,
-                    blocks: catalogue.blocksInUse,
-                    onPath: (next) => setState(() => _path = next),
-                    onFilter: (next) => setState(() {
-                      _filter = next;
-                      // Cambiar de área cambia qué categorías hay, así que
-                      // una selección anterior puede haber desaparecido.
-                      _path = const BrowsePath();
-                    }),
+                : TourTarget(
+                    id: 'library-browser',
+                    child: _Browser(
+                      tree: tree,
+                      path: _path,
+                      language: session.language,
+                      filter: filter,
+                      blocks: catalogue.blocksInUse,
+                      onPath: (next) => _change(() => _path = next),
+                      onFilter: (next) => _change(() {
+                        _filter = next;
+                        // Cambiar de área cambia qué categorías hay, así que
+                        // una selección anterior puede haber desaparecido.
+                        _path = const BrowsePath();
+                      }),
+                    ),
                   ),
           ),
         ],
@@ -230,9 +429,331 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 }
 
+/// El nombre de una búsqueda que se guarda.
+class _NameSearch extends StatefulWidget {
+  const _NameSearch({required this.suggested});
+
+  final String suggested;
+
+  @override
+  State<_NameSearch> createState() => _NameSearchState();
+}
+
+class _NameSearchState extends State<_NameSearch> {
+  late final TextEditingController _name =
+      TextEditingController(text: widget.suggested)
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.suggested.length,
+        );
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(tr('Guardar esta búsqueda')),
+    content: SizedBox(
+      width: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            tr(
+              'Con lo buscado, los filtros y lo abierto. Sale en la raíz de la '
+              'biblioteca, para volver a ella de un clic.',
+            ),
+            style: TextStyle(fontSize: 12.5, color: context.palette.muted),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('save-search-name'),
+            controller: _name,
+            autofocus: true,
+            decoration: InputDecoration(labelText: tr('Nombre')),
+            onSubmitted: (value) => Navigator.of(context).pop(value),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: Text(tr('Cancelar')),
+      ),
+      FilledButton(
+        key: const Key('save-search-confirm'),
+        onPressed: () => Navigator.of(context).pop(_name.text),
+        child: Text(tr('Guardar')),
+      ),
+    ],
+  );
+}
+
+/// «Abiertas hace poco» y, en la interfaz completa, las búsquedas guardadas.
+///
+/// Sin nada que enseñar no ocupa sitio: una fila vacía que dice «todavía no
+/// has abierto nada» es una fila que se aprende a no mirar.
+class _Shortcuts extends StatelessWidget {
+  const _Shortcuts({required this.session, required this.onSearch});
+
+  final Session session;
+  final ValueChanged<String> onSearch;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([session.libraryPrefs, session.settings]),
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
+    final recent = session.recentUnits;
+    final saved = session.completeInterface
+        ? session.savedSearches
+        : const <SavedSearch>[];
+    if (recent.isEmpty && saved.isEmpty) return const SizedBox.shrink();
+    return Container(
+      key: const Key('library-shortcuts'),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (recent.isNotEmpty)
+            _ShortcutRow(
+              label: tr('Abiertas hace poco'),
+              children: [
+                for (final unit in recent)
+                  ActionChip(
+                    key: Key('recent-${unit.path}'),
+                    avatar: Icon(
+                      Icons.history,
+                      size: 14,
+                      color: context.palette.muted,
+                    ),
+                    label: Text(unit.title(session.language)),
+                    tooltip: unit.path,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => goTo(context, Routes.unit(unit.path)),
+                  ),
+              ],
+            ),
+          if (recent.isNotEmpty && saved.isNotEmpty) const SizedBox(height: 6),
+          if (saved.isNotEmpty)
+            _ShortcutRow(
+              label: tr('Búsquedas guardadas'),
+              children: [
+                for (final search in saved)
+                  InputChip(
+                    key: Key('saved-search-${search.name}'),
+                    avatar: Icon(
+                      Icons.bookmark_outline,
+                      size: 14,
+                      color: context.palette.muted,
+                    ),
+                    label: Text(search.name),
+                    tooltip: search.url,
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => onSearch(search.url),
+                    deleteButtonTooltipMessage: tr('Olvidar esta búsqueda'),
+                    onDeleted: () => session.forgetSearch(search.url),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ShortcutRow extends StatelessWidget {
+  const _ShortcutRow({required this.label, required this.children});
+
+  final String label;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      SizedBox(
+        width: 150,
+        child: Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+            color: context.palette.muted,
+          ),
+        ),
+      ),
+      // En una línea que se desplaza: ocho títulos largos en dos líneas
+      // empujarían el árbol hacia abajo cada vez que se abre algo.
+      Expanded(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              for (final child in children) ...[
+                child,
+                const SizedBox(width: 6),
+              ],
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+/// La biblioteca sin ninguna lección: por qué, y qué hacer.
+///
+/// Era un árbol vacío con «0 unidades» encima. Hay dos motivos y cada uno
+/// tiene su salida: no hay ningún repositorio abierto, o el que hay no tiene
+/// lecciones todavía.
+class _EmptyLibrary extends StatefulWidget {
+  const _EmptyLibrary({required this.session});
+
+  final Session session;
+
+  @override
+  State<_EmptyLibrary> createState() => _EmptyLibraryState();
+}
+
+class _EmptyLibraryState extends State<_EmptyLibrary> {
+  bool _working = false;
+  String _doing = '';
+
+  late final RepositoryAdder _adder = RepositoryAdder(
+    session: widget.session,
+    onBusy: (working) {
+      if (mounted) setState(() => _working = working);
+    },
+    onStep: (what) {
+      if (mounted) setState(() => _doing = what);
+    },
+    onProgress: (_) {},
+    onProblem: (problem) {
+      if (mounted && problem != null) showProblem(context, problem);
+    },
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final noRepository = widget.session.workspace.isEmpty;
+    // Desplazable: en un móvil, con un aviso encima, no cabe entero.
+    return Center(
+      key: const Key('empty-library'),
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.library_books_outlined,
+                  size: 40,
+                  color: context.palette.faint,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  noRepository
+                      ? tr('La biblioteca está vacía')
+                      : tr('Todavía no hay ninguna lección'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  noRepository
+                      ? tr(
+                          'No hay ningún repositorio abierto. Añade el tuyo, o '
+                          'prueba Didacta con un ejemplo en tu cuenta de '
+                          'GitHub.',
+                        )
+                      : tr(
+                          'Una lección es una carpeta dentro de content/ o '
+                          'problems/ del repositorio, con un .tex por idioma. '
+                          'La guía cuenta cómo es una.',
+                        ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: context.palette.muted),
+                ),
+                const SizedBox(height: 16),
+                if (_working)
+                  Working(step: _doing)
+                else
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (noRepository) ...[
+                        FilledButton.icon(
+                          key: const Key('empty-library-add'),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: Text(tr('Añadir un repositorio')),
+                          onPressed: () => goTo(
+                            context,
+                            Routes.settings(section: 'repositorios'),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          key: const Key('empty-library-example'),
+                          icon: const Icon(
+                            Icons.auto_stories_outlined,
+                            size: 16,
+                          ),
+                          label: Text(tr('Probar con un ejemplo')),
+                          onPressed: widget.session.signedIn
+                              ? () => _adder.example(context)
+                              : null,
+                        ),
+                      ] else
+                        OutlinedButton.icon(
+                          key: const Key('empty-library-guide'),
+                          icon: const Icon(Icons.menu_book_outlined, size: 16),
+                          label: Text(tr('Cómo se escribe una lección')),
+                          onPressed: () => openLink('${didactaDocs}escribir/'),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // La cabecera y los menús
 // ---------------------------------------------------------------------------
+
+/// Si hay algún filtro de los menús puesto: todo menos el texto y el bloque.
+bool _narrowing(LibraryFilter filter) =>
+    filter.copyWith(query: '', clearBlock: true).hasFacets;
+
+/// Cuántas unidades hay en el bloque que se mira, sin más filtros.
+int _inBlock(Session session, LibraryFilter filter) => filter.block == null
+    ? session.catalogue.units.length
+    : session.catalogue.units
+          .where((unit) => unit.block == filter.block)
+          .length;
 
 class _Header extends StatelessWidget {
   const _Header({
@@ -247,7 +768,14 @@ class _Header extends StatelessWidget {
     required this.onFilter,
     required this.onSearchChanged,
     required this.onPath,
+    this.inText = false,
+    this.onInText,
   });
+
+  /// El interruptor «En el texto». Sin [onInText] no sale: sin copia local
+  /// no hay dónde buscar.
+  final bool inText;
+  final ValueChanged<bool>? onInText;
 
   final LibraryTree tree;
   final Session session;
@@ -264,9 +792,9 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaSurface,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.surface,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: LayoutBuilder(
@@ -275,26 +803,25 @@ class _Header extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // La biblioteca tiene su propia cabecera --con el buscador y
-              // los idiomas-- pero el botón de volver tiene que estar en
-              // todas: si falta en una pantalla, deja de ser una forma de
-              // moverse y pasa a ser una que a veces está.
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: BackForward(),
-              ),
               const SizedBox(height: 2),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // La biblioteca tiene su propia cabecera --con el buscador
+                  // y los idiomas-- pero el botón de volver tiene que estar
+                  // en todas: si falta en una pantalla, deja de ser una forma
+                  // de moverse y pasa a ser una que a veces está. Delante del
+                  // título, como en las demás, y no en una fila para él solo.
+                  const BackForward(),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(left: 4),
                           child: Text(
-                            'Biblioteca',
+                            tr('Biblioteca'),
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
@@ -308,15 +835,40 @@ class _Header extends StatelessWidget {
                           padding: const EdgeInsets.only(left: 4),
                           child: Text(
                             searching
-                                ? 'Buscando «${filter.query}»'
-                                : '${tree.unitCount} unidades · '
-                                      '${tree.categoryCount} categorías · '
-                                      '${tree.topicCount} temas',
+                                ? tr('Buscando «{0}»', [filter.query])
+                                : _narrowing(filter)
+                                // Con filtros, cuántas quedan y cuáles: un
+                                // árbol recortado que no lo dice parece la
+                                // biblioteca entera con material de menos. El
+                                // bloque no cuenta: es el área que se mira, y
+                                // se ve arriba de la primera columna.
+                                ? tr(
+                                    '{0} de {1} '
+                                    'unidades · '
+                                    '{2}',
+                                    [
+                                      tree.unitCount,
+                                      _inBlock(session, filter),
+                                      filter
+                                          .copyWith(clearBlock: true)
+                                          .describe(),
+                                    ],
+                                  )
+                                : tr(
+                                    '{0} unidades · '
+                                    '{1} categorías · '
+                                    '{2} temas',
+                                    [
+                                      tree.unitCount,
+                                      tree.categoryCount,
+                                      tree.topicCount,
+                                    ],
+                                  ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12.5,
-                              color: didactaMuted,
+                              color: context.palette.muted,
                             ),
                           ),
                         ),
@@ -329,6 +881,24 @@ class _Header extends StatelessWidget {
                   // la que se puede dejar para el escritorio es esta:
                   // ojear un PDF de diapositivas en 390 px no es ojear.
                   if (!narrow && session.canCompile) ...[
+                    // Todo lo abierto: una orden del castellano en el
+                    // valenciano, una figura que falta, un «??».
+                    TextButton.icon(
+                      key: const Key('library-review'),
+                      icon: const Icon(Icons.fact_check_outlined, size: 16),
+                      label: Text(tr('Revisar')),
+                      onPressed: () => showReview(
+                        context,
+                        session,
+                        repos: session.snippetRepos.isEmpty
+                            ? const [null]
+                            : session.snippetRepos,
+                        title: session.snippetRepos.length > 1
+                            ? tr('los repositorios')
+                            : tr('el repositorio'),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     _PreviewPicker(session: session),
                     const SizedBox(width: 8),
                   ],
@@ -338,28 +908,56 @@ class _Header extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
+                  // Los filtros llevan la misma marca del tour en los dos
+                  // sitios: nunca están los dos a la vez.
                   if (!narrow) ...[
-                    _LibraryMenus(
-                      filter: filter,
-                      onFilter: onFilter,
-                      blocks: blocks,
+                    TourTarget(
+                      id: 'library-filters',
+                      child: _LibraryMenus(
+                        filter: filter,
+                        onFilter: onFilter,
+                        blocks: blocks,
+                      ),
                     ),
                     const SizedBox(width: 10),
                   ],
                   Expanded(
-                    child: _SearchField(
-                      controller: search,
-                      focus: searchFocus,
-                      onChanged: onSearchChanged,
+                    child: TourTarget(
+                      id: 'library-search',
+                      child: _SearchField(
+                        controller: search,
+                        focus: searchFocus,
+                        inText: inText,
+                        onChanged: onSearchChanged,
+                      ),
                     ),
                   ),
+                  if (onInText != null) ...[
+                    const SizedBox(width: 6),
+                    // Aquí, al lado de lo que se escribe, y no en Ajustes: es
+                    // una pregunta de esta búsqueda, no una preferencia.
+                    FilterChip(
+                      key: const Key('search-in-text'),
+                      label: Text(tr('En el texto')),
+                      tooltip: tr(
+                        'Buscar también dentro de las lecciones, no solo '
+                        'en su título, su ruta y sus etiquetas',
+                      ),
+                      selected: inText,
+                      onSelected: onInText,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ],
                   if (narrow) ...[
                     const SizedBox(width: 4),
-                    _LibraryMenus(
-                      filter: filter,
-                      onFilter: onFilter,
-                      blocks: blocks,
-                      compact: true,
+                    TourTarget(
+                      id: 'library-filters',
+                      child: _LibraryMenus(
+                        filter: filter,
+                        onFilter: onFilter,
+                        blocks: blocks,
+                        compact: true,
+                      ),
                     ),
                   ],
                 ],
@@ -405,7 +1003,7 @@ class _LibraryMenus extends StatelessWidget {
     if (compact) {
       return MenuAnchor(
         builder: (context, controller, child) => IconButton(
-          tooltip: 'Ver y filtrar',
+          tooltip: tr('Ver y filtrar'),
           icon: Badge(
             isLabelVisible: filter.isNarrowed,
             child: const Icon(Icons.tune, size: 20),
@@ -417,16 +1015,16 @@ class _LibraryMenus extends StatelessWidget {
           // Con uno solo no hay nada que elegir: un filtro cuyo único valor
           // es «todo» ocupa sitio y no contesta ninguna pregunta.
           if (blocks.length > 1) ...[
-            ..._blockItems(),
+            ..._blockItems(context),
             const Divider(height: 1),
           ],
-          ..._statusItems(),
+          ..._statusItems(context),
           const Divider(height: 1),
-          ..._kindItems(),
+          ..._kindItems(context),
           const Divider(height: 1),
-          ..._sortItems(),
+          ..._sortItems(context),
           const Divider(height: 1),
-          ..._extraItems(),
+          ..._extraItems(context),
         ],
       );
     }
@@ -443,50 +1041,110 @@ class _LibraryMenus extends StatelessWidget {
         // añade un sitio donde mirar. En estrecho sí va en el menú, porque
         // ahí la columna desaparece al bajar de nivel.
         SubmenuButton(
+          style: _pill(
+            context,
+            filter.status != StatusFilter.any || filter.unusedOnly,
+          ),
+          leadingIcon: const Icon(Icons.translate, size: 16),
+          trailingIcon: const Icon(Icons.expand_more, size: 16),
           menuChildren: [
-            ..._statusItems(),
+            ..._statusItems(context),
             const Divider(height: 1),
-            ..._extraItems(),
+            ..._extraItems(context),
           ],
-          child: const Text('Traducción'),
+          child: Text(tr('Traducción'), style: _pillText),
         ),
-        SubmenuButton(menuChildren: _kindItems(), child: const Text('Tipo')),
-        SubmenuButton(menuChildren: _sortItems(), child: const Text('Orden')),
+        const SizedBox(width: 6),
+        SubmenuButton(
+          style: _pill(context, filter.kind != null),
+          leadingIcon: const Icon(Icons.category_outlined, size: 16),
+          trailingIcon: const Icon(Icons.expand_more, size: 16),
+          menuChildren: _kindItems(context),
+          child: Text(tr('Tipo'), style: _pillText),
+        ),
+        const SizedBox(width: 6),
+        SubmenuButton(
+          style: _pill(context, filter.sort != LibrarySort.path),
+          leadingIcon: const Icon(Icons.sort, size: 16),
+          trailingIcon: const Icon(Icons.expand_more, size: 16),
+          menuChildren: _sortItems(context),
+          child: Text(tr('Orden'), style: _pillText),
+        ),
       ],
     );
   }
 
-  List<Widget> _blockItems() => [
+  /// Sin familia a propósito: se mezcla con la del botón. Un `textStyle`
+  /// en el estilo del botón la sustituiría entera.
+  static const TextStyle _pillText = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+  );
+
+  /// Un filtro como un botón con borde, en verde si está puesto.
+  ///
+  /// Eran tres palabras sueltas en negrita, y no se veía ni que eran menús
+  /// ni cuál estaba filtrando: la única forma de saber por qué la biblioteca
+  /// enseñaba doce unidades era abrirlos uno a uno.
+  static ButtonStyle _pill(BuildContext context, bool active) => ButtonStyle(
+    padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 10)),
+    minimumSize: const WidgetStatePropertyAll(Size(0, 38)),
+    backgroundColor: WidgetStatePropertyAll(
+      active ? context.palette.selected : context.palette.card,
+    ),
+    foregroundColor: WidgetStatePropertyAll(
+      active ? context.palette.accentDark : context.palette.ink,
+    ),
+    iconColor: WidgetStatePropertyAll(
+      active ? context.palette.accentDark : context.palette.muted,
+    ),
+    side: WidgetStatePropertyAll(
+      BorderSide(
+        color: active ? context.palette.accentDark : context.palette.rule,
+      ),
+    ),
+    shape: WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
+    ),
+  );
+
+  List<Widget> _blockItems(BuildContext context) => [
     _check(
-      'Todo',
+      context,
+      tr('Todo'),
       filter.block == null,
       () => onFilter(filter.copyWith(clearBlock: true)),
     ),
     for (final block in blocks)
       _check(
+        context,
         block.title(filter.language),
         filter.block == block.id,
         () => onFilter(filter.copyWith(block: block.id)),
       ),
   ];
 
-  List<Widget> _statusItems() => [
-    for (final (status, label) in const [
-      (StatusFilter.any, 'Cualquier estado'),
-      (StatusFilter.present, 'Existe en este idioma'),
-      (StatusFilter.missing, 'Falta en este idioma'),
-      (StatusFilter.needsWork, 'Por revisar o desactualizada'),
+  List<Widget> _statusItems(BuildContext context) => [
+    for (final (status, label) in [
+      (StatusFilter.any, tr('Cualquier estado')),
+      (StatusFilter.present, tr('Existe en este idioma')),
+      (StatusFilter.missing, tr('Falta en este idioma')),
+      (StatusFilter.needsWork, tr('Por revisar o desactualizada')),
     ])
       _check(
+        context,
         label,
         filter.status == status,
         () => onFilter(filter.copyWith(status: status)),
       ),
   ];
 
-  List<Widget> _kindItems() => [
+  List<Widget> _kindItems(BuildContext context) => [
     _check(
-      'Cualquier tipo',
+      context,
+      tr('Cualquier tipo'),
       filter.kind == null,
       () => onFilter(filter.copyWith(clearKind: true)),
     ),
@@ -503,7 +1161,7 @@ class _LibraryMenus extends StatelessWidget {
       'history',
     ])
       MenuItemButton(
-        leadingIcon: Dot(colour: kindColour(kind)),
+        leadingIcon: Dot(colour: context.palette.kind(kind)),
         trailingIcon: filter.kind == kind
             ? const Icon(Icons.check, size: 15)
             : null,
@@ -516,23 +1174,25 @@ class _LibraryMenus extends StatelessWidget {
       ),
   ];
 
-  List<Widget> _sortItems() => [
-    for (final (sort, label) in const [
-      (LibrarySort.path, 'Por ruta'),
-      (LibrarySort.title, 'Por título'),
-      (LibrarySort.usage, 'Más usadas primero'),
-      (LibrarySort.needsWork, 'Por traducir primero'),
+  List<Widget> _sortItems(BuildContext context) => [
+    for (final (sort, label) in [
+      (LibrarySort.path, tr('Por ruta')),
+      (LibrarySort.title, tr('Por título')),
+      (LibrarySort.usage, tr('Más usadas primero')),
+      (LibrarySort.needsWork, tr('Por traducir primero')),
     ])
       _check(
+        context,
         label,
         filter.sort == sort,
         () => onFilter(filter.copyWith(sort: sort)),
       ),
   ];
 
-  List<Widget> _extraItems() => [
+  List<Widget> _extraItems(BuildContext context) => [
     _check(
-      'Solo las que no usa ninguna asignatura',
+      context,
+      tr('Solo las que no usa ninguna asignatura'),
       filter.unusedOnly,
       () => onFilter(filter.copyWith(unusedOnly: !filter.unusedOnly)),
     ),
@@ -542,20 +1202,24 @@ class _LibraryMenus extends StatelessWidget {
         onPressed: () => onFilter(
           LibraryFilter(language: filter.language, sort: filter.sort),
         ),
-        child: const Text('Quitar los filtros'),
+        child: Text(tr('Quitar los filtros')),
       ),
   ];
 
-  Widget _check(String label, bool on, VoidCallback onPressed) =>
-      MenuItemButton(
-        leadingIcon: Icon(
-          on ? Icons.check : null,
-          size: 15,
-          color: didactaAccentDark,
-        ),
-        onPressed: onPressed,
-        child: Text(label),
-      );
+  Widget _check(
+    BuildContext context,
+    String label,
+    bool on,
+    VoidCallback onPressed,
+  ) => MenuItemButton(
+    leadingIcon: Icon(
+      on ? Icons.check : null,
+      size: 15,
+      color: context.palette.accentDark,
+    ),
+    onPressed: onPressed,
+    child: Text(label),
+  );
 }
 
 /// Un cuadrado de color: el tipo de una unidad, del mismo color que en el PDF.
@@ -582,17 +1246,19 @@ class _SearchField extends StatelessWidget {
     required this.controller,
     required this.focus,
     required this.onChanged,
+    this.inText = false,
   });
 
   final TextEditingController controller;
   final FocusNode focus;
   final VoidCallback onChanged;
+  final bool inText;
 
   @override
   Widget build(BuildContext context) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(7),
-      borderSide: const BorderSide(color: didactaRule),
+      borderSide: BorderSide(color: context.palette.rule),
     );
     return TextField(
       controller: controller,
@@ -601,14 +1267,16 @@ class _SearchField extends StatelessWidget {
       decoration: InputDecoration(
         isDense: true,
         filled: true,
-        fillColor: Colors.white,
-        hintText: 'Buscar por título, ruta o etiqueta…',
+        fillColor: context.palette.card,
+        hintText: inText
+            ? tr('Buscar también dentro de las lecciones…')
+            : tr('Buscar por título, ruta o etiqueta…'),
         prefixIcon: const Icon(Icons.search, size: 18),
         suffixIcon: controller.text.isEmpty
             ? null
             : IconButton(
                 icon: const Icon(Icons.close, size: 16),
-                tooltip: 'Limpiar',
+                tooltip: tr('Limpiar'),
                 onPressed: () {
                   controller.clear();
                   onChanged();
@@ -633,7 +1301,12 @@ class _PreviewPicker extends StatelessWidget {
   final Session session;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: session.settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     // Las que tienen sentido para ojear una lección: lo que se proyecta y lo
     // que se lee. Un examen o una hoja de problemas del profesor no son
     // versiones de una lección suelta.
@@ -652,7 +1325,7 @@ class _PreviewPicker extends StatelessWidget {
     return MenuAnchor(
       key: const Key('preview-picker'),
       builder: (context, controller, child) => Tooltip(
-        message: 'Qué versión se abre al ojear una lección',
+        message: tr('Qué versión se abre al ojear una lección'),
         child: OutlinedButton.icon(
           icon: const Icon(Icons.visibility_outlined, size: 15),
           label: Text(
@@ -676,8 +1349,8 @@ class _PreviewPicker extends StatelessWidget {
                   : Icons.radio_button_unchecked,
               size: 15,
               color: profile.id == session.previewProfile
-                  ? didactaAccentDark
-                  : didactaMuted,
+                  ? context.palette.accentDark
+                  : context.palette.muted,
             ),
             onPressed: () => session.setPreviewProfile(profile.id),
             child: Text(profile.name),
@@ -703,9 +1376,9 @@ class _LanguagePicker extends StatelessWidget {
     if (languages.isEmpty) return const SizedBox.shrink();
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: didactaRule),
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(7),
-        color: Colors.white,
+        color: context.palette.card,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -751,7 +1424,7 @@ class _LanguageTab extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: selected ? didactaAccentDark : Colors.transparent,
+          color: selected ? context.palette.accentDark : Colors.transparent,
           borderRadius: radius,
         ),
         child: Text(
@@ -759,7 +1432,7 @@ class _LanguageTab extends StatelessWidget {
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : didactaMuted,
+            color: selected ? context.palette.onAccent : context.palette.muted,
           ),
         ),
       ),
@@ -794,7 +1467,7 @@ class _Breadcrumbs extends StatelessWidget {
       children: [
         _Crumb(
           key: const Key('crumb-root'),
-          label: 'Biblioteca',
+          label: tr('Biblioteca'),
           onTap: () => onPath(const BrowsePath()),
           last: category == null,
         ),
@@ -857,12 +1530,13 @@ class _Crumb extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: last ? FontWeight.w700 : FontWeight.w400,
-              color: last ? didactaInk : didactaAccentDark,
+              color: last ? context.palette.ink : context.palette.accentDark,
             ),
           ),
         ),
       ),
-      if (!last) const Icon(Icons.chevron_right, size: 15, color: didactaMuted),
+      if (!last)
+        Icon(Icons.chevron_right, size: 15, color: context.palette.muted),
     ],
   );
 }
@@ -896,7 +1570,7 @@ class _ActiveFilters extends StatelessWidget {
       if (filter.kind != null)
         _Chip(
           label: kindName(filter.kind!),
-          colour: kindColour(filter.kind!),
+          colour: context.palette.kind(filter.kind!),
           onRemove: () => onFilter(filter.copyWith(clearKind: true)),
         ),
       if (filter.category != null)
@@ -912,16 +1586,16 @@ class _ActiveFilters extends StatelessWidget {
       if (filter.status != StatusFilter.any)
         _Chip(
           label: switch (filter.status) {
-            StatusFilter.present => 'existe en ${filter.language}',
-            StatusFilter.missing => 'falta en ${filter.language}',
-            StatusFilter.needsWork => 'por revisar',
+            StatusFilter.present => tr('existe en {0}', [filter.language]),
+            StatusFilter.missing => tr('falta en {0}', [filter.language]),
+            StatusFilter.needsWork => tr('por revisar'),
             StatusFilter.any => '',
           },
           onRemove: () => onFilter(filter.copyWith(status: StatusFilter.any)),
         ),
       if (filter.unusedOnly)
         _Chip(
-          label: 'sin usar en ninguna asignatura',
+          label: tr('sin usar en ninguna asignatura'),
           onRemove: () => onFilter(filter.copyWith(unusedOnly: false)),
         ),
     ];
@@ -944,7 +1618,7 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tone = colour ?? didactaAccentDark;
+    final tone = colour ?? context.palette.accentDark;
     return InkWell(
       onTap: onRemove,
       borderRadius: BorderRadius.circular(20),
@@ -967,7 +1641,12 @@ class _Chip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 3),
-            Icon(Icons.close, size: 13, color: tone),
+            Icon(
+              Icons.close,
+              size: 13,
+              color: tone,
+              semanticLabel: tr('Quitar este filtro'),
+            ),
           ],
         ),
       ),
@@ -1032,6 +1711,7 @@ class _Browser extends StatelessWidget {
             category: category,
             path: path,
             language: language,
+            sort: filter.sort,
             onPath: onPath,
           );
         }
@@ -1057,6 +1737,16 @@ class _Browser extends StatelessWidget {
                   tree: tree,
                   language: language,
                   onPath: onPath,
+                  filtered: _narrowing(filter)
+                      ? filter.copyWith(clearBlock: true).describe()
+                      : null,
+                  onClear: () => onFilter(
+                    LibraryFilter(
+                      language: language,
+                      sort: filter.sort,
+                      block: filter.block,
+                    ),
+                  ),
                 ),
               )
             else ...[
@@ -1075,6 +1765,7 @@ class _Browser extends StatelessWidget {
                   category: category,
                   path: path,
                   language: language,
+                  sort: filter.sort,
                   onPath: onPath,
                 ),
               ),
@@ -1109,7 +1800,7 @@ class _CategoryColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: didactaPanel,
+      color: context.palette.panel,
       child: Column(
         children: [
           _BlockFilter(filter: filter, onFilter: onFilter, blocks: blocks),
@@ -1118,7 +1809,7 @@ class _CategoryColumn extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 24),
               children: [
                 _ColumnHeader(
-                  label: '${tree.categoryCount} categorías',
+                  label: tr('{0} categorías', [tree.categoryCount]),
                   count: tree.unitCount,
                   selected: path.isRoot,
                   onTap: () => onPath(const BrowsePath()),
@@ -1168,8 +1859,8 @@ class _BlockFilter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (blocks.length < 2) return const SizedBox.shrink();
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       child: Align(
@@ -1182,8 +1873,8 @@ class _BlockFilter extends StatelessWidget {
         // como lo que son, tres estados de lo mismo.
         child: Container(
           decoration: BoxDecoration(
-            color: didactaPanel,
-            border: Border.all(color: didactaRule),
+            color: context.palette.panel,
+            border: Border.all(color: context.palette.rule),
             borderRadius: BorderRadius.circular(Radii.control),
           ),
           padding: const EdgeInsets.all(2),
@@ -1197,7 +1888,7 @@ class _BlockFilter extends StatelessWidget {
             children: [
               Flexible(
                 child: _BlockTab(
-                  label: 'Todo',
+                  label: tr('Todo'),
                   selected: filter.block == null,
                   onTap: () => onFilter(filter.copyWith(clearBlock: true)),
                 ),
@@ -1237,13 +1928,13 @@ class _BlockTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
         color: selected
-            ? didactaCard
-            : (hovering ? didactaHover : Colors.transparent),
+            ? context.palette.card
+            : (hovering ? context.palette.hover : Colors.transparent),
         borderRadius: BorderRadius.circular(Radii.small),
         boxShadow: selected
             ? [
                 BoxShadow(
-                  color: didactaInk.withValues(alpha: 0.08),
+                  color: context.palette.shadow.withValues(alpha: 0.08),
                   blurRadius: 3,
                   offset: const Offset(0, 1),
                 ),
@@ -1259,7 +1950,7 @@ class _BlockTab extends StatelessWidget {
         style: TextStyle(
           fontSize: 12.5,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-          color: selected ? didactaAccentDark : didactaMuted,
+          color: selected ? context.palette.accentDark : context.palette.muted,
         ),
       ),
     ),
@@ -1284,8 +1975,8 @@ class _ColumnHeader extends StatelessWidget {
     onTap: onTap,
     builder: (context, hovering) => Container(
       color: selected
-          ? didactaAccentDark.withValues(alpha: 0.08)
-          : (hovering ? didactaHover : null),
+          ? context.palette.accentDark.withValues(alpha: 0.08)
+          : (hovering ? context.palette.hover : null),
       padding: const EdgeInsets.fromLTRB(14, 14, 12, 7),
       child: Row(
         children: [
@@ -1294,21 +1985,21 @@ class _ColumnHeader extends StatelessWidget {
               label.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10.5,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.7,
-                color: didactaMuted,
+                color: context.palette.muted,
               ),
             ),
           ),
           const SizedBox(width: 6),
           Text(
             '$count',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
-              color: didactaMuted,
+              color: context.palette.muted,
             ),
           ),
         ],
@@ -1339,15 +2030,15 @@ class _CategoryRow extends StatelessWidget {
         duration: const Duration(milliseconds: 90),
         decoration: BoxDecoration(
           color: selected
-              ? didactaCard
-              : (hovering ? didactaHover : Colors.transparent),
+              ? context.palette.card
+              : (hovering ? context.palette.hover : Colors.transparent),
           border: Border(
             left: BorderSide(
               width: 3,
               color: selected
-                  ? didactaAccentDark
+                  ? context.palette.accentDark
                   : (hovering
-                        ? didactaAccentDark.withValues(alpha: 0.35)
+                        ? context.palette.accentDark.withValues(alpha: 0.35)
                         : Colors.transparent),
             ),
           ),
@@ -1373,7 +2064,10 @@ class _CategoryRow extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   '${category.count}',
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
               ],
             ),
@@ -1403,12 +2097,12 @@ class _TopicColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: didactaSurface,
+      color: context.palette.surface,
       child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
           _ColumnHeader(
-            label: '${category.topics.length} temas',
+            label: tr('{0} temas', [category.topics.length]),
             count: category.count,
             selected: path.topic == null,
             onTap: () => onPath(BrowsePath(category: category.category)),
@@ -1445,8 +2139,10 @@ class _TopicRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: selected ? didactaAccentDark.withValues(alpha: 0.08) : null,
-          border: const Border(bottom: BorderSide(color: didactaRule)),
+          color: selected
+              ? context.palette.accentDark.withValues(alpha: 0.08)
+              : null,
+          border: Border(bottom: BorderSide(color: context.palette.rule)),
         ),
         padding: const EdgeInsets.fromLTRB(14, 9, 8, 9),
         child: Row(
@@ -1469,13 +2165,13 @@ class _TopicRow extends StatelessWidget {
                   Row(
                     children: [
                       for (final kind in topic.kinds.take(4))
-                        Dot(colour: kindColour(kind), size: 7),
+                        Dot(colour: context.palette.kind(kind), size: 7),
                       const SizedBox(width: 6),
                       Text(
                         '${topic.count}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ],
@@ -1486,7 +2182,9 @@ class _TopicRow extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 16,
-              color: selected ? didactaAccentDark : didactaRule,
+              color: selected
+                  ? context.palette.accentDark
+                  : context.palette.rule,
             ),
           ],
         ),
@@ -1506,12 +2204,16 @@ class _UnitColumn extends StatelessWidget {
     required this.path,
     required this.language,
     required this.onPath,
+    this.sort = LibrarySort.path,
   });
 
   final CategoryNode category;
   final BrowsePath path;
   final String language;
   final ValueChanged<BrowsePath> onPath;
+
+  /// El «Orden» de la cabecera, que antes solo ordenaba lo buscado.
+  final LibrarySort sort;
 
   @override
   Widget build(BuildContext context) {
@@ -1521,56 +2223,88 @@ class _UnitColumn extends StatelessWidget {
     // un tema lo que se quiere es su reparto, no las cuatrocientas que hay en
     // la biblioteca entera.
     final tags = topic == null ? category.tags : topic.tags;
+    final session = watchSession(context);
+    // Crear aquí, en el tema que se mira: es donde se echa en falta la lección.
+    final canCreate =
+        session.admin() != null &&
+        session.workspace.repos.any((repo) => session.canWriteIn(repo.id));
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-      children: [
-        if (tags.isNotEmpty) ...[
-          _TagFilter(
-            tags: tags,
-            selected: path.tag,
-            onSelected: (tag) => onPath(path.withTag(tag)),
+    // Una lista de filas y `ListView.builder`: se construye lo que se ve. Un
+    // tema con cuatrocientos problemas eran cuatrocientas tarjetas hechas de
+    // golpe para enseñar doce.
+    final rows = <Widget Function()>[
+      if (canCreate)
+        () => Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: const Key('library-new-unit'),
+            icon: const Icon(Icons.add, size: 16),
+            label: Text(
+              topic == null
+                  ? tr('Nueva lección en {0}', [category.label])
+                  : tr('Nueva lección en {0}', [topic.label]),
+            ),
+            onPressed: () => createUnitFrom(
+              context,
+              session,
+              category: category.category,
+              topic: topic?.topic,
+            ),
           ),
-          const SizedBox(height: 6),
-        ],
-        for (final group in groups)
-          if (_shown(group.units) case final shown when shown.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8, top: 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      group.label,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
+        ),
+      if (tags.isNotEmpty) ...[
+        () => _TagFilter(
+          tags: tags,
+          selected: path.tag,
+          onSelected: (tag) => onPath(path.withTag(tag)),
+        ),
+        () => const SizedBox(height: 6),
+      ],
+      for (final group in groups)
+        if (_shown(group.units) case final shown when shown.isNotEmpty) ...[
+          () => Padding(
+            padding: const EdgeInsets.only(bottom: 8, top: 6),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    group.label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${shown.length} '
-                    '${shown.length == 1 ? 'unidad' : 'unidades'}',
-                    style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${shown.length} '
+                  '${shown.length == 1 ? 'unidad' : 'unidades'}',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            for (final unit in shown) UnitCard(unit: unit, language: language),
-            const SizedBox(height: 16),
-          ],
-      ],
+          ),
+          for (final unit in shown)
+            () => UnitCard(unit: unit, language: language),
+          () => const SizedBox(height: 16),
+        ],
+    ];
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      itemCount: rows.length,
+      itemBuilder: (context, index) => rows[index](),
     );
   }
 
-  List<Unit> _shown(List<Unit> units) => path.tag == null
-      ? units
-      : [
-          for (final unit in units)
-            if (unit.tags.contains(path.tag)) unit,
-        ];
+  List<Unit> _shown(List<Unit> units) =>
+      LibraryFilter(language: language, sort: sort).apply([
+        for (final unit in units)
+          if (path.tag == null || unit.tags.contains(path.tag)) unit,
+      ]);
 }
 
 /// Las etiquetas de donde se está, encima de la lista.
@@ -1599,14 +2333,14 @@ class _TagFilter extends StatelessWidget {
       runSpacing: 5,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(right: 3, bottom: 1),
           child: Text(
-            'Etiquetas',
+            tr('Etiquetas'),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: didactaMuted,
+              color: context.palette.muted,
               letterSpacing: 0.4,
             ),
           ),
@@ -1638,7 +2372,7 @@ class UnitCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fallback = unit.titleIsFallback(language);
-    final repoColour = watchSession(context).colourOf(unit.repo);
+    final repoTint = watchSession(context).colourOf(unit.repo);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Hoverable(
@@ -1646,20 +2380,22 @@ class UnitCard extends StatelessWidget {
         builder: (context, hovering) => AnimatedContainer(
           duration: const Duration(milliseconds: 110),
           decoration: BoxDecoration(
-            color: didactaCard,
+            color: context.palette.card,
             // Al pasar por encima: el borde se tiñe del verde de la casa y
             // aparece una sombra muy corta. Es lo que hace que una rejilla de
             // tarjetas se sienta viva sin que las miles de filas de las
             // listas lleven sombra, que sería ruido.
             border: Border.all(
-              color: hovering ? didactaAccentDark : didactaRule,
+              color: hovering
+                  ? context.palette.accentDark
+                  : context.palette.rule,
               width: hovering ? 1.4 : 1,
             ),
             borderRadius: BorderRadius.circular(Radii.card),
             boxShadow: hovering
                 ? [
                     BoxShadow(
-                      color: didactaInk.withValues(alpha: 0.07),
+                      color: context.palette.shadow.withValues(alpha: 0.07),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -1680,19 +2416,19 @@ class UnitCard extends StatelessWidget {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 3),
-                    child: Dot(colour: kindColour(unit.kind)),
+                    child: Dot(colour: context.palette.kind(unit.kind)),
                   ),
                   const SizedBox(width: 8),
                   // El repositorio del que sale, cuando hay más de uno: dos
                   // pueden tener la misma ruta y son cosas distintas.
-                  if (repoColour != null) ...[
+                  if (repoTint != null) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 3, right: 6),
                       child: Container(
                         width: 3,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: Color(repoColour),
+                          color: context.palette.repo(repoTint),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1713,7 +2449,7 @@ class UnitCard extends StatelessWidget {
                         fontStyle: fallback
                             ? FontStyle.italic
                             : FontStyle.normal,
-                        color: fallback ? didactaMuted : null,
+                        color: fallback ? context.palette.muted : null,
                       ),
                     ),
                   ),
@@ -1726,10 +2462,10 @@ class UnitCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Tooltip(
                       message: unit.warnings.join('\n'),
-                      child: const Icon(
+                      child: Icon(
                         Icons.warning_amber_rounded,
                         size: 15,
-                        color: didactaEx,
+                        color: context.palette.ex,
                       ),
                     ),
                   ],
@@ -1745,16 +2481,16 @@ class UnitCard extends StatelessWidget {
                     kindName(unit.kind),
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: kindColour(unit.kind),
+                      color: context.palette.kind(unit.kind),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   for (final code in unit.statuses.keys)
                     StatusBadge(language: code, status: unit.statusIn(code)),
                   if (unit.usedBy.isEmpty)
-                    const Text(
-                      'sin usar',
-                      style: TextStyle(fontSize: 11, color: didactaEx),
+                    Text(
+                      tr('sin usar'),
+                      style: TextStyle(fontSize: 11, color: context.palette.ex),
                     )
                   else
                     Tooltip(
@@ -1764,13 +2500,17 @@ class UnitCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.link, size: 12, color: didactaMuted),
+                          Icon(
+                            Icons.link,
+                            size: 12,
+                            color: context.palette.muted,
+                          ),
                           const SizedBox(width: 2),
                           Text(
                             '${unit.usedBy.length}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
-                              color: didactaMuted,
+                              color: context.palette.muted,
                             ),
                           ),
                         ],
@@ -1796,15 +2536,54 @@ class _Overview extends StatelessWidget {
     required this.tree,
     required this.language,
     required this.onPath,
+    this.filtered,
+    this.onClear,
   });
 
   final LibraryTree tree;
   final String language;
   final ValueChanged<BrowsePath> onPath;
 
+  /// Qué filtros hay puestos, dicho para leer; null sin ninguno.
+  final String? filtered;
+  final VoidCallback? onClear;
+
   @override
   Widget build(BuildContext context) {
     final all = tree.categories;
+    // Nada que enseñar por culpa de los filtros: decirlo, y cuáles, en vez
+    // de una pantalla vacía que parece una biblioteca sin material.
+    if (all.isEmpty && filtered != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                tr('Nada con estos filtros'),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                filtered!,
+                key: const Key('library-empty-filters'),
+                style: TextStyle(fontSize: 12.5, color: context.palette.muted),
+              ),
+              const SizedBox(height: 10),
+              TextButton(
+                key: const Key('library-clear-filters'),
+                onPressed: onClear,
+                child: Text(tr('Quitar los filtros')),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     final whole = TranslationProgress.of(tree.byPath.values, language);
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1814,15 +2593,18 @@ class _Overview extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
           children: [
-            const Text(
-              'Dónde está el material',
+            Text(
+              tr('Dónde está el material'),
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 3),
             Text(
-              'Las categorías de mayor a menor. La barra de cada una es el '
-              'estado del ${languageName(language)}.',
-              style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+              tr(
+                'Las categorías de mayor a menor. La barra de cada una es el '
+                'estado del {0}.',
+                [languageName(language)],
+              ),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             const SizedBox(height: 9),
             ProgressLegend(progress: whole),
@@ -1866,14 +2648,14 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = category.progressIn(language);
     return Material(
-      color: Colors.white,
+      color: context.palette.card,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: didactaRule),
+            border: Border.all(color: context.palette.rule),
             borderRadius: BorderRadius.circular(8),
           ),
           padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
@@ -1908,11 +2690,22 @@ class _CategoryCard extends StatelessWidget {
                   // estrecha, y sin esto desborda en lugar de recortarse.
                   Expanded(
                     child: Text(
-                      '· ${category.topics.length} temas'
-                      '${category.problems > 0 ? ' · ${category.problems} probl.' : ''}',
+                      tr(
+                        '· {0} temas'
+                        '{1}',
+                        [
+                          category.topics.length,
+                          category.problems > 0
+                              ? tr(' · {0} probl.', [category.problems])
+                              : '',
+                        ],
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, color: didactaMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.palette.muted,
+                      ),
                     ),
                   ),
                 ],
@@ -1939,31 +2732,36 @@ class ProgressBar extends StatelessWidget {
   /// El gris de lo que no está escrito. Es la vía de la barra además del
   /// tramo, para que una barra sin nada hecho siga siendo una barra y no un
   /// hueco: «no hay nada» y «no se dibujó» tienen que distinguirse.
-  static const Color track = Color(0xFFDCE0E4);
+  static Color trackIn(DidactaPalette palette) => palette.track;
 
   @override
   Widget build(BuildContext context) {
     if (progress.total == 0) return SizedBox(height: height);
     return Tooltip(
-      message:
-          '${progress.done} al día · ${progress.needsWork} por revisar · '
-          '${progress.missing} sin escribir',
+      message: tr(
+        '{0} al día · {1} por revisar · '
+        '{2} sin escribir',
+        [progress.done, progress.needsWork, progress.missing],
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(height),
         child: Container(
           height: height,
-          color: track,
+          color: trackIn(context.palette),
+          // Estirados: un `ColoredBox` sin hijo mide cero de alto, y la barra
+          // enseñaba solo la vía gris aunque todo estuviera al día.
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (progress.done > 0)
                 Expanded(
                   flex: progress.done,
-                  child: const ColoredBox(color: didactaAccentDark),
+                  child: ColoredBox(color: context.palette.accentDark),
                 ),
               if (progress.needsWork > 0)
                 Expanded(
                   flex: progress.needsWork,
-                  child: const ColoredBox(color: didactaEx),
+                  child: ColoredBox(color: context.palette.ex),
                 ),
               if (progress.missing > 0)
                 Expanded(flex: progress.missing, child: const SizedBox()),
@@ -1991,13 +2789,25 @@ class ProgressLegend extends StatelessWidget {
     spacing: 14,
     runSpacing: 5,
     children: [
-      _key(didactaAccentDark, '${progress.done} al día'),
-      _key(didactaEx, '${progress.needsWork} por revisar'),
-      _key(ProgressBar.track, '${progress.missing} sin escribir'),
+      _key(
+        context,
+        context.palette.accentDark,
+        tr('{0} al día', [progress.done]),
+      ),
+      _key(
+        context,
+        context.palette.ex,
+        tr('{0} por revisar', [progress.needsWork]),
+      ),
+      _key(
+        context,
+        ProgressBar.trackIn(context.palette),
+        tr('{0} sin escribir', [progress.missing]),
+      ),
     ],
   );
 
-  Widget _key(Color colour, String label) => Row(
+  Widget _key(BuildContext context, Color colour, String label) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
       Container(
@@ -2009,7 +2819,10 @@ class ProgressLegend extends StatelessWidget {
         ),
       ),
       const SizedBox(width: 5),
-      Text(label, style: const TextStyle(fontSize: 11.5, color: didactaMuted)),
+      Text(
+        label,
+        style: TextStyle(fontSize: 11.5, color: context.palette.muted),
+      ),
     ],
   );
 }
@@ -2024,6 +2837,9 @@ class _SearchResults extends StatelessWidget {
     required this.units,
     required this.blocks,
     required this.onFilter,
+    this.inText = false,
+    this.hits,
+    this.onSave,
   });
 
   final LibraryFilter filter;
@@ -2031,10 +2847,93 @@ class _SearchResults extends StatelessWidget {
   final List<CourseBlock> blocks;
   final ValueChanged<LibraryFilter> onFilter;
 
+  /// Guardar esta búsqueda, en la interfaz completa.
+  final VoidCallback? onSave;
+
+  /// Si se busca también en el texto, y lo encontrado ahí (null mientras se
+  /// busca).
+  final bool inText;
+  final List<TextHit>? hits;
+
   @override
   Widget build(BuildContext context) {
-    final found = filter.apply(units);
+    final titled = filter.apply(units);
     final facets = LibraryFacets.of(units, filter);
+    // Lo encontrado en el texto, por lección. Primero lo que casa por el
+    // título --es lo que más se parece a lo que se busca-- y después lo que
+    // solo lo dice dentro, con los mismos filtros puestos.
+    final byPath = <String, List<TextHit>>{};
+    for (final hit in hits ?? const <TextHit>[]) {
+      (byPath[hit.unitPath] ??= []).add(hit);
+    }
+    // Por la ruta, y por el repositorio cuando se sabe: dos repositorios
+    // pueden tener la misma ruta y son lecciones distintas.
+    List<TextHit>? linesOf(Unit unit) {
+      final found = [
+        for (final hit in byPath[unit.path] ?? const <TextHit>[])
+          if (unit.repo.isEmpty || hit.repo.isEmpty || hit.repo == unit.repo)
+            hit,
+      ];
+      return found.isEmpty ? null : found;
+    }
+
+    final facetsOnly = filter.copyWith(query: '');
+    final seen = titled.toSet();
+    final inside = [
+      for (final unit in units)
+        if (!seen.contains(unit) &&
+            facetsOnly.matches(unit) &&
+            linesOf(unit) != null)
+          unit,
+    ];
+    // Lo que se parece --casa con una errata-- va al final, detrás también
+    // de lo que lo dice dentro: eso sí es lo que se ha escrito.
+    final typos = filter.typosIn(units);
+    final near = [
+      for (final unit in titled)
+        if (filter.queryMatch(unit, typos: typos) == SearchMatch.near) unit,
+    ];
+    final nearSet = near.toSet();
+    final found = [
+      for (final unit in titled)
+        if (!nearSet.contains(unit)) unit,
+      ...inside,
+      ...near,
+    ];
+    final nearNote = near.isEmpty
+        ? ''
+        : near.length == found.length
+        ? tr(
+            ' · ninguna tal cual, se parece{0} '
+            'a lo que buscas',
+            [near.length == 1 ? '' : 'n'],
+          )
+        : tr(' · {0} parecida{1}', [near.length, near.length == 1 ? '' : 's']);
+    final String textNote;
+    if (!inText) {
+      textNote = '';
+    } else if (hits == null) {
+      textNote = tr(' · buscando en el texto…');
+    } else if (inside.isEmpty) {
+      textNote = '';
+    } else {
+      textNote = tr(' · {0} por lo que dicen dentro', [inside.length]);
+    }
+    final summary = found.isEmpty
+        ? (inText && hits == null
+              ? tr('Buscando en el texto…')
+              : tr('Nada coincide'))
+        : tr(
+            '{0} {1} '
+            'de {2}{3}{4}',
+            [
+              found.length,
+              found.length == 1 ? 'unidad' : 'unidades',
+              facets.total,
+              textNote,
+              nearNote,
+            ],
+          );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -2043,19 +2942,32 @@ class _SearchResults extends StatelessWidget {
           children: [
             Container(
               width: double.infinity,
-              color: didactaPanel,
+              color: context.palette.panel,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              child: Text(
-                found.isEmpty
-                    ? 'Nada coincide'
-                    : '${found.length} '
-                          '${found.length == 1 ? 'unidad' : 'unidades'} '
-                          'de ${facets.total}',
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: didactaMuted,
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      summary,
+                      key: const Key('search-summary'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.palette.muted,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (onSave != null)
+                    TextButton.icon(
+                      key: const Key('save-search'),
+                      icon: const Icon(Icons.bookmark_add_outlined, size: 15),
+                      label: Text(tr('Guardar esta búsqueda')),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: onSave,
+                    ),
+                ],
               ),
             ),
             Expanded(
@@ -2074,7 +2986,11 @@ class _SearchResults extends StatelessWidget {
                     const VerticalDivider(width: 1),
                   ],
                   Expanded(
-                    child: UnitList(units: found, filter: filter),
+                    child: UnitList(
+                      units: found,
+                      filter: filter,
+                      lines: {for (final unit in found) unit: ?linesOf(unit)},
+                    ),
                   ),
                 ],
               ),

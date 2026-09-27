@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/course_admin.dart';
+import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/course_admin_ui.dart';
 import 'package:didacta_app/ui/courses_page.dart';
@@ -100,7 +101,15 @@ void main() {
       await pump(tester, const CoursesPage(), withAdmin: false);
 
       expect(find.byKey(const Key('new-course')), findsNothing);
-      expect(find.byKey(const Key('course-menu-am-iii')), findsNothing);
+      // En «…» queda ocultarla, que es de esta lista y no del repositorio;
+      // lo de administrar, no.
+      await tester.tap(find.byKey(const Key('course-menu-am-iii')));
+      await settle(tester);
+      expect(find.byKey(const Key('hide-course-am-iii')), findsOneWidget);
+      expect(find.byKey(const Key('duplicate-am-iii')), findsNothing);
+      expect(find.byKey(const Key('remove-am-iii')), findsNothing);
+      await tester.tapAt(const Offset(5, 5));
+      await settle(tester);
       // Y la asignatura sigue viéndose: lo que falta es editarla, no verla.
       expect(find.text('Análisis Matemático III'), findsOneWidget);
     });
@@ -134,7 +143,11 @@ void main() {
       );
       // Lo que **no** se va, que es lo que evita el susto.
       expect(find.textContaining('Las unidades no se tocan'), findsOneWidget);
-      expect(find.textContaining('se puede revertir'), findsOneWidget);
+      // Y dice cómo se deshace, que ahora se puede.
+      expect(
+        find.textContaining('Se puede deshacer justo después'),
+        findsOneWidget,
+      );
 
       // Y hasta aquí no se ha aplicado nada.
       expect(harness.engine.commands.single, isNot(contains('--apply')));
@@ -182,7 +195,10 @@ void main() {
         1,
         reason: 'sin recargar, la pantalla sigue enseñando lo que ya no está',
       );
-      expect(find.textContaining('quitada como un commit'), findsOneWidget);
+      expect(
+        find.textContaining('quitada. Queda en el historial'),
+        findsOneWidget,
+      );
 
       // Un commit, con la asignatura y el índice dentro --son la misma
       // cosa: un commit que quita el curso y deja el índice como estaba
@@ -194,6 +210,41 @@ void main() {
         'Quitar la asignatura «Análisis Matemático III» (am-iii)',
       );
       expect(commit.author, 'Javier <javier@uv.es>');
+    });
+
+    testWidgets('y el aviso ofrece deshacerlo', (tester) async {
+      final harness = await pump(
+        tester,
+        const CoursesPage(),
+        answers: {'remove course': '  2 año(s)\n  77 documento(s)\n'},
+      );
+      final before = harness.clone!.at;
+
+      await tester.tap(find.byKey(const Key('course-menu-am-iii')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('remove-am-iii')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('confirm-removal')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('admin-undo')));
+      await settle(tester);
+
+      // Lo de antes, traído del commit de antes, con el índice rehecho y en
+      // un commit nuevo que dice lo que deshace.
+      final restored = harness.clone!.restored.single;
+      expect(restored.sha, before);
+      expect(restored.paths, ['courses/am-iii']);
+      expect(harness.engine.commands.last, ['index']);
+      final undo = harness.clone!.commits.last;
+      expect(undo.paths, ['courses/am-iii', 'generated']);
+      expect(
+        undo.message,
+        'Deshacer: quitar la asignatura «Análisis Matemático III»',
+      );
+      // El aviso de «hecho» sale cuando se ha ido el anterior.
+      await tester.pump(const Duration(seconds: 1));
+      await settle(tester);
+      expect(find.textContaining('ha vuelto'), findsOneWidget);
     });
 
     testWidgets('si el motor falla se dice, y no se recarga', (tester) async {
@@ -226,6 +277,8 @@ void main() {
         answers: {'remove year': '  1 año(s)\n  2 documento(s)\n'},
       );
 
+      await tester.tap(find.byKey(const Key('year-page-menu')));
+      await settle(tester);
       await tester.tap(find.byKey(const Key('remove-year')));
       await settle(tester);
 
@@ -354,6 +407,8 @@ void main() {
 
       await tester.tap(find.byKey(const Key('add-year-am-iii')));
       await settle(tester);
+      await tester.tap(find.byKey(const Key('freeze-source-year')));
+      await settle(tester);
       await tester.tap(find.byKey(const Key('confirm-duplicate')));
       await settle(tester);
 
@@ -366,6 +421,92 @@ void main() {
         'courses/am-iii/2026-2027',
         'generated',
       ]);
+    });
+
+    testWidgets('y congela antes el curso de origen, si no se desmarca', (
+      tester,
+    ) async {
+      // El curso que se acaba es el que alguien querrá volver a ver, y lo
+      // que se cambie en el nuevo puede cambiarlo también a él.
+      final harness = await pump(tester, const CoursesPage());
+
+      await tester.tap(find.byKey(const Key('add-year-am-iii')));
+      await settle(tester);
+      expect(
+        tester
+            .widget<CheckboxListTile>(
+              find.byKey(const Key('freeze-source-year')),
+            )
+            .value,
+        isTrue,
+      );
+      expect(find.text('Congelar 2025-2026 tal como quedó'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('confirm-duplicate')));
+      await settle(tester);
+
+      expect(harness.engine.commands, [
+        [
+          'freeze',
+          'add',
+          'am-iii@2025-2026',
+          '--name',
+          'Tal como quedó',
+          '--commit',
+          harness.clone!.at,
+          '--description',
+          'Al crear el curso 2026-2027.',
+        ],
+        ['new', 'year', '--from', '2025-2026', '--', 'am-iii', '2026-2027'],
+        ['index'],
+      ]);
+      expect(harness.clone!.commits, hasLength(2));
+      expect(
+        find.textContaining('congelado como «Tal como quedó»'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('empezando de cero no hay nada que congelar', (tester) async {
+      await pump(tester, const CoursesPage());
+
+      await tester.tap(find.byKey(const Key('add-year-am-iii')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('start-empty')));
+      await settle(tester);
+
+      expect(find.byKey(const Key('freeze-source-year')), findsNothing);
+    });
+
+    testWidgets('dice que los documentos vinculados se comparten', (
+      tester,
+    ) async {
+      final json = courseJson();
+      final year = (json['years'] as Map)['2025-2026'] as Map<String, dynamic>;
+      final documents = [
+        for (final document in year['documents'] as List)
+          {...(document as Map).cast<String, dynamic>(), 'content': 'normados'},
+      ];
+      year['documents'] = documents;
+      final course = Course.fromJson(json);
+      tester.view.physicalSize = const Size(1000, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: didactaTheme(),
+          home: Scaffold(body: DuplicateYearDialog(course: course)),
+        ),
+      );
+      await settle(tester);
+
+      final note = tester.widget<Note>(
+        find.byKey(const Key('linked-in-source-year')),
+      );
+      expect(
+        note.text,
+        startsWith('2 documentos de 2025-2026 están vinculados'),
+      );
+      expect(note.text, contains('cambia también en 2025-2026'));
     });
   });
 
@@ -463,7 +604,7 @@ void main() {
         ],
         ['index'],
       ]);
-      expect(find.textContaining('creada como un commit'), findsOneWidget);
+      expect(find.textContaining('creada.'), findsOneWidget);
       expect(harness.session.reloads, 1);
       expect(harness.clone!.commits.single.paths, [
         'courses/topologia',

@@ -34,18 +34,34 @@ estable» a propósito: para una tubería que publica binarios, «stable» es un
 objetivo que se mueve, y el compilador con el que se reparte una aplicación no
 puede ser uno que nadie eligió.
 
-Hay un repositorio de contenido de ejemplo en
-[`examples/demo-course`](examples/demo-course):
+Hay dos repositorios de contenido de ejemplo, y no son el mismo:
 
-```bash
-cd examples/demo-course
-../../cli/didacta status
-../../cli/didacta build --all
-```
+- [`examples/demo-course`](examples/demo-course) es el de la herramienta: las
+  15 salidas, los tres idiomas y los casos raros que el motor tiene que
+  resolver. Es con el que se prueba `didacta` en el terminal:
+
+  ```bash
+  cd examples/demo-course
+  ../../cli/didacta status
+  ../../cli/didacta build --all
+  ```
+
+- [`app/assets/ejemplo`](app/assets/ejemplo) es el que la aplicación empaqueta
+  y sube, tal cual, como primer commit cuando alguien pulsa «Probar con un
+  ejemplo». Es lo primero que ve de Didacta quien no lo conoce, así que tiene
+  que abrir sin un solo aviso: lo comprueban `tests/test_example_repository.py`
+  y `app/test/example_repository_test.dart`. Dos cosas que conviene saber
+  antes de tocarlo: Flutter empaqueta carpeta a carpeta, así que **una carpeta
+  nueva hay que apuntarla en `app/pubspec.yaml`** (el test dice cuál falta); y
+  lo que en el repositorio de quien lo prueba es `.github/` aquí se llama
+  `github/`, porque un asset no puede empezar por punto.
 
 ## Lo que se comprueba en cada push
 
-Es lo mismo que conviene ejecutar antes de mandar nada:
+Es lo mismo que conviene ejecutar antes de mandar nada. El CI lo hace en Linux,
+macOS y Windows. En Windows, de momento, un fallo no para el resto, y la
+aplicación pasa sin los tests que lanzan git, Python o LaTeX
+(`-x integration`).
 
 ```bash
 python3 -m unittest discover -s tests            # el motor
@@ -57,6 +73,11 @@ dart format --output=none --set-exit-if-changed lib test tool
 flutter test
 flutter build web --release --dart-define=DIDACTA_INDEX=generated
 ```
+
+`flutter test` se salta los tests con la etiqueta `real`, que leen el material
+de verdad de `~/didacta_db` y fallan por el estado del contenido, no por el
+código. Para pasarlos: `flutter test --run-skipped -t real`. Las etiquetas
+están en [`app/dart_test.yaml`](app/dart_test.yaml).
 
 `--fatal-infos` no es exageración: un aviso de nivel *info* que nadie arregla
 se convierte en ruido que esconde el siguiente que sí importa.

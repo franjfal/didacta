@@ -30,6 +30,7 @@ import 'catalogue_source.dart';
 import 'compiler.dart';
 import 'content_gateway.dart';
 import 'local_clone.dart';
+import '../l10n/tr.dart';
 
 /// Una congelación abierta.
 class FrozenView {
@@ -129,8 +130,10 @@ class Frozen {
     void Function(FrozenStep step) onStep = _ignore,
   }) async {
     if (freeze.commit.isEmpty) {
-      throw const FrozenException(
-        'Esta versión congelada no dice a qué commit apunta.',
+      throw FrozenException(
+        tr(
+          'Esta versión congelada no dice a qué momento del historial apunta.',
+        ),
       );
     }
 
@@ -148,7 +151,7 @@ class Frozen {
         );
       } on CloneException catch (error) {
         throw FrozenException(
-          'No se pudo traer el commit de «${freeze.name}».',
+          tr('No se pudo traer de GitHub «{0}».', [freeze.name]),
           detail: error.stderr.isEmpty ? error.message : error.stderr,
         );
       }
@@ -160,7 +163,7 @@ class Frozen {
       tree = await clone.worktreeAt(freeze.commit);
     } on CloneException catch (error) {
       throw FrozenException(
-        'No se pudo preparar «${freeze.name}» para mirarla.',
+        tr('No se pudo preparar «{0}» para mirarla.', [freeze.name]),
         detail: error.stderr.isEmpty ? error.message : error.stderr,
       );
     }
@@ -169,8 +172,8 @@ class Frozen {
     onStep(FrozenStep.reading);
     var source = CatalogueSource.inClone(tree.directory, repo: repo);
     if (source == null) {
-      throw const FrozenException(
-        'Esta plataforma no puede leer una versión congelada del disco.',
+      throw FrozenException(
+        tr('Esta plataforma no puede leer una versión congelada del disco.'),
       );
     }
 
@@ -185,8 +188,11 @@ class Frozen {
       final engine = compiler;
       if (engine == null) {
         throw FrozenException(
-          '«${freeze.name}» no trae el índice de aquel día, y sin el motor no '
-          'se puede reconstruir. Elige el motor en Ajustes.',
+          tr(
+            '«{0}» no trae el índice de aquel día, y sin el motor no '
+            'se puede reconstruir. Elige el motor en Ajustes.',
+            [freeze.name],
+          ),
           detail: '$first',
         );
       }
@@ -199,7 +205,7 @@ class Frozen {
         await engine.run(['--root', tree.directory, 'index']);
       } on CompileException catch (error) {
         throw FrozenException(
-          'No se pudo reconstruir el catálogo de «${freeze.name}».',
+          tr('No se pudo reconstruir el catálogo de «{0}».', [freeze.name]),
           detail: error.detail.isEmpty ? error.message : error.detail,
         );
       }
@@ -239,11 +245,18 @@ class Frozen {
   ///
   /// [from] y [to] son commits; `HEAD` vale como cualquiera de los dos, que es
   /// lo que hace que «comparar con la versión actual» sea el mismo código.
+  ///
+  /// Con un curso académico, las lecciones se limitan a **las que ese curso
+  /// usa**, antes o después --las del `year.yaml` de los dos momentos y las
+  /// de sus temas vinculados--. [lessonOf] dice qué lección es una
+  /// referencia, que puede estar escrita como ruta o como id; sin él, o si ya
+  /// no existe, se compara por ruta.
   Future<CourseDiff> compare({
     required String from,
     required String to,
     String course = '',
     String year = '',
+    String? Function(String reference)? lessonOf,
   }) async {
     // Limitado al curso cuando se pregunta por uno: el contenido cambia por
     // todas partes, y enseñar el repositorio entero al comparar dos versiones
@@ -271,7 +284,35 @@ class Frozen {
       before = await clone.fileAt(sha: from, path: path);
       after = await clone.fileAt(sha: to, path: path);
     }
-    return readCourseDiff(tree, before: before, after: after);
+    final diff = readCourseDiff(tree, before: before, after: after);
+    if (course.isEmpty || year.isEmpty) return diff;
+
+    final used = <String>{};
+    final links = <String>{};
+    for (final text in [before, after]) {
+      final found = referencesIn(text);
+      used.addAll(found.references);
+      links.addAll(found.links);
+    }
+    for (final link in links) {
+      for (final sha in [from, to]) {
+        final text = await clone.fileAt(
+          sha: sha,
+          path: 'shared/documents/$link.yaml',
+        );
+        used.addAll(referencesIn(text, shared: true).references);
+      }
+    }
+    final lessons = {
+      for (final reference in used)
+        if (lessonOf?.call(reference) case final String path) path,
+    };
+    return diff.onlyLessons((lesson) {
+      if (lessons.contains(lesson)) return true;
+      // `content/analysis/x` se escribe `analysis/x` en una composición.
+      final cut = lesson.indexOf('/');
+      return used.contains(cut < 0 ? lesson : lesson.substring(cut + 1));
+    });
   }
 
   /// El diff de un fichero entre dos versiones.
@@ -315,9 +356,11 @@ class FrozenGateway extends ContentGateway {
   bool get canWrite => false;
 
   @override
-  String describe() =>
-      'Versión congelada «${view.freeze.name}» (${view.freeze.shortCommit}). '
-      'Solo lectura.';
+  String describe() => tr(
+    'Versión congelada «{0}» ({1}). '
+    'Solo lectura.',
+    [view.freeze.name, view.freeze.shortCommit],
+  );
 
   @override
   Future<ContentFile> read(String path) async {
@@ -337,9 +380,12 @@ class FrozenGateway extends ContentGateway {
     required String sha,
     required String message,
   }) async => throw ContentException(
-    'Estás viendo «${view.freeze.name}», que es una versión congelada: es el '
-    'estado de un commit y no se edita. Vuelve a la versión actual para '
-    'escribir, o restaura esto desde aquí.',
+    tr(
+      'Estás viendo «{0}», que es una versión congelada: es el '
+      'estado de un momento del historial y no se edita. Vuelve a la versión actual para '
+      'escribir, o restaura esto desde aquí.',
+      [view.freeze.name],
+    ),
     kind: ContentFailure.forbidden,
   );
 
@@ -348,8 +394,11 @@ class FrozenGateway extends ContentGateway {
     required List<({String path, String text, String sha})> files,
     required String message,
   }) async => throw ContentException(
-    'Estás viendo «${view.freeze.name}», que es una versión congelada y no se '
-    'edita.',
+    tr(
+      'Estás viendo «{0}», que es una versión congelada y no se '
+      'edita.',
+      [view.freeze.name],
+    ),
     kind: ContentFailure.forbidden,
   );
 }

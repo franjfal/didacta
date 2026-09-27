@@ -89,6 +89,57 @@
   \edef\didacta@classoptions{\didacta@classoptions,notes=show}%
 \fi
 
+%% El PDF etiquetado, para lo que se lee y no para lo que se proyecta.
+%%
+%%     \def\DidactaTagged{}
+%%
+%% --lo pone `didacta build --accessible`-- escribe \DocumentMetadata antes
+%% de la clase, que es el único sitio donde vale: el PDF lleva su árbol de
+%% estructura (títulos, párrafos, listas, fórmulas, figuras con su texto
+%% alternativo), declara PDF/UA-2 y dice su idioma, que es lo que un lector de
+%% pantalla necesita para leerlo en orden y pronunciarlo bien. Hace falta
+%% LuaLaTeX y el LaTeX de 2025 o posterior.
+%%
+%% Beamer no: el etiquetado de LaTeX todavía no lo admite, y unas diapositivas
+%% etiquetadas a medias son peores que unas sin etiquetar. Lo accesible de una
+%% clase son sus apuntes.
+%%
+%% Los códigos de idioma, aquí y no solo en el paquete: \DocumentMetadata va
+%% antes de la clase, y el paquete después.
+\@namedef{didacta@pdflang@es}{es-ES}
+\@namedef{didacta@pdflang@va}{ca-ES-valencia}
+\@namedef{didacta@pdflang@ca}{ca-ES}
+\@namedef{didacta@pdflang@gl}{gl-ES}
+\@namedef{didacta@pdflang@eu}{eu-ES}
+\@namedef{didacta@pdflang@en}{en}
+\@namedef{didacta@pdflang@fr}{fr-FR}
+\@namedef{didacta@pdflang@de}{de-DE}
+\@namedef{didacta@pdflang@it}{it-IT}
+\@namedef{didacta@pdflang@pt}{pt-PT}
+\def\didacta@beamer{beamer}
+\@ifundefined{DidactaTagged}{}{%
+  \ifx\didacta@class\didacta@beamer\else
+    \@ifundefined{DocumentMetadata}{%
+      \errmessage{Didacta: el PDF accesible necesita el LaTeX de 2025 o
+        posterior (\string\DocumentMetadata)}%
+    }{%
+      \@ifundefined{didacta@pdflang@\DidactaLanguage}{%
+        \edef\didacta@tagged@lang{\DidactaLanguage}%
+      }{%
+        \edef\didacta@tagged@lang{%
+          \csname didacta@pdflang@\DidactaLanguage\endcsname}%
+      }%
+      \edef\didacta@tagged{\noexpand\DocumentMetadata{%
+        lang=\didacta@tagged@lang,pdfversion=2.0,pdfstandard=ua-2,%
+        tagging=on}}%
+      \didacta@tagged
+    }%
+  \fi
+}
+%% \DocumentMetadata carga lo suyo y deja la arroba como la encontró el
+%% documento, que no es como la necesita lo de abajo.
+\makeatletter
+
 \expandafter\documentclass\expandafter[\didacta@classoptions]{\didacta@class}
 
 \makeatother

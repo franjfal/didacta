@@ -25,6 +25,11 @@
 /// tiene uno. Eso no se descubre editando; se descubre cuando otra persona va
 /// a dar la clase.
 ///
+/// **Los snippets que no coinciden.** Un snippet que está en dos
+/// repositorios es uno: el mismo `\begin{resumen}` tiene que salir igual
+/// compile quien compile. Si uno cambió la definición y el otro no, sale
+/// distinto según la máquina, y eso no lo ve nadie mirando un solo PDF.
+///
 /// Nada se resuelve solo. Son ficheros que pueden ser de otra persona, y
 /// propagar el valor «más nuevo» por cuenta propia deshace el cambio de quien
 /// todavía no lo ha enviado. Se enseña, se explica, y se pulsa.
@@ -37,12 +42,16 @@ library;
 import 'package:flutter/material.dart';
 
 import '../model/catalogue.dart';
+import '../model/latex_snippets.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'manage_blocks.dart';
+import 'manage_snippets.dart';
+import 'problem.dart';
 import 'shell.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class BetweenReposPage extends StatelessWidget {
   const BetweenReposPage({super.key});
@@ -53,26 +62,33 @@ class BetweenReposPage extends StatelessWidget {
     final conflicts = session.catalogue.metadataConflicts;
     final crossing = session.catalogue.crossRepoUses;
     final orphans = session.catalogue.undeclaredBlocks;
-    final total = conflicts.length + crossing.length + orphans.length;
+    final snippets = session.snippetConflicts;
+    final total =
+        conflicts.length + crossing.length + orphans.length + snippets.length;
 
     return Column(
       children: [
         PageHeader(
-          title: 'Entre repositorios',
-          subtitle: total == 0 ? 'Todo cuadra' : '$total cosa(s) por mirar',
+          title: tr('Entre repositorios'),
+          subtitle: total == 0
+              ? tr('Todo cuadra')
+              : tr('{0} cosa(s) por mirar', [total]),
         ),
         Expanded(
           child: ListView(
             padding: const EdgeInsets.only(bottom: 28),
             children: [
-              const SectionLabel('Metadatos que no coinciden'),
+              SectionLabel(tr('Metadatos que no coinciden')),
               _ConflictsSection(session: session),
 
-              const SectionLabel('Lecciones sin bloque'),
+              SectionLabel(tr('Lecciones sin bloque')),
               _OrphanBlocksSection(session: session, blocks: orphans),
 
-              const SectionLabel('Documentos que llaman fuera'),
+              SectionLabel(tr('Documentos que llaman fuera')),
               _CrossingSection(session: session, uses: crossing),
+
+              SectionLabel(tr('Snippets que no coinciden')),
+              _SnippetsSection(session: session, conflicts: snippets),
             ],
           ),
         ),
@@ -107,26 +123,30 @@ class _OrphanBlocksSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Cada lección dice a qué parte de la asignatura pertenece, y '
-              'quién es cada bloque lo declara un `taxonomy.yaml` que puede '
-              'estar en otro repositorio. Estas nombran uno que no declara '
-              'ninguno de los abiertos: se ven enteras, pero el bloque sale '
-              'por su id.',
+            Text(
+              tr(
+                'Cada lección dice a qué parte de la asignatura pertenece, y '
+                'quién es cada bloque lo declara un `taxonomy.yaml` que puede '
+                'estar en otro repositorio. Estas nombran uno que no declara '
+                'ninguno de los abiertos: se ven enteras, pero el bloque sale '
+                'por su id.',
+              ),
               style: TextStyle(fontSize: 12.5, height: 1.45),
             ),
             const SizedBox(height: 10),
             if (blocks.isEmpty)
-              const Note('Todas las lecciones tienen su bloque declarado.')
+              Note(tr('Todas las lecciones tienen su bloque declarado.'))
             else ...[
               for (final id in blocks)
                 _OrphanBlockRow(session: session, id: id),
               const SizedBox(height: 6),
-              const Note(
-                'Si el bloque es de otra persona, lo que falta es abrir su '
-                'repositorio: declararlo aquí crea un segundo sitio donde '
-                'vive el mismo nombre, y entonces pueden discrepar.',
-                tone: didactaTeacher,
+              Note(
+                tr(
+                  'Si el bloque es de otra persona, lo que falta es abrir su '
+                  'repositorio: declararlo aquí crea un segundo sitio donde '
+                  'vive el mismo nombre, y entonces pueden discrepar.',
+                ),
+                tone: context.palette.teacher,
               ),
             ],
           ],
@@ -157,8 +177,8 @@ class _OrphanBlockRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: didactaSurface,
-        border: Border.all(color: didactaRule),
+        color: context.palette.surface,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Column(
@@ -180,13 +200,13 @@ class _OrphanBlockRow extends StatelessWidget {
                 TextButton(
                   key: Key('declare-orphan-$id'),
                   onPressed: () => declareNamedBlock(context, session, id),
-                  child: const Text('Declararlo'),
+                  child: Text(tr('Declararlo')),
                 ),
                 if (session.catalogue.blocks.isNotEmpty)
                   TextButton(
                     key: Key('move-orphan-$id'),
                     onPressed: () => moveBlockLessons(context, session, id),
-                    child: const Text('Mover sus lecciones'),
+                    child: Text(tr('Mover sus lecciones')),
                   ),
               ],
             ],
@@ -199,13 +219,13 @@ class _OrphanBlockRow extends StatelessWidget {
             children: [
               Text(
                 units.length == 1
-                    ? 'lo nombra 1 lección'
-                    : 'lo nombran ${units.length} lecciones',
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                    ? tr('lo nombra 1 lección')
+                    : tr('lo nombran {0} lecciones', [units.length]),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
-              const Text(
+              Text(
                 'en',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
               for (final repo in repos)
                 RepoChip(
@@ -242,25 +262,29 @@ class _CrossingSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Un documento y las unidades que compone tienen que estar en el '
-              'mismo repositorio. LaTeX las busca bajo una sola raíz, así que '
-              'esto compila en tu máquina --que tiene los dos-- y no compila '
-              'en la de quien solo tenga uno.',
+            Text(
+              tr(
+                'Un documento y las unidades que compone tienen que estar en el '
+                'mismo repositorio. LaTeX las busca bajo una sola raíz, así que '
+                'esto compila en tu máquina --que tiene los dos-- y no compila '
+                'en la de quien solo tenga uno.',
+              ),
               style: TextStyle(fontSize: 12.5, height: 1.45),
             ),
             const SizedBox(height: 10),
             if (uses.isEmpty)
-              const Note('Ningún documento llama fuera de su repositorio.')
+              Note(tr('Ningún documento llama fuera de su repositorio.'))
             else ...[
               for (final use in uses) _CrossingRow(session: session, use: use),
               const SizedBox(height: 6),
-              const Note(
-                'Se arregla moviendo la unidad al repositorio del documento, '
-                'o el documento al de la unidad. Las dos cosas cambian dónde '
-                'vive material que puede estar usando otra persona, así que '
-                'no se hacen desde aquí.',
-                tone: didactaTeacher,
+              Note(
+                tr(
+                  'Se arregla moviendo la unidad al repositorio del documento, '
+                  'o el documento al de la unidad. Las dos cosas cambian dónde '
+                  'vive material que puede estar usando otra persona, así que '
+                  'no se hacen desde aquí.',
+                ),
+                tone: context.palette.teacher,
               ),
             ],
           ],
@@ -284,8 +308,8 @@ class _CrossingRow extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 8),
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
-      color: didactaSurface,
-      border: Border.all(color: didactaRule),
+      color: context.palette.surface,
+      border: Border.all(color: context.palette.rule),
       borderRadius: BorderRadius.circular(4),
     ),
     child: Column(
@@ -308,7 +332,7 @@ class _CrossingRow extends StatelessWidget {
                 context,
                 Routes.document(use.course, use.year, use.document),
               ),
-              child: const Text('Abrir'),
+              child: Text(tr('Abrir')),
             ),
           ],
         ),
@@ -322,9 +346,9 @@ class _CrossingRow extends StatelessWidget {
               use.reference,
               style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
             ),
-            const Text(
-              'está en',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('está en'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             RepoChip(
               colour: session.colourOf(use.unitRepo) ?? 0xFF62697A,
@@ -332,9 +356,9 @@ class _CrossingRow extends StatelessWidget {
                   session.workspace.byId(use.unitRepo)?.label ?? use.unitRepo,
               compact: true,
             ),
-            const Text(
-              'y el documento en',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('y el documento en'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             RepoChip(
               colour: session.colourOf(use.documentRepo) ?? 0xFF62697A,
@@ -366,15 +390,17 @@ class _ConflictsSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Una asignatura --o un grado, o un bloque-- declarada en dos '
-                'repositorios tiene que decir lo mismo en los dos. Si no, lo '
-                'que se enseña depende de en qué orden se abrieron.',
+              Text(
+                tr(
+                  'Una asignatura --o un grado, o un bloque-- declarada en dos '
+                  'repositorios tiene que decir lo mismo en los dos. Si no, lo '
+                  'que se enseña depende de en qué orden se abrieron.',
+                ),
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
               const SizedBox(height: 10),
               if (conflicts.isEmpty)
-                const Note('Todo coincide.')
+                Note(tr('Todo coincide.'))
               else
                 for (final conflict in conflicts)
                   _ConflictRow(session: session, conflict: conflict),
@@ -397,23 +423,29 @@ class _ConflictRow extends StatelessWidget {
     margin: const EdgeInsets.only(bottom: 8),
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(
-      color: didactaSurface,
-      border: Border.all(color: didactaRule),
+      color: context.palette.surface,
+      border: Border.all(color: context.palette.rule),
       borderRadius: BorderRadius.circular(4),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(switch (conflict.about) {
-          ConflictAbout.degree =>
-            'Grado ${conflict.course} · '
-                '${conflict.field}',
-          ConflictAbout.block =>
-            'Bloque ${conflict.course} · '
-                '${conflict.field}',
-          ConflictAbout.template =>
-            'Plantilla ${conflict.course} · '
-                '${conflict.field}',
+          ConflictAbout.degree => tr(
+            'Grado {0} · '
+            '{1}',
+            [conflict.course, conflict.field],
+          ),
+          ConflictAbout.block => tr(
+            'Bloque {0} · '
+            '{1}',
+            [conflict.course, conflict.field],
+          ),
+          ConflictAbout.template => tr(
+            'Plantilla {0} · '
+            '{1}',
+            [conflict.course, conflict.field],
+          ),
           ConflictAbout.course => '${conflict.course} · ${conflict.field}',
         }, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
@@ -445,28 +477,32 @@ class _ConflictRow extends StatelessWidget {
                   onPressed: conflict.fixable
                       ? () => _use(context, entry.value)
                       : null,
-                  child: const Text('Usar este'),
+                  child: Text(tr('Usar este')),
                 ),
               ],
             ),
           ),
         if (!conflict.fixable)
           Note(switch (conflict.about) {
-            ConflictAbout.degree =>
+            ConflictAbout.degree => tr(
               'De un grado solo se puede igualar el título desde aquí. '
-                  'Lo demás, a mano en `degrees.yaml`.',
-            ConflictAbout.block =>
+              'Lo demás, a mano en `degrees.yaml`.',
+            ),
+            ConflictAbout.block => tr(
               'De un bloque solo se puede igualar el nombre desde aquí. '
-                  'Lo demás, a mano en `taxonomy.yaml`.',
-            ConflictAbout.template =>
+              'Lo demás, a mano en `taxonomy.yaml`.',
+            ),
+            ConflictAbout.template => tr(
               'De una plantilla solo se puede igualar el nombre desde aquí. '
-                  'La clase y las opciones se cambian editándola: cambiar a '
-                  'distancia qué PDF sale es algo que se mira antes de '
-                  'pulsar.',
-            ConflictAbout.course =>
+              'La clase y las opciones se cambian editándola: cambiar a '
+              'distancia qué PDF sale es algo que se mira antes de '
+              'pulsar.',
+            ),
+            ConflictAbout.course => tr(
               'Este campo hay que igualarlo a mano: Didacta no sabe en '
-                  'qué línea de `course.yaml` se escribe.',
-          }, tone: didactaTeacher),
+              'qué línea de `course.yaml` se escribe.',
+            ),
+          }, tone: context.palette.teacher),
       ],
     ),
   );
@@ -503,21 +539,194 @@ class _ConflictRow extends StatelessWidget {
         SnackBar(
           content: Text(
             written == 0
-                ? 'No se ha podido escribir en ningún repositorio.'
+                ? tr('No se ha podido escribir en ningún repositorio.')
                 : written == 1
-                ? 'Igualado en un repositorio, como un commit.'
-                : 'Igualado en $written repositorios.',
+                ? tr('Igualado en un repositorio.')
+                : tr('Igualado en {0} repositorios.', [written]),
           ),
         ),
       );
     } catch (error) {
+      showProblemIn(messenger, error);
+    }
+  }
+}
+
+/// Los snippets que dos repositorios declaran distinto.
+///
+/// Uno a uno y entero, no campo a campo como los metadatos: un snippet es su
+/// definición, su nombre y sus argumentos juntos, y quedarse con el rótulo de
+/// uno y la definición de otro da un snippet que no ha escrito nadie. Se
+/// elige de qué repositorio es el bueno, y ese se copia en los demás.
+class _SnippetsSection extends StatelessWidget {
+  const _SnippetsSection({required this.session, required this.conflicts});
+
+  final Session session;
+  final List<SnippetConflict> conflicts;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    child: Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              tr(
+                'Un snippet declarado en dos repositorios tiene que decir lo '
+                'mismo en los dos: si no, el mismo \\begin sale distinto según '
+                'dónde se compile. Elige cuál es el bueno y se copia en los '
+                'demás.',
+              ),
+              style: TextStyle(fontSize: 12.5, height: 1.45),
+            ),
+            const SizedBox(height: 10),
+            if (conflicts.isEmpty)
+              Note(tr('Todos los snippets dicen lo mismo en todas partes.'))
+            else
+              for (final conflict in conflicts)
+                _SnippetConflictRow(session: session, conflict: conflict),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _SnippetConflictRow extends StatelessWidget {
+  const _SnippetConflictRow({required this.session, required this.conflict});
+
+  final Session session;
+  final SnippetConflict conflict;
+
+  @override
+  Widget build(BuildContext context) {
+    final entry = conflict.entry;
+    return Container(
+      key: Key('snippet-conflict-${conflict.id}'),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: context.palette.rule),
+        borderRadius: BorderRadius.circular(Radii.control),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.call_split, size: 15, color: context.palette.teacher),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  tr(
+                    'Snippet «{0}» · '
+                    '{1}',
+                    [entry.shown.label, conflict.differences.keys.join(', ')],
+                  ),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () =>
+                    showSnippetEditor(context, session: session, entry: entry),
+                child: Text(tr('Abrir')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (final field in conflict.differences.entries) ...[
+            Text(
+              field.key,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: context.palette.muted,
+              ),
+            ),
+            const SizedBox(height: 3),
+            for (final value in field.value.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 120,
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: RepoChip(
+                          colour: snippetRepoColour(session, value.key),
+                          label:
+                              session.workspace.byId(value.key)?.label ??
+                              value.key,
+                          compact: true,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        value.value.isEmpty ? '(nada)' : value.value,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: monoStyle.copyWith(
+                          fontSize: 11.5,
+                          color: value.value.isEmpty
+                              ? context.palette.muted
+                              : context.palette.ink,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 6),
+          ],
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final repo in entry.byRepo.keys)
+                OutlinedButton(
+                  key: Key('use-snippet-${conflict.id}-from-$repo'),
+                  onPressed: () => _use(context, repo),
+                  child: Text(
+                    tr(
+                      'Quedarse con el de '
+                      '{0}',
+                      [session.workspace.byId(repo)?.label ?? repo],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _use(BuildContext context, String repo) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final written = await session.useSnippetFrom(id: conflict.id, repo: repo);
       messenger.showSnackBar(
         SnackBar(
-          content: Text('$error'),
-          backgroundColor: didactaTeacher,
-          duration: const Duration(seconds: 7),
+          content: Text(
+            written == 0
+                ? tr('No se ha podido escribir en ningún repositorio.')
+                : written == 1
+                ? tr('Igualado en un repositorio.')
+                : tr('Igualado en {0} repositorios.', [written]),
+          ),
         ),
       );
+    } catch (error) {
+      showProblemIn(messenger, error);
     }
   }
 }

@@ -11,6 +11,11 @@
 /// schema version it was not written for rather than misinterpret it.
 library;
 
+import 'fuzzy.dart' as fuzzy;
+import 'latex_snippets.dart';
+import 'slug.dart';
+import '../l10n/tr.dart';
+
 /// The index schema this code understands. The generator writes the same
 /// number; a mismatch is reported rather than guessed at, because a field that
 /// silently changed meaning is worse than a file that fails to load.
@@ -23,7 +28,7 @@ class CatalogueFormatException implements Exception {
   final String message;
 
   @override
-  String toString() => 'CatalogueFormatException: $message';
+  String toString() => tr('CatalogueFormatException: {0}', [message]);
 }
 
 /// The state of one language of one unit.
@@ -75,6 +80,27 @@ enum TranslationStatus {
       this == TranslationStatus.outdated ||
       this == TranslationStatus.draft;
 }
+
+/// The statuses a file may declare. `missing` and `outdated` are computed by
+/// the engine and deliberately absent: writing either down guarantees it goes
+/// stale.
+const List<String> declarableStatuses = [
+  'draft',
+  'translated',
+  'reviewed',
+  'source',
+];
+
+/// Cómo se llama cada estado para quien lo lee.
+String statusName(TranslationStatus status) => switch (status) {
+  TranslationStatus.source => 'original',
+  TranslationStatus.reviewed => 'revisada',
+  TranslationStatus.translated => 'traducida',
+  // «Borrador» decía qué es y no qué hay que hacer con ello.
+  TranslationStatus.draft => tr('sin revisar'),
+  TranslationStatus.outdated => 'desactualizada',
+  TranslationStatus.missing => tr('no existe'),
+};
 
 /// Una ubicación de una lección: un documento de un año de una asignatura.
 ///
@@ -298,15 +324,30 @@ class Unit {
       statuses[language] ?? TranslationStatus.missing;
 
   /// Text a search box should match against: everything a person might type.
-  String get searchable => [
-    path,
-    id,
-    ...titles.values,
-    ...tags,
-    kind,
-    category,
-    topic,
-  ].join(' ').toLowerCase();
+  ///
+  /// Sin tildes y en minúsculas, como lo que se escribe en el buscador: quien
+  /// busca «limite» busca «Límite», y teclear las tildes para encontrar algo
+  /// es pedir que se sepa cómo lo escribió otro.
+  ///
+  /// Una vez por unidad: se pregunta por cada una en cada letra que se
+  /// teclea en el buscador, y plegar las tildes de dos mil textos a cada
+  /// letra era lo que hacía que la biblioteca fuera a trompicones.
+  String get searchable => _searchable[this] ??= fold(
+    [
+      path,
+      id,
+      ...titles.values,
+      ...tags,
+      kind,
+      category,
+      topic,
+    ].join(' ').toLowerCase(),
+  );
+
+  /// Las palabras de [searchable], para buscar con una errata. Ver
+  /// `fuzzy.dart`. Una vez por unidad, como aquel.
+  Set<String> get searchTokens =>
+      _searchTokens[this] ??= fuzzy.searchTokens(searchable);
 }
 
 /// One compilable document inside a course year.
@@ -682,7 +723,7 @@ class CourseYear {
     final added = <Document>[];
     for (final document in other.documents) {
       if (known.contains(document.id)) {
-        conflicts.add('${document.id} está en dos repositorios');
+        conflicts.add(tr('{0} está en dos repositorios', [document.id]));
         continue;
       }
       added.add(document);
@@ -774,6 +815,16 @@ class CourseYear {
 
   /// Los repositorios que aportan algo a este año.
   Set<String> get repos => {for (final document in documents) document.repo};
+
+  /// Los repositorios donde este año existe: los que aportan documentos, y
+  /// también los que de momento solo declaran sus temas o guardan sus
+  /// versiones congeladas. Duplicar o quitar el año tiene que llegar a todos,
+  /// y [repos] se deja fuera a esos últimos.
+  Set<String> get presentIn => {
+    ...repos,
+    for (final theme in themes) theme.repo,
+    for (final freeze in freezes) freeze.repo,
+  };
 
   /// Los documentos repartidos en temas, en el orden en que se dan.
   ///
@@ -1146,8 +1197,8 @@ class MetadataConflict {
 
   @override
   String toString() =>
-      '$course · $field: ${values.entries.map((e) => '${e.key} dice '
-          '«${e.value}»').join(' y ')}';
+      '$course · $field: ${values.entries.map((e) => tr('{0} dice '
+      '«{1}»', [e.key, e.value])).join(' y ')}';
 }
 
 /// A subject, across the years it has run.
@@ -1337,9 +1388,11 @@ class CrossRepoUse {
   final String unitRepo;
 
   @override
-  String toString() =>
-      '$course $year · $document (en $documentRepo) llama a $reference, '
-      'que está en $unitRepo';
+  String toString() => tr(
+    '{0} {1} · {2} (en {3}) llama a {4}, '
+    'que está en {5}',
+    [course, year, document, documentRepo, reference, unitRepo],
+  );
 }
 
 /// An output profile, so the interface can offer what exists rather than a
@@ -1517,10 +1570,10 @@ class OutputTemplate {
   /// `problems` o `problems-answers`. Entregar a una clase la hoja
   /// equivocada es el fallo que esto viene a impedir.
   String get shows => switch (reveals) {
-    'answers' => 'enunciados y resultados',
-    'solutions' => 'enunciados, resultados y solución',
-    'teacher' => 'todo, con la solución paso a paso',
-    _ => 'solo los enunciados',
+    'answers' => tr('enunciados y resultados'),
+    'solutions' => tr('enunciados, resultados y solución'),
+    'teacher' => tr('todo, con la solución paso a paso'),
+    _ => tr('solo los enunciados'),
   };
 
   /// La misma, declarada por [repo].
@@ -1697,6 +1750,7 @@ class Catalogue {
     required this.profiles,
     required this.errors,
     this.shared = const [],
+    this.snippets = const {},
   });
 
   /// Builds from the three index files.
@@ -1717,14 +1771,17 @@ class Catalogue {
       final version = (entry.value['schemaVersion'] as num?)?.toInt();
       if (version == null) {
         throw CatalogueFormatException(
-          '${entry.key}.json has no schemaVersion',
+          tr('{0}.json has no schemaVersion', [entry.key]),
         );
       }
       if (version != supportedSchemaVersion) {
         throw CatalogueFormatException(
-          '${entry.key}.json is schema $version; this app reads '
-          '$supportedSchemaVersion. Regenerate with `didacta index`, or '
-          'update the app.',
+          tr(
+            '{0}.json is schema {1}; this app reads '
+            '{2}. Regenerate with `didacta index`, or '
+            'update the app.',
+            [entry.key, version, supportedSchemaVersion],
+          ),
         );
       }
     }
@@ -1733,7 +1790,7 @@ class Catalogue {
     final defaultLanguage = manifest['defaultLanguage'] as String? ?? 'es';
 
     return Catalogue(
-      name: manifest['name'] as String? ?? 'Didacta',
+      name: manifest['name'] as String? ?? tr('Didacta'),
       languages: languages,
       available: [
         for (final item
@@ -1799,10 +1856,32 @@ class Catalogue {
           ),
       ],
       errors: _stringList(manifest['errors']),
+      // Los snippets de la barra, por repositorio. Null --no hay
+      // `snippets.yaml`, o el índice es de antes-- es «los de serie», y no
+      // «ninguno»: ver [CatalogueSnippets.snippetsIn].
+      snippets: {
+        repo: manifest['snippets'] is List
+            ? [
+                for (final item in manifest['snippets'] as List)
+                  SnippetDeclaration.fromJson(
+                    (item as Map).cast<String, dynamic>(),
+                  ),
+              ]
+            : null,
+      },
     );
   }
 
   final String name;
+
+  /// Lo que declara cada repositorio en su `snippets.yaml`, por id de
+  /// repositorio, sin resolver. Null para uno que no tiene fichero.
+  ///
+  /// Sin fundir, al revés que las plantillas: un snippet se ofrece en el
+  /// repositorio que lo declara y en ninguno más, así que lo que importa es
+  /// qué dice cada uno. La biblioteca junta y compara --ver
+  /// [CatalogueSnippets]--.
+  final Map<String, List<SnippetDeclaration>?> snippets;
 
   /// A los que este repositorio traduce.
   final List<String> languages;
@@ -2078,6 +2157,7 @@ class Catalogue {
       // cursos de dos repositorios distintos, y el grupo es el de los dos.
       shared: _mergedShared(parts),
       errors: [for (final part in parts) ...part.errors, ...conflicts],
+      snippets: {for (final part in parts) ...part.snippets},
     );
   }
 
@@ -2247,13 +2327,15 @@ class Catalogue {
 
   /// La unidad en esa ruta. Con varios repositorios hay que decir en cuál:
   /// la misma ruta puede existir en dos y son unidades distintas.
+  ///
+  /// Por un mapa y no recorriendo la lista: la página de un curso pregunta
+  /// por cada referencia de cada documento en cada redibujado, y con dos mil
+  /// unidades eran del orden de diez millones de comparaciones.
   Unit? unitByPath(String path, {String? repo}) {
-    for (final unit in units) {
-      if (unit.path != path) continue;
-      if (repo != null && repo.isNotEmpty && unit.repo != repo) continue;
-      return unit;
-    }
-    return null;
+    final index = _unitIndex[this] ??= _indexUnits(units);
+    return index[repo == null || repo.isEmpty
+        ? '\u0000$path'
+        : '$repo\u0000$path'];
   }
 
   /// Units a composition reference resolves to, matching the engine's rule:
@@ -2676,7 +2758,10 @@ class Catalogue {
   /// El motor no puede verlo --`didacta check` mira un repositorio y desde
   /// allí la unidad simplemente no existe-- así que lo ve quien tiene los dos
   /// delante, que es esto.
-  List<CrossRepoUse> get crossRepoUses {
+  List<CrossRepoUse> get crossRepoUses =>
+      _crossRepo[this] ??= List.unmodifiable(_findCrossRepoUses());
+
+  List<CrossRepoUse> _findCrossRepoUses() {
     final uses = <CrossRepoUse>[];
     for (final course in courses) {
       for (final entry in course.years.entries) {
@@ -2713,6 +2798,26 @@ class Catalogue {
     }
     return unitByPath(trimmed, repo: repo);
   }
+}
+
+/// El índice de unidades de cada catálogo, hecho la primera vez que se pide.
+///
+/// Fuera de la clase porque `Catalogue` es constante y no puede llevar campos
+/// perezosos; un `Expando` se olvida de él cuando se olvida el catálogo.
+final Expando<Map<String, Unit>> _unitIndex = Expando('unitIndex');
+final Expando<String> _searchable = Expando('searchable');
+final Expando<Set<String>> _searchTokens = Expando('searchTokens');
+final Expando<List<CrossRepoUse>> _crossRepo = Expando('crossRepoUses');
+
+/// Por `repositorio + ruta`, y por la ruta sola para la primera que la tenga
+/// --en el orden de la lista--, que es lo que contestaba recorrerla.
+Map<String, Unit> _indexUnits(List<Unit> units) {
+  final index = <String, Unit>{};
+  for (final unit in units) {
+    index.putIfAbsent('${unit.repo}\u0000${unit.path}', () => unit);
+    index.putIfAbsent('\u0000${unit.path}', () => unit);
+  }
+  return index;
 }
 
 List<String> _stringList(Object? value) => [

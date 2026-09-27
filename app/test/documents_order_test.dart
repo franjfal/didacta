@@ -195,8 +195,43 @@ void main() {
     });
   });
 
-  group('contra el repositorio de verdad', () {
+  group('contra la muestra fija de test/fixtures/years', () {
+    // Las mismas dos comprobaciones que contra el repositorio de verdad, pero
+    // sobre unos ficheros que no cambian: esas dependen de cómo esté el
+    // material ese día, y estas no. Salieron de un fallo de verdad: un
+    // documento de una línea pegado al siguiente ganaba una línea en blanco
+    // al «reordenarlo» al mismo orden.
+    final files = [
+      for (final file in Directory('test/fixtures/years').listSync())
+        if (file is File && file.path.endsWith('.yaml')) file,
+    ];
+
+    test('hay muestra', () => expect(files, hasLength(greaterThan(1))));
+
     test('reordenar al mismo orden no cambia ni un byte', () {
+      for (final file in files) {
+        final text = file.readAsStringSync();
+        final composition = CompositionFile(text);
+        composition.setDocumentOrder(composition.documentIds());
+        expect(composition.text, text, reason: file.path);
+      }
+    });
+
+    test('dar la vuelta al orden y deshacerlo devuelve el fichero', () {
+      for (final file in files) {
+        final text = file.readAsStringSync();
+        final ids = CompositionFile(text).documentIds();
+        final reversed = ids.reversed.toList();
+        final moved = CompositionFile(text)..setDocumentOrder(reversed);
+        expect(CompositionFile(moved.text).documentIds(), reversed);
+        final back = CompositionFile(moved.text)..setDocumentOrder(ids);
+        expect(back.text, text, reason: file.path);
+      }
+    });
+  });
+
+  group('contra el repositorio de verdad', () {
+    test('reordenar al mismo orden no cambia ni un byte', tags: 'real', () {
       final files = realYears();
       if (files.isEmpty) {
         markTestSkipped('sin didacta_db al lado');
@@ -212,35 +247,39 @@ void main() {
       }
     });
 
-    test('dar la vuelta al orden y deshacerlo devuelve el fichero', () {
-      final files = realYears();
-      if (files.isEmpty) {
-        markTestSkipped('sin didacta_db al lado');
-        return;
-      }
-      var checked = 0;
-      for (final file in files) {
-        final text = file.readAsStringSync();
-        final ids = CompositionFile(text).documentIds();
-        if (ids.length < 2) continue;
-        final reversed = ids.reversed.toList();
-        final moved = CompositionFile(text)..setDocumentOrder(reversed);
-        expect(
-          CompositionFile(moved.text).documentIds(),
-          reversed,
-          reason: file.path,
-        );
-        final back = CompositionFile(moved.text)..setDocumentOrder(ids);
-        expect(back.text, text, reason: file.path);
-        checked += 1;
-      }
-      // Sin exigir cuántos: el repositorio de contenido se vacía y se vuelve
-      // a llenar --acaba de pasar-- y un test que dependa de cuánto material
-      // haya hoy falla por algo que no es un fallo. Lo que sujeta esto es
-      // que ninguno de los que haya cambie al ir y volver.
-      if (checked == 0) {
-        markTestSkipped('ningún año con dos documentos todavía');
-      }
-    });
+    test(
+      'dar la vuelta al orden y deshacerlo devuelve el fichero',
+      tags: 'real',
+      () {
+        final files = realYears();
+        if (files.isEmpty) {
+          markTestSkipped('sin didacta_db al lado');
+          return;
+        }
+        var checked = 0;
+        for (final file in files) {
+          final text = file.readAsStringSync();
+          final ids = CompositionFile(text).documentIds();
+          if (ids.length < 2) continue;
+          final reversed = ids.reversed.toList();
+          final moved = CompositionFile(text)..setDocumentOrder(reversed);
+          expect(
+            CompositionFile(moved.text).documentIds(),
+            reversed,
+            reason: file.path,
+          );
+          final back = CompositionFile(moved.text)..setDocumentOrder(ids);
+          expect(back.text, text, reason: file.path);
+          checked += 1;
+        }
+        // Sin exigir cuántos: el repositorio de contenido se vacía y se vuelve
+        // a llenar --acaba de pasar-- y un test que dependa de cuánto material
+        // haya hoy falla por algo que no es un fallo. Lo que sujeta esto es
+        // que ninguno de los que haya cambie al ir y volver.
+        if (checked == 0) {
+          markTestSkipped('ningún año con dos documentos todavía');
+        }
+      },
+    );
   });
 }

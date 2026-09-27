@@ -18,7 +18,6 @@
 library;
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
@@ -26,37 +25,55 @@ import '../data/catalogue_source.dart';
 import '../data/secrets.dart';
 import '../data/translation_secrets.dart';
 import '../data/compiler.dart';
+import '../data/diagnostics.dart';
 import '../data/content_gateway.dart';
+import '../data/draft_store.dart';
 import '../data/course_admin.dart';
 import '../data/frozen.dart';
-import '../data/disk_watch.dart';
+import '../data/engine_pin.dart';
 import '../data/file_manager.dart';
 import '../data/legacy_identity.dart';
+import '../data/notifier.dart';
 import '../data/github.dart';
-import '../data/indenter.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../data/template_store.dart';
 import '../data/toolchain.dart';
 import '../model/catalogue.dart';
-import '../model/composition_file.dart';
-import '../model/degrees_file.dart';
+import '../model/file_history.dart' show FileCommit;
 import '../model/folder_safety.dart';
+import '../model/github_credential.dart';
+import '../model/glossary.dart';
+import '../model/latex_snippets.dart';
 import '../model/slug.dart';
 import '../model/synced_prefs.dart';
-import '../model/taxonomy_file.dart';
-import '../model/templates_file.dart';
-import '../model/themes_file.dart';
-import '../model/translation.dart' show TranslationProvider;
 import '../data/translator.dart';
 import '../model/translation_memory.dart';
 import '../model/translation_run.dart';
 import '../model/workspace.dart';
-import '../model/yaml_patch.dart';
-import '../ui/metadata_editor.dart' show declarableStatuses;
-import '../ui/theme.dart' show statusName;
+import '../model/saved_search.dart';
+import '../model/text_search.dart';
+import 'auth_state.dart';
 import 'build_console.dart';
+import 'build_service.dart';
+import 'catalogue_editor.dart';
+import 'catalogue_store.dart';
+import 'engine_service.dart';
+import 'freeze_service.dart';
 import 'history.dart';
+import 'languages.dart';
+import 'library_prefs.dart';
+import 'repo_sync.dart';
+import 'repositories.dart';
+import 'startup.dart';
+import 'translation_service.dart';
+import 'unsaved_work.dart';
+import 'work_settings.dart';
+import '../l10n/tr.dart';
+
+export 'auth_state.dart' show KeychainProblem, SignInState;
+export 'repositories.dart' show AppAccessMissing, MaterialCiException;
+export 'translation_service.dart' show TranslationBatch, TranslationTask;
 
 /// El repositorio del motor: éste mismo.
 ///
@@ -74,28 +91,6 @@ const String engineRepo = String.fromEnvironment(
 
 /// Where the app is in bringing itself up.
 enum LoadState { loading, ready, failed }
-
-/// Si hay sesión de GitHub, que es lo que decide si Didacta se abre.
-///
-/// Tres estados y no un booleano, porque el tercero es real y confundirlo con
-/// «no» tiene consecuencias: al arrancar, leer el llavero tarda, y durante ese
-/// rato la respuesta no es «no ha entrado» sino **todavía no se sabe**. Con un
-/// booleano, cada arranque enseñaría la pantalla de entrar durante un
-/// parpadeo antes de abrir la biblioteca.
-enum SignInState {
-  /// Leyendo el llavero. No se sabe.
-  checking,
-
-  /// Hay credencial guardada y GitHub no la ha rechazado.
-  ///
-  /// Sin red también es esto. Lo que se exige es **haber entrado**, no estar
-  /// conectado: un aula sin wifi no puede dejar a nadie sin sus diapositivas,
-  /// y el trabajo está en un clon del disco.
-  signedIn,
-
-  /// No hay credencial, o GitHub ha dicho que ya no vale.
-  signedOut,
-}
 
 /// Lo que un repositorio tiene esperando para enviarse a GitHub.
 class RepoOutbox {
@@ -123,13 +118,27 @@ class Session extends ChangeNotifier {
     TranslationSecrets? translationSecrets,
     Preferences? preferences,
     this.files = const FileManager(),
+    this.notifier = const SystemNotifier(),
     this.forgetLegacy = forgetLegacyData,
+    DraftStore? drafts,
   }) : preferences = preferences ?? MemoryPreferences(),
-       translationSecrets = translationSecrets ?? KeychainTranslationSecrets();
+       translationSecrets = translationSecrets ?? KeychainTranslationSecrets(),
+       drafts = drafts ?? MemoryDraftStore();
+
+  /// Dónde se copia lo que se escribe y no se ha guardado todavía. Ver
+  /// `data/draft_store.dart`. En memoria salvo que se diga otra cosa: la
+  /// aplicación pone el del disco, y una prueba no escribe en la carpeta de
+  /// datos de quien la ejecuta.
+  final DraftStore drafts;
 
   /// El explorador de archivos: abrir la carpeta de un repositorio y
   /// mandarla a la Papelera. Las pruebas ponen uno que sólo apunta.
   final FileManager files;
+
+  /// Los avisos del sistema. Las pruebas ponen uno que sólo apunta: un test
+  /// que compila no puede dejar notificaciones en el ordenador de quien lo
+  /// ejecuta.
+  final SystemNotifier notifier;
 
   /// Borrar lo que quede del nombre de antes, al restablecer.
   ///
@@ -147,6 +156,10 @@ class Session extends ChangeNotifier {
   /// el idioma que se está mirando, y porque toda pantalla ya tiene la
   /// sesión a mano.
   final NavigationHistory history = NavigationHistory();
+
+  /// Lo que hay escrito y sin guardar en alguna pantalla. Ver
+  /// `state/unsaved_work.dart`.
+  final UnsavedWork unsaved = UnsavedWork();
 
   /// Donde vive el token de GitHub: el llavero del sistema.
   final SecretStore tokenStore;
@@ -166,13 +179,15 @@ class Session extends ChangeNotifier {
   /// in the keychain.
   final Preferences preferences;
 
-  LoadState _state = LoadState.loading;
-  LoadState get state => _state;
+  /// El catálogo, el índice y la vigilancia del disco: ver [CatalogueStore].
+  late final CatalogueStore catalogueStore = CatalogueStore(
+    this,
+    onChanged: notifyListeners,
+  );
 
-  Object? _error;
-  Object? get error => _error;
+  LoadState get state => catalogueStore.state;
 
-  Catalogue? _catalogue;
+  Object? get error => catalogueStore.error;
 
   /// Throws if read before [state] is ready. Callers inside the shell are
   /// past that point by construction, and an optional catalogue would put a
@@ -187,77 +202,24 @@ class Session extends ChangeNotifier {
   /// Con una versión congelada abierta, **el de aquel commit**: ese es el
   /// punto de abrirla. Lo que la aplicación entera enseña pasa por aquí, así
   /// que ninguna pantalla tiene que preguntar si está mirando el presente.
-  Catalogue get catalogue => _frozen?.catalogue ?? _visible ?? _catalogue!;
+  Catalogue get catalogue =>
+      frozen?.catalogue ?? catalogueStore.visible ?? catalogueStore.full!;
   Catalogue? get catalogueOrNull =>
-      _frozen?.catalogue ?? _visible ?? _catalogue;
+      frozen?.catalogue ?? catalogueStore.visible ?? catalogueStore.full;
 
   /// El catálogo entero, apagados incluidos. Lo mira quien tiene que hablar
   /// de los repositorios en sí: el filtro y los ajustes.
-  Catalogue? get fullCatalogue => _catalogue;
+  Catalogue? get fullCatalogue => catalogueStore.full;
 
-  Catalogue? _visible;
+  /// La carpeta de plantillas del programa, cuando la hay: ver
+  /// [CatalogueStore.templateStore].
+  TemplateStore? get templateStore => catalogueStore.templateStore;
 
-  /// La carpeta de plantillas del programa, cuando la hay.
-  ///
-  /// Null en la web y hasta que se abre. Quien guarde algo ahí no lo tiene en
-  /// ningún repositorio, así que no lo protege git ni lo ve nadie más: ver
-  /// [TemplateStore].
-  TemplateStore? get templateStore => _templateStore;
-  TemplateStore? _templateStore;
-
-  /// Lo que esa carpeta declara, leído por el motor.
-  ///
-  /// Se junta con el catálogo en [_refilter], así que todo lo demás --qué
-  /// ofrece un bloque, qué compila un tema-- las ve como cualquier otra.
-  List<OutputTemplate> _storedTemplates = const [];
-
-  /// Abre la carpeta del programa y lee lo que tenga.
-  ///
-  /// Silencioso si algo va mal: no poder leer las plantillas propias no puede
-  /// impedir abrir la aplicación, y lo que se pierde es una lista, no el
-  /// material.
-  Future<void> loadStoredTemplates() async {
-    try {
-      _templateStore ??= await TemplateStore.open();
-    } catch (_) {
-      // Sin carpeta de datos --una plataforma que no la da, o una prueba sin
-      // canales de plataforma-- no hay plantillas propias, y eso no puede
-      // impedir leer el catálogo.
-      return;
-    }
-    final store = _templateStore;
-    if (store == null || !await store.hasAny) {
-      if (_storedTemplates.isEmpty) return;
-      _storedTemplates = const [];
-      _refilter();
-      notifyListeners();
-      return;
-    }
-    try {
-      final compiler = this.compiler();
-      if (compiler == null) return;
-      _storedTemplates = [
-        for (final template in await compiler.templatesIn(store.directory))
-          template.declaredBy(programTemplates),
-      ];
-    } catch (_) {
-      _storedTemplates = const [];
-    }
-    _refilter();
-    notifyListeners();
-  }
-
-  void _refilter() {
-    // Las del programa se añaden al final y solo si su id no está ya: un
-    // repositorio que declare el mismo id gana, porque lo compartido manda
-    // sobre lo personal.
-    _visible = _catalogue
-        ?.without(_synced.hiddenRepos)
-        .withTemplates(_storedTemplates);
-  }
+  Future<void> loadStoredTemplates() => catalogueStore.loadStoredTemplates();
 
   /// Si un repositorio se está mirando ahora mismo.
-  bool isRepoVisible(String repo) => !_synced.hiddenRepos.contains(repo);
+  bool isRepoVisible(String repo) =>
+      !libraryPrefs.synced.hiddenRepos.contains(repo);
 
   /// Enciende o apaga un repositorio en la interfaz.
   ///
@@ -266,22 +228,31 @@ class Session extends ChangeNotifier {
   /// toca el disco ni vuelve a leer el índice.
   Future<void> setRepoVisible(String repo, bool visible) async {
     if (isRepoVisible(repo) == visible) return;
-    _synced = _synced.withRepoHidden(repo, !visible);
-    _refilter();
-    notifyListeners();
-    await _rememberPrefs();
+    await libraryPrefs.change((prefs) => prefs.withRepoHidden(repo, !visible));
   }
 
-  /// Los repositorios abiertos, en orden.
-  Workspace _workspace = const Workspace.empty();
-  Workspace get workspace => _workspace;
+  /// Los repositorios abiertos, sus pasarelas, abrirlos, añadirlos y
+  /// quitarlos: ver [Repositories].
+  late final Repositories repositories = Repositories(
+    this,
+    onChanged: notifyListeners,
+  );
 
-  /// Una pasarela por repositorio. Cada fichero es de uno y de uno solo.
-  final Map<String, ContentGateway> _gateways = {};
+  /// Los repositorios abiertos, en orden.
+  Workspace get workspace => repositories.workspace;
+
+  /// Los repositorios abiertos, sin pasar por [workspace].
+  ///
+  /// Es lo que leen el catálogo, el índice y las demás piezas de la sesión:
+  /// una prueba que sustituye [workspace] para que una pantalla crea que hay
+  /// un repositorio no puede cambiar de dónde se lee el catálogo.
+  @nonVirtual
+  Workspace get openedWorkspace => repositories.workspace;
 
   /// La del primer repositorio, para lo que no tiene uno en la mano.
-  ContentGateway get gateway =>
-      _gateways.isEmpty ? const UnconfiguredGateway() : _gateways.values.first;
+  ContentGateway get gateway => repositories.gateways.isEmpty
+      ? const UnconfiguredGateway()
+      : repositories.gateways.values.first;
 
   /// La del repositorio de un fichero.
   ///
@@ -293,198 +264,246 @@ class Session extends ChangeNotifier {
     // no en cada pantalla: un editor que pareciera editable y fallara al
     // guardar sería peor que uno que dice desde el principio que esto es una
     // foto de septiembre.
-    final frozen = _frozen;
+    final frozen = freezes.frozen;
     if (frozen != null) return FrozenGateway(view: frozen);
     if (repo == null || repo.isEmpty) return gateway;
-    return _gateways[repo] ??
-        UnconfiguredGateway('No está abierto el repositorio $repo.');
+    return repositories.gateways[repo] ??
+        UnconfiguredGateway(tr('No está abierto el repositorio {0}.', [repo]));
   }
 
   /// Si se puede escribir en el repositorio de un fichero.
   bool canWriteIn(String? repo) => gatewayFor(repo).canWrite;
 
-  GitHubUser? _user;
+  /// La sesión de GitHub. Aparte --ver `auth_state.dart`-- y ofrecida aquí
+  /// con los nombres de siempre.
+  late final AuthState auth = AuthState(
+    tokenStore: tokenStore,
+    preferences: preferences,
+    whoIs: (token) => whoIs(token),
+    onRejected: () async {
+      notifyListeners();
+      await refreshAccess();
+    },
+    renew: (old) => renewCredential(old),
+    // Las pasarelas llevan el token con el que se abrieron: con uno nuevo se
+    // vuelven a abrir, que es lo que hace `refreshAccess`.
+    onRenewed: () => refreshAccess(),
+  );
+
+  /// Pide a GitHub una credencial nueva con la de renovar de [old], con la
+  /// misma App con la que se pidió. Aparte por lo mismo que [whoIs]: es ir a
+  /// GitHub, y las pruebas lo sustituyen.
+  Future<GitHubCredential> renewCredential(GitHubCredential old) async {
+    final github = GitHubAuth(clientId: old.clientId ?? githubClientId);
+    try {
+      return await github.refresh(old.refreshToken ?? '');
+    } finally {
+      github.close();
+    }
+  }
 
   /// Quién ha entrado en GitHub, si alguien lo ha hecho.
-  ///
-  /// Puede ser null habiendo sesión: es lo que pasa al abrir sin red con un
-  /// token guardado de una versión anterior, que todavía no recordaba el
-  /// nombre. Quien decide si se puede usar Didacta es [signInState], no esto.
-  GitHubUser? get user => _user;
-
-  SignInState _signIn = SignInState.checking;
+  GitHubUser? get user => auth.user;
 
   /// Si hay sesión de GitHub. Es lo que decide si la aplicación se abre.
-  SignInState get signInState => _signIn;
+  SignInState get signInState => auth.state;
 
-  bool get signedIn => _signIn == SignInState.signedIn;
-
-  Object? _signInProblem;
+  bool get signedIn => auth.state == SignInState.signedIn;
 
   /// Por qué se cerró la sesión sola, si se cerró.
-  ///
-  /// Se enseña en la pantalla de entrar. Que la sesión caduque y la
-  /// aplicación se limite a pedir la contraseña otra vez, sin decir que antes
-  /// había una, es la clase de silencio que hace pensar que algo se ha
-  /// perdido.
-  Object? get signInProblem => _signInProblem;
+  Object? get signInProblem => auth.problem;
 
-  String? _token;
-  bool _pushOnCommit = true;
-  bool _commitOnSave = true;
+  /// Cómo se guarda, cómo se compila, qué paneles se ven y qué interfaz se
+  /// enseña: ver [WorkSettings]. Se avisa sola; quien enseña uno de estos
+  /// ajustes la escucha a ella.
+  late final WorkSettings settings = WorkSettings(preferences);
 
-  /// Si guardar un fichero lo deja confirmado.
-  ///
-  /// La pantalla lo pregunta para saber qué decir al terminar y para enseñar
-  /// el botón de confirmar solo cuando hace falta.
-  bool get commitOnSave => _commitOnSave;
+  bool get commitOnSave => settings.commitOnSave;
 
-  /// Si lo confirmado se envía solo a GitHub.
-  bool get pushOnCommit => _pushOnCommit;
+  bool get pushOnCommit => settings.pushOnCommit;
+
+  bool get reviewBeforeSave => settings.reviewBeforeSave;
+
+  Future<void> setReviewBeforeSave(bool value) =>
+      settings.setReviewBeforeSave(value);
+
+  bool get completeInterface => settings.completeInterface;
+
+  Future<void> setCompleteInterface(bool value) =>
+      settings.setCompleteInterface(value);
+
+  int get buildJobs => settings.buildJobs;
+
+  Future<void> setBuildJobs(int value) => settings.setBuildJobs(value);
+
+  bool get overfullLines => settings.overfullLines;
+
+  Future<void> setOverfullLines(bool value) => settings.setOverfullLines(value);
+
+  bool get accessiblePdf => settings.accessiblePdf;
+
+  Future<void> setAccessiblePdf(bool value) => settings.setAccessiblePdf(value);
+
+  bool get quickBuild => settings.quickBuild;
+
+  Future<void> setQuickBuild(bool value) => settings.setQuickBuild(value);
+
+  bool get notifyWhenBuilt => settings.notifyWhenBuilt;
+
+  Future<void> setNotifyWhenBuilt(bool value) =>
+      settings.setNotifyWhenBuilt(value);
 
   /// Si hay un token de GitHub guardado en esta máquina.
-  bool get hasStoredToken => _token?.isNotEmpty ?? false;
+  bool get hasStoredToken => auth.token?.isNotEmpty ?? false;
 
   /// Whether storing one is even possible here. False on the web.
   bool get canStoreToken => tokenStore.canStoreSafely;
 
-  String _clientId = '';
-
   /// El Client ID de la OAuth App con la que se entra.
-  String get githubClientId => _clientId;
-
-  String _cloneBase = '';
+  String get githubClientId => settings.githubClientId;
 
   /// Dónde se clonan los repositorios nuevos.
-  String get cloneBase => _cloneBase;
+  String get cloneBase => settings.cloneBase;
 
   /// Whether a clone is possible at all here. False on the web.
   bool get canUseClone => LocalClone.supported;
 
-  /// Cómo está cada clon respecto a GitHub, por repositorio.
-  final Map<String, CloneStatus> _cloneStatus = {};
+  /// Traer, enviar y tener los clones al día: ver [RepoSync].
+  late final RepoSync repoSync = RepoSync(this);
 
-  CloneStatus? statusOf(String repo) => _cloneStatus[repo];
+  CloneStatus? statusOf(String repo) => repoSync.statusOf(repo);
 
   /// Lo que falló al abrir cada repositorio, por si alguno no abre.
-  final Map<String, Object> _repoProblems = {};
-
-  Object? problemOf(String repo) => _repoProblems[repo];
-
-  ({String name, String email})? _cloneAuthor;
+  Object? problemOf(String repo) => repositories.problems[repo];
 
   /// Who the clone's commits will be attributed to.
-  ({String name, String email})? get cloneAuthor => _cloneAuthor;
+  ({String name, String email})? get cloneAuthor => repositories.cloneAuthor;
 
   /// Las carpetas de los clones abiertos.
   List<String> get repoPaths => [
-    for (final repo in _workspace.repos) repo.directory,
+    for (final repo in openedWorkspace.repos) repo.directory,
   ];
 
   /// El primero: lo que mira quien necesita **un** clon --vigilar el disco,
-  /// compilar por defecto-- y no todos.
-  String? get _primaryPath =>
-      _workspace.repos.isEmpty ? null : _workspace.repos.first.directory;
+  /// compilar por defecto, buscar el motor al lado-- y no todos.
+  String? get primaryPath => openedWorkspace.repos.isEmpty
+      ? null
+      : openedWorkspace.repos.first.directory;
 
   /// El clon de un repositorio, para compilar contra su raíz.
   String? pathOf(String? repo) => repo == null || repo.isEmpty
-      ? _primaryPath
-      : _workspace.directoryOf(repo);
+      ? primaryPath
+      : openedWorkspace.directoryOf(repo);
+
+  /// La credencial de GitHub, la que haya: la de la sesión o la del llavero.
+  Future<String> currentToken() async => await auth.storedToken() ?? '';
 
   // -- las preferencias que viajan entre ordenadores ----------------------
 
-  SyncedPrefs _synced = const SyncedPrefs();
+  /// Lo marcado, lo oculto, lo plegado, los idiomas y los repositorios que se
+  /// miran. Aparte --ver `library_prefs.dart`-- y ofrecido aquí con los
+  /// nombres de siempre.
+  late final LibraryPrefs libraryPrefs = LibraryPrefs(
+    preferences: preferences,
+    gatewayFor: gatewayFor,
+    login: () => auth.user?.login,
+  )..addListener(_libraryPrefsChanged);
 
-  /// Las preferencias sincronizadas, tal como están ahora mismo.
-  SyncedPrefs get syncedPrefs => _synced;
+  /// Los repositorios ocultos la última vez que se miró. El catálogo visible
+  /// se rehace solo si cambian: rehacerlo es un catálogo nuevo, y con él se
+  /// tiran los índices que se habían hecho del anterior.
+  Set<String> _hiddenSeen = const {};
 
-  String? _prefsRepo;
+  /// Los idiomas encendidos la última vez que se miró.
+  Set<String> _languagesSeen = const {};
 
-  /// En qué repositorio se guardan. Null es «en ninguno»: se quedan aquí.
-  String? get prefsRepo => _prefsRepo;
-
-  /// Dónde se escriben dentro de ese repositorio.
-  ///
-  /// Con el login de GitHub en el nombre, que es lo que permite que un
-  /// departamento comparta repositorio sin pisarse: cada uno escribe el suyo
-  /// y nadie lee el de otro.
-  String? get prefsPath {
-    final login = _user?.login ?? '';
-    if (login.isEmpty) return null;
-    return '.didacta/prefs/$login.json';
+  /// Lo que cambia en las preferencias de la biblioteca **avisa por ellas**:
+  /// plegar un tema, marcar una asignatura o abrir una lección --que la
+  /// apunta entre las recientes-- le importa a la lista que lo enseña, no a
+  /// todas las pantallas. Solo dos cosas cambian lo que se ve en todas y
+  /// avisan también por aquí: qué repositorios se miran y qué idiomas se
+  /// ofrecen.
+  void _libraryPrefsChanged() {
+    final synced = libraryPrefs.synced;
+    final hidden = {...synced.hiddenRepos};
+    final languages = {...synced.enabledLanguages};
+    var everywhere = false;
+    if (!setEquals(hidden, _hiddenSeen)) {
+      _hiddenSeen = hidden;
+      catalogueStore.refilter();
+      everywhere = true;
+    }
+    if (!setEquals(languages, _languagesSeen)) {
+      _languagesSeen = languages;
+      everywhere = true;
+    }
+    if (everywhere) notifyListeners();
   }
 
-  Timer? _prefsWrite;
+  /// Las preferencias sincronizadas, tal como están ahora mismo.
+  SyncedPrefs get syncedPrefs => libraryPrefs.synced;
+
+  /// En qué repositorio se guardan. Null es «en ninguno»: se quedan aquí.
+  String? get prefsRepo => libraryPrefs.repo;
+
+  /// Dónde se escriben dentro de ese repositorio.
+  String? get prefsPath => libraryPrefs.path;
 
   // -- lo marcado ---------------------------------------------------------
 
-  bool isFavouriteCourse(String course) => _synced.isFavouriteCourse(course);
+  bool isFavouriteCourse(String course) =>
+      libraryPrefs.synced.isFavouriteCourse(course);
 
   bool isFavouriteYear(String course, String year) =>
-      _synced.isFavouriteYear(course, year);
+      libraryPrefs.synced.isFavouriteYear(course, year);
 
-  Future<void> setFavouriteCourse(String course, bool favourite) async {
-    _synced = _synced.withFavouriteCourse(course, favourite);
-    notifyListeners();
-    await _rememberPrefs();
-  }
+  Future<void> setFavouriteCourse(String course, bool favourite) => libraryPrefs
+      .change((prefs) => prefs.withFavouriteCourse(course, favourite));
 
-  Future<void> setFavouriteYear(
-    String course,
-    String year,
-    bool favourite,
-  ) async {
-    _synced = _synced.withFavouriteYear(course, year, favourite);
-    notifyListeners();
-    await _rememberPrefs();
-  }
+  Future<void> setFavouriteYear(String course, String year, bool favourite) =>
+      libraryPrefs.change(
+        (prefs) => prefs.withFavouriteYear(course, year, favourite),
+      );
 
   // -- ocultar y plegar ---------------------------------------------------
 
-  bool isHiddenCourse(String course) => _synced.isHiddenCourse(course);
+  bool isHiddenCourse(String course) =>
+      libraryPrefs.synced.isHiddenCourse(course);
 
   bool isHiddenYear(String course, String year) =>
-      _synced.isHiddenYear(course, year);
+      libraryPrefs.synced.isHiddenYear(course, year);
 
-  bool isCollapsedCourse(String course) => _synced.isCollapsedCourse(course);
+  bool isCollapsedCourse(String course) =>
+      libraryPrefs.synced.isCollapsedCourse(course);
 
   /// Oculta una asignatura, o la vuelve a enseñar.
   ///
   /// Ocultar no es quitar: la asignatura sigue en el repositorio, sigue
   /// compilando y sigue en la biblioteca. Lo que cambia es la lista, que
   /// después de unos años son veinte asignaturas de las que se dan tres.
-  Future<void> setCourseHidden(String course, bool hidden) async {
-    _synced = _synced.withCourseHidden(course, hidden);
-    notifyListeners();
-    await _rememberPrefs();
-  }
+  Future<void> setCourseHidden(String course, bool hidden) =>
+      libraryPrefs.change((prefs) => prefs.withCourseHidden(course, hidden));
 
   /// Oculta un curso académico, o lo vuelve a enseñar.
-  Future<void> setYearHidden(String course, String year, bool hidden) async {
-    _synced = _synced.withYearHidden(course, year, hidden);
-    notifyListeners();
-    await _rememberPrefs();
-  }
+  Future<void> setYearHidden(String course, String year, bool hidden) =>
+      libraryPrefs.change(
+        (prefs) => prefs.withYearHidden(course, year, hidden),
+      );
 
   /// Pliega una asignatura: se ve su título y no sus cursos.
-  Future<void> setCourseCollapsed(String course, bool collapsed) async {
-    _synced = _synced.withCourseCollapsed(course, collapsed);
-    notifyListeners();
-    await _rememberPrefs();
-  }
+  Future<void> setCourseCollapsed(String course, bool collapsed) => libraryPrefs
+      .change((prefs) => prefs.withCourseCollapsed(course, collapsed));
 
   /// Qué se está mirando en la lista de asignaturas.
   ///
   /// Se guarda con lo demás: quien está ordenando la lista se queda un rato
   /// en «las ocultas», y volver a «las que doy» cada vez que se entra en otra
   /// pantalla convierte esa tarde en un baile de clics.
-  String get coursesView => _synced.coursesView;
+  String get coursesView => libraryPrefs.synced.coursesView;
 
   Future<void> setCoursesView(String view) async {
-    if (_synced.coursesView == view) return;
-    _synced = _synced.withCoursesView(view);
-    notifyListeners();
-    await _rememberPrefs();
+    if (libraryPrefs.synced.coursesView == view) return;
+    await libraryPrefs.change((prefs) => prefs.withCoursesView(view));
   }
 
   /// Las asignaturas, por título.
@@ -500,9 +519,7 @@ class Session extends ChangeNotifier {
   /// cuenta, acabaría discrepando de la de al lado.
   List<Course> get sortedCourses {
     final courses = [...catalogue.courses];
-    courses.sort(
-      (a, b) => compareTitles(a.title(_language), b.title(_language)),
-    );
+    courses.sort((a, b) => compareTitles(a.title(language), b.title(language)));
     return courses;
   }
 
@@ -519,7 +536,7 @@ class Session extends ChangeNotifier {
 
   /// Los temas plegados de un curso.
   Set<String> collapsedThemes(String course, String year) =>
-      _synced.collapsedIn(course, year);
+      libraryPrefs.synced.collapsedIn(course, year);
 
   /// Pliega o despliega un tema, y lo apunta donde toque.
   Future<void> setThemeCollapsed({
@@ -527,122 +544,44 @@ class Session extends ChangeNotifier {
     required String year,
     required String theme,
     required bool collapsed,
-  }) async {
-    _synced = _synced.withThemeCollapsed(
+  }) => libraryPrefs.change(
+    (prefs) => prefs.withThemeCollapsed(
       course: course,
       year: year,
       theme: theme,
       collapsed: collapsed,
-    );
-    notifyListeners();
-    await _rememberPrefs();
-  }
+    ),
+  );
 
   /// Elige el repositorio donde se sincronizan, o quita el que hubiera.
-  Future<void> setPrefsRepo(String? repo) async {
-    if (_prefsRepo == repo) return;
-    _prefsRepo = repo;
-    await preferences.setPrefsRepo(repo);
-    notifyListeners();
-    if (repo != null) await loadSyncedPrefs();
-  }
-
-  /// Guarda en esta máquina ya, y en el repositorio dentro de un rato.
-  ///
-  /// Lo segundo con espera a propósito: plegar tres temas seguidos son tres
-  /// clics y **un** commit. Escribir uno por clic llenaría el historial del
-  /// material de ruido, que es el motivo por el que alguien decidiría no usar
-  /// esto.
-  Future<void> _rememberPrefs() async {
-    await preferences.setSyncedPrefs(_synced.toJson());
-    if (_prefsRepo == null) return;
-    _prefsWrite?.cancel();
-    _prefsWrite = Timer(const Duration(seconds: 5), () {
-      unawaited(pushSyncedPrefs());
-    });
-  }
+  Future<void> setPrefsRepo(String? repo) => libraryPrefs.setRepo(repo);
 
   /// Lee las preferencias del repositorio elegido, si hay alguno.
-  ///
-  /// Silencioso cuando falla. Es lo correcto aquí: no poder leer unas
-  /// preferencias deja paneles como estaban, y una aplicación que no abre
-  /// porque no encuentra un fichero de ajustes es peor que una que abre con
-  /// los de por defecto.
-  Future<void> loadSyncedPrefs() async {
-    final repo = _prefsRepo;
-    final path = prefsPath;
-    if (repo == null || path == null) return;
-    try {
-      final file = await gatewayFor(repo).read(path);
-      _synced = SyncedPrefs.fromJson(file.text);
-      _refilter();
-      await preferences.setSyncedPrefs(_synced.toJson());
-      notifyListeners();
-    } catch (_) {
-      // Todavía no existe, o no se puede leer. Se queda lo local.
-    }
-  }
+  Future<void> loadSyncedPrefs() => libraryPrefs.load();
 
   /// Escribe las preferencias en el repositorio elegido, como un commit.
-  Future<void> pushSyncedPrefs() async {
-    final repo = _prefsRepo;
-    final path = prefsPath;
-    if (repo == null || path == null) return;
-    final text = _synced.toJson();
-    try {
-      final gateway = gatewayFor(repo);
-      var sha = '';
-      try {
-        final existing = await gateway.read(path);
-        if (existing.text == text) return;
-        sha = existing.sha;
-      } catch (_) {
-        // No estaba: se crea.
-      }
-      await gateway.save(
-        path: path,
-        text: text,
-        sha: sha,
-        message: 'Preferencias de ${_user?.login ?? 'quien edita'}',
-      );
-    } catch (_) {
-      // Sin red, sin permiso o con un conflicto: lo local sigue valiendo y
-      // el próximo cambio lo vuelve a intentar.
-    }
-  }
-
-  bool _unitPanel = true;
+  Future<void> pushSyncedPrefs() => libraryPrefs.push();
 
   /// Si el panel de la derecha de una unidad está desplegado.
-  bool get unitPanelVisible => _unitPanel;
-
-  bool _split = false;
+  bool get unitPanelVisible => settings.unitPanelVisible;
 
   /// Si los idiomas de una unidad se editan lado a lado.
-  bool get splitEditors => _split;
+  bool get splitEditors => settings.splitEditors;
 
-  Future<void> setUnitPanelVisible(bool value) async {
-    if (_unitPanel == value) return;
-    _unitPanel = value;
-    notifyListeners();
-    await preferences.setUnitPanelVisible(value);
-  }
+  Future<void> setUnitPanelVisible(bool value) =>
+      settings.setUnitPanelVisible(value);
 
-  Future<void> setSplitEditors(bool value) async {
-    if (_split == value) return;
-    _split = value;
-    notifyListeners();
-    await preferences.setSplitEditors(value);
-  }
+  Future<void> setSplitEditors(bool value) => settings.setSplitEditors(value);
 
-  String? _enginePath;
-
-  /// La carpeta `bin` de TeX, si se ha tenido que decir a mano. Casi siempre
-  /// null: se busca en los sitios de siempre.
-  String? _texPath;
+  /// El motor y TeX: ver [EngineService]. Encontrar el motor o perderlo
+  /// cambia qué se puede compilar, y eso avisa también por aquí.
+  late final EngineService engine = EngineService(
+    this,
+    onPathChanged: notifyListeners,
+  );
 
   /// Where the engine repository is, for compiling.
-  String? get enginePath => _enginePath;
+  String? get enginePath => engine.enginePath;
 
   /// Whether compiling is possible on this platform at all. False on the
   /// web, which has no LaTeX and no way to run a process that does.
@@ -666,25 +605,45 @@ class Session extends ChangeNotifier {
   /// la suya.
   final BuildConsole syncConsole = BuildConsole();
 
-  /// Lo que se enseña mientras git todavía no ha dicho nada.
-  static const String _gitOpening = 'Preguntándole a git…';
-  static const String _gitAbout = 'Todo lo que dice git, según lo dice.';
-
   /// The compiler, or null when there is nothing to compile with -- no
   /// engine, no clone, or a browser.
   ///
   /// Built fresh rather than held: it is a thin wrapper over a process, and
   /// caching it would mean caching a stale engine path.
+  ///
+  /// **El de lo que se está mirando.** Con una versión congelada abierta,
+  /// compila y busca PDF en el árbol de aquella versión, igual que
+  /// [gatewayFor] lee de él: antes compilaba lo de hoy mientras la pantalla
+  /// enseñaba lo de septiembre, y «Ver PDF» abría un PDF que no era de la
+  /// versión que se estaba mirando. Lo que escribe en el repositorio --
+  /// administrar asignaturas, reindexar, abrir la propia congelación-- usa
+  /// [liveCompiler], que es siempre el clon.
   Compiler? compiler({String? repo}) {
-    if (!Compiler.supported) return null;
-    final engine = _enginePath;
+    final root = compileRootOf(repo);
+    return root == null ? null : _compilerAt(root);
+  }
+
+  /// Dónde compila [compiler]: el árbol de la congelación abierta, o el clon.
+  String? compileRootOf(String? repo) => frozen?.directory ?? pathOf(repo);
+
+  /// El compilador del clon, con congelación o sin ella.
+  Compiler? liveCompiler({String? repo}) {
     final clone = pathOf(repo);
-    if (engine == null || clone == null) return null;
+    return clone == null ? null : _compilerAt(clone);
+  }
+
+  Compiler? _compilerAt(String root) {
+    if (!Compiler.supported) return null;
+    final enginePath = engine.enginePath;
+    if (enginePath == null) return null;
     return Compiler(
-      enginePath: engine,
-      repositoryPath: clone,
-      texPath: _texPath,
-      templateDirs: _templateDirsBesides(clone),
+      enginePath: enginePath,
+      repositoryPath: root,
+      texPath: engine.texPath,
+      templateDirs: _templateDirsBesides(root),
+      jobs: settings.buildJobs,
+      overfullLines: settings.overfullLines,
+      accessible: settings.accessiblePdf,
     );
   }
 
@@ -697,14 +656,14 @@ class Session extends ChangeNotifier {
   /// declara el de problemas da «perfil desconocido», y el material está
   /// repartido justamente así.
   List<String> _templateDirsBesides(String clone) => [
-    for (final repo in _workspace.repos)
+    for (final repo in openedWorkspace.repos)
       if (pathOf(repo.id) != null && pathOf(repo.id) != clone) pathOf(repo.id)!,
     // Y la carpeta del programa, que no es un repositorio de nadie.
-    ?_templateStore?.directory,
+    ?catalogueStore.templateStore?.directory,
   ];
 
   /// Dónde está TeX, si se ha tenido que decir a mano.
-  String? get texPath => _texPath;
+  String? get texPath => engine.texPath;
 
   /// Con qué se comprueba qué hay instalado en la máquina, y se instala.
   ///
@@ -718,282 +677,79 @@ class Session extends ChangeNotifier {
   /// unos procesos, y guardarla sería guardar la ruta del motor de hace un
   /// rato.
   Toolchain toolchain() =>
-      Toolchain(texPath: _texPath, enginePath: _enginePath);
+      Toolchain(texPath: engine.texPath, enginePath: engine.enginePath);
 
-  /// Cuándo se escribió el índice que está cargado, por repositorio.
-  ///
-  /// Es lo que permite saber que el de disco es otro: la comprobación de
-  /// arranque compara el índice con el contenido, y eso no ve que el índice
-  /// haya cambiado **después** de leerlo --que es lo que pasa cuando alguien
-  /// lo regenera desde el terminal con la aplicación abierta--.
-  ///
-  /// Uno por clon, y no uno solo: con dos repositorios abiertos, mirar el del
-  /// primero deja al segundo enseñando lo que leyó al abrirse. Que no haya
-  /// entrada para un clon significa que cuando se miró no tenía índice, y por
-  /// eso encontrarlo ahora **es** un cambio.
-  final Map<String, DateTime> _indexRead = {};
+  // -- el índice y el disco: ver [CatalogueStore] --------------------------
 
-  final List<StreamSubscription<void>> _watching = [];
-  final List<StreamSubscription<void>> _watchingContent = [];
-  Timer? _settle;
-  Timer? _settleContent;
+  void watchDisk() => catalogueStore.watchDisk();
 
-  /// Los clones que se vigilan: todos los del espacio de trabajo.
-  List<String> get _watchedPaths => repoPaths;
-
-  /// Empieza a vigilar `generated/` de cada clon.
-  ///
-  /// Uno por repositorio abierto: vigilar solo el primero dejaba al segundo
-  /// sin enterarse de nada --ni de un `.tex` editado por fuera, ni de un
-  /// `didacta index` desde el terminal-- hasta reiniciar.
-  ///
-  /// Idempotente: llamarlo dos veces no deja dos vigilantes. Y se vuelve a
-  /// llamar después de cada recarga, porque un clon al que le acaba de
-  /// aparecer `generated/` necesita que se le monte el vigilante de verdad.
-  void watchDisk() {
-    for (final subscription in [..._watching, ..._watchingContent]) {
-      unawaited(subscription.cancel());
-    }
-    _watching.clear();
-    _watchingContent.clear();
-
-    for (final path in _watchedPaths) {
-      // El material. Editar un `.tex` en otro programa, copiar una figura o
-      // traerse cien ficheros con un `git pull` son la misma cosa desde aquí:
-      // el disco ya no es lo que el índice dice. Con más respiro que el
-      // índice --un `pull` son cientos de eventos seguidos-- y sin forzar
-      // nada: se pregunta si hace falta, que cuesta una décima, y solo se
-      // regenera si la respuesta es que sí.
-      _watchingContent.add(
-        watchContent(path).listen((_) {
-          _settleContent?.cancel();
-          _settleContent = Timer(const Duration(seconds: 2), () {
-            unawaited(_rescan());
-          });
-        }),
-      );
-
-      _watching.add(
-        watchIndex(path).listen((_) {
-          // Con un respiro: el motor escribe cuatro ficheros, y recargar el
-          // catálogo cuatro veces por una regeneración es tirar el trabajo
-          // tres veces.
-          _settle?.cancel();
-          _settle = Timer(const Duration(milliseconds: 400), () {
-            unawaited(_reloadIfIndexChanged());
-          });
-        }),
-      );
-    }
+  /// Se vuelve a la ventana: mirar el disco y, si la credencial de GitHub
+  /// caduca, renovarla. Ver `_DidactaAppState._lifecycle`.
+  Future<void> backInFront() async {
+    await checkDisk();
+    if (await auth.renewIfDue()) await refreshAccess();
   }
 
-  /// Vuelve a mirar el disco: si el índice se ha quedado corto, lo regenera.
-  Future<void> _rescan() async {
-    if (await refreshIndex()) {
-      await reloadCatalogue();
-      await refreshBuilt();
-      await _rememberIndexDates();
-      watchDisk();
-    }
-  }
+  Future<void> checkDisk() => catalogueStore.checkDisk();
 
-  /// Al volver a la ventana: ¿ha cambiado algo mientras no mirábamos?
-  ///
-  /// Dos `stat` y, si el índice está viejo respecto al contenido, una
-  /// regeneración. Es el momento exacto en que alguien vuelve después de
-  /// tocar ficheros por fuera.
-  Future<void> checkDisk() async {
-    if (await _reloadIfIndexChanged()) {
-      watchDisk();
-      return;
-    }
-    if (await refreshIndex()) {
-      await reloadCatalogue();
-    } else if (_catalogue?.errors.isNotEmpty ?? false) {
-      // Un repositorio que no cargó deja su queja en el catálogo, y esa queja
-      // se queda en pantalla aunque el motivo desaparezca: el caso de siempre
-      // es un clon recién añadido al que todavía no le habían pasado
-      // `didacta index`. Volver a leer cuesta cuatro ficheros.
-      await reloadCatalogue();
-    }
+  String? get indexNote => catalogueStore.indexNote;
 
-    // Desde aquí, el disco avisa solo.
-    if (_watchedPaths.isNotEmpty) {
-      await _rememberIndexDates();
-      watchDisk();
-    }
-  }
+  void dismissIndexNote() => catalogueStore.dismissIndexNote();
 
-  /// Relee el catálogo si el índice de algún clon es más nuevo que el leído.
-  Future<bool> _reloadIfIndexChanged() async {
-    var changed = false;
-    for (final path in _watchedPaths) {
-      final when = await indexModified(path);
-      if (when == null) continue;
-      final last = _indexRead[path];
-      // Sin entrada: cuando se miró no había índice y ahora sí. Es
-      // exactamente lo que pasa con un repositorio recién añadido.
-      if (last != null && !when.isAfter(last)) continue;
-      _indexRead[path] = when;
-      changed = true;
-    }
-    if (!changed) return false;
-    await reloadCatalogue();
-    await refreshBuilt();
-    return true;
-  }
+  Future<bool> refreshIndex({
+    bool force = false,
+    String? only,
+    bool skipFresh = false,
+    bool quiet = false,
+  }) => catalogueStore.refreshIndex(
+    force: force,
+    only: only,
+    skipFresh: skipFresh,
+    quiet: quiet,
+  );
 
-  /// Apunta la fecha del índice de cada clon, que es contra lo que se compara.
-  Future<void> _rememberIndexDates() async {
-    for (final path in _watchedPaths) {
-      final when = await indexModified(path);
-      if (when != null) _indexRead[path] = when;
-    }
-  }
+  String get catalogueOrigin => catalogueStore.catalogueOrigin;
 
-  /// Lo que pasó con el índice la última vez que se miró.
-  ///
-  /// Null cuando no había nada que decir. Se enseña porque regenerarlo
-  /// cambia lo que la biblioteca lista, y un cambio así no puede ocurrir en
-  /// silencio: quien acaba de mover una carpeta tiene que ver que la
-  /// aplicación se ha enterado.
-  String? get indexNote => _indexNote;
-  String? _indexNote;
+  /// Reloads the catalogue, for after a commit that changed structure. Ver
+  /// [CatalogueStore.reloadCatalogue].
+  Future<void> reloadCatalogue() => catalogueStore.reloadCatalogue();
 
-  void dismissIndexNote() {
-    _indexNote = null;
-    notifyListeners();
-  }
+  int? get behind => repoSync.behind;
 
-  /// Si el índice sigue describiendo el disco; si no, lo regenera.
-  ///
-  /// [force] lo regenera igual, que es lo que hace el botón de actualizar:
-  /// pedirlo a mano significa «ponlo como está el disco», no «mira a ver».
-  ///
-  /// [only] lo limita a un repositorio, que es lo que hace falta después de
-  /// tocar su `didacta.yaml`: regenerar los de al lado cuesta segundos y no
-  /// cambia nada de ellos.
-  ///
-  /// Devuelve si lo regeneró, que es cuando hay que volver a leerlo.
-  Future<bool> refreshIndex({bool force = false, String? only}) async {
-    var any = false;
-    for (final repo in _workspace.repos) {
-      if (only != null && repo.id != only) continue;
-      if (await _refreshIndexOf(repo.id, force: force)) any = true;
-    }
-    if (_workspace.isEmpty) return _refreshIndexOf(null, force: force);
-    return any;
-  }
+  int get ahead => repoSync.ahead;
 
-  /// El índice de un repositorio. Cada uno tiene el suyo, escrito por el
-  /// motor en su carpeta, y se comprueba por separado.
-  Future<bool> _refreshIndexOf(String? repo, {bool force = false}) async {
-    final compiler = this.compiler(repo: repo);
-    if (compiler == null) return false;
-    try {
-      final why = force
-          ? (stale: true, reason: 'a mano')
-          : await compiler.indexStale();
-      if (!why.stale) return false;
-      await compiler.reindex();
-      _indexNote = force
-          ? 'Índice actualizado.'
-          : 'El índice no describía lo que hay en el disco '
-                '(${why.reason}), así que se ha regenerado.';
-      notifyListeners();
-      return true;
-    } catch (error) {
-      // No poder regenerarlo no puede impedir arrancar: se lee el que hay y
-      // se dice que puede no corresponder.
-      _indexNote =
-          'El índice puede estar desactualizado y no se ha podido '
-          'regenerar: $error';
-      notifyListeners();
-      return false;
-    }
-  }
+  Map<String, List<String>> get pendingChanges => repoSync.pendingChanges;
 
-  /// Qué dijo GitHub la última vez que se preguntó.
-  ///
-  /// Null cuando no se ha preguntado o no hay a quién preguntar. Es la
-  /// segunda mitad de «actualizar»: lo de este disco ya está al día, pero
-  /// puede haber trabajo de otra persona --o del mismo, desde otra máquina--
-  /// esperando en el repositorio.
-  int? get behind {
-    if (_cloneStatus.isEmpty) return null;
-    var most = 0;
-    for (final status in _cloneStatus.values) {
-      if (status.behind > most) most = status.behind;
-    }
-    return most;
-  }
+  Future<int> checkRemote() => repoSync.checkRemote();
 
-  /// Cuántos commits hay sin enviar, sumando los repositorios.
-  int get ahead {
-    var total = 0;
-    for (final status in _cloneStatus.values) {
-      total += status.ahead;
-    }
-    return total;
-  }
+  Object? get remoteProblem => repoSync.remoteProblem;
 
-  /// Los ficheros tocados fuera de la aplicación, por repositorio.
-  Map<String, List<String>> get pendingChanges => {
-    for (final entry in _cloneStatus.entries)
-      if (entry.value.dirtyPaths.isNotEmpty) entry.key: entry.value.dirtyPaths,
-  };
-
-  /// Pregunta a GitHub si hay algo nuevo, sin traerlo.
-  ///
-  /// Traerlo es otra decisión: un `pull` cambia los ficheros de debajo de
-  /// quien está editando, y eso no se hace sin decirlo. Aquí solo se mira.
-  Future<int> checkRemote() async {
-    if (_workspace.isEmpty) return 0;
-    try {
-      final token = await tokenStore.read() ?? '';
-      for (final repo in _workspace.repos) {
-        final clone = cloneAt(repo.directory);
-        await clone.fetch(token: token);
-        _cloneStatus[repo.id] = await clone.status();
-      }
-      notifyListeners();
-      return behind ?? 0;
-    } catch (error) {
-      // Sin red, sin token o sin remoto: lo local sigue valiendo, y decirlo
-      // como un error pararía un refresco que ya ha hecho su trabajo.
-      _remoteProblem = error;
-      notifyListeners();
-      return 0;
-    }
-  }
-
-  /// Por qué no se pudo preguntar a GitHub, si no se pudo.
-  Object? get remoteProblem => _remoteProblem;
-  Object? _remoteProblem;
-
-  /// El botón de actualizar: el índice, el catálogo y lo compilado.
   @override
   void dispose() {
-    _settle?.cancel();
-    _settleContent?.cancel();
-    _prefsWrite?.cancel();
-    for (final subscription in [..._watching, ..._watchingContent]) {
-      unawaited(subscription.cancel());
-    }
+    auth.dispose();
+    catalogueStore.dispose();
+    libraryPrefs.dispose();
+    settings.dispose();
+    engine.dispose();
+    freezes.dispose();
+    startup.dispose();
+    builds.dispose();
+    repoSync.dispose();
     buildConsole.dispose();
     syncConsole.dispose();
     super.dispose();
   }
 
+  /// El botón de actualizar: el índice, el catálogo y lo compilado.
   Future<void> refreshEverything() async {
     // Buscar el motor solo si no hay: encontrarlo es mirar el disco, y
     // hacerlo cuando ya tenemos uno es trabajo por nada.
-    if (compiler() == null) await _findEngine();
-    _remoteProblem = null;
+    if (compiler() == null) await engine.find();
+    repoSync.forgetRemoteProblem();
     await refreshIndex(force: true);
     await reloadCatalogue();
     await refreshBuilt();
-    await _rememberIndexDates();
+    await catalogueStore.rememberIndexDates();
     // Un repositorio al que le acaba de aparecer `generated/` no se estaba
     // vigilando: ahora sí.
     watchDisk();
@@ -1002,52 +758,32 @@ class Session extends ChangeNotifier {
     await checkRemote();
   }
 
-  /// Busca el motor y lo recuerda.
-  Future<void> _findEngine() async {
-    if (!Compiler.supported) return;
-    try {
-      _enginePath = await Compiler.discover(
-        configured: await preferences.enginePath(),
-        repositoryPath: _primaryPath,
-      );
-    } catch (error) {
-      // No encontrarlo no para nada: la pantalla de compilar lo dice.
-      _enginePath = null;
-    }
-  }
+  /// El motor frente a la aplicación: si es el de su versión.
+  EngineVersion? get engineVersion => engine.version;
 
-  /// Qué hay compilado, por unidad.
-  ///
-  /// En la sesión y no en la pantalla porque la pregunta la hace la
-  /// biblioteca --¿cuáles puedo ojear?-- y la respuesta vale para toda la
-  /// aplicación: compilar una unidad la cambia, y la lista tiene que
-  /// enterarse sin volver a preguntarle al motor por las dos mil.
-  Map<String, List<ExistingOutput>> get built => _built;
-  Map<String, List<ExistingOutput>> _built = const {};
+  /// Mira la versión del motor. Ver [EngineService.checkVersion].
+  Future<void> checkEngineVersion() => engine.checkVersion();
+
+  /// Poner el motor en la versión de la aplicación, a petición. Ver
+  /// [EngineService.pinNow].
+  Future<void> pinEngineNow() => engine.pinNow();
+
+  /// Qué hay compilado, por unidad. Ver [BuildService.built].
+  Map<String, List<ExistingOutput>> get built => builds.built;
 
   /// Si ya se ha preguntado. Distinto de «no hay nada compilado».
-  bool get builtKnown => _builtKnown;
-  bool _builtKnown = false;
+  bool get builtKnown => builds.builtKnown;
 
-  /// La versión que se abre al ojear una unidad desde la biblioteca.
-  ///
-  /// Una sola y elegida arriba, no una por unidad: quien prepara una clase
-  /// está mirando diapositivas toda la tarde, y elegirlo en cada tarjeta
-  /// sería el mismo clic dos mil veces.
-  String get previewProfile => _previewProfile;
-  String _previewProfile = 'slides';
+  /// La versión que se abre al ojear una unidad desde la biblioteca. Ver
+  /// [WorkSettings.previewProfile].
+  String get previewProfile => settings.previewProfile;
 
-  Future<void> setPreviewProfile(String id) async {
-    _previewProfile = id;
-    notifyListeners();
-    await preferences.setPreviewProfile(id);
-  }
+  Future<void> setPreviewProfile(String id) => settings.setPreviewProfile(id);
 
   /// El clon en un directorio.
   ///
   /// Un solo sitio donde se construye, para que un test pueda dar otro sin
   /// que la sesión tenga que saber que está en un test.
-  @visibleForTesting
   LocalClone cloneAt(String directory) => LocalClone(directory: directory);
 
   /// El clon de un repositorio, o null si no hay con qué.
@@ -1063,6 +799,67 @@ class Session extends ChangeNotifier {
     return cloneAt(directory);
   }
 
+  /// Si se puede buscar en el texto de las lecciones: hace falta una copia
+  /// local, porque lo que busca es git en la carpeta.
+  bool get canSearchText =>
+      LocalClone.supported &&
+      openedWorkspace.repos.any((repo) => cloneFor(repo.id) != null);
+
+  /// Las líneas de las lecciones que dicen [query], sin mirar tildes ni
+  /// mayúsculas, en todos los repositorios con copia local.
+  ///
+  /// Con tres letras por lo menos: con menos, «de» está en todas. Un
+  /// repositorio que no contesta no deja sin resultados a los demás.
+  Future<List<TextHit>> searchText(String query) async {
+    final text = query.trim();
+    if (text.length < 3) return const [];
+    final pattern = accentPattern(text);
+    final found = <TextHit>[];
+    for (final repo in openedWorkspace.repos) {
+      final clone = cloneFor(repo.id);
+      if (clone == null) continue;
+      try {
+        for (final hit in await clone.grep(pattern)) {
+          found.add(hit.inRepo(repo.id));
+        }
+      } on CloneException {
+        continue;
+      }
+    }
+    return found;
+  }
+
+  // -- lo reciente y las búsquedas guardadas --------------------------------
+
+  /// Cuántas lecciones recientes se recuerdan: las de una tarde de trabajo.
+  static const int recentLimit = LibraryPrefs.recentLimit;
+
+  /// Las últimas lecciones abiertas, la más reciente primero, sin las que ya
+  /// no están en el catálogo.
+  List<Unit> get recentUnits => [
+    for (final key in libraryPrefs.recent) ?_unitByKey(key),
+  ];
+
+  Unit? _unitByKey(String key) {
+    final bar = key.indexOf('|');
+    if (bar < 0) return unitByPath(key);
+    final repo = key.substring(0, bar);
+    return unitByPath(key.substring(bar + 1), repo: repo.isEmpty ? null : repo);
+  }
+
+  /// Apunta que se ha abierto [unit].
+  void noteOpened(Unit unit) =>
+      libraryPrefs.noteOpened('${unit.repo}|${unit.path}');
+
+  List<SavedSearch> get savedSearches => libraryPrefs.savedSearches;
+
+  /// Guarda [url] --una dirección de la biblioteca-- con [name]. Si ya había
+  /// una con esa dirección, se renombra.
+  Future<void> saveSearch(String name, String url) =>
+      libraryPrefs.saveSearch(name, url);
+
+  Future<void> forgetSearch(String url) => libraryPrefs.forgetSearch(url);
+
   /// Para un test: el clon, sin pasar por Ajustes ni por el disco.
   @visibleForTesting
   Future<void> useCloneForTest(String path) => useClonesForTest([path]);
@@ -1071,7 +868,7 @@ class Session extends ChangeNotifier {
   /// aparecen con más de uno abierto.
   @visibleForTesting
   Future<void> useClonesForTest(List<String> paths) async {
-    _workspace = Workspace([
+    repositories.workspace = Workspace([
       for (var index = 0; index < paths.length; index += 1)
         ContentRepo(
           owner: 'test',
@@ -1088,886 +885,62 @@ class Session extends ChangeNotifier {
   /// `refreshAccess` yendo al disco. Una prueba de widgets no puede.
   @visibleForTesting
   void setCloneAuthorForTest(({String name, String email}) author) {
-    _cloneAuthor = author;
+    repositories.cloneAuthor = author;
   }
 
   /// Para un test: lo compilado, sin motor que lo diga.
   @visibleForTesting
-  Future<void> setBuiltForTest(Map<String, List<ExistingOutput>> built) async {
-    _built = built;
-    _builtKnown = true;
-    notifyListeners();
-  }
+  Future<void> setBuiltForTest(Map<String, List<ExistingOutput>> built) async =>
+      builds.setForTest(built);
 
-  // -- metadatos que discrepan entre repositorios -------------------------
+  // -- editar el material ---------------------------------------------------
+  //
+  // Aparte, en `catalogue_editor.dart`: los metadatos, los títulos, las
+  // titulaciones, los bloques, los snippets, las plantillas y el estado de
+  // cada traducción. Ofrecido aquí con los nombres de siempre.
 
-  /// Iguala un campo de una asignatura en todos los repositorios.
-  ///
-  /// Escribe [value] en el `course.yaml` de cada repositorio que diga otra
-  /// cosa, y no toca los que ya coinciden ni los que no lo declaran: rellenar
-  /// lo que falta es otra decisión.
-  ///
-  /// Por líneas, con [YamlPatch], como el resto de ediciones de YAML aquí:
-  /// un `course.yaml` lleva comentarios y `# TODO` que dicen qué falta por
-  /// rellenar, y volver a serializarlo se los lleva por delante.
-  ///
-  /// Un commit por repositorio, porque son historiales distintos. Devuelve en
-  /// cuántos se escribió.
-  Future<int> resolveMetadata({
-    required MetadataConflict conflict,
-    required String value,
-  }) async {
-    final path = conflict.path;
-    if (path == null) {
-      throw ArgumentError('no sé dónde se escribe «${conflict.field}»');
-    }
-    final where = 'courses/${conflict.course}/course.yaml';
-    var written = 0;
+  late final CatalogueEditor editor = CatalogueEditor(
+    this,
+    onChanged: notifyListeners,
+  );
 
-    for (final entry in conflict.values.entries) {
-      if (entry.value == value) continue;
-      final gateway = gatewayFor(entry.key);
-      if (!gateway.canWrite) continue;
+  static const String snippetsPath = CatalogueEditor.snippetsPath;
 
-      final file = await gateway.read(where);
-      final patch = YamlPatch(file.text);
-      if (conflict.field == 'idiomas') {
-        patch.setFlowList(path, [
-          for (final code in value.split(',')) code.trim(),
-        ]);
-      } else {
-        patch.setScalar(path, value);
-      }
-      if (patch.result == file.text) continue;
+  static const String programTemplates = CatalogueEditor.programTemplates;
 
-      await gateway.save(
-        path: where,
-        text: patch.result,
-        sha: file.sha,
-        message: 'Igualar ${conflict.field} de ${conflict.course}',
-      );
-      written += 1;
-    }
-    if (written > 0) await reloadCatalogue();
-    return written;
-  }
+  Future<ContentFile?> approveTranslation({
+    required Unit unit,
+    required String language,
+    String? text,
+    String sha = '',
+  }) => editor.approveTranslation(
+    unit: unit,
+    language: language,
+    text: text,
+    sha: sha,
+  );
 
-  /// Cambia a qué idiomas se da una asignatura.
-  ///
-  /// En **todos** los repositorios que la declaran, no solo en uno. Una
-  /// asignatura partida tiene un `course.yaml` en cada uno y los dos han de
-  /// decir lo mismo: escribir en uno solo convierte el cambio en una
-  /// discrepancia de metadatos que hay que resolver a mano después, y deja al
-  /// otro repositorio pidiendo traducciones que ya no se quieren.
-  ///
-  /// Un repositorio de solo lectura se salta en silencio. No es un fallo --se
-  /// puede mirar material de otra persona-- pero sí queda la asignatura
-  /// diciendo dos cosas, y de eso ya avisa la sección de discrepancias.
-  ///
-  /// Quitar un idioma no borra nada: los `.tex` que hubiera siguen donde
-  /// estaban, simplemente dejan de pedirse. Volver a activarlo los recupera.
-  ///
-  /// Devuelve en cuántos repositorios se escribió.
-  Future<int> setCourseLanguages({
-    required String course,
-    required List<String> languages,
-  }) async {
-    if (languages.isEmpty) {
-      throw ArgumentError('una asignatura tiene que darse en algún idioma');
-    }
-    final entry = courseById(course);
-    if (entry == null) throw ArgumentError('no existe la asignatura $course');
+  List<Course> coursesUsing(String repo, String code) =>
+      editor.coursesUsing(repo, code);
 
-    final where = 'courses/$course/course.yaml';
-    // El orden es el del catálogo, no el de los clics: así el fichero sale
-    // igual se marque como se marque, y no hay diffs que solo mueven códigos.
-    final options =
-        catalogueOrNull?.languageOptions ?? const <LanguageOption>[];
-    final ordered = <String>[
-      for (final option in options)
-        if (languages.contains(option.code)) option.code,
-      // Lo que se pide y el índice no conoce se escribe igual, al final: con
-      // un índice viejo, ordenar no puede ser motivo para perder un idioma.
-      for (final code in languages)
-        if (!options.any((o) => o.code == code)) code,
-    ];
-    final written = <String>[];
-
-    for (final repo in entry.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      // Lo que se pide, cruzado con lo que **este** repositorio mantiene.
-      //
-      // Escribir la lista entera en todos era lo que se hacía, y produce un
-      // `course.yaml` que el motor rechaza: una asignatura no puede darse en
-      // un idioma que su repositorio no traduce, porque no habría dónde poner
-      // su `.tex`. Rechazada, la asignatura desaparece del catálogo con un
-      // error, así que el fallo no se veía al guardar sino al volver a
-      // indexar. Repartida entre dos repositorios, cada uno declara lo suyo y
-      // la unión de los dos es en lo que se da --que es como la lee el
-      // catálogo--.
-      final keeps = catalogueOrNull?.languagesOf(repo) ?? ordered;
-      // Lo que este `course.yaml` ya dice pasa igual, lo entienda el índice o
-      // no: puede estar viejo, y una lista que no se reconoce se conserva en
-      // lugar de podarse. Quitar un idioma es una decisión, y esta pantalla
-      // no la ha tomado.
-      final already = entry.sources[repo]?.languages ?? const <String>[];
-      final mine = [
-        for (final code in ordered)
-          if (keeps.contains(code) || already.contains(code)) code,
-      ];
-      // Ninguno: este repositorio no mantiene nada de lo que se ha pedido.
-      // Escribir una lista vacía sería peor que no escribir --el motor la lee
-      // como «los del repositorio», o sea justo lo contrario-- así que se
-      // deja como está y lo dice quien llama contando los que se tocaron.
-      if (mine.isEmpty) continue;
-
-      final file = await gateway.read(where);
-      final patch = YamlPatch(file.text);
-      patch.setFlowList(const ['languages'], mine);
-      if (patch.result == file.text) continue;
-
-      await gateway.save(
-        path: where,
-        text: patch.result,
-        sha: file.sha,
-        message: 'Idiomas de $course: ${mine.join(', ')}',
-      );
-      written.add(repo);
-    }
-    if (written.isNotEmpty) await reloadCatalogue();
-    return written.length;
-  }
-
-  // -- los idiomas de un repositorio --------------------------------------
-
-  /// Las asignaturas de [repo] que se dan en [code].
-  ///
-  /// Lo que hay que mirar antes de quitar un idioma del repositorio: el motor
-  /// rechaza un `course.yaml` que declare uno que su repositorio no mantiene,
-  /// y una asignatura rechazada no sale en el catálogo. Quitarlo sin mirar es
-  /// hacer desaparecer material de la biblioteca.
-  List<Course> coursesUsing(String repo, String code) => [
-    for (final course in catalogueOrNull?.courses ?? const <Course>[])
-      if (course.sources[repo]?.languages.contains(code) ?? false) course,
-  ];
-
-  /// Cambia a qué idiomas traduce un repositorio, en su `didacta.yaml`.
-  ///
-  /// Es la lista de la que cuelga todo lo demás: una asignatura solo puede
-  /// declararse en uno de estos, y una unidad solo tiene hueco de traducción
-  /// en uno de estos. Por eso quitar uno que está en uso **no se hace**: se
-  /// lanza diciendo qué asignaturas lo usan, y se quita antes de ellas.
-  ///
-  /// El idioma de referencia sigue a la lista: si se queda fuera, pasa a ser
-  /// el primero de los que quedan. Dejarlo apuntando a un idioma que ya no
-  /// está hace que el motor no pueda ni leer el fichero.
-  ///
-  /// Al terminar se regenera el índice de ese repositorio, a la fuerza y sin
-  /// esperar a que el disco avise. La lista de idiomas sale en el índice, así
-  /// que hasta regenerarlo la interfaz seguiría ofreciendo la de antes; y a la
-  /// fuerza porque quien acaba de marcar una casilla espera verla aplicada, no
-  /// que se compruebe si hacía falta.
-  ///
-  /// Solo el suyo: regenerar los de al lado son segundos por nada.
-  Future<void> setRepoLanguages({
-    required String repo,
-    required List<String> languages,
-  }) async {
-    if (languages.isEmpty) {
-      throw ArgumentError('un repositorio tiene que traducir a algún idioma');
-    }
-    final gateway = gatewayFor(repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en $repo');
-    }
-
-    final before = catalogueOrNull?.languagesOf(repo) ?? const <String>[];
-    for (final code in before) {
-      if (languages.contains(code)) continue;
-      final using = coursesUsing(repo, code);
-      if (using.isEmpty) continue;
-      throw ArgumentError(
-        'no se puede quitar $code de $repo: se dan en ese idioma '
-        '${using.map((course) => course.title(_language)).join(', ')}',
-      );
-    }
-
-    // En el orden del registro, por lo mismo que en una asignatura: el
-    // fichero sale igual se marque como se marque.
-    final ordered = [
-      for (final option in namedLanguages(languages)) option.code,
-    ];
-
-    const where = 'didacta.yaml';
-    final file = await gateway.read(where);
-    final patch = YamlPatch(file.text)
-      ..setFlowList(const ['languages'], ordered);
-
-    // El de referencia, si se ha quedado fuera. Se escribe aunque no estuviera
-    // declarado: el motor lo deduce del primero de la lista, así que callarse
-    // aquí cambiaría el idioma de referencia del repositorio de rebote.
-    final reference = patch.scalar(const ['default_language']);
-    if (reference != null && !ordered.contains(reference)) {
-      patch.setScalar(const ['default_language'], ordered.first);
-    }
-
-    if (patch.result != file.text) {
-      await gateway.save(
-        path: where,
-        text: patch.result,
-        sha: file.sha,
-        message: 'Idiomas de $repo: ${ordered.join(', ')}',
-      );
-    }
-
-    await refreshIndex(force: true, only: repo);
-    await reloadCatalogue();
-  }
-
-  // -- los títulos, en todos los idiomas ----------------------------------
-
-  /// Cambia el título de una asignatura, en todos los idiomas a la vez.
-  ///
-  /// En todos los repositorios que la declaran, por lo mismo que los idiomas:
-  /// una asignatura partida tiene un `course.yaml` en cada uno y si dicen
-  /// cosas distintas el título que se enseña depende de en qué orden se
-  /// abrieron los repositorios.
-  ///
-  /// Un idioma vacío borra ese título. No se escribe cadena vacía --sería un
-  /// título de verdad, y saldría en el PDF-- sino que se quita la línea.
-  Future<int> setCourseTitles({
-    required String course,
-    required Map<String, String> titles,
-  }) async {
-    final entry = courseById(course);
-    if (entry == null) throw ArgumentError('no existe la asignatura $course');
-    if (titles.values.every((value) => value.trim().isEmpty)) {
-      throw ArgumentError('una asignatura sin título se enseñaría por su id');
-    }
-
-    final where = 'courses/$course/course.yaml';
-    final written = <String>[];
-    for (final repo in entry.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      final file = await gateway.read(where);
-      final patch = YamlPatch(file.text);
-      for (final item in titles.entries) {
-        final value = item.value.trim();
-        if (value.isEmpty) {
-          patch.remove(['title', item.key]);
-        } else {
-          patch.setScalar(['title', item.key], value);
-        }
-      }
-      if (patch.result == file.text) continue;
-
-      await gateway.save(
-        path: where,
-        text: patch.result,
-        sha: file.sha,
-        message: 'Título de $course',
-      );
-      written.add(repo);
-    }
-    if (written.isNotEmpty) await reloadCatalogue();
-    return written.length;
-  }
-
-  /// Cambia el título de un tema, en el repositorio que lo declara.
-  ///
-  /// En ese y en ninguno más: un tema lo declara **uno** --los demás solo lo
-  /// nombran desde sus documentos-- así que aquí no hay nada que hacer
-  /// converger. Esa asimetría es lo que permite que quien no tenga el
-  /// repositorio que declara el tema siga viendo todo su material.
-  Future<void> setThemeTitles({
-    required String repo,
-    required String course,
-    required String year,
-    required String id,
-    required Map<String, String> titles,
-  }) async {
-    final where = 'courses/$course/$year/themes.yaml';
-    final gateway = gatewayFor(repo);
-    final file = await gateway.read(where);
-    final themes = ThemesFile(file.text)..setTitles(id, titles);
-    if (themes.text == file.text) return;
-
-    await gateway.save(
-      path: where,
-      text: themes.text,
-      sha: file.sha,
-      message: 'Título del tema $id en $course $year',
-    );
-    await reloadCatalogue();
-  }
-
-  /// Cambia el título de un documento, en el `year.yaml` donde vive.
-  ///
-  /// En el suyo y solo el suyo: un documento está en un repositorio, y su
-  /// composición --qué unidades lleva-- también, que es la regla que sostiene
-  /// que esto funcione con varios repositorios abiertos.
-  Future<void> setDocumentTitles({
-    required String repo,
-    required String course,
-    required String year,
-    required String id,
-    required Map<String, String> titles,
-  }) async {
-    final where = 'courses/$course/$year/year.yaml';
-    final gateway = gatewayFor(repo);
-    final file = await gateway.read(where);
-    final composition = CompositionFile(file.text)
-      ..setDocumentTitles(id, titles);
-    if (composition.text == file.text) return;
-
-    await gateway.save(
-      path: where,
-      text: composition.text,
-      sha: file.sha,
-      message: 'Título de $id en $course $year',
-    );
-    await reloadCatalogue();
-  }
-
-  // -- las titulaciones ---------------------------------------------------
-
-  /// Cambia a qué grado pertenece una asignatura.
-  ///
-  /// En todos los repositorios que la declaran, por lo mismo que los idiomas:
-  /// si dicen cosas distintas, la asignatura sale en un grado o en otro según
-  /// en qué orden se abrieron los repositorios.
-  ///
-  /// [degree] vacío la deja sin grado, que es un estado legítimo: no todo lo
-  /// que se da pertenece a una titulación, y obligar a elegir una inventaría
-  /// grados para no dejar huecos.
-  Future<int> setCourseDegree({
-    required String course,
-    required String? degree,
-  }) async {
-    final entry = courseById(course);
-    if (entry == null) throw ArgumentError('no existe la asignatura $course');
-
-    final where = 'courses/$course/course.yaml';
-    final written = <String>[];
-    for (final repo in entry.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      final file = await gateway.read(where);
-      final patch = YamlPatch(file.text);
-      if ((degree ?? '').isEmpty) {
-        patch.remove(const ['degree_id']);
-      } else {
-        patch.setScalar(const ['degree_id'], degree!);
-      }
-      if (patch.result == file.text) continue;
-
-      await gateway.save(
-        path: where,
-        text: patch.result,
-        sha: file.sha,
-        message: (degree ?? '').isEmpty
-            ? 'Quitar el grado de $course'
-            : 'Grado de $course: $degree',
-      );
-      written.add(repo);
-    }
-    if (written.isNotEmpty) await reloadCatalogue();
-    return written.length;
-  }
-
-  /// Declara un grado nuevo en un repositorio.
-  ///
-  /// En **uno**, no en todos: un grado lo declara quien lo tenga y los demás
-  /// lo nombran desde sus asignaturas. Declararlo en los dos no rompe nada
-  /// --se fusionan por id-- pero es lo que hace que luego discrepen.
   Future<void> createDegree({
     required String repo,
     required String id,
     required Map<String, String> titles,
     String? institution,
-  }) async {
-    final gateway = gatewayFor(repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en $repo');
-    }
-    const where = 'degrees.yaml';
+  }) => editor.createDegree(
+    repo: repo,
+    id: id,
+    titles: titles,
+    institution: institution,
+  );
 
-    String text;
-    // Vacío cuando el fichero no existe todavía: es lo que la pasarela
-    // entiende por «no había nada aquí».
-    var sha = '';
-    try {
-      final file = await gateway.read(where);
-      text = file.text;
-      sha = file.sha;
-    } on ContentException catch (error) {
-      if (error.kind != ContentFailure.missing) rethrow;
-      // Se crea con sus comentarios, que explican por qué un grado que nadie
-      // declara no rompe nada.
-      text = emptyDegreesYaml;
-    }
-
-    final degrees = DegreesFile(text)
-      ..add(
-        id: id,
-        titles: titles,
-        institution: institution,
-        languages: catalogueOrNull?.languages ?? const ['es'],
-      );
-
-    await gateway.save(
-      path: where,
-      text: degrees.text,
-      sha: sha,
-      message: 'Declarar el grado $id',
-    );
-    await reloadCatalogue();
-  }
-
-  /// Deja de declarar un grado en un repositorio.
-  ///
-  /// Las asignaturas que lo nombran siguen nombrándolo: un grado que no
-  /// declara nadie no agrupa, y sus asignaturas salen enteras. Por eso esto
-  /// no puede perder material, y por eso «Grados» las sigue enseñando como
-  /// nombradas y sin declarar.
-  Future<void> undeclareDegree({
-    required String repo,
-    required String id,
-  }) async {
-    final gateway = gatewayFor(repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en $repo');
-    }
-    const where = 'degrees.yaml';
-    final file = await gateway.read(where);
-    final degrees = DegreesFile(file.text)..remove(id);
-    if (degrees.text == file.text) return;
-
-    await gateway.save(
-      path: where,
-      text: degrees.text,
-      sha: file.sha,
-      message: 'Dejar de declarar el grado $id',
-    );
-    await reloadCatalogue();
-  }
-
-  /// Cambia el título de un grado, en todos los idiomas a la vez.
-  ///
-  /// En los repositorios que lo declaran, que pueden ser varios: si lo
-  /// declaran dos y solo se cambia en uno, la discrepancia aparece al momento.
-  Future<int> setDegreeTitles({
-    required String id,
-    required Map<String, String> titles,
-  }) async {
-    final degree = catalogueOrNull?.degrees
-        .where((entry) => entry.id == id)
-        .firstOrNull;
-    if (degree == null) throw ArgumentError('no se declara el grado $id');
-
-    const where = 'degrees.yaml';
-    final written = <String>[];
-    for (final repo in degree.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      final file = await gateway.read(where);
-      final degrees = DegreesFile(file.text)..setTitles(id, titles);
-      if (degrees.text == file.text) continue;
-
-      await gateway.save(
-        path: where,
-        text: degrees.text,
-        sha: file.sha,
-        message: 'Título del grado $id',
-      );
-      written.add(repo);
-    }
-    if (written.isNotEmpty) await reloadCatalogue();
-    return written.length;
-  }
-
-  // -- los bloques --------------------------------------------------------
-
-  /// Declara un bloque en un repositorio.
-  ///
-  /// En **uno**. Declararlo en varios es corriente aquí, a diferencia de los
-  /// grados --la teoría y los problemas repartidos necesitan los dos
-  /// bloques-- pero se hace llamando a esto una vez por repositorio, para que
-  /// cada uno sea su propio commit en su propio historial.
-  ///
-  /// El fichero se crea si no existía, con sus comentarios: son la única
-  /// explicación de por qué un bloque que nadie declara no esconde nada.
   Future<void> declareBlock({
     required String repo,
     required String id,
     required Map<String, String> titles,
-  }) async {
-    final gateway = gatewayFor(repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en $repo');
-    }
-    const where = 'taxonomy.yaml';
+  }) => editor.declareBlock(repo: repo, id: id, titles: titles);
 
-    String text;
-    // Vacío cuando el fichero no existe todavía: es lo que la pasarela
-    // entiende por «no había nada aquí».
-    var sha = '';
-    try {
-      final file = await gateway.read(where);
-      text = file.text;
-      sha = file.sha;
-    } on ContentException catch (error) {
-      if (error.kind != ContentFailure.missing) rethrow;
-      text = emptyTaxonomyYaml;
-    }
-
-    final taxonomy = TaxonomyFile(text)
-      ..addBlock(
-        id: id,
-        titles: titles,
-        languages: catalogueOrNull?.languagesOf(repo) ?? const ['es'],
-      );
-
-    await gateway.save(
-      path: where,
-      text: taxonomy.text,
-      sha: sha,
-      message: 'Declarar el bloque $id',
-    );
-    await _reindexAfterTaxonomy(repo);
-  }
-
-  /// Deja de declarar un bloque en un repositorio.
-  ///
-  /// Solo la declaración de ese repositorio: las lecciones que lo nombran
-  /// siguen nombrándolo, y si no queda nadie que lo declare salen como
-  /// huérfanas en «Entre repositorios». Quitarlo de todas partes y decidir
-  /// qué pasa con sus lecciones es [removeBlock].
-  Future<void> undeclareBlock({
-    required String repo,
-    required String id,
-  }) async {
-    final gateway = gatewayFor(repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en $repo');
-    }
-    const where = 'taxonomy.yaml';
-    final file = await gateway.read(where);
-    final taxonomy = TaxonomyFile(file.text)..removeBlock(id);
-    if (taxonomy.text == file.text) return;
-
-    await gateway.save(
-      path: where,
-      text: taxonomy.text,
-      sha: file.sha,
-      message: 'Dejar de declarar el bloque $id',
-    );
-    await _reindexAfterTaxonomy(repo);
-  }
-
-  /// Cambia el nombre de un bloque, en todos los idiomas a la vez.
-  ///
-  /// En los repositorios que lo declaran, que aquí suelen ser varios: si lo
-  /// declaran dos y solo se cambia en uno, la discrepancia aparece al momento
-  /// y la misma lección se ve bajo un nombre u otro según la máquina.
-  ///
-  /// Devuelve en cuántos se escribió.
-  Future<int> setBlockTitles({
-    required String id,
-    required Map<String, String> titles,
-  }) async {
-    final block = catalogueOrNull?.blocks
-        .where((entry) => entry.id == id)
-        .firstOrNull;
-    if (block == null) throw ArgumentError('no se declara el bloque $id');
-
-    const where = 'taxonomy.yaml';
-    final written = <String>[];
-    for (final repo in block.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      final file = await gateway.read(where);
-      final taxonomy = TaxonomyFile(file.text)..setBlockTitles(id, titles);
-      if (taxonomy.text == file.text) continue;
-
-      await gateway.save(
-        path: where,
-        text: taxonomy.text,
-        sha: file.sha,
-        message: 'Nombre del bloque $id',
-      );
-      written.add(repo);
-    }
-    for (final repo in written) {
-      await _reindexAfterTaxonomy(repo, reload: false);
-    }
-    if (written.isNotEmpty) await reloadCatalogue();
-    return written.length;
-  }
-
-  /// Quita un bloque de todos los repositorios que lo declaren.
-  ///
-  /// Con [moveTo], sus lecciones se mueven antes a ese otro bloque; sin él,
-  /// se quedan nombrándolo y salen como huérfanas. Las dos cosas son
-  /// legítimas y por eso se pregunta: lo que no puede pasar es que noventa
-  /// lecciones se queden clasificadas en ninguna parte sin que nadie lo haya
-  /// decidido.
-  ///
-  /// **Primero se mueven y después se quita la declaración.** Al revés, entre
-  /// una cosa y la otra el repositorio queda un momento con lecciones
-  /// huérfanas, y si algo falla a mitad se queda así.
-  ///
-  /// Un repositorio de solo lectura se salta en silencio, y entonces el
-  /// bloque sigue existiendo por él. No es un fallo --se puede mirar material
-  /// de otra persona-- y la pantalla lo dice antes de pulsar.
-  ///
-  /// Devuelve cuántas lecciones se movieron.
-  Future<int> removeBlock({required String id, String? moveTo}) async {
-    final block = catalogueOrNull?.blocks
-        .where((entry) => entry.id == id)
-        .firstOrNull;
-    if (block == null) throw ArgumentError('no se declara el bloque $id');
-    if (moveTo == id) {
-      throw ArgumentError('un bloque no se puede mover a sí mismo');
-    }
-
-    var moved = 0;
-    if (moveTo != null) {
-      moved = await moveUnitsBetweenBlocks(from: id, to: moveTo);
-    }
-
-    const where = 'taxonomy.yaml';
-    final written = <String>[];
-    for (final repo in block.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      final file = await gateway.read(where);
-      final taxonomy = TaxonomyFile(file.text);
-      if (!taxonomy.blockIds.contains(id)) continue;
-      taxonomy.removeBlock(id);
-
-      await gateway.save(
-        path: where,
-        text: taxonomy.text,
-        sha: file.sha,
-        message: moveTo == null
-            ? 'Quitar el bloque $id'
-            : 'Quitar el bloque $id, con sus lecciones a $moveTo',
-      );
-      written.add(repo);
-    }
-    for (final repo in written) {
-      await _reindexAfterTaxonomy(repo, reload: false);
-    }
-    await reloadCatalogue();
-    return moved;
-  }
-
-  /// Mueve de bloque todas las lecciones que nombren [from].
-  ///
-  /// Un commit por repositorio y no uno por lección: mover noventa lecciones
-  /// es **un** cambio --una decisión, una frase que la explica-- y noventa
-  /// commits seguidos que dicen lo mismo dejan el historial sin servir para
-  /// ver qué cambió de verdad.
-  ///
-  /// Devuelve cuántas se movieron.
-  Future<int> moveUnitsBetweenBlocks({
-    required String from,
-    required String to,
-  }) async {
-    final units = catalogueOrNull?.unitsInBlock(from) ?? const <Unit>[];
-    if (units.isEmpty) return 0;
-
-    final byRepo = <String, List<Unit>>{};
-    for (final unit in units) {
-      byRepo.putIfAbsent(unit.repo, () => []).add(unit);
-    }
-
-    var moved = 0;
-    for (final entry in byRepo.entries) {
-      final gateway = gatewayFor(entry.key);
-      if (!gateway.canWrite) continue;
-
-      final files = <({String path, String text, String sha})>[];
-      for (final unit in entry.value) {
-        final where = unit.metadataPath;
-        final file = await gateway.read(where);
-        final patch = YamlPatch(file.text)..setScalar(const ['block'], to);
-        if (patch.result == file.text) continue;
-        files.add((path: where, text: patch.result, sha: file.sha));
-      }
-      if (files.isEmpty) continue;
-
-      await gateway.saveAll(
-        files: files,
-        message: files.length == 1
-            ? 'Mover una lección de $from a $to'
-            : 'Mover ${files.length} lecciones de $from a $to',
-      );
-      moved += files.length;
-    }
-    if (moved > 0) await reloadCatalogue();
-    return moved;
-  }
-
-  /// Cambia el bloque de una lección, en su `unit.yaml`.
-  ///
-  /// En el suyo y solo el suyo: una lección vive en un repositorio, y a qué
-  /// parte de la asignatura pertenece lo dice ella.
-  Future<void> setUnitBlock({
-    required String repo,
-    required String path,
-    required String block,
-  }) async {
-    final where = '$path/unit.yaml';
-    final gateway = gatewayFor(repo);
-    final file = await gateway.read(where);
-    final patch = YamlPatch(file.text)..setScalar(const ['block'], block);
-    if (patch.result == file.text) return;
-
-    await gateway.save(
-      path: where,
-      text: patch.result,
-      sha: file.sha,
-      message: 'Bloque de $path: $block',
-    );
-    await reloadCatalogue();
-  }
-
-  /// Con qué plantillas se compila un bloque, por defecto.
-  ///
-  /// En todos los repositorios que lo declaran, por lo mismo que el nombre:
-  /// si dicen cosas distintas, lo que sale de compilar depende de en qué
-  /// orden se abrieron -- y eso se descubre cuando falta media clase.
-  ///
-  /// Lista vacía es «todas las activas», que es un estado legítimo y el que
-  /// tiene un bloque recién declarado.
-  Future<int> setBlockTemplates({
-    required String id,
-    required List<String> templates,
-  }) async {
-    final block = catalogueOrNull?.blocks
-        .where((entry) => entry.id == id)
-        .firstOrNull;
-    if (block == null) throw ArgumentError('no se declara el bloque $id');
-
-    const where = 'taxonomy.yaml';
-    final written = <String>[];
-    for (final repo in block.sources.keys) {
-      final gateway = gatewayFor(repo);
-      if (!gateway.canWrite) continue;
-
-      final file = await gateway.read(where);
-      final taxonomy = TaxonomyFile(file.text)
-        ..setBlockTemplates(id, templates);
-      if (taxonomy.text == file.text) continue;
-
-      await gateway.save(
-        path: where,
-        text: taxonomy.text,
-        sha: file.sha,
-        message: 'Plantillas del bloque $id',
-      );
-      written.add(repo);
-    }
-    for (final repo in written) {
-      await _reindexAfterTaxonomy(repo, reload: false);
-    }
-    if (written.isNotEmpty) await reloadCatalogue();
-    return written.length;
-  }
-
-  // -- las plantillas de compilación --------------------------------------
-
-  /// El «repositorio» que es la carpeta del programa.
-  ///
-  /// Un id que ningún repositorio puede tener --lleva una arroba-- para poder
-  /// usar los mismos métodos con las dos cosas. Una plantilla guardada aquí no
-  /// viaja con ningún material y **no la protege nadie**: ver [TemplateStore].
-  static const String programTemplates = '@programa';
-
-  /// Dónde se puede guardar una plantilla: los repositorios en los que se
-  /// puede escribir, y la carpeta del programa si la hay.
-  List<String> get templateHomes => [
-    for (final repo in _workspace.repos)
-      if (canWriteIn(repo.id)) repo.id,
-    if (_templateStore != null) programTemplates,
-  ];
-
-  /// Cómo se llama cada uno de esos sitios, para una lista.
-  String templateHomeLabel(String home) => home == programTemplates
-      ? 'En el programa (sin copia de seguridad)'
-      : (workspace.byId(home)?.label ?? home);
-
-  /// Leer un fichero de plantillas, venga de donde venga.
-  Future<String> _readTemplateFile(String home, String path) async {
-    if (home == programTemplates) {
-      final store = _templateStore;
-      if (store == null) throw ArgumentError('no hay carpeta del programa');
-      return store.read(path);
-    }
-    try {
-      final file = await gatewayFor(home).read(path);
-      return file.text;
-    } on ContentException catch (error) {
-      if (error.kind == ContentFailure.missing) return '';
-      rethrow;
-    }
-  }
-
-  /// Escribirlo. En un repositorio es un commit; en la carpeta del programa,
-  /// un fichero y nada más -- ahí no hay historial que consultar, y por eso
-  /// la pantalla insiste en las copias.
-  Future<void> _writeTemplateFile(
-    String home,
-    String path,
-    String text,
-    String message,
-  ) async {
-    if (home == programTemplates) {
-      final store = _templateStore;
-      if (store == null) throw ArgumentError('no hay carpeta del programa');
-      await store.write(path, text);
-      return;
-    }
-    final gateway = gatewayFor(home);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en $home');
-    }
-    var sha = '';
-    try {
-      final file = await gateway.read(path);
-      if (file.text == text) return;
-      sha = file.sha;
-    } on ContentException catch (error) {
-      if (error.kind != ContentFailure.missing) rethrow;
-    }
-    await gateway.save(path: path, text: text, sha: sha, message: message);
-  }
-
-  /// Volver a mirar después de escribir plantillas.
-  Future<void> _afterTemplates(String home) async {
-    if (home == programTemplates) {
-      await loadStoredTemplates();
-      return;
-    }
-    await _reindexAfterTaxonomy(home);
-  }
-
-  /// Declara una plantilla en un repositorio.
-  ///
-  /// En **uno**: una plantilla es un fichero con su preámbulo, y declararla
-  /// en dos es tener dos versiones de la misma salida que pueden discrepar.
-  /// Los demás repositorios la usan sin declararla, que es lo que permite que
-  /// el bloque de teoría se compile con una plantilla del de problemas.
   Future<void> declareTemplate({
     required String repo,
     required String id,
@@ -1976,595 +949,350 @@ class Session extends ChangeNotifier {
     String classOptions = '',
     Map<String, String> axes = const {},
     String preamble = '',
-  }) async {
-    const where = 'templates.yaml';
-    final current = await _readTemplateFile(repo, where);
-    final templates =
-        TemplatesFile(current.isEmpty ? emptyTemplatesYaml : current)..add(
-          id: id,
-          titles: titles,
-          documentClass: documentClass,
-          classOptions: classOptions,
-          axes: axes,
-          languages: catalogueOrNull?.languagesOf(repo) ?? const ['es'],
-        );
-
-    await _writeTemplateFile(
-      repo,
-      where,
-      templates.text,
-      'Declarar la plantilla $id',
-    );
-    // El preámbulo va aparte y solo si lo hay: una plantilla sin cabecera
-    // propia se comporta exactamente como la salida de serie, que es el punto
-    // de partida razonable.
-    if (preamble.trim().isNotEmpty) {
-      await setTemplatePreamble(repo: repo, id: id, text: preamble);
-    }
-    await _afterTemplates(repo);
-  }
-
-  /// Cambia el nombre de una plantilla, en todos los idiomas a la vez.
-  Future<int> setTemplateTitles({
-    required String id,
-    required Map<String, String> titles,
-  }) => _writeTemplate(
+  }) => editor.declareTemplate(
+    repo: repo,
     id: id,
-    message: 'Nombre de la plantilla $id',
-    edit: (file) => file.setTitles(id, titles),
+    titles: titles,
+    documentClass: documentClass,
+    classOptions: classOptions,
+    axes: axes,
+    preamble: preamble,
   );
 
-  /// Enciende o apaga una plantilla.
-  ///
-  /// Apagada queda declarada y fuera de lo que se compila. No se borra: lo
-  /// que se quiere guardar de una versión que este curso no se da es
-  /// justamente su preámbulo.
-  Future<int> setTemplateActive({required String id, required bool active}) =>
-      _writeTemplate(
-        id: id,
-        message: active
-            ? 'Encender la plantilla $id'
-            : 'Apagar la plantilla $id',
-        edit: (file) => file.setActive(id, active),
-      );
+  Future<int> moveUnitsBetweenBlocks({
+    required String from,
+    required String to,
+  }) => editor.moveUnitsBetweenBlocks(from: from, to: to);
 
-  /// Cambia qué produce una plantilla: la clase, sus opciones y los ejes.
-  Future<int> setTemplateShape({
-    required String id,
-    required String documentClass,
-    required String classOptions,
-    required Map<String, String> axes,
-  }) => _writeTemplate(
-    id: id,
-    message: 'Salida de la plantilla $id',
-    edit: (file) {
-      file.setField(id, 'class', documentClass.trim());
-      file.setField(
-        id,
-        'options',
-        classOptions.trim().isEmpty ? null : classOptions.trim(),
-      );
-      file.setAxes(id, axes);
-    },
-  );
+  Unit? nextToReview(String language, {String? after}) =>
+      editor.nextToReview(language, after: after);
 
-  /// Quita una plantilla de los repositorios que la declaran.
-  ///
-  /// El `templates/<id>.tex` se queda donde está, y eso es deliberado: es
-  /// LaTeX que alguien escribió, y borrarlo de paso al quitar una línea de
-  /// una lista sería la clase de ayuda que nadie pidió. Volver a declararla
-  /// con el mismo id lo recupera entero.
-  Future<int> removeTemplate({required String id}) => _writeTemplate(
-    id: id,
-    message: 'Quitar la plantilla $id',
-    edit: (file) => file.remove(id),
-  );
+  Future<({String text, FileCommit commit})?> originalAtReview(
+    Unit unit,
+    String language, {
+    int depth = 200,
+  }) => editor.originalAtReview(unit, language, depth: depth);
 
-  /// Escribe en el `templates.yaml` de cada repositorio que declare [id].
-  Future<int> _writeTemplate({
-    required String id,
-    required String message,
-    required void Function(TemplatesFile file) edit,
-  }) async {
-    final template = catalogueOrNull?.templates
-        .where((entry) => entry.id == id)
-        .firstOrNull;
-    if (template == null) {
-      throw ArgumentError('no se declara la plantilla $id');
-    }
-
-    const where = 'templates.yaml';
-    final written = <String>[];
-    for (final repo in template.sources.keys) {
-      if (repo != programTemplates && !gatewayFor(repo).canWrite) continue;
-
-      final current = await _readTemplateFile(repo, where);
-      if (current.isEmpty) continue;
-      final templates = TemplatesFile(current);
-      edit(templates);
-      if (templates.text == current) continue;
-
-      await _writeTemplateFile(repo, where, templates.text, message);
-      written.add(repo);
-    }
-    for (final repo in written) {
-      if (repo == programTemplates) continue;
-      await _reindexAfterTaxonomy(repo, reload: false);
-    }
-    if (written.isNotEmpty) {
-      await reloadCatalogue();
-      if (written.contains(programTemplates)) await loadStoredTemplates();
-    }
-    return written.length;
-  }
-
-  /// El preámbulo de una plantilla, tal como está escrito.
-  ///
-  /// Cadena vacía cuando no tiene: una plantilla sin cabecera propia no es un
-  /// error, es la que se comporta como la salida de serie.
-  Future<String> templatePreamble({required String repo, required String id}) =>
-      _readTemplateFile(repo, 'templates/$id.tex');
-
-  /// Escribe el preámbulo de una plantilla.
-  ///
-  /// Vacío borra el fichero de hecho --se deja en blanco-- en lugar de
-  /// quitarlo: un fichero que desaparece y vuelve en cada edición llena el
-  /// historial de ruido, y uno vacío es exactamente lo que dice.
-  Future<void> setTemplatePreamble({
-    required String repo,
-    required String id,
-    required String text,
-  }) async {
-    await _writeTemplateFile(
-      repo,
-      'templates/$id.tex',
-      text,
-      'Cabecera de la plantilla $id',
-    );
-    // Sin reindexar: el preámbulo no sale en el índice --lo lee LaTeX al
-    // compilar-- así que regenerarlo costaría tres segundos para no cambiar
-    // una línea de lo que la pantalla enseña.
-    await reloadCatalogue();
-  }
-
-  /// Con qué plantillas se compila una lección.
-  ///
-  /// Lista vacía la devuelve a lo que diga su bloque, que es el estado
-  /// normal: elegir aquí es apartarse, y hay que poder dejar de apartarse.
   Future<void> setUnitTemplates({
     required String repo,
     required String path,
     required List<String> templates,
-  }) async {
-    final where = '$path/unit.yaml';
-    final gateway = gatewayFor(repo);
-    final file = await gateway.read(where);
-    final patch = YamlPatch(file.text);
-    if (templates.isEmpty) {
-      patch.remove(const ['templates']);
-    } else {
-      patch.setFlowList(const ['templates'], templates);
-    }
-    if (patch.result == file.text) return;
+  }) => editor.setUnitTemplates(repo: repo, path: path, templates: templates);
 
-    await gateway.save(
-      path: where,
-      text: patch.result,
-      sha: file.sha,
-      message: templates.isEmpty
-          ? 'Plantillas de $path: las del bloque'
-          : 'Plantillas de $path',
-    );
-    await reloadCatalogue();
-  }
+  Future<SnippetPreview?> previewSnippet(
+    LatexSnippet snippet, {
+    String profile = 'notes',
+    String? repo,
+    void Function(String line)? onOutput,
+  }) => editor.previewSnippet(
+    snippet,
+    profile: profile,
+    repo: repo,
+    onOutput: onOutput,
+  );
 
-  /// Con qué plantillas se compila un documento.
-  ///
-  /// En su `year.yaml`, que es donde vive el documento. Lista vacía lo
-  /// devuelve a lo que digan los bloques de las lecciones que compone.
+  Future<int> removeBlock({required String id, String? moveTo}) =>
+      editor.removeBlock(id: id, moveTo: moveTo);
+
+  Future<int> removeSnippet(LatexSnippet snippet) =>
+      editor.removeSnippet(snippet);
+
+  Future<int> removeTemplate({required String id}) =>
+      editor.removeTemplate(id: id);
+
+  Future<int> reorderSnippets(List<String> order) =>
+      editor.reorderSnippets(order);
+
+  Future<int> resolveMetadata({
+    required MetadataConflict conflict,
+    required String value,
+  }) => editor.resolveMetadata(conflict: conflict, value: value);
+
+  Future<int> saveSnippet(LatexSnippet snippet, {required Set<String> repos}) =>
+      editor.saveSnippet(snippet, repos: repos);
+
+  Future<int> setBlockTemplates({
+    required String id,
+    required List<String> templates,
+  }) => editor.setBlockTemplates(id: id, templates: templates);
+
+  Future<int> setBlockTitles({
+    required String id,
+    required Map<String, String> titles,
+  }) => editor.setBlockTitles(id: id, titles: titles);
+
+  Future<int> setCourseDegree({
+    required String course,
+    required String? degree,
+  }) => editor.setCourseDegree(course: course, degree: degree);
+
+  Future<int> setCourseLanguages({
+    required String course,
+    required List<String> languages,
+  }) => editor.setCourseLanguages(course: course, languages: languages);
+
+  Future<int> setCourseTitles({
+    required String course,
+    required Map<String, String> titles,
+  }) => editor.setCourseTitles(course: course, titles: titles);
+
+  Future<int> setDegreeTitles({
+    required String id,
+    required Map<String, String> titles,
+  }) => editor.setDegreeTitles(id: id, titles: titles);
+
   Future<void> setDocumentTemplates({
     required String repo,
     required String course,
     required String year,
     required String id,
     required List<String> templates,
-  }) async {
-    final where = 'courses/$course/$year/year.yaml';
-    final gateway = gatewayFor(repo);
-    final file = await gateway.read(where);
-    final composition = CompositionFile(file.text)
-      ..setDocumentTemplates(id, templates);
-    if (composition.text == file.text) return;
+  }) => editor.setDocumentTemplates(
+    repo: repo,
+    course: course,
+    year: year,
+    id: id,
+    templates: templates,
+  );
 
-    await gateway.save(
-      path: where,
-      text: composition.text,
-      sha: file.sha,
-      message: templates.isEmpty
-          ? 'Plantillas de $id: las de sus bloques'
-          : 'Plantillas de $id en $course $year',
-    );
-    await reloadCatalogue();
-  }
+  Future<void> setDocumentTitles({
+    required String repo,
+    required String course,
+    required String year,
+    required String id,
+    required Map<String, String> titles,
+  }) => editor.setDocumentTitles(
+    repo: repo,
+    course: course,
+    year: year,
+    id: id,
+    titles: titles,
+  );
 
-  /// Regenerar el índice después de tocar `taxonomy.yaml`.
-  ///
-  /// Hace falta y no basta con releer: los bloques declarados salen en el
-  /// **manifiesto**, no en los ficheros de unidades, así que hasta que el
-  /// motor no lo vuelve a escribir la aplicación sigue leyendo los de antes
-  /// -- y quien acaba de crear un bloque no lo vería hasta reiniciar.
-  ///
-  /// A la fuerza, porque la comprobación de si el índice está viejo mira
-  /// fechas y recuentos, y aquí ya sabemos que lo está.
-  Future<void> _reindexAfterTaxonomy(String repo, {bool reload = true}) async {
-    await refreshIndex(force: true, only: repo);
-    if (reload) await reloadCatalogue();
-  }
+  Future<void> setRepoLanguages({
+    required String repo,
+    required List<String> languages,
+  }) => editor.setRepoLanguages(repo: repo, languages: languages);
 
-  /// Cambia el estado declarado de una unidad en un idioma.
-  ///
-  /// Es lo que cierra el ciclo de traducir: una máquina deja un borrador, una
-  /// persona lo lee, y aquí dice que ya está. Sin esto el borrador se queda
-  /// en la lista para siempre y la lista deja de significar nada.
-  ///
-  /// Solo los declarables. «No existe» y «desactualizada» los calcula el
-  /// motor --el primero de que el fichero esté, el segundo comparando con el
-  /// original-- y escribirlos garantizaría que se queden obsoletos: bastaría
-  /// con volver a tocar el original.
-  /// Enciende o apaga la sangría automática de un idioma de una unidad.
-  ///
-  /// Se guarda en el `unit.yaml`, al lado del estado, porque es una propiedad
-  /// del fichero y no de quien lo edita: si una tabla alineada a mano hay que
-  /// dejarla quieta, hay que dejarla quieta también cuando la abra otra
-  /// persona en otro ordenador.
-  ///
-  /// Por idioma. La versión castellana de una unidad puede ser un bloque
-  /// generado por otra herramienta que no conviene tocar mientras la inglesa
-  /// se escribe a mano y agradece la sangría.
-  /// El `.tex` con la sangría puesta, antes de escribirlo.
-  ///
-  /// Un método y no una llamada suelta a [beautifyLatex] porque **qué
-  /// indentador hay** es cosa del entorno: en escritorio se busca
-  /// `latexindent` en el disco, y una prueba de widgets con el reloj falso no
-  /// puede esperar a un proceso de verdad. Sobrescribiéndolo, una prueba usa
-  /// el indentador propio, que es Dart puro y contesta en el acto.
-  Future<String> tidyLatex(String text) =>
-      beautifyLatex(text, texPath: _texPath);
+  Future<int> setTemplateActive({required String id, required bool active}) =>
+      editor.setTemplateActive(id: id, active: active);
+
+  Future<void> setTemplatePreamble({
+    required String repo,
+    required String id,
+    required String text,
+  }) => editor.setTemplatePreamble(repo: repo, id: id, text: text);
+
+  Future<int> setTemplateShape({
+    required String id,
+    required String documentClass,
+    required String classOptions,
+    required Map<String, String> axes,
+  }) => editor.setTemplateShape(
+    id: id,
+    documentClass: documentClass,
+    classOptions: classOptions,
+    axes: axes,
+  );
+
+  Future<int> setTemplateTitles({
+    required String id,
+    required Map<String, String> titles,
+  }) => editor.setTemplateTitles(id: id, titles: titles);
+
+  Future<void> setThemeTitles({
+    required String repo,
+    required String course,
+    required String year,
+    required String id,
+    required Map<String, String> titles,
+  }) => editor.setThemeTitles(
+    repo: repo,
+    course: course,
+    year: year,
+    id: id,
+    titles: titles,
+  );
+
+  Future<void> setUnitBlock({
+    required String repo,
+    required String path,
+    required String block,
+  }) => editor.setUnitBlock(repo: repo, path: path, block: block);
 
   Future<void> setUnitIndent({
     required Unit unit,
     required String language,
     required bool on,
-  }) async {
-    final gateway = gatewayFor(unit.repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en ${unit.repo}');
-    }
-
-    final where = '${unit.path}/unit.yaml';
-    String text;
-    var sha = '';
-    try {
-      final file = await gateway.read(where);
-      text = file.text;
-      sha = file.sha;
-    } on ContentException catch (error) {
-      if (error.kind != ContentFailure.missing) rethrow;
-      text = '# Metadatos de la unidad.\nlanguages:\n';
-    }
-
-    // Se escribe también el `true`, aunque sea el valor por defecto: quien
-    // apagó esto y volvió a encenderlo quiere ver en el fichero que está
-    // encendido a propósito, y el motor lee las dos cosas igual.
-    final patch = YamlPatch(text)
-      ..setFlagInFlowMap(['languages', language], 'indent', on);
-    if (patch.result == text) return;
-
-    await gateway.save(
-      path: where,
-      text: patch.result,
-      sha: sha,
-      message:
-          '${on ? 'Activar' : 'Desactivar'} la sangría de $language en '
-          '«${unit.title(unit.reference)}»',
-    );
-    await reloadCatalogue();
-  }
+  }) => editor.setUnitIndent(unit: unit, language: language, on: on);
 
   Future<void> setUnitStatus({
     required Unit unit,
     required String language,
     required String status,
-  }) async {
-    if (!declarableStatuses.contains(status)) {
-      throw ArgumentError(
-        'el estado «$status» lo calcula el motor; no se puede declarar',
-      );
-    }
-    final gateway = gatewayFor(unit.repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en ${unit.repo}');
-    }
+  }) => editor.setUnitStatus(unit: unit, language: language, status: status);
 
-    final where = '${unit.path}/unit.yaml';
-    String text;
-    var sha = '';
-    try {
-      final file = await gateway.read(where);
-      text = file.text;
-      sha = file.sha;
-    } on ContentException catch (error) {
-      if (error.kind != ContentFailure.missing) rethrow;
-      // Una unidad migrada puede no tener metadatos todavía. Se crean con lo
-      // único que se está diciendo; lo demás sigue deduciéndose del disco.
-      text = '# Metadatos de la unidad.\nlanguages:\n';
-    }
+  List<SnippetConflict> get snippetConflicts => editor.snippetConflicts;
 
-    final patch = YamlPatch(text)
-      ..setInFlowMap(['languages', language], 'status', status);
-    if (patch.result == text) return;
-
-    await gateway.save(
-      path: where,
-      text: patch.result,
-      sha: sha,
-      message:
-          'Marcar $language de «${unit.title(unit.reference)}» '
-          'como ${statusName(TranslationStatus.parse(status))}',
-    );
-    await reloadCatalogue();
+  /// Si «Entre repositorios» tiene algo que enseñar: metadatos que no
+  /// coinciden, lecciones sin bloque, documentos que llaman fuera o snippets
+  /// que no coinciden.
+  ///
+  /// Es lo que decide si sale en el carril con la interfaz Esencial: un
+  /// apartado que casi siempre dice «todo cuadra» se deja de abrir, y el día
+  /// que hay algo nadie lo mira.
+  bool get betweenReposNeedsLooking {
+    final catalogue = catalogueOrNull;
+    if (catalogue == null || !workspace.isMultiple) return false;
+    return catalogue.metadataConflicts.isNotEmpty ||
+        catalogue.undeclaredBlocks.isNotEmpty ||
+        catalogue.crossRepoUses.isNotEmpty ||
+        snippetConflicts.isNotEmpty;
   }
 
+  List<SnippetEntry> get snippetLibrary => editor.snippetLibrary;
+
+  List<String> get snippetRepos => editor.snippetRepos;
+
+  List<LatexSnippet> snippetsIn(String? repo) => editor.snippetsIn(repo);
+
+  String templateHomeLabel(String home) => editor.templateHomeLabel(home);
+
+  Future<String> templatePreamble({required String repo, required String id}) =>
+      editor.templatePreamble(repo: repo, id: id);
+
+  Future<String> tidyLatex(String text) => editor.tidyLatex(text);
+
+  Future<void> undeclareBlock({required String repo, required String id}) =>
+      editor.undeclareBlock(repo: repo, id: id);
+
+  Future<void> undeclareDegree({required String repo, required String id}) =>
+      editor.undeclareDegree(repo: repo, id: id);
+
+  Future<int> useSnippetFrom({required String id, required String repo}) =>
+      editor.useSnippetFrom(id: id, repo: repo);
+
   // -- traducir -----------------------------------------------------------
+  //
+  // Aparte, en `translation_service.dart`, y ofrecido aquí con los nombres de
+  // siempre.
+
+  late final TranslationService translations = TranslationService(this);
 
   /// La memoria de un par de idiomas, junta de todos los repositorios.
-  ///
-  /// De todos y no solo del que se va a escribir: lo que alguien decidió en
-  /// el repositorio de problemas vale igual para el de teoría, y es lo que
-  /// hace que la misma definición no salga dicha de dos maneras.
   Future<TranslationMemory> translationMemory({
     required String from,
     required String to,
-  }) async {
-    final path = memoryPath(from, to);
-    final parts = <TranslationMemory>[];
-    for (final repo in _workspace.repos) {
-      try {
-        final file = await gatewayFor(repo.id).read(path);
-        parts.add(TranslationMemory.parse(file.text));
-      } catch (_) {
-        // No tenerla es lo normal hasta que alguien traduce algo.
-      }
-    }
-    return TranslationMemory.merge(parts);
-  }
+  }) => translations.memoryFor(from: from, to: to);
 
-  /// Traduce una unidad y deja el resultado escrito.
-  ///
-  /// El `.tex` del idioma destino y la memoria, en dos commits separados a
-  /// propósito: son dos cosas distintas --el material y lo que se aprendió al
-  /// traducirlo-- y quien revise el historial quiere poder mirar una sin la
-  /// otra. Si la memoria falla al guardarse, la traducción ya está hecha.
-  ///
-  /// Lo que se escribe queda **como borrador**: es una traducción de máquina,
-  /// y marcarla como revisada sería decir que alguien la ha leído.
+  Future<Glossary> glossaryIn(String repo) => translations.glossaryIn(repo);
+
+  Future<Glossary> glossary() => translations.glossary();
+
+  Future<void> saveGlossary(String repo, Glossary glossary) =>
+      translations.saveGlossary(repo, glossary);
+
   Future<TranslationResult> translateUnit({
     required Unit unit,
     required String from,
     required String to,
     required Translator translator,
     List<TermCheck> terms = const [],
-  }) async {
-    final gateway = gatewayFor(unit.repo);
-    if (!gateway.canWrite) {
-      throw ArgumentError('no se puede escribir en ${unit.repo}');
-    }
-    final source = await gateway.read(unit.fileFor(from));
-    final memory = await translationMemory(from: from, to: to);
+  }) => translations.translateUnit(
+    unit: unit,
+    from: from,
+    to: to,
+    translator: translator,
+    terms: terms,
+  );
 
-    final result = await translateLatex(
-      source.text,
-      memory: memory,
-      translate: (pieces) => translator.translate(pieces, from: from, to: to),
-      terms: terms,
-      unit: unit.path,
-      by: _user?.login ?? '',
-      when: DateTime.now(),
-    );
+  Future<TranslationEstimate> estimateTranslation(
+    List<TranslationTask> tasks,
+  ) => translations.estimate(tasks);
 
-    // Lo que hubiera en el destino, para no pisarlo a ciegas.
-    var sha = '';
-    try {
-      sha = (await gateway.read(unit.fileFor(to))).sha;
-    } catch (_) {
-      // No estaba: se crea.
-    }
-    // Sangrado antes de escribirlo, si este idioma lo tiene puesto. Es donde
-    // más falta hace: un traductor devuelve cada párrafo en una sola línea
-    // --hace lo suyo-- y sin esto la primera versión de cada traducción entra
-    // en el repositorio como un muro, y así se queda.
-    final text = unit.indentsIn(to)
-        ? await tidyLatex(result.text)
-        : result.text;
-    await gateway.save(
-      path: unit.fileFor(to),
-      text: text,
-      sha: sha,
-      message: 'Traducir «${unit.title(from)}» a $to (borrador)',
-    );
-
-    await _rememberTranslations(
-      repo: unit.repo,
-      from: from,
-      to: to,
-      learned: result.learned,
-      memory: memory,
-    );
-    await reloadCatalogue();
-    return result;
-  }
-
-  /// Añade al fichero de memoria lo que se acaba de aprender.
-  ///
-  /// Añadiendo al final y sin reescribir lo que hay: el fichero lo tocan
-  /// varias personas y lo fusiona git, y reescribirlo entero convierte cada
-  /// traducción en un conflicto con todo lo que otra persona haya traducido
-  /// mientras tanto.
-  Future<void> _rememberTranslations({
-    required String repo,
-    required String from,
-    required String to,
-    required List<MemoryEntry> learned,
-    required TranslationMemory memory,
-  }) async {
-    final lines = memory.linesFor(learned);
-    if (lines.isEmpty) return;
-
-    final path = memoryPath(from, to);
-    final gateway = gatewayFor(repo);
-    var text = '';
-    var sha = '';
-    try {
-      final file = await gateway.read(path);
-      text = file.text;
-      sha = file.sha;
-    } catch (_) {
-      // Primera vez.
-    }
-    final body = StringBuffer(text);
-    if (text.isNotEmpty && !text.endsWith('\n')) body.write('\n');
-    for (final line in lines) {
-      body.writeln(line);
-    }
-
-    try {
-      await gateway.save(
-        path: path,
-        text: body.toString(),
-        sha: sha,
-        message: 'Memoria de traducción $from→$to: ${lines.length} segmento(s)',
-      );
-    } catch (_) {
-      // No poder guardarla no puede deshacer la traducción, que ya está
-      // escrita. Se vuelve a aprender la próxima vez.
-    }
-  }
+  Future<TranslationBatch> translateUnits({
+    required List<TranslationTask> tasks,
+    required Translator translator,
+    List<TermCheck> terms = const [],
+    bool Function()? stop,
+    void Function(int done, TranslationTask task)? onProgress,
+    bool failFast = false,
+    bool useGlossary = true,
+  }) => translations.translateUnits(
+    tasks: tasks,
+    translator: translator,
+    terms: terms,
+    stop: stop,
+    onProgress: onProgress,
+    failFast: failFast,
+    useGlossary: useGlossary,
+  );
 
   // -- compilar en lote ---------------------------------------------------
+  //
+  // Aparte, en `build_service.dart`: la cola de compilaciones, compilar
+  // documentos en tanda y lo que hay compilado. Ofrecido aquí con los
+  // nombres de siempre.
 
-  /// Compila varios documentos, todas sus versiones, contándolo por el
-  /// camino.
-  ///
-  /// Un documento a la vez y no todos de golpe: LaTeX come un núcleo entero y
-  /// lanzar ocho a la vez no acaba antes, solo deja el ordenador inservible
-  /// mientras tanto. El orden es el de la lista, que es el orden en que se
-  /// dan, así que lo primero que se compila es lo primero que se busca.
-  ///
-  /// Devuelve cuántos documentos salieron enteros. No lanza: un documento que
-  /// no compila es un resultado --sale en el registro con su error-- y parar
-  /// el lote por él dejaría los demás sin hacer.
-  /// [languages] son los idiomas en los que compilar. Vacío es «el suyo», que
-  /// es lo que hace el motor por su cuenta y lo que se quiere casi siempre:
-  /// quien compila un tema para la clase del jueves lo quiere en el idioma en
-  /// el que va a darla, no en los tres.
+  late final BuildService builds = BuildService(this);
+
+  /// Cuántas compilaciones esperan detrás de la que está en marcha.
+  int get queuedBuilds => builds.queued;
+
+  /// Si se ha pedido parar y todavía no ha parado.
+  bool get stoppingBuild => builds.stopping;
+
+  Future<T?> runBuild<T>(
+    String title,
+    Future<T> Function(BuildConsole console) job, {
+    int total = 0,
+  }) => builds.run(title, job, total: total);
+
+  Future<void> stopBuilds() => builds.stop();
+
   Future<int> buildDocuments(
     List<({String repo, String course, String year, String id, String title})>
     documents, {
     required String title,
     List<String> languages = const [],
-  }) async {
-    buildConsole.start(title, total: documents.length);
-    var ok = 0;
-    for (final document in documents) {
-      final compiler = this.compiler(repo: document.repo);
-      final reference = '${document.course}@${document.year}/${document.id}';
-      buildConsole.startStep(document.title);
-      if (compiler == null) {
-        buildConsole.add('--- sin motor para $reference');
-        buildConsole.finishStep();
-        continue;
-      }
-      try {
-        final profiles = await compiler.documentProfiles(reference);
-        final results = await compiler.compileDocument(
-          document: reference,
-          // Todas las versiones que admite, que es lo que se pide al darle a
-          // compilar sobre un documento entero.
-          profiles: [for (final profile in profiles) profile.id],
-          languages: languages,
-          onOutput: buildConsole.add,
-        );
-        if (results.isNotEmpty && results.every((result) => result.ok)) ok += 1;
-      } catch (error) {
-        buildConsole.add('--- $reference: $error');
-      }
-      buildConsole.finishStep();
-    }
-    buildConsole.finish(ok: ok == documents.length);
-    await refreshBuilt();
-    return ok;
-  }
+    bool everyVersion = false,
+    Map<String, List<({String profile, String language})>>? only,
+  }) => builds.buildDocuments(
+    documents,
+    title: title,
+    languages: languages,
+    everyVersion: everyVersion,
+    only: only,
+  );
 
   /// Vuelve a preguntar qué hay compilado.
-  ///
-  /// Silencioso a propósito: no saberlo quita un atajo, no una pantalla, y
-  /// un error aquí no puede impedir listar la biblioteca.
-  Future<void> refreshBuilt() async {
-    final compiler = this.compiler();
-    if (compiler == null) {
-      _builtKnown = true;
-      return;
-    }
-    try {
-      _built = await compiler.builtOutputs();
-    } catch (error) {
-      _built = const {};
-    }
-    _builtKnown = true;
-    notifyListeners();
-  }
+  Future<void> refreshBuilt() => builds.refreshBuilt();
 
-  Future<void> setTexPath(String? path) async {
-    await preferences.setTexPath(path);
-    _texPath = path == null || path.isEmpty ? null : path;
-    notifyListeners();
-  }
+  Future<void> setTexPath(String? path) => engine.setTexPath(path);
 
-  /// Crear, duplicar y borrar asignaturas y años.
-  ///
-  /// Null cuando no se puede: hace falta el clon --para escribir y para
-  /// hacer el commit-- y el motor, que es el que sabe hacer cada operación.
-  /// La pantalla lo dice en lugar de ofrecer botones que no funcionan.
   // -- Versiones congeladas -------------------------------------------------
   //
-  // Abrir una congelación cambia **qué se está mirando**, y por eso vive
+  // Abrir una congelación cambia **qué se está mirando**, y por eso pasa por
   // aquí: es el único sitio por el que pasan todas las pantallas. Ninguna
   // tiene que preguntar si está en una versión antigua; lo que reciben es el
   // catálogo de aquel día y una pasarela que no deja escribir, y con eso ya
-  // se comportan bien.
+  // se comportan bien. Ver [FreezeService].
 
-  FrozenView? _frozen;
+  late final FreezeService freezes = FreezeService(
+    this,
+    onChanged: notifyListeners,
+  );
 
   /// La congelación que se está mirando, o null si es la versión actual.
-  FrozenView? get frozen => _frozen;
+  FrozenView? get frozen => freezes.frozen;
 
-  bool get isFrozen => _frozen != null;
+  bool get isFrozen => freezes.isFrozen;
 
   /// Cómo va la apertura, para poder contarlo mientras dura.
-  FrozenStep? _frozenStep;
-  FrozenStep? get frozenStep => _frozenStep;
+  FrozenStep? get frozenStep => freezes.step;
 
   /// Lo que abre, compara y restaura, para un repositorio.
-  Frozen? frozenIn(String? repo) {
-    final clone = cloneFor(repo);
-    if (clone == null) return null;
-    return Frozen(
-      clone: clone,
-      repo: repo ?? _workspace.repos.firstOrNull?.id ?? '',
-      compiler: compiler(repo: repo),
-      token: _token ?? '',
-    );
-  }
+  Frozen? frozenIn(String? repo) => freezes.frozenIn(repo);
 
   /// Abre una versión congelada. A partir de aquí todo es de solo lectura.
   ///
@@ -2572,28 +1300,8 @@ class Session extends ChangeNotifier {
   /// congelación es un commit de un repositorio, así que si la asignatura está
   /// repartida entre dos, lo que se ve es la mitad congelada -- y decirlo es
   /// mejor que mezclar la foto de septiembre de uno con lo de hoy del otro.
-  Future<void> openFreeze(Freeze freeze, {String? repo}) async {
-    final service = frozenIn(repo ?? freeze.repo);
-    if (service == null) {
-      throw const FrozenException(
-        'Para abrir una versión congelada hace falta el clon del repositorio.',
-      );
-    }
-    _frozenStep = FrozenStep.looking;
-    notifyListeners();
-    try {
-      _frozen = await service.open(
-        freeze,
-        onStep: (step) {
-          _frozenStep = step;
-          notifyListeners();
-        },
-      );
-    } finally {
-      _frozenStep = null;
-      notifyListeners();
-    }
-  }
+  Future<void> openFreeze(Freeze freeze, {String? repo}) =>
+      freezes.open(freeze, repo: repo);
 
   /// Para un test de pantalla: la congelación ya abierta.
   ///
@@ -2602,94 +1310,57 @@ class Session extends ChangeNotifier {
   /// funcione se prueba contra git de verdad en `frozen_repo_test.dart`; lo
   /// que se prueba desde la pantalla es qué enseña cuando ya está abierta.
   @visibleForTesting
-  void useFrozenForTest(FrozenView? view) {
-    _frozen = view;
-    notifyListeners();
-  }
+  void useFrozenForTest(FrozenView? view) => freezes.useForTest(view);
 
   /// Vuelve a la versión actual.
   ///
   /// El árbol de la congelación se queda en la caché: volver a abrirla es lo
   /// que más se hace --se compara, se vuelve, se compara otra vez-- y
   /// recrearlo cada vez sería pagar la copia que esto existe para no pagar.
-  void leaveFreeze() {
-    if (_frozen == null) return;
-    _frozen = null;
-    notifyListeners();
-  }
+  void leaveFreeze() => freezes.leave();
 
   /// Vacía la caché de árboles de congelación. No pierde nada.
-  Future<int> clearFrozenCache() async {
-    var total = 0;
-    for (final repo in _workspace.repos) {
-      final service = frozenIn(repo.id);
-      if (service == null) continue;
-      total += await service.clearCache();
-    }
-    if (_frozen != null) leaveFreeze();
-    return total;
-  }
+  Future<int> clearFrozenCache() => freezes.clearCache();
 
   /// Cuántos árboles de congelación hay guardados ahora mismo.
-  Future<int> frozenCacheSize() async {
-    var total = 0;
-    for (final repo in _workspace.repos) {
-      final clone = cloneFor(repo.id);
-      if (clone == null) continue;
-      total += (await clone.worktrees()).length;
-    }
-    return total;
-  }
+  Future<int> frozenCacheSize() => freezes.cacheSize();
 
   /// Las congelaciones de un curso, las más nuevas primero.
-  List<Freeze> freezesOf(String courseId, String year) {
-    final entry = fullYear(courseId, year);
-    if (entry == null) return const [];
-    final found = [...entry.freezes];
-    found.sort((a, b) => (b.created).compareTo(a.created));
-    return found;
-  }
+  List<Freeze> freezesOf(String courseId, String year) =>
+      freezes.freezesOf(courseId, year);
 
   /// El commit que congelaría ahora mismo: el HEAD del repositorio.
-  Future<String> headOf(String? repo) async {
-    final clone = cloneFor(repo);
-    if (clone == null) {
-      throw const FrozenException(
-        'Para congelar hace falta el clon del repositorio.',
-      );
-    }
-    return clone.head();
-  }
+  Future<String> headOf(String? repo) => freezes.headOf(repo);
 
-  /// Si hay cambios sin guardar en el clon de un repositorio.
+  /// Si hay cambios sin guardar en el clon de un repositorio. Ver
+  /// [FreezeService.pendingIn].
+  Future<List<String>> pendingIn(String? repo) => freezes.pendingIn(repo);
+
+  /// Crear, duplicar y borrar asignaturas y años.
   ///
-  /// Se pregunta antes de congelar y antes de restaurar: una congelación
-  /// apunta a un commit, así que lo que esté sin confirmar **no entra**, y hay
-  /// que decirlo antes y no después.
-  Future<List<String>> pendingIn(String? repo) async {
-    final clone = cloneFor(repo);
-    if (clone == null) return const [];
-    try {
-      return (await clone.status()).dirtyPaths;
-    } catch (_) {
-      return const [];
-    }
-  }
-
+  /// Null cuando no se puede: hace falta el clon --para escribir y para
+  /// hacer el commit-- y el motor, que es el que sabe hacer cada operación.
+  /// La pantalla lo dice en lugar de ofrecer botones que no funcionan.
   CourseAdmin? admin({String? repo}) {
-    final compiler = this.compiler(repo: repo);
+    final compiler = liveCompiler(repo: repo);
     final path = pathOf(repo);
     if (compiler == null || path == null) return null;
     return CourseAdmin(
       compiler: compiler,
       clone: LocalClone(directory: path),
-      author: _cloneAuthor,
-      token: _token ?? '',
-      pushOnCommit: _pushOnCommit,
+      author: cloneAuthor,
+      token: auth.token ?? '',
+      pushOnCommit: pushOnCommit,
       // Crear o borrar una asignatura es una modificación como cualquier
       // otra, y de las que más daño hacen si se hacen sobre una copia vieja:
       // toca la estructura del repositorio entero.
-      beforeWrite: () => ensureFresh(repo),
+      beforeWrite: () {
+        catalogueStore.forgetIndexFresh(repo);
+        return ensureFresh(repo);
+      },
+      // Y al terminar deja el índice hecho: la recarga de después no tiene
+      // que volver a mirarlo.
+      onIndexed: () => catalogueStore.markIndexFresh(repo),
     );
   }
 
@@ -2697,117 +1368,43 @@ class Session extends ChangeNotifier {
   ///
   /// Called after the clone is known, because the likeliest place for the
   /// engine is next to it.
-  Future<void> findEngine() async {
-    final found = await Compiler.discover(
-      configured: await preferences.enginePath(),
-      repositoryPath: _primaryPath,
-    );
-    if (found != _enginePath) {
-      _enginePath = found;
-      notifyListeners();
-    }
-  }
+  Future<void> findEngine() => engine.findOrThrow();
 
   Future<void> setEnginePath(String? path) async {
     await preferences.setEnginePath(path);
     await refreshAccess();
   }
 
+  // -- qué idiomas se ofrecen: ver [LanguageChoices] -----------------------
+
+  late final LanguageChoices languages = LanguageChoices(
+    this,
+    onChanged: notifyListeners,
+  );
+
   /// The language the interface is working in. Not a locale -- the app's own
   /// text is Spanish -- but which language of the *content* is being looked
   /// at, which is the choice that actually matters here.
-  String _language = 'es';
-  String get language => _language;
+  String get language => languages.language;
 
-  set language(String code) {
-    if (_language == code) return;
-    _language = code;
-    notifyListeners();
-  }
+  set language(String code) => languages.language = code;
 
-  // -- qué idiomas se ofrecen ---------------------------------------------
+  bool isLanguageEnabled(String code) => languages.isEnabled(code);
 
-  /// Si un idioma está encendido en esta aplicación. Ver
-  /// [SyncedPrefs.enabledLanguages] para qué es y qué no es.
-  bool isLanguageEnabled(String code) => _synced.isLanguageEnabled(code);
+  Future<void> setLanguageEnabled(String code, bool on) =>
+      languages.setEnabled(code, on);
 
-  /// Enciende o apaga un idioma, y lo apunta donde toque.
-  ///
-  /// Si se apaga el que se estaba mirando, se pasa al primero que quede: la
-  /// alternativa es una barra que enseña un idioma que ya no ofrece y una
-  /// biblioteca con la pestaña marcada fuera de la fila.
-  Future<void> setLanguageEnabled(String code, bool on) async {
-    _synced = _synced.withLanguageEnabled(
-      code,
-      on,
-      all: catalogueOrNull?.languages ?? const [],
-    );
-    final offered = languageChoices;
-    if (offered.isNotEmpty &&
-        offered.every((option) => option.code != _language)) {
-      _language = offered.first.code;
-    }
-    notifyListeners();
-    await _rememberPrefs();
-  }
+  List<LanguageOption> get languageChoices => languages.choices;
 
-  /// Los idiomas que ofrece cualquier selector: los del material ∩ los
-  /// encendidos, con su nombre y en el orden del registro.
-  ///
-  /// Nunca vacío. Si el filtro se quedara sin nada --se apagó un repositorio
-  /// y con él el único idioma encendido-- valen los del material: un selector
-  /// sin ninguna opción no es un filtro, es una pantalla rota.
-  List<LanguageOption> get languageChoices {
-    final catalogue = catalogueOrNull;
-    if (catalogue == null) return const [];
-    return namedLanguages([
-      for (final code in catalogue.languages)
-        if (_synced.isLanguageEnabled(code)) code,
-    ], or: catalogue.languages);
-  }
+  List<LanguageOption> languageChoicesFor(Course course) =>
+      languages.choicesFor(course);
 
-  /// Los idiomas que se ofrecen para una asignatura.
-  ///
-  /// Los suyos --ya cruzados con lo que mantienen sus repositorios-- y luego
-  /// el filtro. Lo que la asignatura declara y está apagado **no se pierde**:
-  /// las pantallas que escriben lo añaden con [languagesToEdit].
-  List<LanguageOption> languageChoicesFor(Course course) {
-    final catalogue = catalogueOrNull;
-    if (catalogue == null) return const [];
-    final hers = catalogue.languagesForCourse(course);
-    return namedLanguages([
-      for (final code in hers)
-        if (_synced.isLanguageEnabled(code)) code,
-    ], or: hers);
-  }
+  List<String> languagesIn(String? courseId) => languages.codesIn(courseId);
 
-  /// Los idiomas de una asignatura por su id, o los del material cuando no se
-  /// sabe de cuál se habla.
-  ///
-  /// Lo que usa una pantalla que ya está dentro de una asignatura --una
-  /// composición, el fuente de un documento-- y solo tiene el id a mano.
-  List<String> languagesIn(String? courseId) {
-    final course = courseId == null ? null : courseById(courseId);
-    final options = course == null
-        ? languageChoices
-        : languageChoicesFor(course);
-    return [for (final option in options) option.code];
-  }
-
-  /// Lo que ofrece una pantalla que **escribe** un idioma en un fichero.
-  ///
-  /// Lo que se puede elegir, más lo que ese fichero ya dice. Apagar un idioma
-  /// en Ajustes es dejar de mirarlo, no borrarlo del material: sin esta unión,
-  /// abrir la ficha de una asignatura que se da en inglés con el inglés
-  /// apagado y darle a guardar se lo quitaría, sin que nadie lo pidiera y sin
-  /// que se viera.
   List<LanguageOption> languagesToEdit({
     required List<String> allowed,
     required List<String> declared,
-  }) => namedLanguages([
-    for (final code in allowed)
-      if (_synced.isLanguageEnabled(code) || declared.contains(code)) code,
-  ], or: allowed);
+  }) => languages.toEdit(allowed: allowed, declared: declared);
 
   /// Lo mismo, en códigos, para quien no necesite los nombres.
   List<String> languagesToEditCodes({
@@ -2818,146 +1415,38 @@ class Session extends ChangeNotifier {
       option.code,
   ];
 
-  /// Los códigos con su nombre, en el orden del registro, o [or] si no queda
-  /// ninguno.
   List<LanguageOption> namedLanguages(
     List<String> codes, {
     List<String> or = const [],
-  }) {
-    final wanted = codes.isEmpty ? or : codes;
-    final known = catalogueOrNull?.languageOptions ?? const <LanguageOption>[];
-    // El orden del registro y no el de la lista: así la barra de arriba, el
-    // menú de compilar y la ficha de la asignatura enseñan los mismos idiomas
-    // en el mismo sitio, que es lo que permite ir a ciegas.
-    final ordered = [
-      for (final option in known)
-        if (wanted.contains(option.code)) option,
-    ];
-    final rest = [
-      for (final code in wanted)
-        if (!known.any((option) => option.code == code))
-          LanguageOption(code: code, name: code),
-    ];
-    return [...ordered, ...rest];
+  }) => languages.named(codes, or: or);
+
+  // -- el arranque: ver [Startup] -----------------------------------------
+
+  late final Startup startup = Startup(this, onChanged: notifyListeners);
+
+  /// Qué está haciendo el arranque, para la pantalla de carga. Null fuera
+  /// de él.
+  String? get startStep => startup.step;
+
+  Future<void> start() => startup.run();
+
+  /// Los repositorios ocultos la última vez que se miró: ver
+  /// [_libraryPrefsChanged]. El arranque los apunta al leer las preferencias.
+  void noteHiddenRepos() {
+    _hiddenSeen = {...libraryPrefs.synced.hiddenRepos};
+    _languagesSeen = {...libraryPrefs.synced.enabledLanguages};
   }
-
-  /// Brings up the catalogue and works out how content can be reached.
-  ///
-  /// **The catalogue is the only thing that can stop this.** Everything else
-  /// here -- a stored preference, a keychain, a clone, GitHub --
-  /// is allowed to fail, and each failure is recorded and shown rather than
-  /// thrown. That is not defensiveness: this is called from `initState`
-  /// without an `await`, so anything that escapes becomes an unhandled async
-  /// error, and an unhandled error before the first frame is a black window
-  /// with the reason in a log nobody reads. It has happened twice.
-  Future<void> start() async {
-    _state = LoadState.loading;
-    notifyListeners();
-
-    // The clone is looked up first because it changes where the catalogue is
-    // read from: inside a clone, the index on disk is the one that matches
-    // the files the editor writes, and fetching a different copy over HTTP
-    // would let the library disagree with the editor.
-    try {
-      _workspace = Workspace.fromJson(await preferences.workspace() ?? '');
-      _clientId = await preferences.githubClientId() ?? '';
-      _cloneBase = await preferences.cloneBase() ?? '';
-      _texPath = await preferences.texPath();
-      _previewProfile = await preferences.previewProfile() ?? _previewProfile;
-      _unitPanel = await preferences.unitPanelVisible();
-      _split = await preferences.splitEditors();
-      // La copia local primero: es la que hace que los temas abran plegados
-      // sin esperar al repositorio, y la que vale cuando no hay ninguno.
-      _prefsRepo = await preferences.prefsRepo();
-      _synced = SyncedPrefs.fromJson(await preferences.syncedPrefs() ?? '');
-      _welcomeDone = await preferences.welcomeDone();
-      _refilter();
-    } catch (error) {
-      // A setting that cannot be read is a setting that is not set.
-      _workspace = const Workspace.empty();
-      _settingsProblem = error;
-    }
-
-    // La sesión, antes que el catálogo y antes de pintar.
-    //
-    // Va aquí y no en `refreshAccess`, que es donde estaba, porque ahora
-    // decide **si hay aplicación**: sin sesión no se abre nada, así que la
-    // primera pantalla depende de esto y no puede pintarse sin ello. Y porque
-    // un catálogo que no carga sale por una rama que nunca llegaba a
-    // `refreshAccess`, y habría dejado la pantalla de carga para siempre.
-    _token = await tokenStore.read();
-    await _resolveSignIn();
-
-    try {
-      _catalogue = await _source.load();
-      _refilter();
-      _language = _catalogue!.defaultLanguage;
-      _state = LoadState.ready;
-    } catch (error) {
-      // Sin repositorios abiertos, que no se pueda leer un catálogo **no es
-      // un error**: es una instalación recién puesta y todavía no se le ha
-      // dicho con qué trabajar. Antes caía en el catálogo por HTTP que traía
-      // la compilación, que en escritorio no resuelve, y la primera pantalla
-      // era «No se pudo cargar el catálogo» con una dirección relativa y un
-      // botón que ya no llevaba a ninguna parte.
-      if (_workspace.isEmpty && LocalClone.supported) {
-        _catalogue = Catalogue.merge(const []);
-        _refilter();
-        _language = _catalogue!.defaultLanguage;
-        _state = LoadState.ready;
-        notifyListeners();
-        return;
-      }
-      _error = error;
-      _state = LoadState.failed;
-      notifyListeners();
-      return;
-    }
-
-    // Painted before access is resolved. The library needs none of what
-    // follows, and making the reader wait for a keychain -- or lose the
-    // screen to it -- is the wrong trade.
-    notifyListeners();
-
-    // Y ahora los repositorios: mirar el estado de cada clon, quién ha
-    // entrado y dónde está el motor. Después de pintar a propósito, que es
-    // hablar con git y con la red.
-    await refreshAccess();
-
-    // El índice, después de pintar.
-    //
-    // Es un fichero generado que describe el disco, y el disco cambia entre
-    // arranques: mover `content/` a otro sitio deja un índice que habla de
-    // dos mil unidades que ya no están, y la biblioteca las enseñaba tan
-    // contenta. Preguntar cuesta una décima --el motor cuenta ficheros, no
-    // los abre-- y solo se regenera cuando hace falta.
-    //
-    // Después y no antes a propósito: buscar el motor y hablar con él es
-    // lanzar procesos, y ponerlo delante de la primera pantalla haría que un
-    // motor lento o ausente retrasara el arranque entero. Así la biblioteca
-    // aparece con lo que había y se corrige sola un segundo después, con el
-    // aviso diciendo qué ha cambiado.
-    if (await refreshIndex()) await reloadCatalogue();
-  }
-
-  Object? _settingsProblem;
 
   /// Why the stored settings could not be read, if they could not be.
-  Object? get settingsProblem => _settingsProblem;
-
-  Object? _accessProblem;
+  Object? get settingsProblem => startup.settingsProblem;
 
   /// Why working out how to reach the content failed, if it did.
   ///
   /// Kept and shown in Ajustes. The app is usable without it -- reading the
   /// public catalogue needs no access at all -- so this is a degraded state
   /// and not a broken one.
-  Object? get accessProblem => _accessProblem;
+  Object? get accessProblem => repositories.accessProblem;
 
-  /// Recomputes the authorisation and the gateway from scratch.
-  ///
-  /// Called on every auth change and after a token is stored or cleared.
-  /// Deriving rather than mutating is what guarantees the two cannot drift.
   /// Vuelve a abrir los repositorios y a recalcular sus pasarelas.
   ///
   /// Se llama después de entrar, de salir, de añadir o quitar uno, y al
@@ -2965,69 +1454,12 @@ class Session extends ChangeNotifier {
   /// garantiza que no pueda quedar una pasarela que escribe en un repositorio
   /// que ya no está abierto.
   Future<void> refreshAccess() async {
-    try {
-      await _openRepositories();
-      _accessProblem = null;
-    } catch (error) {
-      _accessProblem = error;
-    }
-    notifyListeners();
+    await repositories.refresh();
     // Las preferencias sincronizadas, después: hacen falta la pasarela del
     // repositorio y el login de quien ha entrado, y las dos salen de arriba.
     // Sin esperar a que terminen: lo local ya está puesto, y esto solo puede
     // mejorarlo.
     unawaited(loadSyncedPrefs());
-  }
-
-  /// Abre cada repositorio del espacio de trabajo: su clon y su pasarela.
-  Future<void> _openRepositories() async {
-    _token = await tokenStore.read();
-    _pushOnCommit = await preferences.pushOnCommit();
-    _commitOnSave = await preferences.commitOnSave();
-    _gateways.clear();
-    _cloneStatus.clear();
-    _repoProblems.clear();
-
-    await _resolveSignIn();
-
-    // El autor de los commits: quien ha entrado en GitHub. Sin sesión, lo que
-    // git tenga configurado en la máquina, que es lo que hace que un clon
-    // propio no necesite entrar en ningún sitio para escribir en él.
-    final signedIn = _user;
-    _cloneAuthor = signedIn == null
-        ? null
-        : (name: signedIn.authorName, email: signedIn.authorEmail);
-
-    for (final repo in _workspace.repos) {
-      if (!LocalClone.supported) continue;
-      try {
-        final clone = LocalClone(directory: repo.directory);
-        if (!await clone.looksRight(owner: repo.owner, repo: repo.name)) {
-          throw CloneException(
-            '${repo.directory} no es un clon de ${repo.id}. '
-            'Quítalo y vuelve a añadirlo.',
-          );
-        }
-        _cloneStatus[repo.id] = await clone.status();
-        _cloneAuthor ??= await clone.configuredAuthor();
-        _gateways[repo.id] = CloneGateway(
-          clone: clone,
-          token: _token ?? '',
-          author: _cloneAuthor,
-          pushOnCommit: _pushOnCommit,
-          commitOnSave: _commitOnSave,
-          // Traer antes de escribir, con la ventana de [freshFor] para no
-          // preguntar a GitHub en cada guardado.
-          beforeWrite: () => ensureFresh(repo.id),
-        );
-      } catch (thrown) {
-        // Uno que no abre no puede llevarse por delante a los demás: quien
-        // tenga el otro tiene que poder trabajar con él.
-        _repoProblems[repo.id] = thrown;
-      }
-    }
-
-    if (compiler() == null) await _findEngine();
   }
 
   /// Quién es quien tiene este token, según GitHub.
@@ -3045,66 +1477,11 @@ class Session extends ChangeNotifier {
   /// Null es que no llega. Aparte por lo mismo que [whoIs]: es de las pocas
   /// cosas que necesitan internet, y aislarla permite probar la regla --qué
   /// carpetas se dejan añadir y cuáles no-- sin una máquina conectada.
-  @protected
-  @visibleForTesting
+  ///
+  /// Sin `@protected`: lo llama [Repositories]. Sigue siendo el punto que
+  /// sustituyen las pruebas, y por eso se llama siempre por la sesión.
   Future<GitHubRepo?> accessTo(String owner, String name) async {
-    final token = _token ?? await tokenStore.read() ?? '';
-    return GitHubApi(token: token).repository(owner, name);
-  }
-
-  /// Decide si hay sesión, que es lo que decide si Didacta se abre.
-  ///
-  /// La regla, en una línea: **hay sesión si hay credencial guardada y GitHub
-  /// no la ha rechazado.** Los cuatro casos que salen de ahí no son
-  /// intercambiables:
-  ///
-  /// * sin token, no hay sesión. Es la instalación recién puesta;
-  /// * con token y GitHub contestando, hay sesión y además se sabe de quién.
-  ///   Se apunta, para la próxima vez que no haya red;
-  /// * con token y **GitHub diciendo que no vale** --un 401, un token
-  ///   revocado desde github.com-- se cierra la sesión aquí y se dice por
-  ///   qué. Dejar abierta una sesión que GitHub ya no reconoce sería enseñar
-  ///   un candado que no cierra;
-  /// * con token y **sin poder preguntar** --sin red-- hay sesión. Lo que se
-  ///   exige es haber entrado, y eso ya pasó; lo que no hay ahora es forma de
-  ///   confirmarlo, que no es lo mismo. Se usa el nombre apuntado la última
-  ///   vez.
-  Future<void> _resolveSignIn() async {
-    if (_token == null || _token!.isEmpty) {
-      _user = null;
-      _signIn = SignInState.signedOut;
-      return;
-    }
-
-    if (_user == null) {
-      try {
-        // Con tope: sin red, una petición puede tardar lo que tarde el DNS en
-        // rendirse, y eso es tiempo con la aplicación en blanco delante de
-        // alguien que ya entró. Pasado el tope se sigue con lo apuntado, que
-        // es exactamente lo que hay que hacer cuando no se puede preguntar.
-        _user = await whoIs(_token!).timeout(const Duration(seconds: 6));
-        await preferences.setGithubUser(jsonEncode(_user!.toJson()));
-        _signInProblem = null;
-      } on GitHubException catch (rejected) {
-        if (rejected.rejectsCredential) {
-          await tokenStore.clear();
-          await preferences.setGithubUser(null);
-          _token = null;
-          _user = null;
-          _signInProblem = rejected;
-          _signIn = SignInState.signedOut;
-          return;
-        }
-        // GitHub contestó, pero con algo que no habla de la credencial --un
-        // 500 suyo--. No es motivo para echar a nadie.
-        _user = GitHubUser.fromJson(await preferences.githubUser());
-      } catch (_) {
-        // Ni siquiera contestó: sin red. Lo que se sabe es lo de la última
-        // vez, y basta para firmar los commits.
-        _user = GitHubUser.fromJson(await preferences.githubUser());
-      }
-    }
-    _signIn = SignInState.signedIn;
+    return GitHubApi(token: await currentToken()).repository(owner, name);
   }
 
   Future<void> storeToken(String token) async {
@@ -3133,126 +1510,25 @@ class Session extends ChangeNotifier {
     await refreshAccess();
   }
 
-  /// Confirma lo que haya escrito y sin confirmar, con un mensaje.
-  ///
-  /// **También con los commits automáticos puestos.** Se creía que con ellos
-  /// no quedaba nunca nada pendiente, y no es verdad: lo que se escribe
-  /// desde fuera --otro editor, un `cp` de una lección, una carpeta traída
-  /// de otro sitio-- aparece en el árbol de trabajo sin pasar por Didacta, y
-  /// ahí se queda. Setecientos ficheros sin confirmar en un repositorio son
-  /// setecientos ficheros que nadie más tiene.
-  ///
-  /// [only] son las rutas elegidas, por repositorio; null es todo lo
-  /// pendiente. Se puede elegir porque setecientos ficheros rara vez son un
-  /// solo cambio que contar, y un commit que dice «Editar 706 ficheros» es
-  /// un commit que nadie va a poder leer dentro de seis meses.
-  ///
-  /// Repositorio por repositorio y por rutas, no un `git add -A`: cada uno
-  /// tiene su historial y su mensaje, y barrer el árbol entero se llevaría al
-  /// commit lo que alguien tenga a medias fuera de Didacta.
-  ///
-  /// Devuelve en cuántos repositorios se confirmó algo.
   Future<int> commitPending(
     String message, {
     Map<String, List<String>>? only,
-  }) async {
-    // El registro, desde el principio: confirmar setecientos ficheros tarda,
-    // y lo que tarda tiene que decir lo que está haciendo.
-    syncConsole.start(
-      'Confirmar los cambios',
-      opening: _gitOpening,
-      about: _gitAbout,
-    );
+  }) => repoSync.commitPending(message, only: only);
 
-    if (message.trim().isEmpty) {
-      final problem = ArgumentError('un commit necesita un mensaje');
-      syncConsole.finish(failure: problem);
-      throw problem;
-    }
-    final author = _cloneAuthor;
-    if (author == null) {
-      final problem = ArgumentError(
-        'Un commit necesita un autor. Inicia sesión antes de confirmar.',
-      );
-      syncConsole.finish(failure: problem);
-      throw problem;
-    }
-
-    final chosen = only ?? pendingChanges;
-    syncConsole.expect(chosen.values.where((files) => files.isNotEmpty).length);
-
-    var done = 0;
-    Object? failure;
-    for (final entry in chosen.entries) {
-      if (entry.value.isEmpty) continue;
-      final clone = cloneFor(entry.key);
-      if (clone == null) continue;
-      syncConsole.startStep(entry.key);
-      syncConsole.add('=== ${entry.key}');
-      try {
-        final committed = await clone.commitPaths(
-          paths: entry.value,
-          message: message.trim(),
-          authorName: author.name,
-          authorEmail: author.email,
-          token: _token ?? '',
-          // Enviar o no lo decide la otra preferencia, igual que con los
-          // commits automáticos: son dos decisiones distintas.
-          push: _pushOnCommit && (_token ?? '').isNotEmpty,
-          onProgress: syncConsole.add,
-        );
-        if (committed) done += 1;
-        if (!committed) syncConsole.add('--- no había nada que confirmar');
-      } catch (thrown) {
-        // Uno que falle no para a los demás, igual que al enviar: lo que se
-        // pudo confirmar queda confirmado, y por qué no salió el otro está
-        // escrito ahí arriba.
-        failure ??= thrown;
-        syncConsole.add('--- FAIL $thrown');
-      }
-      syncConsole.finishStep();
-    }
-    if (done > 0) {
-      syncConsole.startStep('volviendo a mirar los repositorios');
-      await refreshAccess();
-    }
-    syncConsole.finish(ok: failure == null);
-    if (failure != null) throw failure;
-    return done;
-  }
-
-  /// Cuántos ficheros hay escritos y sin confirmar, en todos los repositorios.
-  int get pendingCount =>
-      pendingChanges.values.fold<int>(0, (sum, files) => sum + files.length);
+  int get pendingCount => repoSync.pendingCount;
 
   /// Sets who the clone's commits are attributed to, for this clone only.
-  Future<void> setCloneAuthor({
-    required String name,
-    required String email,
-  }) async {
-    for (final repo in _workspace.repos) {
-      await LocalClone(
-        directory: repo.directory,
-      ).setAuthor(name: name, email: email);
-    }
-    await refreshAccess();
-  }
+  Future<void> setCloneAuthor({required String name, required String email}) =>
+      repositories.setCloneAuthor(name: name, email: email);
 
   // -- los repositorios ---------------------------------------------------
 
   /// Guarda el Client ID de la OAuth App con la que se entra.
-  Future<void> setGithubClientId(String value) async {
-    _clientId = value.trim();
-    await preferences.setGithubClientId(_clientId);
-    notifyListeners();
-  }
+  Future<void> setGithubClientId(String value) =>
+      settings.setGithubClientId(value);
 
   /// Dónde se clonan los repositorios nuevos.
-  Future<void> setCloneBase(String path) async {
-    _cloneBase = path;
-    await preferences.setCloneBase(path);
-    notifyListeners();
-  }
+  Future<void> setCloneBase(String path) => settings.setCloneBase(path);
 
   /// Guarda el token de GitHub y mira quién es.
   ///
@@ -3261,67 +1537,22 @@ class Session extends ChangeNotifier {
   /// se ha podido comprobar ni una vez no es una sesión. Lo que se guarda es
   /// el resultado de esa comprobación, y es lo que permite que los arranques
   /// siguientes valgan sin red.
-  Future<void> signIn(String token) async {
-    final who = await whoIs(token);
-    await tokenStore.write(token);
-    await preferences.setGithubUser(jsonEncode(who.toJson()));
-    _token = token;
-    _user = who;
-    _signIn = SignInState.signedIn;
-    _signInProblem = null;
-    _forgetFreshness();
-    await _dropUnreachable();
-    await refreshAccess();
-  }
+  Future<void> signIn(String token) =>
+      signInWith(GitHubCredential(token: token));
 
-  /// Los repositorios abiertos que esta cuenta no alcanza, fuera.
-  ///
-  /// Se hace al entrar y solo al entrar. Entrar es cuando puede cambiar la
-  /// respuesta --es otra cuenta, o a esta le han quitado el acceso-- y es
-  /// además el único momento en el que se sabe que hay red: comprobarlo en
-  /// cada arranque costaría una llamada por repositorio y dejaría a quien
-  /// abre sin conexión sin sus propias carpetas.
-  ///
-  /// Se quitan del espacio de trabajo, no del disco. La carpeta lleva trabajo
-  /// dentro y perder el acceso a un repositorio no es motivo para borrarlo de
-  /// la máquina de nadie.
-  Future<void> _dropUnreachable() async {
-    final dropped = <String>[];
-    for (final repo in _workspace.repos) {
-      try {
-        if (await accessTo(repo.owner, repo.name) == null) {
-          dropped.add(repo.id);
-        }
-      } catch (_) {
-        // No haber podido preguntar no es un «no»: quitarle a alguien sus
-        // repositorios porque GitHub tuvo un mal momento sería mucho peor
-        // que dejarlos abiertos un rato de más.
-      }
-    }
-    if (dropped.isEmpty) return;
-    for (final id in dropped) {
-      _workspace = _workspace.without(id);
-    }
-    await preferences.setWorkspace(_workspace.toJson());
-    _accessProblem = CloneException(
-      dropped.length == 1
-          ? 'He cerrado ${dropped.single}: esta cuenta no llega a él. La '
-                'carpeta sigue en el disco.'
-          : 'He cerrado ${dropped.length} repositorios a los que esta cuenta '
-                'no llega: ${dropped.join(', ')}. Las carpetas siguen en el '
-                'disco.',
-    );
+  /// Entra con una credencial entera: la de una GitHub App trae el de renovar
+  /// y cuándo caduca. Ver `model/github_credential.dart`.
+  Future<void> signInWith(GitHubCredential credential) async {
+    await auth.signInWith(credential);
+    repoSync.forgetFreshness();
+    await repositories.dropUnreachable();
+    await refreshAccess();
   }
 
   /// Sale de GitHub. Los clones se quedan: son carpetas de esta máquina con
   /// el trabajo dentro, y borrarlas al salir sería perderlo.
   Future<void> signOut() async {
-    await tokenStore.clear();
-    await preferences.setGithubUser(null);
-    _token = null;
-    _user = null;
-    _signIn = SignInState.signedOut;
-    _signInProblem = null;
+    await auth.signOut();
     // Avisando ya, antes de volver a abrir los repositorios: salir tiene que
     // devolver a la puerta en el acto. Lo que viene después --mirar el estado
     // de cada clon, buscar el motor-- habla con git y con el disco, y dejar
@@ -3331,29 +1562,17 @@ class Session extends ChangeNotifier {
     await refreshAccess();
   }
 
-  /// Dónde se clonaría un repositorio, y qué hay ya ahí.
-  ///
-  /// Se consulta **antes** de clonar: es lo que permite decir «ya lo tienes,
-  /// lo uso» o «ahí hay otra cosa, elige otra carpeta» en lugar de escribir
-  /// encima y explicarlo después.
+  /// Dónde se clonaría un repositorio, y qué hay ya ahí. Ver
+  /// [Repositories.inspectTarget].
   Future<({String directory, CloneTarget state})> inspectTarget({
     required String owner,
     required String name,
     String? directory,
-  }) async {
-    final where = directory ?? '$_cloneBase/$name';
-    if (!LocalClone.supported) {
-      return (directory: where, state: CloneTarget.free);
-    }
-    return (
-      directory: where,
-      state: await LocalClone.inspect(
-        directory: where,
-        owner: owner,
-        repo: name,
-      ),
-    );
-  }
+  }) => repositories.inspectTarget(
+    owner: owner,
+    name: name,
+    directory: directory,
+  );
 
   /// Añade un repositorio al espacio de trabajo, clonándolo si hace falta.
   ///
@@ -3365,33 +1584,14 @@ class Session extends ChangeNotifier {
     String? directory,
     int? colour,
     void Function(String line)? onProgress,
-  }) async {
-    final where = directory ?? '$_cloneBase/$name';
-    final token = _token ?? await tokenStore.read() ?? '';
-
-    if (LocalClone.supported) {
-      final existing = LocalClone(directory: where);
-      final already = await existing.looksRight(owner: owner, repo: name);
-      if (!already) {
-        await LocalClone.create(
-          directory: where,
-          owner: owner,
-          repo: name,
-          branch: branch,
-          token: token,
-          onProgress: onProgress,
-        );
-      }
-    }
-
-    return _register(
-      owner: owner,
-      name: name,
-      directory: where,
-      branch: branch,
-      colour: colour,
-    );
-  }
+  }) => repositories.add(
+    owner: owner,
+    name: name,
+    branch: branch,
+    directory: directory,
+    colour: colour,
+    onProgress: onProgress,
+  );
 
   /// Prepara un repositorio de GitHub vacío como repositorio de contenido, y
   /// lo añade.
@@ -3408,66 +1608,91 @@ class Session extends ChangeNotifier {
     String? directory,
     int? colour,
     void Function(String line)? onProgress,
-  }) async {
-    if (!LocalClone.supported) {
-      throw const CloneException(
-        'Preparar un repositorio necesita clonarlo, y aquí no se puede.',
-      );
-    }
-    final where = directory ?? '$_cloneBase/$name';
-    final token = _token ?? await tokenStore.read() ?? '';
-    final signedIn = _user;
-    final author = signedIn == null
-        ? _cloneAuthor
-        : (name: signedIn.authorName, email: signedIn.authorEmail);
-    if (author == null) {
-      throw const CloneException(
-        'Entra en GitHub primero: el primer commit tiene que ir a nombre de '
-        'alguien.',
-      );
-    }
+  }) => repositories.initialize(
+    owner: owner,
+    name: name,
+    branch: branch,
+    title: title,
+    directory: directory,
+    colour: colour,
+    onProgress: onProgress,
+  );
 
-    await LocalClone.initialize(
-      directory: where,
-      owner: owner,
-      repo: name,
-      branch: branch,
-      token: token,
-      title: title,
-      authorName: author.name,
-      authorEmail: author.email,
-      onProgress: onProgress,
-    );
-    return _register(
-      owner: owner,
-      name: name,
-      directory: where,
-      branch: branch,
-      colour: colour,
-    );
-  }
+  /// Crea el repositorio de ejemplo en la cuenta de quien ha entrado, lo
+  /// siembra con el curso que trae la aplicación y lo abre.
+  ///
+  /// Privado y con un nombre libre: `didacta-ejemplo`, o `didacta-ejemplo-2`
+  /// si aquel ya está cogido por otra cosa. Si ya existe **y es de contenido**
+  /// es el ejemplo de otra vez, y se abre ese en lugar de crear otro: quien
+  /// vuelve a pulsar el botón quiere su ejemplo, no una colección de ellos.
+  ///
+  /// Devuelve el repositorio abierto y si ya existía.
+  Future<({ContentRepo repo, bool reused})> createExampleRepository({
+    Map<String, String>? files,
+    void Function(String what)? onStep,
+    void Function(String line)? onProgress,
+  }) => repositories.createExample(
+    files: files,
+    onStep: onStep,
+    onProgress: onProgress,
+  );
 
-  /// Apunta un clon ya listo en el espacio de trabajo y lo abre.
-  Future<ContentRepo> _register({
-    required String owner,
+  /// Crea un repositorio vacío y privado en GitHub. Aparte por lo mismo que
+  /// [accessTo]: una prueba no puede crear repositorios de verdad.
+  ///
+  /// Sin `@protected`: lo llama [Repositories]. Sigue siendo el punto que
+  /// sustituyen las pruebas, y por eso se llama siempre por la sesión.
+  Future<GitHubRepo> createGitHubRepository({
     required String name,
-    required String directory,
-    required String branch,
-    int? colour,
+    String description = '',
   }) async {
-    final repo = ContentRepo(
-      owner: owner,
-      name: name,
-      directory: directory,
-      branch: branch,
-      colour: colour ?? _workspace.nextColour(),
-    );
-    _workspace = _workspace.with_(repo);
-    await preferences.setWorkspace(_workspace.toJson());
-    await refreshAccess();
-    await reloadCatalogue();
-    return repo;
+    final api = GitHubApi(token: await currentToken());
+    try {
+      return await api.createRepository(name: name, description: description);
+    } finally {
+      api.close();
+    }
   }
+
+  /// Si un repositorio de GitHub es de contenido de Didacta.
+  ///
+  /// Sin `@protected`: lo llama [Repositories]. Sigue siendo el punto que
+  /// sustituyen las pruebas, y por eso se llama siempre por la sesión.
+  Future<bool> isContentRepository(String owner, String name) async {
+    final api = GitHubApi(token: await currentToken());
+    try {
+      return await api.isContentRepo(owner, name);
+    } finally {
+      api.close();
+    }
+  }
+
+  /// Si el token puede enviar un commit que toca `.github/workflows/`.
+  ///
+  /// Null es que no se ha podido preguntar. Un token de antes de que Didacta
+  /// pidiera el permiso `workflow` no puede, y GitHub rechaza el envío entero:
+  /// el commit se quedaría aquí sin enviar y taparía los de después. Por eso
+  /// se pregunta **antes** de escribir un workflow, y no se escribe si no.
+  /// Punto de sustitución de las pruebas, como [accessTo].
+  Future<bool?> canPushWorkflows() async {
+    final api = GitHubApi(token: await currentToken());
+    try {
+      final scopes = await api.scopes();
+      return scopes == null || scopes.contains('workflow');
+    } catch (caught, trace) {
+      Diagnostics.instance.note('session.canPushWorkflows', caught, trace);
+      return null;
+    } finally {
+      api.close();
+    }
+  }
+
+  /// De dónde se clona un repositorio. Null es GitHub; una prueba lo apunta
+  /// a un repositorio desnudo del disco.
+  ///
+  /// Sin `@protected`: lo llama [Repositories]. Sigue siendo el punto que
+  /// sustituyen las pruebas, y por eso se llama siempre por la sesión.
+  String? remoteFor(String owner, String name) => null;
 
   /// Añade una carpeta que ya está en el disco.
   ///
@@ -3475,233 +1700,35 @@ class Session extends ChangeNotifier {
   /// sin entrar en GitHub: un clon que ya tenías sigue siendo tuyo. Es también
   /// el camino de vuelta para quien tenía la aplicación de antes, cuando había
   /// un solo clon configurado en Ajustes.
-  Future<ContentRepo> addExistingRepository(String directory) async {
-    final clone = cloneAt(directory);
-
-    // 1. Que sea un clon de git con un remoto de GitHub.
-    //
-    // Una carpeta cualquiera del disco no sirve, y no por capricho: lo que
-    // se escriba ahí no tiene a dónde ir. Un repositorio de contenido es la
-    // fuente de la verdad de un curso entero, y una copia que solo existe en
-    // un portátil es la copia que se pierde.
-    final remote = await clone.remoteUrl();
-    final found = repoFromRemote(remote);
-    if (found == null) {
-      throw CloneException(
-        '$directory no es un clon de un repositorio de GitHub. Didacta solo '
-        'trabaja sobre clones: lo que se escribe tiene que poder enviarse, y '
-        'una carpeta suelta no tiene a dónde.',
-      );
-    }
-
-    // 2. Que la cuenta que ha entrado llegue a ese repositorio.
-    //
-    // Que la carpeta esté en este disco no dice nada de quién la puso ahí:
-    // puede ser el clon de otra persona, o el de una cuenta anterior. Quien
-    // decide si esto se puede abrir es GitHub, y se le pregunta.
-    final GitHubRepo? reachable;
-    try {
-      reachable = await accessTo(found.owner, found.name);
-    } on GitHubException catch (thrown) {
-      throw CloneException(
-        'No se ha podido comprobar en GitHub si llegas a '
-        '${found.owner}/${found.name}, así que no lo añado: añadirlo sin '
-        'saberlo sería abrir algo que quizá no se puede sincronizar.',
-        stderr: '$thrown',
-      );
-    } catch (thrown) {
-      throw CloneException(
-        'Sin conexión con GitHub no puedo comprobar si llegas a '
-        '${found.owner}/${found.name}. Añadir un repositorio se hace una vez '
-        'y con red; lo que ya está añadido sigue abriéndose sin ella.',
-        stderr: '$thrown',
-      );
-    }
-    if (reachable == null) {
-      final who = _user?.login;
-      throw CloneException(
-        '${found.owner}/${found.name} no existe o no llegas a él'
-        '${who == null ? '' : ' con la cuenta $who'}. '
-        'Pide acceso en GitHub, o entra con la cuenta que lo tiene.',
-      );
-    }
-
-    final repo = ContentRepo(
-      owner: found.owner,
-      name: found.name,
-      directory: directory,
-      branch: (await clone.status()).branch,
-      colour: _workspace.nextColour(),
-    );
-    _workspace = _workspace.with_(repo);
-    await preferences.setWorkspace(_workspace.toJson());
-
-    // 3. Y que quede al día.
-    //
-    // Se añade y acto seguido se pone en hora con GitHub, porque una carpeta
-    // que llevaba meses parada abre enseñando material viejo sin decirlo. Lo
-    // que no se puede alinear --commits sin enviar, ficheros sin guardar-- no
-    // se toca ni se esconde: queda dicho y en la barra de sincronización.
-    _addProblem = await _catchUp(repo);
-
-    await refreshAccess();
-    await reloadCatalogue();
-    return repo;
-  }
-
-  Object? _addProblem;
+  Future<ContentRepo> addExistingRepository(String directory) =>
+      repositories.addExisting(directory);
 
   /// Qué impidió dejar al día el último repositorio añadido, si algo lo hizo.
-  Object? get addProblem => _addProblem;
+  Object? get addProblem => repositories.addProblem;
 
-  /// Cuánto vale una comprobación de que un clon está al día.
-  ///
-  /// Cinco minutos. Editando se guarda muchas veces seguidas --cada campo de
-  /// un problema, cada vuelta a una unidad-- y preguntar a GitHub en cada
-  /// guardado convertiría cada pulsación en una llamada de red: la aplicación
-  /// se pondría lenta justo en lo que más se hace, y GitHub acabaría
-  /// limitando las peticiones. Lo que hace falta es no editar sobre material
-  /// viejo, y para eso una comprobación de hace un momento vale igual que una
-  /// de ahora: en cinco minutos nadie ha empujado y se ha ido.
-  static const Duration freshFor = Duration(minutes: 5);
+  static const Duration freshFor = RepoSync.freshFor;
 
-  /// Cuándo se comprobó por última vez que cada clon estaba al día.
-  final Map<String, DateTime> _verified = {};
+  static const Duration freshFetchLimit = RepoSync.freshFetchLimit;
 
-  /// Se asegura de que el clon de [repo] está al día antes de escribir en él.
-  ///
-  /// Es la otra mitad de «siempre sincronizados»: traer antes de modificar,
-  /// enviar después. Sin esto, dos personas sobre el mismo tema se pisan sin
-  /// enterarse hasta que una de las dos no puede enviar.
-  ///
-  /// Cuatro cosas que decide, y las cuatro importan:
-  ///
-  /// * **no pregunta si preguntó hace poco** ([freshFor]). Guardar es lo que
-  ///   más se hace, y una llamada de red por guardado se nota;
-  /// * **avanza solo si no hay nada que perder**: con el clon limpio y sin
-  ///   commits propios, ponerse al día es un avance rápido;
-  /// * **si ha divergido, no toca nada y lo dice**. Juntar dos historias es
-  ///   un merge, y eso no lo decide un guardado;
-  /// * **sin red, deja escribir**. Un commit a un clon del propio disco no
-  ///   necesita credencial ni conexión, y bloquear el guardado ahí sería
-  ///   perder trabajo para proteger una sincronización que se hará luego.
-  Future<void> ensureFresh(String? repo) async {
-    final id = repo ?? _workspace.repos.firstOrNull?.id;
-    if (id == null) return;
-    final target = _workspace.repos.where((r) => r.id == id).firstOrNull;
-    if (target == null || !LocalClone.supported) return;
+  Future<void> ensureFresh(String? repo) => repoSync.ensureFresh(repo);
 
-    final last = _verified[id];
-    if (last != null && DateTime.now().difference(last) < freshFor) return;
+  String saveNotice(String? repo, {int files = 1}) =>
+      repoSync.saveNotice(repo, files: files);
 
-    final problem = await _catchUp(target);
-    if (problem == null) {
-      _verified[id] = DateTime.now();
-      _driftProblem.remove(id);
-    } else {
-      // No se marca como comprobado: la próxima vez se vuelve a intentar, que
-      // es lo que hace que esto se arregle solo en cuanto vuelva la red o se
-      // resuelva el desfase desde la barra.
-      _driftProblem[id] = problem;
-    }
-    notifyListeners();
-  }
-
-  final Map<String, Object> _driftProblem = {};
-
-  /// Qué impide que un repositorio esté al día con GitHub, si algo lo impide.
-  ///
-  /// Se enseña donde se ve el repositorio. No es un error de guardar --lo
-  /// guardado está guardado-- sino una advertencia sobre lo que hay debajo.
-  Object? driftOf(String repo) => _driftProblem[repo];
-
-  /// Vuelve a exigir una comprobación, aunque se hiciera hace un momento.
-  ///
-  /// Después de traer o de enviar: lo que se acaba de hacer cambia lo que una
-  /// comprobación anterior daba por bueno.
-  void _forgetFreshness() => _verified.clear();
-
-  /// Pone un clon en hora con GitHub, hasta donde se pueda sin pisar nada.
-  ///
-  /// Trae siempre, y **avanza mientras no haya historia propia que juntar**.
-  /// Con commits locales sin enviar no se toca nada: unir dos historias es un
-  /// merge o un rebase, y eso no lo decide ni un guardado ni un botón de
-  /// «añadir carpeta». Se dice lo que hay y se deja para la barra de
-  /// sincronización, que es donde se trae y se envía a propósito.
-  ///
-  /// Quién decide si un fichero suelto sin guardar estorba es **git**, con
-  /// `pull --ff-only`, y no una comprobación propia: un `generated/` recién
-  /// regenerado deja el clon sucio casi siempre, y negarse a avanzar por eso
-  /// habría convertido la garantía en un aviso permanente que nadie lee. Si
-  /// lo que viene pisa algo sin guardar, git se niega y su mensaje es el
-  /// bueno.
-  ///
-  /// Devuelve qué lo impidió, o null si quedó al día.
-  Future<Object?> _catchUp(ContentRepo repo) async {
-    final token = _token ?? await tokenStore.read() ?? '';
-    final clone = cloneAt(repo.directory);
-    try {
-      await clone.fetch(token: token);
-      final status = await clone.status();
-      if (status.behind == 0) {
-        // Al día en lo que importa aquí. Los commits propios sin enviar no
-        // son un desfase con GitHub: son trabajo esperando a salir, y de eso
-        // ya habla la barra de sincronización.
-        return null;
-      }
-      if (status.ahead == 0) {
-        await clone.pull(token: token);
-        return null;
-      }
-      return CloneException(
-        '${repo.id} no está al día con GitHub: ${_describeDrift(status)}. '
-        'Las dos historias han seguido por su lado, así que hay que juntarlas '
-        'desde la barra de sincronización antes de seguir.',
-      );
-    } catch (thrown) {
-      return thrown;
-    }
-  }
-
-  static String _describeDrift(CloneStatus status) {
-    final pieces = [
-      if (status.behind > 0)
-        '${status.behind} ${status.behind == 1 ? 'commit' : 'commits'} por '
-            'traer',
-      if (status.ahead > 0) '${status.ahead} sin enviar',
-      if (status.dirtyPaths.isNotEmpty)
-        '${status.dirtyPaths.length} '
-            '${status.dirtyPaths.length == 1 ? 'fichero' : 'ficheros'} sin '
-            'guardar',
-    ];
-    return pieces.join(', ');
-  }
+  Object? driftOf(String repo) => repoSync.driftOf(repo);
 
   /// Si todavía no hay ningún repositorio con el que trabajar.
-  bool get needsRepository => _workspace.isEmpty;
+  bool get needsRepository => openedWorkspace.isEmpty;
 
-  /// Si la presentación de bienvenida ya se ha visto.
-  ///
-  /// `null` mientras no se ha leído, y eso no es lo mismo que `false`: la
-  /// bienvenida se enseña **en lugar de** la aplicación, así que mientras no
-  /// se sabe lo que toca es la pantalla de carga. Sin esa distinción, cada
-  /// arranque enseñaría la bienvenida durante un parpadeo.
-  bool? _welcomeDone;
-  bool? get welcomeDone => _welcomeDone;
+  /// Si la presentación de bienvenida ya se ha visto. Ver
+  /// [Startup.welcomeDone].
+  bool? get welcomeDone => startup.welcomeDone;
 
   /// La bienvenida se ha terminado --o se ha saltado--, y no vuelve.
-  Future<void> completeWelcome() async {
-    _welcomeDone = true;
-    await preferences.setWelcomeDone(true);
-    notifyListeners();
-  }
+  Future<void> completeWelcome() => startup.completeWelcome();
 
   /// Volver a enseñarla. Es lo que hace el botón de Ajustes.
-  Future<void> replayWelcome() async {
-    _welcomeDone = false;
-    await preferences.setWelcomeDone(false);
-    notifyListeners();
-  }
+  Future<void> replayWelcome() => startup.replayWelcome();
 
   /// Clona el motor --este mismo repositorio-- al lado de los de contenido.
   ///
@@ -3717,30 +1744,7 @@ class Session extends ChangeNotifier {
     String owner = engineOwner,
     String repo = engineRepo,
     void Function(String line)? onProgress,
-  }) async {
-    if (!LocalClone.supported) {
-      throw const CloneException('Aquí no se puede clonar nada.');
-    }
-    final base = _cloneBase.isEmpty ? '.' : _cloneBase;
-    final where = '$base/$repo';
-
-    final existing = LocalClone(directory: where);
-    if (!await existing.looksRight(owner: owner, repo: repo)) {
-      await LocalClone.create(
-        directory: where,
-        owner: owner,
-        repo: repo,
-        branch: 'main',
-        token: _token ?? await tokenStore.read() ?? '',
-        onProgress: onProgress,
-      );
-    }
-
-    await preferences.setEnginePath(where);
-    _enginePath = where;
-    notifyListeners();
-    return where;
-  }
+  }) => engine.install(owner: owner, repo: repo, onProgress: onProgress);
 
   /// Lo quita del espacio de trabajo. La carpeta se queda donde está: lleva
   /// trabajo dentro, y borrarla es otra decisión que hay que pedir aparte.
@@ -3750,49 +1754,8 @@ class Session extends ChangeNotifier {
   /// encuentra nada dentro que no sea suyo. Devuelve qué pasó con la carpeta
   /// si no se pudo tirar, o `null`. Que no se pueda no deshace el quitarlo:
   /// ya no está en la lista, y la carpeta sigue donde estaba.
-  Future<String?> removeRepository(
-    String id, {
-    bool trashFolder = false,
-  }) async {
-    ContentRepo? removed;
-    for (final repo in _workspace.repos) {
-      if (repo.id == id) removed = repo;
-    }
-    _workspace = _workspace.without(id);
-    await preferences.setWorkspace(_workspace.toJson());
-    // Antes de tirarla: así ya nadie la está mirando.
-    await refreshAccess();
-    String? problem;
-    if (trashFolder && removed != null) {
-      problem = await _trashRepositoryFolder(removed);
-    }
-    await reloadCatalogue();
-    return problem;
-  }
-
-  /// Manda a la Papelera la carpeta de [repo], si es seguro. Devuelve el
-  /// porqué si no se pudo.
-  Future<String?> _trashRepositoryFolder(ContentRepo repo) async {
-    final folder = repo.directory;
-    final why = whyNotTrash(
-      folder,
-      home: files.home,
-      cloneBase: _cloneBase,
-      engine: _enginePath,
-      others: [
-        for (final other in _workspace.repos)
-          if (other.id != repo.id) other.directory,
-      ],
-    );
-    if (why != null) {
-      return 'No he mandado $folder a la Papelera: $why. Sigue donde estaba.';
-    }
-    if (!await files.trash(folder)) {
-      return 'No he podido mandar $folder a la Papelera, así que sigue donde '
-          'estaba. Si quieres quitarla, bórrala a mano.';
-    }
-    return null;
-  }
+  Future<String?> removeRepository(String id, {bool trashFolder = false}) =>
+      repositories.remove(id, trashFolder: trashFolder);
 
   /// Deja Didacta en este ordenador como recién instalada.
   ///
@@ -3811,174 +1774,28 @@ class Session extends ChangeNotifier {
   Future<List<String>> resetEverything({
     bool folders = false,
     bool templates = false,
-  }) async {
-    final problems = <String>[];
-    if (folders) {
-      for (final repo in List.of(_workspace.repos)) {
-        final problem = await _trashRepositoryFolder(repo);
-        if (problem != null) problems.add(problem);
-      }
-    }
-    final store = _templateStore?.directory;
-    if (templates && store != null && !await files.trash(store)) {
-      problems.add(
-        'No he podido mandar las plantillas del programa ($store) a la '
-        'Papelera.',
-      );
-    }
-    await tokenStore.clear();
-    for (final provider in TranslationProvider.values) {
-      await translationSecrets.clear(provider);
-    }
-    await preferences.clearAll();
-    await forgetLegacy();
-    return problems;
-  }
+  }) => repositories.resetEverything(folders: folders, templates: templates);
+
+  /// Si [repo] compila su material en GitHub. Ver
+  /// [Repositories.hasMaterialCi].
+  Future<bool?> hasMaterialCi(String repo) => repositories.hasMaterialCi(repo);
+
+  /// Que [repo] compile su material en GitHub en cada envío. Ver
+  /// [Repositories.addMaterialCi].
+  Future<void> addMaterialCi(String repo) => repositories.addMaterialCi(repo);
 
   /// Cambia el color con el que se marca un repositorio en la interfaz.
-  Future<void> setRepositoryColour(String id, int colour) async {
-    _workspace = _workspace.recoloured(id, colour);
-    await preferences.setWorkspace(_workspace.toJson());
-    notifyListeners();
-  }
+  Future<void> setRepositoryColour(String id, int colour) =>
+      repositories.setColour(id, colour);
 
-  /// Trae de GitHub lo que haya en todos los repositorios.
-  ///
-  /// Devuelve cuántos commits se han traído, por repositorio. Uno que falle
-  /// no para a los demás: se cuenta y se sigue.
-  Future<Map<String, Object>> pullAll() async {
-    // Lo primero de todo y antes del primer `await`, para que quien abra el
-    // registro justo después lo encuentre ya en marcha y no enseñando lo de
-    // la vez anterior.
-    syncConsole.start(
-      'Traer de GitHub',
-      total: _workspace.repos.length,
-      opening: _gitOpening,
-      about: _gitAbout,
-    );
+  Future<Map<String, Object>> pullAll() => repoSync.pullAll();
 
-    final result = <String, Object>{};
-    final token = _token ?? await tokenStore.read() ?? '';
-    for (final repo in _workspace.repos) {
-      syncConsole.startStep(repo.label);
-      syncConsole.add('=== ${repo.id}');
-      try {
-        final clone = cloneAt(repo.directory);
-        final before = await clone.status();
-        await clone.pull(token: token, onProgress: syncConsole.add);
-        final after = await clone.status();
-        result[repo.id] = before.head == after.head ? 0 : (before.behind);
-        // El commit en el que queda, y no cuántos entraron: `before.behind`
-        // es de la última vez que se preguntó a GitHub, así que en un clon
-        // que no había hecho `fetch` diría cero justo cuando acaba de traer
-        // algo. Cuántos fueron ya lo dice git ahí arriba.
-        syncConsole.add(
-          before.head == after.head
-              ? '--- ya estaba al día'
-              : '--- ahora en ${after.head}',
-        );
-      } catch (thrown) {
-        result[repo.id] = thrown;
-        syncConsole.add('--- FAIL $thrown');
-      }
-      syncConsole.finishStep();
-    }
+  Future<List<RepoOutbox>> outbox() => repoSync.outbox();
 
-    // Y el registro sigue abierto durante lo que queda, que no es de git
-    // pero tarda igual: releer el índice de un repositorio grande son varios
-    // segundos más. Cerrarlo al acabar el `pull` devolvería la aplicación a
-    // la pantalla quieta que esto viene a quitar, justo antes del final.
-    syncConsole.startStep('releyendo el índice');
-    syncConsole.add('--- releyendo el índice y el catálogo');
-    _forgetFreshness();
-    await refreshAccess();
-    if (await refreshIndex()) {
-      await reloadCatalogue();
-    } else {
-      await reloadCatalogue();
-    }
-    syncConsole.finish(ok: result.values.every((each) => each is int));
-    return result;
-  }
-
-  /// Lo que se enviaría: por repositorio, lo que está sin guardar y lo que
-  /// está guardado y sin enviar.
-  Future<List<RepoOutbox>> outbox() async {
-    final boxes = <RepoOutbox>[];
-    for (final repo in _workspace.repos) {
-      try {
-        final status = await cloneAt(repo.directory).status();
-        _cloneStatus[repo.id] = status;
-        if (status.ahead == 0 && status.dirtyPaths.isEmpty) continue;
-        boxes.add(
-          RepoOutbox(
-            repo: repo,
-            ahead: status.ahead,
-            pending: status.dirtyPaths,
-          ),
-        );
-      } catch (_) {
-        // Un repositorio que no se puede leer no tiene nada que enviar.
-      }
-    }
-    return boxes;
-  }
-
-  /// Envía a GitHub: cierra en un commit lo que quedara suelto y empuja.
-  ///
-  /// El mensaje es uno para todos porque el gesto es uno: se estaba
-  /// trabajando en algo, y ese algo tocó ficheros de varios repositorios.
-  Future<Map<String, Object>> pushAll(String message) async {
-    // Antes del primer `await`, por lo mismo que en `pullAll`: la primera
-    // espera de un envío es `outbox()`, que en un repositorio grande son ya
-    // varios segundos de `git status`, y arrancar el registro después
-    // dejaría sin contar justo el tramo en el que no se ve nada.
-    syncConsole.start(
-      'Enviar a GitHub',
-      opening: _gitOpening,
-      about: _gitAbout,
-    );
-
-    final result = <String, Object>{};
-    final token = _token ?? await tokenStore.read() ?? '';
-    final author = _cloneAuthor;
-    final boxes = await outbox();
-    syncConsole.expect(boxes.length);
-    if (boxes.isEmpty) syncConsole.add('--- no había nada que enviar');
-
-    for (final box in boxes) {
-      syncConsole.startStep(box.repo.label);
-      syncConsole.add('=== ${box.repo.id}');
-      try {
-        final clone = cloneAt(box.repo.directory);
-        if (box.pending.isNotEmpty && author != null) {
-          await clone.commitPaths(
-            paths: box.pending,
-            message: message,
-            authorName: author.name,
-            authorEmail: author.email,
-            token: token,
-            push: false,
-            onProgress: syncConsole.add,
-          );
-        }
-        await clone.push(token: token, onProgress: syncConsole.add);
-        result[box.repo.id] = box.ahead + (box.pending.isEmpty ? 0 : 1);
-      } catch (thrown) {
-        result[box.repo.id] = thrown;
-        syncConsole.add('--- FAIL $thrown');
-      }
-      syncConsole.finishStep();
-    }
-
-    // Lo mismo que al traer: el registro se queda hasta que la aplicación
-    // ha terminado de enterarse, y no solo hasta que git ha terminado.
-    syncConsole.startStep('volviendo a mirar los repositorios');
-    _forgetFreshness();
-    await refreshAccess();
-    syncConsole.finish(ok: result.values.every((each) => each is int));
-    return result;
-  }
+  Future<Map<String, Object>> pushAll(
+    String message, {
+    bool commitPending = true,
+  }) => repoSync.pushAll(message, commitPending: commitPending);
 
   /// Installs a catalogue directly, for tests and for a build that ships one.
   ///
@@ -3989,76 +1806,20 @@ class Session extends ChangeNotifier {
     // Las preferencias que deciden cómo se guarda, también: las lee
     // `refreshAccess`, que se va al disco y a git, y un test de widgets no
     // puede llamarla --el reloj es falso y el proceso no vuelve--.
-    _commitOnSave = await preferences.commitOnSave();
-    _pushOnCommit = await preferences.pushOnCommit();
+    await settings.restoreWorking();
+    await libraryPrefs.restoreLocal();
 
     // Y con sesión iniciada si hay token guardado, porque **Didacta no se
     // abre sin ella**: hay una puerta delante de todas las pantallas, así
     // que una pantalla montada en un test es siempre la de alguien que
     // entró. Un test que quiera lo contrario pide un llavero vacío
     // --`StubStore(token: null)`-- y lo dice.
-    _token = await tokenStore.read();
-    if ((_token ?? '').isNotEmpty) _signIn = SignInState.signedIn;
+    auth.token = await auth.readToken();
+    if ((auth.token ?? '').isNotEmpty) auth.state = SignInState.signedIn;
 
-    _catalogue = catalogue;
-    _refilter();
-    _language = catalogue.defaultLanguage;
-    _state = LoadState.ready;
+    catalogueStore.loaded(catalogue);
+    languages.resetTo(catalogue);
     notifyListeners();
-  }
-
-  /// Lo que un repositorio tiene esperando para enviarse.
-  ///
-  /// Dos cosas distintas: lo que está escrito y sin guardar en un commit --lo
-  /// que se tocó desde fuera, o desde aquí sin cerrar-- y lo que ya tiene
-  /// commit y no ha salido de la máquina. El diálogo de enviar enseña las dos
-  /// porque son dos preguntas distintas: qué mensaje le pongo, y qué va a
-  /// llegar a GitHub.
-  ///
-  /// Where the catalogue is actually read from: the clone if there is one,
-  /// otherwise whatever the app was built with.
-  CatalogueSource get _source {
-    if (_workspace.isEmpty) return catalogueSource;
-    final parts = <CatalogueSource>[
-      for (final repo in _workspace.repos)
-        ?CatalogueSource.inClone(repo.directory, repo: repo.id),
-    ];
-    if (parts.isEmpty) return catalogueSource;
-    return parts.length == 1 ? parts.single : CatalogueSource.merged(parts);
-  }
-
-  /// For the interface, which has to be able to say where it read from.
-  String get catalogueOrigin => _source.describe;
-
-  /// Reloads the catalogue, for after a commit that changed structure.
-  Future<void> reloadCatalogue() async {
-    try {
-      // Regenerar el índice si hace falta, **antes** de leerlo.
-      //
-      // Lo que la aplicación escribe son ficheros YAML --`degrees.yaml`,
-      // `themes.yaml`, `year.yaml`, `unit.yaml`-- y lo que lee son los
-      // índices que el motor saca de ellos. Sin esto, guardar el título de un
-      // grado escribía el fichero, decía que lo había guardado y la pantalla
-      // seguía enseñando el de antes: el cambio estaba en el disco y el
-      // índice era de hace un minuto.
-      //
-      // Aquí y no en cada método que escribe, que son veinte y basta con
-      // olvidarse de uno para que vuelva el mismo fallo en otro sitio. La
-      // comprobación es barata --contar ficheros y mirar fechas-- y solo
-      // regenera cuando de verdad hace falta.
-      await refreshIndex();
-      _catalogue = await _source.load();
-      _refilter();
-      notifyListeners();
-      // Las del programa, después: son una llamada al motor y no pueden
-      // retrasar lo que la pantalla ya puede enseñar.
-      unawaited(loadStoredTemplates());
-    } catch (error) {
-      // Deliberately not fatal: the old catalogue is stale, not wrong, and
-      // throwing away a working screen because a refresh failed is worse.
-      _error = error;
-      notifyListeners();
-    }
   }
 
   // -- lookups the screens need ------------------------------------------
@@ -4069,8 +1830,10 @@ class Session extends ChangeNotifier {
   /// El color con el que se marca un repositorio, o null si no hay más de uno
   /// --con uno solo, marcar no dice nada--.
   int? colourOf(String? repo) {
-    if (!_workspace.isMultiple || repo == null || repo.isEmpty) return null;
-    return _workspace.byId(repo)?.colour;
+    if (!openedWorkspace.isMultiple || repo == null || repo.isEmpty) {
+      return null;
+    }
+    return openedWorkspace.byId(repo)?.colour;
   }
 
   /// El año tal como está sin filtrar, para poder decir cuánto se está
@@ -4101,9 +1864,19 @@ class Session extends ChangeNotifier {
   ///
   /// Computed here rather than in the translations screen so the count in the
   /// navigation and the list in the page can never disagree.
+  ///
+  /// Una vez por catálogo e idioma: el carril lo pide para su contador en
+  /// cada redibujado, y eran dos mil unidades filtradas y ordenadas cada vez.
   List<Unit> needingTranslation(String language) {
+    final catalogue = catalogueOrNull;
+    final cached = _needing;
+    if (cached != null &&
+        identical(cached.catalogue, catalogue) &&
+        cached.language == language) {
+      return cached.units;
+    }
     final units = [
-      for (final unit in catalogueOrNull?.units ?? const <Unit>[])
+      for (final unit in catalogue?.units ?? const <Unit>[])
         if (unit.statusIn(language).needsWork) unit,
     ];
     units.sort((a, b) {
@@ -4112,6 +1885,35 @@ class Session extends ChangeNotifier {
       final byUse = b.usedBy.length.compareTo(a.usedBy.length);
       return byUse != 0 ? byUse : a.path.compareTo(b.path);
     });
-    return units;
+    final frozen = List<Unit>.unmodifiable(units);
+    _needing = (catalogue: catalogue, language: language, units: frozen);
+    return frozen;
   }
+
+  ({Catalogue? catalogue, String language, List<Unit> units})? _needing;
+}
+
+/// La huella del original que declara [language] en un `unit.yaml`, escrita
+/// en línea (`va: {status: reviewed, source_hash: sha256:…}`) o en bloque.
+String? declaredSourceHash(String yaml, String language) {
+  final lines = yaml.split('\n');
+  final head = RegExp('^(\\s+)${RegExp.escape(language)}:\\s*(.*)\$');
+  for (var i = 0; i < lines.length; i += 1) {
+    final match = head.firstMatch(lines[i]);
+    if (match == null) continue;
+    final rest = match.group(2)!;
+    final inline = RegExp(r'source_hash:\s*([^,}\s]+)').firstMatch(rest);
+    if (inline != null) return inline.group(1);
+    if (rest.trim().isNotEmpty) return null;
+    final indent = match.group(1)!.length;
+    for (var j = i + 1; j < lines.length; j += 1) {
+      final line = lines[j];
+      if (line.trim().isEmpty) continue;
+      if (line.length - line.trimLeft().length <= indent) break;
+      final block = RegExp(r'^\s+source_hash:\s*(\S+)').firstMatch(line);
+      if (block != null) return block.group(1);
+    }
+    return null;
+  }
+  return null;
 }

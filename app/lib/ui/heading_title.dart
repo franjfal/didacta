@@ -19,6 +19,7 @@ import 'package:flutter/material.dart';
 
 import '../model/library_tree.dart' show languageName;
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 Future<Map<String, String>?> editHeadingTitles(
   BuildContext context, {
@@ -27,13 +28,8 @@ Future<Map<String, String>?> editHeadingTitles(
   required Map<String, String> titles,
   required String reference,
 
-  /// «del» o «de la», según el nombre de lo que se titula. Sin esto el
-  /// diálogo dice «Título del asignatura», que es la clase de detalle que
-  /// hace que una pantalla parezca de mentira.
-  String article = 'del',
-  String note =
-      'Un idioma en blanco se queda marcado como pendiente en el fichero, '
-      'no se borra el apartado.',
+  /// Lo que se dice debajo. Por defecto, lo de un apartado.
+  String? note,
 }) => showDialog<Map<String, String>>(
   context: context,
   builder: (context) => _HeadingTitles(
@@ -41,8 +37,12 @@ Future<Map<String, String>?> editHeadingTitles(
     languages: languages,
     titles: titles,
     reference: reference,
-    article: article,
-    note: note,
+    note:
+        note ??
+        tr(
+          'Un idioma en blanco se queda marcado como pendiente en el fichero, '
+          'no se borra el apartado.',
+        ),
   ),
 );
 
@@ -52,7 +52,6 @@ class _HeadingTitles extends StatefulWidget {
     required this.languages,
     required this.titles,
     required this.reference,
-    required this.article,
     required this.note,
   });
 
@@ -64,8 +63,6 @@ class _HeadingTitles extends StatefulWidget {
 
   /// El idioma del documento: el que hace de original cuando faltan otros.
   final String reference;
-
-  final String article;
 
   /// Qué pasa con lo que se deje en blanco. Cambia según qué se esté
   /// titulando, y decirlo mal es peor que no decirlo.
@@ -91,7 +88,11 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Título ${widget.article} ${widget.heading.toLowerCase()}'),
+    title: Text(
+      // Un solo mensaje y no «Título» + artículo + nombre: cada idioma lo
+      // dice a su manera. Los que se titulan aquí son masculinos en los tres.
+      tr('Título del {0}', [widget.heading.toLowerCase()]),
+    ),
     content: SizedBox(
       width: 460,
       child: Column(
@@ -109,11 +110,11 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
                 // un título prestado que parece traducido es la misma
                 // trampa que copiar el original en el editor.
                 helperText: (widget.titles[code] ?? '').isEmpty
-                    ? 'sin traducir'
+                    ? tr('sin traducir')
                     : null,
-                helperStyle: const TextStyle(
+                helperStyle: TextStyle(
                   fontSize: 11.5,
-                  color: didactaTeacher,
+                  color: context.palette.teacher,
                 ),
               ),
             ),
@@ -126,7 +127,7 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('heading-title-save'),
@@ -134,7 +135,7 @@ class _HeadingTitlesState extends State<_HeadingTitles> {
           for (final entry in _fields.entries)
             entry.key: entry.value.text.trim(),
         }),
-        child: const Text('Aceptar'),
+        child: Text(tr('Aceptar')),
       ),
     ],
   );
@@ -164,7 +165,7 @@ class TitleButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     key: Key('edit-title-$id'),
-    tooltip: 'Título de $what en todos los idiomas',
+    tooltip: tr('Título de {0} en todos los idiomas', [what]),
     visualDensity: VisualDensity.compact,
     icon: const Icon(Icons.edit_outlined, size: 15),
     onPressed: onPressed,

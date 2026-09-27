@@ -19,8 +19,12 @@
 /// que no pueden funcionar.
 library;
 
+import 'dart:math';
+
 import 'compiler.dart';
+import 'diagnostics.dart';
 import 'local_clone.dart';
+import '../l10n/tr.dart';
 
 /// Qué hace falta para administrar asignaturas, y si está.
 class AdminStatus {
@@ -51,6 +55,22 @@ class RemovalPreview {
 
   /// Lo que dijo el motor, tal cual, para lo que el resumen no cubra.
   final String detail;
+
+  /// Lo que se llevaría en varios repositorios a la vez: una asignatura
+  /// repartida se quita de todos.
+  ///
+  /// Los documentos se suman, que cada uno vive en uno solo. Los años no:
+  /// el mismo curso académico está en los dos y no son dos cursos, así que
+  /// cuenta el mayor.
+  factory RemovalPreview.across(List<RemovalPreview> parts) {
+    if (parts.length == 1) return parts.single;
+    return RemovalPreview(
+      what: parts.isEmpty ? '' : parts.first.what,
+      years: parts.fold(0, (most, part) => max(most, part.years)),
+      documents: parts.fold(0, (sum, part) => sum + part.documents),
+      detail: parts.map((part) => part.detail).join('\n'),
+    );
+  }
 }
 
 class AdminException implements Exception {
@@ -72,6 +92,7 @@ class CourseAdmin {
     required this.token,
     required this.pushOnCommit,
     this.beforeWrite,
+    this.onIndexed,
   });
 
   /// El que sabe lanzar el motor. Se reutiliza en lugar de tener otro:
@@ -91,13 +112,18 @@ class CourseAdmin {
   /// de lo que peor se arregla después: mueve ficheros y reescribe el índice.
   final Future<void> Function()? beforeWrite;
 
+  /// Avisa de que el índice se acaba de regenerar, para que la recarga del
+  /// catálogo que viene detrás no lance el motor otra vez a comprobarlo.
+  final void Function()? onIndexed;
+
   Future<AdminStatus> status() async {
     if (author == null) {
-      return const AdminStatus(
+      return AdminStatus(
         ready: false,
-        problem:
-            'Un commit necesita un autor. Pon un nombre y un correo en '
-            'Ajustes.',
+        problem: tr(
+          'Para guardar en el historial hace falta un autor. Pon un '
+          'nombre y un correo en Ajustes.',
+        ),
       );
     }
     final found = await compiler.status();
@@ -144,17 +170,110 @@ class CourseAdmin {
   /// quien lo revierta tendría que acordarse de revertir los dos.
   static const String _index = 'generated';
 
+  /// Deshace un cambio: lo que había en [paths] en [sha] --el commit de
+  /// justo antes-- vuelve, como un commit nuevo.
+  ///
+  /// No reescribe la historia: el cambio deshecho sigue en ella, y deshacer
+  /// es un cambio más, con su mensaje, que a su vez se puede deshacer.
+  Future<void> undo({
+    required String sha,
+    required List<String> paths,
+    required String message,
+  }) => _change(
+    arguments: const [],
+    write: () async {
+      await clone.restoreFrom(sha: sha, paths: paths);
+    },
+    paths: paths,
+    message: message,
+  );
+
   Future<void> removeCourse(String course, {required String title}) => _change(
     arguments: ['remove', 'course', '--apply', '--', course],
     paths: ['courses/$course'],
-    message: 'Quitar la asignatura «$title» ($course)',
+    message: tr('Quitar la asignatura «{0}» ({1})', [title, course]),
   );
 
   Future<void> removeYear(String course, String year) => _change(
     arguments: ['remove', 'year', '--apply', '--', course, year],
     paths: ['courses/$course/$year'],
-    message: 'Quitar el curso $year de $course',
+    message: tr('Quitar el curso {0} de {1}', [year, course]),
   );
+
+  /// Una lección nueva, en `categoría/tema/nombre`.
+  ///
+  /// Con lo que escribe `didacta new unit`: el `.tex` del idioma con el
+  /// esqueleto y un `unit.yaml` con título, tipo y bloque. Un problema va a
+  /// `problems/` y lo demás a `content/`, que es lo que decide el motor por el
+  /// tipo.
+  Future<void> createUnit({
+    required String path,
+    required String kind,
+    required String title,
+    String? language,
+    String? block,
+  }) => _change(
+    arguments: [
+      'new',
+      'unit',
+      '--kind',
+      kind,
+      if (title.isNotEmpty) ...['--title', title],
+      if (language != null && language.isNotEmpty) ...['--lang', language],
+      if (block != null && block.isNotEmpty) ...['--block', block],
+      '--',
+      path,
+    ],
+    paths: ['${unitAreaFor(kind)}/$path'],
+    message: tr('Añadir la lección «{0}»', [title]),
+  );
+
+  /// Una lección que empieza siendo una copia de [from], en
+  /// `categoría/tema/nombre` de su misma área.
+  ///
+  /// Con `didacta new unit --from`: la carpeta entera --idiomas, figuras,
+  /// `unit.yaml`-- con un id nuevo, y [title] puesto en [language]. Son dos
+  /// lecciones desde ese momento.
+  Future<void> duplicateUnit({
+    required String from,
+    required String path,
+    required String title,
+    required String fromTitle,
+    String? language,
+  }) => _change(
+    arguments: [
+      'new',
+      'unit',
+      '--from=$from',
+      if (title.isNotEmpty) ...['--title', title],
+      if (language != null && language.isNotEmpty) ...['--lang', language],
+      '--',
+      path,
+    ],
+    paths: ['${from.split('/').first}/$path'],
+    message: tr('Añadir la lección «{0}», copia de «{1}»', [title, fromTitle]),
+  );
+
+  /// Lleva la lección [unit] a [to] (`categoría/tema/nombre`, sin el área),
+  /// con `didacta move --unit`.
+  ///
+  /// La misma lección en otra carpeta: el motor reescribe cada composición
+  /// que la nombra por su ruta, los temas vinculados y los prerrequisitos de
+  /// las demás, y el commit se los lleva todos junto con la carpeta.
+  Future<void> moveUnit({
+    required String unit,
+    required String to,
+    required String title,
+  }) => _change(
+    arguments: ['move', '--unit=$unit', '--to=$to'],
+    paths: ['content', 'problems', 'courses', 'shared/documents'],
+    message: tr('Mover la lección «{0}» a {1}', [title, to]),
+  );
+
+  /// Dónde va una lección de este tipo: los problemas en `problems/`, lo
+  /// demás en `content/`. La misma regla que el motor.
+  static String unitAreaFor(String kind) =>
+      kind == 'problem' ? 'problems' : 'content';
 
   Future<void> createCourse({
     required String id,
@@ -175,8 +294,12 @@ class CourseAdmin {
     ],
     paths: ['courses/$id'],
     message: from == null || from.isEmpty
-        ? 'Añadir la asignatura «$title» ($id)'
-        : 'Añadir la asignatura «$title» ($id), copiada de $from',
+        ? tr('Añadir la asignatura «{0}» ({1})', [title, id])
+        : tr('Añadir la asignatura «{0}» ({1}), copiada de {2}', [
+            title,
+            id,
+            from,
+          ]),
   );
 
   /// Crea un curso académico, copiando otro o en blanco.
@@ -212,10 +335,18 @@ class CourseAdmin {
     message: fromDirectory.isNotEmpty
         // El nombre de la congelación y no la carpeta: la carpeta es una
         // caché de esta máquina y no dice nada a quien lea el historial.
-        ? 'Añadir el curso $year de $course, desde «$fromLabel»'
+        ? tr('Añadir el curso {0} de {1}, desde «{2}»', [
+            year,
+            course,
+            fromLabel,
+          ])
         : from.isEmpty
-        ? 'Añadir el curso $year de $course'
-        : 'Añadir el curso $year de $course, copiado de $from',
+        ? tr('Añadir el curso {0} de {1}', [year, course])
+        : tr('Añadir el curso {0} de {1}, copiado de {2}', [
+            year,
+            course,
+            from,
+          ]),
   );
 
   /// Declara un tema en un curso.
@@ -243,7 +374,7 @@ class CourseAdmin {
       year,
     ],
     paths: ['courses/$course/$year'],
-    message: 'Declarar el tema «$title» en $course $year',
+    message: tr('Declarar el tema «{0}» en {1} {2}', [title, course, year]),
   );
 
   /// Copia documentos de un curso a otro.
@@ -254,12 +385,19 @@ class CourseAdmin {
   /// su material, y una errata se sigue corrigiendo en un solo sitio.
   ///
   /// Con la lista vacía se copia el curso entero.
+  ///
+  /// [asId] le cambia el nombre en el destino (uno solo). [independent] hace
+  /// que una copia de un tema vinculado deje de estarlo; [withUnits] además
+  /// duplica sus lecciones, y entonces el commit lleva las carpetas nuevas.
   Future<void> copyDocuments({
     required String fromCourse,
     required String fromYear,
     required String toCourse,
     required String toYear,
     List<String> documents = const [],
+    String asId = '',
+    bool independent = false,
+    bool withUnits = false,
   }) => _change(
     arguments: [
       'copy',
@@ -272,17 +410,27 @@ class CourseAdmin {
       // suyo. La pantalla elige el destino de una lista de cursos que
       // existen, así que si falta es eso y no un dedazo.
       '--create-year',
+      if (asId.isNotEmpty && documents.length == 1) ...['--as', asId],
+      if (independent) '--independent',
+      if (withUnits) '--with-units',
       // Detrás de `--` porque los ids vienen de una pantalla y `argparse`
       // tomaría un `-algo` por una opción.
       '--',
       ...documents,
     ],
-    paths: ['courses/$toCourse/$toYear'],
+    paths: [
+      'courses/$toCourse/$toYear',
+      if (withUnits) ...['content', 'problems'],
+    ],
     message: documents.isEmpty
-        ? 'Copiar $fromCourse $fromYear entero a $toYear'
+        ? tr('Copiar {0} {1} entero a {2}', [fromCourse, fromYear, toYear])
         : documents.length == 1
-        ? 'Copiar ${documents.single} de $fromYear a $toYear'
-        : 'Copiar ${documents.length} documentos de $fromYear a $toYear',
+        ? tr('Copiar {0} de {1} a {2}', [documents.single, fromYear, toYear])
+        : tr('Copiar {0} documentos de {1} a {2}', [
+            documents.length,
+            fromYear,
+            toYear,
+          ]),
   );
 
   // -- Contenido vinculado -------------------------------------------------
@@ -314,9 +462,11 @@ class CourseAdmin {
       'courses/$toCourse/$toYear',
       'shared/documents',
     ],
-    message:
-        'Dar «$document» también en $toCourse $toYear, vinculado a '
-        '$fromCourse $fromYear',
+    message: tr(
+      'Dar «{0}» también en {1} {2}, vinculado a '
+      '{3} {4}',
+      [document, toCourse, toYear, fromCourse, fromYear],
+    ),
   );
 
   /// Cambia de sitio una ubicación, sin tocar la identidad del contenido.
@@ -341,7 +491,13 @@ class CourseAdmin {
       'courses/$toCourse/$toYear',
       'shared/documents',
     ],
-    message: 'Mover «$document» de $fromCourse $fromYear a $toCourse $toYear',
+    message: tr('Mover «{0}» de {1} {2} a {3} {4}', [
+      document,
+      fromCourse,
+      fromYear,
+      toCourse,
+      toYear,
+    ]),
   );
 
   /// Parte un grupo de ubicaciones sincronizadas en varios.
@@ -394,8 +550,18 @@ class CourseAdmin {
       if (duplicate) ...['content', 'problems'],
     ],
     message: duplicate
-        ? 'Duplicar «$unit» en «$document» de $toCourse $toYear'
-        : 'Dar «$unit» también en «$document» de $toCourse $toYear',
+        ? tr('Duplicar «{0}» en «{1}» de {2} {3}', [
+            unit,
+            document,
+            toCourse,
+            toYear,
+          ])
+        : tr('Dar «{0}» también en «{1}» de {2} {3}', [
+            unit,
+            document,
+            toCourse,
+            toYear,
+          ]),
   );
 
   /// Hace independiente una ubicación de un tema vinculado.
@@ -406,7 +572,11 @@ class CourseAdmin {
   }) => _change(
     arguments: ['unlink', '--at', '$course@$year/$document'],
     paths: ['courses/$course/$year', 'shared/documents'],
-    message: 'Separar «$document» de $course $year del tema compartido',
+    message: tr('Separar «{0}» de {1} {2} del tema compartido', [
+      document,
+      course,
+      year,
+    ]),
   );
 
   /// Pone un id estable a cada lección que no lo tenga.
@@ -418,11 +588,12 @@ class CourseAdmin {
   Future<void> writeUnitIds() => _change(
     arguments: const ['ids', '--apply'],
     paths: const ['content', 'problems'],
-    message:
-        'Poner un id estable a cada lección\n\n'
-        'Derivado de la ruta con un hash, así que es el mismo lo haga quien '
-        'lo haga. A partir de aquí manda el id y no la ruta: mover una '
-        'lección de carpeta ya no rompe quién la usa.',
+    message: tr(
+      'Poner un id estable a cada lección\n\n'
+      'Derivado de la ruta con un hash, así que es el mismo lo haga quien '
+      'lo haga. A partir de aquí manda el id y no la ruta: mover una '
+      'lección de carpeta ya no rompe quién la usa.',
+    ),
   );
 
   /// Lo que haría [writeUnitIds], sin escribir nada.
@@ -453,7 +624,7 @@ class CourseAdmin {
       if (description.isNotEmpty) ...['--description', description],
     ],
     paths: ['courses/$course/$year'],
-    message: 'Congelar «$name» en $course $year',
+    message: tr('Congelar «{0}» en {1} {2}', [name, course, year]),
     reindex: false,
   );
 
@@ -466,7 +637,11 @@ class CourseAdmin {
   }) => _change(
     arguments: ['freeze', 'remove', '$course@$year', id],
     paths: ['courses/$course/$year'],
-    message: 'Quitar la versión congelada «$name» de $course $year',
+    message: tr('Quitar la versión congelada «{0}» de {1} {2}', [
+      name,
+      course,
+      year,
+    ]),
     reindex: false,
   );
 
@@ -487,7 +662,11 @@ class CourseAdmin {
       if (description != null) ...['--description', description],
     ],
     paths: ['courses/$course/$year'],
-    message: 'Renombrar una versión congelada de $course $year a «$name»',
+    message: tr('Renombrar una versión congelada de {0} {1} a «{2}»', [
+      course,
+      year,
+      name,
+    ]),
     reindex: false,
   );
 
@@ -506,7 +685,12 @@ class CourseAdmin {
   }) => _change(
     arguments: ['restore', '--from', fromDirectory, '$course@$year/$document'],
     paths: ['courses/$course/$year', 'shared/documents'],
-    message: 'Restaurar «$document» de $course $year desde «$fromLabel»',
+    message: tr('Restaurar «{0}» de {1} {2} desde «{3}»', [
+      document,
+      course,
+      year,
+      fromLabel,
+    ]),
     // Sin confirmar, como el resto de restaurar: lo que sale es un cambio
     // pendiente que se revisa y se guarda con el mensaje que quiera quien lo
     // hizo. Restaurar no es una excepción a la regla de que todo cambio es un
@@ -529,11 +713,14 @@ class CourseAdmin {
     required String message,
     bool reindex = true,
     bool commit = true,
+    Future<void> Function()? write,
   }) async {
     final who = author;
     if (who == null) {
-      throw const AdminException(
-        'Un commit necesita un autor. Pon un nombre y un correo en Ajustes.',
+      throw AdminException(
+        tr(
+          'Para guardar en el historial hace falta un autor. Pon un nombre y un correo en Ajustes.',
+        ),
       );
     }
 
@@ -541,15 +728,24 @@ class CourseAdmin {
     // queda en el clon y la barra de sincronización dice lo que falta.
     try {
       await beforeWrite?.call();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('course_admin.Function', caught, trace);
       // Ya lo cuenta quien puso la llamada.
     }
 
-    final String output;
+    // Lo que cambia los ficheros: una orden del motor, o --al deshacer-- traer
+    // los de antes desde git.
+    var output = '';
     try {
-      output = await compiler.run(arguments);
+      await write?.call();
+      if (arguments.isNotEmpty) output = await compiler.run(arguments);
     } on CompileException catch (error) {
       throw AdminException(error.message, detail: error.detail);
+    } on CloneException catch (error) {
+      throw AdminException(
+        tr('No se pudo traer la versión de antes.'),
+        detail: error.stderr.isEmpty ? error.message : error.stderr,
+      );
     }
 
     // El índice, después del cambio. Si falla, el commit se hace igual: los
@@ -565,6 +761,7 @@ class CourseAdmin {
     if (reindex) {
       try {
         await compiler.run(const ['index']);
+        onIndexed?.call();
       } on CompileException catch (error) {
         indexProblem = error;
       }
@@ -573,9 +770,11 @@ class CourseAdmin {
     if (!commit) {
       if (indexProblem != null) {
         throw AdminException(
-          'El cambio está hecho, pero el índice no se pudo regenerar, así que '
-          'la pantalla no lo verá todavía. Ejecuta `didacta index` en el '
-          'repositorio.',
+          tr(
+            'El cambio está hecho, pero el índice no se pudo regenerar, así que '
+            'la pantalla no lo verá todavía. Ejecuta `didacta index` en el '
+            'repositorio.',
+          ),
           detail: '$indexProblem',
         );
       }
@@ -593,22 +792,26 @@ class CourseAdmin {
       );
       if (!committed) {
         throw AdminException(
-          'El motor no cambió nada, así que no hay nada que guardar.',
+          tr('El motor no cambió nada, así que no hay nada que guardar.'),
           detail: output.trim(),
         );
       }
       if (indexProblem != null) {
         throw AdminException(
-          'El cambio está hecho y guardado, pero el índice no se pudo '
-          'regenerar, así que la pantalla no lo verá todavía. Ejecuta '
-          '`didacta index` en el repositorio.',
+          tr(
+            'El cambio está hecho y guardado, pero el índice no se pudo '
+            'regenerar, así que la pantalla no lo verá todavía. Ejecuta '
+            '`didacta index` en el repositorio.',
+          ),
           detail: '$indexProblem',
         );
       }
     } on CloneException catch (error) {
       throw AdminException(
-        'Los ficheros se han cambiado, pero el commit falló: quedan sin '
-        'guardar en el clon.',
+        tr(
+          'Los ficheros se han cambiado, pero no se pudieron guardar en el '
+          'historial: quedan escritos y sin guardar.',
+        ),
         detail: error.stderr.isEmpty ? error.message : error.stderr,
       );
     }

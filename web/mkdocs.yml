@@ -189,6 +189,9 @@ nav:
   - Escribir:
       - escribir/index.md
       - escribir/referencia.md
+  - Ayuda:
+      - ayuda/problemas.md
+      - ayuda/glosario.md
   # Lo de abajo es para quien quiere ir más allá de la ventana: el terminal y
   # el código. Va al final y separado a propósito -- esta web la lee alguien
   # que quiere preparar sus clases, y la arquitectura del programa no es lo

@@ -10,6 +10,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -198,6 +199,55 @@ Output written on out.pdf (7 pages, 221091 bytes).
         self.assertIn("Undefined control sequence", errors[0].message)
         self.assertIn("va.tex", errors[0].file or "")
 
+    def test_con_file_line_error_el_fichero_lo_dice_tex(self):
+        # Con `-file-line-error` la línea del error ya trae el fichero y el
+        # número: no hace falta deducirlo de la pila de paréntesis, que un `(`
+        # suelto en un mensaje descuadra.
+        log = (
+            "(./tema-1.tex (/usr/share/texmf/tex/latex/base/article.cls)\n"
+            "un paréntesis que no se cierra (\n"
+            "../../../content/a/b/c/es.tex:9: Undefined control sequence.\n"
+            "l.9 \\foo\n"
+        )
+        [error] = [d for d in build_mod.parse_log(log) if d.severity == "error"]
+        self.assertEqual(error.file, "../../../content/a/b/c/es.tex")
+        self.assertEqual(error.line, 9)
+        self.assertEqual(error.message, "Undefined control sequence.")
+        self.assertEqual(error.context, "\\foo")
+
+    def test_si_tex_culpa_a_un_paquete_se_sube_al_fichero_del_autor(self):
+        log = (
+            "(./tema-1.tex (../../../content/a/b/c/es.tex\n"
+            "(/usr/share/texmf/tex/latex/hyperref/nameref.sty\n"
+            "/usr/share/texmf/tex/latex/hyperref/nameref.sty:120: Undefined "
+            "control sequence.\n"
+            "l.12 \\section{\\mal}\n"
+        )
+        [error] = [d for d in build_mod.parse_log(log) if d.severity == "error"]
+        self.assertEqual(error.file, "../../../content/a/b/c/es.tex")
+
+    def test_locate_dice_la_leccion_y_el_idioma(self):
+        root = tempfile.mkdtemp(prefix="didacta-locate-")
+        self.addCleanup(shutil.rmtree, root, True)
+        source_dir = os.path.join(root, "courses", "m", "2025-2026")
+        diagnostics = [
+            build_mod.Diagnostic("error", "x", file="../../../content/a/b/c/va.tex",
+                                 line=3),
+            build_mod.Diagnostic("error", "y", file="tema-1.tex", line=1),
+            build_mod.Diagnostic("error", "z", file="/usr/share/foo.sty", line=1),
+            build_mod.Diagnostic("warning", "sin fichero"),
+        ]
+        build_mod.locate(diagnostics, source_dir, "../../..")
+        first, master, package, loose = diagnostics
+        self.assertEqual(first.path, "content/a/b/c/va.tex")
+        self.assertEqual(first.unit, "content/a/b/c")
+        self.assertEqual(first.language, "va")
+        self.assertEqual(first.as_dict()["unit"], "content/a/b/c")
+        self.assertEqual(master.path, "courses/m/2025-2026/tema-1.tex")
+        self.assertIsNone(master.unit)
+        self.assertIsNone(package.path)
+        self.assertIsNone(loose.path)
+
     def test_actionable_warnings_are_reported(self):
         diagnostics = build_mod.parse_log(self.LOG)
         warnings = [d for d in diagnostics if d.severity == "warning"]
@@ -244,12 +294,61 @@ class EngineTests(unittest.TestCase):
             self.assertIn("/tmp/out", command, profile.id)
             self.assertNotIn("clean", command, profile.id)
 
-    def test_latexmk_forces_a_run(self):
-        # The profile arrives on the command line, so latexmk cannot tell that
-        # it differs from last time; without -g it would skip the rebuild.
+    def test_latexmk_ya_no_fuerza_cada_compilacion(self):
+        # El perfil va en un fichero que latexmk ve, así que ya no hace falta
+        # `-g`: sin él, lo que no ha cambiado no se vuelve a compilar.
         command = self.engine._command(
             "m.tex", "job", "/tmp/out", self.engine.profiles["slides"], "es", None)
-        self.assertIn("-g", command)
+        self.assertNotIn("-g", command)
+        self.assertEqual(command[-1], "/tmp/out/" + build_mod.Engine.WRAPPER)
+
+    def test_el_pretex_va_en_el_fichero_y_solo_se_reescribe_si_cambia(self):
+        outdir = os.path.join(self.build_dir, "wrapper")
+        os.makedirs(outdir)
+        profile = self.engine.profiles["slides"]
+        pretex = self.engine._pretex(profile, "es", "../")
+        path = self.engine._write_wrapper(outdir, pretex, "m.tex")
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertIn(pretex, text)
+        self.assertTrue(text.rstrip().endswith("\\input{m.tex}"))
+        before = os.stat(path).st_mtime_ns
+        time.sleep(0.01)
+        self.engine._write_wrapper(outdir, pretex, "m.tex")
+        self.assertEqual(os.stat(path).st_mtime_ns, before)
+        # Otro idioma es otro fichero: latexmk lo ve y compila.
+        self.engine._write_wrapper(
+            outdir, self.engine._pretex(profile, "va", "../"), "m.tex")
+        self.assertNotEqual(os.stat(path).st_mtime_ns, before)
+
+    def test_accesibles_lo_que_no_es_beamer_etiquetado_y_con_lualatex(self):
+        engine = build_mod.Engine(LATEX_DIR, self.build_dir, accessible=True)
+        for profile in engine.profiles.values():
+            command = engine._command(
+                "m.tex", "job", "/tmp/out", profile, "es", "../")
+            pretex = engine._pretex(profile, "es", "../")
+            if profile.document_class == "beamer":
+                # Beamer no: el etiquetado de LaTeX todavía no lo admite.
+                self.assertIn("-pdf", command, profile.id)
+                self.assertNotIn("DidactaTagged", pretex, profile.id)
+            else:
+                self.assertIn("-lualatex", command, profile.id)
+                self.assertTrue(
+                    any(part.startswith("-lualatex=lualatex ")
+                        for part in command), profile.id)
+                # Lo primero del pretex: el arranque lo mira antes de la clase.
+                self.assertTrue(
+                    pretex.startswith("\\def\\DidactaTagged{}"), profile.id)
+                # Y SyncTeX sigue: el PDF accesible también se pulsa.
+                self.assertIn("-synctex=1", " ".join(command), profile.id)
+
+    def test_sin_accesibles_nada_cambia(self):
+        for profile in self.engine.profiles.values():
+            command = self.engine._command(
+                "m.tex", "job", "/tmp/out", profile, "es", "../")
+            self.assertIn("-pdf", command, profile.id)
+            self.assertNotIn(
+                "DidactaTagged", self.engine._pretex(profile, "es", "../"))
 
     def test_unknown_profile_and_language_are_refused(self):
         source = os.path.join(DEMO, "courses", "am-iii", "2025-2026", "tema-1.tex")
@@ -428,6 +527,51 @@ class ContentRepositoryTests(unittest.TestCase):
             handle.write(metadata)
         parent, name = os.path.split(directory)
         return repo_mod.load_unit(parent, name, self.settings)
+
+    def test_the_reference_hash_comes_from_the_file(self):
+        """Desactualizada de verdad.
+
+        La traducción guarda la huella del original de cuando se tradujo o se
+        revisó; la del original se calcula del fichero. Antes las dos eran
+        declaradas y no las escribía nadie, así que cambiar `es.tex` no
+        avisaba nunca a `va.tex`.
+        """
+        now = repo_mod.content_hash("content")
+        unit = self._unit_with(
+            "id: x\nlanguages:\n  va: {status: reviewed, source_hash: %s}\n"
+            % now)
+        self.assertEqual(unit.statuses()["va"], "reviewed")
+
+        with open(os.path.join(unit.directory, "es.tex"), "w") as handle:
+            handle.write("content, corregido")
+        self.assertEqual(unit.statuses()["va"], "outdated")
+
+    def test_reindenting_the_original_does_not_outdate_it(self):
+        # Re-sangrar, o que git lo traiga con otros finales de línea, no
+        # cambia lo que dice.
+        now = repo_mod.content_hash("content")
+        unit = self._unit_with(
+            "id: x\nlanguages:\n  va: {status: reviewed, source_hash: %s}\n"
+            % now)
+        with open(os.path.join(unit.directory, "es.tex"), "w") as handle:
+            handle.write("\n    content\r\n")
+        self.assertEqual(unit.statuses()["va"], "reviewed")
+
+    def test_the_hash_is_the_one_the_app_computes(self):
+        # El mismo ejemplo que `app/test/source_hash_test.dart`: si una de
+        # las dos cambia la forma de calcularla, se entera la otra.
+        self.assertEqual(repo_mod.content_hash("  Hola\r\n\tmundo  \n"),
+                         "sha256:ca8f60b2cc7f0583")
+        self.assertEqual(
+            repo_mod.content_hash("La norma de $\\|x\\|$ es\n  única."),
+            "sha256:1c101d4652ae9780")
+
+    def test_without_a_hash_nothing_is_outdated(self):
+        # Lo que ya estaba traducido antes de esto no tiene huella: no se
+        # puede saber si está atrás, y decirlo todo desactualizado sería
+        # mentir en la otra dirección.
+        unit = self._unit_with("id: x\nlanguages:\n  va: {status: reviewed}\n")
+        self.assertEqual(unit.statuses()["va"], "reviewed")
 
     def test_indentation_is_on_unless_it_is_turned_off(self):
         # Sangrar es lo normal, y lo normal no se declara: una unidad migrada

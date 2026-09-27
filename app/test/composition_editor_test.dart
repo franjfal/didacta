@@ -116,6 +116,7 @@ void main() {
 
   testWidgets('switching a disabled entry on is one line', (tester) async {
     final gateway = await pumpComposition(tester);
+    await reviewEachSave(tester);
 
     // The toggle of the row that is off.
     await tester.tap(find.byIcon(Icons.toggle_off_outlined));
@@ -142,7 +143,7 @@ void main() {
       find.text('+ $indent- unit: analysis/normed/dedekind'),
       findsOneWidget,
     );
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(gateway.commits, hasLength(1));
@@ -165,7 +166,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     // The heading is off, still first, still carrying its title block.
@@ -210,7 +211,7 @@ void main() {
       find.textContaining('Cambiar el orden en la composición de tema-1'),
       findsOneWidget,
     );
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(committedEntries(gateway), [
@@ -258,7 +259,7 @@ void main() {
       expect(find.text('Título nuevo'), findsOneWidget);
       await tester.tap(save);
       await settle(tester);
-      await tester.tap(commit);
+      await tapIfShown(tester, commit);
       await settle(tester);
 
       expect(committedEntries(gateway), [
@@ -292,7 +293,7 @@ void main() {
       await settle(tester);
       await tester.tap(save);
       await settle(tester);
-      await tester.tap(commit);
+      await tapIfShown(tester, commit);
       await settle(tester);
 
       expect(committedEntries(gateway)[1], '- subsection: Título nuevo');
@@ -318,7 +319,7 @@ void main() {
 
       await tester.tap(save);
       await settle(tester);
-      await tester.tap(commit);
+      await tapIfShown(tester, commit);
       await settle(tester);
 
       expect(committedEntries(gateway), [
@@ -374,7 +375,7 @@ void main() {
       await settle(tester);
       await tester.tap(save);
       await settle(tester);
-      await tester.tap(commit);
+      await tapIfShown(tester, commit);
       await settle(tester);
 
       expect(committedEntries(gateway), [
@@ -442,7 +443,7 @@ void main() {
 
       await tester.tap(save);
       await settle(tester);
-      await tester.tap(commit);
+      await tapIfShown(tester, commit);
       await settle(tester);
 
       final text = gateway.commits.single.text;
@@ -470,6 +471,24 @@ void main() {
       await pumpComposition(tester);
       expect(find.text('1/3'), findsOneWidget);
     });
+  });
+
+  testWidgets('el selector busca como la biblioteca', (tester) async {
+    // Cada palabra en cualquier orden, sin tildes ni mayúsculas: «NORMAS
+    // ejercicios» encuentra «Ejercicios de normas», que buscando la frase
+    // entera no salía.
+    await pumpComposition(tester);
+    await tester.tap(addUnit);
+    await settle(tester);
+    await tester.enterText(
+      find.byKey(const Key('picker-search')),
+      'NORMAS ejercicios',
+    );
+    await settle(tester);
+    expect(
+      find.byKey(const Key('unit-problems/analysis/normed/exercises')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('adding a unit picks it from the library', (tester) async {
@@ -500,7 +519,7 @@ void main() {
 
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     // Una sola forma de citar, porque hay un solo árbol. `problem:` se sigue
@@ -606,7 +625,7 @@ void main() {
 
       await tester.tap(save);
       await settle(tester);
-      await tester.tap(commit);
+      await tapIfShown(tester, commit);
       await settle(tester);
 
       expect(committedEntries(gateway, 'hoja-1'), [
@@ -685,7 +704,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(gateway.commits.single.text, contains('      - subsection:'));
@@ -715,7 +734,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(committedEntries(gateway), hasLength(4));
@@ -791,7 +810,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(find.textContaining('ha cambiado'), findsWidgets);

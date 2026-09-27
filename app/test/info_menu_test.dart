@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:didacta_app/data/course_admin.dart';
 import 'package:didacta_app/main.dart';
 import 'package:didacta_app/router.dart';
 import 'package:didacta_app/ui/shell.dart';
@@ -91,6 +92,7 @@ Future<FakeSession> pumpApp(
   List<Map<String, dynamic>>? units,
   List<Map<String, dynamic>>? courses,
   List<Map<String, dynamic>> shared = const [],
+  CourseAdmin? admin,
 }) async {
   tester.view.physicalSize = const Size(1400, 950);
   tester.view.devicePixelRatio = 1.0;
@@ -103,6 +105,7 @@ Future<FakeSession> pumpApp(
       courses: courses ?? [courseWithFreeze()],
       shared: shared,
     ),
+    adminOverride: admin,
   );
   await tester.pumpWidget(
     DidactaApp(session: session, updates: offlineUpdates()),
@@ -173,8 +176,42 @@ void main() {
       expect(find.byKey(const Key('info-freeze-create')), findsNothing);
     });
 
+    testWidgets('sin motor no se ofrece duplicar ni mover', (tester) async {
+      await pumpApp(tester);
+      await goTo(tester, Routes.unit('content/analysis/normed/definition'));
+      await openInfo(tester);
+      // Sin motor ni clon no hay con qué copiarla ni moverla.
+      expect(find.byKey(const Key('info-duplicate')), findsNothing);
+      expect(find.byKey(const Key('info-move')), findsNothing);
+    });
+
+    testWidgets('con el motor, Mover está y Duplicar abre su diálogo', (
+      tester,
+    ) async {
+      final engine = FakeCompiler();
+      final session = await pumpApp(
+        tester,
+        admin: CourseAdmin(
+          compiler: engine,
+          clone: FakeClone(changed: true),
+          author: (name: 'Javier', email: 'javier@uv.es'),
+          token: '',
+          pushOnCommit: false,
+        ),
+      );
+      await goTo(tester, Routes.unit('content/analysis/normed/definition'));
+      await openInfo(tester);
+      // Mover y duplicar, en las dos interfaces: mover ya no es solo de
+      // quien mantiene el repositorio, y el diálogo dice qué cursos toca.
+      expect(session.completeInterface, isFalse);
+      expect(find.byKey(const Key('info-move')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('info-duplicate')));
+      await settle(tester);
+      expect(find.byKey(const Key('duplicate-unit-title')), findsOneWidget);
+    });
+
     testWidgets('una que se da en dos sitios se puede partir', (tester) async {
-      await pumpApp(
+      final session = await pumpApp(
         tester,
         units: [
           unitJson(
@@ -190,6 +227,13 @@ void main() {
       await openInfo(tester);
 
       expect(find.text('SE DA EN (2)'), findsOneWidget);
+      // Partirla, con la interfaz Completa.
+      expect(find.byKey(const Key('info-split')), findsNothing);
+      await tester.tapAt(Offset.zero);
+      await settle(tester);
+      await session.setCompleteInterface(true);
+      await settle(tester);
+      await openInfo(tester);
       expect(find.byKey(const Key('info-split')), findsOneWidget);
       // Dos temas del mismo curso académico son **un** juego de versiones
       // congeladas: no bajan al tema.
@@ -227,7 +271,7 @@ void main() {
     testWidgets('vinculado en dos sitios los enseña y se puede partir', (
       tester,
     ) async {
-      await pumpApp(
+      final session = await pumpApp(
         tester,
         courses: [courseWithLinkedTopic()],
         shared: linkedTopic,
@@ -237,6 +281,15 @@ void main() {
 
       // Los dos sitios donde se da el mismo tema, no sólo este.
       expect(find.text('SE DA EN (2)'), findsOneWidget);
+      // Partirlo en grupos es de la interfaz Completa; ver dónde se da es de
+      // todos.
+      expect(find.byKey(const Key('info-split')), findsNothing);
+
+      await tester.tapAt(Offset.zero);
+      await settle(tester);
+      await session.setCompleteInterface(true);
+      await settle(tester);
+      await openInfo(tester);
       expect(find.byKey(const Key('info-split')), findsOneWidget);
     });
   });

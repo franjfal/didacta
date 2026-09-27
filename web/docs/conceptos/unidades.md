@@ -200,11 +200,18 @@ de migrar un sistema anterior, eso es una lista larga y muy útil.
 
 ## Cómo se crea una unidad
 
-Desde el terminal:
+Desde la aplicación, con **Nueva lección** en la
+[biblioteca](../app/biblioteca.md#crear-una-leccion) o **Crear una nueva…** al
+añadir en una [composición](../app/composicion.md#editar). Para empezar a partir
+de una que ya existe, **Duplicar…** en su [icono de
+información](../app/unidad.md#el-icono-de-informacion).
+
+O desde el terminal:
 
 ```bash
 didacta new unit analysis/normed/dual-space
 didacta new unit analysis/series/convergence --kind problem
+didacta new unit analysis/series/ratio --from analysis/series/convergence
 ```
 
 Crea el directorio, el `unit.yaml` con los campos puestos y el fichero del

@@ -100,21 +100,25 @@ void main() {
     );
   });
 
-  test('contra el repositorio de verdad, no se pierde ninguna', () {
-    // La propiedad que importa: el árbol tiene **todas** las unidades. Una
-    // que no salga en ninguna carpeta es una que no se puede añadir a un
-    // tema, y nadie se daría cuenta hasta buscarla.
-    final units = realUnits();
-    if (units == null) {
-      markTestSkipped('sin didacta_db al lado');
-      return;
-    }
-    final tree = buildPathTree(units);
-    expect(tree.count, units.length);
-    expect(tree.everything('es').length, units.length);
-    expect(
-      tree.everything('es').map((u) => u.path).toSet(),
-      units.map((u) => u.path).toSet(),
-    );
-  });
+  test(
+    'contra el repositorio de verdad, no se pierde ninguna',
+    tags: 'real',
+    () {
+      // La propiedad que importa: el árbol tiene **todas** las unidades. Una
+      // que no salga en ninguna carpeta es una que no se puede añadir a un
+      // tema, y nadie se daría cuenta hasta buscarla.
+      final units = realUnits();
+      if (units == null) {
+        markTestSkipped('sin didacta_db al lado');
+        return;
+      }
+      final tree = buildPathTree(units);
+      expect(tree.count, units.length);
+      expect(tree.everything('es').length, units.length);
+      expect(
+        tree.everything('es').map((u) => u.path).toSet(),
+        units.map((u) => u.path).toSet(),
+      );
+    },
+  );
 }

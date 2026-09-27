@@ -1,0 +1,56 @@
+% Problema: discontinuidades evitables (castellano).
+%
+% \dmarks y \answerspace solo tienen efecto en un examen. En la hoja de
+% problemas no ocupan nada, así que el mismo fichero sirve para las dos.
+
+\begin{exercise}[Discontinuidades evitables]
+\begin{parts}
+  \item Halla el valor de $a$ para el que la función
+        \[
+          f(x) =
+          \begin{cases}
+            \dfrac{x^2 + x - 2}{x - 1} & \text{si } x \neq 1, \\[1ex]
+            a & \text{si } x = 1,
+          \end{cases}
+        \]
+        es continua en $\mathbb{R}$.
+  \item Demuestra que ningún valor de $b$ hace continua en $0$ la función
+        $g(x) = 1/x$ para $x \neq 0$, con $g(0) = b$.
+\end{parts}
+
+\dmarks{4}
+\answerspace{6cm}
+
+\begin{hint}
+En (i), factoriza el numerador. En (ii), mira qué le pasa a $|g(x)|$ cuando
+$x$ se acerca a $0$.
+\end{hint}
+
+\begin{answer}
+(i) $a = 3$. (ii) $g$ no tiene límite en $0$: $|1/x|$ se hace tan grande como
+se quiera.
+\end{answer}
+
+\begin{solution}
+\begin{parts}
+  \item Para $x \neq 1$, $f$ es un cociente de polinomios cuyo denominador no
+        se anula, luego es continua. En $x = 1$, como
+        $x^2 + x - 2 = (x - 1)(x + 2)$,
+        \[
+          \lim_{x \to 1} f(x) = \lim_{x \to 1} (x + 2) = 3 ,
+        \]
+        así que $f$ es continua en $1$ si y solo si $a = 3$.
+  \item Si $g$ fuera continua en $0$, con $\varepsilon = 1$ habría un
+        $\delta > 0$ tal que $|1/x - b| < 1$, y por tanto
+        $|1/x| < |b| + 1$, para todo $0 < |x| < \delta$. Pero
+        $x = \min\{\delta/2, 1/(|b| + 1)\}$ cumple $0 < x < \delta$ y
+        $1/x \geq |b| + 1$. Contradicción.
+\end{parts}
+\end{solution}
+
+\begin{marking}
+(i) Dos puntos: uno por el límite y otro por concluir $a = 3$ justificando la
+continuidad fuera de $1$. (ii) Dos puntos. Decir solo «el límite es infinito»
+sin justificarlo vale medio punto.
+\end{marking}
+\end{exercise}

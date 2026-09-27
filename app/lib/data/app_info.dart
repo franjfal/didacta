@@ -23,6 +23,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../model/app_version.dart';
 import '../model/update_manifest.dart';
 import 'app_info_stub.dart' if (dart.library.io) 'app_info_io.dart' as host;
+import 'diagnostics.dart';
+import '../l10n/tr.dart';
 
 /// Lo que esta copia de Didacta sabe de sí misma.
 class AppInfo {
@@ -62,8 +64,8 @@ class AppInfo {
 
   static String _platformName(UpdatePlatform value) => switch (value) {
     UpdatePlatform.macos => 'macOS',
-    UpdatePlatform.windows => 'Windows',
-    UpdatePlatform.linux => 'Linux',
+    UpdatePlatform.windows => tr('Windows'),
+    UpdatePlatform.linux => tr('Linux'),
   };
 
   /// Lee la versión del paquete construido.
@@ -82,7 +84,8 @@ class AppInfo {
       version = AppVersion.tryParse(info.version) ?? version;
       build = int.tryParse(info.buildNumber) ?? 0;
       if (info.packageName.isNotEmpty) package = info.packageName;
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('app_info.load', caught, trace);
       // Sin canal de plataforma: se sigue con 0.0.0.
     }
     return AppInfo(

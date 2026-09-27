@@ -1,0 +1,49 @@
+% Lección: límite de una función en un punto (castellano).
+%
+% Sin preámbulo, sin \documentclass, sin \begin{document}: solo el contenido.
+% La lección no sabe a qué salida va. Lo que no va envuelto sale en todas;
+% \onlynotes{...} solo en los apuntes; `teaching` solo en las copias del
+% profesor. \begin{frame} es una diapositiva en las diapositivas y un bloque
+% de texto seguido en los apuntes.
+
+\begin{frame}
+\didactatitle{Límite de una función en un punto}
+
+\bymedium{%
+  $f(x)$ se acerca a $L$ cuando $x$ se acerca a $a$. La definición dice qué
+  quiere decir «se acerca».
+}{%
+  La idea intuitiva es que $f(x)$ se acerca tanto como se quiera a $L$ cuando
+  $x$ se acerca lo suficiente a $a$. La definición convierte esa frase en una
+  desigualdad que se puede comprobar.
+}
+
+\begin{definition}[Límite]
+Sea $f$ una función definida en un intervalo abierto que contiene a $a$,
+salvo quizá en el propio $a$. Decimos que $f$ tiene \keyterm{límite} $L$ en
+$a$, y escribimos $\lim_{x \to a} f(x) = L$, si para cada $\varepsilon > 0$
+existe un $\delta > 0$ tal que
+\begin{keyformula}
+  0 < |x - a| < \delta \implies |f(x) - L| < \varepsilon .
+\end{keyformula}
+\end{definition}
+
+% Dos párrafos: para eso está la forma de entorno. \onlynotes{...} es para
+% una frase o dos sin líneas en blanco dentro.
+\begin{notesonly}
+La condición $0 < |x - a|$ deja fuera el propio punto $a$: el límite no
+depende de lo que valga $f$ en $a$, ni siquiera de que esté definida allí.
+Solo mira lo que pasa \emph{cerca} de $a$. Por eso tiene sentido preguntarse
+por el límite de $(x^2 - 1)/(x - 1)$ en $x = 1$, donde el cociente no está
+definido.
+
+Además, el límite, si existe, es único: dos valores distintos $L \neq L'$ no
+pueden estar a la vez a menos de $\varepsilon = |L - L'|/2$ de $f(x)$.
+\end{notesonly}
+
+\begin{teaching}[Ritmo]
+Veinte minutos. Dibuja la banda $(L - \varepsilon, L + \varepsilon)$ antes de
+escribir la fórmula: el orden de los cuantificadores (primero te dan
+$\varepsilon$, luego eliges $\delta$) se entiende mejor en la pizarra.
+\end{teaching}
+\end{frame}

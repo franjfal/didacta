@@ -27,6 +27,8 @@ import json
 import os
 import re
 import shutil
+import signal
+import subprocess
 import sys
 import time
 
@@ -36,6 +38,7 @@ sys.path.insert(0, os.path.join(HERE, "..", "engine"))
 from didacta import build as build_mod  # noqa: E402
 from didacta import compose as compose_mod  # noqa: E402
 from didacta import freeze as freeze_mod  # noqa: E402
+from didacta import html as html_mod  # noqa: E402
 from didacta import identity as identity_mod  # noqa: E402
 from didacta import index as index_mod  # noqa: E402
 from didacta import migrate as migrate_mod  # noqa: E402
@@ -44,6 +47,10 @@ from didacta import preview as preview_mod  # noqa: E402
 from didacta import profiles as profiles_mod  # noqa: E402
 from didacta import repo as repo_mod  # noqa: E402
 from didacta import reuse as reuse_mod  # noqa: E402
+from didacta import review as review_mod  # noqa: E402
+from didacta import site as site_mod  # noqa: E402
+from didacta import snippets as snippets_mod  # noqa: E402
+from didacta import synctex as synctex_mod  # noqa: E402
 from didacta import templates as templates_mod  # noqa: E402
 from didacta import tidy as tidy_mod  # noqa: E402
 from didacta import yamlio  # noqa: E402
@@ -590,6 +597,8 @@ def cmd_build(args):
         on_output=progress_sink(args),
         template_dirs=template_dirs(args, root),
         settings=settings,
+        overfull_lines=args.overfull_lines,
+        accessible=args.accessible,
     )
 
     if args.profiles:
@@ -693,7 +702,8 @@ def cmd_build(args):
             for diagnostic in result.warnings[:3]:
                 print("       %s" % S.warn(str(diagnostic)))
 
-    results = engine.build_many(jobs, on_result=report)
+    workers = args.jobs if args.jobs and args.jobs > 0 else build_mod.default_workers()
+    results = engine.build_many(jobs, on_result=report, workers=workers)
 
     succeeded = [r for r in results if r.ok]
     failed = [r for r in results if not r.ok]
@@ -898,6 +908,294 @@ def _identity_warnings(root, settings, units, courses):
     return found
 
 
+def _folder_size(path):
+    """Cuánto ocupa [path] y cuántos ficheros tiene."""
+    size, files = 0, 0
+    for folder, _dirs, names in os.walk(path):
+        for name in names:
+            try:
+                size += os.lstat(os.path.join(folder, name)).st_size
+            except OSError:
+                continue
+            files += 1
+    return size, files
+
+
+def _human_size(size):
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024 or unit == "GB":
+            return ("%d %s" if unit == "B" else "%.1f %s") % (size, unit)
+        size /= 1024.0
+
+
+def cmd_clean(args):
+    """Vaciar la carpeta de compilación, o decir cuánto ocupa.
+
+    Solo la de compilación, que no se versiona y se rehace compilando: en el
+    repositorio real eran 443 MB de PDF, `.aux` y registros de las vistas
+    previas de dos mil lecciones. Nunca nada fuera de ella.
+    """
+    root, settings = load_repo(args)
+    build_dir = os.path.realpath(os.path.join(root, settings.build_dir))
+    real_root = os.path.realpath(root)
+    # Por si `build_dir` apuntara a la raíz, o fuera de ella: borrar eso no
+    # es vaciar la carpeta de compilación.
+    if (build_dir == real_root
+            or not build_dir.startswith(real_root + os.sep)):
+        message = ("la carpeta de compilación (%s) no está dentro del "
+                   "repositorio: no la vacío" % settings.build_dir)
+        if args.json:
+            json.dump({"error": message}, sys.stdout, ensure_ascii=False)
+            sys.stdout.write("\n")
+        else:
+            print(S.bad(message))
+        return 1
+
+    if args.documents:
+        targets = [
+            os.path.join(build_dir, reference.replace("/", "_"))
+            for reference in args.documents
+        ]
+    else:
+        targets = [build_dir]
+    size, files = 0, 0
+    for target in targets:
+        if os.path.isdir(target):
+            more, count = _folder_size(target)
+            size, files = size + more, files + count
+
+    removed = False
+    if not args.size and not args.dry_run and files:
+        for target in targets:
+            if os.path.isdir(target):
+                shutil.rmtree(target)
+        removed = True
+
+    if args.json:
+        json.dump({
+            "path": os.path.relpath(build_dir, real_root).replace(os.sep, "/"),
+            "bytes": size,
+            "files": files,
+            "removed": removed,
+        }, sys.stdout, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+    where = os.path.relpath(build_dir, real_root)
+    if not files:
+        print(S.dim("%s está vacía" % where))
+    elif removed:
+        print(S.ok("vaciada %s: %s en %d ficheros" % (
+            where, _human_size(size), files)))
+    else:
+        print("%s: %s en %d ficheros" % (where, _human_size(size), files))
+    return 0
+
+
+#: Lo que deja `didacta site` en su carpeta para saber que es suya: solo
+#: vacía una carpeta que hizo ella.
+SITE_MARKER = ".didacta-site"
+
+
+def cmd_html(args):
+    """Los apuntes de un curso en HTML, para leerlos con un lector de pantalla.
+
+    Una página por documento, versión e idioma, en la misma forma de carpetas
+    que `export` --idioma, tema, documento-- y con las mismas reglas: lo que
+    sale es lo del estudiante salvo que `--reveal-up-to` diga otra cosa, y las
+    diapositivas no, que se leen en sus apuntes. Ver `engine/didacta/html.py`.
+
+    No hace falta compilar: se escribe desde el origen, no desde el PDF.
+    """
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+    courses, _ = repo_mod.scan_courses(root, settings)
+    units, _ = repo_mod.scan_units(root, settings)
+
+    course_id, year_id = parse_where(args.where)
+    course = courses.get(course_id)
+    if course is None:
+        print(S.bad("no existe la asignatura %r" % course_id))
+        return 1
+    entry = course.years.get(year_id)
+    if entry is None:
+        print(S.bad("%s no tiene el curso %r" % (course_id, year_id)))
+        return 1
+
+    languages = args.language or course.taught_in(settings)
+    wanted = set(args.documents) if args.documents else None
+    themes = {theme.id: theme for theme in entry.themes}
+    destination = os.path.abspath(args.to)
+    ceiling = REVEALS.index(args.reveal_up_to)
+    written, withheld = [], []
+
+    for language in languages:
+        for document in entry.documents:
+            if wanted is not None and document.id not in wanted:
+                continue
+            profiles = document.profiles or [
+                profile.id for profile in
+                profiles_mod.default_profiles(all_profiles, document.kind)
+            ]
+            folder = os.path.join(
+                destination,
+                *([] if len(languages) == 1 else [language]),
+                _folder_for(document, themes, language),
+            )
+            for name in profiles:
+                profile = all_profiles.get(name)
+                if profile is None or profile.is_slides:
+                    continue
+                if REVEALS.index(profile.reveals) > ceiling:
+                    withheld.append("%s · %s · %s" % (document.id, name,
+                                                       language))
+                    continue
+                # El mismo nombre que el PDF que reparte `export`: al lado,
+                # se ve que son lo mismo.
+                path = html_mod.write_document(
+                    root, settings, course, year_id, document, profile,
+                    language, LATEX_DIR, units, folder,
+                    name=_export_name(document.title(language),
+                                      profile.label_in(language)))
+                written.append({"document": document.id, "profile": name,
+                                "language": language, "path": path})
+
+    if args.json:
+        print(json.dumps({"written": written, "withheld": withheld},
+                         ensure_ascii=False, indent=2))
+        return 0
+    for item in written:
+        print(S.ok(os.path.relpath(item["path"], destination)))
+    if withheld:
+        print(S.dim("  no se escriben, porque enseñan más de lo que se reparte "
+                    "(--reveal-up-to): %d" % len(withheld)))
+    return 0
+
+
+def cmd_site(args):
+    """Una web del curso: lo que se reparte, en una página que se publica.
+
+    Exporta con las reglas de `export` --lo del estudiante salvo que se pida
+    más, con los nombres que se leen-- y escribe al lado un `index.html` que
+    lo enseña por idioma y por tema. Todo en una carpeta que se sube tal cual
+    a GitHub Pages: el repositorio de ejemplo trae el workflow.
+    """
+    import argparse as _argparse
+    import contextlib
+    import io
+
+    root, settings = load_repo(args)
+    all_profiles = profiles_mod.load(LATEX_DIR)
+    courses, _ = repo_mod.scan_courses(root, settings)
+    course_id, year_id = parse_where(args.where)
+    course = courses.get(course_id)
+    entry = course.years.get(year_id) if course else None
+    if entry is None:
+        print(S.bad("no existe %s" % args.where))
+        return 1
+    languages = args.language or course.taught_in(settings)
+
+    destination = os.path.abspath(args.to or os.path.join(root, "site"))
+    if os.path.isdir(destination) and os.listdir(destination):
+        if not os.path.exists(os.path.join(destination, SITE_MARKER)):
+            print(S.bad("%s no está vacía y no la hizo `didacta site`: elige "
+                        "otra con --to" % destination))
+            return 1
+        # La de la vez anterior: se rehace entera, para que un documento que
+        # ya no se da no siga enlazado.
+        shutil.rmtree(destination)
+    os.makedirs(destination, exist_ok=True)
+
+    exported = _argparse.Namespace(**vars(args))
+    exported.to = destination
+    exported.language = languages
+    exported.zip = None
+    exported.zip_append = False
+    exported.json = True
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured):
+        cmd_export(exported)
+    try:
+        report = json.loads(captured.getvalue())
+    except ValueError:
+        print(captured.getvalue())
+        return 1
+
+    def label_of(profile_id, language):
+        profile = all_profiles.get(profile_id)
+        return profile.label_in(language) if profile else profile_id
+
+    groups = site_mod.group_outputs(
+        report.get("outputs", []), entry.documents, languages, label_of,
+        loose=set(_LOOSE.values()))
+    subtitle = " · ".join(
+        part for part in (course.teacher, course.institution) if part)
+    index = site_mod.write(destination, site_mod.page(
+        course.title(languages[0]), year_id, languages, groups,
+        subtitle=subtitle))
+    with open(os.path.join(destination, SITE_MARKER), "w",
+              encoding="utf-8") as handle:
+        handle.write("Esta carpeta la hace `didacta site %s`, y la rehace "
+                     "entera cada vez.\n" % args.where)
+
+    if args.json:
+        json.dump({
+            "to": destination,
+            "index": index,
+            "pdfs": len(report.get("copied", [])),
+            "missing": report.get("missing", []),
+            "withheld": report.get("withheld", []),
+        }, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+    print(S.ok("web del curso ") + "%s: %d PDF" % (
+        index, len(report.get("copied", []))))
+    if report.get("missing"):
+        print(S.warn("%d sin compilar, fuera de la web: compílalos y vuelve a "
+                     "ejecutar esto" % len(report["missing"])))
+    return 0
+
+
+def engine_version():
+    """Qué versión de Didacta es este motor.
+
+    La etiqueta `v<versión>` si el clon está justo en una --es como lo deja
+    la aplicación, que pone el motor en la de su misma versión--; si no, es
+    una copia de desarrollo y se dice su commit. No se lee de
+    `app/pubspec.yaml`: esa línea la sube el workflow **después** de
+    publicar, así que en el commit de una versión dice la anterior.
+    """
+    root = os.path.abspath(os.path.join(HERE, ".."))
+
+    def git(*args):
+        try:
+            done = subprocess.run(
+                ["git", "-C", root, *args], capture_output=True, text=True,
+                stdin=subprocess.DEVNULL,
+            )
+        except OSError:
+            return None
+        return done.stdout.strip() if done.returncode == 0 else None
+
+    tag = git("describe", "--tags", "--exact-match", "HEAD")
+    commit = git("rev-parse", "--short", "HEAD")
+    version = tag[1:] if tag and tag.startswith("v") else None
+    return {"version": version, "tag": tag, "commit": commit}
+
+
+def cmd_version(args):
+    found = engine_version()
+    if args.json:
+        json.dump(found, sys.stdout, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+    if found["version"]:
+        print("didacta %s" % found["version"])
+    else:
+        print("didacta (desarrollo%s)" % (
+            ", " + found["commit"] if found["commit"] else ""))
+    return 0
+
+
 def cmd_check(args):
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
@@ -1035,20 +1333,75 @@ def cmd_check(args):
     # una cita que en el PDF sale como [?] delante de treinta alumnos.
     warnings.extend(bibliography_warnings(root, settings, units))
 
-    for message in errors:
-        print(S.bad("error  ") + " " + message)
-    for message in warnings:
-        print(S.warn("warning") + " " + message)
+    # Y lo que hay escrito: ver `engine/didacta/review.py`.
+    checks = list(review_mod.DEFAULT_CHECKS)
+    for name in args.with_checks or ():
+        for check in name.split(","):
+            check = check.strip()
+            if check and check not in review_mod.OPTIONAL_CHECKS + \
+                    review_mod.DEFAULT_CHECKS:
+                print(S.bad("no hay ninguna comprobación %r" % check))
+                print(S.dim("las que se piden: %s"
+                            % ", ".join(review_mod.OPTIONAL_CHECKS)))
+                return 2
+            if check and check not in checks:
+                checks.append(check)
+    try:
+        snippets = snippets_mod.load(root) or []
+    except (snippets_mod.SnippetError, yamlio.YamlError):
+        snippets = []
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
+    )
+    findings = [
+        review_mod.Finding("structure", "error", message) for message in errors
+    ] + [
+        review_mod.Finding("structure", "warning", message)
+        for message in warnings
+    ] + review_mod.review(
+        root, settings, units, courses, latex_dir=LATEX_DIR, engine=engine,
+        all_profiles=engine.profiles, documents=args.within or None,
+        checks=checks, snippets=snippets,
+    )
+    counts = {
+        severity: sum(1 for f in findings if f.severity == severity)
+        for severity in ("error", "warning", "info")
+    }
+    failed = counts["error"] > 0 or (args.strict and counts["warning"] > 0)
 
-    print()
-    if errors:
-        print(S.bad("%d error(s), %d warning(s)" % (len(errors), len(warnings))))
-        return 1
-    if warnings:
-        print(S.warn("%d warning(s)" % len(warnings)))
-        return 0
-    print(S.ok("repository is consistent"))
-    return 0
+    if args.json:
+        json.dump({
+            "ok": not failed,
+            "errors": counts["error"],
+            "warnings": counts["warning"],
+            "checks": checks,
+            "titles": review_mod.TITLES,
+            "findings": [f.as_dict() for f in findings],
+        }, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 1 if failed else 0
+
+    by_check = {}
+    for finding in findings:
+        by_check.setdefault(finding.check, []).append(finding)
+    for check, found in by_check.items():
+        print(S.bold(review_mod.TITLES.get(check, check)))
+        for finding in found:
+            mark = {"error": S.bad("error  "), "warning": S.warn("warning"),
+                    "info": S.dim("info   ")}[finding.severity]
+            print("  %s %s" % (mark, finding))
+        print()
+    if counts["error"]:
+        print(S.bad("%d error(s), %d warning(s)"
+                    % (counts["error"], counts["warning"])))
+    elif counts["warning"]:
+        print(S.warn("%d warning(s)" % counts["warning"]))
+    else:
+        print(S.ok("repository is consistent"))
+    return 1 if failed else 0
 
 
 # --------------------------------------------------------------------------
@@ -1202,6 +1555,8 @@ def _default_block(root, settings, area):
 
 def cmd_new_unit(args):
     root, settings = load_repo(args)
+    if args.From:
+        return _duplicate_unit(root, settings, args)
     area = repo_mod.PROBLEMS if args.kind == "problem" else repo_mod.CONTENT
     relpath = "%s/%s" % (area, args.path.strip("/"))
     directory = os.path.join(root, relpath)
@@ -1234,6 +1589,69 @@ def cmd_new_unit(args):
     print(S.ok("created ") + relpath)
     print("  %s.tex" % language)
     print("  unit.yaml")
+    return 0
+
+
+def _duplicate_unit(root, settings, args):
+    """Una lección nueva que empieza siendo una copia de otra.
+
+    Para cuando lo que se va a escribir se parece a algo que ya existe: el
+    mismo esquema de problema con otros números, la misma lección para otro
+    público. Copia la carpeta entera con un id nuevo --son dos lecciones desde
+    este momento-- y le pone el título que se le dé, en su idioma.
+
+    En la misma área que la original: una copia de un problema es un problema.
+    La clasificación del `unit.yaml` también se queda; lo que cambia es dónde
+    está y cómo se llama.
+    """
+    units, _ = repo_mod.scan_units(root, settings)
+    try:
+        source = reuse_mod.find_unit(root, units, args.From)
+    except reuse_mod.ReuseError as exc:
+        print(S.bad(str(exc)))
+        return 1
+    area = source.relpath.split("/")[0]
+    relpath = "%s/%s" % (area, args.path.strip("/"))
+    if os.path.exists(os.path.join(root, relpath)):
+        print(S.bad("%s ya existe" % relpath))
+        return 1
+    try:
+        relpath, identifier = identity_mod.duplicate_unit(
+            root, source.relpath, settings, new_relpath=relpath
+        )
+    except identity_mod.IdentityError as exc:
+        print(S.bad(str(exc)))
+        return 1
+
+    directory = os.path.join(root, relpath)
+    language = args.lang or source.reference or settings.default_language
+    if args.title:
+        old = source.title(language)
+        meta = os.path.join(directory, "unit.yaml")
+        with open(meta, encoding="utf-8") as handle:
+            text = handle.read()
+        current = {
+            code: source.titles[code]
+            for code in source.available_languages
+            if source.titles.get(code)
+        }
+        text = identity_mod.set_unit_title(text, language, args.title, current)
+        # El comentario de la primera línea, que es el título escrito para
+        # quien abre el fichero.
+        lines = text.split("\n")
+        if lines and lines[0].strip() == "# %s" % old:
+            lines[0] = "# %s" % args.title
+        with open(meta, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(lines))
+        tex = os.path.join(directory, "%s.tex" % language)
+        if os.path.isfile(tex):
+            with open(tex, encoding="utf-8") as handle:
+                body = handle.read()
+            with open(tex, "w", encoding="utf-8") as handle:
+                handle.write(identity_mod.retitle_tex(body, old, args.title))
+
+    print(S.ok("created ") + relpath)
+    print(S.dim("  copia de %s, con el id %s" % (source.relpath, identifier)))
     return 0
 
 
@@ -1436,6 +1854,13 @@ def cmd_new_year(args):
             handle.write(body)
         copied.append(document.id)
 
+    # Los temas, igual que desde una carpeta: sin ellos el curso nuevo llegaba
+    # con los documentos sueltos, cada uno con su `themes:` apuntando a un
+    # tema que nadie declaraba.
+    themes_path = os.path.join(previous.directory, repo_mod.THEMES_META)
+    if os.path.isfile(themes_path):
+        shutil.copyfile(themes_path, os.path.join(target, repo_mod.THEMES_META))
+
     print(S.ok("created ") + "%s/%s from %s" % (args.course, args.year, source_year))
     print("  year.yaml")
     for name in copied:
@@ -1611,17 +2036,31 @@ def cmd_copy(args):
         print(S.dim("hay: %s" % ", ".join(order)))
         return 1
 
+    # Con otro nombre, cuando se pide: uno solo, porque dos documentos no
+    # pueden llegar con el mismo.
+    rename = getattr(args, "As", None)
+    if rename and len(wanted) != 1:
+        print(S.bad("--as es para copiar un documento, y se han pedido %d"
+                    % len(wanted)))
+        return 1
+    local = {name: rename or name for name in wanted}
+
     # Lo que ya está allí no se pisa. Un documento del mismo id en el destino
     # es otro documento con el mismo nombre, y elegir en silencio cuál se
     # queda es perder uno de los dos.
     taken, _ = document_blocks(os.path.join(target.directory, "year.yaml"))
-    clash = [name for name in wanted if name in taken]
+    clash = [local[name] for name in wanted if local[name] in taken]
     if clash:
         print(S.bad("ya están en %s: %s" % (args.to, ", ".join(clash))))
-        print(S.dim("  quítalos allí, o cópialos con otro nombre a mano."))
+        print(S.dim("  quítalos allí, o cópialos con otro nombre (--as)."))
         return 1
 
-    chosen = [blocks[name] for name in wanted]
+    def renamed(block, new_id):
+        head = re.sub(r"(-\s+id\s*:\s*).*$", r"\g<1>%s" % new_id, block[0],
+                      count=1)
+        return [head] + block[1:]
+
+    chosen = [renamed(blocks[name], local[name]) for name in wanted]
     insert_documents(os.path.join(target.directory, "year.yaml"), chosen)
 
     copied = []
@@ -1633,7 +2072,7 @@ def cmd_copy(args):
         # El año, donde se vea. Un documento copiado que sigue diciendo el
         # año viejo en la portada se reparte con la fecha de otro curso.
         body = body.replace(from_year, to_year)
-        with open(os.path.join(target.directory, "%s.tex" % name), "w",
+        with open(os.path.join(target.directory, "%s.tex" % local[name]), "w",
                   encoding="utf-8") as handle:
             handle.write(body)
         copied.append(name)
@@ -1641,14 +2080,61 @@ def cmd_copy(args):
     themes = copy_themes(source.directory, target.directory,
                          themes_needed(chosen), settings)
 
+    # Duplicar de verdad. Por defecto una copia sigue vinculada si el original
+    # lo estaba --el bloque se copia tal cual, con su `link:`-- y llama a las
+    # mismas lecciones. `--independent` le da su propia composición;
+    # `--with-units` además le da sus propias lecciones, y sin la primera no
+    # tendría sentido: repuntar dentro de un fichero compartido cambiaría el
+    # original.
+    target_year = os.path.join(target.directory, "year.yaml")
+    separated = []
+    independent = getattr(args, "independent", False)
+    with_units = getattr(args, "with_units", False)
+    if independent or with_units:
+        for name in wanted:
+            body = identity_mod._body_of(blocks[name])
+            if identity_mod._field(body, "link"):
+                identity_mod.unshare_document(root, target.directory,
+                                              local[name], remove_file=False)
+                separated.append(local[name])
+    duplicated = {}
+    if with_units:
+        units, _ = repo_mod.scan_units(root, settings)
+        for name in wanted:
+            references = reuse_mod._references_in(target_year, local[name])
+            for index, reference in enumerate(references):
+                unit = repo_mod.resolve_unit_ref(reference, units, root)
+                if unit is None:
+                    continue
+                if unit.relpath not in duplicated:
+                    duplicated[unit.relpath], _ = identity_mod.duplicate_unit(
+                        root, unit.relpath, settings)
+                identity_mod.repoint_reference(
+                    target_year, local[name], index,
+                    reuse_mod._reference_for(duplicated[unit.relpath]))
+    if separated or duplicated:
+        _recompose(root, settings, quiet=True)
+
     print(S.ok("copiados ") + "%d documento(s) de %s a %s"
           % (len(wanted), args.From, args.to))
     for name in wanted:
-        print("  %s%s" % (name, "" if name in copied else "   (sin .tex)"))
+        print("  %s%s%s" % (name,
+                            "" if local[name] == name else " → " + local[name],
+                            "" if name in copied else "   (sin .tex)"))
     if themes:
         print(S.dim("  temas que se han llevado consigo: %s" % ", ".join(themes)))
+    if separated:
+        print(S.dim("  ya no vinculados, con su propia composición: %s"
+                    % ", ".join(separated)))
     print()
-    print(S.dim("  Solo la composición: las unidades son las mismas, no copias."))
+    if duplicated:
+        print(S.dim("  %d lección(es) duplicadas: la copia tiene las suyas."
+                    % len(duplicated)))
+        for new_path in sorted(duplicated.values()):
+            print(S.dim("    %s" % new_path))
+    else:
+        print(S.dim("  Solo la composición: las unidades son las mismas, "
+                    "no copias."))
     return 0
 
 
@@ -1725,6 +2211,11 @@ def cmd_link(args):
 def cmd_move(args):
     """Cambia de sitio una ubicación, sin tocar la identidad del contenido."""
     root, settings = load_repo(args)
+    if args.unit:
+        return _move_unit(root, settings, args)
+    if not args.From:
+        print(S.bad("hace falta --from (un tema) o --unit (una lección)"))
+        return 1
     try:
         plan = reuse_mod.move_document(root, settings, args.From, args.to,
                                        as_id=args.As)
@@ -1734,6 +2225,23 @@ def cmd_move(args):
     print(S.ok("movido  ") + "%s a %s" % (args.From, args.to))
     _report(plan, root)
     _recompose(root, settings, quiet=True)
+    return 0
+
+
+def _move_unit(root, settings, args):
+    """Una lección a otra carpeta, con todo lo que la nombra reescrito."""
+    try:
+        plan = reuse_mod.move_unit(root, settings, args.unit, args.to)
+    except (reuse_mod.ReuseError, identity_mod.IdentityError) as exc:
+        print(S.bad(str(exc)))
+        return 1
+    print(S.ok("movida  ") + plan.notes[-1])
+    for path in plan.touched[1:]:
+        print("  " + os.path.relpath(path, root))
+    _recompose(root, settings, quiet=True)
+    print()
+    print(S.dim("  La misma lección, en otro sitio: su id y sus traducciones "
+                "no cambian."))
     return 0
 
 
@@ -2037,6 +2545,9 @@ def cmd_built(args):
         # es qué se puede abrir, y una traducción compilada que no aparece en
         # la lista es una traducción que nadie vuelve a mirar.
         languages=course.taught_in(settings),
+        # Para que editar una lección deje viejo el PDF del tema que la lleva.
+        root=root,
+        settings=settings,
     )
 
     if args.json:
@@ -2073,6 +2584,13 @@ def cmd_export(args):
 
     Los temas y los documentos llevan su nombre, no su id: esto no lo lee el
     motor, lo lee una persona buscando el Tema 3.
+
+    Lo que se reparte, por defecto, es lo del estudiante: los enunciados y,
+    como mucho, los resultados. Una carpeta exportada acaba en el aula
+    virtual, y la plantilla de corrección del examen no tiene que ir detrás
+    solo porque estaba compilada. `--reveal-up-to` sube el listón a sabiendas
+    --`solutions` añade las resoluciones, `teacher` las copias del profesor--
+    y lo que se queda fuera se dice, igual que lo que falta por compilar.
     """
     root, settings = load_repo(args)
     all_profiles = profiles_mod.load(LATEX_DIR)
@@ -2099,7 +2617,14 @@ def cmd_export(args):
 
     themes = {theme.id: theme for theme in entry.themes}
     destination = os.path.abspath(args.to)
-    copied, missing = [], []
+    ceiling = REVEALS.index(args.reveal_up_to)
+    copied, missing, withheld = [], [], []
+    # Las lecciones, solo si hacen falta: para escribir el HTML.
+    units = None
+    # Lo mismo que `copied`, con de qué versión e idioma es cada fichero: los
+    # nombres ya no llevan el id de la plantilla, y quien quiera saberlo no
+    # tiene por qué adivinarlo del nombre.
+    outputs = []
 
     for language in languages:
         for document in entry.documents:
@@ -2118,7 +2643,32 @@ def cmd_export(args):
                 profile = all_profiles.get(name)
                 if profile is None:
                     continue
+                if REVEALS.index(profile.reveals) > ceiling:
+                    withheld.append("%s · %s · %s" % (document.id, name, language))
+                    continue
                 title = document.title(language)
+                if args.html and not profile.is_slides:
+                    # La página, al lado del PDF y con su mismo nombre. Desde
+                    # el origen: no hace falta que esté compilado.
+                    os.makedirs(folder, exist_ok=True)
+                    if units is None:
+                        units, _ = repo_mod.scan_units(root, settings)
+                    page = html_mod.write_document(
+                        root, settings, course, year_id, document, profile,
+                        language, LATEX_DIR, units, folder,
+                        name=_export_name(title, profile.label_in(language)))
+                    images = os.path.join(folder, "imagenes")
+                    for written in [page] + sorted(
+                            os.path.join(images, each)
+                            for each in (os.listdir(images)
+                                         if os.path.isdir(images) else [])):
+                        relative = os.path.relpath(written, destination)
+                        if relative not in copied:
+                            copied.append(relative)
+                    outputs.append({
+                        "path": os.path.relpath(page, destination),
+                        "document": document.id, "profile": profile.id,
+                        "language": language, "format": "html"})
                 pdf = os.path.join(
                     engine.output_dir(
                         "%s@%s/%s" % (course_id, year_id, document.id),
@@ -2130,12 +2680,29 @@ def cmd_export(args):
                     missing.append("%s · %s · %s" % (document.id, name, language))
                     continue
                 os.makedirs(folder, exist_ok=True)
-                target = os.path.join(folder, os.path.basename(pdf))
+                # En el idioma del reparto: «Tema 1 - Apunts.pdf», sin el id
+                # de la plantilla ni el código del idioma, que ya dice la
+                # carpeta. Si dos versiones se llamaran igual, la segunda
+                # lleva su id detrás en lugar de pisar a la primera.
+                name = _export_name(title, profile.label_in(language))
+                target = os.path.join(folder, name + ".pdf")
+                if os.path.relpath(target, destination) in copied:
+                    target = os.path.join(
+                        folder, "%s - %s.pdf" % (name, profile.id))
                 shutil.copy2(pdf, target)
-                copied.append(os.path.relpath(target, destination))
+                relative = os.path.relpath(target, destination)
+                copied.append(relative)
+                outputs.append({"path": relative, "document": document.id,
+                                "profile": profile.id, "language": language})
+
+    if args.zip:
+        _zip_export(destination, copied, os.path.abspath(args.zip),
+                    append=args.zip_append)
 
     if args.json:
-        json.dump({"copied": copied, "missing": missing, "to": destination},
+        json.dump({"copied": copied, "missing": missing, "withheld": withheld,
+                   "outputs": outputs, "to": destination,
+                   "zip": os.path.abspath(args.zip) if args.zip else None},
                   sys.stdout, indent=2, ensure_ascii=False)
         sys.stdout.write("\n")
         return 0
@@ -2152,7 +2719,27 @@ def cmd_export(args):
             print("  %s" % name)
         if len(missing) > 10:
             print(S.dim("  ... y %d más" % (len(missing) - 10)))
+    if withheld:
+        print()
+        print(S.dim("%d con más de lo que se ha pedido repartir, fuera "
+                    "(--reveal-up-to para llevárselas):" % len(withheld)))
+        for name in withheld[:10]:
+            print(S.dim("  %s" % name))
+        if len(withheld) > 10:
+            print(S.dim("  ... y %d más" % (len(withheld) - 10)))
     return 0 if copied or not missing else 1
+
+
+# Lo que enseña una versión, de menos a más: el orden de `Profile.reveals`.
+REVEALS = ("statements", "answers", "solutions", "teacher")
+
+#: La carpeta de lo que no es de ningún tema, en el idioma del reparto.
+_LOOSE = {
+    "es": "Sin tema", "va": "Sense tema", "ca": "Sense tema",
+    "gl": "Sen tema", "eu": "Gairik gabe", "en": "Other documents",
+    "fr": "Sans thème", "de": "Ohne Thema", "it": "Senza tema",
+    "pt": "Sem tema",
+}
 
 
 def _folder_for(document, themes, language):
@@ -2161,7 +2748,42 @@ def _folder_for(document, themes, language):
         theme = themes.get(name)
         if theme is not None:
             return _safe_name(theme.title(language))
-    return "Sin tema"
+    return _LOOSE.get(language, _LOOSE["es"])
+
+
+def _export_name(title, label):
+    """«Tema 1 - Apunts»: el nombre de un PDF repartido, sin extensión.
+
+    Con las mismas reglas que el de la compilación --los dos puntos se caen,
+    lo que un sistema no admite se sustituye-- y nunca vacío.
+    """
+    name = " - ".join(piece for piece in (title.strip(), label) if piece)
+    name = name.replace(":", "")
+    name = re.sub(r'[/\\*?"<>|%]+', "-", name)
+    name = re.sub(r"\s{2,}", " ", name).strip(" -")
+    return name or "documento"
+
+
+def _zip_export(destination, copied, path, append=False):
+    """Lo exportado, en un .zip al lado: el que se sube al aula virtual.
+
+    Moodle descomprime un .zip en un recurso Carpeta, con las carpetas de
+    dentro, así que es subir un fichero en lugar de cuarenta. Con [append]
+    se añade a uno que ya existe --una asignatura repartida en dos
+    repositorios se exporta en dos pasadas-- y un fichero que ya estaba se
+    deja como estaba.
+    """
+    import zipfile
+
+    mode = "a" if append and os.path.isfile(path) else "w"
+    with zipfile.ZipFile(path, mode, zipfile.ZIP_DEFLATED) as archive:
+        present = set(archive.namelist())
+        for relative in copied:
+            name = relative.replace(os.sep, "/")
+            if name in present:
+                continue
+            archive.write(os.path.join(destination, relative), name)
+            present.add(name)
 
 
 def _safe_name(text):
@@ -2552,6 +3174,7 @@ def cmd_preview(args):
         on_output=progress_sink(args),
         template_dirs=template_dirs(args, root),
         settings=settings,
+        overfull_lines=args.overfull_lines,
     )
 
     reference = unit.reference_path
@@ -2654,6 +3277,131 @@ def cmd_preview(args):
         )
         sys.stdout.write("\n")
     return 0 if all(r.ok for r in results) else 1
+
+
+def cmd_synctex(args):
+    """De un punto del PDF a la lección y la línea que lo escribieron."""
+    root, _settings = load_repo(args)
+    try:
+        found = synctex_mod.edit(args.pdf, args.page, args.x, args.y)
+    except synctex_mod.SyncTexError as exc:
+        if args.json:
+            json.dump({"error": str(exc)}, sys.stdout, ensure_ascii=False)
+            sys.stdout.write("\n")
+        else:
+            print(S.bad(str(exc)))
+        return 1
+    if found is not None:
+        synctex_mod.refine(found, text=args.text, word=args.word)
+        found.update(synctex_mod.in_repository(found["file"], root))
+    if args.json:
+        json.dump({"found": found}, sys.stdout, indent=2, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
+    if found is None:
+        print(S.dim("en ese punto no hay nada que venga de un fichero"))
+        return 0
+    print("%s:%d" % (found.get("path") or found["file"], found["line"]))
+    return 0
+
+
+def cmd_snippet_preview(args):
+    """Compila un snippet suelto: su definición y un texto de ejemplo.
+
+    Es la pregunta del editor de snippets --«¿cómo queda esto?»-- sobre algo
+    que todavía no está guardado, así que no se lee nada del `snippets.yaml`:
+    la definición y el cuerpo llegan en dos ficheros, tal como están en la
+    pantalla. Solo esa definición: si otro snippet del repositorio tiene un
+    error, esta vista previa no tiene por qué pagarlo.
+
+    Una pasada de pdflatex, siempre. No hay referencias que resolver, y la
+    diferencia entre un segundo y cuatro es la que hay entre mirar el
+    resultado y dejar de pedirlo. En apuntes el PDF se recorta a lo que
+    ocupa el snippet con `pdfcrop`, si está: una página A4 en blanco con
+    tres líneas arriba no deja ver nada.
+    """
+    root, settings = load_repo(args)
+
+    def read(path):
+        if not path:
+            return ""
+        with open(path, encoding="utf-8") as handle:
+            return handle.read()
+
+    # En un fichero o en la propia orden: la aplicación los pasa como texto,
+    # que es lo que tiene en la pantalla, y a mano es más cómodo un fichero.
+    definition = (args.definition_text if args.definition_text is not None
+                  else read(args.definition))
+    body = args.body_text if args.body_text is not None else read(args.body)
+    profile = args.profile or "notes"
+    language = args.language or settings.default_language
+
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+        engine="pdflatex",
+        verbose=args.verbose,
+        on_output=progress_sink(args),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
+        snippets=[snippets_mod.Snippet("preview", definition=definition)],
+    )
+
+    def report(data, code):
+        if args.json:
+            json.dump(data, sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+        elif data.get("ok"):
+            print(data["pdf"])
+        else:
+            print(S.bad("FAIL: %s" % (data.get("error") or "")))
+            errors = [each for each in data.get("diagnostics", [])
+                      if each["severity"] == "error"]
+            for diagnostic in errors[:6]:
+                print("  %s" % S.bad(diagnostic["message"]))
+        return code
+
+    ready, why = engine.available()
+    if not ready:
+        return report({"ok": False, "error": why, "pdf": None,
+                       "diagnostics": []}, 2)
+    if profile not in engine.profiles:
+        return report({"ok": False, "pdf": None, "diagnostics": [],
+                       "error": "unknown profile %r" % profile}, 1)
+
+    slides = engine.profiles[profile].document_class == "beamer"
+    source = snippets_mod.write_preview(engine.build_dir, body, slides=slides)
+    result = engine.build(
+        source, profile, language,
+        document_id=snippets_mod.PREVIEW_DIR,
+        document_title="Vista previa",
+    )
+
+    pdf = result.pdf
+    if result.ok and pdf and not slides and not args.no_crop:
+        pdf = _cropped(pdf) or pdf
+
+    data = result.as_dict()
+    data.update({"pdf": pdf, "slides": slides})
+    return report(data, 0 if result.ok else 1)
+
+
+def _cropped(pdf):
+    """El PDF recortado a lo que ocupa, o None si no se puede recortar."""
+    tool = shutil.which("pdfcrop")
+    if not tool:
+        return None
+    out = pdf[:-4] + "-crop.pdf"
+    try:
+        done = subprocess.run(
+            [tool, "--margins", "14", pdf, out],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            env=dict(os.environ, PATH=os.environ.get("PATH", "")),
+            timeout=30,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out if done.returncode == 0 and os.path.isfile(out) else None
 
 
 def _when(stamp):
@@ -3310,21 +4058,68 @@ def cmd_mcp(args):
     if not args.http:
         return mcp_mod.serve_stdio(server, sys.stdin, sys.stdout)
 
+    # El token: el que diga quien lo lanza, o uno nuevo. Nunca por la línea
+    # de órdenes, que cualquiera de la máquina ve con `ps`.
+    import secrets
+    token = os.environ.get("DIDACTA_MCP_TOKEN") or secrets.token_urlsafe(24)
+
     def ready(port):
         # Por stdout y en una línea suelta: la aplicación pide el puerto 0
         # para que lo elija el sistema --dos Didactas abiertos no pueden
         # pelearse por un número-- y necesita que se le diga cuál tocó.
-        print(json.dumps({"port": port, "url": "http://127.0.0.1:%d/" % port}))
+        print(json.dumps({
+            "port": port,
+            "url": "http://127.0.0.1:%d/" % port,
+            "token": token,
+        }))
         sys.stdout.flush()
         journal.record(event="listening", port=port)
 
+    if args.exit_with_stdin:
+        # Morir con quien lo lanzó. La aplicación le deja la entrada estándar
+        # abierta y no escribe nunca en ella; cuando la aplicación se cierra,
+        # del modo que sea --un `exit`, un cuelgue, la ventana--, el sistema
+        # cierra su extremo y aquí llega el final del fichero. Es lo único
+        # que avisa igual en macOS, Linux y Windows, y sin preguntar por
+        # procesos.
+        import threading
+
+        def watch():
+            try:
+                while sys.stdin.buffer.read(4096):
+                    pass
+            except (OSError, ValueError):
+                pass
+            os._exit(0)
+
+        threading.Thread(target=watch, daemon=True).start()
+
     try:
-        return mcp_mod.serve_http(server, port=args.port, on_ready=ready)
+        return mcp_mod.serve_http(
+            server, port=args.port, on_ready=ready, token=token)
     except KeyboardInterrupt:
         journal.record(event="stopped")
         return 0
 
+def _stop_on_sigterm():
+    """Que SIGTERM pare también lo que se esté compilando.
+
+    Es lo que manda la aplicación al pulsar «Detener». Sin esto se para
+    Python y LaTeX sigue: latexmk y pdflatex acabarían solos, escribiendo en
+    la carpeta de salida, mientras la pantalla ya dice que está parado.
+    """
+    if os.name != "posix":
+        return
+
+    def handler(signum, frame):
+        build_mod.stop_all()
+        raise SystemExit(128 + signum)
+
+    signal.signal(signal.SIGTERM, handler)
+
+
 def main(argv=None):
+    _stop_on_sigterm()
     parser = argparse.ArgumentParser(
         prog="didacta",
         description=__doc__,
@@ -3377,13 +4172,48 @@ def main(argv=None):
                    help="the profiles this document can be built in")
     p.add_argument("--fast", action="store_true",
                    help="one pdflatex pass; quick, but references may be wrong")
+    p.add_argument("--overfull-lines", action="store_true",
+                   help="avisar también de las líneas que se salen por la "
+                        "derecha (fuera de las diapositivas)")
+    p.add_argument("--accessible", action="store_true",
+                   help="PDF accesibles: lo que no son diapositivas, "
+                        "etiquetado (PDF/UA-2) y con LuaLaTeX")
     p.add_argument("--json", action="store_true", help="write summary.json")
     p.add_argument("--progress", action="store_true",
                    help="stream LaTeX's output to stderr as it happens")
+    p.add_argument("-j", "--jobs", type=int, default=0, metavar="N",
+                   help="cuántas salidas compilar a la vez (0: min(4, "
+                        "núcleos/2))")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=cmd_build)
 
+    p = sub.add_parser(
+        "clean", help="empty the build folder, or say how big it is")
+    p.add_argument("documents", nargs="*", metavar="DOCUMENT",
+                   help="solo lo de estos documentos (curso@año/documento)")
+    p.add_argument("--size", action="store_true",
+                   help="decir cuánto ocupa, sin borrar nada")
+    p.add_argument("--dry-run", action="store_true",
+                   help="lo mismo que --size")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_clean)
+
+    p = sub.add_parser("version", help="which version of Didacta this is")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_version)
+
     p = sub.add_parser("check", help="validate the repository")
+    p.add_argument("--json", action="store_true",
+                   help="los hallazgos en JSON, con su lección y su línea")
+    p.add_argument("--strict", action="store_true",
+                   help="los avisos también hacen fallar")
+    p.add_argument("--in", dest="within", action="append", metavar="REF",
+                   help="solo esto: curso@año o curso@año/documento "
+                        "(repetible); es lo que se mira antes de exportar")
+    p.add_argument("--with", dest="with_checks", action="append",
+                   metavar="CHECK",
+                   help="más comprobaciones: formulas, unused, "
+                        "overfull-lines, decimals, spelling (con hunspell), accessible")
     p.set_defaults(func=cmd_check)
 
     p = sub.add_parser("remove", help="delete a subject or one of its years")
@@ -3428,12 +4258,55 @@ def main(argv=None):
                    help="say what is already built, and whether it is current")
     p.add_argument("--fast", action="store_true",
                    help="one pdflatex pass; quick, but references may be wrong")
+    p.add_argument("--overfull-lines", action="store_true",
+                   help="avisar también de las líneas que se salen por la "
+                        "derecha (fuera de las diapositivas)")
     p.add_argument("--json", action="store_true",
                    help="write the results as JSON, for an interface to read")
     p.add_argument("--progress", action="store_true",
                    help="stream LaTeX's output to stderr as it happens")
     p.add_argument("-v", "--verbose", action="store_true")
     p.set_defaults(func=cmd_preview)
+
+    p = sub.add_parser(
+        "synctex",
+        help="the source file and line behind a point of a PDF",
+    )
+    p.add_argument("pdf", help="a PDF that Didacta compiled")
+    p.add_argument("--page", type=int, required=True, help="from 1")
+    p.add_argument("--x", type=float, required=True,
+                   help="points from the left edge of the page")
+    p.add_argument("--y", type=float, required=True,
+                   help="points from the top edge of the page")
+    p.add_argument("--word", help="the word under the pointer, to find its "
+                                  "line inside a slide")
+    p.add_argument("--text", help="the line of the PDF around it")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_synctex)
+
+    p = sub.add_parser(
+        "snippet-preview",
+        help="compile a snippet's definition and sample, unsaved",
+    )
+    p.add_argument("--definition", metavar="FILE",
+                   help="the LaTeX that defines it (goes in the preamble)")
+    p.add_argument("--definition-text", metavar="TEX",
+                   help="the same, given as text instead of a file")
+    p.add_argument("--body", metavar="FILE",
+                   help="what to typeset with it")
+    p.add_argument("--body-text", metavar="TEX",
+                   help="the same, given as text instead of a file")
+    p.add_argument("-p", "--profile", help="output profile (default: notes)")
+    p.add_argument("-l", "--language", choices=sorted(profiles_mod.LANGUAGES),
+                   help="language (default: the repository's)")
+    p.add_argument("--no-crop", action="store_true",
+                   help="keep the whole page instead of cropping to the snippet")
+    p.add_argument("--json", action="store_true",
+                   help="write the result as JSON, for an interface to read")
+    p.add_argument("--progress", action="store_true",
+                   help="stream LaTeX's output to stderr as it happens")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_snippet_preview)
 
     p = sub.add_parser(
         "tidy", help="remove the migration header from the unit sources"
@@ -3471,6 +4344,8 @@ def main(argv=None):
                                    "taxonomy.yaml")
     q.add_argument("--lang", choices=profiles_mod.LANGUAGES)
     q.add_argument("--title")
+    q.add_argument("--from", dest="From", metavar="REF",
+                   help="empezar como una copia de esta lección (ruta o id)")
     q.set_defaults(func=cmd_new_unit)
 
     q = new_sub.add_parser("course", help="a new subject")
@@ -3513,6 +4388,14 @@ def main(argv=None):
                    help="qué copiar (por defecto, todo)")
     p.add_argument("--create-year", action="store_true",
                    help="crear el curso de destino aquí si no está todavía")
+    p.add_argument("--as", dest="As", metavar="ID",
+                   help="con otro nombre en el destino (un solo documento)")
+    p.add_argument("--independent", action="store_true",
+                   help="que un documento vinculado deje de estarlo en la "
+                        "copia: su propia composición")
+    p.add_argument("--with-units", action="store_true",
+                   help="duplicar también las lecciones: la copia llama a "
+                        "las suyas (implica --independent)")
     p.set_defaults(func=cmd_copy)
 
     p = sub.add_parser(
@@ -3531,14 +4414,18 @@ def main(argv=None):
 
     p = sub.add_parser(
         "move",
-        help="cambiar de sitio un tema, sin copiarlo ni vincularlo",
-        description="Al acabar hay las mismas ubicaciones que había, una de "
-                    "ellas en otro sitio. Lo que estaba vinculado sigue "
-                    "vinculado.",
+        help="cambiar de sitio un tema o una lección, sin copiarlos",
+        description="Un tema: al acabar hay las mismas ubicaciones que había, "
+                    "una de ellas en otro sitio, y lo que estaba vinculado "
+                    "sigue vinculado. Una lección (--unit): otra carpeta, con "
+                    "cada composición que la nombra reescrita.",
     )
-    p.add_argument("--from", dest="From", required=True,
-                   metavar="CURSO@AÑO/DOC")
-    p.add_argument("--to", dest="to", required=True, metavar="CURSO@AÑO")
+    p.add_argument("--from", dest="From", metavar="CURSO@AÑO/DOC")
+    p.add_argument("--unit", metavar="REF",
+                   help="la ruta o el id de una lección, para moverla a "
+                        "--to categoría/tema/nombre")
+    p.add_argument("--to", dest="to", required=True,
+                   metavar="CURSO@AÑO | RUTA")
     p.add_argument("--as", dest="As", metavar="ID")
     p.set_defaults(func=cmd_move)
 
@@ -3654,7 +4541,8 @@ def main(argv=None):
         "built",
         help="qué hay compilado de un curso",
         description="Los PDF que ya existen de cada documento, y si alguno se "
-                    "ha quedado viejo respecto a su composición.",
+                    "ha quedado viejo respecto a su composición o a sus "
+                    "lecciones.",
     )
     p.add_argument("where", metavar="CURSO@AÑO")
     p.add_argument("--json", action="store_true")
@@ -3673,8 +4561,61 @@ def main(argv=None):
                    help="repetible; por defecto, los de la asignatura")
     p.add_argument("documents", nargs="*", metavar="ID",
                    help="qué exportar (por defecto, todo)")
+    p.add_argument("--reveal-up-to", choices=REVEALS[1:], default="answers",
+                   help="hasta dónde puede enseñar lo que sale: answers "
+                        "(por defecto, lo del estudiante), solutions o "
+                        "teacher")
+    p.add_argument("--zip", metavar="FICHERO",
+                   help="además, todo lo exportado en un .zip")
+    p.add_argument("--zip-append", action="store_true",
+                   help="añadir al .zip si ya existe, en lugar de rehacerlo")
+    p.add_argument("--html", action="store_true",
+                   help="y los apuntes en HTML accesible, al lado de cada PDF "
+                        "que no sea de diapositivas")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_export)
+
+    p = sub.add_parser(
+        "html",
+        help="los apuntes de un curso en HTML accesible",
+        description="Una página por documento, versión e idioma, escrita desde "
+                    "el origen: con su estructura, sus fórmulas para MathJax "
+                    "y el texto alternativo de las figuras. Lo que se "
+                    "reparte, salvo que se pida más.",
+    )
+    p.add_argument("where", metavar="CURSO@AÑO")
+    p.add_argument("--to", required=True, metavar="CARPETA")
+    p.add_argument("-l", "--language", action="append",
+                   choices=profiles_mod.LANGUAGES,
+                   help="repetible; por defecto, los de la asignatura")
+    p.add_argument("documents", nargs="*", metavar="ID",
+                   help="qué escribir (por defecto, todo)")
+    p.add_argument("--reveal-up-to", choices=REVEALS[1:], default="answers",
+                   help="hasta dónde puede enseñar lo que sale: answers "
+                        "(por defecto, lo del estudiante), solutions o "
+                        "teacher")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_html)
+
+    p = sub.add_parser(
+        "site",
+        help="una web del curso con sus PDF, para GitHub Pages",
+        description="Exporta lo que se reparte y escribe un index.html que lo "
+                    "enseña por idioma y por tema.",
+    )
+    p.add_argument("where", metavar="CURSO@AÑO")
+    p.add_argument("--to", metavar="CARPETA",
+                   help="dónde (por defecto, site/ en el repositorio)")
+    p.add_argument("-l", "--language", action="append",
+                   choices=profiles_mod.LANGUAGES,
+                   help="repetible; por defecto, los de la asignatura")
+    p.add_argument("documents", nargs="*", metavar="ID",
+                   help="qué publicar (por defecto, todo)")
+    p.add_argument("--reveal-up-to", choices=REVEALS[1:], default="answers",
+                   help="hasta dónde puede enseñar: answers (por defecto), "
+                        "solutions o teacher")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_site)
 
     p = sub.add_parser(
         "mcp",
@@ -3693,6 +4634,10 @@ def main(argv=None):
                    help="servir por HTTP en 127.0.0.1 en vez de por stdio")
     p.add_argument("--port", type=int, default=0,
                    help="el puerto; 0 lo elige el sistema y se dice cuál")
+    p.add_argument("--exit-with-stdin", action="store_true",
+                   help="terminar cuando se cierre la entrada estándar: lo "
+                        "usa la aplicación para que el servidor no la "
+                        "sobreviva")
     p.add_argument("--no-build", action="store_true",
                    help="sin la herramienta de compilar")
     p.set_defaults(func=cmd_mcp)

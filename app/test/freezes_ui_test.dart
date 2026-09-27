@@ -20,6 +20,7 @@ import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/freezes.dart';
 import 'package:didacta_app/ui/shell.dart';
 import 'package:didacta_app/ui/theme.dart';
+import 'package:didacta_app/ui/year_page.dart';
 
 import 'fixture.dart';
 
@@ -123,7 +124,7 @@ void main() {
       // «¿esto ocupa el doble?» y «¿si la borro, pierdo aquello?».
       await pumpFreezes(tester);
       expect(find.textContaining('no ocupa diez veces más'), findsOneWidget);
-      expect(find.textContaining('no borra ningún commit'), findsOneWidget);
+      expect(find.textContaining('no borra nada'), findsOneWidget);
     });
 
     testWidgets('enseña las que hay, con su commit', (tester) async {
@@ -183,11 +184,11 @@ void main() {
 
       expect(find.textContaining('¿Quitar'), findsOneWidget);
       expect(
-        find.textContaining('El commit sigue donde estaba'),
+        find.textContaining('Ese momento sigue en el historial'),
         findsOneWidget,
       );
       expect(
-        find.textContaining('también las que apunten a este mismo commit'),
+        find.textContaining('también las que apunten al mismo momento'),
         findsOneWidget,
       );
       expect(find.byKey(const Key('confirm-remove-freeze')), findsOneWidget);
@@ -226,7 +227,7 @@ void main() {
 
       expect(find.byKey(const Key('freeze-name')), findsOneWidget);
       expect(find.byKey(const Key('freeze-description')), findsOneWidget);
-      expect(find.textContaining('Apuntará al commit'), findsOneWidget);
+      expect(find.textContaining('Apuntará a '), findsOneWidget);
     });
 
     testWidgets('sin nombre no deja congelar', (tester) async {
@@ -262,6 +263,57 @@ void main() {
       );
       expect(button.onPressed, isNull);
     });
+  });
+
+  testWidgets('quitar el curso dice que se lleva sus versiones congeladas', (
+    tester,
+  ) async {
+    // Viven en la carpeta del curso, así que se van con él, y el recuento
+    // del motor no las cuenta porque no son documentos.
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final engine = FakeCompiler()
+      ..answers['remove year'] = '  1 año(s)\n  2 documento(s)\n';
+    final session = await sessionWith(
+      [
+        freezeJson(),
+        freezeJson(id: 'f-000000000002', name: 'Antes del parcial'),
+      ],
+      admin: CourseAdmin(
+        compiler: engine,
+        clone: FakeClone(),
+        author: (name: 'Javier', email: 'javier@uv.es'),
+        token: '',
+        pushOnCommit: false,
+      ),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider<Session>.value(
+        value: session,
+        child: MaterialApp(
+          theme: didactaTheme(),
+          home: const Scaffold(
+            body: YearPage(courseId: 'am-iii', year: '2025-2026'),
+          ),
+        ),
+      ),
+    );
+    for (var i = 0; i < 10; i += 1) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    await tester.tap(find.byKey(const Key('year-page-menu')));
+    for (var i = 0; i < 10; i += 1) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    await tester.tap(find.byKey(const Key('remove-year')));
+    for (var i = 0; i < 10; i += 1) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(
+      find.textContaining('También se lleva 2 versiones congeladas'),
+      findsOneWidget,
+    );
   });
 
   group('mirando una congelación', () {
@@ -310,6 +362,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(session.isFrozen, isFalse);
       expect(find.byKey(const Key('leave-freeze')), findsNothing);
+    });
+
+    test('se compila en su árbol, y al volver, en el clon', () async {
+      // «Compilar» y «Ver PDF» usaban lo de hoy mientras la pantalla
+      // enseñaba aquella versión: el PDF que se abría no era el suyo.
+      final session = await sessionWith(const []);
+      await session.useCloneForTest('/clon');
+      expect(session.compileRootOf(null), '/clon');
+
+      session.useFrozenForTest(view(session.catalogue));
+      expect(
+        session.compileRootOf(null),
+        '/clon/.git/didacta-worktrees/$commitA',
+      );
+
+      session.leaveFreeze();
+      expect(session.compileRootOf(null), '/clon');
     });
 
     testWidgets('sin congelación abierta no hay banda', (tester) async {

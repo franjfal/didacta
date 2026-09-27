@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Qué enseña el lateral.
 enum PdfSidebarView { outline, thumbnails }
@@ -75,9 +76,9 @@ class _PdfSidebarState extends State<PdfSidebar> {
   @override
   Widget build(BuildContext context) => Container(
     width: widget.width,
-    decoration: const BoxDecoration(
-      color: didactaPanel,
-      border: Border(right: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.panel,
+      border: Border(right: BorderSide(color: context.palette.rule)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -108,7 +109,7 @@ class _PdfSidebarState extends State<PdfSidebar> {
         Expanded(
           child: _Choice(
             key: const Key('pdf-sidebar-outline'),
-            label: 'Índice',
+            label: tr('Índice'),
             selected: _view == PdfSidebarView.outline,
             onTap: () => setState(() => _chosen = PdfSidebarView.outline),
           ),
@@ -117,7 +118,7 @@ class _PdfSidebarState extends State<PdfSidebar> {
         Expanded(
           child: _Choice(
             key: const Key('pdf-sidebar-pages'),
-            label: 'Páginas',
+            label: tr('Páginas'),
             selected: _view == PdfSidebarView.thumbnails,
             onTap: () => setState(() => _chosen = PdfSidebarView.thumbnails),
           ),
@@ -141,7 +142,7 @@ class _Choice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: selected ? didactaSelected : Colors.transparent,
+    color: selected ? context.palette.selected : Colors.transparent,
     borderRadius: BorderRadius.circular(5),
     child: InkWell(
       borderRadius: BorderRadius.circular(5),
@@ -154,7 +155,9 @@ class _Choice extends StatelessWidget {
           style: TextStyle(
             fontSize: 11.5,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-            color: selected ? didactaAccentDark : didactaMuted,
+            color: selected
+                ? context.palette.accentDark
+                : context.palette.muted,
           ),
         ),
       ),
@@ -209,7 +212,9 @@ class _Outline extends StatelessWidget {
                 fontWeight: entry.level == 0
                     ? FontWeight.w600
                     : FontWeight.w400,
-                color: entry.level == 0 ? didactaInk : didactaMuted,
+                color: entry.level == 0
+                    ? context.palette.ink
+                    : context.palette.muted,
               ),
             ),
           ),
@@ -250,7 +255,9 @@ class _Thumbnails extends StatelessWidget {
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: here ? didactaAccentDark : Colors.transparent,
+                    color: here
+                        ? context.palette.accentDark
+                        : Colors.transparent,
                     width: 2,
                   ),
                   borderRadius: BorderRadius.circular(3),
@@ -263,7 +270,9 @@ class _Thumbnails extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: here ? FontWeight.w700 : FontWeight.w400,
-                  color: here ? didactaAccentDark : didactaMuted,
+                  color: here
+                      ? context.palette.accentDark
+                      : context.palette.muted,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),

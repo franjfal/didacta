@@ -1,0 +1,51 @@
+# Una lección de la biblioteca: la definición de límite.
+#
+# Una lección es una carpeta. Dentro, este fichero con sus metadatos y un
+# `.tex` por idioma con el mismo contenido. Todo lo que la aplicación necesita
+# para listarla, filtrarla, traducirla y compilarla está aquí, al lado del
+# contenido: mover la carpeta mueve los metadatos con ella.
+
+# El id estable de la lección. Sobrevive a mover o renombrar la carpeta, y es
+# lo que permite saber que dos ubicaciones son la misma lección. Lo pone el
+# motor (`didacta ids --apply`); no hace falta inventarlo ni tocarlo.
+id: u-240b481e5d63
+
+# Qué es el fichero: una explicación teórica. Hay otros tipos, como `example`
+# o `problem`; mira las demás lecciones.
+kind: theory
+
+# De qué parte de la asignatura forma parte. Sin declarar ningún bloque, hay
+# dos: `theory` y `problems`.
+block: theory
+
+# El título, en cada idioma. Es lo que se ve en la biblioteca.
+title:
+  es: Límite de una función en un punto
+  va: Límit d'una funció en un punt
+  en: The limit of a function at a point
+
+# Dónde se clasifica en la biblioteca. Los nombres de cada id están en
+# `taxonomy.yaml`; las etiquetas son libres.
+category: calculo
+topic: limites
+tags: [limite, epsilon-delta, definicion]
+
+# El idioma original, del que salen las traducciones.
+reference: es
+
+# Los idiomas que existen. Uno que falta no se escribe: su ausencia es lo que
+# significa «falta», y la aplicación lo calcula mirando si está el fichero.
+languages:
+  es: {status: source}
+  va: {status: translated}
+  en: {status: translated}
+
+# Qué da por sabido y qué deja. Es lo que hace segura la reutilización: quien
+# ponga esta lección en otro curso puede ver qué tiene que haber antes.
+prerequisites: []
+objectives:
+  - Enunciar la definición épsilon-delta de límite
+  - Interpretarla con una banda de anchura 2ε alrededor de L
+
+duration_minutes: 20
+difficulty: introductory

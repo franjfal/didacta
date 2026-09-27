@@ -64,12 +64,21 @@ camino que acabe en un callejón sin salida.
 
     Con una instalación mínima como BasicTeX o TinyTeX puede faltar algún
     paquete la primera vez. El log lo dice con nombre y apellido, y se añade
-    con `tlmgr install <paquete>`.
+    con `tlmgr install <paquete>`: [qué orden, en cada
+    distribución](../ayuda/problemas.md#file-xsty-not-found).
+
+!!! note "Las citas necesitan `biber`"
+
+    Si tu repositorio tiene un `.bib`, la bibliografía la compone `biber`.
+    Viene con MacTeX, con TeX Live y con MiKTeX, y Didacta se lo pide a
+    `tlmgr` al instalar TinyTeX. Si falta, la comprobación de herramientas lo
+    dice debajo de LaTeX --sin quitarle el tick: todo lo que no cita compila
+    igual-- con la orden para añadirlo: `tlmgr install biblatex biber`.
 
 ## Si Didacta no la encuentra
 
 Aparece en **Ajustes → Herramientas**, con la lista de los sitios donde ha
-mirado, y en **Ajustes → Compilación** hay un botón para buscar otra vez y un
+mirado, y en **Ajustes → Herramientas**, debajo, en *Compilar*, hay un botón para buscar otra vez y un
 campo para decirle dónde está.
 
 Esto pasa más de lo que parece, y la razón no es evidente:

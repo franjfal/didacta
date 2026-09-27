@@ -110,6 +110,16 @@ class LanguageFiles(unittest.TestCase):
                 "a didacta-lang-%s.def le faltan o le sobran cadenas" % code,
             )
 
+    def test_an_erratum_that_was_fixed_stays_fixed(self):
+        # Lo que dice cada palabra no se juzga aquí, salvo esto: «Questió»,
+        # sin diéresis, salía en todas las hojas de problemas en valenciano,
+        # y una errata que ya se arregló una vez no puede volver sin que se
+        # note.
+        path = os.path.join(LANG_DIR, "didacta-lang-va.def")
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertIn("\\def\\didactaQuestionName{Q\\\"uesti\\'o}", text)
+
     def test_the_printed_strings_are_ascii(self):
         # Los acentos van en notación LaTeX (`\'o`), no en UTF-8: el `.def` se
         # carga antes que `inputenc`, así que una «ó» de verdad se compone como

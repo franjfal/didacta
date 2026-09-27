@@ -6,6 +6,7 @@
 /// que es la pregunta que se hace la víspera. Antes la pantalla del tema solo
 /// enseñaba el comando a copiar en un terminal.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'package:flutter/material.dart';

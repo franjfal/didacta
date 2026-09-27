@@ -25,6 +25,7 @@ library;
 
 import '../data/local_clone.dart';
 import 'composition_file.dart';
+import '../l10n/tr.dart';
 
 /// De qué habla un cambio.
 enum ChangedThing {
@@ -94,9 +95,41 @@ class CourseChange {
 
 /// La lista entera, con lo que hace falta para pintarla.
 class CourseDiff {
-  const CourseDiff({required this.changes, this.documents = const []});
+  const CourseDiff({
+    required this.changes,
+    this.documents = const [],
+    this.hiddenLessons = 0,
+  });
 
   final List<CourseChange> changes;
+
+  /// Los cambios en lecciones que el curso no usa, y que por eso no están en
+  /// [changes]. Se cuentan para decirlo: una comparación que calla lo que
+  /// ha quitado parece más pequeña de lo que es.
+  final int hiddenLessons;
+
+  /// Solo las lecciones que cumplen [used]; las demás se cuentan en
+  /// [hiddenLessons].
+  ///
+  /// El repositorio tiene dos mil y el curso usa cuarenta. Sin esto, comparar
+  /// dos versiones de una asignatura enseñaba los cambios de todas, y lo que
+  /// había cambiado en las cuarenta se perdía entre el resto.
+  CourseDiff onlyLessons(bool Function(String lesson) used) {
+    final kept = <CourseChange>[];
+    var hidden = hiddenLessons;
+    for (final change in changes) {
+      if (change.thing == ChangedThing.lesson && !used(change.lesson)) {
+        hidden += 1;
+      } else {
+        kept.add(change);
+      }
+    }
+    return CourseDiff(
+      changes: kept,
+      documents: documents,
+      hiddenLessons: hidden,
+    );
+  }
 
   /// Los temas añadidos y quitados, que no salen de ninguna ruta: quitar un
   /// tema de un curso es **borrar unas líneas de `year.yaml`**, y desde la
@@ -123,25 +156,25 @@ class CourseDiff {
 
     count(
       documents.where((d) => d.kind == TreeChangeKind.added).length,
-      'tema nuevo',
-      'temas nuevos',
+      tr('tema nuevo'),
+      tr('temas nuevos'),
     );
     count(
       documents.where((d) => d.kind == TreeChangeKind.removed).length,
-      'tema quitado',
-      'temas quitados',
+      tr('tema quitado'),
+      tr('temas quitados'),
     );
     count(
       documents.where((d) => d.kind == TreeChangeKind.modified).length,
-      'tema cambiado',
-      'temas cambiados',
+      tr('tema cambiado'),
+      tr('temas cambiados'),
     );
     count(
       changes.where((c) => c.thing == ChangedThing.lesson).length,
-      'lección',
+      tr('lección'),
       'lecciones',
     );
-    if (pieces.isEmpty) return 'Sin diferencias.';
+    if (pieces.isEmpty) return tr('Sin diferencias.');
     return pieces.join(' · ');
   }
 }
@@ -180,6 +213,43 @@ class DocumentChange {
 /// [before] y [after] son el `year.yaml` del curso en cada versión, cuando se
 /// tienen. Sin ellos la lista sale igual, solo que sin la parte que no está
 /// en ninguna ruta: qué temas entraron y cuáles salieron.
+/// Las referencias de lección de una composición --`unit:` y `problem:`,
+/// activas o desactivadas-- y los contenidos vinculados que nombra.
+///
+/// Las desactivadas cuentan: son material del curso que este año no se da, y
+/// quien compara dos versiones quiere saber si cambió igual.
+({Set<String> references, Set<String> links}) referencesIn(
+  String? text, {
+  bool shared = false,
+}) {
+  final references = <String>{};
+  final links = <String>{};
+  if (text == null || text.trim().isEmpty) {
+    return (references: references, links: links);
+  }
+  final file = shared ? CompositionFile.shared(text) : CompositionFile(text);
+  final ids = <String>[];
+  if (shared) {
+    ids.add(CompositionFile.sharedDocument);
+  } else {
+    for (final draft in file.documentDrafts()) {
+      ids.add(draft.id);
+      if (draft.link.isNotEmpty) links.add(draft.link);
+    }
+  }
+  for (final id in ids) {
+    try {
+      for (final entry in file.blockFor(id)?.entries ?? const []) {
+        if (entry.isReference) references.add(entry.value);
+      }
+    } on CompositionException {
+      // Escrita de una forma que este lector no reescribe: no se filtra por
+      // ella, y lo peor que pasa es enseñar de más.
+    }
+  }
+  return (references: references, links: links);
+}
+
 CourseDiff readCourseDiff(
   List<TreeChange> tree, {
   String? before,
@@ -280,7 +350,7 @@ CourseChange? _classify(TreeChange change) {
         from: change.from,
         course: course,
         title: course,
-        detail: 'los datos de la asignatura',
+        detail: tr('los datos de la asignatura'),
       );
     }
     if (parts.length >= 4) {
@@ -295,7 +365,7 @@ CourseChange? _classify(TreeChange change) {
           course: course,
           year: year,
           title: '$course · $year',
-          detail: 'qué temas lleva el curso y en qué orden',
+          detail: tr('qué temas lleva el curso y en qué orden'),
         );
       }
       if (name == 'themes.yaml') {
@@ -307,7 +377,7 @@ CourseChange? _classify(TreeChange change) {
           course: course,
           year: year,
           title: '$course · $year',
-          detail: 'los bloques bajo los que se agrupan los temas',
+          detail: tr('los bloques bajo los que se agrupan los temas'),
         );
       }
       if (name == 'freezes.yaml') {
@@ -319,7 +389,7 @@ CourseChange? _classify(TreeChange change) {
           course: course,
           year: year,
           title: '$course · $year',
-          detail: 'las versiones congeladas',
+          detail: tr('las versiones congeladas'),
         );
       }
       if (name.endsWith('.tex')) {
@@ -333,7 +403,7 @@ CourseChange? _classify(TreeChange change) {
           year: year,
           document: document,
           title: document,
-          detail: 'el fichero que compila',
+          detail: tr('el fichero que compila'),
         );
       }
     }
@@ -352,7 +422,7 @@ CourseChange? _classify(TreeChange change) {
       from: change.from,
       document: id,
       title: id,
-      detail: 'un tema compartido: su título, su orden y sus apartados',
+      detail: tr('un tema compartido: su título, su orden y sus apartados'),
     );
   }
 
@@ -371,7 +441,7 @@ CourseChange? _classify(TreeChange change) {
         from: change.from,
         lesson: lesson,
         title: _lessonName(lesson),
-        detail: 'los metadatos de la lección',
+        detail: tr('los metadatos de la lección'),
       );
     }
     if (!isFigure && name.endsWith('.tex')) {
@@ -384,7 +454,7 @@ CourseChange? _classify(TreeChange change) {
         lesson: lesson,
         language: language,
         title: _lessonName(lesson),
-        detail: 'el texto en $language',
+        detail: tr('el texto en {0}', [language]),
       );
     }
     return CourseChange(
@@ -394,7 +464,7 @@ CourseChange? _classify(TreeChange change) {
       from: change.from,
       lesson: lesson,
       title: _lessonName(lesson),
-      detail: isFigure ? 'una figura' : name,
+      detail: isFigure ? tr('una figura') : name,
     );
   }
 

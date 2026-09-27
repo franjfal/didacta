@@ -6,14 +6,17 @@
 library;
 
 import 'local_clone.dart';
+import '../l10n/tr.dart';
 
 bool get supported => false;
 
 Future<bool> gitAvailable() async => false;
 
-LocalClone makeClone({required String directory}) => throw const CloneException(
-  'Un navegador no puede tener un clon del repositorio: no hay sistema '
-  'de ficheros ni forma de ejecutar git. En web el acceso va por la API.',
+LocalClone makeClone({required String directory}) => throw CloneException(
+  tr(
+    'Un navegador no puede tener una copia del repositorio: no hay sistema '
+    'de ficheros ni forma de ejecutar git. En web el acceso va por la API.',
+  ),
 );
 
 Future<LocalClone> cloneInto({
@@ -36,6 +39,8 @@ Future<LocalClone> initializeInto({
   required String authorName,
   required String authorEmail,
   String? url,
+  Map<String, String>? files,
+  String? message,
   void Function(String line)? onProgress,
 }) async => makeClone(directory: directory);
 

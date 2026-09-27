@@ -22,6 +22,8 @@
 /// the entry they sit above.
 library;
 
+import '../l10n/tr.dart';
+
 /// What an entry refers to. `section` and `subsection` are headings inside
 /// the composition rather than references, which is why they carry text
 /// instead of a path.
@@ -372,15 +374,15 @@ class CompositionFile {
     final documents = _documents();
     final document = documents.where((d) => d.id == id).firstOrNull;
     if (document == null) {
-      throw CompositionException('no existe el documento `$id`');
+      throw CompositionException(tr('no existe el documento `{0}`', [id]));
     }
     final kept = <String, String>{
       for (final entry in titles.entries)
         if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
     };
     if (kept.isEmpty) {
-      throw const CompositionException(
-        'un documento sin título en ningún idioma no se puede listar',
+      throw CompositionException(
+        tr('un documento sin título en ningún idioma no se puede listar'),
       );
     }
     final pending = [
@@ -443,7 +445,7 @@ class CompositionFile {
   void setDocumentTemplates(String id, List<String> templates) {
     final document = _documents().where((d) => d.id == id).firstOrNull;
     if (document == null) {
-      throw CompositionException('no existe el documento `$id`');
+      throw CompositionException(tr('no existe el documento `{0}`', [id]));
     }
     final field = ' ' * document.fieldIndent;
     final written = templates.isEmpty
@@ -484,12 +486,15 @@ class CompositionFile {
   void setDocumentOrder(List<String> ids) {
     final documents = _documents();
     if (documents.isEmpty) {
-      throw const CompositionException('este año no tiene documentos');
+      throw CompositionException(tr('este año no tiene documentos'));
     }
     final known = [for (final d in documents) d.id];
     if (ids.length != known.length || !ids.toSet().containsAll(known)) {
       throw CompositionException(
-        'el orden nuevo no tiene los mismos documentos: $known contra $ids',
+        tr('el orden nuevo no tiene los mismos documentos: {0} contra {1}', [
+          known,
+          ids,
+        ]),
       );
     }
 
@@ -505,14 +510,25 @@ class CompositionFile {
     final first = documents.first.firstLine;
     final last = documents.last.lastLine;
     final tail = _lines.sublist(last + 1);
+    // Las líneas en blanco entre un documento y el siguiente, por posición.
+    // Se ponía siempre una, y un fichero escrito sin ellas cambiaba al
+    // «reordenarlo» al mismo orden: el diff enseñaba cambios que nadie hizo.
+    final gaps = [
+      for (var i = 1; i < documents.length; i += 1)
+        documents[i].firstLine -
+            documents[i - 1].firstLine -
+            blocks[documents[i - 1].id]!.length,
+    ];
     final trailingBlanks =
-        _lines.sublist(first, last + 1).length -
-        blocks.values.fold<int>(0, (sum, block) => sum + block.length) -
-        (documents.length - 1);
+        last + 1 - documents.last.firstLine - blocks[documents.last.id]!.length;
 
     final written = <String>[];
     for (final (index, id) in ids.indexed) {
-      if (index > 0) written.add('');
+      if (index > 0) {
+        for (var i = 0; i < gaps[index - 1]; i += 1) {
+          written.add('');
+        }
+      }
       written.addAll(blocks[id]!);
     }
     // Las líneas en blanco que había al final del bloque, de vuelta.
@@ -546,7 +562,7 @@ class CompositionFile {
   }) {
     final documents = _documents();
     if (documents.any((document) => document.id == id)) {
-      throw CompositionException('ya hay un documento `$id`');
+      throw CompositionException(tr('ya hay un documento `{0}`', [id]));
     }
 
     // La sangría del fichero, no una inventada: los ficheros del repositorio
@@ -562,23 +578,24 @@ class CompositionFile {
 
     final block = <String>[
       '$pad- id: ${_quote(id)}',
-      '${field}kind: ${_quote(kind)}',
+      tr('{0}kind: {1}', [field, _quote(kind)]),
       '${field}title:',
       for (final entry in title.entries)
         '$field  ${entry.key}: ${_quote(entry.value)}',
       for (final code in pending) '$field  # TODO: $code',
-      if (profiles.isNotEmpty) '${field}profiles: [${profiles.join(', ')}]',
+      if (profiles.isNotEmpty)
+        tr('{0}profiles: [{1}]', [field, profiles.join(', ')]),
       // A qué tema pertenece, si se crea dentro de uno. Una etiqueta y nada
       // más: quién es ese tema lo declara `themes.yaml`, que puede estar en
       // otro repositorio.
-      if (themes.isNotEmpty) '${field}themes: [${themes.join(', ')}]',
-      '${field}structure: []',
+      if (themes.isNotEmpty) tr('{0}themes: [{1}]', [field, themes.join(', ')]),
+      tr('{0}structure: []', [field]),
     ];
 
     if (documents.isEmpty) {
       final start = _lines.indexWhere((line) => _keyAt(line, 0) == 'documents');
       if (start < 0) {
-        throw const CompositionException('el año no tiene clave `documents`');
+        throw CompositionException(tr('el año no tiene clave `documents`'));
       }
       // `documents: []` pasa a ser una lista con un elemento.
       final head = _lines[start];
@@ -597,7 +614,7 @@ class CompositionFile {
     final documents = _documents();
     final document = documents.where((d) => d.id == id).firstOrNull;
     if (document == null) {
-      throw CompositionException('no existe el documento `$id`');
+      throw CompositionException(tr('no existe el documento `{0}`', [id]));
     }
     _lines.removeRange(document.firstLine, document.lastLine + 1);
     // Si era el último, la línea en blanco que lo separaba del anterior
@@ -648,8 +665,11 @@ class CompositionFile {
     final inline = _valueAfterColon(_lines[structure]);
     if (inline.isNotEmpty && inline != '[]') {
       throw CompositionException(
-        'la composición de `$documentId` está escrita en línea '
-        '($inline), y este editor solo reescribe la forma en bloque',
+        tr(
+          'la composición de `{0}` está escrita en línea '
+          '({1}), y este editor solo reescribe la forma en bloque',
+          [documentId, inline],
+        ),
       );
     }
 
@@ -738,8 +758,11 @@ class CompositionFile {
       }
 
       throw CompositionException(
-        'no se entiende la línea ${i + 1} de la composición de '
-        '`$documentId`: $trimmed',
+        tr(
+          'no se entiende la línea {0} de la composición de '
+          '`{1}`: {2}',
+          [i + 1, documentId, trimmed],
+        ),
       );
     }
 
@@ -763,7 +786,9 @@ class CompositionFile {
   void setStructure(String documentId, List<StructureEntry> entries) {
     final block = blockFor(documentId);
     if (block == null) {
-      throw CompositionException('no existe el documento `$documentId`');
+      throw CompositionException(
+        tr('no existe el documento `{0}`', [documentId]),
+      );
     }
 
     final pad = ' ' * block.indent;

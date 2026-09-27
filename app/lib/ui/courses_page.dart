@@ -14,20 +14,34 @@ import 'dart:async';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
+import '../data/compiler.dart' show ExistingOutput;
+import '../data/course_admin.dart';
+import '../data/diagnostics.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'add_repository.dart';
 import 'build_console.dart';
+import 'command_palette.dart';
 import 'course_admin_ui.dart';
 import 'freezes.dart';
+import 'export_actions.dart';
 import 'export_year.dart';
+import 'problem.dart';
+import 'publish_folder.dart';
+import 'recent_changes.dart';
+import 'review_panel.dart';
 import 'shell.dart';
 import 'build_button.dart';
 import 'edit_course.dart';
 import 'manage_degrees.dart';
 import 'heading_title.dart';
 import 'theme.dart';
+import 'tour.dart';
+import 'working.dart';
+import '../l10n/tr.dart';
 
 /// Qué se enseña de la lista: lo que se mira, lo que se escondió, o todo.
 ///
@@ -45,6 +59,22 @@ class CoursesPage extends StatefulWidget {
 }
 
 class _CoursesPageState extends State<CoursesPage> {
+  /// La carpeta de reparto, si hay: con ella cada curso tiene «Publicar».
+  /// Se lee al abrir la pantalla, que es también al volver de Ajustes.
+  String? _publishFolder;
+
+  @override
+  void initState() {
+    super.initState();
+    scheduleMicrotask(() async {
+      final session = context.read<Session>();
+      final found = await session.preferences.publishFolder();
+      if (mounted && found != _publishFolder) {
+        setState(() => _publishFolder = found);
+      }
+    });
+  }
+
   /// Qué grado se está mirando. Null es «todos».
   ///
   /// De la pantalla y no de las preferencias: es una forma de buscar, no una
@@ -68,8 +98,51 @@ class _CoursesPageState extends State<CoursesPage> {
     orElse: () => CoursesView.visible,
   );
 
+  // Lo marcado, lo oculto y lo plegado avisan por las preferencias de la
+  // biblioteca, no por la sesión.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).libraryPrefs,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) =>
+      PaletteCommands(commands: _paletteCommands, child: _courses(context));
+
+  /// Lo que ofrece la paleta de órdenes en la lista de asignaturas.
+  List<PaletteCommand> _paletteCommands(BuildContext context) {
+    final session = sessionOf(context);
+    return [
+      if (session.admin() != null)
+        PaletteCommand(
+          title: tr('Nueva asignatura'),
+          keywords: tr('crear añadir curso'),
+          icon: Icons.add,
+          run: () => _createCourse(session),
+        ),
+      if (session.canSearchText)
+        PaletteCommand(
+          title: tr('Cambios recientes'),
+          keywords: tr('historial últimos deshacer'),
+          icon: Icons.history,
+          run: () => showRecentChanges(this.context, session),
+        ),
+      for (final view in CoursesView.values)
+        if (view.name != session.coursesView)
+          PaletteCommand(
+            title: switch (view) {
+              CoursesView.visible => tr('Ver las asignaturas que doy'),
+              CoursesView.hidden => tr('Ver las asignaturas ocultas'),
+              CoursesView.all => tr('Ver todas las asignaturas'),
+            },
+            keywords: tr('filtro lista'),
+            icon: Icons.filter_list,
+            run: () => session.setCoursesView(view.name),
+          ),
+    ];
+  }
+
+  Widget _courses(BuildContext context) {
     final session = watchSession(context);
     // Por título. El orden lo decide la sesión: si cada lista lo hiciera por
     // su cuenta, acabarían discrepando.
@@ -102,21 +175,24 @@ class _CoursesPageState extends State<CoursesPage> {
     return Column(
       children: [
         PageHeader(
-          title: 'Asignaturas',
+          title: tr('Asignaturas'),
           subtitle: filtering
-              ? '${courses.length} de ${all.length} asignaturas'
+              ? tr('{0} de {1} asignaturas', [courses.length, all.length])
               : [
                   '${courses.length} asignaturas',
-                  '$years cursos académicos',
-                  '$documents documentos',
+                  tr('{0} cursos académicos', [years]),
+                  tr('{0} documentos', [documents]),
                   if (hidden > 0 && view == CoursesView.visible)
-                    '$hidden sin enseñar',
+                    tr('{0} sin enseñar', [hidden]),
                 ].join(' · '),
           actions: [
             // Qué se mira. Primero, porque decide lo que hay debajo.
-            _ViewFilter(
-              view: view,
-              onChanged: (value) => session.setCoursesView(value.name),
+            TourTarget(
+              id: 'courses-view',
+              child: _ViewFilter(
+                view: view,
+                onChanged: (value) => session.setCoursesView(value.name),
+              ),
             ),
             // Filtrar por grado. Solo con más de uno declarado: con ninguno o
             // con uno no filtra nada, y un desplegable de una opción es un
@@ -129,11 +205,21 @@ class _CoursesPageState extends State<CoursesPage> {
                 total: all.length,
                 onChanged: (value) => setState(() => _degree = value),
               ),
+            // Lo que se ha guardado estos días, y deshacerlo. Aquí, que es
+            // por donde se entra: «ayer quité el curso que no era» se busca
+            // en la lista de asignaturas.
+            if (session.canSearchText)
+              IconButton(
+                key: const Key('recent-changes'),
+                tooltip: tr('Cambios recientes'),
+                icon: const Icon(Icons.history, size: 19),
+                onPressed: () => showRecentChanges(context, session),
+              ),
             if (session.admin() != null)
               FilledButton.icon(
                 key: const Key('new-course'),
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Nueva asignatura'),
+                label: Text(tr('Nueva asignatura')),
                 onPressed: () => _createCourse(session),
               ),
           ],
@@ -144,29 +230,66 @@ class _CoursesPageState extends State<CoursesPage> {
             session: session,
             onManage: () => _manageDegrees(session),
           ),
-        Expanded(
-          child: ListView.separated(
-            itemCount: courses.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (context, index) => _CourseTile(
-              course: courses[index],
+        if (courses.isEmpty)
+          Expanded(
+            child: _NoCourses(
               session: session,
-              view: view,
-              admin: session.admin() != null,
-              onDuplicate: () => _duplicateYear(session, courses[index]),
-              onCopy: (year) => _copyYear(session, courses[index], year),
-              onBuild: (year, languages) => _buildYear(
-                session,
-                courses[index],
-                year,
-                languages: languages,
+              anyAtAll: all.isNotEmpty,
+              filtering: filtering,
+              hidden: hidden,
+              onCreate: session.admin() != null
+                  ? () => _createCourse(session)
+                  : null,
+              onShowHidden: () =>
+                  session.setCoursesView(CoursesView.hidden.name),
+              onClearFilter: () => setState(() => _degree = null),
+            ),
+          )
+        else
+          Expanded(
+            child: ListView.separated(
+              itemCount: courses.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              // La primera, marcada para el tour: es la que se enseña como «una
+              // asignatura», y marcar todas repetiría la clave.
+              itemBuilder: (context, index) => TourTarget.first(
+                id: 'courses-first',
+                when: index == 0,
+                child: _CourseTile(
+                  first: index == 0,
+                  course: courses[index],
+                  session: session,
+                  view: view,
+                  admin: session.admin() != null,
+                  onDuplicate: () => _duplicateYear(session, courses[index]),
+                  onCopy: (year) => _copyYear(session, courses[index], year),
+                  onBuild: (year, choice) => _buildYear(
+                    session,
+                    courses[index],
+                    year,
+                    languages: choice.languages,
+                    everyVersion: choice.everyVersion,
+                  ),
+                  onExport: (year) =>
+                      _exportYear(session, courses[index], year),
+                  onPublish: _publishFolder == null
+                      ? null
+                      : (year) => _exportYear(
+                          session,
+                          courses[index],
+                          year,
+                          publishTo: publishTargetFor(
+                            _publishFolder!,
+                            courses[index].title(session.language),
+                            year,
+                          ),
+                        ),
+                  onRemove: () => _removeCourse(session, courses[index]),
+                  onEditTitle: () => _editCourse(session, courses[index]),
+                ),
               ),
-              onExport: (year) => _exportYear(session, courses[index], year),
-              onRemove: () => _removeCourse(session, courses[index]),
-              onEditTitle: () => _editCourse(session, courses[index]),
             ),
           ),
-        ),
       ],
     );
   }
@@ -219,7 +342,7 @@ class _CoursesPageState extends State<CoursesPage> {
         from: answer.from,
         language: answer.language,
       ),
-      done: 'Asignatura «${answer.title}» creada como un commit.',
+      done: tr('Asignatura «{0}» creada.', [answer.title]),
     );
     // El catálogo se genera aparte, así que sin recargarlo la pantalla no ve
     // lo que acaba de crear.
@@ -236,6 +359,7 @@ class _CoursesPageState extends State<CoursesPage> {
     Course course,
     String year, {
     List<String> languages = const [],
+    bool everyVersion = false,
   }) async {
     final entry = course.years[year];
     if (entry == null) return;
@@ -251,15 +375,28 @@ class _CoursesPageState extends State<CoursesPage> {
     ];
     if (wanted.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$year no tiene documentos que compilar.')),
+        SnackBar(
+          content: Text(tr('{0} no tiene documentos que compilar.', [year])),
+        ),
       );
+      return;
+    }
+    final title = '${course.title(session.language)} · $year';
+    if (!await confirmBigBuild(
+          context,
+          documents: wanted.length,
+          what: title,
+          languages: languages,
+        ) ||
+        !mounted) {
       return;
     }
     unawaited(showBuildConsole(context, session.buildConsole));
     await session.buildDocuments(
       wanted,
-      title: '${course.title(session.language)} · $year',
+      title: title,
       languages: languages,
+      everyVersion: everyVersion,
     );
   }
 
@@ -316,12 +453,14 @@ class _CoursesPageState extends State<CoursesPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            touched == 0 ? 'No ha cambiado nada.' : 'Guardado, como un commit.',
+            touched == 0
+                ? tr('No ha cambiado nada.')
+                : tr('Guardado en el historial.'),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     }
   }
 
@@ -333,7 +472,14 @@ class _CoursesPageState extends State<CoursesPage> {
       a.length == b.length && a.toSet().containsAll(b);
 
   /// Saca un curso a una carpeta, para repartirlo.
-  Future<void> _exportYear(Session session, Course course, String year) async {
+  /// Exportar un curso: a una carpeta que se pide, o --con [publishTo]-- a
+  /// la suya dentro de la carpeta de reparto, sin preguntar.
+  Future<void> _exportYear(
+    Session session,
+    Course course,
+    String year, {
+    String? publishTo,
+  }) async {
     final entry = course.years[year];
     if (entry == null) return;
 
@@ -341,6 +487,22 @@ class _CoursesPageState extends State<CoursesPage> {
     // preguntar por tres cuando la asignatura se da en uno llena la pantalla
     // de opciones que no son.
     final languages = session.languagesIn(course.id);
+
+    // Lo que hay compilado, para avisar de lo viejo antes de repartirlo. De
+    // cada repositorio del curso; si alguno no contesta, no se avisa de nada
+    // antes que avisar a medias.
+    Map<String, List<ExistingOutput>>? outputs = {};
+    for (final repo in {for (final d in entry.documents) d.repo}) {
+      final compiler = session.compiler(repo: repo);
+      try {
+        if (compiler == null) throw StateError(tr('sin motor'));
+        outputs?.addAll(await compiler.documentOutputs('${course.id}@$year'));
+      } catch (caught, trace) {
+        Diagnostics.instance.note('courses_page._exportYear', caught, trace);
+        outputs = null;
+      }
+    }
+    if (!mounted) return;
 
     final answer = await showDialog<ExportRequest>(
       context: context,
@@ -350,21 +512,66 @@ class _CoursesPageState extends State<CoursesPage> {
         entry: entry,
         languages: languages,
         language: session.language,
+        outputs: outputs,
+        publishTo: publishTo,
+        reveals: {
+          for (final template in session.catalogue.templatesInUse)
+            template.id: template.reveals,
+        },
       ),
     );
     if (answer == null || !mounted) return;
 
-    final destination = await getDirectoryPath(
-      confirmButtonText: 'Exportar aquí',
-    );
-    if (destination == null || !mounted) return;
+    // Revisar antes de repartir: lo que el motor encuentra --una referencia
+    // rota, una traducción desactualizada-- se ve ahora y no en el aula.
+    // Solo se enseña si hay algo, y se puede seguir igual.
+    final everything = answer.documents.length == entry.documents.length;
+    for (final repo in {
+      for (final document in entry.documents)
+        if (answer.documents.contains(document.id)) document.repo,
+    }) {
+      final go = await reviewBeforeExport(
+        context,
+        session,
+        repo: repo,
+        within: everything
+            ? ['${course.id}@$year']
+            : [
+                for (final document in entry.documents)
+                  if (document.repo == repo &&
+                      answer.documents.contains(document.id))
+                    '${course.id}@$year/${document.id}',
+              ],
+      );
+      if (!go || !mounted) return;
+    }
 
-    // Compilar primero, si se pidió. Con su registro y su barra, porque puede
-    // ser media hora.
-    if (answer.rebuild) {
+    // Donde se exportó la última vez esta asignatura: el aula virtual de cada
+    // una tiene su carpeta, y buscarla cada vez es la mitad del trabajo. Al
+    // publicar no se pregunta: la carpeta es la de reparto.
+    final String? destination;
+    if (publishTo != null) {
+      destination = publishTo;
+    } else {
+      final remembered = await session.preferences.exportFolder(course.id);
+      if (!mounted) return;
+      destination = await getDirectoryPath(
+        initialDirectory: remembered,
+        confirmButtonText: tr('Exportar aquí'),
+      );
+      if (destination == null || !mounted) return;
+      await session.preferences.setExportFolder(course.id, destination);
+    }
+    if (!mounted) return;
+
+    // Compilar primero, si se pidió: todo, o solo lo que estaba viejo. Con su
+    // registro y su barra, porque puede ser media hora.
+    if (answer.rebuild || answer.rebuildOnly.isNotEmpty) {
       final wanted = [
         for (final document in entry.documents)
-          if (answer.documents.contains(document.id))
+          if (answer.rebuild
+              ? answer.documents.contains(document.id)
+              : answer.rebuildOnly.contains(document.id))
             (
               repo: document.repo,
               course: course.id,
@@ -394,7 +601,14 @@ class _CoursesPageState extends State<CoursesPage> {
     };
     final copied = <String>[];
     final missing = <String>[];
+    final withheld = <String>[];
     Object? failure;
+    // Uno para todo el curso, aunque salga de dos repositorios: el segundo
+    // añade al que empezó el primero.
+    final zip = answer.zip
+        ? '$destination/${zipNameFor(course.title(session.language), year)}'
+        : null;
+    var zipped = false;
 
     for (final repo in repos) {
       final compiler = session.compiler(repo: repo);
@@ -410,9 +624,15 @@ class _CoursesPageState extends State<CoursesPage> {
                   answer.documents.contains(document.id))
                 document.id,
           ],
+          reach: answer.reach,
+          zip: zip,
+          appendZip: zipped,
+          html: answer.html,
         );
+        zipped = zipped || result.zip != null;
         copied.addAll(result.copied);
         missing.addAll(result.missing);
+        withheld.addAll(result.withheld);
       } catch (error) {
         failure ??= error;
       }
@@ -420,22 +640,19 @@ class _CoursesPageState extends State<CoursesPage> {
     if (!mounted) return;
 
     if (failure != null && copied.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$failure'),
-          backgroundColor: didactaTeacher,
-          duration: const Duration(seconds: 8),
-        ),
-      );
+      showProblem(context, failure);
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          missing.isEmpty
-              ? '${copied.length} fichero(s) exportados a $destination.'
-              : '${copied.length} exportados; ${missing.length} sin compilar '
-                    'se han quedado fuera.',
+          exportSummary(
+            copied: copied.length,
+            missing: missing.length,
+            withheld: withheld.length,
+            to: destination,
+            zip: zipped ? zip : null,
+          ),
         ),
         duration: const Duration(seconds: 7),
       ),
@@ -489,9 +706,12 @@ class _CoursesPageState extends State<CoursesPage> {
         ),
         repo: group.key,
         done: group.value.length == 1
-            ? '«${group.value.single}» copiado a ${answer.toYear}.'
-            : '${group.value.length} documentos copiados a '
-                  '${answer.toYear}.',
+            ? tr('«{0}» copiado a {1}.', [group.value.single, answer.toYear])
+            : tr(
+                '{0} documentos copiados a '
+                '{1}.',
+                [group.value.length, answer.toYear],
+              ),
       );
       if (!done || !mounted) break;
     }
@@ -499,51 +719,281 @@ class _CoursesPageState extends State<CoursesPage> {
   }
 
   Future<void> _duplicateYear(Session session, Course course) async {
-    final answer = await showDialog<({String year, String from})>(
+    final answer = await showDialog<({String year, String from, bool freeze})>(
       context: context,
       builder: (context) => DuplicateYearDialog(course: course),
     );
     if (answer == null || !mounted) return;
 
-    final done = await runAdmin(
+    // En cada repositorio que tiene algo del año de origen: en una
+    // asignatura repartida entre teoría y problemas, duplicar solo en el
+    // primero dejaba el curso nuevo sin la mitad. Uno vacío va al primero
+    // donde vive la asignatura, que es donde lo buscaría cualquiera.
+    final from = course.years[answer.from];
+    final repos = answer.from.isEmpty || from == null
+        ? <String?>[course.sources.keys.firstOrNull]
+        : <String?>[...from.presentIn];
+
+    // La congelación, antes de copiar y en los mismos repositorios: apunta a
+    // lo último guardado de cada uno, que es el curso tal como quedó.
+    final freeze = answer.freeze && from != null;
+    final freezeName = freeze ? _freezeName(from) : '';
+
+    final done = await runAdminIn(
       context,
       session,
-      (admin) => admin.duplicateYear(
-        course: course.id,
-        year: answer.year,
-        from: answer.from,
-      ),
+      repos,
+      (admin, _) async {
+        if (freeze) {
+          await admin.addFreeze(
+            course: course.id,
+            year: answer.from,
+            name: freezeName,
+            commit: await admin.clone.head(),
+            description: tr('Al crear el curso {0}.', [answer.year]),
+          );
+        }
+        await admin.duplicateYear(
+          course: course.id,
+          year: answer.year,
+          from: answer.from,
+        );
+      },
       done: answer.from.isEmpty
-          ? 'Curso ${answer.year} creado, vacío.'
-          : 'Curso ${answer.year} creado, copiado de ${answer.from}.',
+          ? tr('Curso {0} creado, vacío.', [answer.year])
+          : freeze
+          ? tr(
+              'Curso {0} creado, copiado de {1}, y '
+              '{2} congelado como «{3}».',
+              [answer.year, answer.from, answer.from, freezeName],
+            )
+          : tr('Curso {0} creado, copiado de {1}.', [answer.year, answer.from]),
     );
     if (done) await session.reloadCatalogue();
   }
 
+  /// «Tal como quedó», o con un número si ese nombre ya está: un curso que
+  /// se borró y se volvió a crear dejó la primera congelación en su sitio.
+  static String _freezeName(CourseYear year) {
+    const base = 'Tal como quedó';
+    final taken = {for (final freeze in year.freezes) freeze.name};
+    if (!taken.contains(base)) return base;
+    var n = 2;
+    while (taken.contains('$base ($n)')) {
+      n += 1;
+    }
+    return '$base ($n)';
+  }
+
   Future<void> _removeCourse(Session session, Course course) async {
-    final admin = session.admin();
-    if (admin == null) return;
+    // De todos los repositorios donde vive: quitarla solo del primero dejaba
+    // la otra mitad de una asignatura repartida, que seguía saliendo en la
+    // lista como si no se hubiera quitado.
+    final repos = <String?>[...course.sources.keys];
+    if (repos.isEmpty) repos.add(null);
+    final admins = [for (final repo in repos) session.admin(repo: repo)];
+    if (admins.any((admin) => admin == null)) return;
 
     final confirmed = await confirmRemoval(
       context,
-      title: '¿Quitar «${course.title(session.language)}»?',
-      preview: () => admin.previewRemoveCourse(course.id),
-      warning:
-          'Las unidades no se tocan: siguen en la biblioteca y en las demás '
-          'asignaturas que las usen. Lo que se pierde es la selección y el '
-          'orden de esta.',
+      title: tr('¿Quitar «{0}»?', [course.title(session.language)]),
+      freezes: course.years.values.fold(
+        0,
+        (sum, year) => sum + year.freezes.length,
+      ),
+      preview: () async => RemovalPreview.across([
+        for (final admin in admins) await admin!.previewRemoveCourse(course.id),
+      ]),
+      warning: tr(
+        'Las unidades no se tocan: siguen en la biblioteca y en las demás '
+        'asignaturas que las usen. Lo que se pierde es la selección y el '
+        'orden de esta.',
+      ),
     );
     if (!confirmed || !mounted) return;
 
-    final done = await runAdmin(
+    // El HEAD de cada repositorio justo antes, que es a lo que vuelve
+    // «Deshacer».
+    final heads = <String?, String>{};
+    final title = course.title(session.language);
+    final root = Navigator.of(context, rootNavigator: true).context;
+    final done = await runAdminIn(
       context,
       session,
-      (admin) =>
-          admin.removeCourse(course.id, title: course.title(session.language)),
-      done:
-          'Asignatura «${course.title(session.language)}» quitada como un commit.',
+      repos,
+      (admin, repo) async {
+        heads[repo] = await admin.clone.head();
+        await admin.removeCourse(course.id, title: title);
+      },
+      done: tr('Asignatura «{0}» quitada. Queda en el historial.', [title]),
+      onUndo: () => undoAdminIn(
+        root,
+        session,
+        heads,
+        paths: ['courses/${course.id}'],
+        message: tr('Deshacer: quitar la asignatura «{0}»', [title]),
+        done: tr('«{0}» ha vuelto.', [title]),
+      ),
     );
     if (done) await session.reloadCatalogue();
+  }
+}
+
+/// Lo que se enseña cuando no hay ninguna asignatura que enseñar.
+///
+/// Era una lista en blanco con «0 asignaturas» encima, que no dice si no hay
+/// ninguna, si están ocultas o si las esconde un filtro, y no ofrece nada.
+/// Aquí dice cuál de las tres es, con la salida de cada una.
+class _NoCourses extends StatefulWidget {
+  const _NoCourses({
+    required this.session,
+    required this.anyAtAll,
+    required this.filtering,
+    required this.hidden,
+    required this.onCreate,
+    required this.onShowHidden,
+    required this.onClearFilter,
+  });
+
+  final Session session;
+
+  /// Si hay alguna asignatura, aunque no se vea.
+  final bool anyAtAll;
+  final bool filtering;
+  final int hidden;
+  final VoidCallback? onCreate;
+  final VoidCallback onShowHidden;
+  final VoidCallback onClearFilter;
+
+  @override
+  State<_NoCourses> createState() => _NoCoursesState();
+}
+
+class _NoCoursesState extends State<_NoCourses> {
+  bool _working = false;
+  String _doing = '';
+
+  late final RepositoryAdder _adder = RepositoryAdder(
+    session: widget.session,
+    onBusy: (working) {
+      if (mounted) setState(() => _working = working);
+    },
+    onStep: (what) {
+      if (mounted) setState(() => _doing = what);
+    },
+    onProgress: (_) {},
+    onProblem: (problem) {
+      if (mounted && problem != null) showProblem(context, problem);
+    },
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final (title, text) = widget.filtering
+        ? (
+            tr('Ninguna asignatura en esta titulación'),
+            tr('Quita el filtro para verlas todas.'),
+          )
+        : widget.anyAtAll
+        ? (
+            widget.hidden == 1
+                ? tr('La única asignatura está oculta')
+                : tr('Todas las asignaturas están ocultas'),
+            tr(
+              'Las escondiste de la lista, pero siguen ahí. Se vuelven a '
+              'enseñar desde «Las ocultas».',
+            ),
+          )
+        : (
+            tr('Todavía no hay ninguna asignatura'),
+            tr(
+              'Crea la primera, o prueba Didacta con un ejemplo: una '
+              'asignatura pequeña, con un tema, una hoja de problemas y '
+              'lecciones traducidas, en un repositorio tuyo para tocar sin '
+              'miedo.',
+            ),
+          );
+    // Desplazable: en un móvil, con un aviso encima, no cabe entero.
+    return Center(
+      key: const Key('no-courses'),
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 460),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.school_outlined,
+                  size: 40,
+                  color: context.palette.faint,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: context.palette.muted),
+                ),
+                const SizedBox(height: 16),
+                if (_working)
+                  Working(step: _doing)
+                else
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (widget.filtering)
+                        FilledButton(
+                          key: const Key('no-courses-clear-filter'),
+                          onPressed: widget.onClearFilter,
+                          child: Text(tr('Quitar el filtro')),
+                        )
+                      else if (widget.anyAtAll)
+                        FilledButton.icon(
+                          key: const Key('no-courses-show-hidden'),
+                          icon: const Icon(Icons.visibility_outlined, size: 16),
+                          label: Text(tr('Ver las ocultas')),
+                          onPressed: widget.onShowHidden,
+                        )
+                      else ...[
+                        if (widget.onCreate != null)
+                          FilledButton.icon(
+                            key: const Key('no-courses-create'),
+                            icon: const Icon(Icons.add, size: 16),
+                            label: Text(tr('Nueva asignatura')),
+                            onPressed: widget.onCreate,
+                          ),
+                        OutlinedButton.icon(
+                          key: const Key('no-courses-example'),
+                          icon: const Icon(
+                            Icons.auto_stories_outlined,
+                            size: 16,
+                          ),
+                          label: Text(tr('Probar con un ejemplo')),
+                          onPressed: widget.session.signedIn
+                              ? () => _adder.example(context)
+                              : null,
+                        ),
+                      ],
+                    ],
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -577,9 +1027,11 @@ class _ViewFilter extends StatelessWidget {
             ? Icons.visibility_outlined
             : Icons.visibility_off_outlined,
         size: 15,
-        color: view == CoursesView.visible ? didactaMuted : didactaTeacher,
+        color: view == CoursesView.visible
+            ? context.palette.muted
+            : context.palette.teacher,
       ),
-      label: Text(_names[view]!, style: const TextStyle(fontSize: 12.5)),
+      label: Text(tr(_names[view]!), style: const TextStyle(fontSize: 12.5)),
       onPressed: () =>
           controller.isOpen ? controller.close() : controller.open(),
     ),
@@ -617,13 +1069,13 @@ class _DegreeFilter extends StatelessWidget {
       padding: const EdgeInsets.only(right: 8),
       child: PopupMenuButton<String?>(
         key: const Key('degree-filter'),
-        tooltip: 'Ver solo las asignaturas de un grado',
+        tooltip: tr('Ver solo las asignaturas de un grado'),
         position: PopupMenuPosition.under,
         itemBuilder: (context) => [
           PopupMenuItem<String?>(
             key: const Key('degree-filter-all'),
             value: null,
-            child: Text('Todas las asignaturas  ·  $total'),
+            child: Text(tr('Todas las asignaturas  ·  {0}', [total])),
           ),
           const PopupMenuDivider(),
           for (final degree in degrees)
@@ -637,18 +1089,22 @@ class _DegreeFilter extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
           decoration: BoxDecoration(
-            border: Border.all(color: didactaRule),
+            border: Border.all(color: context.palette.rule),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.school_outlined, size: 14, color: didactaMuted),
+              Icon(
+                Icons.school_outlined,
+                size: 14,
+                color: context.palette.muted,
+              ),
               const SizedBox(width: 6),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 220),
                 child: Text(
-                  current?.title(language) ?? 'Todos los grados',
+                  current?.title(language) ?? tr('Todos los grados'),
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 12,
@@ -656,7 +1112,11 @@ class _DegreeFilter extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(Icons.arrow_drop_down, size: 16, color: didactaMuted),
+              Icon(
+                Icons.arrow_drop_down,
+                size: 16,
+                color: context.palette.muted,
+              ),
             ],
           ),
         ),
@@ -683,9 +1143,9 @@ class _DegreeStrip extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
       child: Row(
@@ -693,11 +1153,19 @@ class _DegreeStrip extends StatelessWidget {
           Expanded(
             child: Text(
               degrees.isEmpty
-                  ? 'Ningún grado declarado todavía.'
-                  : '${degrees.length} grado(s): '
-                        '${degrees.map((d) => d.title(session.language)).join(' · ')}',
+                  ? tr('Ningún grado declarado todavía.')
+                  : tr(
+                      '{0} grado(s): '
+                      '{1}',
+                      [
+                        degrees.length,
+                        degrees
+                            .map((d) => d.title(session.language))
+                            .join(' · '),
+                      ],
+                    ),
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ),
           // Un grado que alguna asignatura nombra y no declara nadie. No es
@@ -707,17 +1175,26 @@ class _DegreeStrip extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: Tooltip(
-                message:
-                    'Nombrados y sin declarar: ${sinDeclarar.join(', ')}. '
-                    'Sus asignaturas se ven, pero sin agrupar.',
-                child: const Row(
+                message: tr(
+                  'Nombrados y sin declarar: {0}. '
+                  'Sus asignaturas se ven, pero sin agrupar.',
+                  [sinDeclarar.join(', ')],
+                ),
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.info_outline, size: 14, color: didactaEx),
+                    Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: context.palette.ex,
+                    ),
                     SizedBox(width: 4),
                     Text(
-                      'sin declarar',
-                      style: TextStyle(fontSize: 11.5, color: didactaEx),
+                      tr('sin declarar'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.palette.ex,
+                      ),
                     ),
                   ],
                 ),
@@ -726,7 +1203,7 @@ class _DegreeStrip extends StatelessWidget {
           TextButton.icon(
             key: const Key('manage-degrees'),
             icon: const Icon(Icons.school_outlined, size: 15),
-            label: const Text('Grados'),
+            label: Text(tr('Grados')),
             onPressed: onManage,
           ),
         ],
@@ -745,9 +1222,14 @@ class _CourseTile extends StatelessWidget {
     required this.onCopy,
     required this.onBuild,
     required this.onExport,
+    this.onPublish,
     required this.onRemove,
     required this.onEditTitle,
+    this.first = false,
   });
+
+  /// Si es la primera de la lista, que es la que señala el tour.
+  final bool first;
 
   /// Si se pueden ofrecer las operaciones: hacen falta el clon y el motor.
   final Session session;
@@ -762,10 +1244,13 @@ class _CourseTile extends StatelessWidget {
   final void Function(String year) onCopy;
 
   /// Compilar un curso entero. Recibe cuál.
-  final void Function(String year, List<String> languages) onBuild;
+  final void Function(String year, BuildChoice choice) onBuild;
 
   /// Exportar un curso. Recibe cuál.
   final void Function(String year) onExport;
+
+  /// Publicarlo en la carpeta de reparto. Null si no hay.
+  final void Function(String year)? onPublish;
   final VoidCallback onRemove;
 
   /// Abrir el diálogo de títulos de la asignatura.
@@ -774,7 +1259,12 @@ class _CourseTile extends StatelessWidget {
   final Course course;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: session.libraryPrefs,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final all = session.sortedYearsOf(course);
     final sortedYears = [
       for (final year in all)
@@ -810,7 +1300,7 @@ class _CourseTile extends StatelessWidget {
                           Icon(
                             collapsed ? Icons.chevron_right : Icons.expand_more,
                             size: 18,
-                            color: didactaMuted,
+                            color: context.palette.muted,
                             key: Key('collapse-${course.id}'),
                           ),
                           const SizedBox(width: 2),
@@ -820,11 +1310,13 @@ class _CourseTile extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: hidden ? didactaMuted : didactaInk,
+                                color: hidden
+                                    ? context.palette.muted
+                                    : context.palette.ink,
                                 decoration: hovering
                                     ? TextDecoration.underline
                                     : null,
-                                decorationColor: didactaRule,
+                                decorationColor: context.palette.rule,
                               ),
                             ),
                           ),
@@ -832,13 +1324,13 @@ class _CourseTile extends StatelessWidget {
                           // mirando: si no, en la vista de todas no habría
                           // forma de saber cuál se escondió.
                           if (hidden)
-                            const Padding(
+                            Padding(
                               padding: EdgeInsets.only(left: 6),
                               child: Text(
                                 'oculta',
                                 style: TextStyle(
                                   fontSize: 10.5,
-                                  color: didactaTeacher,
+                                  color: context.palette.teacher,
                                 ),
                               ),
                             ),
@@ -852,12 +1344,12 @@ class _CourseTile extends StatelessWidget {
                           if (course.teacher != null) course.teacher!,
                           if (collapsed)
                             all.length == 1
-                                ? '1 curso académico'
-                                : '${all.length} cursos académicos',
+                                ? tr('1 curso académico')
+                                : tr('{0} cursos académicos', [all.length]),
                         ].join(' · '),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ],
@@ -871,7 +1363,7 @@ class _CourseTile extends StatelessWidget {
               if (session.canWriteIn(course.sources.keys.firstOrNull))
                 TitleButton(
                   id: 'course-${course.id}',
-                  what: 'esta asignatura',
+                  what: tr('esta asignatura'),
                   onPressed: () => onEditTitle(),
                 ),
               // Marcar, con su estrella y no dentro del menú: es lo que más
@@ -883,46 +1375,61 @@ class _CourseTile extends StatelessWidget {
                 onChanged: (value) =>
                     session.setFavouriteCourse(course.id, value),
               ),
-              _Eye(
-                id: 'course-${course.id}',
-                hidden: hidden,
-                what: course.title(session.language),
-                onChanged: (value) => session.setCourseHidden(course.id, value),
-              ),
+              // El ojo, fuera solo cuando está oculta: es el camino de vuelta,
+              // y tiene que verse sin abrir nada. Para ocultarla, en «…».
+              if (hidden)
+                _Eye(
+                  id: 'course-${course.id}',
+                  hidden: hidden,
+                  what: course.title(session.language),
+                  onChanged: (value) =>
+                      session.setCourseHidden(course.id, value),
+                ),
               // Las operaciones de la asignatura, en un menú y no en botones:
-              // son dos, una de ellas destructiva, y no compiten con los
-              // cursos por la atención de la fila.
-              if (admin)
-                MenuAnchor(
-                  builder: (context, controller, child) => IconButton(
-                    key: Key('course-menu-${course.id}'),
-                    tooltip: 'Operaciones de la asignatura',
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.more_horiz, size: 18),
-                    onPressed: () => controller.isOpen
-                        ? controller.close()
-                        : controller.open(),
-                  ),
-                  menuChildren: [
+              // ninguna se hace cada día, y no compiten con los cursos por la
+              // atención de la fila.
+              MenuAnchor(
+                builder: (context, controller, child) => IconButton(
+                  key: Key('course-menu-${course.id}'),
+                  tooltip: tr('Más de la asignatura'),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.more_horiz, size: 18),
+                  onPressed: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                ),
+                menuChildren: [
+                  if (!hidden)
+                    MenuItemButton(
+                      key: Key('hide-course-${course.id}'),
+                      leadingIcon: const Icon(
+                        Icons.visibility_off_outlined,
+                        size: 15,
+                      ),
+                      onPressed: () => session.setCourseHidden(course.id, true),
+                      child: Text(tr('Ocultar de esta lista')),
+                    ),
+                  if (admin) ...[
                     MenuItemButton(
                       key: Key('duplicate-${course.id}'),
                       leadingIcon: const Icon(Icons.add, size: 15),
                       onPressed: onDuplicate,
-                      child: const Text('Nuevo curso académico…'),
+                      child: Text(tr('Nuevo curso académico…')),
                     ),
                     const Divider(height: 1),
                     MenuItemButton(
                       key: Key('remove-${course.id}'),
-                      leadingIcon: const Icon(
+                      leadingIcon: Icon(
                         Icons.delete_outline,
                         size: 15,
-                        color: didactaTeacher,
+                        color: context.palette.teacher,
                       ),
                       onPressed: onRemove,
-                      child: const Text('Quitar la asignatura…'),
+                      child: Text(tr('Quitar la asignatura…')),
                     ),
                   ],
-                ),
+                ],
+              ),
             ],
           ),
           if (!collapsed) ...[
@@ -931,6 +1438,7 @@ class _CourseTile extends StatelessWidget {
             // quiere, y una lista alfabética de ocho años lo entierra.
             for (final year in sortedYears)
               _YearRow(
+                first: first && year == sortedYears.first,
                 course: course,
                 year: year,
                 entry: course.years[year]!,
@@ -939,17 +1447,18 @@ class _CourseTile extends StatelessWidget {
                 hidden: session.isHiddenYear(course.id, year),
                 canEdit: admin,
                 onCopy: () => onCopy(year),
-                onBuild: (languages) => onBuild(year, languages),
+                onBuild: (choice) => onBuild(year, choice),
                 onExport: () => onExport(year),
+                onPublish: onPublish == null ? null : () => onPublish!(year),
               ),
             if (hiddenYears > 0 && view == CoursesView.visible)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   hiddenYears == 1
-                      ? '1 curso académico sin enseñar'
-                      : '$hiddenYears cursos académicos sin enseñar',
-                  style: const TextStyle(fontSize: 11, color: didactaMuted),
+                      ? tr('1 curso académico sin enseñar')
+                      : tr('{0} cursos académicos sin enseñar', [hiddenYears]),
+                  style: TextStyle(fontSize: 11, color: context.palette.muted),
                 ),
               ),
             if (admin)
@@ -958,7 +1467,7 @@ class _CourseTile extends StatelessWidget {
                 child: TextButton.icon(
                   key: Key('add-year-${course.id}'),
                   icon: const Icon(Icons.add, size: 15),
-                  label: const Text('Nuevo curso académico'),
+                  label: Text(tr('Nuevo curso académico')),
                   onPressed: onDuplicate,
                 ),
               ),
@@ -999,7 +1508,12 @@ class _YearRow extends StatelessWidget {
     required this.onCopy,
     required this.onBuild,
     required this.onExport,
+    this.onPublish,
+    this.first = false,
   });
+
+  /// Si es el primer curso de la primera asignatura: el que señala el tour.
+  final bool first;
 
   final Course course;
   final Session session;
@@ -1021,17 +1535,29 @@ class _YearRow extends StatelessWidget {
   /// Sacar sus PDF a una carpeta.
   final VoidCallback onExport;
 
+  /// Sacarlos a la carpeta de reparto, sin preguntar dónde.
+  final VoidCallback? onPublish;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: session.libraryPrefs,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final references = entry.documents.fold<int>(
       0,
       (sum, document) => sum + document.unitRefs.length,
     );
 
-    return Container(
+    final row = Container(
       decoration: BoxDecoration(
-        color: current ? didactaAccent.withValues(alpha: 0.08) : Colors.white,
-        border: Border.all(color: current ? didactaAccentDark : didactaRule),
+        color: current
+            ? context.palette.tint(context.palette.accent)
+            : context.palette.card,
+        border: Border.all(
+          color: current ? context.palette.accentDark : context.palette.rule,
+        ),
         borderRadius: BorderRadius.circular(4),
       ),
       margin: const EdgeInsets.only(bottom: 5),
@@ -1057,19 +1583,22 @@ class _YearRow extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text(
                         entry.group!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ],
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '${entry.documents.length} doc · $references unid.',
-                        style: const TextStyle(
+                        tr('{0} doc · {1} unid.', [
+                          entry.documents.length,
+                          references,
+                        ]),
+                        style: TextStyle(
                           fontSize: 11,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     ),
@@ -1083,7 +1612,7 @@ class _YearRow extends StatelessWidget {
           // los PDF.
           BuildButton(
             id: 'year-${course.id}-$year',
-            what: 'todo el curso $year',
+            what: tr('todo el curso {0}', [year]),
             // Los de la asignatura ya cruzados con lo que mantienen sus
             // repositorios y con el filtro de Ajustes: compilar en un idioma
             // que no se ofrece en ninguna otra parte es una salida que nadie
@@ -1109,7 +1638,7 @@ class _YearRow extends StatelessWidget {
           // también lo hace quien solo lo tiene para leer.
           IconButton(
             key: Key('export-year-${course.id}-$year'),
-            tooltip: 'Exportar este curso a una carpeta',
+            tooltip: tr('Exportar este curso a una carpeta'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.file_download_outlined, size: 17),
             onPressed: onExport,
@@ -1121,66 +1650,95 @@ class _YearRow extends StatelessWidget {
             onChanged: (value) =>
                 session.setFavouriteYear(course.id, year, value),
           ),
-          _Eye(
-            id: 'year-${course.id}-$year',
-            hidden: hidden,
-            what: '${course.title(session.language)} $year',
-            onChanged: (value) => session.setYearHidden(course.id, year, value),
-          ),
+          // Como el de la asignatura: fuera solo para volver a enseñarlo.
+          if (hidden)
+            _Eye(
+              id: 'year-${course.id}-$year',
+              hidden: hidden,
+              what: '${course.title(session.language)} $year',
+              onChanged: (value) =>
+                  session.setYearHidden(course.id, year, value),
+            ),
           // Lo que se puede hacer con **este** curso. En el borde, alineado
           // con el de la asignatura: el mismo gesto siempre en el mismo
           // sitio.
-          if (canEdit)
-            MenuAnchor(
+          TourTarget.first(
+            id: 'courses-year-menu',
+            when: first && canEdit,
+            child: MenuAnchor(
               builder: (context, controller, child) => IconButton(
                 key: Key('year-menu-${course.id}-$year'),
-                tooltip: 'Operaciones de este curso',
+                tooltip: tr('Más de este curso'),
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.more_horiz, size: 18),
                 onPressed: () =>
                     controller.isOpen ? controller.close() : controller.open(),
               ),
               menuChildren: [
-                MenuItemButton(
-                  key: Key('copy-year-${course.id}-$year'),
-                  leadingIcon: const Icon(Icons.copy_all_outlined, size: 15),
-                  onPressed: onCopy,
-                  child: const Text('Copiar a otro curso…'),
-                ),
-                const Divider(height: 1),
-                // Las versiones congeladas. En el menú del curso y no en una
-                // pantalla aparte porque congelar es algo que se hace
-                // **mirando el curso** --el día que empieza, el día antes del
-                // parcial-- y no algo a lo que se va.
-                MenuItemButton(
-                  key: Key('freeze-year-${course.id}-$year'),
-                  leadingIcon: const Icon(Icons.ac_unit, size: 15),
-                  onPressed: () => createFreeze(
-                    context,
-                    session,
-                    course,
-                    year,
-                    repo: entry.repos.firstOrNull,
+                if (onPublish != null)
+                  MenuItemButton(
+                    key: Key('publish-year-${course.id}-$year'),
+                    leadingIcon: const Icon(
+                      Icons.cloud_upload_outlined,
+                      size: 15,
+                    ),
+                    onPressed: onPublish,
+                    child: Text(tr('Publicar en la carpeta de reparto')),
                   ),
-                  child: const Text('Crear versión congelada…'),
-                ),
-                MenuItemButton(
-                  key: Key('freezes-${course.id}-$year'),
-                  leadingIcon: const Icon(Icons.history_toggle_off, size: 15),
-                  onPressed: () => showFreezes(context, session, course, year),
-                  child: Text(
-                    entry.freezes.isEmpty
-                        ? 'Ver versiones congeladas…'
-                        : 'Ver versiones congeladas (${entry.freezes.length})…',
+                if (!hidden)
+                  MenuItemButton(
+                    key: Key('hide-year-${course.id}-$year'),
+                    leadingIcon: const Icon(
+                      Icons.visibility_off_outlined,
+                      size: 15,
+                    ),
+                    onPressed: () =>
+                        session.setYearHidden(course.id, year, true),
+                    child: Text(tr('Ocultar de esta lista')),
                   ),
-                ),
+                if (canEdit) ...[
+                  MenuItemButton(
+                    key: Key('copy-year-${course.id}-$year'),
+                    leadingIcon: const Icon(Icons.copy_all_outlined, size: 15),
+                    onPressed: onCopy,
+                    child: Text(tr('Copiar a otro curso…')),
+                  ),
+                  const Divider(height: 1),
+                  // Las versiones congeladas. En el menú del curso y no en una
+                  // pantalla aparte porque congelar es algo que se hace
+                  // **mirando el curso** --el día que empieza, el día antes del
+                  // parcial-- y no algo a lo que se va.
+                  MenuItemButton(
+                    key: Key('freeze-year-${course.id}-$year'),
+                    leadingIcon: const Icon(Icons.ac_unit, size: 15),
+                    // En todos los repositorios del curso, con el mismo
+                    // nombre: congelar solo el primero dejaba la otra mitad
+                    // de una asignatura repartida cambiando por debajo.
+                    onPressed: () =>
+                        createFreeze(context, session, course, year),
+                    child: Text(tr('Crear versión congelada…')),
+                  ),
+                  MenuItemButton(
+                    key: Key('freezes-${course.id}-$year'),
+                    leadingIcon: const Icon(Icons.history_toggle_off, size: 15),
+                    onPressed: () =>
+                        showFreezes(context, session, course, year),
+                    child: Text(
+                      entry.freezes.isEmpty
+                          ? tr('Ver versiones congeladas…')
+                          : tr('Ver versiones congeladas ({0})…', [
+                              entry.freezes.length,
+                            ]),
+                    ),
+                  ),
+                ],
               ],
-            )
-          else
-            const SizedBox(width: 6),
+            ),
+          ),
         ],
       ),
     );
+    return TourTarget.first(id: 'courses-year-first', when: first, child: row);
   }
 }
 
@@ -1213,13 +1771,15 @@ class _Eye extends StatelessWidget {
   Widget build(BuildContext context) => IconButton(
     key: Key('hide-$id'),
     tooltip: hidden
-        ? 'Volver a enseñar «$what» en esta lista'
-        : 'Ocultar «$what» de esta lista. Sigue estando: no se quita nada.',
+        ? tr('Volver a enseñar «{0}» en esta lista', [what])
+        : tr('Ocultar «{0}» de esta lista. Sigue estando: no se quita nada.', [
+            what,
+          ]),
     visualDensity: VisualDensity.compact,
     icon: Icon(
       hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
       size: 17,
-      color: hidden ? didactaTeacher : didactaMuted,
+      color: hidden ? context.palette.teacher : context.palette.muted,
     ),
     onPressed: () => onChanged(!hidden),
   );
@@ -1245,12 +1805,12 @@ class _Star extends StatelessWidget {
   @override
   Widget build(BuildContext context) => IconButton(
     key: Key('favourite-$id'),
-    tooltip: on ? 'Desmarcar «$what»' : 'Marcar «$what»',
+    tooltip: on ? tr('Desmarcar «{0}»', [what]) : tr('Marcar «{0}»', [what]),
     visualDensity: VisualDensity.compact,
     icon: Icon(
       on ? Icons.star : Icons.star_border,
       size: 17,
-      color: on ? didactaEx : didactaMuted,
+      color: on ? context.palette.ex : context.palette.muted,
     ),
     onPressed: () => onChanged(!on),
   );

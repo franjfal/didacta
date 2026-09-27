@@ -204,6 +204,23 @@ para saber si una versión compila en Windows sin gastar un número: el commit
 con la versión nueva sólo lo hace `publicar`, así que después de un ensayo la
 próxima publicación asigna ese mismo número.
 
+### Versiones de prueba
+
+Con `prerelease: true` en `release.yaml` --o `python3 packaging/publish.py
+--prueba`-- lo que sale es una **versión de prueba** de la siguiente:
+`1.5.0-rc.1` tras la `1.4.2`, y `1.5.0-rc.2` si se publica otra prueba, suba lo
+que suba. El release se marca como *prerelease*, así que `releases/latest` no
+lo devuelve y solo lo reciben las instalaciones que tienen encendido *Ajustes
+→ Actualizaciones → Versiones de prueba*: esas miran la lista de releases y
+toman la versión más alta. El manifiesto lleva `"prerelease": true`.
+
+Las notas de una prueba son las de la sección de arriba del CHANGELOG
+--`## Próxima`-- **sin ponerle número**: el número es de la final, que se
+publica después con `prerelease: false` como `1.5.0`, y es la que llega a
+todos. Una final es más alta que sus pruebas, así que quien estaba en la
+`1.5.0-rc.2` pasa a la `1.5.0` sin hacer nada. Como `bump`, `prerelease` vale
+para una publicación: `plan --reset` la vuelve a dejar en `false`.
+
 ### Si la publicación sale pero el commit de la versión no
 
 El último paso de `publicar` escribe `app/pubspec.yaml` en `main`. El tag no:
@@ -346,8 +363,10 @@ macOS, Credential Manager en Windows, Secret Service en Linux. Nunca a
 `SharedPreferences`, ni a un JSON, ni a un log. Está en
 `app/lib/data/repository_access.dart`.
 
-El alcance pedido es `repo` y nada más. Sin `delete_repo`, sin `admin`, sin
-`user`.
+El alcance pedido es `repo workflow` y nada más. Sin `delete_repo`, sin
+`admin`, sin `user`. `workflow` porque GitHub rechaza el envío de un commit
+que toca `.github/workflows/` si el token no lo tiene, aunque tenga `repo`: el
+ejemplo trae dos workflows, y el CI del material es uno (D81).
 
 ### El Client ID va escrito en el código
 
@@ -374,13 +393,80 @@ Lo único que un Client ID ajeno permite es montar una aplicación que enseñe
 «Didacta» en la pantalla de autorización de GitHub. Es así para cualquier
 aplicación de escritorio y no se arregla escondiéndolo.
 
+### La GitHub App { #la-github-app }
+
+Con una **GitHub App** en lugar de la OAuth App, Didacta llega **solo a los
+repositorios que cada persona elige** en GitHub, y no a todos los suyos con el
+permiso `repo`; y la credencial **caduca a las ocho horas** y se renueva sola
+con otra que dura seis meses, en lugar de valer para siempre hasta que alguien
+la revoque. Es lo correcto para una herramienta que reparten los departamentos.
+
+El código está hecho y probado (`app/lib/model/github_credential.dart`,
+`GitHubAuth.refresh`, `AuthState.renewIfDue`). **Falta registrar la App**, que
+es un paso en github.com que solo puede dar su dueño:
+
+1. *Settings → Developer settings → GitHub Apps → New GitHub App*, en la cuenta
+   o la organización que publica Didacta.
+2. **Nombre**: `Didacta` (su nombre corto sale en la dirección de su página,
+   `github.com/apps/<nombre-corto>`: apúntalo). **Homepage URL**: la de la web
+   de documentación.
+3. **Callback URL**: ninguna. Marca **Enable Device Flow** y deja marcado
+   **Expire user authorization tokens**.
+4. **Webhook**: desmarca *Active*. Didacta no escucha nada.
+5. **Permisos de repositorio**:
+   - *Contents*: **Read and write** --leer y escribir el material--;
+   - *Metadata*: **Read-only** --lo pide GitHub para todas--;
+   - *Workflows*: **Read and write** --el CI del material y la web del curso
+     (D81)--;
+   - *Administration*: **Read and write** --solo para crear el repositorio de
+     ejemplo y los de una asignatura nueva--.
+
+   **Permisos de cuenta**: *Email addresses*: **Read-only**, para firmar los
+   commits con el correo de verdad.
+6. **Where can this GitHub App be installed?**: *Any account*.
+7. Crear. Copia su **Client ID** (empieza por `Iv`) y ponlo, con el nombre
+   corto, en `didactaAppClientId` y `didactaAppSlug` de
+   `app/lib/data/github.dart` --o con `--dart-define=DIDACTA_GITHUB_APP_CLIENT=`
+   y `DIDACTA_GITHUB_APP_SLUG=` al compilar--.
+
+**Qué cambia para cada persona.** La próxima vez que entre, lo hará con la App:
+GitHub le pide autorizarla y, la primera vez, **instalarla** en su cuenta
+eligiendo a qué repositorios llega (Ajustes → Cuenta y repositorios →
+*Elegir repositorios en GitHub*, y *Dar acceso a otro* al añadir uno). Si
+tiene abiertos repositorios a los que la App no llega, **no se cierran**: se
+dice cuáles y dónde darle acceso, y en cuanto lo tiene, llega sin volver a
+entrar.
+
+**Qué no cambia.** Quien entró con la OAuth App **sigue con su sesión**: su
+token no caduca y Didacta lo sigue leyendo como siempre, y el Client ID que
+se guardó al entrar deja de contar como elegido (`replacedClientIds`), así
+que al volver a entrar pasa a la App sin tocar Ajustes. Un Client ID propio,
+el de una OAuth App o el de otra GitHub App, se respeta.
+
+**Cómo sabe cuál es cuál.** Por el Client ID: los de una GitHub App empiezan
+por `Iv` y los de una OAuth App por `Ov`. Con una App no se piden permisos al
+entrar --son los de la App, los mismos para todos--; lo que se guarda en el
+llavero es JSON, con el token, el de renovar, cuándo caduca cada uno y con qué
+App se pidió, porque se renueva con la misma. Se renueva quince minutos antes
+de caducar, al arrancar si caducó con Didacta cerrada --antes de preguntar a
+GitHub quién es, que con el token de ayer sería un 401 y cerraría una sesión
+viva-- y al volver a la ventana. Si GitHub dice que la de renovar ya no vale
+(seis meses sin abrir Didacta, o la App desautorizada), se sale y se dice por
+qué; sin red, se sigue con la que hay y se vuelve a intentar en cinco
+minutos.
+
+**Un límite de GitHub que hay que saber.** Con la App instalada en *Solo los
+repositorios elegidos*, un repositorio que Didacta crea --el de ejemplo, el
+de una asignatura nueva-- puede no quedar en la lista de la App: si después
+no llega a él, se añade desde *Elegir repositorios en GitHub*.
+
 ### La OAuth App de la gente y el token del CI son dos cosas
 
 Y no se mezclan nunca:
 
 | | Quién la usa | Para qué | Dónde vive |
 |---|---|---|---|
-| **OAuth App** | Las personas | Entrar, clonar | Client ID en el código, token en el llavero de cada uno |
+| **GitHub App** (u OAuth App) | Las personas | Entrar, clonar | Client ID en el código, credencial en el llavero de cada uno |
 | **`GITHUB_TOKEN`** | El workflow | Crear el release, construir la web | Lo da Actions en cada ejecución |
 
 Reutilizar la OAuth App como credencial de publicación daría a cada persona que

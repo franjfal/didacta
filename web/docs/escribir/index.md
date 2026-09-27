@@ -101,28 +101,43 @@ descuido, porque los perfiles del alumno no tienen ese canal.
 ## Los problemas
 
 ```latex
-\begin{problem}[Convergencia]
+\begin{exercise}[Convergencia]
 Estudia la convergencia de $\sum 1/n^2$.
 
-\hint{Compárala con una integral.}
-\answer{Converge; su suma es $\pi^2/6$.}
-\solution{Por el criterio integral\ldots}
-\marking{1 punto por plantear, 1 por calcular, 0{,}5 por concluir.}
-\end{problem}
+\begin{hint}
+Compárala con una integral.
+\end{hint}
+
+\begin{answer}
+Converge; su suma es $\pi^2/6$.
+\end{answer}
+
+\begin{solution}
+Por el criterio integral\ldots
+\end{solution}
+
+\begin{marking}
+1 punto por plantear, 1 por calcular, 0{,}5 por concluir.
+\end{marking}
+\end{exercise}
 ```
 
 [:octicons-arrow-right-24: Los cuatro niveles](../conceptos/problemas.md)
 
 ## Las figuras
 
-Viven en `figures/`, dentro del directorio de la unidad, y se llaman por su
-nombre:
+Viven en `figures/`, dentro del directorio de la unidad, y se llaman desde
+ahí:
 
 ```latex
-\didactafigure{bola-unidad}{La bola unidad de tres normas de $\mathbb{R}^2$.}
+\includegraphics[width=.6\textwidth,alt={La bola unidad: un círculo}]{figures/bola-unidad.pdf}
 ```
 
-La ruta la resuelve Didacta, así que mover la unidad no rompe la figura.
+La ruta es la de la unidad, así que moverla o darla en otra asignatura no
+rompe la figura. `alt={…}` es lo que se ve en ella, dicho para quien no la
+ve: lo lee un lector de pantalla en los apuntes accesibles. En un dibujo va
+igual, `\begin{tikzpicture}[alt={…}]`.
+[:octicons-arrow-right-24: Apuntes accesibles](../app/compilar.md#apuntes-accesibles)
 
 ## La referencia completa
 

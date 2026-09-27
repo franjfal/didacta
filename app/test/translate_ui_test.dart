@@ -147,6 +147,11 @@ void main() {
       ]);
       await showDialogFor(tester, session, session.catalogue.units);
 
+      // De salida hay uno; «Todos» marca los dos.
+      await tester.tap(find.byKey(const Key('translate-toggle-all')));
+      await settle(tester);
+      expect(find.text('Traducir 2'), findsOneWidget);
+
       await tester.tap(find.byKey(const Key('translate-toggle-all')));
       await settle(tester);
       expect(
@@ -156,6 +161,23 @@ void main() {
         isNull,
         reason: 'sin idiomas no hay nada que traducir',
       );
+    });
+
+    testWidgets('de salida, solo el que se está mirando', (tester) async {
+      // Antes venían marcados todos los que faltaran: una tanda a tres
+      // idiomas sin haberlo pedido son tres veces más borradores que
+      // revisar.
+      final session = await sessionWith([
+        unitJson('content/a/uno', statuses: {'es': 'source'}),
+      ]);
+      session.language = 'en';
+      await showDialogFor(tester, session, session.catalogue.units);
+
+      bool marked(String code) => tester
+          .widget<FilterChip>(find.byKey(Key('translate-language-$code')))
+          .selected;
+      expect(marked('en'), isTrue);
+      expect(marked('va'), isFalse);
     });
 
     testWidgets('viniendo de una pestaña, solo ese idioma', (tester) async {
@@ -186,8 +208,60 @@ void main() {
 
       await showDialogFor(tester, session, session.catalogue.units);
 
-      // Dos lecciones × dos idiomas que faltan.
+      // Dos lecciones en el idioma marcado…
+      expect(find.text('Traducir 2'), findsOneWidget);
+
+      // …y dos lecciones × dos idiomas con los dos.
+      await tester.tap(find.byKey(const Key('translate-toggle-all')));
+      await settle(tester);
       expect(find.text('Traducir 4'), findsOneWidget);
+    });
+
+    testWidgets('lo que ya tiene texto no se toca salvo que se pida', (
+      tester,
+    ) async {
+      // Un borrador puede estar corregido a mano, y una desactualizada es
+      // una traducción revisada a la que le falta un cambio: la máquina
+      // por encima tira ese trabajo.
+      final session = await sessionWith([
+        unitJson('content/a/uno', statuses: {'es': 'source', 'va': 'draft'}),
+        unitJson('content/a/dos', statuses: {'es': 'source', 'va': 'outdated'}),
+        unitJson('content/a/tres', statuses: {'es': 'source'}),
+      ]);
+      session.language = 'va';
+      await showDialogFor(tester, session, session.catalogue.units);
+
+      // Solo la que no tiene nada.
+      expect(find.text('Traducir'), findsOneWidget);
+      final redo = find.byKey(const Key('translate-redo'));
+      expect(redo, findsOneWidget);
+      expect(tester.widget<CheckboxListTile>(redo).value, isFalse);
+      expect(find.textContaining('las 2 que ya tienen texto'), findsOneWidget);
+
+      await tester.tap(redo);
+      await settle(tester);
+      expect(find.text('Traducir 3'), findsOneWidget);
+    });
+
+    testWidgets('sin nada vacío, lo dice en lugar de traducir', (tester) async {
+      final session = await sessionWith([
+        unitJson('content/a/uno', statuses: {'es': 'source', 'va': 'draft'}),
+      ]);
+      session.language = 'va';
+      await showDialogFor(
+        tester,
+        session,
+        session.catalogue.units,
+        only: ['va'],
+      );
+
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('translate-go')))
+            .onPressed,
+        isNull,
+      );
+      expect(find.textContaining('marca «Rehacer»'), findsOneWidget);
     });
 
     testWidgets('sin credencial se dice dónde se pone', (tester) async {

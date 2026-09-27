@@ -26,7 +26,9 @@ import '../model/commit_message.dart';
 import '../model/workspace.dart';
 import '../state/session.dart';
 import 'build_console.dart';
+import 'problem.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class SyncBar extends StatefulWidget {
   const SyncBar({super.key, required this.session});
@@ -70,17 +72,15 @@ class _SyncBarState extends State<SyncBar> {
         SnackBar(
           content: Text(
             done == 0
-                ? 'No había nada que confirmar.'
+                ? tr('No había nada que guardar.')
                 : session.pushOnCommit
-                ? 'Confirmado y enviado.'
-                : 'Confirmado. Queda enviarlo.',
+                ? tr('Guardado y enviado.')
+                : tr('Guardado. Queda enviarlo.'),
           ),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('$error'), backgroundColor: didactaTeacher),
-      );
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -99,25 +99,35 @@ class _SyncBarState extends State<SyncBar> {
         showBuildConsole(context, widget.session.syncConsole, autoClose: true),
       );
       final result = await bringing;
-      final failed = [
+      final errors = {
         for (final entry in result.entries)
-          if (entry.value is! int) '${entry.key}: ${entry.value}',
+          if (entry.value is! int) entry.key: entry.value,
+      };
+      // Uno solo: su aviso entero, con su arreglo. Varios: cada uno en una
+      // línea, dicho para leer.
+      if (errors.length == 1 && result.length == 1) {
+        showProblemIn(messenger, errors.values.single);
+        return;
+      }
+      final failed = [
+        for (final entry in errors.entries)
+          '${entry.key}: ${problemOf(entry.value).title}',
       ];
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             failed.isEmpty
-                ? 'Traído de GitHub y actualizado.'
-                : 'Traído, con problemas:\n${failed.join('\n')}',
+                ? tr('Traído de GitHub y actualizado.')
+                : tr('Traído, con problemas:\n{0}', [failed.join('\n')]),
           ),
-          backgroundColor: failed.isEmpty ? null : didactaTeacher,
+          backgroundColor: failed.isEmpty
+              ? null
+              : messenger.context.palette.teacher,
           duration: Duration(seconds: failed.isEmpty ? 3 : 10),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('$error'), backgroundColor: didactaTeacher),
-      );
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -131,7 +141,7 @@ class _SyncBarState extends State<SyncBar> {
       if (!mounted) return;
       if (boxes.isEmpty) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('No hay nada que enviar.')),
+          SnackBar(content: Text(tr('No hay nada que enviar.'))),
         );
         return;
       }
@@ -146,32 +156,50 @@ class _SyncBarState extends State<SyncBar> {
         showBuildConsole(context, widget.session.syncConsole, autoClose: true),
       );
       final result = await sending;
-      final failed = [
+      final errors = {
         for (final entry in result.entries)
-          if (entry.value is! int) '${entry.key}: ${entry.value}',
+          if (entry.value is! int) entry.key: entry.value,
+      };
+      if (errors.length == 1 && result.length == 1) {
+        showProblemIn(messenger, errors.values.single);
+        return;
+      }
+      final failed = [
+        for (final entry in errors.entries)
+          '${entry.key}: ${problemOf(entry.value).title}',
       ];
       messenger.showSnackBar(
         SnackBar(
           content: Text(
             failed.isEmpty
-                ? 'Enviado a GitHub.'
-                : 'No se pudo enviar todo:\n${failed.join('\n')}',
+                ? tr('Enviado a GitHub.')
+                : tr('No se pudo enviar todo:\n{0}', [failed.join('\n')]),
           ),
-          backgroundColor: failed.isEmpty ? null : didactaTeacher,
+          backgroundColor: failed.isEmpty
+              ? null
+              : messenger.context.palette.teacher,
           duration: Duration(seconds: failed.isEmpty ? 3 : 10),
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('$error'), backgroundColor: didactaTeacher),
-      );
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  // Cómo está cada clon y cómo se guarda: avisan por su cuenta, no por la
+  // sesión.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([
+      widget.session.repoSync,
+      widget.session.settings,
+    ]),
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final session = widget.session;
     final repos = session.workspace.repos;
     if (repos.isEmpty) return const SizedBox.shrink();
@@ -188,9 +216,9 @@ class _SyncBarState extends State<SyncBar> {
     final pending = session.pendingCount;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       child: Row(
@@ -212,7 +240,7 @@ class _SyncBarState extends State<SyncBar> {
             Expanded(
               child: Text(
                 repos.single.id,
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -230,19 +258,19 @@ class _SyncBarState extends State<SyncBar> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.sync_problem_outlined,
                         size: 15,
-                        color: didactaEx,
+                        color: context.palette.ex,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         session.workspace.isMultiple
                             ? repo.label
-                            : 'sin sincronizar',
-                        style: const TextStyle(
+                            : tr('sin sincronizar'),
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: didactaEx,
+                          color: context.palette.ex,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -278,8 +306,8 @@ class _SyncBarState extends State<SyncBar> {
             id: 'pull',
             icon: Icons.download_outlined,
             tooltip: behind > 0
-                ? 'Traer de GitHub ($behind por traer)'
-                : 'Traer de GitHub',
+                ? tr('Traer de GitHub ({0} por traer)', [behind])
+                : tr('Traer de GitHub'),
             badge: behind,
             onPressed: _busy ? null : _pull,
           ),
@@ -288,14 +316,16 @@ class _SyncBarState extends State<SyncBar> {
             icon: Icons.upload_outlined,
             tooltip: [
               'Enviar a GitHub',
-              if (unsent > 0) '$unsent commit(s) sin enviar',
+              if (unsent > 0)
+                tr('{0} cambio(s) guardado(s) sin enviar', [unsent]),
               // Dicho aquí también, porque enviar se los lleva: cierra en un
               // commit lo que quede suelto antes de empujar. Quien quiera
               // contarlos por separado tiene el botón de al lado.
-              if (pending > 0) '$pending fichero(s) sin confirmar',
+              if (pending > 0)
+                tr('{0} fichero(s) sin guardar en el historial', [pending]),
             ].join('\n'),
             badge: unsent,
-            colour: didactaAccentDark,
+            colour: context.palette.accentDark,
             onPressed: _busy ? null : _push,
           ),
         ],
@@ -321,9 +351,12 @@ class _CommitButton extends StatelessWidget {
     final pending = session.pendingCount;
     return Tooltip(
       message: pending == 0
-          ? 'No hay nada escrito sin confirmar'
-          : 'Confirmar $pending fichero(s) escritos y sin confirmar, '
-                'eligiendo cuáles entran',
+          ? tr('No hay nada escrito sin guardar en el historial')
+          : tr(
+              'Guardar en el historial {0} fichero(s) escritos, '
+              'eligiendo cuáles entran',
+              [pending],
+            ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -331,7 +364,9 @@ class _CommitButton extends StatelessWidget {
             key: const Key('sync-commit'),
             visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.check_circle_outline, size: 18),
-            color: pending > 0 ? didactaAccentDark : didactaMuted,
+            color: pending > 0
+                ? context.palette.accentDark
+                : context.palette.muted,
             onPressed: pending == 0 ? null : onPressed,
           ),
           if (pending > 0)
@@ -341,16 +376,16 @@ class _CommitButton extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                  color: didactaAccentDark,
+                  color: context.palette.accentDark,
                   borderRadius: BorderRadius.circular(7),
                 ),
                 child: Text(
                   key: const Key('sync-commit-badge'),
                   pending > 99 ? '99+' : '$pending',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 9,
                     height: 1,
-                    color: Colors.white,
+                    color: context.palette.onAccent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -508,7 +543,7 @@ class _CommitDialogState extends State<_CommitDialog> {
     final rows = _rows;
 
     return AlertDialog(
-      title: const Text('Confirmar los cambios'),
+      title: Text(tr('Guardar en el historial')),
       content: SizedBox(
         width: 560,
         child: Column(
@@ -520,9 +555,9 @@ class _CommitDialogState extends State<_CommitDialog> {
               controller: _message,
               autofocus: true,
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Qué has cambiado',
-                hintText: 'Corregir la errata del Teorema 2.1',
+              decoration: InputDecoration(
+                labelText: tr('Qué has cambiado'),
+                hintText: tr('Corregir la errata del Teorema 2.1'),
                 isDense: true,
               ),
             ),
@@ -537,7 +572,7 @@ class _CommitDialogState extends State<_CommitDialog> {
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: 'Filtrar por ruta: taylor, va.tex, series/…',
+                  hintText: tr('Filtrar por ruta: taylor, va.tex, series/…'),
                   prefixIcon: const Icon(Icons.search, size: 17),
                   prefixIconConstraints: const BoxConstraints(
                     minWidth: 30,
@@ -547,7 +582,7 @@ class _CommitDialogState extends State<_CommitDialog> {
                       ? null
                       : IconButton(
                           key: const Key('commit-pending-filter-clear'),
-                          tooltip: 'Quitar el filtro',
+                          tooltip: tr('Quitar el filtro'),
                           visualDensity: VisualDensity.compact,
                           icon: const Icon(Icons.close, size: 15),
                           onPressed: () {
@@ -563,13 +598,13 @@ class _CommitDialogState extends State<_CommitDialog> {
             Text(
               [
                 if (_picked == _total)
-                  _total == 1 ? 'Un fichero' : '$_total ficheros'
+                  _total == 1 ? tr('Un fichero') : tr('{0} ficheros', [_total])
                 else
-                  '$_picked de $_total ficheros',
-                if (_needle.isNotEmpty) '$_shown se ven',
+                  tr('{0} de {1} ficheros', [_picked, _total]),
+                if (_needle.isNotEmpty) tr('{0} se ven', [_shown]),
               ].join(' · '),
               key: const Key('commit-pending-count'),
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 4),
             // Lo que va dentro, a la vista y marcable. Un commit que se firma
@@ -579,10 +614,10 @@ class _CommitDialogState extends State<_CommitDialog> {
               child: rows.isEmpty
                   ? Center(
                       child: Text(
-                        'Nada encaja con «${_filter.text.trim()}».',
-                        style: const TextStyle(
+                        tr('Nada encaja con «{0}».', [_filter.text.trim()]),
+                        style: TextStyle(
                           fontSize: 12,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                         ),
                       ),
                     )
@@ -624,7 +659,7 @@ class _CommitDialogState extends State<_CommitDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('commit-pending-confirm'),
@@ -646,7 +681,7 @@ class _CommitDialogState extends State<_CommitDialog> {
                         ],
                   },
                 )),
-          child: const Text('Confirmar'),
+          child: Text(tr('Guardar')),
         ),
       ],
     );
@@ -684,7 +719,7 @@ class _RepoHeader extends StatelessWidget {
                 ? Icons.check_box_outline_blank
                 : Icons.indeterminate_check_box_outlined,
             size: 15,
-            color: didactaMuted,
+            color: context.palette.muted,
           ),
         ),
         if (repo != null)
@@ -693,8 +728,8 @@ class _RepoHeader extends StatelessWidget {
           Text(id, style: const TextStyle(fontSize: 10.5)),
         const SizedBox(width: 7),
         Text(
-          picked == total ? '$total' : '$picked de $total',
-          style: const TextStyle(fontSize: 11, color: didactaMuted),
+          picked == total ? '$total' : tr('{0} de {1}', [picked, total]),
+          style: TextStyle(fontSize: 11, color: context.palette.muted),
         ),
       ],
     ),
@@ -724,7 +759,7 @@ class _FileRow extends StatelessWidget {
           child: Icon(
             chosen ? Icons.check_box_outlined : Icons.check_box_outline_blank,
             size: 14,
-            color: chosen ? didactaAccentDark : didactaMuted,
+            color: chosen ? context.palette.accentDark : context.palette.muted,
           ),
         ),
         Expanded(
@@ -733,7 +768,7 @@ class _FileRow extends StatelessWidget {
             style: TextStyle(
               fontSize: 11.5,
               fontFamily: 'monospace',
-              color: chosen ? null : didactaMuted,
+              color: chosen ? null : context.palette.muted,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -778,7 +813,7 @@ class _LanguagePicker extends StatelessWidget {
       padding: const EdgeInsets.only(right: 4),
       child: PopupMenuButton<String>(
         key: const Key('language-picker'),
-        tooltip: 'En qué idioma se ve el contenido',
+        tooltip: tr('En qué idioma se ve el contenido'),
         position: PopupMenuPosition.under,
         itemBuilder: (context) => [
           for (final option in options)
@@ -802,13 +837,13 @@ class _LanguagePicker extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
           decoration: BoxDecoration(
-            border: Border.all(color: didactaRule),
+            border: Border.all(color: context.palette.rule),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.translate, size: 14, color: didactaMuted),
+              Icon(Icons.translate, size: 14, color: context.palette.muted),
               const SizedBox(width: 5),
               Text(
                 current?.name ?? session.language,
@@ -817,7 +852,11 @@ class _LanguagePicker extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Icon(Icons.arrow_drop_down, size: 16, color: didactaMuted),
+              Icon(
+                Icons.arrow_drop_down,
+                size: 16,
+                color: context.palette.muted,
+              ),
             ],
           ),
         ),
@@ -854,8 +893,8 @@ class _RepoFilter extends StatelessWidget {
     final visible = session.isRepoVisible(repo.id);
     return Tooltip(
       message: visible
-          ? 'Ocultar ${repo.id} de la biblioteca y las asignaturas'
-          : 'Volver a enseñar ${repo.id}',
+          ? tr('Ocultar {0} de la biblioteca y las asignaturas', [repo.id])
+          : tr('Volver a enseñar {0}', [repo.id]),
       child: InkWell(
         key: Key('repo-filter-${repo.id}'),
         borderRadius: BorderRadius.circular(3),
@@ -892,7 +931,7 @@ class RepoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = Color(colour);
+    final tint = context.palette.repo(colour);
     return Container(
       padding: EdgeInsets.symmetric(horizontal: compact ? 5 : 7, vertical: 2),
       decoration: BoxDecoration(
@@ -922,7 +961,7 @@ class _SyncButton extends StatelessWidget {
     required this.tooltip,
     required this.badge,
     required this.onPressed,
-    this.colour = didactaMuted,
+    this.colour,
   });
 
   final String id;
@@ -930,44 +969,53 @@ class _SyncButton extends StatelessWidget {
   final String tooltip;
   final int badge;
   final VoidCallback? onPressed;
-  final Color colour;
+
+  /// Sin él, el gris del texto secundario.
+  final Color? colour;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-    message: tooltip,
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          key: Key('sync-$id'),
-          visualDensity: VisualDensity.compact,
-          icon: Icon(icon, size: 17, color: badge > 0 ? colour : didactaMuted),
-          onPressed: onPressed,
-        ),
-        if (badge > 0)
-          Positioned(
-            right: 2,
-            top: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-              decoration: BoxDecoration(
-                color: colour,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                key: Key('sync-$id-badge'),
-                '$badge',
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+  Widget build(BuildContext context) {
+    final tint = colour ?? context.palette.muted;
+    return Tooltip(
+      message: tooltip,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          IconButton(
+            key: Key('sync-$id'),
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              icon,
+              size: 17,
+              color: badge > 0 ? tint : context.palette.muted,
+            ),
+            onPressed: onPressed,
+          ),
+          if (badge > 0)
+            Positioned(
+              right: 2,
+              top: 2,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: tint,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  key: Key('sync-$id-badge'),
+                  '$badge',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    color: context.palette.onAccent,
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 /// Qué se va a enviar, y con qué mensaje.
@@ -998,7 +1046,7 @@ class _PushDialogState extends State<_PushDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Enviar a GitHub'),
+      title: Text(tr('Enviar a GitHub')),
       content: SizedBox(
         width: 560,
         child: Column(
@@ -1012,11 +1060,17 @@ class _PushDialogState extends State<_PushDialog> {
                   const SizedBox(width: 8),
                   Text(
                     [
-                      if (box.ahead > 0) '${box.ahead} commits sin enviar',
+                      if (box.ahead > 0)
+                        tr('{0} cambios guardados sin enviar', [box.ahead]),
                       if (box.pending.isNotEmpty)
-                        '${box.pending.length} ficheros sin confirmar',
+                        tr('{0} ficheros sin guardar en el historial', [
+                          box.pending.length,
+                        ]),
                     ].join(' · '),
-                    style: const TextStyle(fontSize: 12, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
                   ),
                 ],
               ),
@@ -1025,10 +1079,10 @@ class _PushDialogState extends State<_PushDialog> {
                   padding: const EdgeInsets.only(left: 6, top: 2),
                   child: Text(
                     path,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1037,17 +1091,22 @@ class _PushDialogState extends State<_PushDialog> {
                 Padding(
                   padding: const EdgeInsets.only(left: 6, top: 2),
                   child: Text(
-                    'y ${box.pending.length - 6} más',
-                    style: const TextStyle(fontSize: 11, color: didactaMuted),
+                    tr('y {0} más', [box.pending.length - 6]),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.palette.muted,
+                    ),
                   ),
                 ),
               const SizedBox(height: 10),
             ],
             if (_pending.isEmpty)
-              const Text(
-                'No hay nada escrito sin confirmar: solo se envían los '
-                'commits que ya están hechos.',
-                style: TextStyle(fontSize: 12, color: didactaMuted),
+              Text(
+                tr(
+                  'No hay nada escrito sin guardar: solo se envían los '
+                  'cambios que ya están guardados.',
+                ),
+                style: TextStyle(fontSize: 12, color: context.palette.muted),
               )
             else
               // El mensaje del commit que cierra lo que queda suelto. Un
@@ -1059,8 +1118,8 @@ class _PushDialogState extends State<_PushDialog> {
                 key: const Key('push-message'),
                 controller: _message,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Mensaje del commit que cierra lo que falta',
+                decoration: InputDecoration(
+                  labelText: tr('Qué has cambiado, para guardar lo que falta'),
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -1070,16 +1129,16 @@ class _PushDialogState extends State<_PushDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('push-confirm'),
           onPressed: () {
             final message = _message.text.trim();
             if (_pending.isNotEmpty && message.isEmpty) return;
-            Navigator.of(context).pop(message.isEmpty ? 'Enviar' : message);
+            Navigator.of(context).pop(message.isEmpty ? tr('Enviar') : message);
           },
-          child: const Text('Enviar'),
+          child: Text(tr('Enviar')),
         ),
       ],
     );

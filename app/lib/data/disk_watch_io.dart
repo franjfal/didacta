@@ -4,6 +4,8 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:watcher/watcher.dart';
+
 /// El fichero que se mira: si cambia, el índice cambió.
 ///
 /// Uno y no los cuatro de `generated/`: el motor los escribe juntos, y cuatro
@@ -28,8 +30,27 @@ Stream<void> watchContent(String directory) => _watch(
   _content,
   recursive: true,
   // Los temporales de un editor no son un cambio de material.
-  keep: (path) => !path.endsWith('~') && !path.contains('/.'),
+  keep: (path) => !path.endsWith('~') && !_slashes(path).contains('/.'),
 );
+
+/// La ruta con `/`: en Windows los avisos llegan con `\`, y lo de abajo
+/// compara con `/`.
+String _slashes(String path) => path.replaceAll(r'\', '/');
+
+/// Los cambios de dentro de [folder], con todo lo que lleva.
+///
+/// En Linux el sistema no sabe vigilar una carpeta entera --`inotify` va
+/// carpeta a carpeta, y `Directory.watch(recursive: true)` no lo hace--, así
+/// que ahí se usa `package:watcher`, que vigila cada subcarpeta y las nuevas
+/// según aparecen. En macOS y en Windows, el del sistema.
+Stream<String> _changesIn(Directory folder, {required bool recursive}) {
+  if (recursive && Platform.isLinux) {
+    return DirectoryWatcher(folder.path).events.map((event) => event.path);
+  }
+  return folder
+      .watch(events: FileSystemEvent.all, recursive: recursive)
+      .map((event) => event.path);
+}
 
 /// Avisa cuando el motor reescribe el índice.
 Stream<void> watchIndex(String directory) => _watch(
@@ -55,7 +76,7 @@ Stream<void> _watch(
   required bool recursive,
   required bool Function(String path) keep,
 }) {
-  final streams = <Stream<FileSystemEvent>>[];
+  final streams = <Stream<String>>[];
   var missing = false;
 
   for (final name in names) {
@@ -65,11 +86,7 @@ Stream<void> _watch(
       continue;
     }
     try {
-      streams.add(
-        folder
-            .watch(events: FileSystemEvent.all, recursive: recursive)
-            .where((event) => keep(event.path)),
-      );
+      streams.add(_changesIn(folder, recursive: recursive).where(keep));
     } on FileSystemException {
       missing = true;
     }
@@ -77,14 +94,14 @@ Stream<void> _watch(
 
   if (missing) {
     try {
+      final root = _slashes(directory);
       streams.add(
         Directory(directory)
             .watch(events: FileSystemEvent.all)
+            .map((event) => _slashes(event.path))
             .where(
-              (event) => names.any(
-                (name) =>
-                    event.path == '$directory/$name' ||
-                    event.path.endsWith('/$name'),
+              (path) => names.any(
+                (name) => path == '$root/$name' || path.endsWith('/$name'),
               ),
             ),
       );
@@ -99,9 +116,14 @@ Stream<void> _watch(
   final controller = StreamController<void>.broadcast();
   final subscriptions = [
     for (final stream in streams)
-      stream.listen((_) {
-        if (!controller.isClosed) controller.add(null);
-      }),
+      stream.listen(
+        (_) {
+          if (!controller.isClosed) controller.add(null);
+        },
+        // Una carpeta que desaparece mientras se vigila no es un fallo de la
+        // aplicación: queda la comprobación al volver a la ventana.
+        onError: (Object _) {},
+      ),
   ];
   controller.onCancel = () async {
     for (final subscription in subscriptions) {

@@ -1,0 +1,1435 @@
+[
+ {
+  "key": "Añadir vinculado a…",
+  "where": [
+   "ui/year_page.dart:2884"
+  ]
+ },
+ {
+  "key": "Añadir {0}",
+  "where": [
+   "ui/composition_editor.dart:1373",
+   "ui/add_repository.dart:461"
+  ]
+ },
+ {
+  "key": "Añadir {0} lecciones a {1}",
+  "where": [
+   "ui/document_page.dart:225"
+  ]
+ },
+ {
+  "key": "Añadir «{0}» a {1}",
+  "where": [
+   "ui/document_page.dart:221"
+  ]
+ },
+ {
+  "key": "Añadir: {0}",
+  "where": [
+   "ui/metadata_editor.dart:1304"
+  ]
+ },
+ {
+  "key": "Añil (algoritmo)",
+  "where": [
+   "ui/manage_snippets.dart:60"
+  ]
+ },
+ {
+  "key": "Bajar",
+  "where": [
+   "ui/manage_snippets.dart:920"
+  ]
+ },
+ {
+  "key": "Bearer {0}",
+  "where": [
+   "state/mcp_service.dart:218",
+   "data/github.dart:371",
+   "data/mcp_process_io.dart:169"
+  ]
+ },
+ {
+  "key": "Biblioteca",
+  "where": [
+   "ui/library_page.dart:824",
+   "ui/library_page.dart:1470",
+   "ui/platform_menus.dart:238"
+  ]
+ },
+ {
+  "key": "Bloque",
+  "where": [
+   "ui/year_page.dart:1695",
+   "ui/library_search.dart:141"
+  ]
+ },
+ {
+  "key": "Bloque de {0}: {1}",
+  "where": [
+   "state/catalogue_editor.dart:806"
+  ]
+ },
+ {
+  "key": "Bloque {0} · {1}",
+  "where": [
+   "ui/between_repos_page.dart:439"
+  ]
+ },
+ {
+  "key": "Bloque «{0}» declarado en {1}.",
+  "where": [
+   "ui/manage_blocks.dart:271"
+  ]
+ },
+ {
+  "key": "Bloque «{0}» declarado.",
+  "where": [
+   "ui/manage_blocks.dart:76"
+  ]
+ },
+ {
+  "key": "Bloque «{0}» quitado y {1} movidas a «{2}».",
+  "where": [
+   "ui/manage_blocks.dart:365"
+  ]
+ },
+ {
+  "key": "Bloque «{0}» quitado. Sus lecciones quedan sin bloque declarado; salen en Entre repositorios.",
+  "where": [
+   "ui/manage_blocks.dart:360"
+  ]
+ },
+ {
+  "key": "Bloques",
+  "where": [
+   "ui/settings_page.dart:318",
+   "ui/manage_blocks.dart:151"
+  ]
+ },
+ {
+  "key": "Bloques y plantillas",
+  "where": [
+   "ui/settings_page.dart:139"
+  ]
+ },
+ {
+  "key": "Borradores y desactualizadas. Se sustituye lo que tengan, también lo que alguien haya corregido a mano.",
+  "where": [
+   "ui/translate_unit.dart:402"
+  ]
+ },
+ {
+  "key": "Borrar",
+  "where": [
+   "ui/unit_preview.dart:1004"
+  ]
+ },
+ {
+  "key": "Borrar este PDF. Se rehace compilando",
+  "where": [
+   "ui/unit_preview.dart:1142"
+  ]
+ },
+ {
+  "key": "Borrar la búsqueda",
+  "where": [
+   "ui/manage_snippets.dart:565"
+  ]
+ },
+ {
+  "key": "Borrar la compilada",
+  "where": [
+   "ui/unit_preview.dart:929"
+  ]
+ },
+ {
+  "key": "Borrar la versión compilada",
+  "where": [
+   "ui/unit_preview.dart:987"
+  ]
+ },
+ {
+  "key": "Borrar las {0}",
+  "where": [
+   "ui/unit_preview.dart:930"
+  ]
+ },
+ {
+  "key": "Borrar las {0} versiones compiladas",
+  "where": [
+   "ui/unit_preview.dart:988"
+  ]
+ },
+ {
+  "key": "Busca una orden, una lección, un curso…",
+  "where": [
+   "ui/command_palette.dart:543"
+  ]
+ },
+ {
+  "key": "Buscando en el texto…",
+  "where": [
+   "ui/library_page.dart:2924"
+  ]
+ },
+ {
+  "key": "Buscando tlmgr…",
+  "where": [
+   "data/toolchain_io.dart:494"
+  ]
+ },
+ {
+  "key": "Buscando «{0}»",
+  "where": [
+   "ui/library_page.dart:838"
+  ]
+ },
+ {
+  "key": "Buscando…",
+  "where": [
+   "ui/pdf_search.dart:187"
+  ]
+ },
+ {
+  "key": "Buscar",
+  "where": [
+   "ui/tour.dart:263",
+   "ui/add_repository.dart:348"
+  ]
+ },
+ {
+  "key": "Buscar TeX solo",
+  "where": [
+   "ui/settings_page.dart:2576"
+  ]
+ },
+ {
+  "key": "Buscar actualizaciones",
+  "where": [
+   "ui/update_section.dart:117"
+  ]
+ },
+ {
+  "key": "Buscar en el PDF",
+  "where": [
+   "ui/pdf_search.dart:232"
+  ]
+ },
+ {
+  "key": "Buscar en el PDF ({0})",
+  "where": [
+   "ui/pdf_tab.dart:528",
+   "ui/pdf_dialog.dart:378"
+  ]
+ },
+ {
+  "key": "Buscar en el texto",
+  "where": [
+   "ui/tex_find_bar.dart:290"
+  ]
+ },
+ {
+  "key": "Buscar en la biblioteca",
+  "where": [
+   "ui/library_page.dart:310"
+  ]
+ },
+ {
+  "key": "Buscar por nombre, entorno u orden",
+  "where": [
+   "ui/manage_snippets.dart:559"
+  ]
+ },
+ {
+  "key": "Buscar por título, ruta o etiqueta…",
+  "where": [
+   "ui/composition_editor.dart:1265",
+   "ui/library_page.dart:1273",
+   "ui/problem_set.dart:329"
+  ]
+ },
+ {
+  "key": "Buscar solo en títulos y etiquetas",
+  "where": [
+   "ui/library_page.dart:319"
+  ]
+ },
+ {
+  "key": "Buscar también dentro de las lecciones",
+  "where": [
+   "ui/library_page.dart:320"
+  ]
+ },
+ {
+  "key": "Buscar también dentro de las lecciones, no solo en su título, su ruta y sus etiquetas",
+  "where": [
+   "ui/library_page.dart:942"
+  ]
+ },
+ {
+  "key": "Buscar también dentro de las lecciones…",
+  "where": [
+   "ui/library_page.dart:1272"
+  ]
+ },
+ {
+  "key": "Buscar un snippet…",
+  "where": [
+   "ui/tex_toolbar.dart:933"
+  ]
+ },
+ {
+  "key": "Buscar una orden, una lección o un curso",
+  "where": [
+   "ui/shortcuts.dart:19"
+  ]
+ },
+ {
+  "key": "Buscar: en la biblioteca, en el texto que se edita o en el PDF",
+  "where": [
+   "ui/shortcuts.dart:28"
+  ]
+ },
+ {
+  "key": "Búsquedas guardadas",
+  "where": [
+   "ui/library_page.dart:552"
+  ]
+ },
+ {
+  "key": "C:\\Program Files",
+  "where": [
+   "data/compiler_io.dart:77"
+  ]
+ },
+ {
+  "key": "C:\\Program Files (x86)\\MiKTeX\\miktex\\bin\\x64",
+  "where": [
+   "data/compiler_io.dart:210"
+  ]
+ },
+ {
+  "key": "C:\\Program Files\\Git\\bin",
+  "where": [
+   "data/toolchain_io.dart:75"
+  ]
+ },
+ {
+  "key": "C:\\Program Files\\MiKTeX\\miktex\\bin\\x64",
+  "where": [
+   "data/compiler_io.dart:209"
+  ]
+ },
+ {
+  "key": "Cabecera",
+  "where": [
+   "ui/manage_templates.dart:768"
+  ]
+ },
+ {
+  "key": "Cabecera de la plantilla {0}",
+  "where": [
+   "state/catalogue_editor.dart:1346"
+  ]
+ },
+ {
+  "key": "Cabecera de «{0}»",
+  "where": [
+   "ui/manage_templates.dart:1136"
+  ]
+ },
+ {
+  "key": "Cabecera ·",
+  "where": [
+   "ui/manage_templates.dart:768"
+  ]
+ },
+ {
+  "key": "Caché vaciada: {0} versión(es). Se vuelven a preparar solas al abrirlas.",
+  "where": [
+   "ui/freezes.dart:142"
+  ]
+ },
+ {
+  "key": "Cada cambio queda con tu nombre y su mensaje, y puedes ver cómo estaba cualquier fichero en cualquier momento. Lo que compartes y lo que no lo decide a quién le das acceso.",
+  "where": [
+   "ui/welcome.dart:496"
+  ]
+ },
+ {
+  "key": "Cada grupo que se separe recibe una copia de la lección, con su texto, sus figuras y sus metadatos tal como están ahora, y un id propio. Nada se pierde y ningún otro sitio cambia.",
+  "where": [
+   "ui/unit_page.dart:3618"
+  ]
+ },
+ {
+  "key": "Cada guardado enseña lo que cambia y pide el mensaje antes de dejarlo en el historial.",
+  "where": [
+   "ui/settings_page.dart:2838"
+  ]
+ },
+ {
+  "key": "Cada guardado queda en el historial con su mensaje, sin preguntar nada.",
+  "where": [
+   "ui/settings_page.dart:2812"
+  ]
+ },
+ {
+  "key": "Cada lección del tema, copiada con su propia identidad: lo que se corrija en una copia no se ve en la otra. Son carpetas nuevas en el repositorio.",
+  "where": [
+   "ui/reuse.dart:312"
+  ]
+ },
+ {
+  "key": "Cada lección dice a qué parte de la asignatura pertenece, y quién es cada bloque lo declara un `taxonomy.yaml` que puede estar en otro repositorio. Estas nombran uno que no declara ninguno de los abiertos: se ven enteras, pero el bloque sale por su id.",
+  "where": [
+   "ui/between_repos_page.dart:127"
+  ]
+ },
+ {
+  "key": "Cada llamada que recibe, lo último arriba. Las que escriben van marcadas: lo que hacen queda en disco y se envía desde la barra de arriba, como cualquier otro cambio.",
+  "where": [
+   "ui/mcp_page.dart:242"
+  ]
+ },
+ {
+  "key": "Cada rama se lleva su propia copia de cada lección. Sin marcar, el tema se separa y el material sigue siendo uno.",
+  "where": [
+   "ui/reuse.dart:1049"
+  ]
+ },
+ {
+  "key": "Cada una es un momento del historial con nombre: el estado exacto del material en ese punto. No hay ninguna copia detrás, así que tener diez no ocupa diez veces más, y quitar una no borra nada del historial.",
+  "where": [
+   "ui/freezes.dart:88"
+  ]
+ },
+ {
+  "key": "Cada vez que envíes cambios a {0}, GitHub compilará todo el material y dejará los PDF para descargar durante treinta días, en la pestaña Actions del repositorio.",
+  "where": [
+   "ui/settings_page.dart:1635"
+  ]
+ },
+ {
+  "key": "Caja de teorema",
+  "where": [
+   "ui/manage_snippets.dart:1714"
+  ]
+ },
+ {
+  "key": "Calculando cuánto hay que mandar…",
+  "where": [
+   "ui/translate_unit.dart:656"
+  ]
+ },
+ {
+  "key": "Cambiar",
+  "where": [
+   "ui/settings_page.dart:2540"
+  ]
+ },
+ {
+  "key": "Cambiar TeX",
+  "where": [
+   "ui/settings_page.dart:2564"
+  ]
+ },
+ {
+  "key": "Cambiar el orden de los grupos de {0}",
+  "where": [
+   "ui/year_page.dart:1340"
+  ]
+ },
+ {
+  "key": "Cambiar el título…",
+  "where": [
+   "ui/year_page.dart:2843"
+  ]
+ },
+ {
+  "key": "Cambiar los grupos de {0}",
+  "where": [
+   "ui/year_page.dart:1342"
+  ]
+ },
+ {
+  "key": "Cambiar {0} en «{1}»",
+  "where": [
+   "ui/metadata_editor.dart:397"
+  ]
+ },
+ {
+  "key": "Cambiarla…",
+  "where": [
+   "ui/publish_folder.dart:121"
+  ]
+ },
+ {
+  "key": "Cambio",
+  "where": [
+   "ui/history_tab.dart:823"
+  ]
+ },
+ {
+  "key": "Cambios recientes",
+  "where": [
+   "ui/recent_changes.dart:252",
+   "ui/courses_page.dart:125",
+   "ui/courses_page.dart:214"
+  ]
+ },
+ {
+  "key": "Campos",
+  "where": [
+   "ui/unit_page.dart:1629"
+  ]
+ },
+ {
+  "key": "Cancelar",
+  "where": [
+   "ui/sync_bar.dart:662",
+   "ui/sync_bar.dart:1132",
+   "ui/history_tab.dart:406"
+  ]
+ },
+ {
+  "key": "Carpeta de reparto",
+  "where": [
+   "ui/settings_page.dart:306"
+  ]
+ },
+ {
+  "key": "Carpeta, dentro de {0}/",
+  "where": [
+   "ui/new_unit.dart:615"
+  ]
+ },
+ {
+  "key": "Carpetas del repositorio · {0} unidades",
+  "where": [
+   "ui/composition_editor.dart:1283"
+  ]
+ },
+ {
+  "key": "Casi todas las distribuciones lo traen puesto; si no, lo instala el gestor de paquetes con la contraseña de administrador.",
+  "where": [
+   "model/toolchain.dart:536"
+  ]
+ },
+ {
+  "key": "Casi todo",
+  "where": [
+   "ui/start_over.dart:85"
+  ]
+ },
+ {
+  "key": "CatalogueFormatException: {0}",
+  "where": [
+   "model/catalogue.dart:31"
+  ]
+ },
+ {
+  "key": "Categoría",
+  "where": [
+   "ui/new_unit.dart:186",
+   "ui/library_search.dart:193"
+  ]
+ },
+ {
+  "key": "Categoría nueva: ninguna otra lección la usa. Si es una errata, la lección saldrá sola en la biblioteca.",
+  "where": [
+   "ui/metadata_editor.dart:650"
+  ]
+ },
+ {
+  "key": "Catálogo",
+  "where": [
+   "ui/settings_page.dart:322"
+  ]
+ },
+ {
+  "key": "Cerrando Didacta para instalar la versión nueva…",
+  "where": [
+   "ui/update_section.dart:346"
+  ]
+ },
+ {
+  "key": "Cerrar",
+  "where": [
+   "main.dart:815",
+   "ui/problem.dart:373",
+   "ui/compare_view.dart:219"
+  ]
+ },
+ {
+  "key": "Cerrar  Esc",
+  "where": [
+   "ui/tex_find_bar.dart:363"
+  ]
+ },
+ {
+  "key": "Cerrar (Esc)",
+  "where": [
+   "ui/pdf_search.dart:282"
+  ]
+ },
+ {
+  "key": "Cerrar e instalar",
+  "where": [
+   "ui/update_section.dart:381"
+  ]
+ },
+ {
+  "key": "Cerrar el aviso",
+  "where": [
+   "ui/update_section.dart:215",
+   "ui/update_section.dart:528"
+  ]
+ },
+ {
+  "key": "Cerrar la búsqueda",
+  "where": [
+   "ui/tex_find_bar.dart:367"
+  ]
+ },
+ {
+  "key": "Cerrar la pestaña",
+  "where": [
+   "ui/tabs.dart:162"
+  ]
+ },
+ {
+  "key": "Cerrar sin guardar",
+  "where": [
+   "main.dart:366",
+   "ui/manage_snippets.dart:1909"
+  ]
+ },
+ {
+  "key": "Cierra Didacta y vuelve a abrirla para que vea el PATH nuevo.",
+  "where": [
+   "model/toolchain.dart:445"
+  ]
+ },
+ {
+  "key": "Cierra Didacta y vuelve a abrirla.",
+  "where": [
+   "model/toolchain.dart:529"
+  ]
+ },
+ {
+  "key": "Cierra un entorno",
+  "where": [
+   "model/tex_vocabulary.dart:74"
+  ]
+ },
+ {
+  "key": "Cita de la bibliografía",
+  "where": [
+   "model/tex_vocabulary.dart:82"
+  ]
+ },
+ {
+  "key": "Cita dentro de la frase",
+  "where": [
+   "model/tex_vocabulary.dart:84"
+  ]
+ },
+ {
+  "key": "Claro",
+  "where": [
+   "ui/settings_page.dart:594"
+  ]
+ },
+ {
+  "key": "Claro, oscuro o lo que diga el sistema, y el tamaño del texto.",
+  "where": [
+   "ui/settings_page.dart:182"
+  ]
+ },
+ {
+  "key": "Clase de documento",
+  "where": [
+   "ui/manage_templates.dart:997"
+  ]
+ },
+ {
+  "key": "Clasificación",
+  "where": [
+   "ui/metadata_editor.dart:610"
+  ]
+ },
+ {
+  "key": "Clave de API",
+  "where": [
+   "ui/translation_settings.dart:188"
+  ]
+ },
+ {
+  "key": "Client ID de la OAuth App",
+  "where": [
+   "ui/sign_in.dart:169"
+  ]
+ },
+ {
+  "key": "Clonando {0}{1}…",
+  "where": [
+   "ui/add_repository.dart:160"
+  ]
+ },
+ {
+  "key": "Coma y punto decimal mezclados",
+  "where": [
+   "model/review.dart:11"
+  ]
+ },
+ {
+  "key": "Como el sistema",
+  "where": [
+   "ui/settings_page.dart:589"
+  ]
+ },
+ {
+  "key": "Como se repartió el primer día.",
+  "where": [
+   "ui/freezes.dart:654"
+  ]
+ },
+ {
+  "key": "Como {0}. A partir de aquí, lo que puedas leer y escribir lo dice GitHub: Didacta no mantiene ninguna otra lista.",
+  "where": [
+   "ui/welcome.dart:776"
+  ]
+ },
+ {
+  "key": "Compacta",
+  "where": [
+   "ui/manage_templates.dart:75"
+  ]
+ },
+ {
+  "key": "Comparar con",
+  "where": [
+   "ui/freezes.dart:371"
+  ]
+ },
+ {
+  "key": "Comparar con ahora",
+  "where": [
+   "ui/history_tab.dart:715"
+  ]
+ },
+ {
+  "key": "Comparar con la versión actual",
+  "where": [
+   "ui/freezes.dart:292"
+  ]
+ },
+ {
+  "key": "Comparar con…",
+  "where": [
+   "ui/freezes.dart:298"
+  ]
+ },
+ {
+  "key": "Compila en GitHub: ver lo compilado",
+  "where": [
+   "ui/settings_page.dart:1722"
+  ]
+ },
+ {
+  "key": "Compilaciones a la vez",
+  "where": [
+   "ui/settings_page.dart:2602"
+  ]
+ },
+ {
+  "key": "Compilación",
+  "where": [
+   "ui/build_console.dart:526"
+  ]
+ },
+ {
+  "key": "Compilado",
+  "where": [
+   "model/notification.dart:38"
+  ]
+ },
+ {
+  "key": "Compilado en {0} s",
+  "where": [
+   "ui/manage_snippets.dart:2225"
+  ]
+ },
+ {
+  "key": "Compilando la vista previa…",
+  "where": [
+   "ui/manage_snippets.dart:2309"
+  ]
+ },
+ {
+  "key": "Compilando {0}",
+  "where": [
+   "ui/unit_preview.dart:508"
+  ]
+ },
+ {
+  "key": "Compilando {0}: {1} versiones",
+  "where": [
+   "ui/unit_preview.dart:509"
+  ]
+ },
+ {
+  "key": "Compilando {0}{1}{2}",
+  "where": [
+   "ui/build_strip.dart:66"
+  ]
+ },
+ {
+  "key": "Compilando. La primera vez tarda más: LaTeX está construyendo los formatos.",
+  "where": [
+   "ui/unit_preview.dart:899"
+  ]
+ },
+ {
+  "key": "Compilando…",
+  "where": [
+   "ui/unit_preview.dart:783",
+   "ui/manage_snippets.dart:2218"
+  ]
+ },
+ {
+  "key": "Compilar",
+  "where": [
+   "ui/unit_preview.dart:789",
+   "ui/document_page.dart:781",
+   "ui/document_page.dart:1389"
+  ]
+ },
+ {
+  "key": "Compilar ahora",
+  "where": [
+   "ui/composition_editor.dart:533",
+   "ui/document_page.dart:250"
+  ]
+ },
+ {
+  "key": "Compilar ahora (Ctrl+Intro)",
+  "where": [
+   "ui/manage_snippets.dart:2273"
+  ]
+ },
+ {
+  "key": "Compilar ahora (⌘↵)",
+  "where": [
+   "ui/manage_snippets.dart:2272"
+  ]
+ },
+ {
+  "key": "Compilar antes solo ese",
+  "where": [
+   "ui/export_year.dart:386"
+  ]
+ },
+ {
+  "key": "Compilar antes solo esos {0}",
+  "where": [
+   "ui/export_year.dart:387"
+  ]
+ },
+ {
+  "key": "Compilar el curso",
+  "where": [
+   "ui/year_page.dart:1616"
+  ]
+ },
+ {
+  "key": "Compilar el curso en {0}",
+  "where": [
+   "ui/year_page.dart:1617"
+  ]
+ },
+ {
+  "key": "Compilar el material en GitHub en cada cambio",
+  "where": [
+   "state/repositories.dart:781"
+  ]
+ },
+ {
+  "key": "Compilar en GitHub en cada cambio",
+  "where": [
+   "ui/settings_page.dart:1627"
+  ]
+ },
+ {
+  "key": "Compilar en GitHub en cada cambio…",
+  "where": [
+   "ui/settings_page.dart:1731"
+  ]
+ },
+ {
+  "key": "Compilar en los {0} idiomas",
+  "where": [
+   "ui/build_button.dart:98"
+  ]
+ },
+ {
+  "key": "Compilar en {0}",
+  "where": [
+   "ui/build_button.dart:91"
+  ]
+ },
+ {
+  "key": "Compilar entero",
+  "where": [
+   "ui/unit_preview.dart:799"
+  ]
+ },
+ {
+  "key": "Compilar este documento",
+  "where": [
+   "ui/document_page.dart:374"
+  ]
+ },
+ {
+  "key": "Compilar lee los ficheros del disco, así que hace falta la copia del repositorio de contenido en tu ordenador. Se elige en Ajustes.",
+  "where": [
+   "data/compiler_io.dart:372"
+  ]
+ },
+ {
+  "key": "Compilar lo desactualizado",
+  "where": [
+   "ui/year_page.dart:1378"
+  ]
+ },
+ {
+  "key": "Compilar lo desactualizado ({0})",
+  "where": [
+   "ui/year_page.dart:1638"
+  ]
+ },
+ {
+  "key": "Compilar necesita LaTeX, y un navegador no lo tiene. Desde el repositorio de contenido:",
+  "where": [
+   "ui/document_page.dart:1393"
+  ]
+ },
+ {
+  "key": "Compilar necesita LaTeX, y un navegador no lo tiene. Usa la aplicación de escritorio.",
+  "where": [
+   "ui/unit_preview.dart:322"
+  ]
+ },
+ {
+  "key": "Compilar necesita el motor y la copia del repositorio en disco. Los dos se eligen en Ajustes.",
+  "where": [
+   "ui/unit_preview.dart:318"
+  ]
+ },
+ {
+  "key": "Compilar sus versiones",
+  "where": [
+   "ui/build_button.dart:90"
+  ]
+ },
+ {
+  "key": "Compilar todas las versiones",
+  "where": [
+   "ui/build_button.dart:106"
+  ]
+ },
+ {
+  "key": "Compilar todo el curso",
+  "where": [
+   "ui/year_page.dart:1385"
+  ]
+ },
+ {
+  "key": "Compilar un documento desde su pantalla en una sola pasada, para ver cómo queda: tarda la mitad, y el índice y las referencias pueden no estar al día. Al lado queda «Compilar entero», y compilar un tema o un curso es siempre entero.",
+  "where": [
+   "ui/settings_page.dart:2655"
+  ]
+ },
+ {
+  "key": "Compilar una lección sola",
+  "where": [
+   "ui/tour.dart:304"
+  ]
+ },
+ {
+  "key": "Compilar y ver el PDF",
+  "where": [
+   "ui/unit_page.dart:493"
+  ]
+ },
+ {
+  "key": "Compilar {0}",
+  "where": [
+   "ui/unit_preview.dart:701",
+   "ui/build_button.dart:232"
+  ]
+ },
+ {
+  "key": "Compilar {0} en {1}. Mantén pulsado para elegir el idioma o compilar todas las versiones",
+  "where": [
+   "ui/build_button.dart:166"
+  ]
+ },
+ {
+  "key": "Compilar {0} versiones",
+  "where": [
+   "ui/unit_preview.dart:790"
+  ]
+ },
+ {
+  "key": "Compilar {0}, en sus versiones. Mantén pulsado para compilarlas todas",
+  "where": [
+   "ui/build_button.dart:161"
+  ]
+ },
+ {
+  "key": "Compilarlo todo antes de exportar",
+  "where": [
+   "ui/export_year.dart:404"
+  ]
+ },
+ {
+  "key": "Completa",
+  "where": [
+   "ui/settings_page.dart:759"
+  ]
+ },
+ {
+  "key": "Composición ({0})",
+  "where": [
+   "ui/document_page.dart:768",
+   "ui/document_page.dart:1256"
+  ]
+ },
+ {
+  "key": "Comprobando la sesión",
+  "where": [
+   "state/startup.dart:110"
+  ]
+ },
+ {
+  "key": "Comprobando {0} en GitHub…",
+  "where": [
+   "ui/add_repository.dart:283"
+  ]
+ },
+ {
+  "key": "Comprobando…",
+  "where": [
+   "ui/update_section.dart:116",
+   "ui/settings_page.dart:2491"
+  ]
+ },
+ {
+  "key": "Con TinyTeX: tlmgr install biblatex biber. En Debian o Ubuntu: sudo apt install biber.",
+  "where": [
+   "model/toolchain.dart:828"
+  ]
+ },
+ {
+  "key": "Con TinyTeX: tlmgr install biblatex biber. MacTeX ya lo trae.",
+  "where": [
+   "model/toolchain.dart:821"
+  ]
+ },
+ {
+  "key": "Con TinyTeX: tlmgr install biblatex biber. MiKTeX lo instala solo la primera vez que hace falta.",
+  "where": [
+   "model/toolchain.dart:824"
+  ]
+ },
+ {
+  "key": "Con ahora",
+  "where": [
+   "ui/history_tab.dart:715"
+  ]
+ },
+ {
+  "key": "Con cuáles trabajas tú, y a cuáles traduce cada repositorio.",
+  "where": [
+   "ui/settings_page.dart:127"
+  ]
+ },
+ {
+  "key": "Con errores: {0}",
+  "where": [
+   "ui/build_console.dart:344"
+  ]
+ },
+ {
+  "key": "Con identidad propia: a partir de ahí son dos lecciones. Sin marcar es la misma, y corregirla sigue siendo corregirla una vez.",
+  "where": [
+   "ui/reuse.dart:637"
+  ]
+ },
+ {
+  "key": "Con las dos apagadas, lo que escribes está solo en esta carpeta hasta que lo guardes y lo envíes a mano. Es una forma legítima de trabajar, pero conviene saberlo.",
+  "where": [
+   "ui/settings_page.dart:2879"
+  ]
+ },
+ {
+  "key": "Con las resoluciones completas",
+  "where": [
+   "ui/export_year.dart:319"
+  ]
+ },
+ {
+  "key": "Con lo buscado, los filtros y lo abierto. Sale en la raíz de la biblioteca, para volver a ella de un clic.",
+  "where": [
+   "ui/library_page.dart:466"
+  ]
+ },
+ {
+  "key": "Con los que trabajas",
+  "where": [
+   "ui/language_settings.dart:139"
+  ]
+ },
+ {
+  "key": "Con problemas",
+  "where": [
+   "ui/mcp_page.dart:175"
+  ]
+ },
+ {
+  "key": "Con qué",
+  "where": [
+   "ui/translate_unit.dart:413"
+  ]
+ },
+ {
+  "key": "Con qué cuenta de GitHub entras, qué repositorios tienes abiertos y dónde se clonan.",
+  "where": [
+   "ui/settings_page.dart:108"
+  ]
+ },
+ {
+  "key": "Con qué nombre llega",
+  "where": [
+   "ui/reuse.dart:286"
+  ]
+ },
+ {
+  "key": "Con qué plantillas se compila lo de este bloque",
+  "where": [
+   "ui/manage_blocks.dart:542"
+  ]
+ },
+ {
+  "key": "Con sus cursos académicos debajo, el más reciente primero. La estrella la marca como tuya y el ojo la oculta de la lista: la asignatura sigue en el repositorio, solo deja de estorbar.",
+  "where": [
+   "ui/tour.dart:163"
+  ]
+ },
+ {
+  "key": "Con un filtro puesto no se puede cambiar el orden: quítalo para arrastrar.",
+  "where": [
+   "ui/manage_snippets.dart:281"
+  ]
+ },
+ {
+  "key": "Con una notificación del sistema, si mientras tanto te has ido a otra ventana: si ha salido bien o cuántos documentos tienen errores. Con Didacta delante no avisa, porque ya se ve.",
+  "where": [
+   "ui/settings_page.dart:2734"
+  ]
+ },
+ {
+  "key": "Conexión",
+  "where": [
+   "ui/mcp_page.dart:58"
+  ]
+ },
+ {
+  "key": "Configurar el acceso…",
+  "where": [
+   "ui/platform_menus.dart:318"
+  ]
+ },
+ {
+  "key": "Congelada «{0}». No se ha copiado nada: es el historial el que guarda el estado.",
+  "where": [
+   "ui/freezes.dart:577"
+  ]
+ },
+ {
+  "key": "Congelar",
+  "where": [
+   "ui/freezes.dart:559"
+  ]
+ },
+ {
+  "key": "Congelar esto ahora…",
+  "where": [
+   "ui/freezes.dart:169"
+  ]
+ },
+ {
+  "key": "Congelar y copiar",
+  "where": [
+   "ui/tour.dart:181"
+  ]
+ },
+ {
+  "key": "Congelar {0} tal como quedó",
+  "where": [
+   "ui/course_admin_ui.dart:625"
+  ]
+ },
+ {
+  "key": "Congelar {0} {1}",
+  "where": [
+   "ui/freezes.dart:556"
+  ]
+ },
+ {
+  "key": "Congelar «{0}» en {1} {2}",
+  "where": [
+   "data/course_admin.dart:627"
+  ]
+ },
+ {
+  "key": "Conjuntos",
+  "where": [
+   "model/tex_snippets.dart:138"
+  ]
+ },
+ {
+  "key": "Contando qué se llevaría…",
+  "where": [
+   "ui/course_admin_ui.dart:366"
+  ]
+ },
+ {
+  "key": "Contar el problema",
+  "where": [
+   "ui/problem.dart:369"
+  ]
+ },
+ {
+  "key": "Contar un problema de Didacta en GitHub",
+  "where": [
+   "ui/shell.dart:907"
+  ]
+ },
+ {
+  "key": "Contar un problema…",
+  "where": [
+   "ui/platform_menus.dart:354"
+  ]
+ },
+ {
+  "key": "Contestó {0}: {1}",
+  "where": [
+   "data/translator_http.dart:75"
+  ]
+ },
+ {
+  "key": "Copia en tu ordenador, en {0}, {1}{2}",
+  "where": [
+   "data/content_gateway.dart:270"
+  ]
+ },
+ {
+  "key": "Copiada en «{0}». Son dos lecciones a partir de ahora.",
+  "where": [
+   "ui/unit_page.dart:3698"
+  ]
+ },
+ {
+  "key": "Copiado.",
+  "where": [
+   "ui/problem.dart:360",
+   "ui/document_page.dart:1446",
+   "ui/mcp_page.dart:161"
+  ]
+ },
+ {
+  "key": "Copiado: {0}",
+  "where": [
+   "ui/document_page.dart:495",
+   "ui/unit_page.dart:644"
+  ]
+ },
+ {
+  "key": "Copiar",
+  "where": [
+   "ui/problem.dart:362",
+   "ui/document_page.dart:1435",
+   "ui/platform_menus.dart:162"
+  ]
+ },
+ {
+  "key": "Copiar 1",
+  "where": [
+   "ui/course_admin_ui.dart:1117"
+  ]
+ },
+ {
+  "key": "Copiar a otro curso…",
+  "where": [
+   "ui/courses_page.dart:1704"
+  ]
+ },
+ {
+  "key": "Copiar a una carpeta",
+  "where": [
+   "ui/settings_page.dart:2016"
+  ]
+ },
+ {
+  "key": "Copiar aquí",
+  "where": [
+   "ui/settings_page.dart:2047"
+  ]
+ },
+ {
+  "key": "Copiar de {0}",
+  "where": [
+   "ui/course_admin_ui.dart:978"
+  ]
+ },
+ {
+  "key": "Copiar el comando para compilarlo",
+  "where": [
+   "ui/document_page.dart:489"
+  ]
+ },
+ {
+  "key": "Copiar el detalle",
+  "where": [
+   "ui/toolchain_check.dart:913"
+  ]
+ },
+ {
+  "key": "Copiar informe de diagnóstico",
+  "where": [
+   "ui/settings_page.dart:1062"
+  ]
+ },
+ {
+  "key": "Copiar la dirección",
+  "where": [
+   "ui/mcp_page.dart:108"
+  ]
+ },
+ {
+  "key": "Copiar la referencia para una composición",
+  "where": [
+   "ui/unit_page.dart:636"
+  ]
+ },
+ {
+  "key": "Copiar los datos de",
+  "where": [
+   "ui/course_admin_ui.dart:794"
+  ]
+ },
+ {
+  "key": "Copiar otra vez",
+  "where": [
+   "ui/sign_in.dart:387"
+  ]
+ },
+ {
+  "key": "Copiar {0}",
+  "where": [
+   "ui/course_admin_ui.dart:1118"
+  ]
+ },
+ {
+  "key": "Copiar {0} de {1} a {2}",
+  "where": [
+   "data/course_admin.dart:428"
+  ]
+ },
+ {
+  "key": "Copiar {0} documentos de {1} a {2}",
+  "where": [
+   "data/course_admin.dart:429"
+  ]
+ },
+ {
+  "key": "Copiar {0} {1} entero a {2}",
+  "where": [
+   "data/course_admin.dart:426"
+  ]
+ },
+ {
+  "key": "Corolario",
+  "where": [
+   "model/tex_vocabulary.dart:106",
+   "model/tex_wrap.dart:290"
+  ]
+ },
+ {
+  "key": "Corrección",
+  "where": [
+   "model/tex_wrap.dart:244"
+  ]
+ },
+ {
+  "key": "Corregir errata",
+  "where": [
+   "ui/welcome_art.dart:581"
+  ]
+ },
+ {
+  "key": "Corregir la errata del Teorema 2.1",
+  "where": [
+   "ui/sync_bar.dart:560"
+  ]
+ },
+ {
+  "key": "Corregir y revisar {0} de «{1}»",
+  "where": [
+   "state/catalogue_editor.dart:1593"
+  ]
+ },
+ {
+  "key": "Cortar",
+  "where": [
+   "ui/platform_menus.dart:150"
+  ]
+ },
+ {
+  "key": "Cosecante",
+  "where": [
+   "model/tex_vocabulary.dart:91"
+  ]
+ },
+ {
+  "key": "Cotangente",
+  "where": [
+   "model/tex_vocabulary.dart:90"
+  ]
+ },
+ {
+  "key": "Crea la primera, o prueba Didacta con un ejemplo: una asignatura pequeña, con un tema, una hoja de problemas y lecciones traducidas, en un repositorio tuyo para tocar sin miedo.",
+  "where": [
+   "ui/courses_page.dart:909"
+  ]
+ },
+ {
+  "key": "Creando {0}/{1} en GitHub…",
+  "where": [
+   "state/repositories.dart:492"
+  ]
+ },
+ {
+  "key": "Crear",
+  "where": [
+   "ui/new_unit.dart:287",
+   "ui/new_document.dart:182",
+   "ui/new_document.dart:297"
+  ]
+ }
+]

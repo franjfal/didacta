@@ -20,6 +20,8 @@
 /// la misma pregunta.
 library;
 
+import '../l10n/tr.dart';
+
 /// Lo que no se puede hacer con este fichero.
 class TaxonomyException implements Exception {
   const TaxonomyException(this.message);
@@ -74,7 +76,7 @@ class TaxonomyFile {
   void setBlockTitles(String id, Map<String, String> titles) {
     final block = _blocks().where((b) => b.id == id).firstOrNull;
     if (block == null) {
-      throw TaxonomyException('no se declara el bloque `$id`');
+      throw TaxonomyException(tr('no se declara el bloque `{0}`', [id]));
     }
 
     final kept = <String, String>{
@@ -82,8 +84,8 @@ class TaxonomyFile {
         if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
     };
     if (kept.isEmpty) {
-      throw const TaxonomyException(
-        'un bloque sin nombre en ningún idioma se enseñaría por su id',
+      throw TaxonomyException(
+        tr('un bloque sin nombre en ningún idioma se enseñaría por su id'),
       );
     }
     final pending = [
@@ -134,7 +136,7 @@ class TaxonomyFile {
   void setBlockTemplates(String id, List<String> templates) {
     final block = _blocks().where((b) => b.id == id).firstOrNull;
     if (block == null) {
-      throw TaxonomyException('no se declara el bloque `$id`');
+      throw TaxonomyException(tr('no se declara el bloque `{0}`', [id]));
     }
     final field = ' ' * block.fieldIndent;
     final written = templates.isEmpty
@@ -162,15 +164,17 @@ class TaxonomyFile {
     required List<String> languages,
   }) {
     if (blockIds.contains(id)) {
-      throw TaxonomyException('este repositorio ya declara el bloque `$id`');
+      throw TaxonomyException(
+        tr('este repositorio ya declara el bloque `{0}`', [id]),
+      );
     }
     final kept = <String, String>{
       for (final entry in titles.entries)
         if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
     };
     if (kept.isEmpty) {
-      throw const TaxonomyException(
-        'un bloque sin nombre en ningún idioma se enseñaría por su id',
+      throw TaxonomyException(
+        tr('un bloque sin nombre en ningún idioma se enseñaría por su id'),
       );
     }
 
@@ -238,7 +242,7 @@ class TaxonomyFile {
   void removeBlock(String id) {
     final block = _blocks().where((b) => b.id == id).firstOrNull;
     if (block == null) {
-      throw TaxonomyException('no se declara el bloque `$id`');
+      throw TaxonomyException(tr('no se declara el bloque `{0}`', [id]));
     }
     var end = block.lastLine;
     // Las líneas en blanco de debajo se van con él; si no, cada bloque
@@ -252,7 +256,7 @@ class TaxonomyFile {
     // clave sin valor es null y no una lista vacía.
     if (blockIds.isEmpty) {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'blocks');
-      if (at >= 0) _lines[at] = 'blocks: []';
+      if (at >= 0) _lines[at] = tr('blocks: []');
     }
   }
 

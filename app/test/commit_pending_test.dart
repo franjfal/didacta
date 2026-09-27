@@ -275,7 +275,7 @@ void main() {
       await settle(tester);
 
       final console = made.session.syncConsole;
-      expect(console.title, 'Confirmar los cambios');
+      expect(console.title, 'Guardar en el historial');
       expect(console.lines, contains('=== test/repo'));
       expect(console.ok, isTrue);
     });

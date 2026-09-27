@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/model/catalogue.dart';
+import 'package:didacta_app/model/source_hash.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
@@ -48,6 +49,54 @@ Unit theUnit(FakeSession session) =>
     session.catalogue.units.firstWhere((u) => u.path == unitPathHere);
 
 void main() {
+  group('la huella del original', () {
+    // Aprobar una traducción es decir «está al día con este original», y es
+    // lo que deja al motor saber que se queda atrás cuando el original
+    // cambie. Sin ella, «desactualizada» no ocurría nunca.
+    Future<(FakeSession, FakeGateway)> withOriginal() async {
+      final gateway = FakeGateway(
+        files: {
+          '$unitPathHere/unit.yaml':
+              'kind: theory\nlanguages:\n  es: {status: source}\n',
+          '$unitPathHere/es.tex': 'El original.\n',
+        },
+      );
+      final catalogue = catalogueWith(defaultUnits());
+      final session = FakeSession(
+        gatewayOverride: gateway,
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+      await session.useCloneForTest('/tmp/didacta-test');
+      return (session, gateway);
+    }
+
+    test('aprobar una traducción guarda la del original de ahora', () async {
+      final (session, gateway) = await withOriginal();
+      await session.setUnitStatus(
+        unit: theUnit(session),
+        language: 'va',
+        status: 'reviewed',
+      );
+      expect(
+        gateway.commits.single.text,
+        contains(
+          'va: {status: reviewed, source_hash: ${contentHash('El original.\n')}}',
+        ),
+      );
+    });
+
+    test('el original no lleva huella: no es traducción de nada', () async {
+      final (session, gateway) = await withOriginal();
+      await session.setUnitStatus(
+        unit: theUnit(session),
+        language: 'es',
+        status: 'reviewed',
+      );
+      expect(gateway.commits.single.text, isNot(contains('source_hash')));
+    });
+  });
+
   test('aprobar una traducción la escribe en unit.yaml', () async {
     final (session, gateway) = await ready();
 
@@ -203,7 +252,7 @@ void main() {
     for (var i = 0; i < 10; i += 1) {
       await tester.pump(const Duration(milliseconds: 20));
     }
-    expect(find.text('borrador'), findsWidgets);
+    expect(find.text('sin revisar'), findsWidgets);
 
     // Lo que hace `setUnitStatus` al terminar: recargar el catálogo. La
     // unidad es **otra instancia**, y el editor cacheado tenía la vieja.
@@ -213,7 +262,7 @@ void main() {
     }
 
     expect(find.text('revisada'), findsWidgets);
-    expect(find.text('borrador'), findsNothing);
+    expect(find.text('sin revisar'), findsNothing);
   });
 
   group('qué se puede declarar', () {

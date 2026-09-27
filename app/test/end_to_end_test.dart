@@ -21,6 +21,7 @@
 /// lo que lanza un proceso va dentro de `runAsync`, que es exactamente para
 /// esto.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -415,6 +416,153 @@ void main() {
     },
   );
 
+  test('una lección nueva, creada desde la aplicación', () async {
+    // Había que ir al terminal a escribir `didacta new unit`. Ahora la crea
+    // la aplicación con el motor, en un solo commit con el índice, y aparece
+    // en la biblioteca sin reindexar a mano.
+    final session = await openSession();
+    final admin = session.admin(repo: 'test/repo')!;
+    await admin.createUnit(
+      path: 'analisis/series/criterio-de-la-raiz',
+      kind: 'theory',
+      title: 'Criterio de la raíz',
+    );
+    await session.reloadCatalogue();
+
+    const where = 'content/analisis/series/criterio-de-la-raiz';
+    final unit = session.unitByPath(where, repo: 'test/repo');
+    expect(unit, isNotNull);
+    expect(unit!.title('es'), 'Criterio de la raíz');
+    expect(File('$work/$where/unit.yaml').existsSync(), isTrue);
+
+    final log = await Process.run('git', [
+      'log',
+      '-1',
+      '--pretty=%s',
+      '--name-only',
+    ], workingDirectory: work);
+    final said = log.stdout as String;
+    expect(said, contains('Añadir la lección «Criterio de la raíz»'));
+    expect(said, contains('$where/unit.yaml'));
+    expect(said, contains('generated/'));
+  });
+
+  test('un problema nuevo va a problems/', () async {
+    final session = await openSession();
+    await session
+        .admin(repo: 'test/repo')!
+        .createUnit(
+          path: 'analisis/series/ejercicios-de-la-raiz',
+          kind: 'problem',
+          title: 'Ejercicios del criterio de la raíz',
+        );
+    await session.reloadCatalogue();
+    expect(
+      session.unitByPath(
+        'problems/analisis/series/ejercicios-de-la-raiz',
+        repo: 'test/repo',
+      ),
+      isNotNull,
+    );
+  });
+
+  test('duplicar una lección, desde la aplicación', () async {
+    // La copia lleva todo --idiomas, metadatos-- con un id propio y el
+    // título nuevo, y la original no se toca: son dos lecciones.
+    final session = await openSession();
+    const source = 'content/analisis/series/criterio-de-la-raiz';
+    await session
+        .admin(repo: 'test/repo')!
+        .createUnit(
+          path: 'analisis/series/criterio-de-la-raiz',
+          kind: 'theory',
+          title: 'Criterio de la raíz',
+        );
+    await session.reloadCatalogue();
+    final original = session.unitByPath(source, repo: 'test/repo')!;
+
+    await session
+        .admin(repo: 'test/repo')!
+        .duplicateUnit(
+          from: source,
+          path: 'analisis/series/criterio-del-cociente',
+          title: 'Criterio del cociente',
+          fromTitle: 'Criterio de la raíz',
+          language: 'es',
+        );
+    await session.reloadCatalogue();
+
+    const where = 'content/analisis/series/criterio-del-cociente';
+    final copy = session.unitByPath(where, repo: 'test/repo');
+    expect(copy, isNotNull);
+    expect(copy!.title('es'), 'Criterio del cociente');
+    expect(copy.id, isNot(original.id));
+    expect(
+      File('$work/$where/es.tex').readAsStringSync(),
+      contains(r'\didactatitle{Criterio del cociente}'),
+    );
+    expect(
+      session.unitByPath(source, repo: 'test/repo')!.title('es'),
+      'Criterio de la raíz',
+    );
+
+    final log = await Process.run('git', [
+      'log',
+      '-1',
+      '--pretty=%s',
+      '--name-only',
+    ], workingDirectory: work);
+    final said = log.stdout as String;
+    expect(
+      said,
+      contains(
+        'Añadir la lección «Criterio del cociente», copia de «Criterio de la '
+        'raíz»',
+      ),
+    );
+    expect(said, contains('$where/unit.yaml'));
+    expect(said, isNot(contains('$source/')));
+  });
+
+  test('mover una lección reescribe lo que la usa, en un commit', () async {
+    // `convergencia` está en la composición de Series. Al moverla, Series la
+    // sigue encontrando, y el commit lleva la carpeta y la composición
+    // juntas: separados, el primero dejaría el repositorio roto.
+    final session = await openSession();
+    const before = 'content/analisis/series/convergencia';
+    const after = 'content/analisis/sucesiones/convergencia-de-series';
+    final id = session.unitByPath(before, repo: 'test/repo')!.id;
+
+    await session
+        .admin(repo: 'test/repo')!
+        .moveUnit(
+          unit: before,
+          to: 'analisis/sucesiones/convergencia-de-series',
+          title: 'convergencia',
+        );
+    await session.reloadCatalogue();
+
+    expect(session.unitByPath(before, repo: 'test/repo'), isNull);
+    final moved = session.unitByPath(after, repo: 'test/repo');
+    expect(moved, isNotNull);
+    expect(moved!.id, id);
+    expect(
+      File('$work/courses/analisis/2025-2026/year.yaml').readAsStringSync(),
+      contains('- unit: analisis/sucesiones/convergencia-de-series'),
+    );
+    expect(
+      File('$work/courses/analisis/2025-2026/series.tex').readAsStringSync(),
+      contains('analisis/sucesiones/convergencia-de-series'),
+    );
+
+    final status = await git(['status', '--porcelain']);
+    expect(status, isEmpty, reason: 'todo va en el commit');
+    final log = await git(['log', '-1', '--pretty=%s', '--name-status']);
+    expect(log, contains('Mover la lección «convergencia»'));
+    expect(log, contains('courses/analisis/2025-2026/year.yaml'));
+    expect(log, contains('$after/es.tex'));
+  });
+
   test('el editor lee y reescribe el fichero que escribe el motor', () async {
     // La juntura más fácil de romper de todo esto: el tema compartido lo
     // escribe el motor, en Python, y quien lo edita es el editor de
@@ -510,6 +658,8 @@ void main() {
         toYear: '2026-2027',
       );
       await session.reloadCatalogue();
+      // Mover y gestionar la vinculación son de la interfaz Completa.
+      await session.setCompleteInterface(true);
     });
 
     await tester.pumpWidget(
@@ -530,13 +680,25 @@ void main() {
     expect(find.text('3'), findsWidgets);
 
     // Y el menú ofrece las cuatro operaciones por separado.
-    await tester.tap(find.byKey(const Key('reuse-menu-series')));
+    await tester.tap(find.byKey(const Key('document-menu-series')));
     await tester.pumpAndSettle();
     expect(find.text('Mover a…'), findsOneWidget);
     expect(find.text('Añadir vinculado a…'), findsOneWidget);
     expect(find.text('Duplicar en…'), findsOneWidget);
     expect(find.text('Ver ubicaciones vinculadas (3)'), findsOneWidget);
     expect(find.text('Gestionar vinculación…'), findsOneWidget);
+
+    // Con la Esencial, lo de reorganizar el repositorio no sale; lo demás sí.
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
+    await tester.runAsync(() => session.setCompleteInterface(false));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('document-menu-series')));
+    await tester.pumpAndSettle();
+    expect(find.text('Mover a…'), findsNothing);
+    expect(find.text('Gestionar vinculación…'), findsNothing);
+    expect(find.text('Añadir vinculado a…'), findsOneWidget);
+    expect(find.text('Ver ubicaciones vinculadas (3)'), findsOneWidget);
 
     // Ver dónde se da lo dice con nombres, no con ids.
     await tester.tap(find.byKey(const Key('document-places-series')));
@@ -605,7 +767,12 @@ void main() {
     await settleReal(tester);
     expect(find.text('Series'), findsWidgets);
     // Sin el menú de reutilizar, y con el de restaurar en su sitio.
-    expect(find.byKey(const Key('reuse-menu-series')), findsNothing);
+    final menu = find.byKey(const Key('document-menu-series'));
+    if (menu.evaluate().isNotEmpty) {
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+    }
+    expect(find.byKey(const Key('document-move-series')), findsNothing);
     expect(find.byKey(const Key('restore-document-series')), findsOneWidget);
   });
 }

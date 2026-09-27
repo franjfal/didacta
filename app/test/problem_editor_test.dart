@@ -142,6 +142,11 @@ void main() {
 
     expect(find.text('Enunciado'), findsNothing);
     expect(find.text('Solución detallada'), findsNothing);
+    // En la interfaz esencial, sin interruptor: en una lección que no tiene
+    // campos no hay nada que elegir.
+    expect(find.byKey(const Key('problem-view-text')), findsNothing);
+    await session.setCompleteInterface(true);
+    await settle(tester);
 
     // El interruptor sigue ahí, diciendo que esto ya es el LaTeX entero: es
     // lo que contesta «¿dónde veo el LaTeX completo?». Y «Campos» apagado,
@@ -179,7 +184,7 @@ void main() {
 
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(find.byKey(const Key('commit-save')));
+    await tapIfShown(tester, find.byKey(const Key('commit-save')));
     await settle(tester);
 
     final written = gateway.commits.single.text;
@@ -220,5 +225,22 @@ void main() {
     expect(find.textContaining('2 problemas'), findsOneWidget);
     // Y el texto sigue estando a un botón.
     expect(find.byKey(const Key('problem-view-text')), findsOneWidget);
+  });
+
+  testWidgets('un aviso desde los campos lleva al texto, a su línea', (
+    tester,
+  ) async {
+    // Un aviso nombra una línea del fichero y en los campos no hay líneas:
+    // pulsarlo pasa al texto y deja el cursor donde está el fallo.
+    final broken = problemTex.replaceFirst(r'$f(x) = x^2$', r'$f(x) = x^2');
+    await pumpUnit(tester, text: broken);
+    expect(find.byType(ProblemFields), findsOneWidget);
+    expect(find.byKey(const Key('tex-warnings')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('tex-warning-0')));
+    await settle(tester);
+    expect(find.byType(ProblemFields), findsNothing);
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.controller!.selection.baseOffset, broken.indexOf(r'$'));
   });
 }

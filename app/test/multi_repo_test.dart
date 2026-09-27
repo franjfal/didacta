@@ -6,6 +6,7 @@
 /// hubiera. Con clones reales y el binario `git`, porque lo que se está
 /// probando es precisamente el trato con git.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -125,6 +126,26 @@ void main() {
   });
 
   tearDown(() => root.delete(recursive: true));
+
+  test('mientras se vuelven a abrir, las pasarelas siguen ahí', () async {
+    // Reabrir los repositorios pregunta a git por cada clon, y eso son
+    // segundos. Antes se vaciaban al empezar: un guardado en ese rato no
+    // encontraba el repositorio.
+    var done = false;
+    final reopening = session.refreshAccess().whenComplete(() => done = true);
+    // Mirando todo el rato, que es lo que vería un guardado que llega en
+    // cualquier momento mientras tanto.
+    var looked = 0;
+    while (!done) {
+      expect(session.gatewayFor('x/uno').canWrite, isTrue);
+      expect(session.gatewayFor('x/dos').canWrite, isTrue);
+      looked += 1;
+      await Future<void>.delayed(const Duration(milliseconds: 1));
+    }
+    await reopening;
+    expect(looked, greaterThan(1), reason: 'la reapertura ni se vio');
+    expect(session.gatewayFor('x/uno').canWrite, isTrue);
+  });
 
   test('cada repositorio tiene su pasarela, y escriben en el suyo', () async {
     // `looksRight` compara el remoto, y aquí es una ruta: lo que importa es
@@ -276,6 +297,26 @@ void main() {
       ),
       hasLength(2),
       reason: 'los dos clones se movieron, y el registro dice a dónde',
+    );
+  });
+
+  test('desde el menú, solo lo que ya tiene commit', () async {
+    // ⌘⇧U no pregunta mensaje, así que no puede cerrar lo suelto: antes lo
+    // cerraba con «Enviar», que en el historial no dice qué se hizo.
+    File(
+      '${uno.directory}/content/analysis/normed/def/es.tex',
+    ).writeAsStringSync('Suelto, sin guardar.\n');
+    final before = await uno.remoteCommits();
+
+    final result = await session.pushAll('', commitPending: false);
+
+    expect(result['x/uno'], 0);
+    expect(await uno.remoteCommits(), before);
+    // Y sigue ahí, sin commit, esperando a que alguien le ponga mensaje.
+    final boxes = await session.outbox();
+    expect(
+      boxes.firstWhere((box) => box.repo.id == 'x/uno').pending,
+      contains('content/analysis/normed/def/es.tex'),
     );
   });
 

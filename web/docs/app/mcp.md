@@ -49,6 +49,32 @@ Nada de esto se enciende solo al abrir Didacta salvo que ya estuviera
 encendido: es una decisión de la persona, no algo que se herede de una
 instalación.
 
+## Quién puede hablarle
+
+Escucha **solo en esta máquina** (`127.0.0.1`), y además **pide un token** que
+cambia cada vez que se enciende. Lo segundo no sobra: en tu ordenador también
+está el navegador, y una página web cualquiera puede mandarle peticiones a
+`localhost`. Sin el token, sin una cabecera `Origin` de página web y con la
+dirección de esta máquina, o no contesta.
+
+La configuración que se copia de la pantalla ya lleva el token:
+
+```json
+{
+  "mcpServers": {
+    "didacta": {
+      "type": "http",
+      "url": "http://127.0.0.1:52011/",
+      "headers": { "Authorization": "Bearer …" }
+    }
+  }
+}
+```
+
+El puerto y el token cambian al volver a encenderlo, así que tras reiniciar
+Didacta hay que volver a pegarla. Y el servidor se apaga solo si Didacta se
+cierra, del modo que sea.
+
 ## Se ve lo que hace
 
 La mitad de arriba de la pantalla es el registro en vivo: quién se ha

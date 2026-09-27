@@ -9,7 +9,10 @@
 /// from a new value without any question of half-applied state.
 library;
 
+import 'fuzzy.dart';
 import 'catalogue.dart';
+import 'slug.dart';
+import '../l10n/tr.dart';
 
 /// How to order the results.
 enum LibrarySort {
@@ -141,19 +144,21 @@ class LibraryFilter {
     if (tag != null) parts.add('#$tag');
     switch (status) {
       case StatusFilter.present:
-        parts.add('con $language');
+        parts.add(tr('con {0}', [language]));
       case StatusFilter.missing:
-        parts.add('sin $language');
+        parts.add(tr('sin {0}', [language]));
       case StatusFilter.needsWork:
-        parts.add('$language por revisar');
+        parts.add(tr('{0} por revisar', [language]));
       case StatusFilter.any:
         break;
     }
-    if (unusedOnly) parts.add('sin usar');
+    if (unusedOnly) parts.add(tr('sin usar'));
     return parts.join(' · ');
   }
 
-  bool matches(Unit unit) {
+  /// Si [unit] pasa el filtro. Con una errata, solo en las palabras de
+  /// [typos]: ver [typosIn].
+  bool matches(Unit unit, {Set<String> typos = const {}}) {
     if (block != null && unit.block != block) return false;
     if (category != null && unit.category != category) return false;
     if (kind != null && unit.kind != kind) return false;
@@ -172,30 +177,78 @@ class LibraryFilter {
         break;
     }
 
-    if (query.isNotEmpty) {
-      // Every whitespace-separated word must appear somewhere, so typing
-      // "normados problemas" narrows instead of finding nothing.
-      final haystack = unit.searchable;
-      for (final word in query.toLowerCase().split(RegExp(r'\s+'))) {
-        if (word.isEmpty) continue;
-        if (!haystack.contains(word)) return false;
-      }
-    }
-    return true;
+    return queryMatch(unit, typos: typos) != SearchMatch.none;
   }
 
-  /// The filtered, sorted result.
+  /// Las palabras buscadas, plegadas como el texto en el que se buscan.
+  List<String> get _words => [
+    for (final word in fold(query.toLowerCase()).split(RegExp(r'\s+')))
+      if (word.isNotEmpty) word,
+  ];
+
+  /// Las palabras buscadas que no aparecen tal cual en ninguna de [units]:
+  /// las únicas que pueden llevar una errata. Ver `model/fuzzy.dart`.
+  Set<String> typosIn(Iterable<Unit> units) {
+    if (query.isEmpty) return const {};
+    return {
+      for (final word in _words)
+        if (word.length >= fuzzyMinLength &&
+            !units.any((unit) => unit.searchable.contains(word)))
+          word,
+    };
+  }
+
+  /// Cómo casa lo escrito en el buscador con [unit]: tal cual, con una errata
+  /// (en las palabras de [typos]) o nada. Sin nada escrito, tal cual.
+  SearchMatch queryMatch(Unit unit, {Set<String> typos = const {}}) {
+    if (query.isEmpty) return SearchMatch.exact;
+    return matchWords(
+      _words,
+      unit.searchable,
+      () => unit.searchTokens,
+      typos: typos,
+    );
+  }
+
+  /// [units] con lo que casa tal cual delante de lo que casa con una errata,
+  /// y en el orden en que venían dentro de cada grupo.
+  List<Unit> exactFirst(Iterable<Unit> units) {
+    final typos = typosIn(units);
+    final exact = <Unit>[];
+    final near = <Unit>[];
+    for (final unit in units) {
+      switch (queryMatch(unit, typos: typos)) {
+        case SearchMatch.exact:
+          exact.add(unit);
+        case SearchMatch.near:
+          near.add(unit);
+        case SearchMatch.none:
+          break;
+      }
+    }
+    return [...exact, ...near];
+  }
+
+  /// The filtered, sorted result: what matches exactly first, sorted; then
+  /// what matches with a typo, sorted the same way.
   List<Unit> apply(List<Unit> units) {
-    final result = units.where(matches).toList();
+    final typos = typosIn(units);
+    final result = _sorted([
+      for (final unit in units)
+        if (matches(unit, typos: typos)) unit,
+    ]);
+    return query.isEmpty ? result : exactFirst(result);
+  }
+
+  List<Unit> _sorted(List<Unit> result) {
     switch (sort) {
       case LibrarySort.path:
         result.sort((a, b) => a.path.compareTo(b.path));
       case LibrarySort.title:
+        // Plegando las tildes: comparando a secas, «Álgebra» iba detrás de
+        // la Z.
         result.sort(
-          (a, b) => a
-              .title(language)
-              .toLowerCase()
-              .compareTo(b.title(language).toLowerCase()),
+          (a, b) => compareTitles(a.title(language), b.title(language)),
         );
       case LibrarySort.usage:
         result.sort((a, b) {
@@ -239,22 +292,23 @@ class LibraryFacets {
   });
 
   factory LibraryFacets.of(List<Unit> units, LibraryFilter filter) {
+    final typos = filter.typosIn(units);
     final byCategory = <String, int>{};
     final byKind = <String, int>{};
     final byBlock = <String, int>{};
     final byStatus = <TranslationStatus, int>{};
 
     for (final unit in units) {
-      if (filter.copyWith(clearCategory: true).matches(unit)) {
+      if (filter.copyWith(clearCategory: true).matches(unit, typos: typos)) {
         byCategory[unit.category] = (byCategory[unit.category] ?? 0) + 1;
       }
-      if (filter.copyWith(clearKind: true).matches(unit)) {
+      if (filter.copyWith(clearKind: true).matches(unit, typos: typos)) {
         byKind[unit.kind] = (byKind[unit.kind] ?? 0) + 1;
       }
-      if (filter.copyWith(clearBlock: true).matches(unit)) {
+      if (filter.copyWith(clearBlock: true).matches(unit, typos: typos)) {
         byBlock[unit.block] = (byBlock[unit.block] ?? 0) + 1;
       }
-      if (filter.matches(unit)) {
+      if (filter.matches(unit, typos: typos)) {
         final state = unit.statusIn(filter.language);
         byStatus[state] = (byStatus[state] ?? 0) + 1;
       }
@@ -262,7 +316,7 @@ class LibraryFacets {
 
     return LibraryFacets(
       total: units.length,
-      shown: units.where(filter.matches).length,
+      shown: units.where((unit) => filter.matches(unit, typos: typos)).length,
       byCategory: byCategory,
       byKind: byKind,
       byBlock: byBlock,

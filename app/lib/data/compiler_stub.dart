@@ -6,6 +6,7 @@
 library;
 
 import 'compiler.dart';
+import '../l10n/tr.dart';
 
 bool get supported => false;
 
@@ -17,7 +18,12 @@ Compiler makeCompiler({
   required String repositoryPath,
   String? texPath,
   List<String> templateDirs = const [],
-}) => throw const CompileException(
-  'Un navegador no puede compilar LaTeX. Usa la aplicación de escritorio, o '
-  'el comando que da la pantalla del documento.',
+  int jobs = 0,
+  bool overfullLines = false,
+  bool accessible = false,
+}) => throw CompileException(
+  tr(
+    'Un navegador no puede compilar LaTeX. Usa la aplicación de escritorio, o '
+    'el comando que da la pantalla del documento.',
+  ),
 );

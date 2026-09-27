@@ -13,6 +13,7 @@
 /// * **a write is a compare-and-set** -- if the file moved on since the
 ///   screen read it, the save fails and nothing is written.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';
@@ -438,7 +439,8 @@ void main() {
           authorEmail: 'javier@uv.es',
           token: '',
         ),
-        throwsA(isA<CloneException>()),
+        // Como lo que es: guardado y sin enviar, con el hash para seguir.
+        throwsA(isA<UnsentException>().having((e) => e.sha, 'sha', isNotEmpty)),
       );
 
       // Committed, so nothing is lost, and the status says it is ahead.
@@ -607,6 +609,11 @@ void main() {
           File('$into/.gitignore').readAsStringSync(),
           contains('.didacta-build/'),
         );
+        // El fin de línea, fijado por el repositorio y no por quien guarda:
+        // el Git de Windows convierte a `\r\n` de serie.
+        final attributes = File('$into/.gitattributes').readAsStringSync();
+        expect(attributes, contains('* text=auto eol=lf'));
+        expect(attributes, contains('*.pdf binary'));
 
         final status = await prepared.status();
         expect(status.branch, 'main');
@@ -642,6 +649,82 @@ void main() {
         '--heads',
       ], workingDirectory: empty);
       expect(refs.stdout as String, contains('refs/heads/trunk'));
+    });
+
+    test('sembrado, sube todos los ficheros en el primer commit', () async {
+      // Es el camino del repositorio de ejemplo: el mismo que preparar uno
+      // vacío, con una asignatura dentro en lugar de dos ficheros.
+      final into = '${root.path}/ejemplo';
+      final prepared = await LocalClone.initialize(
+        directory: into,
+        owner: 'x',
+        repo: 'ejemplo',
+        branch: 'main',
+        token: '',
+        title: 'Ejemplo',
+        authorName: 'A',
+        authorEmail: 'a@uv.es',
+        url: empty,
+        files: const {
+          'didacta.yaml': 'name: Ejemplo\n',
+          '.gitignore': '.didacta-build/\n',
+          'content/limites/definicion/es.tex': 'Una definición.\n',
+        },
+        message: 'Empezar con el ejemplo de Didacta',
+      );
+
+      expect(
+        File('$into/content/limites/definicion/es.tex').readAsStringSync(),
+        'Una definición.\n',
+      );
+      expect((await prepared.status()).isSynced, isTrue);
+      final tree = await Process.run('git', [
+        'ls-tree',
+        '-r',
+        '--name-only',
+        'main',
+      ], workingDirectory: empty);
+      expect(
+        (tree.stdout as String).trim().split('\n'),
+        unorderedEquals([
+          // El de todo repositorio nuevo, aunque la semilla no lo traiga.
+          '.gitattributes',
+          '.gitignore',
+          'content/limites/definicion/es.tex',
+          'didacta.yaml',
+        ]),
+      );
+      final log = await Process.run('git', [
+        'log',
+        '-1',
+        '--pretty=%s',
+        'main',
+      ], workingDirectory: empty);
+      expect(
+        (log.stdout as String).trim(),
+        'Empezar con el ejemplo de Didacta',
+      );
+    });
+
+    test('una ruta que se sale del repositorio no se escribe', () async {
+      final into = '${root.path}/fuera';
+      await expectLater(
+        LocalClone.initialize(
+          directory: into,
+          owner: 'x',
+          repo: 'fuera',
+          branch: 'main',
+          token: '',
+          title: 'Fuera',
+          authorName: 'A',
+          authorEmail: 'a@uv.es',
+          url: empty,
+          files: const {'../fuera.txt': 'no\n'},
+        ),
+        throwsA(isA<CloneException>()),
+      );
+      expect(File('${root.path}/fuera.txt').existsSync(), isFalse);
+      expect(Directory(into).existsSync(), isFalse);
     });
 
     test('si ya no está vacío no se pisa, y no deja carpeta', () async {
@@ -691,6 +774,208 @@ void main() {
     });
   });
 
+  group('rutas con acentos', () {
+    // El material está en castellano y valenciano, y sus carpetas también:
+    // `análisis`, `definición`, `lògica`. git las escapaba en octal y entre
+    // comillas, y así se descartaban al confirmar sin decir nada.
+    const nueva = 'content/análisis/definición/es.tex';
+    const otra = 'content/lògica/conjunció/va.tex';
+
+    test('salen como pendientes con su ruta de verdad', () async {
+      File('${clone.directory}/$nueva')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('Una definición.\n');
+      File('${clone.directory}/$otra')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('Una conjunció.\n');
+
+      final status = await clone.status();
+      expect(status.dirtyPaths, containsAll([nueva, otra]));
+      for (final path in status.dirtyPaths) {
+        expect(path, isNot(contains(r'\')), reason: path);
+        expect(path, isNot(startsWith('"')), reason: path);
+      }
+    });
+
+    test('y se confirman', () async {
+      File('${clone.directory}/$nueva')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('Una definición.\n');
+
+      final status = await clone.status();
+      await clone.commitPaths(
+        paths: status.dirtyPaths,
+        message: 'Añadir la definición',
+        authorName: 'A',
+        authorEmail: 'a@uv.es',
+        token: '',
+        push: false,
+      );
+
+      expect((await clone.status()).dirtyPaths, isEmpty);
+      final tree = await Process.run('git', [
+        '-c',
+        'core.quotePath=false',
+        'ls-tree',
+        '-r',
+        '--name-only',
+        'HEAD',
+      ], workingDirectory: clone.directory);
+      expect(tree.stdout as String, contains(nueva));
+    });
+
+    test('un renombrado cuenta una vez, por su ruta nueva', () async {
+      // `-z` trae la ruta de origen en un campo aparte: no es un fichero
+      // pendiente, y contarla sería confirmar algo que ya no existe.
+      final moved = nueva.replaceFirst('es.tex', 'movida.tex');
+      Directory(
+        '${clone.directory}/content/análisis/definición',
+      ).createSync(recursive: true);
+      await _git(['mv', unitFile, moved], clone.directory);
+
+      expect((await clone.status()).dirtyPaths, [moved]);
+    });
+  });
+
+  group('el índice versionado', () {
+    test('un generated/ sucio no impide traer', () async {
+      // `generated/` va en el repositorio y la aplicación lo regenera al
+      // abrir, así que en local casi siempre tiene cambios. En cuanto otra
+      // máquina enviaba el suyo, traer se negaba con «would be overwritten».
+      const index = 'generated/units.json';
+      final other = await cloneByPath(remote, '${root.path}/otra');
+      File('${other.directory}/$index')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('{"v": 1}\n');
+      await _git(['add', '.'], other.directory);
+      await _git(_asSomeone(['commit', '-m', 'Índice']), other.directory);
+      await _git(['push'], other.directory);
+      await clone.pull(token: '');
+
+      // Las dos máquinas reindexan: esta deja el suyo sin confirmar y la
+      // otra envía uno nuevo.
+      File('${clone.directory}/$index').writeAsStringSync('{"v": "local"}\n');
+      File('${other.directory}/$index').writeAsStringSync('{"v": 2}\n');
+      await _git(
+        _asSomeone(['commit', '-am', 'Índice nuevo']),
+        other.directory,
+      );
+      await _git(['push'], other.directory);
+
+      await clone.pull(token: '');
+
+      expect(
+        File('${clone.directory}/$index').readAsStringSync(),
+        '{"v": 2}\n',
+      );
+    });
+
+    test('lo que no es el índice sí se respeta', () async {
+      // Solo `generated/`: un cambio sin guardar en una lección que el
+      // commit de fuera también toca tiene que seguir parando el traer.
+      final other = await cloneByPath(remote, '${root.path}/otra');
+      File('${other.directory}/$unitFile').writeAsStringSync('De fuera.\n');
+      await _git(_asSomeone(['commit', '-am', 'De fuera']), other.directory);
+      await _git(['push'], other.directory);
+      File('${clone.directory}/$unitFile').writeAsStringSync('Mío.\n');
+
+      await expectLater(clone.pull(token: ''), throwsA(isA<CloneException>()));
+      expect(File('${clone.directory}/$unitFile').readAsStringSync(), 'Mío.\n');
+    });
+  });
+
+  group('dos cosas a la vez sobre el mismo clon', () {
+    test(
+      'diez guardados seguidos no chocan, y cada uno es su commit',
+      () async {
+        // Lo que pasa al guardar varias pestañas casi a la vez, o al coincidir
+        // un guardado con las preferencias que se confirman solas. Sin la cola
+        // por carpeta chocaban en `index.lock`, o un commit se llevaba el
+        // fichero que estaba añadiendo el otro.
+        final before = await clone.head();
+        final writes = [
+          for (var i = 0; i < 10; i += 1)
+            // Un objeto nuevo cada vez, como hace la aplicación: la cola tiene
+            // que ser de la carpeta, no del objeto.
+            LocalClone(directory: clone.directory).commitFile(
+              path: 'content/analysis/normed/n$i/es.tex',
+              text: 'La número $i.\n',
+              message: 'La número $i',
+              expectedSha: '',
+              authorName: 'A',
+              authorEmail: 'a@uv.es',
+              token: '',
+              push: false,
+            ),
+        ];
+        await Future.wait(writes);
+
+        expect((await clone.status()).dirtyPaths, isEmpty);
+        final log = await Process.run('git', [
+          'log',
+          '--format=%s',
+          '$before..HEAD',
+        ], workingDirectory: clone.directory);
+        final subjects = (log.stdout as String).trim().split('\n');
+        expect(subjects, hasLength(10));
+        for (var i = 0; i < 10; i += 1) {
+          // Cada commit con su fichero y solo el suyo.
+          final files = await Process.run('git', [
+            'log',
+            '--format=',
+            '--name-only',
+            '--grep=^La número $i\$',
+            '$before..HEAD',
+          ], workingDirectory: clone.directory);
+          expect(
+            (files.stdout as String).trim(),
+            'content/analysis/normed/n$i/es.tex',
+          );
+        }
+      },
+    );
+  });
+
+  group('cuando la red no contesta', () {
+    test('git se para al vencer el tope, y lo dice', () async {
+      // Un servidor que acepta la conexión y no contesta nunca: lo que hace
+      // un portal cautivo o una wifi que se ha caído a medias. Antes, git se
+      // quedaba esperando para siempre, y con él el guardado que lo pidió.
+      final silent = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final held = <Socket>[];
+      silent.listen(held.add);
+      addTearDown(() async {
+        for (final socket in held) {
+          socket.destroy();
+        }
+        await silent.close();
+      });
+
+      await _git([
+        'remote',
+        'set-url',
+        'origin',
+        'http://127.0.0.1:${silent.port}/nadie.git',
+      ], clone.directory);
+
+      final started = DateTime.now();
+      await expectLater(
+        clone.fetch(token: '', timeout: const Duration(seconds: 2)),
+        throwsA(
+          isA<CloneException>().having(
+            (e) => e.message,
+            'motivo',
+            contains('lo he parado'),
+          ),
+        ),
+      );
+      expect(
+        DateTime.now().difference(started),
+        lessThan(const Duration(seconds: 10)),
+      );
+    });
+  });
+
   group('the gateway on top', () {
     CloneGateway gatewayFor({bool signedIn = true, bool push = true}) =>
         CloneGateway(
@@ -701,6 +986,40 @@ void main() {
               : null,
           pushOnCommit: push,
         );
+
+    test('si no se puede enviar, guardar sale bien y avisa aparte', () async {
+      // El envío falla --GitHub no está, la red se cae-- pero el commit está
+      // hecho. Antes eso era un guardado fallido: el editor se quedaba con el
+      // hash viejo y el siguiente guardado daba un falso «ha cambiado».
+      await Directory(remote).delete(recursive: true);
+      final unsent = <UnsentException>[];
+      final gateway = CloneGateway(
+        clone: clone,
+        token: 'x',
+        author: (name: 'Javier Falcó', email: 'javier@uv.es'),
+        onUnsent: unsent.add,
+      );
+
+      final first = await gateway.read(unitFile);
+      final sha = await gateway.save(
+        path: unitFile,
+        text: 'Primera vez.\n',
+        sha: first.sha,
+        message: 'Primera',
+      );
+      expect(unsent, hasLength(1));
+      expect(sha, isNot(first.sha));
+
+      // Con el hash que devolvió, el siguiente guardado entra sin conflicto.
+      await gateway.save(
+        path: unitFile,
+        text: 'Segunda vez.\n',
+        sha: sha,
+        message: 'Segunda',
+      );
+      expect((await clone.readFile(unitFile)).text, 'Segunda vez.\n');
+      expect(unsent, hasLength(2));
+    });
 
     test('says where the clone is and as whom it commits', () {
       final described = gatewayFor().describe();
@@ -719,7 +1038,7 @@ void main() {
       );
       expect(gateway.canWrite, isTrue);
       expect(gateway.willPush, isFalse);
-      expect(gateway.describe(), contains('falta el token'));
+      expect(gateway.describe(), contains('falta entrar'));
 
       final file = await gateway.read(unitFile);
       await gateway.save(

@@ -15,6 +15,8 @@
 /// misma pregunta.
 library;
 
+import '../l10n/tr.dart';
+
 /// Lo que no se puede hacer con este fichero.
 class ThemesException implements Exception {
   const ThemesException(this.message);
@@ -65,15 +67,17 @@ class ThemesFile {
   /// título: un tema sin ninguno se enseñaría por su id, que es un slug.
   void setTitles(String id, Map<String, String> titles) {
     final theme = _themes().where((t) => t.id == id).firstOrNull;
-    if (theme == null) throw ThemesException('no se declara el tema `$id`');
+    if (theme == null) {
+      throw ThemesException(tr('no se declara el tema `{0}`', [id]));
+    }
 
     final kept = <String, String>{
       for (final entry in titles.entries)
         if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
     };
     if (kept.isEmpty) {
-      throw const ThemesException(
-        'un tema sin título en ningún idioma se enseñaría por su id',
+      throw ThemesException(
+        tr('un tema sin título en ningún idioma se enseñaría por su id'),
       );
     }
     final pending = [

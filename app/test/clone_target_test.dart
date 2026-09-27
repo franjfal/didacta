@@ -9,6 +9,7 @@
 /// Contra git de verdad: lo que se prueba es precisamente el trato con el
 /// disco y con un remoto, y un doble diría que sí a todo.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:io';

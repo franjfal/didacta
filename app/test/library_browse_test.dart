@@ -314,4 +314,57 @@ void testWidegtsBajar() {
     expect(find.text('Espacios de Banach'), findsWidgets);
     expect(find.text('Ejercicios de normas'), findsWidgets);
   });
+
+  group('los filtros también en el árbol, sin buscar nada', () {
+    // Se ponían en verde y el árbol seguía enseñándolo todo: solo hacían
+    // algo escribiendo en el buscador.
+    Future<void> pick(WidgetTester tester, String menu, String item) async {
+      await tester.tap(find.text(menu));
+      await settle(tester);
+      await tester.tap(find.text(item).last);
+      await settle(tester);
+    }
+
+    testWidgets('«sin usar» deja solo lo que no usa nadie, y lo dice', (
+      tester,
+    ) async {
+      await pumpLibrary(tester);
+      await pick(
+        tester,
+        'Traducción',
+        'Solo las que no usa ninguna asignatura',
+      );
+
+      // Del fixture, dos no las usa nadie: los ejercicios y la de álgebra.
+      expect(find.textContaining('2 de 4 unidades'), findsOneWidget);
+      expect(find.textContaining('sin usar'), findsWidgets);
+    });
+
+    testWidgets('sin nada que enseñar lo dice y deja quitarlos', (
+      tester,
+    ) async {
+      await pumpLibrary(tester);
+      await pick(tester, 'Tipo', kindName('history'));
+
+      expect(find.text('Nada con estos filtros'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('library-clear-filters')));
+      await settle(tester);
+      expect(find.textContaining('4 unidades'), findsOneWidget);
+    });
+
+    testWidgets('«Orden» ordena también las listas del árbol', (tester) async {
+      await pumpLibrary(tester);
+      await tester.tap(find.text('Analysis').first);
+      await settle(tester);
+      await tester.tap(find.text('Normed').first);
+      await settle(tester);
+
+      double top(String title) => tester.getTopLeft(find.text(title).last).dy;
+      // Por ruta, de salida: `content/…/banach` antes que `problems/…`.
+      expect(top('Espacios de Banach'), lessThan(top('Ejercicios de normas')));
+
+      await pick(tester, 'Orden', 'Por título');
+      expect(top('Ejercicios de normas'), lessThan(top('Espacios de Banach')));
+    });
+  });
 }

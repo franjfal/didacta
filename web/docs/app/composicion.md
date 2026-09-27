@@ -29,10 +29,21 @@ valenciano, lo que decide si sale entero son las unidades, no el documento.
     No se omite. Una composición que se salta lo que falta **parece completa y
     compila corta**, y eso se descubre en clase.
 
+## Añadir sin abrir el editor
+
+Debajo de la composición, **Añadir una lección** abre el mismo buscador que el
+editor y pone lo elegido al final, en un solo guardado. Es lo que se hace casi
+siempre --el tema ya está y le falta una--; para colocarla en otro sitio, se
+mueve después en el editor.
+
 ## Editar
 
 - **reordenar** arrastrando;
-- **añadir** unidades buscándolas en la biblioteca, sin salir de la pantalla;
+- **añadir** unidades buscándolas en la biblioteca, sin salir de la pantalla,
+  con el mismo buscador que la biblioteca: cada palabra en cualquier orden,
+  en los títulos de todos los idiomas y sin mirar tildes;
+- **crear** la que falta: «Crear una nueva…», junto a Añadir, la crea en el
+  repositorio del documento y la deja puesta en la composición;
 - **quitar** una entrada, que la comenta en lugar de borrarla;
 - **crear apartados**, con su título en cada idioma.
 
@@ -78,8 +89,10 @@ está este tema y qué hay guardado de él:
 
 ## Guardar
 
-Como en todas partes: un commit, con mensaje y con el diff delante. Y con el
-mismo cuidado que en `unit.yaml` --las líneas comentadas y los `TODO` de los
+Como en todas partes: un commit, con mensaje y con el diff delante. El aviso
+de guardado trae **Compilar ahora**, que abre la pestaña de compilar y compila
+el tema, porque lo siguiente que se quiere es verlo. Y con el mismo cuidado que
+en `unit.yaml` --las líneas comentadas y los `TODO` de los
 títulos que faltan sobreviven a la edición, porque se cambia la línea que toca
 y no se reescribe el fichero.
 
@@ -93,6 +106,10 @@ los apartados en los tres idiomas. Al lado hay un `<documento>.tex`, que es lo
 que compila `pdflatex`, y que repite esa misma lista porque tiene que seguir
 funcionando por su cuenta: abrirlo en un editor y compilarlo a mano da el
 documento que dice la composición, sin que el motor intervenga.
+
+Un documento creado desde Didacta lo trae desde el principio: el `.tex` se
+escribe al guardarlo, con el cuerpo vacío, y el motor lo llena la primera vez
+que compila.
 
 **Compilar pone los dos de acuerdo.** Antes de llamar a LaTeX, `didacta build`
 reescribe el cuerpo del `.tex` con lo que dice `year.yaml` --sólo el cuerpo: el

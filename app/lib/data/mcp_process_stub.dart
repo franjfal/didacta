@@ -2,9 +2,12 @@
 library;
 
 import 'mcp_process.dart';
+import '../l10n/tr.dart';
 
 McpRunner runnerFor({required String enginePath, String? texPath}) =>
-    const UnavailableRunner(
-      'El servidor MCP necesita lanzar el motor, y en el navegador no se '
-      'pueden lanzar procesos. Usa la aplicación de escritorio.',
+    UnavailableRunner(
+      tr(
+        'El servidor MCP necesita lanzar el motor, y en el navegador no se '
+        'pueden lanzar procesos. Usa la aplicación de escritorio.',
+      ),
     );

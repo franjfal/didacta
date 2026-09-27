@@ -27,6 +27,7 @@ from __future__ import annotations
 import os
 import re
 
+from . import inputs as inputs_mod
 from . import profiles as profiles_mod
 from . import repo as repo_mod
 
@@ -175,8 +176,77 @@ def built(engine, units, all_profiles, languages, title_of):
     return {"units": found}
 
 
+def _lesson_dirs(document, root, settings):
+    """Las carpetas de las lecciones que llama un documento.
+
+    Primero en el disco, que es barato: una referencia es casi siempre una
+    ruta, y la carpeta está o no está. Solo si alguna se escribió por id hace
+    falta leer el repositorio entero para saber dónde vive, y eso se hace una
+    vez. Lo que no se encuentra --una lección del repositorio de al lado-- se
+    salta: de esa no se sabe la fecha desde aquí.
+    """
+    found, pending = [], []
+    for ref in document.unit_refs or []:
+        clean = str(ref).strip("/")
+        for candidate in (os.path.join(root, repo_mod.CONTENT, clean),
+                          os.path.join(root, repo_mod.PROBLEMS, clean),
+                          os.path.join(root, clean)):
+            if os.path.isdir(candidate):
+                found.append(candidate)
+                break
+        else:
+            pending.append(clean)
+    if pending and settings is not None:
+        units, _ = repo_mod.scan_units(root, settings)
+        for ref in pending:
+            unit = repo_mod.resolve_unit_ref(ref, units, root)
+            if unit is not None:
+                found.append(os.path.join(root, unit.relpath))
+    return found
+
+
+#: Las subcarpetas de una lección que son suyas y no otra lección: las mismas
+#: que `repo.scan_units` se salta al buscar lecciones.
+_FIGURE_DIRS = ("figures", "assets", "img")
+
+
+def _newest_in_lesson(directory, language):
+    """Cuándo se tocó por última vez lo que una lección pone en un PDF.
+
+    El texto en ese idioma --o todos, si no existe, porque entonces se
+    compila con el de referencia en su sitio-- y sus figuras. `unit.yaml` no:
+    aprobar una traducción cambia su estado y no una letra del PDF.
+    """
+    newest = 0.0
+    own = os.path.join(directory, "%s.tex" % language)
+    try:
+        entries = os.listdir(directory)
+    except OSError:
+        return 0.0
+    for name in entries:
+        path = os.path.join(directory, name)
+        if name.startswith(".") or name == repo_mod.UNIT_META:
+            continue
+        if name.endswith(".tex"):
+            if os.path.isfile(own) and path != own:
+                continue
+            newest = max(newest, os.path.getmtime(path))
+        elif os.path.isdir(path):
+            # Solo las carpetas de figuras: cualquier otra subcarpeta con un
+            # `.tex` es otra lección, con su propia fecha.
+            if name not in _FIGURE_DIRS:
+                continue
+            for dirpath, _, files in os.walk(path):
+                for file in files:
+                    newest = max(newest,
+                                 os.path.getmtime(os.path.join(dirpath, file)))
+        elif os.path.isfile(path):
+            newest = max(newest, os.path.getmtime(path))
+    return newest
+
+
 def document_outputs(engine, course, year, documents, all_profiles,
-                     languages=None):
+                     languages=None, root=None, settings=None):
     """Qué hay compilado de cada documento de un curso.
 
     El equivalente para documentos de [built], y existe por la misma razón:
@@ -193,6 +263,13 @@ def document_outputs(engine, course, year, documents, all_profiles,
     ofrece abrir el PDF necesita los de la asignatura: si solo se mira el del
     documento, la versión en valenciano existe en el disco y no hay forma de
     llegar a ella desde la aplicación.
+
+    Un PDF está viejo si es anterior a su composición **o a cualquiera de las
+    lecciones que lleva**, en ese idioma. Con ``root`` se miran también las
+    lecciones; sin él, solo la composición, que es lo que hacía antes y lo que
+    sigue haciendo quien no sabe dónde está el repositorio. Son fechas y no
+    contenidos: un `git pull` que toca una lección la da por cambiada aunque
+    traiga lo mismo, que es el lado bueno del error.
     """
     found = []
     for document in documents:
@@ -215,6 +292,8 @@ def document_outputs(engine, course, year, documents, all_profiles,
                 os.path.dirname(document.source or ""), "year.yaml")):
             if path and os.path.isfile(path):
                 newest = max(newest, os.path.getmtime(path))
+        lessons = _lesson_dirs(document, root, settings) if root else []
+        newest_by_language = {}
 
         records = []
         for name in wanted:
@@ -232,6 +311,14 @@ def document_outputs(engine, course, year, documents, all_profiles,
                 if not os.path.isfile(path):
                     continue
                 when = os.path.getmtime(path)
+                if language not in newest_by_language:
+                    newest_by_language[language] = max(
+                        [newest] + [_newest_in_lesson(directory, language)
+                                    for directory in lessons])
+                latest = newest_by_language[language]
+                # Por el contenido de lo que entró, si se apuntó al compilar;
+                # si no --un PDF de antes--, por las fechas.
+                hashed = inputs_mod.is_stale(path)
                 records.append({
                     "profile": name,
                     "label": profile.label,
@@ -239,7 +326,10 @@ def document_outputs(engine, course, year, documents, all_profiles,
                     "language": language,
                     "pdf": path,
                     "exists": True,
-                    "stale": bool(newest and when < newest),
+                    "stale": hashed if hashed is not None
+                             else bool(latest and when < latest),
+                    # De una sola pasada: viejo por eso y no por un cambio.
+                    "quick": inputs_mod.is_quick(path),
                     "mtime": when,
                 })
         if records:
@@ -267,6 +357,7 @@ def status(engine, unit, profiles, languages, title):
             pdf = expected_pdf(engine, reference, profile, language, title)
             exists = os.path.isfile(pdf)
             when = os.path.getmtime(pdf) if exists else None
+            hashed = inputs_mod.is_stale(pdf) if exists else None
             records.append(
                 {
                     "profile": profile.id,
@@ -280,7 +371,9 @@ def status(engine, unit, profiles, languages, title):
                     # A PDF that does not exist is not stale, it is missing --
                     # two different things, and the interface says each
                     # differently.
-                    "stale": bool(exists and source_when > (when or 0)),
+                    "stale": hashed if hashed is not None
+                             else bool(exists and source_when > (when or 0)),
+                    "quick": bool(exists and inputs_mod.is_quick(pdf)),
                 }
             )
 

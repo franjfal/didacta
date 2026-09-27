@@ -22,12 +22,17 @@ import '../model/catalogue.dart';
 import '../model/composition_file.dart';
 import '../model/path_tree.dart';
 import '../model/line_diff.dart';
+import '../model/library_filter.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'commit_dialog.dart';
+import 'save_review.dart';
 import 'document_links.dart';
 import 'heading_title.dart';
+import 'new_unit.dart';
+import 'save_shortcut.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class CompositionEditor extends StatefulWidget {
   const CompositionEditor({
@@ -36,12 +41,17 @@ class CompositionEditor extends StatefulWidget {
     required this.year,
     required this.documentId,
     required this.session,
+    this.onCompile,
   });
 
   final String courseId;
   final String year;
   final String documentId;
   final Session session;
+
+  /// Compilar el documento, que es lo siguiente que se quiere al guardar una
+  /// composición: ver cómo queda. Null donde no hay nada que compilar.
+  final VoidCallback? onCompile;
 
   Document? get _document => session.documentIn(courseId, year, documentId);
 
@@ -118,13 +128,19 @@ class _CompositionEditorState extends State<CompositionEditor> {
       if (block == null) {
         throw CompositionException(
           widget.shared
-              ? 'el tema compartido `${widget.documentId}` dice vivir en '
-                    '${widget.path}, y ahí no hay ninguna composición. Puede '
-                    'que el fichero esté en otro repositorio que no tienes '
-                    'abierto.'
-              : 'el documento `${widget.documentId}` no está en '
-                    '${widget.path}. Puede que el catálogo esté '
-                    'desactualizado: se regenera con `didacta index`.',
+              ? tr(
+                  'el tema compartido `{0}` dice vivir en '
+                  '{1}, y ahí no hay ninguna composición. Puede '
+                  'que el fichero esté en otro repositorio que no tienes '
+                  'abierto.',
+                  [widget.documentId, widget.path],
+                )
+              : tr(
+                  'el documento `{0}` no está en '
+                  '{1}. Puede que el catálogo esté '
+                  'desactualizado: se regenera con `didacta index`.',
+                  [widget.documentId, widget.path],
+                ),
         );
       }
       if (!mounted) return;
@@ -154,8 +170,10 @@ class _CompositionEditorState extends State<CompositionEditor> {
     } on CompositionException catch (thrown) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No se ha tocado el fichero: ${thrown.message}'),
-          backgroundColor: didactaTeacher,
+          content: Text(
+            tr('No se ha tocado el fichero: {0}', [thrown.message]),
+          ),
+          backgroundColor: context.palette.teacher,
           duration: const Duration(seconds: 7),
         ),
       );
@@ -168,7 +186,27 @@ class _CompositionEditorState extends State<CompositionEditor> {
   }
 
   @override
+  void dispose() {
+    widget.session.unsaved.mark(this, null);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    widget.session.unsaved.mark(
+      this,
+      _dirty
+          ? tr(
+              'La composición de '
+              '«{0}»',
+              [
+                widget._document?.title(widget.session.language) ??
+                    widget.documentId,
+              ],
+            )
+          : null,
+      place: Routes.document(widget.courseId, widget.year, widget.documentId),
+    );
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -185,103 +223,114 @@ class _CompositionEditorState extends State<CompositionEditor> {
     final size = diffSize(_loaded, _text);
     final active = _entries.where((e) => e.enabled).length;
 
-    return Column(
-      children: [
-        _Bar(
-          path: widget.path,
-          active: active,
-          total: _entries.length,
-          added: size.added,
-          removed: size.removed,
-          saving: _saving,
-          canSave: canWrite && _dirty && !_saving,
-          onDiscard: _dirty ? () => _apply(_reload()) : null,
-          onSave: _save,
-        ),
-        // Que esto se da en más sitios, y que guardar los cambia todos. Se
-        // dice **antes** de tocar nada: descubrirlo después de reordenar
-        // cuarenta lecciones no es descubrirlo, es enterarse.
-        if (widget.shared && widget.places > 1)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Note(
-              'Este tema se da en ${widget.places} cursos y es el mismo en '
-              'todos: lo que ordenes, añadas o quites aquí se ve en los demás. '
-              'Para que deje de ser así, «Gestionar vinculación».',
-              tone: didactaThm,
-            ),
+    return SaveShortcut(
+      onSave: canWrite && _dirty && !_saving ? _save : null,
+      child: Column(
+        children: [
+          _Bar(
+            path: widget.path,
+            active: active,
+            total: _entries.length,
+            added: size.added,
+            removed: size.removed,
+            saving: _saving,
+            canSave: canWrite && _dirty && !_saving,
+            onDiscard: _dirty ? () => _apply(_reload()) : null,
+            onSave: _save,
           ),
-        if (_conflicted)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Note(
-              widget.shared
-                  ? 'El tema compartido ha cambiado en el repositorio desde '
+          // Que esto se da en más sitios, y que guardar los cambia todos. Se
+          // dice **antes** de tocar nada: descubrirlo después de reordenar
+          // cuarenta lecciones no es descubrirlo, es enterarse.
+          if (widget.shared && widget.places > 1)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Note(
+                tr(
+                  'Este tema se da en {0} cursos y es el mismo en '
+                  'todos: lo que ordenes, añadas o quites aquí se ve en los demás. '
+                  'Para que deje de ser así, «Crear copia independiente», en '
+                  'el «…» del tema en su curso.',
+                  [widget.places],
+                ),
+                tone: context.palette.thm,
+              ),
+            ),
+          if (_conflicted)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Note(
+                widget.shared
+                    ? tr(
+                        'El tema compartido ha cambiado en el repositorio desde '
                         'que lo abriste. Vuelve a cargarlo antes de guardar; '
-                        'tu orden sigue aquí mientras decides.'
-                  : 'year.yaml ha cambiado en el repositorio desde que lo '
+                        'tu orden sigue aquí mientras decides.',
+                      )
+                    : tr(
+                        'year.yaml ha cambiado en el repositorio desde que lo '
                         'abriste. Vuelve a cargarlo antes de guardar; tu '
                         'orden sigue aquí mientras decides.',
-              tone: didactaTeacher,
+                      ),
+                tone: context.palette.teacher,
+              ),
             ),
-          ),
-        Expanded(
-          child: _entries.isEmpty
-              ? _Empty(enabled: canWrite, onAdd: () => _addUnit(context))
-              : ReorderableListView.builder(
-                  padding: const EdgeInsets.only(bottom: 80),
-                  buildDefaultDragHandles: false,
-                  itemCount: _entries.length,
-                  onReorderItem: _reorder,
-                  itemBuilder: (context, index) => _EntryRow(
-                    key: ValueKey('entry-$index-${_entries[index]}'),
-                    index: index,
-                    entry: _entries[index],
-                    session: session,
-                    // Los de la asignatura, y los que este apartado ya tiene
-                    // escritos aunque estén apagados: el título en un idioma
-                    // que no se está mirando sigue estando en el fichero, y
-                    // esconderlo aquí es perderlo al guardar.
-                    languages: session.languagesToEditCodes(
-                      allowed: session.languagesIn(widget.courseId),
-                      declared: _entries[index].titles.keys.toList(),
+          Expanded(
+            child: _entries.isEmpty
+                ? _Empty(enabled: canWrite, onAdd: () => _addUnit(context))
+                : ReorderableListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80),
+                    buildDefaultDragHandles: false,
+                    itemCount: _entries.length,
+                    onReorderItem: _reorder,
+                    itemBuilder: (context, index) => _EntryRow(
+                      key: ValueKey('entry-$index-${_entries[index]}'),
+                      index: index,
+                      entry: _entries[index],
+                      session: session,
+                      // Los de la asignatura, y los que este apartado ya tiene
+                      // escritos aunque estén apagados: el título en un idioma
+                      // que no se está mirando sigue estando en el fichero, y
+                      // esconderlo aquí es perderlo al guardar.
+                      languages: session.languagesToEditCodes(
+                        allowed: session.languagesIn(widget.courseId),
+                        declared: _entries[index].titles.keys.toList(),
+                      ),
+                      enabled: canWrite,
+                      position: _positionOf(index),
+                      // Dónde está la fila dentro de su apartado, para que la
+                      // lista se lea como tarjetas. La lista sigue siendo una
+                      // sola, que es lo que permite arrastrar dentro de un
+                      // apartado y de un apartado a otro sin nada especial:
+                      // anidar listas para dibujar tarjetas habría comprado el
+                      // aspecto al precio de la función.
+                      place: _placeOf(index),
+                      onToggle: () => _apply([
+                        for (var i = 0; i < _entries.length; i += 1)
+                          i == index
+                              ? _entries[i].copyWith(
+                                  enabled: !_entries[i].enabled,
+                                )
+                              : _entries[i],
+                      ]),
+                      onRemove: () => _remove(index),
+                      onInsertHeading: (kind) =>
+                          _insertAt(index, _newHeading(kind)),
+                      onInsertUnit: () => _insertUnit(context, index),
+                      onTitles: (titles) => _apply([
+                        for (var i = 0; i < _entries.length; i += 1)
+                          i == index
+                              ? _retitle(_entries[i], titles)
+                              : _entries[i],
+                      ]),
                     ),
-                    enabled: canWrite,
-                    position: _positionOf(index),
-                    // Dónde está la fila dentro de su apartado, para que la
-                    // lista se lea como tarjetas. La lista sigue siendo una
-                    // sola, que es lo que permite arrastrar dentro de un
-                    // apartado y de un apartado a otro sin nada especial:
-                    // anidar listas para dibujar tarjetas habría comprado el
-                    // aspecto al precio de la función.
-                    place: _placeOf(index),
-                    onToggle: () => _apply([
-                      for (var i = 0; i < _entries.length; i += 1)
-                        i == index
-                            ? _entries[i].copyWith(
-                                enabled: !_entries[i].enabled,
-                              )
-                            : _entries[i],
-                    ]),
-                    onRemove: () => _remove(index),
-                    onInsertHeading: (kind) =>
-                        _insertAt(index, _newHeading(kind)),
-                    onInsertUnit: () => _insertUnit(context, index),
-                    onTitles: (titles) => _apply([
-                      for (var i = 0; i < _entries.length; i += 1)
-                        i == index
-                            ? _retitle(_entries[i], titles)
-                            : _entries[i],
-                    ]),
                   ),
-                ),
-        ),
-        if (canWrite)
-          _AddBar(
-            onUnit: () => _addUnit(context),
-            onHeading: (kind) => _addHeading(kind),
           ),
-      ],
+          if (canWrite)
+            _AddBar(
+              onUnit: () => _addUnit(context),
+              onHeading: (kind) => _addHeading(kind),
+            ),
+        ],
+      ),
     );
   }
 
@@ -336,22 +385,25 @@ class _CompositionEditorState extends State<CompositionEditor> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('¿Quitar de la composición?'),
+        title: Text(tr('¿Quitar de la composición?')),
         content: Text(
-          'Se quita «${entry.label(widget.session.language)}» de este '
-          'documento. La unidad no se borra: sigue en la biblioteca y en los '
-          'demás documentos que la usen.\n\n'
-          'Si es que este año no se da, desactívala en lugar de quitarla: '
-          'queda en su sitio, comentada, y se vuelve a activar en un toque.',
+          tr(
+            'Se quita «{0}» de este '
+            'documento. La unidad no se borra: sigue en la biblioteca y en los '
+            'demás documentos que la usen.\n\n'
+            'Si es que este año no se da, desactívala en lugar de quitarla: '
+            'queda en su sitio, comentada, y se vuelve a activar en un toque.',
+            [entry.label(widget.session.language)],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Quitar'),
+            child: Text(tr('Quitar')),
           ),
         ],
       ),
@@ -402,21 +454,15 @@ class _CompositionEditorState extends State<CompositionEditor> {
     value: unit.reference_,
   );
 
-  Future<List<Unit>> _pickUnits(BuildContext context) async {
-    final already = {
+  Future<List<Unit>> _pickUnits(BuildContext context) => pickUnits(
+    context,
+    session: widget.session,
+    already: {
       for (final entry in _entries)
         if (entry.isReference) entry.value,
-    };
-    final chosen = await showDialog<List<Unit>>(
-      context: context,
-      builder: (context) => _UnitPicker(
-        session: widget.session,
-        already: already,
-        repo: widget.repo,
-      ),
-    );
-    return chosen ?? const [];
-  }
+    },
+    repo: widget.repo,
+  );
 
   Future<void> _addUnit(BuildContext context) async {
     final chosen = await _pickUnits(context);
@@ -442,15 +488,17 @@ class _CompositionEditorState extends State<CompositionEditor> {
   }
 
   Future<void> _save() async {
-    final message = await showDialog<String>(
-      context: context,
-      builder: (context) => CommitDialog(
-        before: _loaded,
-        after: _text,
-        suggested: _suggestedMessage(),
-      ),
+    final suggested = _suggestedMessage();
+    final message = await askSaveMessage(
+      context,
+      widget.session,
+      suggested: suggested,
+      dialog: (context) =>
+          CommitDialog(before: _loaded, after: _text, suggested: suggested),
     );
     if (message == null || !mounted) return;
+    final before = _loaded;
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     setState(() {
       _saving = true;
@@ -472,7 +520,21 @@ class _CompositionEditorState extends State<CompositionEditor> {
         _saving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('year.yaml guardado como un commit.')),
+        savedNotice(
+          notice: widget.session.saveNotice(widget.repo),
+          message: message,
+          before: before,
+          after: _text,
+          what: widget.path,
+          navigator: navigator,
+          followUp: widget.onCompile == null
+              ? null
+              : (
+                  label: tr('Compilar ahora'),
+                  icon: Icons.play_circle_outline,
+                  onPressed: widget.onCompile!,
+                ),
+        ),
       );
       await widget.session.reloadCatalogue();
     } on ContentException catch (thrown) {
@@ -484,7 +546,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(thrown.message),
-          backgroundColor: didactaTeacher,
+          backgroundColor: context.palette.teacher,
           duration: const Duration(seconds: 6),
         ),
       );
@@ -517,23 +579,28 @@ class _CompositionEditorState extends State<CompositionEditor> {
         !_sameOrder(wasValues, nowValues);
 
     final parts = <String>[];
-    if (added > 0) parts.add('añadir ${_entries_(added)}');
-    if (added < 0) parts.add('quitar ${_entries_(-added)}');
+    if (added > 0) parts.add(tr('añadir {0}', [_entries_(added)]));
+    if (added < 0) parts.add(tr('quitar {0}', [_entries_(-added)]));
     if (switchedOn > 0 && added <= 0) {
-      parts.add('activar ${_entries_(switchedOn)}');
+      parts.add(tr('activar {0}', [_entries_(switchedOn)]));
     }
-    if (switchedOn < 0) parts.add('desactivar ${_entries_(-switchedOn)}');
+    if (switchedOn < 0) {
+      parts.add(tr('desactivar {0}', [_entries_(-switchedOn)]));
+    }
     // "cambiar el orden" rather than "reordenar" so the sentence reads the
     // same whether it is the only change or one of several.
-    if (reordered) parts.add('cambiar el orden');
+    if (reordered) parts.add(tr('cambiar el orden'));
 
     final what = parts.isEmpty ? 'editar' : parts.join(' y ');
-    return '${_capitalise(what)} en la composición de ${widget.documentId} '
-        '(${widget.courseId} ${widget.year})';
+    return tr(
+      '{0} en la composición de {1} '
+      '({2} {3})',
+      [_capitalise(what), widget.documentId, widget.courseId, widget.year],
+    );
   }
 
   static String _entries_(int count) =>
-      count == 1 ? 'una entrada' : '$count entradas';
+      count == 1 ? tr('una entrada') : tr('{0} entradas', [count]);
 
   static bool _sameOrder(List<String> a, List<String> b) {
     for (var i = 0; i < a.length; i += 1) {
@@ -572,9 +639,9 @@ class _Bar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: LayoutBuilder(
@@ -585,14 +652,14 @@ class _Bar extends StatelessWidget {
               Expanded(
                 child: Text(
                   narrow
-                      ? '$active de $total'
-                      : '$path · $active de $total activas',
+                      ? tr('{0} de {1}', [active, total])
+                      : tr('{0} · {1} de {2} activas', [path, active, total]),
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontFamily: 'monospace',
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
               ),
@@ -600,10 +667,10 @@ class _Bar extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   '+$added −$removed',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
-                    color: didactaEx,
+                    color: context.palette.ex,
                   ),
                 ),
               ],
@@ -611,7 +678,7 @@ class _Bar extends StatelessWidget {
               if (!narrow && onDiscard != null)
                 TextButton(
                   onPressed: saving ? null : onDiscard,
-                  child: const Text('Descartar'),
+                  child: Text(tr('Descartar')),
                 ),
               const SizedBox(width: 4),
               FilledButton.icon(
@@ -623,7 +690,7 @@ class _Bar extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check, size: 16),
-                label: Text(saving ? 'Guardando…' : 'Guardar'),
+                label: Text(saving ? tr('Guardando…') : tr('Guardar')),
                 onPressed: canSave ? onSave : null,
               ),
             ],
@@ -705,13 +772,15 @@ class _EntryRow extends StatelessWidget {
       margin: EdgeInsets.fromLTRB(8, head ? 10 : 0, 8, closes ? 4 : 0),
       decoration: BoxDecoration(
         color: off
-            ? didactaPanel
-            : (head ? const Color(0xFFF3F6F1) : didactaCard),
+            ? context.palette.panel
+            : (head
+                  ? context.palette.tint(context.palette.accent, 0.05)
+                  : context.palette.card),
         // Borde igual por los cuatro lados: Flutter no admite un radio con
         // lados de colores distintos, y la alternativa --dibujar cada línea
         // a mano para que no se doblen entre filas-- es mucho enredo por un
         // pelo de un gris que casi no se ve.
-        border: Border.all(color: didactaRule),
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.only(
           topLeft: head ? radius : Radius.zero,
           topRight: head ? radius : Radius.zero,
@@ -726,12 +795,12 @@ class _EntryRow extends StatelessWidget {
             if (enabled)
               ReorderableDragStartListener(
                 index: index,
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14),
                   child: Icon(
                     Icons.drag_indicator,
                     size: 17,
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
               )
@@ -742,9 +811,9 @@ class _EntryRow extends StatelessWidget {
               child: Text(
                 position == null ? '—' : '$position',
                 textAlign: TextAlign.right,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
               ),
@@ -771,7 +840,7 @@ class _EntryRow extends StatelessWidget {
               MenuAnchor(
                 builder: (context, controller, child) => IconButton(
                   key: Key('insert-$index'),
-                  tooltip: 'Insertar encima',
+                  tooltip: tr('Insertar encima'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.add, size: 16),
                   onPressed: () => controller.isOpen
@@ -783,37 +852,39 @@ class _EntryRow extends StatelessWidget {
                     key: Key('insert-section-$index'),
                     leadingIcon: const Icon(Icons.title, size: 15),
                     onPressed: () => onInsertHeading(EntryKind.section),
-                    child: const Text('Apartado, encima'),
+                    child: Text(tr('Apartado, encima')),
                   ),
                   MenuItemButton(
                     key: Key('insert-subsection-$index'),
                     leadingIcon: const Icon(Icons.subtitles_outlined, size: 15),
                     onPressed: () => onInsertHeading(EntryKind.subsection),
-                    child: const Text('Subapartado, encima'),
+                    child: Text(tr('Subapartado, encima')),
                   ),
                   const Divider(height: 1),
                   MenuItemButton(
                     key: Key('insert-unit-$index'),
                     leadingIcon: const Icon(Icons.add, size: 15),
                     onPressed: onInsertUnit,
-                    child: const Text('Unidad, encima…'),
+                    child: Text(tr('Unidad, encima…')),
                   ),
                 ],
               ),
             IconButton(
               // No se quita: se comenta. Que el texto lo diga es lo que
               // separa este botón del de al lado.
-              tooltip: off ? 'Activar' : 'Desactivar, se queda comentada',
+              tooltip: off
+                  ? tr('Activar')
+                  : tr('Desactivar, se queda comentada'),
               visualDensity: VisualDensity.compact,
               icon: Icon(
                 off ? Icons.toggle_off_outlined : Icons.toggle_on,
                 size: 21,
-                color: off ? didactaMuted : didactaAccentDark,
+                color: off ? context.palette.muted : context.palette.accentDark,
               ),
               onPressed: enabled ? onToggle : null,
             ),
             IconButton(
-              tooltip: 'Quitar',
+              tooltip: tr('Quitar'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.close, size: 15),
               onPressed: enabled ? onRemove : null,
@@ -861,21 +932,21 @@ class _Reference extends StatelessWidget {
                   KindChip(kind: unit!.kind),
                   const SizedBox(width: 8),
                 ] else
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(right: 6),
                     child: Icon(
                       Icons.link_off,
                       size: 13,
-                      color: didactaTeacher,
+                      color: context.palette.teacher,
                     ),
                   ),
                 Expanded(
                   child: Text(
-                    broken ? '${entry.value} (no existe)' : title,
+                    broken ? tr('{0} (no existe)', [entry.value]) : title,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: broken ? didactaTeacher : null,
+                      color: broken ? context.palette.teacher : null,
                       decoration: off ? TextDecoration.lineThrough : null,
                     ),
                   ),
@@ -891,10 +962,10 @@ class _Reference extends StatelessWidget {
             Text(
               entry.value,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontFamily: 'monospace',
-                color: didactaMuted,
+                color: context.palette.muted,
               ),
             ),
           ],
@@ -939,12 +1010,12 @@ class _Heading extends StatelessWidget {
           Icon(
             isSection ? Icons.folder_outlined : Icons.segment,
             size: isSection ? 16 : 14,
-            color: didactaAccentDark,
+            color: context.palette.accentDark,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              label.isEmpty ? 'Apartado sin título' : label,
+              label.isEmpty ? tr('Apartado sin título') : label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -953,7 +1024,7 @@ class _Heading extends StatelessWidget {
                 // Un título prestado de otro idioma se marca, como en el
                 // resto de la aplicación: no está traducido, está prestado.
                 fontStyle: missing ? FontStyle.italic : null,
-                color: missing || label.isEmpty ? didactaMuted : null,
+                color: missing || label.isEmpty ? context.palette.muted : null,
               ),
             ),
           ),
@@ -968,21 +1039,21 @@ class _Heading extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: entry.titles.length == languages.length
-                      ? didactaAccentDark
-                      : didactaTeacher,
+                      ? context.palette.accentDark
+                      : context.palette.teacher,
                 ),
               ),
             ),
           if (enabled)
             IconButton(
               key: Key('edit-title-${entry.value}-$label'),
-              tooltip: 'Editar el título en todos los idiomas',
+              tooltip: tr('Editar el título en todos los idiomas'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.edit_outlined, size: 15),
               onPressed: () async {
                 final titles = await editHeadingTitles(
                   context,
-                  heading: isSection ? 'Apartado' : 'Subapartado',
+                  heading: isSection ? tr('Apartado') : tr('Subapartado'),
                   languages: languages,
                   titles: entry.titles,
                   reference: language,
@@ -1005,9 +1076,9 @@ class _AddBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(top: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(top: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       child: Wrap(
@@ -1017,23 +1088,42 @@ class _AddBar extends StatelessWidget {
           FilledButton.icon(
             key: const Key('add-unit'),
             icon: const Icon(Icons.add, size: 16),
-            label: const Text('Añadir unidad'),
+            label: Text(tr('Añadir unidad')),
             onPressed: onUnit,
           ),
           OutlinedButton.icon(
             icon: const Icon(Icons.title, size: 15),
-            label: const Text('Apartado'),
+            label: Text(tr('Apartado')),
             onPressed: () => onHeading(EntryKind.section),
           ),
           OutlinedButton.icon(
             icon: const Icon(Icons.subtitles_outlined, size: 15),
-            label: const Text('Subapartado'),
+            label: Text(tr('Subapartado')),
             onPressed: () => onHeading(EntryKind.subsection),
           ),
         ],
       ),
     );
   }
+}
+
+/// Elige lecciones de [repo] para añadir a una composición. Vacío si se
+/// cancela.
+///
+/// Fuera del editor para que la vista de lectura de un tema pueda añadir sin
+/// abrirlo: es el mismo diálogo, con el mismo buscador y las mismas carpetas.
+Future<List<Unit>> pickUnits(
+  BuildContext context, {
+  required Session session,
+  required Set<String> already,
+  required String repo,
+}) async {
+  final chosen = await showDialog<List<Unit>>(
+    context: context,
+    builder: (context) =>
+        UnitPicker(session: session, already: already, repo: repo),
+  );
+  return chosen ?? const [];
 }
 
 /// Picking a unit to add: the library, filtered by typing.
@@ -1055,8 +1145,9 @@ class _AddBar extends StatelessWidget {
 /// seguidas, y hacerlo de una en una son cinco veces abrir el diálogo,
 /// buscar y confirmar. Lo elegido se acumula aunque se cambie de carpeta o
 /// se busque otra cosa.
-class _UnitPicker extends StatefulWidget {
-  const _UnitPicker({
+class UnitPicker extends StatefulWidget {
+  const UnitPicker({
+    super.key,
     required this.session,
     required this.already,
     required this.repo,
@@ -1076,10 +1167,10 @@ class _UnitPicker extends StatefulWidget {
   final String repo;
 
   @override
-  State<_UnitPicker> createState() => _UnitPickerState();
+  State<UnitPicker> createState() => _UnitPickerState();
 }
 
-class _UnitPickerState extends State<_UnitPicker> {
+class _UnitPickerState extends State<UnitPicker> {
   final TextEditingController _query = TextEditingController();
 
   /// Las carpetas abiertas. Vacío es todo cerrado, que es como empieza.
@@ -1106,6 +1197,34 @@ class _UnitPickerState extends State<_UnitPicker> {
 
   bool _isChosen(Unit unit) => _chosen.any((u) => u.path == unit.path);
 
+  /// La categoría que más sale en lo que ya lleva el documento: es la que
+  /// casi siempre tiene la lección que falta.
+  String get _likelyCategory {
+    final counts = <String, int>{};
+    for (final reference in widget.already) {
+      final category = reference.split('/').first;
+      if (category.isEmpty) continue;
+      counts[category] = (counts[category] ?? 0) + 1;
+    }
+    if (counts.isEmpty) return '';
+    return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+  }
+
+  Future<void> _createAndAdd() async {
+    final created = await createUnitFrom(
+      context,
+      widget.session,
+      category: _likelyCategory,
+      open: false,
+      onlyIn: widget.repo,
+      askCategory: true,
+    );
+    if (created == null || !mounted) return;
+    final unit = widget.session.unitByPath(created, repo: widget.repo);
+    if (unit == null) return;
+    Navigator.of(context).pop([..._chosen, unit]);
+  }
+
   void _toggle(Unit unit) {
     setState(() {
       final at = _chosen.indexWhere((u) => u.path == unit.path);
@@ -1119,19 +1238,18 @@ class _UnitPickerState extends State<_UnitPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final needle = _query.text.trim().toLowerCase();
     final language = widget.session.language;
-    final searching = needle.isNotEmpty;
-    final matches = [
-      for (final unit in _units)
-        if (unit.path.toLowerCase().contains(needle) ||
-            unit.title(language).toLowerCase().contains(needle) ||
-            unit.tags.any((tag) => tag.toLowerCase().contains(needle)))
-          unit,
-    ];
+    final searching = _query.text.trim().isNotEmpty;
+    // El mismo buscador que la biblioteca: cada palabra en cualquier sitio,
+    // en los títulos de todos los idiomas, sin tildes. Este buscaba la frase
+    // entera y solo en el título del idioma que se mira, así que lo que se
+    // encontraba en la biblioteca aquí no salía.
+    final search = LibraryFilter(query: _query.text.trim(), language: language);
+    // Y lo que casa con una errata, detrás de lo que casa tal cual.
+    final matches = search.exactFirst(_units);
 
     return AlertDialog(
-      title: const Text('Añadir unidades'),
+      title: Text(tr('Añadir unidades')),
       content: SizedBox(
         width: 620,
         height: 520,
@@ -1144,11 +1262,11 @@ class _UnitPickerState extends State<_UnitPicker> {
               decoration: InputDecoration(
                 isDense: true,
                 prefixIcon: const Icon(Icons.search, size: 18),
-                hintText: 'Buscar por título, ruta o etiqueta…',
+                hintText: tr('Buscar por título, ruta o etiqueta…'),
                 suffixIcon: searching
                     ? IconButton(
                         key: const Key('picker-clear'),
-                        tooltip: 'Volver a las carpetas',
+                        tooltip: tr('Volver a las carpetas'),
                         icon: const Icon(Icons.close, size: 16),
                         onPressed: () => setState(_query.clear),
                       )
@@ -1161,17 +1279,19 @@ class _UnitPickerState extends State<_UnitPicker> {
               alignment: Alignment.centerLeft,
               child: Text(
                 searching
-                    ? '${matches.length} de ${_tree.count}'
-                    : 'Carpetas del repositorio · ${_tree.count} unidades',
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                    ? tr('{0} de {1}', [matches.length, _tree.count])
+                    : tr('Carpetas del repositorio · {0} unidades', [
+                        _tree.count,
+                      ]),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ),
             const SizedBox(height: 4),
             Expanded(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: didactaCard,
-                  border: Border.all(color: didactaRule),
+                  color: context.palette.card,
+                  border: Border.all(color: context.palette.rule),
                   borderRadius: BorderRadius.circular(Radii.control),
                 ),
                 child: ClipRRect(
@@ -1190,31 +1310,36 @@ class _UnitPickerState extends State<_UnitPicker> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_circle_outline,
                       size: 15,
-                      color: didactaAccentDark,
+                      color: context.palette.accentDark,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         _chosen.length == 1
-                            ? '1 elegida: ${_chosen.single.title(language)}'
-                            : '${_chosen.length} elegidas, y se añaden en '
-                                  'este orden',
+                            ? tr('1 elegida: {0}', [
+                                _chosen.single.title(language),
+                              ])
+                            : tr(
+                                '{0} elegidas, y se añaden en '
+                                'este orden',
+                                [_chosen.length],
+                              ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: didactaAccentDark,
+                          color: context.palette.accentDark,
                         ),
                       ),
                     ),
                     TextButton(
                       key: const Key('picker-clear-selection'),
                       onPressed: () => setState(_chosen.clear),
-                      child: const Text('Quitar la selección'),
+                      child: Text(tr('Quitar la selección')),
                     ),
                   ],
                 ),
@@ -1223,9 +1348,19 @@ class _UnitPickerState extends State<_UnitPicker> {
         ),
       ),
       actions: [
+        // Cuando lo que hace falta todavía no existe: crearla aquí y
+        // añadirla, en lugar de salir a la biblioteca y volver.
+        if (widget.session.admin(repo: widget.repo) != null &&
+            widget.session.canWriteIn(widget.repo))
+          TextButton.icon(
+            key: const Key('picker-create'),
+            icon: const Icon(Icons.add, size: 16),
+            label: Text(tr('Crear una nueva…')),
+            onPressed: _createAndAdd,
+          ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('picker-add'),
@@ -1233,7 +1368,9 @@ class _UnitPickerState extends State<_UnitPicker> {
               ? null
               : () => Navigator.of(context).pop(List<Unit>.from(_chosen)),
           child: Text(
-            _chosen.length <= 1 ? 'Añadir' : 'Añadir ${_chosen.length}',
+            _chosen.length <= 1
+                ? tr('Añadir')
+                : tr('Añadir {0}', [_chosen.length]),
           ),
         ),
       ],
@@ -1242,10 +1379,10 @@ class _UnitPickerState extends State<_UnitPicker> {
 
   Widget _results(List<Unit> matches, String language) {
     if (matches.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
-          'Nada coincide.',
-          style: TextStyle(fontSize: 13, color: didactaMuted),
+          tr('Nada coincide.'),
+          style: TextStyle(fontSize: 13, color: context.palette.muted),
         ),
       );
     }
@@ -1299,20 +1436,20 @@ class _UnitPickerState extends State<_UnitPicker> {
         if (!_open.remove(node.path)) _open.add(node.path);
       }),
       builder: (context, hovering) => Container(
-        color: hovering ? didactaHover : null,
+        color: hovering ? context.palette.hover : null,
         padding: EdgeInsets.fromLTRB(8.0 + depth * 16, 7, 10, 7),
         child: Row(
           children: [
             Icon(
               open ? Icons.keyboard_arrow_down : Icons.chevron_right,
               size: 17,
-              color: didactaMuted,
+              color: context.palette.muted,
             ),
             const SizedBox(width: 4),
             Icon(
               open ? Icons.folder_open : Icons.folder,
               size: 15,
-              color: didactaAccentDark.withValues(alpha: 0.75),
+              color: context.palette.accentDark.withValues(alpha: 0.75),
             ),
             const SizedBox(width: 7),
             Expanded(
@@ -1330,17 +1467,17 @@ class _UnitPickerState extends State<_UnitPicker> {
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: Text(
-                  '$chosen elegidas',
-                  style: const TextStyle(
+                  tr('{0} elegidas', [chosen]),
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: didactaAccentDark,
+                    color: context.palette.accentDark,
                   ),
                 ),
               ),
             Text(
               '${node.count}',
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ],
         ),
@@ -1364,8 +1501,8 @@ class _UnitPickerState extends State<_UnitPicker> {
       onTap: present ? null : () => _toggle(unit),
       builder: (context, hovering) => Container(
         color: chosen
-            ? didactaSelected
-            : (hovering && !present ? didactaHover : null),
+            ? context.palette.selected
+            : (hovering && !present ? context.palette.hover : null),
         padding: EdgeInsets.fromLTRB(10.0 + indent * 16, 5, 10, 5),
         child: Row(
           children: [
@@ -1383,7 +1520,7 @@ class _UnitPickerState extends State<_UnitPicker> {
               height: 8,
               margin: const EdgeInsets.only(right: 8),
               decoration: BoxDecoration(
-                color: kindColour(unit.kind),
+                color: context.palette.kind(unit.kind),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1397,24 +1534,24 @@ class _UnitPickerState extends State<_UnitPicker> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: present ? didactaMuted : null,
+                      color: present ? context.palette.muted : null,
                       fontWeight: chosen ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                   if (present)
-                    const Text(
-                      'ya está en este documento',
-                      style: TextStyle(fontSize: 11, color: didactaEx),
+                    Text(
+                      tr('ya está en este documento'),
+                      style: TextStyle(fontSize: 11, color: context.palette.ex),
                     )
                   else if (showPath)
                     Text(
                       unit.path,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10.5,
                         fontFamily: 'monospace',
-                        color: didactaMuted,
+                        color: context.palette.muted,
                       ),
                     ),
                 ],
@@ -1444,23 +1581,25 @@ class _Empty extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Este documento no compone nada todavía.',
+            Text(
+              tr('Este documento no compone nada todavía.'),
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Después de una migración esto suele significar que el '
-              'documento original no importó ninguna unidad que se '
-              'pudiera resolver.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr(
+                'Después de una migración esto suele significar que el '
+                'documento original no importó ninguna unidad que se '
+                'pudiera resolver.',
+              ),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 18),
             if (enabled)
               FilledButton.icon(
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Añadir la primera unidad'),
+                label: Text(tr('Añadir la primera unidad')),
                 onPressed: onAdd,
               ),
           ],
@@ -1495,17 +1634,17 @@ class _CompositionFailure extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'No se ha podido abrir la composición',
+              Text(
+                tr('No se ha podido abrir la composición'),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               SelectableText(
                 path,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontFamily: 'monospace',
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
               ),
               const SizedBox(height: 10),
@@ -1518,13 +1657,14 @@ class _CompositionFailure extends StatelessWidget {
                 children: [
                   FilledButton.icon(
                     icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Reintentar'),
+                    label: Text(tr('Reintentar')),
                     onPressed: onRetry,
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
-                    onPressed: () => context.go(Routes.settings()),
-                    child: const Text('Ajustes'),
+                    onPressed: () =>
+                        context.go(Routes.settings(section: 'repositorios')),
+                    child: Text(tr('Ajustes')),
                   ),
                 ],
               ),

@@ -1,0 +1,53 @@
+% Problema: discontinuïtats evitables (valencià).
+
+\begin{exercise}[Discontinuïtats evitables]
+\begin{parts}
+  \item Troba el valor de $a$ per al qual la funció
+        \[
+          f(x) =
+          \begin{cases}
+            \dfrac{x^2 + x - 2}{x - 1} & \text{si } x \neq 1, \\[1ex]
+            a & \text{si } x = 1,
+          \end{cases}
+        \]
+        és contínua en $\mathbb{R}$.
+  \item Demostra que cap valor de $b$ no fa contínua en $0$ la funció
+        $g(x) = 1/x$ per a $x \neq 0$, amb $g(0) = b$.
+\end{parts}
+
+\dmarks{4}
+\answerspace{6cm}
+
+\begin{hint}
+En (i), factoritza el numerador. En (ii), mira què li passa a $|g(x)|$ quan
+$x$ s'acosta a $0$.
+\end{hint}
+
+\begin{answer}
+(i) $a = 3$. (ii) $g$ no té límit en $0$: $|1/x|$ es fa tan gran com es
+vulga.
+\end{answer}
+
+\begin{solution}
+\begin{parts}
+  \item Per a $x \neq 1$, $f$ és un quocient de polinomis el denominador del
+        qual no s'anul·la, per tant és contínua. En $x = 1$, com que
+        $x^2 + x - 2 = (x - 1)(x + 2)$,
+        \[
+          \lim_{x \to 1} f(x) = \lim_{x \to 1} (x + 2) = 3 ,
+        \]
+        així que $f$ és contínua en $1$ si i només si $a = 3$.
+  \item Si $g$ fora contínua en $0$, amb $\varepsilon = 1$ hi hauria un
+        $\delta > 0$ tal que $|1/x - b| < 1$, i per tant
+        $|1/x| < |b| + 1$, per a tot $0 < |x| < \delta$. Però
+        $x = \min\{\delta/2, 1/(|b| + 1)\}$ compleix $0 < x < \delta$ i
+        $1/x \geq |b| + 1$. Contradicció.
+\end{parts}
+\end{solution}
+
+\begin{marking}
+(i) Dos punts: un pel límit i un altre per concloure $a = 3$ justificant la
+continuïtat fora de $1$. (ii) Dos punts. Dir només «el límit és infinit»
+sense justificar-ho val mig punt.
+\end{marking}
+\end{exercise}

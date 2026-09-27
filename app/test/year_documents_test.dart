@@ -56,8 +56,14 @@ Future<FakeGateway> pumpYear(
   return used;
 }
 
+/// El último `year.yaml` guardado: con un documento nuevo, su master va en
+/// el mismo cambio y se apunta detrás.
+String committedYear(FakeGateway gateway) => gateway.commits
+    .lastWhere((commit) => commit.path.endsWith('/year.yaml'))
+    .text;
+
 List<String> committedIds(FakeGateway gateway) =>
-    CompositionFile(gateway.commits.last.text).documentIds();
+    CompositionFile(committedYear(gateway)).documentIds();
 
 void main() {
   testWidgets('los grupos salen en el orden del fichero', (tester) async {
@@ -95,7 +101,7 @@ void main() {
     await settle(tester);
     // El mensaje dice lo que pasó, no «editar year.yaml».
     expect(find.textContaining('Cambiar el orden de los grupos'), findsWidgets);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(committedIds(gateway), ['hoja-1', 'tema-1']);
@@ -132,15 +138,29 @@ void main() {
     await tester.tap(save);
     await settle(tester);
     expect(find.textContaining('Añadir el grupo'), findsWidgets);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
-    final text = gateway.commits.single.text;
+    final text = committedYear(gateway);
     expect(committedIds(gateway), [
       'tema-1',
       'hoja-1',
       'tema-3-series-de-funciones',
     ]);
+    // Con su master al lado y en el mismo cambio: sin él el motor no lo
+    // compila, y guardado aparte habría un commit con un documento roto.
+    const master = 'courses/am-iii/2025-2026/tema-3-series-de-funciones.tex';
+    expect(gateway.batches.single, [
+      'courses/am-iii/2025-2026/year.yaml',
+      master,
+    ]);
+    expect(gateway.files[master], contains(r'\DidactaTitlePage'));
+    expect(
+      gateway.files[master],
+      contains(r'\DidactaDocument{Tema 3. Series de funciones}'),
+    );
+    // Un seminario lleva índice; un examen o una hoja, no.
+    expect(gateway.files[master], contains(r'\DidactaContents'));
     expect(text, contains('    kind: seminar'));
     expect(text, contains('      es: Tema 3. Series de funciones'));
     // Los demás idiomas, marcados como pendientes **en un comentario**: un
@@ -178,6 +198,8 @@ void main() {
   testWidgets('quitar pregunta antes, y dice qué no se toca', (tester) async {
     final gateway = await pumpYear(tester);
 
+    await tester.tap(find.byKey(const Key('document-menu-hoja-1')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('remove-document-hoja-1')));
     await settle(tester);
     expect(find.textContaining('Las unidades no se tocan'), findsOneWidget);
@@ -187,6 +209,8 @@ void main() {
     await settle(tester);
     expect(save, findsNothing);
 
+    await tester.tap(find.byKey(const Key('document-menu-hoja-1')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('remove-document-hoja-1')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('confirm-remove-document')));
@@ -194,7 +218,7 @@ void main() {
     await tester.tap(save);
     await settle(tester);
     expect(find.textContaining('Quitar el grupo hoja-1'), findsWidgets);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(committedIds(gateway), ['tema-1']);
@@ -206,12 +230,39 @@ void main() {
     );
   });
 
+  testWidgets('lo guardado se deshace desde el aviso', (tester) async {
+    final gateway = await pumpYear(tester);
+    final original = gateway.files['courses/am-iii/2025-2026/year.yaml'];
+
+    await tester.tap(find.byKey(const Key('document-menu-hoja-1')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('remove-document-hoja-1')));
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('confirm-remove-document')));
+    await settle(tester);
+    await tester.tap(save);
+    await settle(tester);
+    await tapIfShown(tester, commit);
+    await settle(tester);
+    expect(committedIds(gateway), ['tema-1']);
+
+    await tester.tap(find.byKey(const Key('saved-follow-up')));
+    await settle(tester);
+
+    // Un commit nuevo con el fichero de antes, que dice lo que deshace.
+    expect(gateway.commits, hasLength(2));
+    expect(gateway.commits.last.text, original);
+    expect(gateway.commits.last.message, startsWith('Deshacer: '));
+    expect(find.text('Hoja 1'), findsOneWidget);
+  });
+
   testWidgets('sin permiso de escritura no se arrastra ni se añade', (
     tester,
   ) async {
     await pumpYear(tester, gateway: FakeGateway(writable: false));
     expect(find.byIcon(Icons.drag_indicator), findsNothing);
     expect(find.byKey(const Key('add-document')), findsNothing);
+    expect(find.byKey(const Key('document-menu-hoja-1')), findsNothing);
     expect(find.byKey(const Key('remove-document-hoja-1')), findsNothing);
     // Pero se sigue viendo lo que hay.
     expect(find.text('Hoja 1'), findsOneWidget);
@@ -220,6 +271,8 @@ void main() {
   testWidgets('descartar vuelve al fichero como estaba', (tester) async {
     final gateway = await pumpYear(tester);
 
+    await tester.tap(find.byKey(const Key('document-menu-hoja-1')));
+    await settle(tester);
     await tester.tap(find.byKey(const Key('remove-document-hoja-1')));
     await settle(tester);
     await tester.tap(find.byKey(const Key('confirm-remove-document')));

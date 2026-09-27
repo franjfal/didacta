@@ -97,6 +97,7 @@ jobs:
       version: ${{ steps.leer.outputs.version }}
       build: ${{ steps.leer.outputs.build }}
       tag: ${{ steps.leer.outputs.tag }}
+      prerelease: ${{ steps.leer.outputs.prerelease }}
     steps:
       - uses: actions/checkout@v7
 
@@ -459,6 +460,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
           VERSION: ${{ needs.comprobar.outputs.version }}
+          PRERELEASE: ${{ needs.comprobar.outputs.prerelease }}
         run: |
           # Las notas se vuelven a leer del CHANGELOG en vez de venir
           # interpoladas desde el trabajo anterior.
@@ -475,11 +477,15 @@ jobs:
           # de esta explicación llevaba las llaves vacías y tumbaba el
           # workflow entero con «An expression was expected».
           python3 packaging/release.py notes > notas.md
+          # Una versión de prueba se marca como tal: `releases/latest` no la
+          # devuelve, y así solo la ve quien ha pedido las de prueba.
+          PRUEBA=""
+          if [ "$PRERELEASE" = "true" ]; then PRUEBA="--prerelease"; fi
           gh release create "$TAG" \
             -R "$RELEASE_REPO" \
             --title "Didacta $VERSION" \
             --notes-file notas.md \
-            --draft \
+            --draft $PRUEBA \
             --target "$GITHUB_SHA"
           gh release upload "$TAG" -R "$RELEASE_REPO" dist/*
 
@@ -515,8 +521,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.comprobar.outputs.tag }}
+          PRERELEASE: ${{ needs.comprobar.outputs.prerelease }}
         run: |
-          gh release edit "$TAG" -R "$RELEASE_REPO" --draft=false --latest
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release edit "$TAG" -R "$RELEASE_REPO" --draft=false \
+              --prerelease --latest=false
+          else
+            gh release edit "$TAG" -R "$RELEASE_REPO" --draft=false --latest
+          fi
           echo "· Publicado: https://github.com/$RELEASE_REPO/releases/tag/$TAG"
 
       # La página de descarga no se escribe aquí.

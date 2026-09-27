@@ -30,6 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Los textos de Material --el menú de cortar y pegar, los selectores de
+  # fecha-- en castellano, y no en inglés, que es lo que salía sin esto.
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -44,6 +48,9 @@ dependencies:
   package_info_plus: ^10.2.1
   crypto: ^3.0.7
   path_provider: ^2.1.6
+  # Vigilar las carpetas del material en Linux, donde el sistema no sabe
+  # vigilar una carpeta con todo lo que lleva dentro.
+  watcher: ^1.2.1
 
 dev_dependencies:
   flutter_test:
@@ -66,6 +73,28 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # El repositorio de ejemplo que se sube a la cuenta de quien pulsa «Probar
+  # con un ejemplo». Flutter empaqueta carpeta a carpeta y no baja a las de
+  # dentro, así que va una línea por carpeta; si falta una, el test
+  # `example_repository_test.dart` dice cuál.
+  assets:
+    - assets/ejemplo/
+    - assets/ejemplo/content/calculo/continuidad/funcion-continua/
+    - assets/ejemplo/content/calculo/continuidad/teorema-de-bolzano/
+    - assets/ejemplo/content/calculo/limites/algebra-de-limites/
+    - assets/ejemplo/content/calculo/limites/definicion-de-limite/
+    - assets/ejemplo/content/calculo/limites/historia-del-epsilon/
+    - assets/ejemplo/content/calculo/limites/limite-por-definicion/
+    - assets/ejemplo/courses/calculo-i/
+    - assets/ejemplo/courses/calculo-i/2026-2027/
+    - assets/ejemplo/generated/
+    # `.github/workflows/`, sin el punto: Flutter no empaqueta lo oculto, y
+    # `loadExampleRepository` le pone el punto al subirlo.
+    - assets/ejemplo/github/workflows/
+    - assets/ejemplo/problems/calculo/continuidad/discontinuidades-evitables/
+    - assets/ejemplo/problems/calculo/continuidad/tres-raices-por-bolzano/
+    - assets/ejemplo/problems/calculo/limites/limites-de-cocientes/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

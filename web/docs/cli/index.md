@@ -50,12 +50,36 @@ didacta places --document am-iii@2025-2026/tema-1   # dónde más se da
 
 ```bash
 didacta check
+didacta check --in am-iii@2025-2026          # solo lo de ese curso
+didacta check --with formulas,unused --json  # más comprobaciones, en JSON
+didacta check --strict                       # los avisos también fallan
 ```
 
 Referencias que no resuelven, perfiles que no existen, documentos que compilan
-en un idioma que su contenido no tiene. Es lo que conviene ejecutar antes de
-dar por bueno un curso, y lo que un repositorio de contenido debería correr en
-su integración continua.
+en un idioma que su contenido no tiene. Y lo que hay escrito: órdenes de un
+solo idioma de babel en otro, entornos que no define nadie, figuras que
+faltan, `\label` repetidas y `\ref` sin destino, diapositivas que se salían
+en la última compilación y traducciones desactualizadas. Con `--with`, además
+`formulas` (distintas entre idiomas), `unused` (lecciones sin usar),
+`overfull-lines`, `decimals`, `spelling` (la ortografía, ver abajo) y
+`accessible` (las figuras sin texto alternativo y lo que no deja etiquetar un
+PDF). Es lo que
+conviene ejecutar antes de dar por bueno un curso, y lo que un repositorio de
+contenido debería correr en su integración continua, con `--strict`.
+
+`spelling` lee la prosa de cada lección --sin las fórmulas, las órdenes ni las
+etiquetas-- con [hunspell](https://hunspell.github.io/) y el diccionario de su
+idioma. Didacta no los trae: se instalan una vez (`brew install hunspell` en
+macOS, con los diccionarios de LibreOffice en `~/Library/Spelling`; `sudo apt
+install hunspell hunspell-es hunspell-ca` en Debian o Ubuntu). El valenciano
+usa `ca_ES-valencia` si está y el catalán si no. Si falta hunspell o el
+diccionario de un idioma, lo dice una vez y no cuenta como aviso. Las palabras
+buenas que el diccionario no conoce --«Banach», «seminorma»-- van en
+`shared/palabras.txt`, una por línea, y valen para todos los idiomas. Si
+hunspell está en un sitio raro, `DIDACTA_HUNSPELL` dice dónde.
+
+Con `--json`, cada hallazgo lleva su comprobación, su gravedad y dónde está:
+`path`, `line`, `unit`, `language` y, si es de uno, `document`.
 
 ## Compilar
 
@@ -70,14 +94,52 @@ didacta preview analysis/normed/definition   # una unidad suelta
 La compilación es **fuera del árbol** y con SyncTeX: el repositorio no se
 llena de `.aux`, y el PDF sabe volver a la línea del fichero fuente.
 
+Una diapositiva que se sale por abajo más de 5 pt es un **aviso** con su
+lección y la línea de su `\begin{frame}` (`code: overfull-slide` en el JSON,
+con `points` y `times`, en cuántas páginas). Las líneas que se salen por la
+derecha fuera de las diapositivas, solo con `--overfull-lines`
+(`overfull-line`), en `build` y en `preview`.
+
+`didacta version` dice de qué versión es el motor: la etiqueta en la que
+está su clon, o su commit si es una copia de desarrollo.
+
+`didacta synctex PDF --page N --x X --y Y` dice de qué fichero y de qué
+línea sale un punto de un PDF compilado (en puntos, desde arriba a la
+izquierda), con la lección y el idioma si es de una. `--word` y `--text`, lo
+que hay escrito ahí, afinan la línea dentro de una diapositiva.
+
+`--accessible` saca etiquetado (PDF/UA-2, con LuaLaTeX) lo que no son
+diapositivas; lo que no se deja etiquetar sale sin etiquetar y lo dice (`code:
+untagged`), y el resultado de lo que sí lleva `"tagged": true`.
+[:octicons-arrow-right-24: Apuntes accesibles](../app/compilar.md#apuntes-accesibles)
+
+`--fast` compila en una sola pasada. El resultado lleva `"quick": true`, y
+`didacta built` da ese PDF por viejo (`stale`, con `quick`) hasta que se
+compila entero.
+
 ## Crear
 
 ```bash
 didacta new unit analysis/normed/dual-space
 didacta new unit analysis/series/convergence --kind problem
+didacta new unit analysis/series/ratio --from analysis/series/convergence --title "Criterio del cociente"
 didacta new year am-iii 2026-2027
 didacta copy --from am-iii@2025-2026 --to am-iii@2026-2027 tema-1
 ```
+
+`new unit --from` empieza la lección como una **copia de otra**, con su
+carpeta entera y un id nuevo: son dos lecciones desde ese momento. El título
+se pone en el idioma de `--lang`, o en el de referencia de la original.
+
+Para cambiar una lección de carpeta sin copiarla:
+
+```bash
+didacta move --unit analysis/series/ratio --to analysis/criterios/ratio
+```
+
+Reescribe cada composición que la nombra por su ruta, los temas vinculados y
+los prerrequisitos de las demás lecciones, y pone al día el `.tex` de cada
+documento. El id no cambia, así que lo que la nombra por id sigue igual.
 
 `copy` **duplica** la composición: el curso de destino se lleva su propia
 entrada y a partir de ahí los dos van por su lado. Para dar *el mismo* tema en
@@ -90,7 +152,31 @@ didacta export am-iii@2025-2026 --to ~/Escritorio/AM3
 ```
 
 Saca los PDF ya compilados a una carpeta, en carpetas por idioma y con nombres
-que se leen.
+que se leen. Con `--html`, al lado de cada uno que no es de diapositivas, sus
+apuntes en HTML accesible; y solo el HTML, sin compilar nada:
+
+```bash
+didacta html am-iii@2025-2026 --to ~/Escritorio/AM3-html
+```
+
+### Una web del curso { #una-web-del-curso }
+
+```bash
+didacta site am-iii@2025-2026              # en site/, dentro del repositorio
+didacta site am-iii@2025-2026 --to ~/web -l es -l va
+```
+
+Exporta lo que se reparte --con la misma regla que `export`: lo del
+estudiante, salvo `--reveal-up-to`-- y escribe al lado un `index.html` que lo
+enseña por idioma y por tema, con cada versión de cada documento enlazada. Es
+una página sola, en claro y en oscuro según el sistema de quien la mire, que
+se sube tal cual a GitHub Pages, a un servidor de la universidad o a una
+carpeta compartida. Cada vez se rehace entera, para que lo que ya no se da no
+siga enlazado; por eso solo vacía una carpeta que hizo ella.
+
+El repositorio de ejemplo trae `.github/workflows/web-del-curso.yml`, que
+publica `site/` en GitHub Pages cada vez que cambia: `didacta site`, commit y
+subir.
 
 ## Compartir temario entre cursos
 
@@ -200,7 +286,14 @@ antiguo no guardaba metadatos, y eso no se inventa.
 didacta tidy      # quita la cabecera de migración de los fuentes
 didacta remove course am-iii            # cuenta lo que se llevaría
 didacta remove course am-iii --apply    # y entonces lo hace
+didacta clean --size    # cuánto ocupa la carpeta de compilación
+didacta clean           # y vaciarla
 ```
 
 `remove` **sin `--apply` no borra nada**: cuenta qué se llevaría. Es la misma
 cifra que enseña la aplicación antes de preguntar.
+
+`didacta clean` vacía la carpeta de compilación --los PDF, los `.aux` y los
+registros, que no se versionan-- y nunca nada fuera de ella; `--size` dice
+cuánto ocupa sin borrar, y con documentos (`curso@año/documento`) solo
+los suyos.

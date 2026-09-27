@@ -24,6 +24,7 @@ library;
 
 import 'catalogue.dart';
 import 'tex_outline.dart';
+import '../l10n/tr.dart';
 
 /// Una pieza de la lectura, en el orden en que se lee.
 sealed class ReadingPiece {
@@ -158,7 +159,10 @@ Future<DocumentReading> readDocument({
     final unit = catalogue.unitByReference(part.reference);
     if (unit == null) {
       pieces.add(
-        ReadingGap(reference: part.reference, reason: 'no está en el catálogo'),
+        ReadingGap(
+          reference: part.reference,
+          reason: tr('no está en el catálogo'),
+        ),
       );
       continue;
     }
@@ -168,7 +172,7 @@ Future<DocumentReading> readDocument({
       pieces.add(
         ReadingGap(
           reference: part.reference,
-          reason: 'no existe en ningún idioma',
+          reason: tr('no existe en ningún idioma'),
         ),
       );
       continue;

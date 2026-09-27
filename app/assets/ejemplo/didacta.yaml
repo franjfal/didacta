@@ -1,0 +1,25 @@
+# Un repositorio de contenido de Didacta.
+#
+# Este fichero marca la raíz del repositorio: el motor sube de carpeta en
+# carpeta hasta encontrarlo, igual que git busca `.git`. Todo lo que dice tiene
+# un valor por defecto, así que un `didacta.yaml` vacío también funcionaría.
+
+# El nombre con el que la aplicación enseña este repositorio.
+name: Ejemplo de Didacta
+
+# Los idiomas a los que se traduce el material de este repositorio. Cada
+# lección tiene un fichero por idioma (`es.tex`, `va.tex`, `en.tex`), y el que
+# falta es lo que la pantalla de Traducción enseña como pendiente.
+#
+# Declarar solo los que de verdad se mantienen: un idioma de más convierte
+# cada lección en una traducción pendiente que nadie va a hacer.
+languages: [es, va, en]
+
+# El idioma que se supone cuando nada dice otra cosa: el de una lección nueva,
+# o el de una asignatura que no declara el suyo.
+default_language: es
+
+# Dónde van los PDF. Es relativo a la raíz y está en `.gitignore`: lo
+# compilado se regenera a partir de los `.tex`, así que guardarlo en git sería
+# tener lo mismo dos veces y dejar que las dos copias discrepen.
+build_dir: .didacta-build

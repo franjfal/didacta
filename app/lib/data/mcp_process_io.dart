@@ -13,6 +13,7 @@ library;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:http/http.dart' as http;
 
@@ -20,12 +21,15 @@ import '../model/mcp.dart';
 import 'compiler_io.dart'
     show cliIn, engineCommand, noPythonProblem, texAwarePath;
 import 'mcp_process.dart';
+import '../l10n/tr.dart';
 
 McpRunner runnerFor({required String enginePath, String? texPath}) {
   if (enginePath.isEmpty) {
-    return const UnavailableRunner(
-      'No hay motor configurado. El servidor MCP es `didacta mcp`, así que '
-      'hace falta decir dónde está Didacta en Ajustes.',
+    return UnavailableRunner(
+      tr(
+        'No hay motor configurado. El servidor MCP es `didacta mcp`, así que '
+        'hace falta decir dónde está Didacta en Ajustes.',
+      ),
     );
   }
   return ProcessRunner(enginePath: enginePath, texPath: texPath);
@@ -41,18 +45,31 @@ class ProcessRunner implements McpRunner {
   Future<McpSession> start(List<McpRepository> repositories) async {
     final script = cliIn(enginePath);
     if (!await File(script).exists()) {
-      throw StateError('No existe $script.');
+      throw StateError(tr('No existe {0}.', [script]));
     }
     // Con el intérprete delante en Windows, igual que al compilar: lanzar el
     // script tal cual allí no ha funcionado nunca.
     final command = await engineCommand(enginePath, texPath: texPath);
     if (command == null) throw StateError(noPythonProblem);
 
+    // El token, de aquí y por el entorno: por la línea de órdenes lo vería
+    // cualquiera de la máquina con `ps`.
+    final random = Random.secure();
+    final token = base64Url
+        .encode(List<int>.generate(24, (_) => random.nextInt(256)))
+        .replaceAll('=', '');
+
     final process = await Process.start(
       command.executable,
       command.then([
         'mcp',
         '--http',
+        // Que se apague si esta aplicación se muere: le dejamos la entrada
+        // estándar abierta sin escribir nunca, y al cerrarse la aplicación
+        // --del modo que sea-- le llega el final del fichero. Antes, un
+        // `exit(0)` al actualizar dejaba el servidor escribiendo en los
+        // repositorios sin nadie que lo apagara.
+        '--exit-with-stdin',
         // Cero: lo elige el sistema y lo dice. Un puerto fijo choca con otra
         // copia de Didacta, y con cualquier otra cosa que lo haya cogido.
         '--port', '0',
@@ -62,6 +79,7 @@ class ProcessRunner implements McpRunner {
         ],
       ]),
       environment: {
+        'DIDACTA_MCP_TOKEN': token,
         'NO_COLOR': '1',
         'TERM': 'dumb',
         // Con TeX dentro: si no, la herramienta de compilar no encuentra
@@ -99,7 +117,7 @@ class ProcessRunner implements McpRunner {
       await lines.close();
       throw StateError(
         problems.isEmpty
-            ? 'El motor no dijo por qué puerto escucha ($error).'
+            ? tr('El motor no dijo por qué puerto escucha ({0}).', [error])
             : problems.take(4).join('\n'),
       );
     }
@@ -107,13 +125,19 @@ class ProcessRunner implements McpRunner {
     return _Session(
       process: process,
       url: hello['url'] as String? ?? 'http://127.0.0.1:${hello['port']}/',
+      token: hello['token'] as String? ?? token,
       lines: lines,
     );
   }
 }
 
 class _Session implements McpSession {
-  _Session({required this.process, required this.url, required this._lines});
+  _Session({
+    required this.process,
+    required this.url,
+    required this.token,
+    required this._lines,
+  });
 
   final Process process;
 
@@ -123,6 +147,9 @@ class _Session implements McpSession {
 
   @override
   final String url;
+
+  @override
+  final String token;
 
   @override
   Stream<String> get journal => _lines.stream;
@@ -137,7 +164,10 @@ class _Session implements McpSession {
     final response = await http
         .post(
           Uri.parse(url),
-          headers: const {'Content-Type': 'application/json'},
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': tr('Bearer {0}', [token]),
+          },
           body: jsonEncode({
             'jsonrpc': '2.0',
             'id': 1,

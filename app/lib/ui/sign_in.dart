@@ -33,6 +33,7 @@ import '../data/browser.dart';
 import '../data/github.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// El formulario de entrar: el Client ID y el botón.
 ///
@@ -82,10 +83,11 @@ class _SignInFormState extends State<SignInForm> {
     final clientId = _clientId.text.trim();
     if (clientId.isEmpty) {
       setState(
-        () => _problem =
-            'Falta el Client ID de la OAuth App. Créala en GitHub '
-            '(Settings → Developer settings → OAuth Apps) con «Enable '
-            'Device Flow» marcado, y pega aquí su Client ID.',
+        () => _problem = tr(
+          'Falta el Client ID. Crea en GitHub una GitHub App (Settings → '
+          'Developer settings → GitHub Apps) o una OAuth App, con «Enable '
+          'Device Flow» marcado, y pega aquí su Client ID.',
+        ),
       );
       return;
     }
@@ -119,8 +121,9 @@ class _SignInFormState extends State<SignInForm> {
         barrierDismissible: false,
         builder: (context) => _DeviceCodeDialog(code: code),
       );
-      final token = await auth.waitForToken(code);
-      await widget.session.signIn(token);
+      // La credencial entera: la de una GitHub App trae el de renovar.
+      final credential = await auth.waitForCredential(code);
+      await widget.session.signInWith(credential);
       if (!mounted) return;
       Navigator.of(context, rootNavigator: true).pop();
       await waiting;
@@ -143,10 +146,12 @@ class _SignInFormState extends State<SignInForm> {
     // la web: el «almacenamiento seguro» de un navegador lo lee cualquier
     // script de su origen.
     if (!widget.session.canStoreToken) {
-      return const Note(
-        'Aquí no se puede guardar una credencial de forma segura, así que no '
-        'se puede entrar. Didacta se usa desde la aplicación de escritorio.',
-        tone: didactaTeacher,
+      return Note(
+        tr(
+          'Aquí no se puede guardar una credencial de forma segura, así que no '
+          'se puede entrar. Didacta se usa desde la aplicación de escritorio.',
+        ),
+        tone: context.palette.teacher,
       );
     }
 
@@ -160,12 +165,13 @@ class _SignInFormState extends State<SignInForm> {
           TextField(
             key: const Key('github-client-id'),
             controller: _clientId,
-            decoration: const InputDecoration(
-              labelText: 'Client ID de la OAuth App',
-              helperText:
-                  'GitHub → Settings → Developer settings → OAuth Apps, '
-                  'con «Enable Device Flow». Es público: no es un '
-                  'secreto que haya que proteger.',
+            decoration: InputDecoration(
+              labelText: tr('Client ID de la OAuth App'),
+              helperText: tr(
+                'GitHub → Settings → Developer settings → OAuth Apps, '
+                'con «Enable Device Flow». Es público: no es un '
+                'secreto que haya que proteger.',
+              ),
               helperMaxLines: 3,
               border: OutlineInputBorder(),
               isDense: true,
@@ -183,7 +189,7 @@ class _SignInFormState extends State<SignInForm> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.login, size: 16),
-          label: Text(_working ? 'Esperando…' : 'Entrar en GitHub'),
+          label: Text(_working ? tr('Esperando…') : tr('Entrar en GitHub')),
         ),
         if (!showClientId) ...[
           const SizedBox(height: 6),
@@ -192,8 +198,8 @@ class _SignInFormState extends State<SignInForm> {
             child: TextButton(
               key: const Key('show-client-id'),
               onPressed: () => setState(() => _askedForClientId = true),
-              child: const Text(
-                'Entrar con otra aplicación de OAuth',
+              child: Text(
+                tr('Entrar con otra aplicación de OAuth'),
                 style: TextStyle(fontSize: 12),
               ),
             ),
@@ -201,7 +207,7 @@ class _SignInFormState extends State<SignInForm> {
         ],
         if (_problem != null) ...[
           const SizedBox(height: 12),
-          Note('$_problem', tone: didactaTeacher),
+          Note('$_problem', tone: context.palette.teacher),
         ],
       ],
     );
@@ -223,7 +229,7 @@ class SignInGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final expired = session.signInProblem;
     return Scaffold(
-      backgroundColor: didactaSurface,
+      backgroundColor: context.palette.surface,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
@@ -233,8 +239,8 @@ class SignInGate extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Didacta',
+                Text(
+                  tr('Didacta'),
                   style: TextStyle(
                     fontSize: 27,
                     fontWeight: FontWeight.w700,
@@ -242,27 +248,40 @@ class SignInGate extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'Entra en GitHub para empezar.',
-                  style: TextStyle(fontSize: 14.5, color: didactaMuted),
+                Text(
+                  tr('Entra en GitHub para empezar.'),
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    color: context.palette.muted,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 // Por qué se pide, y no sólo que se pide. Un muro sin motivo
                 // se lee como un trámite; con el motivo se lee como lo que
                 // es, que es de dónde salen los permisos.
-                const Text(
-                  'El material vive en repositorios privados y los cambios se '
-                  'guardan como commits con el nombre de quien los hace. '
-                  'Quién puede leer cada repositorio y quién puede escribir en '
-                  'él lo dice GitHub, así que Didacta no mantiene ninguna otra '
-                  'lista: la sesión es el permiso.',
+                Text(
+                  tr(
+                    'El material vive en repositorios privados y los cambios se '
+                    'guardan en el historial con el nombre de quien los hace. '
+                    'Quién puede leer cada repositorio y quién puede escribir en '
+                    'él lo dice GitHub, así que Didacta no mantiene ninguna otra '
+                    'lista: la sesión es el permiso.',
+                  ),
                   style: TextStyle(fontSize: 13, height: 1.45),
                 ),
                 if (expired != null) ...[
                   const SizedBox(height: 16),
                   Note(
-                    'La sesión que había ha dejado de valer: $expired',
-                    tone: didactaTeacher,
+                    expired is KeychainProblem
+                        ? tr(
+                            '{0} Hasta que se pueda, habrá que entrar cada '
+                            'vez que se abra Didacta.',
+                            [expired],
+                          )
+                        : tr('La sesión que había ha dejado de valer: {0}', [
+                            expired,
+                          ]),
+                    tone: context.palette.teacher,
                   ),
                 ],
                 const SizedBox(height: 22),
@@ -273,11 +292,13 @@ class SignInGate extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'La contraseña se teclea en github.com y en ningún otro '
-                  'sitio: Didacta enseña un código, tú lo autorizas allí. '
-                  'Una vez dentro, se abre también sin conexión.',
-                  style: TextStyle(fontSize: 12, color: didactaMuted),
+                Text(
+                  tr(
+                    'La contraseña se teclea en github.com y en ningún otro '
+                    'sitio: Didacta enseña un código, tú lo autorizas allí. '
+                    'Una vez dentro, se abre también sin conexión.',
+                  ),
+                  style: TextStyle(fontSize: 12, color: context.palette.muted),
                 ),
               ],
             ),
@@ -301,16 +322,18 @@ class _DeviceCodeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Entra en GitHub con este código'),
+    title: Text(tr('Entra en GitHub con este código')),
     content: SizedBox(
       width: 420,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Apunta o copia el código, abre GitHub y pégalo allí. Ya está '
-            'copiado al portapapeles.',
+          Text(
+            tr(
+              'Apunta o copia el código, abre GitHub y pégalo allí. Ya está '
+              'copiado al portapapeles.',
+            ),
             style: TextStyle(fontSize: 13, height: 1.45),
           ),
           const SizedBox(height: 14),
@@ -320,8 +343,8 @@ class _DeviceCodeDialog extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: didactaSurface,
-              border: Border.all(color: didactaRule),
+              color: context.palette.surface,
+              border: Border.all(color: context.palette.rule),
               borderRadius: BorderRadius.circular(6),
             ),
             child: Center(
@@ -339,14 +362,20 @@ class _DeviceCodeDialog extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Se pega en ${code.verificationUri}',
-            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            tr('Se pega en {0}', [code.verificationUri]),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
           const SizedBox(height: 10),
-          const Text(
-            'Esta ventana se cierra sola en cuanto lo autorices. Tu '
-            'contraseña se teclea en github.com y en ningún otro sitio.',
-            style: TextStyle(fontSize: 12, color: didactaMuted, height: 1.4),
+          Text(
+            tr(
+              'Esta ventana se cierra sola en cuanto lo autorices. Tu '
+              'contraseña se teclea en github.com y en ningún otro sitio.',
+            ),
+            style: TextStyle(
+              fontSize: 12,
+              color: context.palette.muted,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -355,13 +384,13 @@ class _DeviceCodeDialog extends StatelessWidget {
       TextButton(
         key: const Key('device-copy'),
         onPressed: () => Clipboard.setData(ClipboardData(text: code.userCode)),
-        child: const Text('Copiar otra vez'),
+        child: Text(tr('Copiar otra vez')),
       ),
       FilledButton.icon(
         key: const Key('device-open'),
         icon: const Icon(Icons.open_in_new, size: 16),
         onPressed: () => openLink(code.verificationUri),
-        label: const Text('Abrir GitHub'),
+        label: Text(tr('Abrir GitHub')),
       ),
     ],
   );

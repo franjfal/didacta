@@ -50,6 +50,9 @@ class StubSession implements McpSession {
   String get url => 'http://127.0.0.1:41234/';
 
   @override
+  String get token => 'token-de-prueba';
+
+  @override
   Stream<String> get journal => lines.stream;
 
   @override

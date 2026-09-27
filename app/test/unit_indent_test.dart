@@ -31,7 +31,10 @@ Map<String, dynamic> unitWith({bool? indentVa}) => {
   },
 };
 
-Future<(FakeSession, FakeGateway)> ready({bool? indentVa}) async {
+Future<(FakeSession, FakeGateway)> ready({
+  bool? indentVa,
+  bool complete = true,
+}) async {
   final gateway = FakeGateway(
     files: {
       '$here/unit.yaml':
@@ -49,6 +52,8 @@ Future<(FakeSession, FakeGateway)> ready({bool? indentVa}) async {
   final session = FakeSession(gatewayOverride: gateway, catalogue: catalogue);
   await session.primeForTest(catalogue);
   await session.useCloneForTest('/tmp/didacta-test');
+  // La casilla de sangrar y el botón de ordenar son de la interfaz completa.
+  await session.setCompleteInterface(complete);
   return (session, gateway);
 }
 
@@ -154,6 +159,30 @@ void main() {
   });
 
   group('en el editor', () {
+    testWidgets('en la interfaz esencial no hay casilla: se ordena y ya', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1500, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final (session, _) = await ready(complete: false);
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(
+              body: UnitPage(unitPath: here, language: 'va'),
+            ),
+          ),
+        ),
+      );
+      await settle(tester);
+      expect(find.byKey(const Key('editor-indent')), findsNothing);
+      expect(find.byKey(const Key('editor-beautify')), findsNothing);
+    });
+
     testWidgets('la casilla sale puesta, y guardar ordena el fichero', (
       tester,
     ) async {
@@ -185,7 +214,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.byKey(const Key('editor-save')));
       await settle(tester);
-      await tester.tap(find.byKey(const Key('commit-save')));
+      await tapIfShown(tester, find.byKey(const Key('commit-save')));
       await settle(tester);
 
       final written = gateway.commits.last;
@@ -224,7 +253,7 @@ void main() {
       await settle(tester);
       await tester.tap(find.byKey(const Key('editor-save')));
       await settle(tester);
-      await tester.tap(find.byKey(const Key('commit-save')));
+      await tapIfShown(tester, find.byKey(const Key('commit-save')));
       await settle(tester);
 
       expect(gateway.commits.last.text, raw);
@@ -324,44 +353,7 @@ void main() {
       expect(find.byKey(const Key('tidy-now')), findsNothing);
     });
 
-    testWidgets('pulsar la palabra ordena el fichero, sin tocar el ajuste', (
-      tester,
-    ) async {
-      // La casilla dice si se ordena solo al guardar; la palabra lo ordena
-      // ahora. Quien acaba de leer «Beautify» y quiere ver qué hace, pulsa la
-      // palabra, y lo que **no** puede pasar es que eso apague el ajuste.
-      tester.view.physicalSize = const Size(1500, 900);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
-
-      final (session, gateway) = await ready();
-      await tester.pumpWidget(
-        ChangeNotifierProvider<Session>.value(
-          value: session,
-          child: MaterialApp(
-            theme: didactaTheme(),
-            home: const Scaffold(
-              body: UnitPage(unitPath: here, language: 'va'),
-            ),
-          ),
-        ),
-      );
-      await settle(tester);
-
-      await tester.tap(find.byKey(const Key('editor-beautify')));
-      await settle(tester);
-
-      final field = tester.widget<TextField>(find.byType(TextField).first);
-      expect(field.controller!.text, contains('  \\item Uno'));
-      // Ni ha guardado nada ni ha tocado el `unit.yaml`.
-      expect(gateway.commits, isEmpty);
-      expect(
-        tester.widget<Checkbox>(find.byKey(const Key('editor-indent'))).value,
-        isTrue,
-      );
-    });
-
-    testWidgets('apagada, la palabra no ofrece ordenar', (tester) async {
+    testWidgets('apagada, la barra no ofrece ordenar', (tester) async {
       tester.view.physicalSize = const Size(1500, 900);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);

@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
 import 'template_store.dart';
+import '../l10n/tr.dart';
 
 bool get supported => true;
 
@@ -54,7 +55,7 @@ class _DiskStore implements TemplateStore {
   Future<int> exportTo(String directory) async {
     final destination = Directory(directory);
     if (!await destination.exists()) {
-      throw TemplateStoreException('no existe la carpeta $directory');
+      throw TemplateStoreException(tr('no existe la carpeta {0}', [directory]));
     }
     final source = await _ensure();
     var copied = 0;
@@ -75,11 +76,11 @@ class _DiskStore implements TemplateStore {
   ) async {
     final source = Directory(directory);
     if (!await source.exists()) {
-      throw TemplateStoreException('no existe la carpeta $directory');
+      throw TemplateStoreException(tr('no existe la carpeta {0}', [directory]));
     }
     if (!await File('${source.path}/templates.yaml').exists()) {
-      throw const TemplateStoreException(
-        'ahí no hay plantillas: falta el templates.yaml',
+      throw TemplateStoreException(
+        tr('ahí no hay plantillas: falta el templates.yaml'),
       );
     }
     final destination = await _ensure();
@@ -87,7 +88,10 @@ class _DiskStore implements TemplateStore {
     final kept = <String>[];
     await for (final entry in source.list(recursive: true)) {
       if (entry is! File) continue;
-      final relative = entry.path.substring(source.path.length + 1);
+      // Con `/`, que es como se enseña: en Windows llega con `\`.
+      final relative = entry.path
+          .substring(source.path.length + 1)
+          .replaceAll(r'\', '/');
       final target = File('${destination.path}/$relative');
       if (await target.exists()) {
         kept.add(relative);

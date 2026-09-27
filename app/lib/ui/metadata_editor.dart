@@ -27,11 +27,19 @@ import 'package:flutter/material.dart';
 import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
 import '../model/line_diff.dart';
+import '../model/metadata_suggestions.dart';
 import '../model/yaml_patch.dart';
+import '../router.dart';
 import '../state/session.dart';
 import 'manage_templates.dart';
+import 'save_review.dart';
+import 'save_shortcut.dart';
+import 'suggest_field.dart';
 import 'theme.dart';
 import 'unit_page.dart';
+import '../l10n/tr.dart';
+
+export '../model/catalogue.dart' show declarableStatuses;
 
 /// The kinds the engine knows. Kept in step with `repo.UNIT_KINDS`; a value
 /// outside it is rejected when the repository is read, so offering a free
@@ -48,15 +56,28 @@ const List<String> unitKinds = [
   'practical',
 ];
 
-/// The statuses a file may declare. `missing` and `outdated` are computed by
-/// the engine and deliberately absent: writing either down guarantees it goes
-/// stale.
-const List<String> declarableStatuses = [
-  'draft',
-  'translated',
-  'reviewed',
-  'source',
-];
+/// Lo que se ofrece declarar de una versión, según la interfaz.
+///
+/// En la esencial, dos estados y nada más: **sin revisar** y
+/// **revisada**, que son las dos preguntas que se hace quien traduce. «Traducida»
+/// --hecha y sin revisar, lo que deja la migración-- y «original» son de quien
+/// mantiene el repositorio y quedan para la completa. La versión de referencia,
+/// en la esencial, no ofrece nada: es el original y ya está.
+List<String> declarableStatusesFor({
+  required bool complete,
+  required bool reference,
+}) {
+  if (complete) return declarableStatuses;
+  return reference ? const [] : const ['draft', 'reviewed'];
+}
+
+/// Cómo se llama cada estado que se puede declarar, en un menú.
+Map<String, String> get declarableStatusNames => {
+  'draft': tr('sin revisar'),
+  'translated': tr('traducida'),
+  'reviewed': tr('revisada'),
+  'source': tr('original'),
+};
 
 const List<String> difficulties = ['easy', 'medium', 'hard'];
 
@@ -88,6 +109,24 @@ class _MetadataEditorState extends State<MetadataEditor> {
 
   bool get _dirty => _text != _loaded;
 
+  /// Lo que usan las demás lecciones, calculado una vez por catálogo: el
+  /// formulario se vuelve a pintar a cada tecla, y recorrer dos mil lecciones
+  /// a cada tecla no hace falta.
+  MetadataSuggestions? _suggestions;
+  Catalogue? _suggestionsOf;
+
+  MetadataSuggestions get _suggested {
+    final catalogue = widget.session.catalogue;
+    if (_suggestions == null || !identical(_suggestionsOf, catalogue)) {
+      _suggestions = MetadataSuggestions.of(
+        catalogue,
+        language: widget.session.language,
+      );
+      _suggestionsOf = catalogue;
+    }
+    return _suggestions!;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -98,6 +137,7 @@ class _MetadataEditorState extends State<MetadataEditor> {
 
   @override
   void dispose() {
+    widget.session.unsaved.mark(this, null);
     _raw.dispose();
     super.dispose();
   }
@@ -138,13 +178,16 @@ class _MetadataEditorState extends State<MetadataEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'No se ha tocado el fichero: ${thrown.message}. '
-            'Edítalo como texto si hace falta.',
+            tr(
+              'No se ha tocado el fichero: {0}. '
+              'Edítalo como texto si hace falta.',
+              [thrown.message],
+            ),
           ),
-          backgroundColor: didactaTeacher,
+          backgroundColor: context.palette.teacher,
           duration: const Duration(seconds: 7),
           action: SnackBarAction(
-            label: 'Ver el fichero',
+            label: tr('Ver el fichero'),
             onPressed: () => setState(() => _showRaw = true),
           ),
         ),
@@ -159,6 +202,15 @@ class _MetadataEditorState extends State<MetadataEditor> {
 
   @override
   Widget build(BuildContext context) {
+    widget.session.unsaved.mark(
+      this,
+      _dirty
+          ? tr('Los metadatos de «{0}»', [
+              widget.unit.title(widget.session.language),
+            ])
+          : null,
+      place: Routes.unit(widget.unit.path),
+    );
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -174,47 +226,53 @@ class _MetadataEditorState extends State<MetadataEditor> {
     final patch = YamlPatch(_text);
     final size = diffSize(_loaded, _text);
 
-    return Column(
-      children: [
-        _Bar(
-          path: _file?.path ?? widget.unit.metadataPath,
-          added: size.added,
-          removed: size.removed,
-          saving: _saving,
-          canSave: canWrite && _dirty && !_saving,
-          showRaw: _showRaw,
-          onToggleRaw: () => setState(() => _showRaw = !_showRaw),
-          onDiscard: _dirty ? _discard : null,
-          onSave: _save,
-        ),
-        if (_conflicted)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-            child: Note(
-              'unit.yaml ha cambiado en el repositorio desde que lo abriste. '
-              'Vuelve a cargarlo antes de guardar; lo que has puesto sigue '
-              'aquí mientras decides.',
-              tone: didactaTeacher,
-            ),
+    return SaveShortcut(
+      onSave: canWrite && _dirty && !_saving ? _save : null,
+      child: Column(
+        children: [
+          _Bar(
+            path: _file?.path ?? widget.unit.metadataPath,
+            added: size.added,
+            removed: size.removed,
+            saving: _saving,
+            canSave: canWrite && _dirty && !_saving,
+            showRaw: _showRaw,
+            onToggleRaw: () => setState(() => _showRaw = !_showRaw),
+            onDiscard: _dirty ? _discard : null,
+            onSave: _save,
           ),
-        Expanded(
-          child: _showRaw
-              ? _RawView(
-                  controller: _raw,
-                  readOnly: !canWrite,
-                  onChanged: (value) => setState(() => _text = value),
-                )
-              : _Form(
-                  patch: patch,
-                  unit: widget.unit,
-                  session: widget.session,
-                  languages: languagesOfUnit(widget.session, widget.unit),
-                  blocks: widget.session.catalogue.blocksInUse,
-                  enabled: canWrite,
-                  onEdit: _edit,
+          if (_conflicted)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+              child: Note(
+                tr(
+                  'unit.yaml ha cambiado en el repositorio desde que lo abriste. '
+                  'Vuelve a cargarlo antes de guardar; lo que has puesto sigue '
+                  'aquí mientras decides.',
                 ),
-        ),
-      ],
+                tone: context.palette.teacher,
+              ),
+            ),
+          Expanded(
+            child: _showRaw
+                ? _RawView(
+                    controller: _raw,
+                    readOnly: !canWrite,
+                    onChanged: (value) => setState(() => _text = value),
+                  )
+                : _Form(
+                    patch: patch,
+                    unit: widget.unit,
+                    session: widget.session,
+                    languages: languagesOfUnit(widget.session, widget.unit),
+                    blocks: widget.session.catalogue.blocksInUse,
+                    suggestions: _suggested,
+                    enabled: canWrite,
+                    onEdit: _edit,
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -226,15 +284,20 @@ class _MetadataEditorState extends State<MetadataEditor> {
   }
 
   Future<void> _save() async {
-    final message = await showDialog<String>(
-      context: context,
-      builder: (context) => _MetadataCommitDialog(
+    final suggested = _suggestedMessage();
+    final message = await askSaveMessage(
+      context,
+      widget.session,
+      suggested: suggested,
+      dialog: (context) => _MetadataCommitDialog(
         before: _loaded,
         after: _text,
-        suggested: _suggestedMessage(),
+        suggested: suggested,
       ),
     );
     if (message == null || !mounted) return;
+    final before = _loaded;
+    final navigator = Navigator.of(context, rootNavigator: true);
 
     setState(() {
       _saving = true;
@@ -260,7 +323,14 @@ class _MetadataEditorState extends State<MetadataEditor> {
         _saving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('unit.yaml guardado como un commit.')),
+        savedNotice(
+          notice: widget.session.saveNotice(widget.unit.repo),
+          message: message,
+          before: before,
+          after: _text,
+          what: widget.unit.metadataPath,
+          navigator: navigator,
+        ),
       );
       // The catalogue's titles, kinds and statuses just changed.
       await widget.session.reloadCatalogue();
@@ -273,7 +343,7 @@ class _MetadataEditorState extends State<MetadataEditor> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(thrown.message),
-          backgroundColor: didactaTeacher,
+          backgroundColor: context.palette.teacher,
           duration: const Duration(seconds: 6),
         ),
       );
@@ -292,14 +362,14 @@ class _MetadataEditorState extends State<MetadataEditor> {
     }
     if (before.scalar(['duration_minutes']) !=
         after.scalar(['duration_minutes'])) {
-      changed.add('duración');
+      changed.add(tr('duración'));
     }
     for (final code in {
       ...before.keysUnder(['title']),
       ...after.keysUnder(['title']),
     }) {
       if (before.scalar(['title', code]) != after.scalar(['title', code])) {
-        changed.add('título $code');
+        changed.add(tr('título {0}', [code]));
       }
     }
     for (final field in const ['tags', 'prerequisites', 'objectives']) {
@@ -315,16 +385,16 @@ class _MetadataEditorState extends State<MetadataEditor> {
     }) {
       if (before.scalar(['languages', code]) !=
           after.scalar(['languages', code])) {
-        changed.add('estado de $code');
+        changed.add(tr('estado de {0}', [code]));
       }
     }
 
     final title = widget.unit.title(widget.session.language);
-    if (changed.isEmpty) return 'Editar unit.yaml de «$title»';
+    if (changed.isEmpty) return tr('Editar unit.yaml de «{0}»', [title]);
     if (changed.length > 3) {
-      return 'Actualizar los metadatos de «$title»';
+      return tr('Actualizar los metadatos de «{0}»', [title]);
     }
-    return 'Cambiar ${changed.join(', ')} en «$title»';
+    return tr('Cambiar {0} en «{1}»', [changed.join(', '), title]);
   }
 }
 
@@ -352,11 +422,16 @@ class _Bar extends StatelessWidget {
   final VoidCallback onSave;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: didactaPanel,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        color: context.palette.panel,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: LayoutBuilder(
@@ -370,10 +445,10 @@ class _Bar extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   softWrap: false,
                   textDirection: TextDirection.rtl,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontFamily: 'monospace',
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
               ),
@@ -382,27 +457,33 @@ class _Bar extends StatelessWidget {
                 // The size of the change, next to the button that makes it.
                 Text(
                   '+$added −$removed',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontFamily: 'monospace',
-                    color: didactaEx,
+                    color: context.palette.ex,
                   ),
                 ),
               ],
               const SizedBox(width: 8),
-              IconButton(
-                tooltip: showRaw ? 'Ver el formulario' : 'Ver el fichero',
-                visualDensity: VisualDensity.compact,
-                icon: Icon(
-                  showRaw ? Icons.list_alt_outlined : Icons.code,
-                  size: 18,
+              // El fichero en bruto, en la interfaz completa; y también de
+              // vuelta, si se llegó a él porque el formulario no podía.
+              if (watchSession(context).completeInterface || showRaw)
+                IconButton(
+                  key: const Key('metadata-raw'),
+                  tooltip: showRaw
+                      ? tr('Ver el formulario')
+                      : tr('Ver el fichero'),
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(
+                    showRaw ? Icons.list_alt_outlined : Icons.code,
+                    size: 18,
+                  ),
+                  onPressed: onToggleRaw,
                 ),
-                onPressed: onToggleRaw,
-              ),
               if (!narrow && onDiscard != null)
                 TextButton(
                   onPressed: saving ? null : onDiscard,
-                  child: const Text('Descartar'),
+                  child: Text(tr('Descartar')),
                 ),
               const SizedBox(width: 4),
               FilledButton.icon(
@@ -414,7 +495,7 @@ class _Bar extends StatelessWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.check, size: 16),
-                label: Text(saving ? 'Guardando…' : 'Guardar'),
+                label: Text(saving ? tr('Guardando…') : tr('Guardar')),
                 onPressed: canSave ? onSave : null,
               ),
             ],
@@ -433,9 +514,12 @@ class _Form extends StatelessWidget {
     required this.session,
     required this.languages,
     required this.blocks,
+    required this.suggestions,
     required this.enabled,
     required this.onEdit,
   });
+
+  final MetadataSuggestions suggestions;
 
   final YamlPatch patch;
   final Unit unit;
@@ -473,38 +557,45 @@ class _Form extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final kind = patch.scalar(['kind']);
     final difficulty = patch.scalar(['difficulty']);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 28),
       children: [
-        const SectionLabel('Identidad'),
+        SectionLabel(tr('Identidad')),
         _Readonly('id', patch.scalar(['id']) ?? unit.id),
         _Readonly('ruta', unit.path),
         // Neither is editable here: the id is what compositions reference by,
         // and the path is the directory. Changing either means moving files
         // and rewriting every year.yaml that mentions it, which is a rename
         // operation and not a field on a form.
-        const Padding(
+        Padding(
           padding: EdgeInsets.fromLTRB(12, 2, 12, 8),
           child: Note(
-            'El id y la ruta no se editan aquí: hay composiciones que '
-            'referencian este id, así que cambiarlo es un renombrado, no un '
-            'campo de un formulario.',
+            tr(
+              'El id y la ruta no se editan aquí: hay composiciones que '
+              'referencian este id, así que cambiarlo es un renombrado, no un '
+              'campo de un formulario.',
+            ),
           ),
         ),
 
-        const SectionLabel('Títulos'),
+        SectionLabel(tr('Títulos')),
         for (final code in languages)
           _TextRow(
             key: ValueKey('title-$code'),
             label: code,
             value: patch.scalar(['title', code]) ?? '',
             hint: code == unit.reference
-                ? 'el título original'
-                : 'sin traducir',
+                ? tr('el título original')
+                : tr('sin traducir'),
             enabled: enabled,
             monospace: true,
             onChanged: (value) => onEdit((p) {
@@ -516,13 +607,13 @@ class _Form extends StatelessWidget {
             }),
           ),
 
-        const SectionLabel('Clasificación'),
+        SectionLabel(tr('Clasificación')),
         _ChoiceRow(
           label: 'tipo',
           value: kind,
           options: unitKinds,
           names: kindName,
-          colours: kindColour,
+          colours: context.palette.kind,
           enabled: enabled,
           onChanged: (value) => onEdit((p) => p.setScalar(['kind'], value)),
         ),
@@ -545,33 +636,53 @@ class _Form extends StatelessWidget {
           enabled: enabled && blocks.isNotEmpty,
           onChanged: (value) => onEdit((p) => p.setScalar(['block'], value)),
         ),
+        // Con lo que ya usan las demás, y diciendo cuándo lo escrito es
+        // nuevo: una errata en la categoría crea una categoría y saca la
+        // lección de su sitio en la biblioteca sin que nadie lo vea.
         _TextRow(
-          label: 'categoría',
+          key: const ValueKey('unit-category'),
+          label: tr('categoría'),
           value: patch.scalar(['category']) ?? '',
           enabled: enabled,
+          suggestions: suggestions.categories,
+          note: (value) => value.isEmpty || suggestions.knowsCategory(value)
+              ? null
+              : tr(
+                  'Categoría nueva: ninguna otra lección la usa. Si es una '
+                  'errata, la lección saldrá sola en la biblioteca.',
+                ),
           onChanged: (value) =>
               onEdit((p) => p.setScalar(['category'], value.trim())),
         ),
         _TextRow(
+          key: const ValueKey('unit-topic'),
           label: 'tema',
           value: patch.scalar(['topic']) ?? '',
           enabled: enabled,
+          suggestions: (typed) =>
+              suggestions.topics(typed, category: patch.scalar(['category'])),
+          note: (value) => value.isEmpty || suggestions.knowsTopic(value)
+              ? null
+              : tr('Tema nuevo: ninguna otra lección lo usa.'),
           onChanged: (value) =>
               onEdit((p) => p.setScalar(['topic'], value.trim())),
         ),
         _TagsRow(
           tags: patch.list(['tags']),
           enabled: enabled,
+          suggestions: suggestions,
           onChanged: (tags) => onEdit((p) => p.setFlowList(['tags'], tags)),
         ),
 
-        const SectionLabel('Salidas'),
-        const Padding(
+        SectionLabel(tr('Salidas')),
+        Padding(
           padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Note(
-            'En qué plantillas se compila esta lección. Lo normal es no '
-            'elegir: sale lo que diga su bloque, y cambiar el bloque las '
-            'cambia todas de una vez. Elegir aquí es apartar **esta**.',
+            tr(
+              'En qué plantillas se compila esta lección. Lo normal es no '
+              'elegir: sale lo que diga su bloque, y cambiar el bloque las '
+              'cambia todas de una vez. Elegir aquí es apartar esta en concreto.',
+            ),
           ),
         ),
         _TemplatesRow(
@@ -588,9 +699,9 @@ class _Form extends StatelessWidget {
           }),
         ),
 
-        const SectionLabel('Para planificar una clase'),
+        SectionLabel(tr('Para planificar una clase')),
         _NumberRow(
-          label: 'duración',
+          label: tr('duración'),
           suffix: 'minutos',
           value: patch.scalar(['duration_minutes']),
           enabled: enabled,
@@ -601,10 +712,10 @@ class _Form extends StatelessWidget {
           label: 'dificultad',
           value: difficulty,
           options: difficulties,
-          names: (value) => const {
-            'easy': 'fácil',
+          names: (value) => {
+            'easy': tr('fácil'),
             'medium': 'media',
-            'hard': 'difícil',
+            'hard': tr('difícil'),
           }[value]!,
           enabled: enabled,
           allowNone: true,
@@ -612,49 +723,65 @@ class _Form extends StatelessWidget {
               onEdit((p) => p.setScalar(['difficulty'], value)),
         ),
 
-        const SectionLabel('Estado declarado por idioma'),
-        const Padding(
+        SectionLabel(tr('Estado declarado por idioma')),
+        Padding(
           padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Note(
-            '«sin traducir» y «desactualizado» no se declaran: el motor los '
-            'calcula, el primero de que el fichero exista y el segundo '
-            'comparando el contenido con el original. Escribirlos aquí '
-            'garantizaría que se queden obsoletos.',
+            tr(
+              '«sin traducir» y «desactualizado» no se declaran: el motor los '
+              'calcula, el primero de que el fichero exista y el segundo '
+              'comparando el contenido con el original. Escribirlos aquí '
+              'garantizaría que se queden obsoletos.',
+            ),
           ),
         ),
         for (final code in patch.keysUnder(['languages']))
-          _ChoiceRow(
-            key: ValueKey('status-$code'),
-            label: code,
-            value:
-                patch.scalar(['languages', code, 'status']) ??
-                patch.scalar(['languages', code]),
-            options: declarableStatuses,
-            names: (value) => const {
-              'draft': 'borrador',
-              'translated': 'traducido',
-              'reviewed': 'revisado',
-              'source': 'original',
-            }[value]!,
-            enabled: enabled,
-            onChanged: (value) => onEdit(
-              (p) => p.setInFlowMap(['languages', code], 'status', value),
+          if (declarableStatusesFor(
+                complete: session.completeInterface,
+                reference: code == unit.reference,
+              )
+              case final options when options.isNotEmpty)
+            _ChoiceRow(
+              key: ValueKey('status-$code'),
+              label: code,
+              value:
+                  patch.scalar(['languages', code, 'status']) ??
+                  patch.scalar(['languages', code]),
+              options: [
+                ...options,
+                // Lo que tenga escrito, aunque en esta interfaz no se ofrezca:
+                // un desplegable sin su valor lo borraría al tocar otro campo.
+                if (patch.scalar(['languages', code, 'status'])
+                    case final written?
+                    when !options.contains(written) &&
+                        declarableStatuses.contains(written))
+                  written,
+              ],
+              names: (value) => declarableStatusNames[value]!,
+              enabled: enabled,
+              onChanged: (value) => onEdit(
+                (p) => p.setInFlowMap(['languages', code], 'status', value),
+              ),
             ),
-          ),
 
-        const SectionLabel('Prerrequisitos'),
+        SectionLabel(tr('Prerrequisitos')),
         _ListRow(
           items: patch.list(['prerequisites']),
           hint: 'analysis/normed/definition',
           enabled: enabled,
+          suggestions: (typed) =>
+              suggestions.units(typed, except: unit.reference_),
+          note: (value) => value.trim().isEmpty || suggestions.knowsUnit(value)
+              ? null
+              : tr('No hay ninguna lección con esa ruta.'),
           onChanged: (items) =>
               onEdit((p) => p.setBlockList(['prerequisites'], items)),
         ),
 
-        const SectionLabel('Objetivos'),
+        SectionLabel(tr('Objetivos')),
         _ListRow(
           items: patch.list(['objectives']),
-          hint: 'Qué sabe hacer alguien después de esta unidad',
+          hint: tr('Qué sabe hacer alguien después de esta unidad'),
           enabled: enabled,
           onChanged: (items) =>
               onEdit((p) => p.setBlockList(['objectives'], items)),
@@ -680,7 +807,7 @@ class _Readonly extends StatelessWidget {
           width: 92,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
         ),
         Expanded(
@@ -708,6 +835,8 @@ class _TextRow extends StatefulWidget {
     required this.onChanged,
     this.hint,
     this.monospace = false,
+    this.suggestions,
+    this.note,
   });
 
   final String label;
@@ -716,6 +845,12 @@ class _TextRow extends StatefulWidget {
   final bool enabled;
   final bool monospace;
   final ValueChanged<String> onChanged;
+
+  /// Lo que se sugiere al escribir, si se sugiere algo.
+  final List<Suggestion> Function(String typed)? suggestions;
+
+  /// Un aviso debajo, sobre lo que hay escrito, o null.
+  final String? Function(String value)? note;
 
   @override
   State<_TextRow> createState() => _TextRowState();
@@ -743,37 +878,69 @@ class _TextRowState extends State<_TextRow> {
   }
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: 92,
-          child: Text(
-            widget.label,
-            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: 13,
+      fontFamily: widget.monospace ? 'monospace' : null,
+    );
+    final suggestions = widget.suggestions;
+    final note = widget.note?.call(widget.value);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                width: 92,
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: suggestions == null
+                    ? TextField(
+                        controller: _controller,
+                        enabled: widget.enabled,
+                        style: style,
+                        decoration: InputDecoration(
+                          isDense: true,
+                          hintText: widget.hint,
+                          border: const OutlineInputBorder(),
+                        ),
+                        onChanged: widget.onChanged,
+                      )
+                    : SuggestField(
+                        controller: _controller,
+                        suggestions: suggestions,
+                        enabled: widget.enabled,
+                        hintText: widget.hint,
+                        style: style,
+                        onChanged: widget.onChanged,
+                        onSelected: widget.onChanged,
+                      ),
+              ),
+            ],
           ),
-        ),
-        Expanded(
-          child: TextField(
-            controller: _controller,
-            enabled: widget.enabled,
-            style: TextStyle(
-              fontSize: 13,
-              fontFamily: widget.monospace ? 'monospace' : null,
+          if (note != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 92, top: 4),
+              child: Text(
+                note,
+                key: Key('note-${widget.label}'),
+                style: TextStyle(fontSize: 11.5, color: context.palette.ex),
+              ),
             ),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: widget.hint,
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: widget.onChanged,
-          ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _NumberRow extends StatelessWidget {
@@ -837,7 +1004,7 @@ class _ChoiceRow extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Text(
                 label,
-                style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ),
           ),
@@ -848,7 +1015,7 @@ class _ChoiceRow extends StatelessWidget {
               children: [
                 if (allowNone)
                   ChoiceChip(
-                    label: const Text('sin definir'),
+                    label: Text(tr('sin definir')),
                     selected: value == null,
                     visualDensity: VisualDensity.compact,
                     onSelected: enabled ? (_) => onChanged(null) : null,
@@ -911,11 +1078,11 @@ class _TemplatesRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 92,
             child: Text(
               'plantillas',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ),
           Expanded(
@@ -924,7 +1091,7 @@ class _TemplatesRow extends StatelessWidget {
               children: [
                 Text(
                   showing.isEmpty
-                      ? 'ninguna encendida'
+                      ? tr('ninguna encendida')
                       : showing
                             .map(
                               (id) => catalogue
@@ -937,9 +1104,9 @@ class _TemplatesRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   chosen.isEmpty
-                      ? 'las de «$blockName»'
-                      : 'elegidas para esta lección',
-                  style: const TextStyle(fontSize: 11, color: didactaMuted),
+                      ? tr('las de «{0}»', [blockName])
+                      : tr('elegidas para esta lección'),
+                  style: TextStyle(fontSize: 11, color: context.palette.muted),
                 ),
               ],
             ),
@@ -951,17 +1118,20 @@ class _TemplatesRow extends StatelessWidget {
                     final answer = await chooseTemplates(
                       context,
                       session,
-                      title: 'Salidas de esta lección',
+                      title: tr('Salidas de esta lección'),
                       inherited: inherited.isEmpty
-                          ? 'Las de su bloque. No hay ninguna encendida.'
-                          : 'Las de «$blockName»: ${inherited.length}',
+                          ? tr('Las de su bloque. No hay ninguna encendida.')
+                          : tr('Las de «{0}»: {1}', [
+                              blockName,
+                              inherited.length,
+                            ]),
                       chosen: chosen,
                       byDefault: inherited,
                     );
                     if (answer != null) onChanged(answer);
                   }
                 : null,
-            child: const Text('Elegir'),
+            child: Text(tr('Elegir')),
           ),
         ],
       ),
@@ -973,9 +1143,11 @@ class _TagsRow extends StatelessWidget {
   const _TagsRow({
     required this.tags,
     required this.enabled,
+    required this.suggestions,
     required this.onChanged,
   });
 
+  final MetadataSuggestions suggestions;
   final List<String> tags;
   final bool enabled;
   final ValueChanged<List<String>> onChanged;
@@ -987,13 +1159,13 @@ class _TagsRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(
+          SizedBox(
             width: 92,
             child: Padding(
               padding: EdgeInsets.only(top: 6),
               child: Text(
                 'etiquetas',
-                style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ),
           ),
@@ -1012,6 +1184,8 @@ class _TagsRow extends StatelessWidget {
                   ),
                 if (enabled)
                   _AddTag(
+                    suggestions: (typed) =>
+                        suggestions.tags(typed, except: tags.toSet()),
                     onAdd: (tag) {
                       if (tag.isEmpty || tags.contains(tag)) return;
                       onChanged([...tags, tag]);
@@ -1027,9 +1201,10 @@ class _TagsRow extends StatelessWidget {
 }
 
 class _AddTag extends StatefulWidget {
-  const _AddTag({required this.onAdd});
+  const _AddTag({required this.onAdd, required this.suggestions});
 
   final ValueChanged<String> onAdd;
+  final List<Suggestion> Function(String typed) suggestions;
 
   @override
   State<_AddTag> createState() => _AddTagState();
@@ -1044,23 +1219,23 @@ class _AddTagState extends State<_AddTag> {
     super.dispose();
   }
 
-  void _submit() {
-    widget.onAdd(_controller.text.trim());
+  void _add(String tag) {
+    widget.onAdd(tag.trim());
     _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 150,
-    child: TextField(
+    width: 180,
+    // Intro con lo escrito lo añade igual aunque no exista: lo nuevo va el
+    // primero de la lista, marcado, y es lo que se elige.
+    child: SuggestField(
+      key: const Key('add-tag'),
       controller: _controller,
+      suggestions: widget.suggestions,
+      hintText: tr('+ etiqueta'),
       style: const TextStyle(fontSize: 12.5),
-      decoration: const InputDecoration(
-        isDense: true,
-        hintText: '+ etiqueta',
-        border: OutlineInputBorder(),
-      ),
-      onSubmitted: (_) => _submit(),
+      onSelected: _add,
     ),
   );
 }
@@ -1072,8 +1247,12 @@ class _ListRow extends StatelessWidget {
     required this.enabled,
     required this.onChanged,
     this.hint,
+    this.suggestions,
+    this.note,
   });
 
+  final List<Suggestion> Function(String typed)? suggestions;
+  final String? Function(String value)? note;
   final List<String> items;
   final String? hint;
   final bool enabled;
@@ -1094,6 +1273,8 @@ class _ListRow extends StatelessWidget {
                     label: '${i + 1}.',
                     value: items[i],
                     enabled: enabled,
+                    suggestions: suggestions,
+                    note: note,
                     onChanged: (value) {
                       final next = [...items];
                       next[i] = value;
@@ -1102,7 +1283,7 @@ class _ListRow extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Quitar',
+                  tooltip: tr('Quitar'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.remove_circle_outline, size: 17),
                   onPressed: enabled
@@ -1119,7 +1300,9 @@ class _ListRow extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.add, size: 15),
-                label: Text(hint == null ? 'Añadir' : 'Añadir: $hint'),
+                label: Text(
+                  hint == null ? tr('Añadir') : tr('Añadir: {0}', [hint]),
+                ),
                 onPressed: () => onChanged([...items, '']),
               ),
             ),
@@ -1142,7 +1325,7 @@ class _RawView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    color: Colors.white,
+    color: context.palette.card,
     child: TextField(
       controller: controller,
       readOnly: readOnly,
@@ -1194,17 +1377,19 @@ class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
   Widget build(BuildContext context) {
     final hunks = diffHunks(widget.before, widget.after);
     return AlertDialog(
-      title: const Text('Guardar unit.yaml'),
+      title: Text(tr('Guardar unit.yaml')),
       content: SizedBox(
         width: 560,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Esto es lo que va a cambiar. Los comentarios y el orden de '
-              'las claves no se tocan.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr(
+                'Esto es lo que va a cambiar. Los comentarios y el orden de '
+                'las claves no se tocan.',
+              ),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             const SizedBox(height: 10),
             ConstrainedBox(
@@ -1212,8 +1397,8 @@ class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: didactaPanel,
-                  border: Border.all(color: didactaRule),
+                  color: context.palette.panel,
+                  border: Border.all(color: context.palette.rule),
                 ),
                 child: SingleChildScrollView(
                   child: SingleChildScrollView(
@@ -1237,7 +1422,7 @@ class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
               autofocus: true,
               maxLines: 3,
               minLines: 1,
-              decoration: const InputDecoration(labelText: 'Mensaje'),
+              decoration: InputDecoration(labelText: tr('Mensaje')),
               onSubmitted: (value) => Navigator.of(
                 context,
               ).pop(value.trim().isEmpty ? widget.suggested : value.trim()),
@@ -1248,7 +1433,7 @@ class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('metadata-commit'),
@@ -1256,7 +1441,7 @@ class _MetadataCommitDialogState extends State<_MetadataCommitDialog> {
             final text = _controller.text.trim();
             Navigator.of(context).pop(text.isEmpty ? widget.suggested : text);
           },
-          child: const Text('Guardar'),
+          child: Text(tr('Guardar')),
         ),
       ],
     );
@@ -1271,16 +1456,16 @@ class _DiffRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (marker, colour) = switch (line.kind) {
-      ChangeKind.added => ('+', didactaAccentDark),
-      ChangeKind.removed => ('−', didactaTeacher),
-      ChangeKind.kept => (' ', didactaMuted),
+      ChangeKind.added => ('+', context.palette.accentDark),
+      ChangeKind.removed => ('−', context.palette.teacher),
+      ChangeKind.kept => (' ', context.palette.muted),
     };
     return Text(
       '$marker ${line.text}',
       style: TextStyle(
         fontSize: 11.5,
         fontFamily: 'monospace',
-        color: line.isChange ? colour : didactaMuted,
+        color: line.isChange ? colour : context.palette.muted,
         fontWeight: line.isChange ? FontWeight.w600 : FontWeight.w400,
       ),
     );
@@ -1312,17 +1497,17 @@ class _MetadataFailure extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'No se ha podido abrir unit.yaml',
+              Text(
+                tr('No se ha podido abrir unit.yaml'),
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               SelectableText(
                 path,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontFamily: 'monospace',
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
               ),
               const SizedBox(height: 10),
@@ -1333,7 +1518,7 @@ class _MetadataFailure extends StatelessWidget {
               const SizedBox(height: 18),
               FilledButton.icon(
                 icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Reintentar'),
+                label: Text(tr('Reintentar')),
                 onPressed: onRetry,
               ),
             ],

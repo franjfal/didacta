@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import '../data/app_restart.dart';
 import '../state/session.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class StartOverSection extends StatelessWidget {
   const StartOverSection({
@@ -39,20 +40,24 @@ class StartOverSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Deja Didacta en este ordenador como recién instalada: sin la '
-              'sesión de GitHub, sin ajustes y sin la lista de repositorios. Al '
-              'volver a abrirse empieza por la bienvenida.\n\n'
-              'Tirar la aplicación a la Papelera no borra nada de esto, así que '
-              'es lo que hay que hacer antes si no quieres que quede nada.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr(
+                'Deja Didacta en este ordenador como recién instalada: sin la '
+                'sesión de GitHub, sin ajustes y sin la lista de repositorios. Al '
+                'volver a abrirse empieza por la bienvenida.\n\n'
+                'Tirar la aplicación a la Papelera no borra nada de esto, así que '
+                'es lo que hay que hacer antes si no quieres que quede nada.',
+              ),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
               key: const Key('start-over'),
-              style: OutlinedButton.styleFrom(foregroundColor: didactaTeacher),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: context.palette.teacher,
+              ),
               icon: const Icon(Icons.restart_alt, size: 16),
-              label: const Text('Restablecer Didacta…'),
+              label: Text(tr('Restablecer Didacta…')),
               onPressed: () => _startOver(context),
             ),
           ],
@@ -77,12 +82,12 @@ class StartOverSection extends StatelessWidget {
       await showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Casi todo'),
+          title: Text(tr('Casi todo')),
           content: SizedBox(width: 480, child: Text(problems.join('\n\n'))),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Volver a abrir Didacta'),
+              child: Text(tr('Volver a abrir Didacta')),
             ),
           ],
         ),
@@ -107,7 +112,12 @@ class _StartOverDialogState extends State<StartOverDialog> {
   bool _templates = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.session.repoSync,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final session = widget.session;
     final repos = session.workspace.repos;
     final unsent = [
@@ -115,26 +125,29 @@ class _StartOverDialogState extends State<StartOverDialog> {
         if (_hasUnsentWork(session, repo.id)) repo.id,
     ];
     return AlertDialog(
-      title: const Text('Restablecer Didacta'),
+      title: Text(tr('Restablecer Didacta')),
       content: SizedBox(
         width: 500,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Se borra de este ordenador:'),
+            Text(tr('Se borra de este ordenador:')),
             const SizedBox(height: 6),
             Text(
-              '• la sesión de GitHub y las claves de traducción\n'
-              '• los ajustes, y la lista de repositorios'
-              '${repos.isEmpty ? '' : ' (${repos.length})'}\n'
-              '• que ya viste la bienvenida',
+              tr(
+                '• la sesión de GitHub y las claves de traducción\n'
+                '• los ajustes, y la lista de repositorios'
+                '{0}\n'
+                '• que ya viste la bienvenida',
+                [repos.isEmpty ? '' : ' (${repos.length})'],
+              ),
               style: const TextStyle(fontSize: 12.5, height: 1.5),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'En GitHub no se toca nada.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr('En GitHub no se toca nada.'),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             if (repos.isNotEmpty && session.files.supported)
               CheckboxListTile(
@@ -144,18 +157,28 @@ class _StartOverDialogState extends State<StartOverDialog> {
                 value: _folders,
                 onChanged: (value) => setState(() => _folders = value ?? false),
                 title: Text(
-                  'Mandar también a la Papelera las carpetas de los '
-                  '${repos.length == 1 ? 'repositorio' : '${repos.length} repositorios'}',
+                  tr(
+                    'Mandar también a la Papelera las carpetas de los '
+                    '{0}',
+                    [
+                      repos.length == 1
+                          ? 'repositorio'
+                          : tr('{0} repositorios', [repos.length]),
+                    ],
+                  ),
                   style: const TextStyle(fontSize: 13),
                 ),
                 subtitle: unsent.isEmpty
                     ? null
                     : Text(
-                        'Hay trabajo sin enviar a GitHub en ${unsent.join(', ')}: '
-                        'se iría con ellas.',
-                        style: const TextStyle(
+                        tr(
+                          'Hay trabajo sin enviar a GitHub en {0}: '
+                          'se iría con ellas.',
+                          [unsent.join(', ')],
+                        ),
+                        style: TextStyle(
                           fontSize: 12,
-                          color: didactaTeacher,
+                          color: context.palette.teacher,
                         ),
                       ),
               ),
@@ -167,16 +190,18 @@ class _StartOverDialogState extends State<StartOverDialog> {
                 value: _templates,
                 onChanged: (value) =>
                     setState(() => _templates = value ?? false),
-                title: const Text(
-                  'Mandar también a la Papelera las plantillas guardadas en el '
-                  'programa',
+                title: Text(
+                  tr(
+                    'Mandar también a la Papelera las plantillas guardadas en el '
+                    'programa',
+                  ),
                   style: TextStyle(fontSize: 13),
                 ),
               ),
             const SizedBox(height: 8),
-            const Text(
-              'Didacta se cerrará y volverá a abrirse.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              tr('Didacta se cerrará y volverá a abrirse.'),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
           ],
         ),
@@ -184,15 +209,17 @@ class _StartOverDialogState extends State<StartOverDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('start-over-confirm'),
-          style: FilledButton.styleFrom(backgroundColor: didactaTeacher),
+          style: FilledButton.styleFrom(
+            backgroundColor: context.palette.teacher,
+          ),
           onPressed: () => Navigator.of(
             context,
           ).pop((folders: _folders, templates: _templates)),
-          child: const Text('Restablecer y volver a abrir'),
+          child: Text(tr('Restablecer y volver a abrir')),
         ),
       ],
     );

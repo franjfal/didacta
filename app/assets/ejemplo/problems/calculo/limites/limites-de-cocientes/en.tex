@@ -1,0 +1,52 @@
+% Problem: limits of quotients (English).
+
+\begin{exercise}[Limits of quotients]
+Compute the following limits:
+\[
+  \text{(i)}\ \lim_{x \to 2} \frac{x^2 - 4}{x - 2} ,
+  \qquad
+  \text{(ii)}\ \lim_{x \to 1} \frac{x^3 - 1}{x^2 - 1} ,
+  \qquad
+  \text{(iii)}\ \lim_{x \to 0} \frac{\sqrt{1 + x} - 1}{x} .
+\]
+
+\dmarks{3}
+
+\begin{hint}
+In all three, numerator and denominator vanish at the point. Factor to cancel
+the common factor; in the last one, multiply and divide by
+$\sqrt{1 + x} + 1$.
+\end{hint}
+
+\begin{answer}
+(i) $4$; (ii) $3/2$; (iii) $1/2$.
+\end{answer}
+
+\begin{solution}
+Since the limit does not depend on the value at the point, we may simplify
+for $x$ different from it and evaluate afterwards.
+\begin{parts}
+  \item For $x \neq 2$, $\dfrac{x^2 - 4}{x - 2} = x + 2$, so the limit is
+        $4$.
+  \item For $x \neq \pm 1$,
+        \[
+          \frac{x^3 - 1}{x^2 - 1}
+          = \frac{(x - 1)(x^2 + x + 1)}{(x - 1)(x + 1)}
+          = \frac{x^2 + x + 1}{x + 1} ,
+        \]
+        which tends to $3/2$.
+  \item For $x \neq 0$,
+        \[
+          \frac{\sqrt{1 + x} - 1}{x}
+          = \frac{(1 + x) - 1}{x\,\bigl(\sqrt{1 + x} + 1\bigr)}
+          = \frac{1}{\sqrt{1 + x} + 1} ,
+        \]
+        which tends to $1/2$.
+\end{parts}
+\end{solution}
+
+\begin{marking}
+One mark per part. Writing ``$0/0$'' as the result scores nothing; a correct
+simplification with a slip in the final evaluation, half a mark.
+\end{marking}
+\end{exercise}

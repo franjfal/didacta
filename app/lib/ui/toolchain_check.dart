@@ -32,6 +32,8 @@
 /// mandar a alguien cuando lo que sabemos no ha bastado.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -41,6 +43,7 @@ import '../model/toolchain.dart';
 import '../state/session.dart';
 import 'theme.dart';
 import 'working.dart';
+import '../l10n/tr.dart';
 
 class ToolchainCheck extends StatefulWidget {
   const ToolchainCheck({
@@ -48,9 +51,18 @@ class ToolchainCheck extends StatefulWidget {
     required this.session,
     this.toolchain,
     this.onChanged,
+    this.foldWhenReady = false,
   });
 
   final Session session;
+
+  /// Si, con todo en su sitio y la interfaz Esencial, se enseña en una línea.
+  ///
+  /// En Ajustes: las rutas y las versiones contestan «¿cuál de los dos gits
+  /// está usando?», que es la pregunta del día que algo va raro, y el resto
+  /// de los días son cuatro filas que no dicen nada. Plegadas, con «Ver
+  /// detalles». En la bienvenida no: ahí es la primera vez que se ven.
+  final bool foldWhenReady;
 
   /// La implementación con la que se comprueba e instala.
   ///
@@ -96,7 +108,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   @override
   void initState() {
     super.initState();
-    _check();
+    unawaited(_check());
   }
 
   @override
@@ -108,7 +120,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
         (old.session.enginePath != widget.session.enginePath ||
             old.session.texPath != widget.session.texPath)) {
       _toolchain = widget.session.toolchain();
-      _check();
+      unawaited(_check());
     }
   }
 
@@ -134,6 +146,17 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   bool get _allReady =>
       _states.length == didactaTools.length &&
       _states.values.every((state) => state.ready);
+
+  /// Si se ha pedido ver el detalle estando plegado.
+  bool _unfolded = false;
+
+  bool get _folded =>
+      widget.foldWhenReady &&
+      !widget.session.completeInterface &&
+      !_unfolded &&
+      _installing == null &&
+      _allReady &&
+      _states.values.every((state) => state.notes.isEmpty);
 
   List<Tool> get _missing => [
     for (final tool in didactaTools)
@@ -174,8 +197,10 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       setState(() {
         _installing = null;
         _progress = plan.handsOver
-            ? 'El instalador está abierto. Cuando termine, vuelve a comprobar.'
-            : 'Instalado. Comprobando…';
+            ? tr(
+                'El instalador está abierto. Cuando termine, vuelve a comprobar.',
+              )
+            : tr('Instalado. Comprobando…');
       });
       await _check();
       if (!mounted) return;
@@ -186,9 +211,11 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
         await _explain(
           tool,
           plan,
-          message:
-              'La instalación terminó sin errores, pero ${tool.name} sigue '
-              'sin aparecer donde Didacta busca.',
+          message: tr(
+            'La instalación terminó sin errores, pero {0} sigue '
+            'sin aparecer donde Didacta busca.',
+            [tool.name],
+          ),
         );
       }
     } on ToolInstallException catch (thrown) {
@@ -237,7 +264,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   Future<void> _installEngine() async {
     setState(() {
       _installing = ToolId.engine;
-      _doing = 'Descargando el motor…';
+      _doing = tr('Descargando el motor…');
       _progress = '';
     });
     try {
@@ -253,7 +280,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       setState(() {
         _installing = null;
         _doing = '';
-        _progress = 'El motor está en $where';
+        _progress = tr('El motor está en {0}', [where]);
       });
       await _check();
     } catch (thrown) {
@@ -305,7 +332,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       state: _states[tool.id],
       onRetry: () {
         Navigator.of(context).pop();
-        _check();
+        unawaited(_check());
       },
     ),
   );
@@ -313,7 +340,23 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   // --------------------------------------------------------------- pintar ---
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.session.settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
+    if (_folded) {
+      // En una columna, como la vista entera: una tarjeta suelta se estiraría
+      // hasta el alto que le den.
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _FoldedTools(onDetails: () => setState(() => _unfolded = true)),
+        ],
+      );
+    }
     final missing = _missing;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -349,7 +392,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
           const SizedBox(height: 10),
           Text(
             _progress,
-            style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+            style: TextStyle(fontSize: 11.5, color: context.palette.muted),
           ),
         ],
         const SizedBox(height: 12),
@@ -364,25 +407,31 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
                     ? null
                     : _installMissing,
                 icon: const Icon(Icons.download_outlined, size: 16),
-                label: Text('Instalar lo que falta (${missing.length})'),
+                label: Text(
+                  tr('Instalar lo que falta ({0})', [missing.length]),
+                ),
               ),
             OutlinedButton.icon(
               key: const Key('recheck-tools'),
               onPressed: _installing != null || _checking ? null : _check,
               icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Volver a comprobar'),
+              label: Text(tr('Volver a comprobar')),
             ),
           ],
         ),
         if (_allReady) ...[
           const SizedBox(height: 10),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.check_circle, size: 16, color: didactaAccentDark),
+              Icon(
+                Icons.check_circle,
+                size: 16,
+                color: context.palette.accentDark,
+              ),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Está todo. Didacta puede traer material y sacar PDF.',
+                  tr('Está todo. Didacta puede traer material y sacar PDF.'),
                   style: TextStyle(fontSize: 12.5),
                 ),
               ),
@@ -392,6 +441,51 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       ],
     );
   }
+}
+
+/// Todo en su sitio, en una línea: qué hay y cómo ver el detalle.
+class _FoldedTools extends StatelessWidget {
+  const _FoldedTools({required this.onDetails});
+
+  final VoidCallback onDetails;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    key: const Key('tools-folded'),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, size: 16, color: context.palette.accentDark),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  tr('Está todo. Didacta puede traer material y sacar PDF.'),
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [for (final tool in didactaTools) tool.name].join(' · '),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            key: const Key('tools-details'),
+            onPressed: onDetails,
+            child: Text(tr('Ver detalles')),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Una herramienta, con lo que se sabe de ella y lo que se puede hacer.
@@ -426,8 +520,8 @@ class _ToolRow extends StatelessWidget {
     return Container(
       decoration: last
           ? null
-          : const BoxDecoration(
-              border: Border(bottom: BorderSide(color: didactaRule)),
+          : BoxDecoration(
+              border: Border(bottom: BorderSide(color: context.palette.rule)),
             ),
       padding: const EdgeInsets.fromLTRB(12, 11, 12, 11),
       child: Row(
@@ -435,7 +529,7 @@ class _ToolRow extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 1, right: 10),
-            child: _mark(ready, checking || installing),
+            child: _mark(context, ready, checking || installing),
           ),
           Expanded(
             child: Column(
@@ -454,9 +548,9 @@ class _ToolRow extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         found!.version!,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: didactaMuted,
+                          color: context.palette.muted,
                           fontFamily: 'monospace',
                         ),
                       ),
@@ -466,10 +560,10 @@ class _ToolRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   tool.what,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
                 // Dónde está. Es lo que contesta «¿cuál de los dos gits está
@@ -478,13 +572,18 @@ class _ToolRow extends StatelessWidget {
                   const SizedBox(height: 4),
                   SelectableText(
                     found!.path!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     ),
                   ),
                 ],
+                if (ready)
+                  for (final note in found!.notes) ...[
+                    const SizedBox(height: 6),
+                    Note(note, tone: context.palette.muted),
+                  ],
                 if (!ready && found != null) ...[
                   const SizedBox(height: 6),
                   Note(
@@ -493,10 +592,14 @@ class _ToolRow extends StatelessWidget {
                     // está ahí manda a instalarlo otra vez.
                     found.problem ??
                         (waiting
-                            ? 'Se está instalando fuera de Didacta. Cuando '
-                                  'termine, pulsa «Volver a comprobar».'
+                            ? tr(
+                                'Se está instalando fuera de Didacta. Cuando '
+                                'termine, pulsa «Volver a comprobar».',
+                              )
                             : tool.missing),
-                    tone: waiting ? didactaMuted : didactaTeacher,
+                    tone: waiting
+                        ? context.palette.muted
+                        : context.palette.teacher,
                   ),
                 ],
               ],
@@ -516,14 +619,14 @@ class _ToolRow extends StatelessWidget {
             OutlinedButton(
               key: Key('install-${tool.id.name}'),
               onPressed: installing ? null : onInstall,
-              child: Text(waiting ? 'Reintentar' : 'Instalar'),
+              child: Text(waiting ? tr('Reintentar') : tr('Instalar')),
             ),
         ],
       ),
     );
   }
 
-  Widget _mark(bool ready, bool busy) {
+  Widget _mark(BuildContext context, bool ready, bool busy) {
     if (busy) {
       return const SizedBox(
         width: 17,
@@ -537,7 +640,7 @@ class _ToolRow extends StatelessWidget {
     return Icon(
       ready ? Icons.check_circle : Icons.radio_button_unchecked,
       size: 17,
-      color: ready ? didactaAccentDark : didactaMuted,
+      color: ready ? context.palette.accentDark : context.palette.muted,
     );
   }
 }
@@ -568,18 +671,24 @@ class _LatexChooserState extends State<_LatexChooser> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('¿Qué distribución de TeX?'),
+    title: Text(tr('¿Qué distribución de TeX?')),
     content: SizedBox(
       width: 520,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Cualquiera de estas sirve: Didacta solo necesita latexmk y '
-            'paquetes que están en CTAN. Lo que cambia es cuánto ocupa y si '
-            'hace falta la contraseña de administrador.',
-            style: TextStyle(fontSize: 12.5, height: 1.5, color: didactaMuted),
+          Text(
+            tr(
+              'Cualquiera de estas sirve: Didacta solo necesita latexmk y '
+              'paquetes que están en CTAN. Lo que cambia es cuánto ocupa y si '
+              'hace falta la contraseña de administrador.',
+            ),
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.5,
+              color: context.palette.muted,
+            ),
           ),
           const SizedBox(height: 14),
           for (final option in _options)
@@ -594,7 +703,7 @@ class _LatexChooserState extends State<_LatexChooser> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('latex-choose'),
@@ -625,8 +734,10 @@ class _OptionRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       decoration: BoxDecoration(
-        color: chosen ? didactaSelected : null,
-        border: Border.all(color: chosen ? didactaAccentDark : didactaRule),
+        color: chosen ? context.palette.selected : null,
+        border: Border.all(
+          color: chosen ? context.palette.accentDark : context.palette.rule,
+        ),
         borderRadius: BorderRadius.circular(Radii.control),
       ),
       child: Row(
@@ -639,7 +750,9 @@ class _OptionRow extends StatelessWidget {
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
               size: 16,
-              color: chosen ? didactaAccentDark : didactaMuted,
+              color: chosen
+                  ? context.palette.accentDark
+                  : context.palette.muted,
             ),
           ),
           Expanded(
@@ -663,25 +776,28 @@ class _OptionRow extends StatelessWidget {
                     ),
                     Text(
                       option.size,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
-                        color: didactaMuted,
+                        color: context.palette.muted,
                       ),
                     ),
                     if (option.needsAdmin)
-                      const Text(
-                        'pide la contraseña de administrador',
-                        style: TextStyle(fontSize: 11, color: didactaTeacher),
+                      Text(
+                        tr('pide la contraseña de administrador'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: context.palette.teacher,
+                        ),
                       ),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Text(
                   option.what,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     height: 1.45,
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
               ],
@@ -742,8 +858,8 @@ class ToolProblemDialog extends StatelessWidget {
     return AlertDialog(
       title: Text(
         failed
-            ? '${tool.name}: no se pudo instalar'
-            : '${tool.name}: cómo instalarlo',
+            ? tr('{0}: no se pudo instalar', [tool.name])
+            : tr('{0}: cómo instalarlo', [tool.name]),
       ),
       content: SizedBox(
         width: 560,
@@ -752,12 +868,18 @@ class ToolProblemDialog extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Note(message, tone: failed ? didactaTeacher : didactaMuted),
+              Note(
+                message,
+                tone: failed ? context.palette.teacher : context.palette.muted,
+              ),
               if (failed) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'Se intentó: ${plan.label}.',
-                  style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+                  tr('Se intentó: {0}.', [plan.label]),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: context.palette.muted,
+                  ),
                 ),
               ],
               if (detail != null && detail!.trim().isNotEmpty) ...[
@@ -766,8 +888,8 @@ class ToolProblemDialog extends StatelessWidget {
                   width: double.infinity,
                   constraints: const BoxConstraints(maxHeight: 180),
                   decoration: BoxDecoration(
-                    color: didactaPanel,
-                    border: Border.all(color: didactaRule),
+                    color: context.palette.panel,
+                    border: Border.all(color: context.palette.rule),
                     borderRadius: BorderRadius.circular(Radii.control),
                   ),
                   child: SingleChildScrollView(
@@ -788,14 +910,14 @@ class ToolProblemDialog extends StatelessWidget {
                     onPressed: () =>
                         Clipboard.setData(ClipboardData(text: detail!.trim())),
                     icon: const Icon(Icons.copy_outlined, size: 14),
-                    label: const Text('Copiar el detalle'),
+                    label: Text(tr('Copiar el detalle')),
                   ),
                 ),
               ],
               if (steps.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                const Text(
-                  'Cómo hacerlo a mano',
+                Text(
+                  tr('Cómo hacerlo a mano'),
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 6),
@@ -822,12 +944,15 @@ class ToolProblemDialog extends StatelessWidget {
               if (searched.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  '¿Ya la tienes instalada? Didacta la ha buscado en: '
-                  '${searched.join(', ')}.',
-                  style: const TextStyle(
+                  tr(
+                    '¿Ya la tienes instalada? Didacta la ha buscado en: '
+                    '{0}.',
+                    [searched.join(', ')],
+                  ),
+                  style: TextStyle(
                     fontSize: 11,
                     height: 1.45,
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
               ],
@@ -840,17 +965,17 @@ class ToolProblemDialog extends StatelessWidget {
           key: const Key('open-guide'),
           onPressed: () => openLink(tool.guide),
           icon: const Icon(Icons.open_in_new, size: 15),
-          label: const Text('La guía oficial'),
+          label: Text(tr('La guía oficial')),
         ),
         if (onRetry != null)
           TextButton(
             key: const Key('problem-recheck'),
             onPressed: onRetry,
-            child: const Text('Volver a comprobar'),
+            child: Text(tr('Volver a comprobar')),
           ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(tr('Cerrar')),
         ),
       ],
     );

@@ -1,0 +1,58 @@
+% Problema: límites de cocientes (castellano).
+%
+% Enunciado, pista, resultado, solución y corrección en UN fichero. Cada nivel
+% sale solo en el perfil que le toca: la hoja del alumno lleva el enunciado y
+% la pista; la hoja con resultados, además, el resultado; la copia del
+% profesor, todo. No hay un fichero de soluciones aparte que se pueda quedar
+% desincronizado.
+
+\begin{exercise}[Límites de cocientes]
+Calcula los siguientes límites:
+\[
+  \text{(i)}\ \lim_{x \to 2} \frac{x^2 - 4}{x - 2} ,
+  \qquad
+  \text{(ii)}\ \lim_{x \to 1} \frac{x^3 - 1}{x^2 - 1} ,
+  \qquad
+  \text{(iii)}\ \lim_{x \to 0} \frac{\sqrt{1 + x} - 1}{x} .
+\]
+
+\dmarks{3}
+
+\begin{hint}
+En los tres, el numerador y el denominador se anulan en el punto. Factoriza
+para simplificar el factor común; en el último, multiplica y divide por
+$\sqrt{1 + x} + 1$.
+\end{hint}
+
+\begin{answer}
+(i) $4$; (ii) $3/2$; (iii) $1/2$.
+\end{answer}
+
+\begin{solution}
+Como el límite no depende del valor en el punto, se puede simplificar para
+$x$ distinto de él y evaluar después.
+\begin{parts}
+  \item Para $x \neq 2$, $\dfrac{x^2 - 4}{x - 2} = x + 2$, así que el límite
+        es $4$.
+  \item Para $x \neq \pm 1$,
+        \[
+          \frac{x^3 - 1}{x^2 - 1}
+          = \frac{(x - 1)(x^2 + x + 1)}{(x - 1)(x + 1)}
+          = \frac{x^2 + x + 1}{x + 1} ,
+        \]
+        que tiende a $3/2$.
+  \item Para $x \neq 0$,
+        \[
+          \frac{\sqrt{1 + x} - 1}{x}
+          = \frac{(1 + x) - 1}{x\,\bigl(\sqrt{1 + x} + 1\bigr)}
+          = \frac{1}{\sqrt{1 + x} + 1} ,
+        \]
+        que tiende a $1/2$.
+\end{parts}
+\end{solution}
+
+\begin{marking}
+Un punto por apartado. Escribir «$0/0$» como resultado no puntúa;
+simplificar bien y equivocarse al evaluar, medio punto.
+\end{marking}
+\end{exercise}

@@ -1,0 +1,25 @@
+{
+  "categories": [
+    {
+      "id": "calculo",
+      "kinds": {
+        "example": 1,
+        "history": 1,
+        "problem": 3,
+        "theory": 4
+      },
+      "topics": [
+        {
+          "id": "continuidad",
+          "units": 4
+        },
+        {
+          "id": "limites",
+          "units": 5
+        }
+      ],
+      "units": 9
+    }
+  ],
+  "schemaVersion": 1
+}

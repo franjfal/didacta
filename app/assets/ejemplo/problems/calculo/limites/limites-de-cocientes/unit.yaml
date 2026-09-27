@@ -1,0 +1,42 @@
+# Un problema: tres límites de cocientes con indeterminación 0/0.
+#
+# Los problemas viven en `problems/` y son lecciones como las demás: una
+# carpeta, un `unit.yaml` y un `.tex` por idioma. Lo que cambia es lo que
+# llevan dentro: enunciado, pista, resultado, solución y criterios de
+# corrección, todo en el mismo fichero.
+
+id: u-06473454ddb4
+kind: problem
+block: problems
+
+title:
+  es: Límites de cocientes
+  va: Límits de quocients
+  en: Limits of quotients
+
+category: calculo
+topic: limites
+tags: [limite, indeterminacion, factorizar, conjugado]
+
+reference: es
+languages:
+  es: {status: source}
+  va: {status: translated}
+  en: {status: translated}
+
+# Qué niveles tiene escritos este problema. Declararlo permite a la aplicación
+# decir «esta hoja todavía no tiene soluciones» antes de compilarla.
+parts:
+  statement: true
+  hint: true
+  answer: true
+  solution: true
+  marking: true
+
+prerequisites: [calculo/limites/algebra-de-limites]
+objectives:
+  - Resolver indeterminaciones 0/0 factorizando o con el conjugado
+
+duration_minutes: 15
+difficulty: introductory
+marks: 3

@@ -11,6 +11,8 @@
 /// in a settings screen.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -23,18 +25,38 @@ import '../data/frozen.dart';
 import '../model/catalogue.dart';
 import '../router.dart';
 import '../state/mcp_service.dart';
+import '../state/appearance.dart';
 import '../state/session.dart';
-import '../state/update_service.dart';
 import 'brand.dart';
+import 'build_strip.dart';
+import 'command_palette.dart';
 import 'freezes.dart';
+import 'platform_menus.dart';
+import 'problem.dart';
+import 'shortcuts.dart';
 import 'sync_bar.dart';
 import 'theme.dart';
 import 'tour.dart';
+import '../l10n/tr.dart';
 
 class DidactaShell extends StatelessWidget {
-  const DidactaShell({super.key, required this.location, required this.child});
+  const DidactaShell({
+    super.key,
+    required this.location,
+    this.url,
+    required this.child,
+  });
 
+  /// La ruta, sin la parte `?…`: es lo que decide qué sección del carril
+  /// está marcada.
   final String location;
+
+  /// La dirección entera, con su `?…`: es lo que se apunta en el historial.
+  /// Con la ruta sola, «atrás» volvía a Ajustes pero no a la sección de
+  /// Ajustes en la que se estaba, ni a una lección en el idioma que se
+  /// miraba. Null es lo mismo que [location].
+  final String? url;
+
   final Widget child;
 
   /// El orden del carril.
@@ -60,51 +82,52 @@ class DidactaShell extends StatelessWidget {
     // documentos que llaman fuera-- no pueden dar nada. Un apartado que
     // siempre dice «todo cuadra» es un apartado que se deja de abrir.
     if (between)
-      const _Destination(
+      _Destination(
         '/between',
         Icons.compare_arrows_outlined,
         Icons.compare_arrows,
-        'Entre repos',
+        tr('Entre repos'),
       ),
     if (mcp)
-      const _Destination('/mcp', Icons.hub_outlined, Icons.hub, 'Servidor'),
+      _Destination('/mcp', Icons.hub_outlined, Icons.hub, tr('Servidor')),
     _always.last,
   ];
 
-  static const List<_Destination> _always = [
+  static List<_Destination> get _always => [
     _Destination(
       '/courses',
       Icons.school_outlined,
       Icons.school,
-      'Asignaturas',
+      tr('Asignaturas'),
     ),
     _Destination(
       '/',
       Icons.library_books_outlined,
       Icons.library_books,
-      'Biblioteca',
+      tr('Biblioteca'),
     ),
     _Destination(
       '/translations',
       Icons.translate_outlined,
       Icons.translate,
-      'Traducción',
+      tr('Traducción'),
     ),
     _Destination(
       '/settings',
       Icons.settings_outlined,
       Icons.settings,
-      'Ajustes',
+      tr('Ajustes'),
     ),
   ];
 
   /// Envuelve el icono de un destino si el tour habla de él.
   ///
-  /// Solo los tres que el recorrido explica: marcar los seis dejaría claves
-  /// registradas que no usa nadie, y una clave global por icono no es gratis.
+  /// Solo los dos que el recorrido explica desde el carril --la biblioteca y
+  /// las asignaturas tienen capítulo propio, dentro de su pantalla--: marcar
+  /// los seis dejaría claves registradas que no usa nadie, y una clave global
+  /// por icono no es gratis.
   static Widget _tourable(_Destination destination, Widget icon) =>
       switch (destination.path) {
-        '/' => TourTarget(id: 'rail-library', child: icon),
         '/translations' => TourTarget(id: 'rail-translations', child: icon),
         '/settings' => TourTarget(id: 'rail-settings', child: icon),
         _ => icon,
@@ -128,15 +151,28 @@ class DidactaShell extends StatelessWidget {
     return destinations.indexWhere((destination) => destination.path == '/');
   }
 
+  // Con la interfaz Completa, «Entre repos» se ve siempre.
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final session = watchSession(context);
     // `watch` y no `read`: encender el servidor tiene que hacer aparecer el
     // icono sin cambiar de pantalla. Si no está el proveedor --un test que
     // monta el armazón suelto-- el carril es el de siempre.
     final mcp = context.watch<McpService?>();
     final destinations = _destinationsWith(
-      between: session.workspace.isMultiple,
+      // Con la interfaz Esencial, solo si hay algo que mirar: casi siempre
+      // dice «todo cuadra», y así el día que no, se ve. Y mientras se está
+      // en ella, aunque se acabe de arreglar lo último.
+      between:
+          session.workspace.isMultiple &&
+          (session.completeInterface ||
+              session.betweenReposNeedsLooking ||
+              location.startsWith('/between')),
       mcp: mcp?.running ?? false,
     );
     final index = _indexIn(destinations);
@@ -145,7 +181,7 @@ class DidactaShell extends StatelessWidget {
     // escucha, y avisar mientras se construye es un `setState` en mitad de
     // un build.
     WidgetsBinding.instance.addPostFrameCallback(
-      (_) => session.history.record(location),
+      (_) => session.history.record(url ?? location),
     );
 
     return _Shortcuts(
@@ -164,6 +200,7 @@ class DidactaShell extends StatelessWidget {
                   FrozenBar(session: session),
                   SyncBar(session: session),
                   Expanded(child: child),
+                  BuildStrip(session: session),
                   const Divider(height: 1),
                   _GatewayStrip(gateway: session.gateway),
                 ],
@@ -171,7 +208,7 @@ class DidactaShell extends StatelessWidget {
               bottomNavigationBar: NavigationBar(
                 elevation: 0,
                 height: 58,
-                backgroundColor: didactaPanel,
+                backgroundColor: context.palette.panel,
                 selectedIndex: index,
                 onDestinationSelected: (at) =>
                     context.go(destinations[at].path),
@@ -210,6 +247,13 @@ class DidactaShell extends StatelessWidget {
                       padding: EdgeInsets.only(top: 14, bottom: 10),
                       child: _Mark(),
                     ),
+                    // Abajo del todo, lejos de los destinos: se toca una vez
+                    // al día, y al lado de ellos se pulsaría por error.
+                    trailingAtBottom: true,
+                    trailing: const Padding(
+                      padding: EdgeInsets.only(bottom: 14),
+                      child: AppearanceToggle(),
+                    ),
                     destinations: [
                       for (final destination in destinations)
                         NavigationRailDestination(
@@ -236,13 +280,14 @@ class DidactaShell extends StatelessWidget {
                                     // «queda trabajo», no «algo ha fallado», y en
                                     // un carril de cuatro iconos era lo que más
                                     // llamaba de toda la aplicación.
-                                    backgroundColor: const Color(0xFFC08A3E),
-                                    textStyle: const TextStyle(
+                                    backgroundColor: context.palette.pending,
+                                    textStyle: TextStyle(
                                       fontSize: 9,
                                       height: 1.1,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: context.palette.onPending,
                                     ),
+                                    textColor: context.palette.onPending,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 4,
                                     ),
@@ -274,6 +319,9 @@ class DidactaShell extends StatelessWidget {
                         child: SyncBar(session: session),
                       ),
                       Expanded(child: child),
+                      // Lo que se compila, en todas las pantallas: cerrar la
+                      // consola no para nada, y sin esto no se sabía.
+                      BuildStrip(session: session),
                       const Divider(height: 1),
                       _GatewayStrip(gateway: session.gateway),
                     ],
@@ -315,20 +363,30 @@ class FrozenBar extends StatelessWidget {
     final frozen = session.frozen;
     if (frozen == null) return const SizedBox.shrink();
     return Material(
-      color: didactaThm.withValues(alpha: 0.12),
+      color: context.palette.thm.withValues(alpha: 0.12),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 7, 8, 7),
         child: Row(
           children: [
-            const Icon(Icons.ac_unit, size: 15, color: didactaThm),
+            Icon(Icons.ac_unit, size: 15, color: context.palette.thm),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Estás viendo «${frozen.freeze.name}»'
-                '${frozen.freeze.year.isEmpty ? '' : ' · ${frozen.freeze.year}'}'
-                ' · ${frozen.freeze.shortCommit}'
-                '${frozen.rebuilt ? ' · catálogo reconstruido' : ''}'
-                '. Es una versión congelada: se mira, no se edita.',
+                tr(
+                  'Estás viendo «{0}»'
+                  '{1}'
+                  ' · {2}'
+                  '{3}'
+                  '. Es una versión congelada: se mira, no se edita.',
+                  [
+                    frozen.freeze.name,
+                    frozen.freeze.year.isEmpty
+                        ? ''
+                        : ' · ${frozen.freeze.year}',
+                    frozen.freeze.shortCommit,
+                    frozen.rebuilt ? tr(' · catálogo reconstruido') : '',
+                  ],
+                ),
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12.5),
               ),
@@ -340,7 +398,7 @@ class FrozenBar extends StatelessWidget {
               builder: (context, controller, child) => TextButton.icon(
                 key: const Key('frozen-actions'),
                 icon: const Icon(Icons.more_horiz, size: 15),
-                label: const Text('Qué puedo hacer'),
+                label: Text(tr('Qué puedo hacer')),
                 onPressed: () =>
                     controller.isOpen ? controller.close() : controller.open(),
               ),
@@ -349,20 +407,20 @@ class FrozenBar extends StatelessWidget {
                   key: const Key('frozen-restore-course'),
                   leadingIcon: const Icon(Icons.restore, size: 15),
                   onPressed: () => _restoreCourse(context, session, frozen),
-                  child: const Text('Restaurar este curso desde aquí…'),
+                  child: Text(tr('Restaurar este curso desde aquí…')),
                 ),
                 MenuItemButton(
                   key: const Key('frozen-new-year'),
                   leadingIcon: const Icon(Icons.add, size: 15),
                   onPressed: () => _yearFromHere(context, session, frozen),
-                  child: const Text('Crear un curso desde aquí…'),
+                  child: Text(tr('Crear un curso desde aquí…')),
                 ),
               ],
             ),
             TextButton(
               key: const Key('leave-freeze'),
               onPressed: session.leaveFreeze,
-              child: const Text('Volver a la versión actual'),
+              child: Text(tr('Volver a la versión actual')),
             ),
           ],
         ),
@@ -420,17 +478,57 @@ class _Shortcuts extends StatelessWidget {
     if (target != null) context.go(target);
   }
 
+  /// El tamaño del texto, desde el teclado.
+  void _textSize(Appearance appearance, AppShortcut shortcut) =>
+      unawaited(switch (shortcut) {
+        AppShortcut.biggerText => appearance.biggerText(),
+        AppShortcut.smallerText => appearance.smallerText(),
+        _ => appearance.normalText(),
+      });
+
   @override
   Widget build(BuildContext context) => CallbackShortcuts(
     bindings: {
-      const SingleActivator(LogicalKeyboardKey.bracketLeft, meta: true): () =>
-          _back(context),
-      const SingleActivator(LogicalKeyboardKey.bracketRight, meta: true): () =>
-          _forward(context),
+      // El tamaño del texto: las teclas de más --el «+» de otros teclados, el
+      // teclado numérico-- en todos los sistemas, y las de la tabla donde no
+      // las atiende la barra de menú.
+      if (context.read<Appearance?>() case final appearance?)
+        for (final shortcut in const [
+          AppShortcut.biggerText,
+          AppShortcut.smallerText,
+          AppShortcut.normalText,
+        ]) ...{
+          if (!PlatformMenus.supported)
+            activatorFor(shortcut): () => _textSize(appearance, shortcut),
+          for (final also in alsoFor(shortcut))
+            also: () => _textSize(appearance, shortcut),
+        },
+      // La paleta, en todos los sistemas: en macOS la barra de menú la
+      // tiene también, y es la que atiende el atajo.
+      activatorFor(AppShortcut.palette): () =>
+          unawaited(showCommandPalette(context)),
+      activatorFor(AppShortcut.back): () => _back(context),
+      activatorFor(AppShortcut.forward): () => _forward(context),
       const SingleActivator(LogicalKeyboardKey.arrowLeft, alt: true): () =>
           _back(context),
       const SingleActivator(LogicalKeyboardKey.arrowRight, alt: true): () =>
           _forward(context),
+      // Los que en macOS atiende la barra de menú. En Windows y en Linux no
+      // hay barra, y antes no había atajo: solo existían en el Mac.
+      if (!PlatformMenus.supported) ...{
+        activatorFor(AppShortcut.courses): () => context.go(Routes.courses()),
+        activatorFor(AppShortcut.library): () => context.go(Routes.library()),
+        activatorFor(AppShortcut.translations): () =>
+            context.go(Routes.translations()),
+        activatorFor(AppShortcut.settings): () => context.go(Routes.settings()),
+        activatorFor(AppShortcut.refresh): () =>
+            refreshAndTell(context, session),
+        activatorFor(AppShortcut.help): () => showShortcuts(context),
+        if (session.workspace.isNotEmpty) ...{
+          activatorFor(AppShortcut.pull): () => pullAndTell(context, session),
+          activatorFor(AppShortcut.push): () => pushAndTell(context, session),
+        },
+      },
     },
     child: Focus(
       autofocus: true,
@@ -468,9 +566,13 @@ class BackForward extends StatelessWidget {
         children: [
           IconButton(
             key: const Key('go-back'),
-            tooltip: history.canGoBack ? 'Atrás  ⌘[' : 'No hay a dónde volver',
+            tooltip: history.canGoBack
+                ? tr('Atrás  {0}', [labelFor(AppShortcut.back)])
+                : tr('No hay a dónde volver'),
             visualDensity: VisualDensity.compact,
-            constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+            // 32 como mínimo: un blanco más pequeño cuesta acertarlo, y más
+            // con un trackpad o sin ver bien.
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
             padding: EdgeInsets.zero,
             icon: const Icon(Icons.arrow_back, size: 16),
             onPressed: history.canGoBack
@@ -483,9 +585,11 @@ class BackForward extends StatelessWidget {
           if (history.canGoForward)
             IconButton(
               key: const Key('go-forward'),
-              tooltip: 'Adelante  ⌘]',
+              tooltip: tr('Adelante  {0}', [labelFor(AppShortcut.forward)]),
               visualDensity: VisualDensity.compact,
-              constraints: const BoxConstraints(minWidth: 26, minHeight: 26),
+              // 32 como mínimo: un blanco más pequeño cuesta acertarlo, y más
+              // con un trackpad o sin ver bien.
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               padding: EdgeInsets.zero,
               icon: const Icon(Icons.arrow_forward, size: 16),
               onPressed: () {
@@ -530,9 +634,9 @@ class _CrumbState extends State<_Crumb> {
           widget.label,
           style: TextStyle(
             fontSize: 12,
-            color: _over ? didactaAccentDark : didactaMuted,
+            color: _over ? context.palette.accentDark : context.palette.muted,
             decoration: _over ? TextDecoration.underline : null,
-            decorationColor: didactaAccentDark,
+            decorationColor: context.palette.accentDark,
           ),
         ),
       ),
@@ -549,12 +653,45 @@ class _Destination {
   final String label;
 }
 
+/// El sol y la luna: pasa de claro a oscuro y al revés.
+///
+/// Desde lo que se ve, y no desde lo que está elegido: con «el del sistema»
+/// puesto y el sistema en oscuro, pulsarlo tiene que dar claro, no «oscuro»
+/// otra vez. Volver a «el del sistema» está en Ajustes → Apariencia.
+class AppearanceToggle extends StatelessWidget {
+  const AppearanceToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final appearance = context.watch<Appearance?>();
+    if (appearance == null) return const SizedBox.shrink();
+    final dark = appearance.brightness == Brightness.dark;
+    return IconButton(
+      key: const Key('appearance-toggle'),
+      tooltip: dark ? tr('Pasar a claro') : tr('Pasar a oscuro'),
+      onPressed: appearance.toggle,
+      icon: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, animation) => RotationTransition(
+          turns: Tween(begin: 0.75, end: 1.0).animate(animation),
+          child: FadeTransition(opacity: animation, child: child),
+        ),
+        child: Icon(
+          dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+          key: ValueKey(dark),
+          size: 19,
+        ),
+      ),
+    );
+  }
+}
+
 class _Mark extends StatelessWidget {
   const _Mark();
 
   @override
-  Widget build(BuildContext context) => const Tooltip(
-    message: 'Didacta',
+  Widget build(BuildContext context) => Tooltip(
+    message: tr('Didacta'),
     // La misma marca que el icono de la aplicación, del mismo código: un
     // logo dibujado aparte se separa del icono en el primer retoque.
     child: DidactaMark(),
@@ -566,6 +703,34 @@ class _Mark extends StatelessWidget {
 /// Always present. The alternative -- surfacing it only when something fails
 /// -- means the first time anyone learns they are in read-only mode is when
 /// they lose an edit.
+/// Cómo está lo que se ha escrito, en una frase y sin git.
+///
+/// La barra de abajo decía «Clon local en /Users/…, como Nombre `<correo>`,
+/// enviando cada commit»: todo cierto y nada de lo que se quiere saber, que
+/// es si lo tuyo está a salvo en GitHub o falta algo.
+String syncStateOf(Session session, ContentGateway gateway) {
+  if (gateway.kind == GatewayKind.none) return gateway.describe();
+  if (!gateway.canWrite) return tr('Solo lectura: aquí no se puede guardar');
+  final pending = session.pendingCount;
+  final ahead = session.ahead;
+  final behind = session.behind ?? 0;
+  final parts = [
+    if (pending > 0)
+      pending == 1
+          ? tr('1 fichero sin guardar en el historial')
+          : tr('{0} ficheros sin guardar en el historial', [pending]),
+    if (ahead > 0)
+      ahead == 1
+          ? tr('1 cambio sin enviar')
+          : tr('{0} cambios sin enviar', [ahead]),
+    if (behind > 0)
+      behind == 1
+          ? tr('1 cambio nuevo en GitHub')
+          : tr('{0} cambios nuevos en GitHub', [behind]),
+  ];
+  return parts.isEmpty ? tr('Guardado en GitHub · al día') : parts.join(' · ');
+}
+
 class _GatewayStrip extends StatefulWidget {
   const _GatewayStrip({required this.gateway});
 
@@ -589,19 +754,25 @@ class _GatewayStripState extends State<_GatewayStrip> {
         SnackBar(
           content: Text(
             behind > 0
-                ? 'Actualizado. En GitHub hay $behind '
-                      '${behind == 1 ? 'commit' : 'commits'} que no están aquí.'
+                ? tr(
+                    'Actualizado. En GitHub hay {0} '
+                    '{1} que no están aquí.',
+                    [behind, behind == 1 ? 'commit' : 'commits'],
+                  )
                 : problem != null
-                ? 'Actualizado desde el disco. No se pudo preguntar a '
-                      'GitHub: $problem'
-                : 'Actualizado. Nada nuevo en GitHub.',
+                ? tr(
+                    'Actualizado desde el disco. No se pudo preguntar a '
+                    'GitHub: {0}',
+                    [problem],
+                  )
+                : tr('Actualizado. Nada nuevo en GitHub.'),
           ),
           duration: Duration(seconds: behind > 0 || problem != null ? 8 : 3),
           // Traerlo es otra decisión, y por eso es otro botón: un `pull`
           // cambia los ficheros de debajo de quien está editando.
           action: behind > 0
               ? SnackBarAction(
-                  label: 'Traerlos',
+                  label: tr('Traerlos'),
                   onPressed: () => _pull(session),
                 )
               : null,
@@ -612,79 +783,70 @@ class _GatewayStripState extends State<_GatewayStrip> {
     }
   }
 
-  /// La dirección de las incidencias, con la versión ya escrita.
-  ///
-  /// Un informe sin versión ni sistema es un informe que necesita un viaje de
-  /// ida y vuelta antes de poder mirarse, y quien lo escribe no tiene por qué
-  /// saber cuál es. Se rellena el cuerpo y se deja escrito el resto: lo que
-  /// hay que contar es qué pasó.
-  ///
-  /// Si no se puede saber la versión --no hay quien la diga-- se abre la lista
-  /// de incidencias a secas, que es lo que se pidió.
-  String _issueLink(BuildContext context) {
-    final service = context.read<UpdateService?>();
-    final info = service?.info;
-    if (info == null) return didactaIssues;
-    final body = Uri.encodeComponent(
-      '## Qué pasó\n\n\n\n'
-      '## Qué esperabas que pasara\n\n\n\n'
-      '## Cómo repetirlo\n\n\n\n'
-      '---\n'
-      'Didacta ${info.describe}\n',
-    );
-    return '$didactaIssues/new?body=$body';
-  }
-
   Future<void> _pull(Session session) async {
     setState(() => _busy = true);
     final messenger = ScaffoldMessenger.of(context);
     try {
+      // Traer ya lo deja todo al día --índice, catálogo, lo compilado--: no
+      // hace falta «actualizarlo todo» después, que lo repetía entero.
       await session.pullAll();
-      await session.refreshEverything();
       messenger.showSnackBar(
-        const SnackBar(content: Text('Traído de GitHub y actualizado.')),
+        SnackBar(content: Text(tr('Traído de GitHub y actualizado.'))),
       );
     } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('$error'),
-          backgroundColor: didactaTeacher,
-          duration: const Duration(seconds: 10),
-        ),
-      );
+      showProblemIn(messenger, error);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).repoSync,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
     final gateway = widget.gateway;
     // Leída aquí y no dentro del `onPressed`: `watch` solo vale mientras se
     // construye, y llamarlo desde una pulsación lanza --y el botón no hacía
     // nada sin decir por qué.
     final session = watchSession(context);
     final (icon, colour) = switch (gateway.kind) {
-      GatewayKind.clone => (Icons.folder_open_outlined, didactaAccentDark),
-      GatewayKind.none => (Icons.lock_outline, didactaMuted),
+      GatewayKind.clone => (
+        Icons.folder_open_outlined,
+        context.palette.accentDark,
+      ),
+      GatewayKind.none => (Icons.lock_outline, context.palette.muted),
     };
 
     return Material(
-      color: didactaPanel,
+      color: context.palette.panel,
       child: InkWell(
-        onTap: () => context.go(Routes.settings()),
+        onTap: () => context.go(Routes.settings(section: 'repositorios')),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
               Icon(icon, size: 14, color: colour),
               const SizedBox(width: 6),
+              // Cómo está lo tuyo, dicho sin git: «Guardado en GitHub · al
+              // día» o «2 cambios sin enviar». Dónde está la copia y como
+              // quién se escribe, en el tooltip: es lo que se mira cuando
+              // algo no cuadra, no cada vez.
               Expanded(
-                child: Text(
-                  gateway.describe(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+                child: Tooltip(
+                  message: gateway.describe(),
+                  child: Text(
+                    syncStateOf(session, gateway),
+                    key: const Key('sync-state'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: context.palette.muted,
+                    ),
+                  ),
                 ),
               ),
               if (!gateway.canWrite)
@@ -694,12 +856,15 @@ class _GatewayStripState extends State<_GatewayStrip> {
                     vertical: 1,
                   ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: didactaRule),
+                    border: Border.all(color: context.palette.rule),
                     borderRadius: BorderRadius.circular(3),
                   ),
-                  child: const Text(
-                    'solo lectura',
-                    style: TextStyle(fontSize: 10.5, color: didactaMuted),
+                  child: Text(
+                    tr('solo lectura'),
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: context.palette.muted,
+                    ),
                   ),
                 ),
               // Actualizar, aquí, porque esta barra es lo que dice de dónde
@@ -716,10 +881,12 @@ class _GatewayStripState extends State<_GatewayStrip> {
                         )
                       : IconButton(
                           key: const Key('refresh-everything'),
-                          tooltip:
-                              'Actualizar: releer el disco, regenerar el '
-                              'índice y mirar si hay algo nuevo en GitHub'
-                              '  ⌘R',
+                          tooltip: tr(
+                            'Actualizar: releer el disco, regenerar el '
+                            'índice y mirar si hay algo nuevo en GitHub'
+                            '  {0}',
+                            [labelFor(AppShortcut.refresh)],
+                          ),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           icon: const Icon(Icons.refresh, size: 15),
@@ -737,11 +904,11 @@ class _GatewayStripState extends State<_GatewayStrip> {
                 height: 26,
                 child: IconButton(
                   key: const Key('report-issue'),
-                  tooltip: 'Contar un problema de Didacta en GitHub',
+                  tooltip: tr('Contar un problema de Didacta en GitHub'),
                   visualDensity: VisualDensity.compact,
                   padding: EdgeInsets.zero,
                   icon: const Icon(Icons.bug_report_outlined, size: 15),
-                  onPressed: () => openLink(_issueLink(context)),
+                  onPressed: () => openLink(issueLink(context)),
                 ),
               ),
               // Lo que espera en GitHub, en la misma barra que dice de dónde
@@ -759,25 +926,25 @@ class _GatewayStripState extends State<_GatewayStrip> {
                     ),
                     decoration: BoxDecoration(
                       color: hovering
-                          ? didactaThm.withValues(alpha: 0.18)
-                          : didactaThm.withValues(alpha: 0.10),
+                          ? context.palette.thm.withValues(alpha: 0.18)
+                          : context.palette.thm.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(Radii.small),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.south_outlined,
                           size: 12,
-                          color: didactaThm,
+                          color: context.palette.thm,
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          '${session.behind} en GitHub',
-                          style: const TextStyle(
+                          tr('{0} en GitHub', [session.behind]),
+                          style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            color: didactaThm,
+                            color: context.palette.thm,
                           ),
                         ),
                       ],
@@ -816,48 +983,63 @@ class PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Blanca sobre la página gris, en lugar de una raya debajo: la
-      // cabecera se separa del contenido por el tono y no por una línea
-      // más, que es lo que hacía que cada pantalla pareciera un formulario.
-      decoration: const BoxDecoration(
-        color: didactaCard,
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      // Sobre la página, en el color de una tarjeta, en lugar de una raya
+      // debajo: la cabecera se separa del contenido por el tono y no por una
+      // línea más, que es lo que hacía que cada pantalla pareciera un
+      // formulario.
+      decoration: BoxDecoration(
+        color: context.palette.card,
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 14, 14, 0),
+      padding: const EdgeInsets.fromLTRB(22, 14, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                const BackForward(),
-                if (breadcrumbs.isNotEmpty) const SizedBox(width: 4),
-                Expanded(
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      for (final (index, crumb) in breadcrumbs.indexed) ...[
-                        _Crumb(label: crumb.$1, route: crumb.$2),
-                        if (index < breadcrumbs.length - 1)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 3),
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 14,
-                              color: didactaRule,
+          // Atrás y adelante, siempre en su sitio --un botón que aparece y
+          // desaparece no se aprende-- pero sin una fila para ellos solos:
+          // con migas van delante de ellas, y sin migas, delante del título.
+          // Encima del título y solo, en una pantalla de arriba del todo, era
+          // una flecha gris huérfana.
+          if (breadcrumbs.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const BackForward(),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        for (final (index, crumb) in breadcrumbs.indexed) ...[
+                          _Crumb(label: crumb.$1, route: crumb.$2),
+                          if (index < breadcrumbs.length - 1)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 3,
+                              ),
+                              child: Icon(
+                                Icons.chevron_right,
+                                size: 14,
+                                color: context.palette.faint,
+                              ),
                             ),
-                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            )
+          else
+            const SizedBox(height: 4),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              if (breadcrumbs.isEmpty) ...[
+                const BackForward(),
+                const SizedBox(width: 8),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -871,10 +1053,10 @@ class PageHeader extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 3),
                         child: Text(
                           subtitle!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12.5,
                             height: 1.35,
-                            color: didactaMuted,
+                            color: context.palette.muted,
                           ),
                         ),
                       ),

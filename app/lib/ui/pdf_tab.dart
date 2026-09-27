@@ -20,14 +20,24 @@
 /// obligación de salir para verlo.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:provider/provider.dart';
 
 import '../data/compiler.dart';
+import '../data/file_manager.dart';
+import '../state/session.dart';
 import 'export_actions.dart';
 import 'pdf_controls.dart';
+import 'pdf_search.dart';
 import 'pdf_sidebar.dart';
+import 'pdf_synctex.dart';
+import 'shortcuts.dart';
 import 'theme.dart';
+import '../data/diagnostics.dart';
+import '../l10n/tr.dart';
 
 /// Un PDF abierto: qué es, y de dónde salió.
 class OpenPdf {
@@ -39,6 +49,7 @@ class OpenPdf {
     this.revision = 0,
     this.busy = false,
     this.stale = false,
+    this.quick = false,
   });
 
   final String path;
@@ -62,15 +73,20 @@ class OpenPdf {
   /// proyectarlo en una clase.
   final bool stale;
 
+  /// Salió de la vista rápida: una sola pasada, con el índice y las
+  /// referencias quizá sin poner al día.
+  final bool quick;
+
   String get label => '$profile · $language';
 
   /// El mismo panel, recién compilado: nueva revisión y ya no ocupado.
-  OpenPdf refreshed({int? pages}) => OpenPdf(
+  OpenPdf refreshed({int? pages, bool quick = false}) => OpenPdf(
     path: path,
     profile: profile,
     language: language,
     pages: pages ?? this.pages,
     revision: revision + 1,
+    quick: quick,
   );
 
   OpenPdf working() => OpenPdf(
@@ -81,6 +97,7 @@ class OpenPdf {
     revision: revision,
     busy: true,
     stale: stale,
+    quick: quick,
   );
 
   OpenPdf idle() => OpenPdf(
@@ -90,6 +107,7 @@ class OpenPdf {
     pages: pages,
     revision: revision,
     stale: stale,
+    quick: quick,
   );
 
   /// El mismo panel, con el aviso de viejo puesto o quitado.
@@ -101,6 +119,7 @@ class OpenPdf {
     revision: revision,
     busy: busy,
     stale: stale,
+    quick: quick,
   );
 }
 
@@ -185,6 +204,7 @@ List<PdfGroup> groupResults(List<CompileOutput> results) {
             profile: result.profile,
             language: result.language,
             pages: result.pages,
+            quick: result.quick,
           ),
         );
   }
@@ -253,6 +273,50 @@ class _PdfTabViewState extends State<PdfTabView> {
   /// a lado el ancho es lo que escasea.
   bool _sidebar = false;
 
+  /// Buscar en el texto de los PDF, en todos los paneles a la vez.
+  final PdfSearch _search = PdfSearch();
+  final GlobalKey<PdfSearchBarState> _searchBar = GlobalKey();
+  bool _finding = false;
+
+  /// El foco de la pestaña, para que ⌘F llegue después de pulsar el PDF:
+  /// el visor no se lo queda al pulsarlo.
+  final FocusNode _focus = FocusNode(debugLabel: 'pdf-tab');
+
+  void _openFind() {
+    if (_finding) {
+      _searchBar.currentState?.focusQuery();
+      return;
+    }
+    setState(() => _finding = true);
+  }
+
+  void _closeFind() {
+    _search.clear();
+    setState(() => _finding = false);
+  }
+
+  /// Al siguiente resultado, y los demás paneles a la misma página: se
+  /// buscan en uno y se comparan en todos.
+  Future<void> _step(int direction) async {
+    final page = await _search.step(direction);
+    final active = _search.active;
+    if (page == null || !mounted) return;
+    for (final pane in widget.group.panes) {
+      if (pane.path == active) continue;
+      final controller = _controllers[pane.path];
+      if (controller == null || !controller.isReady) continue;
+      final total = _pages[pane.path] ?? pane.pages;
+      unawaited(controller.goToPage(pageNumber: page > total ? total : page));
+    }
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
   PdfViewerController _controllerFor(String key) =>
       _controllers.putIfAbsent(key, () {
         final controller = PdfViewerController();
@@ -280,6 +344,8 @@ class _PdfTabViewState extends State<PdfTabView> {
   // sin ir a mirar el otro.
   void _noteReady(String path, PdfDocument document) {
     if (!mounted) return;
+    final controller = _controllers[path];
+    if (controller != null) _search.attach(path, controller);
     setState(() {
       _pages[path] = document.pages.length;
       _documents[path] = document;
@@ -287,7 +353,7 @@ class _PdfTabViewState extends State<PdfTabView> {
       // recompilar, el error de «no existe» ya no vale.
       _problem.remove(path);
     });
-    _loadOutline(path, document);
+    unawaited(_loadOutline(path, document));
   }
 
   /// Los marcadores, que llegan después de abrir.
@@ -298,7 +364,8 @@ class _PdfTabViewState extends State<PdfTabView> {
     List<PdfOutlineNode> outline;
     try {
       outline = await document.loadOutline();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('pdf_tab.loadOutline', caught, trace);
       outline = const [];
     }
     if (!mounted || _documents[path] != document) return;
@@ -332,7 +399,7 @@ class _PdfTabViewState extends State<PdfTabView> {
       final total = _pages[pane.path] ?? pane.pages;
       // Se recorta por panel: si una versión tiene una página menos, se
       // queda en la última en lugar de fallar.
-      controller.goToPage(pageNumber: page > total ? total : page);
+      unawaited(controller.goToPage(pageNumber: page > total ? total : page));
     }
   }
 
@@ -343,13 +410,15 @@ class _PdfTabViewState extends State<PdfTabView> {
   void _goToDest(PdfDest? dest) {
     final leader = _leader;
     if (dest == null || leader == null) return;
-    leader.goToDest(dest);
+    unawaited(leader.goToDest(dest));
     for (final pane in widget.group.panes.skip(1)) {
       final controller = _controllers[pane.path];
       if (controller == null) continue;
       final total = _pages[pane.path] ?? pane.pages;
-      controller.goToPage(
-        pageNumber: dest.pageNumber > total ? total : dest.pageNumber,
+      unawaited(
+        controller.goToPage(
+          pageNumber: dest.pageNumber > total ? total : dest.pageNumber,
+        ),
       );
     }
   }
@@ -378,93 +447,152 @@ class _PdfTabViewState extends State<PdfTabView> {
       _eachReady((controller) {
         final page = controller.pageNumber ?? 1;
         final matrix = how(controller, page);
-        if (matrix != null) controller.goTo(matrix);
+        if (matrix != null) unawaited(controller.goTo(matrix));
       });
 
   bool get _ready => _leader?.isReady ?? false;
 
+  /// ⌘+clic en un PDF: a la lección y la línea de donde sale.
+  final SourceClick _click = SourceClick();
+
+  void _openSource(SourceRequest request) {
+    if (!mounted) return;
+    final Session session;
+    try {
+      session = Provider.of<Session>(context, listen: false);
+    } on ProviderNotFoundException {
+      return;
+    }
+    unawaited(openSourceAt(context, session, request));
+  }
+
   @override
   Widget build(BuildContext context) {
     final panes = widget.group.panes;
-    return Column(
-      children: [
-        // Lo que vale para toda la pestaña: el lateral, la página y el
-        // tamaño en los dos paneles a la vez, separar una versión, y elegir
-        // otras. Lo que se hace a *un* PDF va en su panel, donde no hay que
-        // preguntar cuál.
-        PdfViewerBar(
-          page: _current,
-          pages: _total,
-          sidebar: _sidebar,
-          zoom: _ready ? (_zoom ?? 100) / 100 : null,
-          onSidebar: () => setState(() => _sidebar = !_sidebar),
-          onGoToPage: _goTo,
-          onZoomOut: _ready ? () => _zoomBy(up: false) : null,
-          onZoomIn: _ready ? () => _zoomBy(up: true) : null,
-          onActualSize: _ready ? _actualSize : null,
-          onFitWidth: _ready
-              ? () => _fit(
-                  (c, page) => c.calcMatrixFitWidthForPage(pageNumber: page),
-                )
-              : null,
-          onFitHeight: _ready
-              ? () => _fit(
-                  (c, page) => c.calcMatrixFitHeightForPage(pageNumber: page),
-                )
-              : null,
-          onFitPage: _ready
-              ? () => _fit((c, page) => c.calcMatrixForFit(pageNumber: page))
-              : null,
-          label: widget.group.isSingle
-              ? widget.group.panes.single.path.split('/').last
-              : '${widget.group.panes.length} versiones · las páginas se '
-                    'mueven juntas',
-          labelDirection: widget.group.isSingle
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-          trailing: [
-            // Separar una versión: solo tiene sentido con más de una.
-            if (!widget.group.isSingle)
-              _DetachButton(group: widget.group, onDetach: widget.onDetach),
-            IconButton(
-              key: const Key('pdf-recompile'),
-              tooltip: 'Elegir otras versiones',
-              visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.tune, size: 17),
-              onPressed: widget.onRecompile,
-            ),
-          ],
-        ),
-        Expanded(
-          child: Row(
+    _search.order = [for (final pane in panes) pane.path];
+    return Listener(
+      onPointerDown: (event) {
+        _click.down(event);
+        if (!_focus.hasFocus) _focus.requestFocus();
+      },
+      child: CallbackShortcuts(
+        bindings: {activatorFor(AppShortcut.search): _openFind},
+        child: Focus(
+          focusNode: _focus,
+          child: Column(
             children: [
-              if (_sidebar) ...[
-                PdfSidebar(
-                  document: _documents[panes.first.path],
-                  outline: _outlines[panes.first.path] ?? const [],
-                  page: _current,
-                  onGoToPage: _goTo,
-                  onGoToDest: _goToDest,
-                ),
-              ],
-              for (var i = 0; i < panes.length; i += 1) ...[
-                if (i > 0) const VerticalDivider(width: 1),
-                Expanded(
-                  child: _Pane(
-                    pane: panes[i],
-                    parent: this,
-                    onOpenExternally: () =>
-                        widget.onOpenExternally(panes[i].path),
-                    onReveal: () => widget.onReveal(panes[i].path),
-                    onRecompile: () =>
-                        widget.onRecompilePane(panes[i].language),
+              // Lo que vale para toda la pestaña: el lateral, la página y el
+              // tamaño en los dos paneles a la vez, separar una versión, y elegir
+              // otras. Lo que se hace a *un* PDF va en su panel, donde no hay que
+              // preguntar cuál.
+              PdfViewerBar(
+                page: _current,
+                pages: _total,
+                sidebar: _sidebar,
+                zoom: _ready ? (_zoom ?? 100) / 100 : null,
+                onSidebar: () => setState(() => _sidebar = !_sidebar),
+                onGoToPage: _goTo,
+                onZoomOut: _ready ? () => _zoomBy(up: false) : null,
+                onZoomIn: _ready ? () => _zoomBy(up: true) : null,
+                onActualSize: _ready ? _actualSize : null,
+                onFitWidth: _ready
+                    ? () => _fit(
+                        (c, page) =>
+                            c.calcMatrixFitWidthForPage(pageNumber: page),
+                      )
+                    : null,
+                onFitHeight: _ready
+                    ? () => _fit(
+                        (c, page) =>
+                            c.calcMatrixFitHeightForPage(pageNumber: page),
+                      )
+                    : null,
+                onFitPage: _ready
+                    ? () => _fit(
+                        (c, page) => c.calcMatrixForFit(pageNumber: page),
+                      )
+                    : null,
+                label: widget.group.isSingle
+                    ? widget.group.panes.single.path.split('/').last
+                    : tr(
+                        '{0} versiones · las páginas se '
+                        'mueven juntas',
+                        [widget.group.panes.length],
+                      ),
+                labelDirection: widget.group.isSingle
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
+                trailing: [
+                  IconButton(
+                    key: const Key('pdf-search'),
+                    tooltip: tr('Buscar en el PDF ({0})', [
+                      labelFor(AppShortcut.search),
+                    ]),
+                    visualDensity: VisualDensity.compact,
+                    isSelected: _finding,
+                    color: _finding ? context.palette.accentDark : null,
+                    icon: const Icon(Icons.search, size: 17),
+                    onPressed: _finding ? _closeFind : _openFind,
                   ),
+                  // Separar una versión: solo tiene sentido con más de una.
+                  if (!widget.group.isSingle)
+                    _DetachButton(
+                      group: widget.group,
+                      onDetach: widget.onDetach,
+                    ),
+                  IconButton(
+                    key: const Key('pdf-recompile'),
+                    tooltip: tr('Elegir otras versiones'),
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.tune, size: 17),
+                    onPressed: widget.onRecompile,
+                  ),
+                ],
+              ),
+              if (_finding)
+                PdfSearchBar(
+                  key: _searchBar,
+                  search: _search,
+                  onStep: _step,
+                  onClose: _closeFind,
+                  languageOf: (path) => panes
+                      .where((pane) => pane.path == path)
+                      .firstOrNull
+                      ?.language,
                 ),
-              ],
+              Expanded(
+                child: Row(
+                  children: [
+                    if (_sidebar) ...[
+                      PdfSidebar(
+                        document: _documents[panes.first.path],
+                        outline: _outlines[panes.first.path] ?? const [],
+                        page: _current,
+                        onGoToPage: _goTo,
+                        onGoToDest: _goToDest,
+                      ),
+                    ],
+                    for (var i = 0; i < panes.length; i += 1) ...[
+                      if (i > 0) const VerticalDivider(width: 1),
+                      Expanded(
+                        child: _Pane(
+                          pane: panes[i],
+                          parent: this,
+                          onOpenExternally: () =>
+                              widget.onOpenExternally(panes[i].path),
+                          onReveal: () => widget.onReveal(panes[i].path),
+                          onRecompile: () =>
+                              widget.onRecompilePane(panes[i].language),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -503,31 +631,47 @@ class _Pane extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          decoration: const BoxDecoration(
-            color: didactaPanel,
-            border: Border(bottom: BorderSide(color: didactaRule)),
+          decoration: BoxDecoration(
+            color: context.palette.panel,
+            border: Border(bottom: BorderSide(color: context.palette.rule)),
           ),
           padding: const EdgeInsets.fromLTRB(10, 1, 2, 1),
           child: Row(
             children: [
               Text(
                 pane.language,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: didactaAccentDark,
+                  color: context.palette.accentDark,
                 ),
               ),
               if (pane.stale) ...[
                 const SizedBox(width: 6),
                 Tooltip(
-                  message:
-                      'La unidad ha cambiado después de compilar esto. Lo que '
-                      'se ve es de antes del cambio.',
+                  message: tr(
+                    'La unidad ha cambiado después de compilar esto. Lo que '
+                    'se ve es de antes del cambio.',
+                  ),
                   child: Icon(
                     Icons.change_circle_outlined,
                     size: 15,
-                    color: didactaEx,
+                    color: context.palette.ex,
+                  ),
+                ),
+              ] else if (pane.quick && !pane.busy) ...[
+                const SizedBox(width: 6),
+                Tooltip(
+                  key: Key('pane-quick-${pane.language}'),
+                  message: tr(
+                    'Vista rápida: una sola pasada. El índice, las '
+                    'referencias y el total de diapositivas pueden no estar '
+                    'al día; para repartirlo, «Compilar entero».',
+                  ),
+                  child: Icon(
+                    Icons.bolt,
+                    size: 15,
+                    color: context.palette.muted,
                   ),
                 ),
               ],
@@ -535,14 +679,18 @@ class _Pane extends StatelessWidget {
               Expanded(
                 child: Text(
                   pane.busy
-                      ? 'compilando…'
+                      ? tr('compilando…')
                       : pane.stale
-                      ? 'modificada después · $page / $total'
+                      ? tr('modificada después · {0} / {1}', [page, total])
+                      : pane.quick
+                      ? tr('vista rápida · {0} / {1}', [page, total])
                       : '$page / $total',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    color: pane.stale ? didactaEx : didactaMuted,
+                    color: pane.stale
+                        ? context.palette.ex
+                        : context.palette.muted,
                     fontWeight: pane.stale ? FontWeight.w600 : FontWeight.w400,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
@@ -550,7 +698,7 @@ class _Pane extends StatelessWidget {
               ),
               IconButton(
                 key: Key('pane-recompile-${pane.language}'),
-                tooltip: 'Volver a compilar ${pane.language}',
+                tooltip: tr('Volver a compilar {0}', [pane.language]),
                 visualDensity: VisualDensity.compact,
                 icon: pane.busy
                     ? const SizedBox(
@@ -563,23 +711,28 @@ class _Pane extends StatelessWidget {
               ),
               IconButton(
                 key: Key('pane-save-${pane.language}'),
-                tooltip: 'Guardar una copia de ${pane.language}',
+                tooltip: tr('Guardar una copia de {0}', [pane.language]),
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.file_download_outlined, size: 15),
                 onPressed: () => savePdfCopy(context, path: pane.path),
               ),
               IconButton(
                 key: Key('pane-external-${pane.language}'),
-                tooltip:
-                    'Abrir ${pane.language} en el visor del sistema '
-                    '(pantalla completa)',
+                tooltip: tr(
+                  'Abrir {0} en el visor del sistema '
+                  '(pantalla completa)',
+                  [pane.language],
+                ),
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.open_in_new, size: 15),
                 onPressed: onOpenExternally,
               ),
               IconButton(
                 key: Key('pane-reveal-${pane.language}'),
-                tooltip: 'Ver ${pane.language} en el Finder',
+                tooltip: tr('Ver {0} {1}', [
+                  pane.language,
+                  const FileManager().revealIn,
+                ]),
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.folder_open_outlined, size: 15),
                 onPressed: onReveal,
@@ -594,7 +747,7 @@ class _Pane extends StatelessWidget {
                   // Gris y no blanco: un PDF blanco sobre blanco no tiene
                   // bordes, y en diapositivas el borde es donde se ve si algo
                   // se sale de la caja.
-                  color: const Color(0xFF52565C),
+                  color: context.palette.pdfBackdrop,
                   child: PdfViewer.file(
                     pane.path,
                     // La revisión en la clave: recompilar escribe el mismo
@@ -604,7 +757,12 @@ class _Pane extends StatelessWidget {
                     controller: parent._controllerFor(pane.path),
                     params: PdfViewerParams(
                       margin: 8,
-                      backgroundColor: const Color(0xFF52565C),
+                      backgroundColor: context.palette.pdfBackdrop,
+                      // Lo encontrado al buscar, resaltado.
+                      pagePaintCallbacks: [
+                        (canvas, rect, page) =>
+                            parent._search.paint(pane.path, canvas, rect, page),
+                      ],
                       // La barra de desplazamiento, que no venía de serie.
                       // Un PDF de ciento veinte páginas sin ella sólo se
                       // recorre con la rueda, y no dice por dónde va.
@@ -620,6 +778,10 @@ class _Pane extends StatelessWidget {
                       ],
                       onViewerReady: (document, controller) =>
                           parent._noteReady(pane.path, document),
+                      onGeneralTap: parent._click.handler(
+                        pane.path,
+                        parent._openSource,
+                      ),
                       onPageChanged: (page) {
                         if (page != null) parent._notePage(pane.path, page);
                       },
@@ -654,14 +816,14 @@ class _ScrollThumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     decoration: BoxDecoration(
-      color: didactaInk.withValues(alpha: 0.72),
+      color: didactaOverlay,
       borderRadius: BorderRadius.circular(13),
     ),
     alignment: Alignment.center,
     child: Text(
       '${page ?? ''}',
       style: const TextStyle(
-        color: Colors.white,
+        color: didactaOnOverlay,
         fontSize: 11,
         fontWeight: FontWeight.w600,
         fontFeatures: [FontFeature.tabularFigures()],
@@ -686,7 +848,7 @@ class _DetachButton extends StatelessWidget {
     if (group.panes.length == 2) {
       return IconButton(
         key: const Key('pdf-detach'),
-        tooltip: 'Separar ${group.panes.last.language} en otra pestaña',
+        tooltip: tr('Separar {0} en otra pestaña', [group.panes.last.language]),
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.call_split, size: 17),
         onPressed: () => onDetach(group.panes.last.language),
@@ -695,7 +857,7 @@ class _DetachButton extends StatelessWidget {
     return MenuAnchor(
       builder: (context, controller, child) => IconButton(
         key: const Key('pdf-detach'),
-        tooltip: 'Separar una versión en otra pestaña',
+        tooltip: tr('Separar una versión en otra pestaña'),
         visualDensity: VisualDensity.compact,
         icon: const Icon(Icons.call_split, size: 17),
         onPressed: () =>
@@ -706,7 +868,7 @@ class _DetachButton extends StatelessWidget {
           MenuItemButton(
             key: Key('detach-${pane.language}'),
             onPressed: () => onDetach(pane.language),
-            child: Text('Separar ${pane.language}'),
+            child: Text(tr('Separar {0}', [pane.language])),
           ),
       ],
     );
@@ -729,24 +891,26 @@ class _Failure extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'No se ha podido abrir el PDF',
+            Text(
+              tr('No se ha podido abrir el PDF'),
               style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             SelectableText(
               path,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 fontFamily: 'monospace',
-                color: didactaMuted,
+                color: context.palette.muted,
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'Lo más probable es que la compilación se haya borrado: el '
-              'directorio de compilación no se versiona y se puede limpiar. '
-              'Vuelve a compilar con el botón de arriba.',
+            Text(
+              tr(
+                'Lo más probable es que la compilación se haya borrado: el '
+                'directorio de compilación no se versiona y se puede limpiar. '
+                'Vuelve a compilar con el botón de arriba.',
+              ),
               style: TextStyle(fontSize: 12.5),
             ),
             const SizedBox(height: 10),

@@ -15,6 +15,7 @@
 library;
 
 import 'toolchain.dart' show Host;
+import '../l10n/tr.dart';
 
 /// Un programa y los argumentos que van delante de los de siempre.
 class LaunchCommand {
@@ -129,6 +130,24 @@ String _folderOf(String file) {
 /// que todo ha ido bien.
 bool exitCodeMeansFailure(Host host) => host != Host.windows;
 
+/// El botón que abre una carpeta, dicho como lo llama [host].
+///
+/// Decía «Abrir en el Finder» también en Windows y en Linux, que no tienen
+/// Finder.
+String openFolderLabel(Host host) => switch (host) {
+  Host.macos => tr('Abrir en el Finder'),
+  Host.windows => tr('Abrir en el Explorador'),
+  Host.linux => tr('Abrir la carpeta'),
+};
+
+/// Dónde se enseña una carpeta en [host], para terminar una frase: «Ver
+/// en el Finder», «Ver en el Explorador».
+String revealInLabel(Host host) => switch (host) {
+  Host.macos => tr('en el Finder'),
+  Host.windows => tr('en el Explorador'),
+  Host.linux => tr('en su carpeta'),
+};
+
 /// Cómo se abre una carpeta en el explorador de archivos de [host].
 ///
 /// Las mismas órdenes que para abrir un fichero: con una carpeta, las tres
@@ -160,8 +179,11 @@ List<LaunchCommand> trashFolderLaunches({
     LaunchCommand('/usr/bin/trash', [folder]),
     LaunchCommand('osascript', [
       '-e',
-      'tell application "Finder" to delete '
-          '(POSIX file ${_appleScriptString(folder)} as alias)',
+      tr(
+        'tell application "Finder" to delete '
+        '(POSIX file {0} as alias)',
+        [_appleScriptString(folder)],
+      ),
     ]),
   ],
   Host.windows => [
@@ -169,10 +191,13 @@ List<LaunchCommand> trashFolderLaunches({
       '-NoProfile',
       '-NonInteractive',
       '-Command',
-      'Add-Type -AssemblyName Microsoft.VisualBasic; '
-          '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory('
-          "${_powerShellString(folder.replaceAll('/', r'\'))}, "
-          "'OnlyErrorDialogs', 'SendToRecycleBin')",
+      tr(
+        'Add-Type -AssemblyName Microsoft.VisualBasic; '
+        '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory('
+        "{0}, "
+        "'OnlyErrorDialogs', 'SendToRecycleBin')",
+        [_powerShellString(folder.replaceAll('/', r'\'))],
+      ),
     ]),
   ],
   Host.linux => [

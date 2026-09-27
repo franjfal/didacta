@@ -163,6 +163,15 @@ List<Map<String, dynamic>> screenshotUnits() {
                       'year': '2025-2026',
                       'document': 'tema-${(index % 4) + 1}',
                     },
+                    // La primera, la que enseña la captura de una lección, se
+                    // da también el curso pasado: es lo normal, y es lo que
+                    // hace salir el aviso de que guardar cambia los dos.
+                    if (index == 0)
+                      {
+                        'course': 'am-iii',
+                        'year': '2024-2025',
+                        'document': 'tema-1',
+                      },
                   ],
           ),
         );

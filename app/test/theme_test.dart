@@ -101,28 +101,46 @@ void main() {
     test('el texto apagado llega al contraste mínimo', () {
       // `didactaMuted` está en rutas, recuentos y subtítulos de toda la
       // aplicación: si no llega, no llega en cien sitios.
-      expect(contrastRatio(didactaMuted, Colors.white), greaterThan(4.5));
-      expect(contrastRatio(didactaMuted, didactaPanel), greaterThan(4.0));
+      expect(
+        contrastRatio(DidactaPalette.light.muted, Colors.white),
+        greaterThan(4.5),
+      );
+      expect(
+        contrastRatio(DidactaPalette.light.muted, DidactaPalette.light.panel),
+        greaterThan(4.0),
+      );
     });
 
     test('el acento se lee sobre blanco y sobre el panel', () {
-      expect(contrastRatio(didactaAccentDark, Colors.white), greaterThan(4.5));
-      expect(contrastRatio(didactaAccentDark, didactaPanel), greaterThan(4.0));
+      expect(
+        contrastRatio(DidactaPalette.light.accentDark, Colors.white),
+        greaterThan(4.5),
+      );
+      expect(
+        contrastRatio(
+          DidactaPalette.light.accentDark,
+          DidactaPalette.light.panel,
+        ),
+        greaterThan(4.0),
+      );
     });
 
     test('el blanco se lee sobre el acento, que es un botón lleno', () {
-      expect(contrastRatio(Colors.white, didactaAccentDark), greaterThan(4.5));
+      expect(
+        contrastRatio(Colors.white, DidactaPalette.light.accentDark),
+        greaterThan(4.5),
+      );
     });
 
     test('cada color de estado de traducción se lee sobre blanco', () {
       // Son insignias con texto de dos letras: si una no contrasta, ese
       // estado es el que nadie ve.
       for (final entry in {
-        'thm': didactaThm,
-        'ex': didactaEx,
-        'ques': didactaQues,
-        'teacher': didactaTeacher,
-        'defn': didactaDefn,
+        'thm': DidactaPalette.light.thm,
+        'ex': DidactaPalette.light.ex,
+        'ques': DidactaPalette.light.ques,
+        'teacher': DidactaPalette.light.teacher,
+        'defn': DidactaPalette.light.defn,
       }.entries) {
         expect(
           contrastRatio(entry.value, Colors.white),
@@ -138,9 +156,13 @@ void main() {
       // Casi todo lo que va en este gris es contenido --rutas, recuentos,
       // estados-- y no adorno, así que tiene que pasar AA en la página y en
       // una tarjeta, que son los dos fondos que hay.
-      for (final over in [didactaSurface, didactaCard, didactaPanel]) {
+      for (final over in [
+        DidactaPalette.light.surface,
+        DidactaPalette.light.card,
+        DidactaPalette.light.panel,
+      ]) {
         expect(
-          contrastRatio(didactaMuted, over),
+          contrastRatio(DidactaPalette.light.muted, over),
           greaterThanOrEqualTo(4.5),
           reason: 'sobre $over',
         );
@@ -151,21 +173,30 @@ void main() {
       // La regla de la casa es que no hay sombras en las listas. Entonces lo
       // único que separa una tarjeta del fondo es el tono, y si los dos son
       // el mismo blanco no separa nada.
-      expect(didactaCard, isNot(didactaSurface));
+      expect(DidactaPalette.light.card, isNot(DidactaPalette.light.surface));
       expect(
-        contrastRatio(didactaCard, didactaSurface),
+        contrastRatio(DidactaPalette.light.card, DidactaPalette.light.surface),
         greaterThan(1.02),
         reason: 'la tarjeta y la página son el mismo color',
       );
     });
 
     test('el resalte del ratón se ve, y no tapa el texto', () {
-      final over = flatten(didactaHover, didactaCard);
+      final over = flatten(
+        DidactaPalette.light.hover,
+        DidactaPalette.light.card,
+      );
       // Que se vea...
-      expect(contrastRatio(over, didactaCard), greaterThan(1.01));
+      expect(contrastRatio(over, DidactaPalette.light.card), greaterThan(1.01));
       // ...y que el texto encima siga leyéndose.
-      expect(contrastRatio(didactaInk, over), greaterThanOrEqualTo(7));
-      expect(contrastRatio(didactaMuted, over), greaterThanOrEqualTo(4.5));
+      expect(
+        contrastRatio(DidactaPalette.light.ink, over),
+        greaterThanOrEqualTo(7),
+      );
+      expect(
+        contrastRatio(DidactaPalette.light.muted, over),
+        greaterThanOrEqualTo(4.5),
+      );
     });
 
     test('los radios son los del tema, no números sueltos', () {

@@ -6,6 +6,8 @@
 /// nada y deja basura.
 library;
 
+import '../l10n/tr.dart';
+
 import 'file_manager_stub.dart'
     if (dart.library.io) 'file_manager_io.dart'
     as platform;
@@ -18,6 +20,13 @@ class FileManager {
 
   /// El botón, dicho como lo llama cada sistema: «Abrir en el Finder».
   String get openLabel => platform.openLabel;
+
+  /// Dónde se enseña un fichero, dicho como lo llama cada sistema: «en el
+  /// Finder», «en el Explorador». Era «Finder» también en Windows y Linux.
+  String get revealIn => platform.revealIn;
+
+  /// «Ver en el Finder», o lo que toque en este sistema.
+  String get revealLabel => tr('Ver {0}', [platform.revealIn]);
 
   /// La carpeta de usuario, que nunca se tira.
   String get home => platform.home;

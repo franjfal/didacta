@@ -12,7 +12,9 @@
 library;
 
 import '../model/catalogue.dart';
+import '../model/review.dart';
 import 'compiler_stub.dart' if (dart.library.io) 'compiler_io.dart' as platform;
+import '../l10n/tr.dart';
 
 /// Un perfil de salida ofrecido para una unidad, tal como lo lista el motor.
 ///
@@ -52,10 +54,10 @@ class BuildableProfile {
   /// `problems-answers`. Entregar a una clase la hoja equivocada es el fallo
   /// que esto viene a impedir.
   String get shows => switch (reveals) {
-    'answers' => 'enunciados y resultados',
-    'solutions' => 'enunciados, resultados y solución',
-    'teacher' => 'todo, con la solución paso a paso',
-    _ => 'solo los enunciados',
+    'answers' => tr('enunciados y resultados'),
+    'solutions' => tr('enunciados, resultados y solución'),
+    'teacher' => tr('todo, con la solución paso a paso'),
+    _ => tr('solo los enunciados'),
   };
 
   /// Si enseña algo que un alumno no debería ver antes de tiempo.
@@ -89,6 +91,7 @@ class ExistingOutput {
     required this.exists,
     required this.stale,
     this.modified,
+    this.quick = false,
   });
 
   final String profile;
@@ -112,6 +115,11 @@ class ExistingOutput {
   /// Cuándo se compiló, si está.
   final DateTime? modified;
 
+  /// Salió de una sola pasada (la vista rápida). Cuenta como [stale]: el
+  /// índice y las referencias pueden no estar al día, y lo que se reparte se
+  /// compila entero.
+  final bool quick;
+
   bool get usable => exists && !stale;
 
   /// Si es una de las que se miran primero.
@@ -120,6 +128,85 @@ class ExistingOutput {
 }
 
 /// El resultado de compilar una unidad en un perfil y un idioma.
+/// Un error o un aviso de LaTeX, con dónde está.
+///
+/// El motor sigue qué fichero tenía abierto LaTeX y lo traduce a la
+/// lección: [unit] y [language] cuando el error está en el `.tex` de una, y
+/// [line], la línea. Es lo que permite «Lección X (es) · línea 42 · [Abrir]»
+/// en lugar de una ruta relativa a la carpeta de compilación.
+class CompileDiagnostic {
+  const CompileDiagnostic({
+    required this.severity,
+    required this.message,
+    this.file,
+    this.line,
+    this.context,
+    this.path,
+    this.unit,
+    this.language,
+    this.code,
+    this.points,
+    this.times = 1,
+  });
+
+  factory CompileDiagnostic.fromJson(Map<String, dynamic> json) =>
+      CompileDiagnostic(
+        severity: json['severity'] as String? ?? 'error',
+        message: json['message'] as String? ?? '',
+        file: json['file'] as String?,
+        line: (json['line'] as num?)?.toInt(),
+        context: json['context'] as String?,
+        path: json['path'] as String?,
+        unit: json['unit'] as String?,
+        language: json['language'] as String?,
+        code: json['code'] as String?,
+        points: (json['points'] as num?)?.toDouble(),
+        times: (json['times'] as num?)?.toInt() ?? 1,
+      );
+
+  final String severity;
+  final String message;
+
+  /// Como lo nombra el log, relativo a la carpeta del documento.
+  final String? file;
+  final int? line;
+
+  /// Lo que LaTeX estaba leyendo: en «Undefined control sequence», el único
+  /// sitio donde sale el nombre de la orden.
+  final String? context;
+
+  /// Desde la raíz del repositorio: `content/a/b/c/es.tex`.
+  final String? path;
+
+  /// La lección y el idioma, si es el `.tex` de una.
+  final String? unit;
+  final String? language;
+
+  /// Qué es, cuando el motor lo sabe: `overfull-slide` (una diapositiva que
+  /// se sale por abajo) u `overfull-line` (una línea que se sale por la
+  /// derecha).
+  final String? code;
+
+  /// Cuánto se sale, en puntos, y en cuántas páginas: una diapositiva con
+  /// capas se sale en todas.
+  final double? points;
+  final int times;
+
+  bool get isError => severity == 'error';
+
+  /// Algo que se sale de la página: se compila, pero no se ve entero.
+  bool get isOverflow => code == 'overfull-slide' || code == 'overfull-line';
+
+  /// En una línea, sin saber de la lección más que su ruta.
+  String get plain {
+    final where = path ?? file;
+    final head = where == null || where.isEmpty
+        ? message
+        : '${line == null ? where : '$where:$line'}: $message';
+    return context == null || context!.isEmpty ? head : '$head  ← $context';
+  }
+}
+
 class CompileOutput {
   const CompileOutput({
     required this.profile,
@@ -130,7 +217,37 @@ class CompileOutput {
     this.seconds = 0,
     this.errors = const [],
     this.warnings = const [],
+    this.diagnostics = const [],
+    this.quick = false,
   });
+
+  /// De una sola pasada: el índice, las referencias y el total de
+  /// diapositivas pueden no estar al día.
+  final bool quick;
+
+  /// Los diagnósticos con su sitio, tal como los devuelve el motor.
+  final List<CompileDiagnostic> diagnostics;
+
+  /// Los errores con su sitio. Si el motor no los dio así --uno viejo, o una
+  /// prueba--, los de [errors] como texto.
+  List<CompileDiagnostic> get errorDiagnostics {
+    final located = [
+      for (final diagnostic in diagnostics)
+        if (diagnostic.isError) diagnostic,
+    ];
+    if (located.isNotEmpty || errors.isEmpty) return located;
+    return [
+      for (final error in errors)
+        CompileDiagnostic(severity: 'error', message: error),
+    ];
+  }
+
+  /// Lo que se sale de la página --diapositivas que no caben, líneas que
+  /// pasan el margen--, cada uno con su lección y su línea.
+  List<CompileDiagnostic> get overflowDiagnostics => [
+    for (final diagnostic in diagnostics)
+      if (diagnostic.isOverflow) diagnostic,
+  ];
 
   final String profile;
   final String language;
@@ -144,8 +261,32 @@ class CompileOutput {
 
   /// Los diagnósticos del log, ya parseados por el motor: fichero, línea y
   /// mensaje. Se muestran tal cual porque el motor ya sabe a quién culpar.
+  /// En [warnings] no está lo que se sale de la página, que va en
+  /// [overflowDiagnostics] con a dónde lleva.
   final List<String> errors;
   final List<String> warnings;
+}
+
+/// Hasta dónde puede enseñar lo que se exporta.
+///
+/// Una carpeta exportada acaba en el aula virtual, así que lo que sale por
+/// defecto es lo del estudiante: los enunciados y, como mucho, los
+/// resultados. Subir el listón es algo que se pide a sabiendas.
+enum ExportReach {
+  /// Enunciados y resultados: lo que se reparte.
+  students('answers'),
+
+  /// Además, las resoluciones completas.
+  solutions('solutions'),
+
+  /// Además, las copias del profesor: la plantilla de corrección del examen,
+  /// las diapositivas con notas.
+  teacher('teacher');
+
+  const ExportReach(this.engineName);
+
+  /// Lo que entiende `didacta export --reveal-up-to`.
+  final String engineName;
 }
 
 /// Lo que salió de exportar un curso.
@@ -154,7 +295,12 @@ class ExportResult {
     required this.copied,
     required this.missing,
     required this.to,
+    this.withheld = const [],
+    this.zip,
   });
+
+  /// El .zip con todo lo exportado, cuando se pidió.
+  final String? zip;
 
   /// Los ficheros copiados, con su ruta dentro del destino.
   final List<String> copied;
@@ -163,6 +309,10 @@ class ExportResult {
   /// idioma». Se dice: un reparto incompleto que no lo parece es peor que
   /// uno que falla.
   final List<String> missing;
+
+  /// Lo que estaba compilado y se ha dejado fuera porque enseña más de lo
+  /// que se pidió repartir. Aparte de [missing]: no es que falte compilarlo.
+  final List<String> withheld;
 
   final String to;
 }
@@ -200,16 +350,26 @@ class CompilerStatus {
 
 abstract class Compiler {
   /// La implementación de esta plataforma.
+  /// [jobs] es cuántas salidas de un documento compilar a la vez; 0 deja
+  /// que lo decida el motor (min(4, núcleos/2)). [overfullLines], si avisar
+  /// también de las líneas que se salen por la derecha en lo que no son
+  /// diapositivas. [accessible], PDF etiquetados (`--accessible`).
   factory Compiler({
     required String enginePath,
     required String repositoryPath,
     String? texPath,
     List<String> templateDirs = const [],
+    int jobs = 0,
+    bool overfullLines = false,
+    bool accessible = false,
   }) => platform.makeCompiler(
     enginePath: enginePath,
     repositoryPath: repositoryPath,
     texPath: texPath,
     templateDirs: templateDirs,
+    jobs: jobs,
+    overfullLines: overfullLines,
+    accessible: accessible,
   );
 
   /// Si compilar es posible aquí. Falso en web, donde no hay LaTeX ni forma
@@ -309,11 +469,22 @@ abstract class Compiler {
   /// Copia, no toca el repositorio: lo que sale es para repartir. Devuelve qué
   /// se copió y qué faltaba por compilar, porque un reparto al que le faltan
   /// tres PDF tiene que decirlo y no adivinarse contando ficheros.
+  ///
+  /// [reach] decide si entran las soluciones y las copias del profesor; por
+  /// defecto, no. Con [zip], además, todo lo exportado en ese .zip; con
+  /// [appendZip] se añade a uno que ya exista, que es lo que hace falta en
+  /// la segunda pasada de una asignatura repartida en dos repositorios. Con
+  /// [html], los apuntes también en HTML accesible, al lado de cada PDF que
+  /// no sea de diapositivas (`export --html`).
   Future<ExportResult> exportCourse({
     required String where,
     required String to,
     List<String> languages = const [],
     List<String> documents = const [],
+    ExportReach reach = ExportReach.students,
+    String? zip,
+    bool appendZip = false,
+    bool html = false,
   });
 
   /// Qué hay compilado de cada documento de un curso, por id de documento.
@@ -363,4 +534,104 @@ abstract class Compiler {
   /// compilación, que no se versiona: esto es tirar algo que se rehace
   /// pulsando el botón de al lado, y por eso no pregunta dos veces.
   Future<int> deleteOutputs(List<String> pdfs);
+
+  /// Para lo que se esté compilando: el motor y lo que haya lanzado.
+  ///
+  /// Lo que estaba compilando termina entonces con un error o con un
+  /// resultado a medias, y quien compila tiene que tomarlo por «detenido» y
+  /// no por un fallo: lo sabe porque fue quien pidió parar.
+  Future<void> stopCompiling();
+
+  /// De dónde salió el punto ([x], [y]) de la página [page] de [pdf]:
+  /// `didacta synctex`. Las coordenadas en puntos, desde arriba a la
+  /// izquierda. [word] y [text], lo que había escrito ahí, afinan la línea
+  /// dentro de una diapositiva. Null si ahí no hay nada que venga de un
+  /// fichero.
+  Future<SourceSpot?> sourceAt({
+    required String pdf,
+    required int page,
+    required double x,
+    required double y,
+    String? word,
+    String? text,
+  });
+
+  /// Revisa el repositorio: `didacta check --json`. [within] lo limita a
+  /// esos documentos o cursos --`curso@año`, `curso@año/documento`--, que
+  /// es lo que se mira antes de exportar; [extra], las comprobaciones que se
+  /// piden aparte (ver `optionalReviewChecks`).
+  Future<ReviewReport> review({
+    List<String> within = const [],
+    List<String> extra = const [],
+  });
+
+  /// Cuánto ocupa la carpeta de compilación: `didacta clean --size`.
+  Future<BuildFolder> buildFolder();
+
+  /// La vacía: `didacta clean`. Devuelve lo que había.
+  Future<BuildFolder> cleanBuild();
+}
+
+/// La carpeta de compilación de un repositorio: los PDF, los `.aux` y los
+/// registros, que no se versionan y se rehacen compilando.
+class BuildFolder {
+  const BuildFolder({required this.path, required this.bytes, this.files = 0});
+
+  factory BuildFolder.fromJson(Map<String, dynamic> json) => BuildFolder(
+    path: json['path'] as String? ?? '',
+    bytes: (json['bytes'] as num?)?.toInt() ?? 0,
+    files: (json['files'] as num?)?.toInt() ?? 0,
+  );
+
+  /// Desde la raíz del repositorio: `.didacta-build`.
+  final String path;
+  final int bytes;
+  final int files;
+
+  bool get isEmpty => files == 0;
+
+  /// «440,7 MB».
+  String get size {
+    const units = ['B', 'KB', 'MB', 'GB'];
+    var value = bytes.toDouble();
+    var unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit += 1;
+    }
+    final number = unit == 0
+        ? '${value.round()}'
+        : value.toStringAsFixed(1).replaceAll('.', ',');
+    return '$number ${units[unit]}';
+  }
+}
+
+/// Un sitio de un fichero fuente: lo que dice SyncTeX de un punto del PDF.
+class SourceSpot {
+  const SourceSpot({
+    required this.file,
+    required this.line,
+    this.path,
+    this.unit,
+    this.language,
+  });
+
+  factory SourceSpot.fromJson(Map<String, dynamic> json) => SourceSpot(
+    file: json['file'] as String? ?? '',
+    line: (json['line'] as num?)?.toInt() ?? 1,
+    path: json['path'] as String?,
+    unit: json['unit'] as String?,
+    language: json['language'] as String?,
+  );
+
+  /// La ruta entera, como la leyó LaTeX.
+  final String file;
+  final int line;
+
+  /// Desde la raíz del repositorio, si es suyo.
+  final String? path;
+
+  /// La lección y el idioma, si es el `.tex` de una.
+  final String? unit;
+  final String? language;
 }

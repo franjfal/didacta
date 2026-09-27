@@ -10,11 +10,14 @@
 /// que hay que decidir es si se actualiza ahora o luego.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/update_service.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// La tarjeta de Ajustes → Actualizaciones.
 class UpdateSection extends StatelessWidget {
@@ -33,9 +36,9 @@ class UpdateSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Fact(label: 'Versión instalada', value: info.describe),
+              _Fact(label: tr('Versión instalada'), value: info.describe),
               _Fact(
-                label: 'Última comprobación',
+                label: tr('Última comprobación'),
                 value: _when(updates.lastCheck),
               ),
               const SizedBox(height: 12),
@@ -52,24 +55,34 @@ class UpdateSection extends StatelessWidget {
 
               if (updates.hasUpdate) ...[
                 Note(
-                  'Hay una versión nueva de Didacta: '
-                  '${updates.newVersion}.',
-                  tone: didactaAccentDark,
+                  tr(
+                    'Hay una versión nueva de Didacta: '
+                    '{0}'
+                    '{1}.',
+                    [
+                      updates.newVersion,
+                      updates.newVersion!.isPreRelease ? tr(', de prueba') : '',
+                    ],
+                  ),
+                  tone: context.palette.accentDark,
                 ),
                 const SizedBox(height: 10),
               ],
 
               if (updates.stage == UpdateStage.upToDate && !updates.hasUpdate)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.only(bottom: 10),
                   child: Text(
-                    'Estás al día.',
-                    style: TextStyle(fontSize: 12.5, color: didactaMuted),
+                    tr('Estás al día.'),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: context.palette.muted,
+                    ),
                   ),
                 ),
 
               if (updates.problem != null) ...[
-                Note('${updates.problem}', tone: didactaTeacher),
+                Note('${updates.problem}', tone: context.palette.teacher),
                 const SizedBox(height: 10),
               ],
 
@@ -100,18 +113,42 @@ class UpdateSection extends StatelessWidget {
                         : const Icon(Icons.refresh, size: 16),
                     label: Text(
                       updates.stage == UpdateStage.checking
-                          ? 'Comprobando…'
-                          : 'Buscar actualizaciones',
+                          ? tr('Comprobando…')
+                          : tr('Buscar actualizaciones'),
                     ),
                   ),
                   if (updates.hasUpdate && updates.canInstall)
                     FilledButton.icon(
                       key: const Key('install-update'),
                       icon: const Icon(Icons.download, size: 16),
-                      label: Text('Actualizar a ${updates.newVersion}'),
+                      label: Text(tr('Actualizar a {0}', [updates.newVersion])),
                       onPressed: () => showUpdateDialog(context),
                     ),
                 ],
+              ),
+              const SizedBox(height: 8),
+              // Opcional: quien prueba las versiones antes que nadie.
+              SwitchListTile(
+                key: const Key('update-tests'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                value: updates.testVersions,
+                onChanged: updates.setTestVersions,
+                title: Text(
+                  tr('Versiones de prueba'),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  tr(
+                    'Recibir cada versión antes de publicarla para todos --la '
+                    '1.5.0-rc.1 antes que la 1.5.0--, para probarla. Pueden '
+                    'traer fallos; la final llega después igual.',
+                  ),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
+                ),
               ),
             ],
           ),
@@ -121,15 +158,15 @@ class UpdateSection extends StatelessWidget {
   }
 
   static String _when(DateTime? value) {
-    if (value == null) return 'Todavía no se ha comprobado';
+    if (value == null) return tr('Todavía no se ha comprobado');
     final now = DateTime.now();
     final days = now.difference(value).inDays;
     final stamp =
         '${value.day.toString().padLeft(2, '0')}/'
         '${value.month.toString().padLeft(2, '0')}/${value.year}';
-    if (days <= 0) return 'Hoy';
-    if (days == 1) return 'Ayer';
-    return '$stamp (hace $days días)';
+    if (days <= 0) return tr('Hoy');
+    if (days == 1) return tr('Ayer');
+    return tr('{0} (hace {1} días)', [stamp, days]);
   }
 }
 
@@ -151,24 +188,32 @@ class _Outcome extends StatelessWidget {
       Expanded(
         child: outcome.succeeded
             ? Note(
-                'Didacta se ha actualizado a la ${outcome.installed}.',
-                tone: didactaAccentDark,
+                tr('Didacta se ha actualizado a la {0}.', [outcome.installed]),
+                tone: context.palette.accentDark,
               )
             : Note(
-                'La actualización a la ${outcome.installed} no se completó: '
-                'sigues con la ${outcome.running}, que funciona igual que '
-                'antes. Vuelve a intentarlo, y si sigue sin salir, descarga '
-                'el instalador.',
-                tone: didactaTeacher,
+                tr(
+                  'La actualización a la {0} no se completó: '
+                  'sigues con la {1}, que funciona igual que '
+                  'antes. Vuelve a intentarlo, y si sigue sin salir, descarga '
+                  'el instalador.',
+                  [outcome.installed, outcome.running],
+                ),
+                tone: context.palette.teacher,
               ),
       ),
       InkResponse(
         key: const Key('dismiss-update-outcome'),
         onTap: onDismiss,
         radius: 16,
-        child: const Padding(
+        child: Padding(
           padding: EdgeInsets.all(6),
-          child: Icon(Icons.close, size: 15, color: didactaMuted),
+          child: Icon(
+            Icons.close,
+            size: 15,
+            color: context.palette.muted,
+            semanticLabel: tr('Cerrar el aviso'),
+          ),
         ),
       ),
     ],
@@ -191,7 +236,7 @@ class _Fact extends StatelessWidget {
           width: 150,
           child: Text(
             label,
-            style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+            style: TextStyle(fontSize: 12.5, color: context.palette.muted),
           ),
         ),
         Expanded(
@@ -216,7 +261,7 @@ Future<void> showUpdateDialog(BuildContext context) {
   ).whenComplete(() {
     // Si se cierra con algo descargado y sin instalar, se tira: dejarlo
     // ocupando disco a la espera de una decisión que ya se tomó no ayuda.
-    if (updates.stage == UpdateStage.ready) updates.later();
+    if (updates.stage == UpdateStage.ready) unawaited(updates.later());
   });
 }
 
@@ -230,12 +275,12 @@ class _UpdateDialog extends StatelessWidget {
 
     if (published == null || !updates.hasUpdate) {
       return AlertDialog(
-        title: const Text('Didacta está al día'),
-        content: Text('Tienes la versión ${updates.info.version}.'),
+        title: Text(tr('Didacta está al día')),
+        content: Text(tr('Tienes la versión {0}.', [updates.info.version])),
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cerrar'),
+            child: Text(tr('Cerrar')),
           ),
         ],
       );
@@ -247,7 +292,7 @@ class _UpdateDialog extends StatelessWidget {
     final asset = updates.asset;
 
     return AlertDialog(
-      title: const Text('Hay una versión nueva de Didacta'),
+      title: Text(tr('Hay una versión nueva de Didacta')),
       content: SizedBox(
         width: 460,
         child: Column(
@@ -255,17 +300,17 @@ class _UpdateDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _Fact(
-              label: 'Versión instalada',
+              label: tr('Versión instalada'),
               value: updates.info.version.toString(),
             ),
-            _Fact(label: 'Nueva versión', value: '${updates.newVersion}'),
+            _Fact(label: tr('Nueva versión'), value: '${updates.newVersion}'),
             if (asset != null && asset.size > 0)
-              _Fact(label: 'Descarga', value: _size(asset.size)),
+              _Fact(label: tr('Descarga'), value: _size(asset.size)),
             const SizedBox(height: 14),
 
             if (published.releaseNotes.trim().isNotEmpty) ...[
-              const Text(
-                'Novedades',
+              Text(
+                tr('Novedades'),
                 style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 6),
@@ -283,30 +328,32 @@ class _UpdateDialog extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 _progressLabel(updates),
-                style: const TextStyle(fontSize: 12, color: didactaMuted),
+                style: TextStyle(fontSize: 12, color: context.palette.muted),
               ),
             ],
 
             if (ready)
-              const Note(
-                'Ya está descargada y comprobada. Al continuar, Didacta se '
-                'cerrará un momento y volverá a abrirse con la versión nueva.',
-                tone: didactaAccentDark,
+              Note(
+                tr(
+                  'Ya está descargada y comprobada. Al continuar, Didacta se '
+                  'cerrará un momento y volverá a abrirse con la versión nueva.',
+                ),
+                tone: context.palette.accentDark,
               ),
 
             if (installing)
-              const Note(
-                'Cerrando Didacta para instalar la versión nueva…',
-                tone: didactaAccentDark,
+              Note(
+                tr('Cerrando Didacta para instalar la versión nueva…'),
+                tone: context.palette.accentDark,
               ),
 
             if (updates.problem != null) ...[
               const SizedBox(height: 8),
-              Note('${updates.problem}', tone: didactaTeacher),
+              Note('${updates.problem}', tone: context.palette.teacher),
               const SizedBox(height: 4),
-              const Text(
-                'Tu versión sigue instalada y funciona igual.',
-                style: TextStyle(fontSize: 12, color: didactaMuted),
+              Text(
+                tr('Tu versión sigue instalada y funciona igual.'),
+                style: TextStyle(fontSize: 12, color: context.palette.muted),
               ),
             ],
           ],
@@ -317,20 +364,22 @@ class _UpdateDialog extends StatelessWidget {
           TextButton(
             key: const Key('cancel-update'),
             onPressed: updates.cancel,
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           )
         else if (!installing) ...[
           TextButton(
             key: const Key('update-later'),
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Más tarde'),
+            child: Text(tr('Más tarde')),
           ),
           FilledButton(
             key: const Key('update-now'),
             onPressed: ready
                 ? updates.installUpdate
                 : () => updates.downloadUpdate(),
-            child: Text(ready ? 'Cerrar e instalar' : 'Actualizar ahora'),
+            child: Text(
+              ready ? tr('Cerrar e instalar') : tr('Actualizar ahora'),
+            ),
           ),
         ],
       ],
@@ -339,10 +388,15 @@ class _UpdateDialog extends StatelessWidget {
 
   static String _progressLabel(UpdateService updates) {
     final progress = updates.progress;
-    if (progress == null) return 'Descargando…';
-    if (progress.total <= 0) return 'Descargando ${_size(progress.received)}…';
-    return 'Descargando ${_size(progress.received)} de '
-        '${_size(progress.total)}';
+    if (progress == null) return tr('Descargando…');
+    if (progress.total <= 0) {
+      return tr('Descargando {0}…', [_size(progress.received)]);
+    }
+    return tr(
+      'Descargando {0} de '
+      '{1}',
+      [_size(progress.received), _size(progress.total)],
+    );
   }
 
   static String _size(int bytes) {
@@ -350,7 +404,7 @@ class _UpdateDialog extends StatelessWidget {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
     if (bytes >= 1024) return '${(bytes / 1024).round()} kB';
-    return '$bytes bytes';
+    return tr('{0} bytes', [bytes]);
   }
 }
 
@@ -418,16 +472,25 @@ class _ReleaseNotes extends StatelessWidget {
 /// El aviso discreto de arriba, cuando la comprobación de fondo encuentra
 /// algo y nadie ha ido a Ajustes.
 class UpdateBanner extends StatelessWidget {
-  const UpdateBanner({super.key});
+  const UpdateBanner({super.key, this.dialogContext});
+
+  /// De dónde se abre el diálogo, si no es de aquí.
+  ///
+  /// En la aplicación esta franja va en el `builder` de `MaterialApp.router`,
+  /// por encima del Navigator, y un `showDialog` con su propio contexto no
+  /// tiene dónde abrirse. Sin nada, se abre desde la franja: es lo que vale
+  /// cuando está montada dentro de una pantalla.
+  final BuildContext Function()? dialogContext;
 
   @override
   Widget build(BuildContext context) {
     final updates = context.watch<UpdateService>();
     if (!updates.showBanner) return const SizedBox.shrink();
+    void open() => showUpdateDialog(dialogContext?.call() ?? context);
     return Material(
-      color: didactaAccentDark.withValues(alpha: 0.10),
+      color: context.palette.accentDark.withValues(alpha: 0.10),
       child: InkWell(
-        onTap: () => showUpdateDialog(context),
+        onTap: open,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           child: Row(
@@ -436,16 +499,19 @@ class UpdateBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Hay una versión nueva de Didacta (${updates.newVersion}). '
-                  'Tienes la ${updates.info.version}.',
+                  tr(
+                    'Hay una versión nueva de Didacta ({0}). '
+                    'Tienes la {1}.',
+                    [updates.newVersion, updates.info.version],
+                  ),
                   style: const TextStyle(fontSize: 12.5),
                 ),
               ),
               const SizedBox(width: 8),
               FilledButton(
                 key: const Key('open-update-dialog'),
-                onPressed: () => showUpdateDialog(context),
-                child: const Text('Ver'),
+                onPressed: open,
+                child: Text(tr('Ver')),
               ),
               // Sin `IconButton` ni `Tooltip`: esta franja vive por encima
               // del Navigator, donde no hay Overlay.
@@ -453,9 +519,14 @@ class UpdateBanner extends StatelessWidget {
                 key: const Key('dismiss-update-banner'),
                 onTap: updates.dismissBanner,
                 radius: 16,
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.all(6),
-                  child: Icon(Icons.close, size: 15, color: didactaMuted),
+                  child: Icon(
+                    Icons.close,
+                    size: 15,
+                    color: context.palette.muted,
+                    semanticLabel: tr('Cerrar el aviso'),
+                  ),
                 ),
               ),
             ],

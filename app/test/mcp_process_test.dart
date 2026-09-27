@@ -10,6 +10,7 @@
 /// stdout y el diario por stderr, y de que confundirlos deja la pantalla en
 /// «encendiendo» para siempre.
 @TestOn('vm')
+@Tags(['integration'])
 library;
 
 import 'dart:convert';
@@ -90,8 +91,13 @@ void main() {
       // Una llamada de verdad, por el puerto que acaba de decir. `tools/list`
       // no vale: listar no es llamar a una herramienta, y el diario apunta lo
       // que se hace con el repositorio, no cada mensaje del protocolo.
-      final answer = await _call(service.url!, 'list_courses');
+      final answer = await _call(service.url!, service.token, 'list_courses');
       expect(answer, contains('am-iii'));
+
+      // Y sin el token no contesta: cualquier página web abierta en el
+      // navegador puede mandarle peticiones a `localhost`.
+      expect(await _status(service.url!, null), 401);
+      expect(service.clientConfiguration, contains(service.token!));
 
       await _until(() => service.calls > 0);
       final call = service.activity.firstWhere((e) => e.isCall);
@@ -125,11 +131,12 @@ void main() {
 }
 
 /// Le pide una herramienta al servidor, por HTTP, como haría un cliente.
-Future<String> _call(String url, String tool) async {
+Future<String> _call(String url, String? token, String tool) async {
   final client = HttpClient();
   try {
     final request = await client.postUrl(Uri.parse(url));
     request.headers.contentType = ContentType.json;
+    if (token != null) request.headers.set('Authorization', 'Bearer $token');
     request.write(
       jsonEncode({
         'jsonrpc': '2.0',
@@ -160,5 +167,21 @@ Future<void> _until(bool Function() done, {int seconds = 20}) async {
       fail('no llegó a cumplirse en $seconds segundos');
     }
     await Future<void>.delayed(const Duration(milliseconds: 50));
+  }
+}
+
+/// El código con el que contesta una petición, con el token que se diga.
+Future<int> _status(String url, String? token) async {
+  final client = HttpClient();
+  try {
+    final request = await client.postUrl(Uri.parse(url));
+    request.headers.contentType = ContentType.json;
+    if (token != null) request.headers.set('Authorization', 'Bearer $token');
+    request.write('{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}');
+    final response = await request.close();
+    await response.drain<void>();
+    return response.statusCode;
+  } finally {
+    client.close();
   }
 }

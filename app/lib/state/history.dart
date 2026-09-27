@@ -51,6 +51,15 @@ class NavigationHistory extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    // El mismo sitio mirado de otra forma --la biblioteca con otro filtro, o
+    // con una letra más en el buscador-- no es una visita nueva: se apunta
+    // encima. Si no, «atrás» desharía la búsqueda letra a letra en lugar de
+    // volver a la pantalla de antes.
+    if (_current != null && _samePlace(_current!, location)) {
+      _current = location;
+      notifyListeners();
+      return;
+    }
     if (_current != null) {
       _back.add(_current!);
       if (_back.length > limit) _back.removeAt(0);
@@ -59,6 +68,9 @@ class NavigationHistory extends ChangeNotifier {
     _forward.clear();
     notifyListeners();
   }
+
+  static bool _samePlace(String a, String b) =>
+      Uri.parse(a).path == Uri.parse(b).path;
 
   /// A dónde ir al pulsar «atrás», o null si no hay a dónde.
   String? back() {

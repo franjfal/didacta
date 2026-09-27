@@ -9,6 +9,7 @@
 /// el ida y vuelta devuelve el fichero **byte a byte**. Si no lo hace con una
 /// traducción que no cambia nada, no lo va a hacer con una que sí.
 @TestOn('vm')
+@Tags(['real'])
 library;
 
 import 'dart:io';

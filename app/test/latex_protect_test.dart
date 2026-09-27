@@ -114,6 +114,30 @@ void main() {
       );
     });
 
+    test('el texto alternativo de una figura se traduce, y nada más', () {
+      const image =
+          r'Mira \includegraphics[width=2cm,alt={Una parábola}]{fig.png}.';
+      final out = sent(image);
+      expect(out, contains('Una parábola'));
+      expect(out, isNot(contains('fig.png')));
+      expect(out, isNot(contains('width')));
+      // Y vuelve entero: la figura como estaba, con su texto traducido.
+      expect(
+        roundTrip(
+          image,
+          translate: (t) => t.replaceAll('parábola', 'paràbola'),
+        ),
+        r'Mira \includegraphics[width=2cm,alt={Una paràbola}]{fig.png}.',
+      );
+      const drawing =
+          '\\begin{tikzpicture}[alt={Un círculo}, scale=2]\n'
+          '\\draw (0,0) circle (1);\n\\end{tikzpicture}';
+      final sentDrawing = sent(drawing);
+      expect(sentDrawing, contains('Un círculo'));
+      expect(sentDrawing, isNot(contains('draw')));
+      expect(roundTrip(drawing), drawing);
+    });
+
     test('las matemáticas en bloque', () {
       const tex = 'Sea\n\\[ x = \\frac{a}{b} \\]\ny entonces.';
       expect(sent(tex), isNot(contains(r'\frac')));

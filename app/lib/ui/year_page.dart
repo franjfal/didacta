@@ -17,19 +17,28 @@ import 'package:go_router/go_router.dart';
 
 import '../data/compiler.dart';
 import '../data/content_gateway.dart';
+import '../data/course_admin.dart';
+import '../data/diagnostics.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
+import '../model/document_master.dart';
 import '../model/line_diff.dart';
 import '../router.dart';
 import '../state/session.dart';
+import 'command_palette.dart';
+import 'shortcuts.dart';
 import 'build_console.dart';
 import 'commit_dialog.dart';
+import 'save_review.dart';
 import 'course_admin_ui.dart';
 import 'document_links.dart';
 import 'freezes.dart';
+import 'problem.dart';
 import 'reuse.dart';
 import 'new_document.dart';
 import 'pdf_dialog.dart';
+import 'problem_set.dart';
+import 'save_shortcut.dart';
 import 'shell.dart';
 import 'sync_bar.dart';
 import 'build_button.dart';
@@ -37,6 +46,8 @@ import 'document_properties.dart';
 import 'export_actions.dart';
 import 'heading_title.dart';
 import 'theme.dart';
+import 'tour.dart';
+import '../l10n/tr.dart';
 
 class YearPage extends StatelessWidget {
   const YearPage({super.key, required this.courseId, required this.year});
@@ -53,9 +64,10 @@ class YearPage extends StatelessWidget {
     if (course == null || entry == null) {
       return _NotHere(
         what: '$courseId · $year',
-        hint:
-            'No está en el catálogo. Puede que el año no exista todavía, o '
-            'que el catálogo esté desactualizado (`didacta index`).',
+        hint: tr(
+          'No está en el catálogo. Puede que el año no exista todavía, o '
+          'que el catálogo esté desactualizado (`didacta index`).',
+        ),
       );
     }
 
@@ -75,19 +87,57 @@ class YearPage extends StatelessWidget {
           title: '${course.title(session.language)} · $year',
           subtitle: [
             '${entry.documents.length} documentos',
-            '$references referencias',
+            tr('{0} referencias', [references]),
             if (entry.group != null) entry.group!,
-            'idioma ${entry.language}',
+            tr('idioma {0}', [entry.language]),
           ].join(' · '),
-          breadcrumbs: [('Asignaturas', Routes.courses())],
+          breadcrumbs: [(tr('Asignaturas'), Routes.courses())],
+          // En «…» y no una papelera suelta en la cabecera: quitar un curso
+          // entero es lo que menos se hace, y era lo único que había arriba,
+          // a la vista, al lado del título. Con lo que sí se hace mirando el
+          // curso: congelarlo.
           actions: [
             if (session.admin() != null)
-              IconButton(
-                key: const Key('remove-year'),
-                tooltip: 'Quitar este curso académico',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(Icons.delete_outline, size: 18),
-                onPressed: () => _removeYear(context, session, course),
+              MenuAnchor(
+                builder: (context, controller, child) => IconButton(
+                  key: const Key('year-page-menu'),
+                  tooltip: tr('Más de este curso académico'),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.more_horiz, size: 18),
+                  onPressed: () => controller.isOpen
+                      ? controller.close()
+                      : controller.open(),
+                ),
+                menuChildren: [
+                  MenuItemButton(
+                    key: const Key('year-page-freeze'),
+                    leadingIcon: const Icon(Icons.ac_unit, size: 15),
+                    onPressed: () =>
+                        createFreeze(context, session, course, year),
+                    child: Text(tr('Crear versión congelada…')),
+                  ),
+                  MenuItemButton(
+                    key: const Key('year-page-freezes'),
+                    leadingIcon: const Icon(Icons.history_toggle_off, size: 15),
+                    onPressed: () =>
+                        showFreezes(context, session, course, year),
+                    child: Text(tr('Ver versiones congeladas…')),
+                  ),
+                  const Divider(height: 1),
+                  MenuItemButton(
+                    key: const Key('remove-year'),
+                    leadingIcon: Icon(
+                      Icons.delete_outline,
+                      size: 15,
+                      color: context.palette.teacher,
+                    ),
+                    onPressed: () => _removeYear(context, session, course),
+                    child: Text(
+                      tr('Quitar este curso académico…'),
+                      style: TextStyle(color: context.palette.teacher),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -95,11 +145,14 @@ class YearPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Note(
-              '$broken referencia(s) de esta composición no apuntan a ninguna '
-              'unidad del catálogo. Se muestran en su sitio, no se omiten: una '
-              'composición que se salta lo que falta parece completa y compila '
-              'corta.',
-              tone: didactaTeacher,
+              tr(
+                '{0} referencia(s) de esta composición no apuntan a ninguna '
+                'unidad del catálogo. Se muestran en su sitio, no se omiten: una '
+                'composición que se salta lo que falta parece completa y compila '
+                'corta.',
+                [broken],
+              ),
+              tone: context.palette.teacher,
             ),
           ),
         // Lo que compila aquí y no compilaría en la máquina de al lado.
@@ -107,19 +160,30 @@ class YearPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Note(
-              '${crossing.length} referencia(s) de este curso llaman a '
-              'lecciones de otro repositorio. Compilan aquí, donde están los '
-              'dos abiertos, y no compilan para quien solo tenga uno.\n\n'
-              '${crossing.take(3).join('\n')}'
-              '${crossing.length > 3 ? '\n…' : ''}',
-              tone: didactaTeacher,
+              tr(
+                '{0} referencia(s) de este curso llaman a '
+                'lecciones de otro repositorio. Compilan aquí, donde están los '
+                'dos abiertos, y no compilan para quien solo tenga uno.\n\n'
+                '{1}'
+                '{2}',
+                [
+                  crossing.length,
+                  crossing.take(3).join('\n'),
+                  crossing.length > 3 ? '\n…' : '',
+                ],
+              ),
+              tone: context.palette.teacher,
             ),
           ),
         Expanded(
           child: _Documents(
             // Con clave: cambiar de año tiene que recargar el fichero, y sin
-            // esto el estado del anterior se quedaría pegado.
-            key: ValueKey('${course.id}/$year'),
+            // esto el estado del anterior se quedaría pegado. Lo mismo al
+            // abrir o cerrar una versión congelada: su `year.yaml` y lo que
+            // hay compilado son los de su árbol, no los de hoy.
+            key: ValueKey(
+              '${course.id}/$year/${session.frozen?.freeze.id ?? ''}',
+            ),
             course: course,
             year: year,
             entry: entry,
@@ -155,29 +219,61 @@ class YearPage extends StatelessWidget {
     Session session,
     Course course,
   ) async {
-    final admin = session.admin();
-    if (admin == null) return;
+    // De todos los repositorios donde está este año, no solo del primero:
+    // en una asignatura repartida, la mitad que quedaba seguía enseñando el
+    // curso como si no se hubiera quitado.
+    final repos = <String?>[...?course.years[year]?.presentIn];
+    if (repos.isEmpty) repos.add(null);
+    final admins = [for (final repo in repos) session.admin(repo: repo)];
+    if (admins.any((admin) => admin == null)) return;
 
     final onlyOne = course.years.length == 1;
     final confirmed = await confirmRemoval(
       context,
-      title: '¿Quitar el curso $year de «${course.title(session.language)}»?',
-      preview: () => admin.previewRemoveYear(course.id, year),
+      title: tr('¿Quitar el curso {0} de «{1}»?', [
+        year,
+        course.title(session.language),
+      ]),
+      freezes: course.years[year]?.freezes.length ?? 0,
+      preview: () async => RemovalPreview.across([
+        for (final admin in admins)
+          await admin!.previewRemoveYear(course.id, year),
+      ]),
       warning: onlyOne
-          ? 'Es el único curso de la asignatura, así que se queda sin '
-                'ninguno. Las unidades no se tocan: lo que se pierde es la '
-                'selección y el orden de este curso.'
-          : 'Las unidades no se tocan, y los demás cursos de la asignatura '
-                'tampoco. Lo que se pierde es la selección y el orden de '
-                'este.',
+          ? tr(
+              'Es el único curso de la asignatura, así que se queda sin '
+              'ninguno. Las unidades no se tocan: lo que se pierde es la '
+              'selección y el orden de este curso.',
+            )
+          : tr(
+              'Las unidades no se tocan, y los demás cursos de la asignatura '
+              'tampoco. Lo que se pierde es la selección y el orden de '
+              'este.',
+            ),
     );
     if (!confirmed || !context.mounted) return;
 
-    final done = await runAdmin(
+    // El HEAD de antes, al que vuelve «Deshacer». Con el contexto raíz: al
+    // terminar se sale de esta página, y el aviso vive más que ella.
+    final heads = <String?, String>{};
+    final root = Navigator.of(context, rootNavigator: true).context;
+    final done = await runAdminIn(
       context,
       session,
-      (admin) => admin.removeYear(course.id, year),
-      done: 'Curso $year quitado como un commit.',
+      repos,
+      (admin, repo) async {
+        heads[repo] = await admin.clone.head();
+        await admin.removeYear(course.id, year);
+      },
+      done: tr('Curso {0} quitado. Queda en el historial.', [year]),
+      onUndo: () => undoAdminIn(
+        root,
+        session,
+        heads,
+        paths: ['courses/${course.id}/$year'],
+        message: tr('Deshacer: quitar el curso {0} de {1}', [year, course.id]),
+        done: tr('El curso {0} ha vuelto.', [year]),
+      ),
     );
     if (!done || !context.mounted) return;
     await session.reloadCatalogue();
@@ -330,7 +426,8 @@ class _DocumentsState extends State<_Documents> {
           _loaded[repo] = file.text;
           _order[repo] = CompositionFile(file.text).documentIds();
         });
-      } catch (_) {
+      } catch (caught, trace) {
+        Diagnostics.instance.note('year_page._loadInto', caught, trace);
         // Uno que no se deja leer no puede con los demás.
       }
     }
@@ -375,7 +472,9 @@ class _DocumentsState extends State<_Documents> {
   }
 
   /// Aplica un cambio al fichero de un repositorio, o dice por qué no.
-  void _edit(
+  /// Aplica un cambio al `year.yaml` de [repo], sin guardar. Falso si el
+  /// fichero no lo admite, y entonces ya se ha dicho por qué.
+  bool _edit(
     String repo,
     void Function(CompositionFile file) change, {
     String? failure,
@@ -387,18 +486,19 @@ class _DocumentsState extends State<_Documents> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${failure ?? 'No se ha tocado el fichero'}: ${thrown.message}',
+            '${failure ?? tr('No se ha tocado el fichero')}: ${thrown.message}',
           ),
-          backgroundColor: didactaTeacher,
+          backgroundColor: context.palette.teacher,
           duration: const Duration(seconds: 7),
         ),
       );
-      return;
+      return false;
     }
     setState(() {
       _text[repo] = composition.text;
       _order[repo] = CompositionFile(composition.text).documentIds();
     });
+    return true;
   }
 
   /// Reordena dentro de una tarjeta, sin tocar lo que hay fuera de ella.
@@ -553,7 +653,8 @@ class _DocumentsState extends State<_Documents> {
         for (final entry in mine.entries) {
           (found[entry.key] ??= []).addAll(entry.value);
         }
-      } catch (_) {
+      } catch (caught, trace) {
+        Diagnostics.instance.note('year_page._loadOutputs', caught, trace);
         // No poder saberlo quita un atajo, no una pantalla. Y que un
         // repositorio no conteste no puede dejar sin atajos a los demás.
       }
@@ -621,6 +722,53 @@ class _DocumentsState extends State<_Documents> {
     );
   }
 
+  /// Un examen o una hoja, con sus problemas, en un solo guardado.
+  ///
+  /// El documento se crea y se compone a la vez, en el `year.yaml` del
+  /// repositorio de los problemas, y se guarda de una vez: un commit. Después
+  /// se abre, que es donde se compila y se retoca el orden.
+  Future<void> _addProblemSet() async {
+    final session = widget.session;
+    final repos = [
+      for (final repo in _writable)
+        if (session.canWriteIn(repo)) repo,
+    ];
+    final draft = await showDialog<ProblemSetDraft>(
+      context: context,
+      builder: (context) => ProblemSetDialog(
+        session: session,
+        course: widget.course,
+        year: widget.year,
+        taken: [for (final ids in _order.values) ...ids],
+        repos: repos,
+        themes: widget.entry.themes,
+      ),
+    );
+    if (draft == null || !mounted) return;
+    final applied = _edit(
+      draft.repo,
+      (file) => file
+        ..addDocument(
+          id: draft.id,
+          kind: draft.kind,
+          title: draft.title,
+          pending: draft.pending,
+          themes: draft.theme == null ? const [] : [draft.theme!],
+        )
+        ..setStructure(draft.id, [
+          for (final unit in draft.problems)
+            StructureEntry(kind: EntryKind.unit, value: unit.reference_),
+        ]),
+      failure: tr('No se ha creado'),
+    );
+    if (!applied) return;
+    await _save();
+    if (!mounted || _dirtyRepos.contains(draft.repo)) return;
+    GoRouter.maybeOf(
+      context,
+    )?.go(Routes.document(widget.course.id, widget.year, draft.id));
+  }
+
   /// Declara un tema en este curso.
   ///
   /// Escribe en `themes.yaml` y no en el `year.yaml`, así que pasa por el
@@ -649,7 +797,7 @@ class _DocumentsState extends State<_Documents> {
         language: widget.session.language,
       ),
       repo: repo,
-      done: 'Tema «${draft.title}» creado.',
+      done: tr('Tema «{0}» creado.', [draft.title]),
     );
     if (done) await widget.session.reloadCatalogue();
   }
@@ -701,10 +849,83 @@ class _DocumentsState extends State<_Documents> {
         : [options.first.code];
   }
 
+  /// Las salidas que se han quedado viejas de cada documento, por versión e
+  /// idioma. Viejas por el contenido de lo que entró en el PDF --lo apunta
+  /// el motor al compilar--, no por las fechas.
+  Map<String, List<({String profile, String language})>> _staleIn(
+    Iterable<String> ids,
+  ) {
+    final found = <String, List<({String profile, String language})>>{};
+    for (final id in ids) {
+      final stale = [
+        for (final output in _outputs[id] ?? const <ExistingOutput>[])
+          if (output.stale)
+            (profile: output.profile, language: output.language),
+      ];
+      if (stale.isNotEmpty) found[id] = stale;
+    }
+    return found;
+  }
+
+  /// «Compilar lo desactualizado»: de [theme], o del curso entero, solo las
+  /// salidas que se han quedado viejas. Lo que sigue al día se queda como
+  /// está, que es lo que hace que después de corregir dos erratas no haya que
+  /// esperar por los cuarenta documentos.
+  Future<void> _buildStale({String? theme}) async {
+    final candidates = [
+      for (final document in widget.entry.documents)
+        if (theme == null || document.themes.contains(theme)) document,
+    ];
+    final stale = _staleIn(candidates.map((document) => document.id));
+    if (stale.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(tr('Nada desactualizado: todo está como se compiló.')),
+        ),
+      );
+      return;
+    }
+    final wanted = [
+      for (final document in candidates)
+        if (stale.containsKey(document.id))
+          (
+            repo: document.repo,
+            course: widget.course.id,
+            year: widget.year,
+            id: document.id,
+            title: document.title(widget.session.language),
+          ),
+    ];
+    final what = theme == null
+        ? '${widget.course.title(widget.session.language)} · ${widget.year}'
+        : widget.entry.themes
+                  .where((t) => t.id == theme)
+                  .map((t) => t.title(widget.session.language))
+                  .firstOrNull ??
+              theme;
+    if (!await confirmBigBuild(
+          context,
+          documents: wanted.length,
+          what: what,
+          question: tr('¿Compilar lo desactualizado de {0}?', [what]),
+        ) ||
+        !mounted) {
+      return;
+    }
+    unawaited(showBuildConsole(context, widget.session.buildConsole));
+    await widget.session.buildDocuments(
+      wanted,
+      title: tr('Lo desactualizado de {0}', [what]),
+      only: stale,
+    );
+    await _loadOutputs();
+  }
+
   Future<void> _buildAll({
     String? theme,
     String? document,
     List<String> languages = const [],
+    bool everyVersion = false,
   }) async {
     final entry = widget.entry;
     final wanted = [
@@ -722,7 +943,7 @@ class _DocumentsState extends State<_Documents> {
     ];
     if (wanted.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aquí no hay nada que compilar todavía.')),
+        SnackBar(content: Text(tr('Aquí no hay nada que compilar todavía.'))),
       );
       return;
     }
@@ -737,12 +958,22 @@ class _DocumentsState extends State<_Documents> {
                   .firstOrNull ??
               theme;
 
+    if (!await confirmBigBuild(
+          context,
+          documents: wanted.length,
+          what: what,
+          languages: languages,
+        ) ||
+        !mounted) {
+      return;
+    }
     final console = widget.session.buildConsole;
     unawaited(showBuildConsole(context, console));
     await widget.session.buildDocuments(
       wanted,
       title: what,
       languages: languages,
+      everyVersion: everyVersion,
     );
     // Lo que acaba de salir, para que los atajos de ver el PDF aparezcan sin
     // tener que volver a entrar.
@@ -769,13 +1000,14 @@ class _DocumentsState extends State<_Documents> {
   Future<void> _editThemeTitle(CourseTheme theme) async {
     final titles = await editHeadingTitles(
       context,
-      heading: 'tema',
+      heading: tr('Tema'),
       languages: [for (final option in _buildLanguages) option.code],
       titles: theme.titles,
       reference: widget.entry.language,
-      note:
-          'Un idioma en blanco se queda marcado como pendiente en el fichero, '
-          'no se borra el tema.',
+      note: tr(
+        'Un idioma en blanco se queda marcado como pendiente en el fichero, '
+        'no se borra el tema.',
+      ),
     );
     if (titles == null || !mounted) return;
 
@@ -789,12 +1021,10 @@ class _DocumentsState extends State<_Documents> {
         titles: titles,
       );
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Título del tema cambiado, como un commit.'),
-        ),
+        SnackBar(content: Text(tr('Título del tema cambiado.'))),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     }
   }
 
@@ -840,11 +1070,9 @@ class _DocumentsState extends State<_Documents> {
       // disco; sin releerlo, el siguiente guardado escribiría encima con el
       // título viejo.
       await _loadInto({repo});
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Título cambiado, como un commit.')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(tr('Título cambiado.'))));
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('$error')));
+      showProblemIn(messenger, error);
     }
   }
 
@@ -886,27 +1114,32 @@ class _DocumentsState extends State<_Documents> {
     final yes = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('¿Quitar «$title»?'),
-        content: const SizedBox(
+        title: Text(tr('¿Quitar «{0}»?', [title])),
+        content: SizedBox(
           width: 420,
           child: Text(
-            'Se va el grupo y su composición: qué unidades llevaba y en qué '
-            'orden. Las unidades no se tocan, siguen en la biblioteca y en '
-            'los demás grupos que las usen.\n\n'
-            'Queda como un commit, así que se puede revertir.',
+            tr(
+              'Se va el grupo y su composición: qué unidades llevaba y en qué '
+              'orden. Las unidades no se tocan, siguen en la biblioteca y en '
+              'los demás grupos que las usen.\n\n'
+              'No se guarda hasta que pulses Guardar: hasta entonces, '
+              'Descartar lo trae de vuelta.',
+            ),
             style: TextStyle(fontSize: 12.5, height: 1.45),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             key: const Key('confirm-remove-document'),
-            style: FilledButton.styleFrom(backgroundColor: didactaTeacher),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.palette.teacher,
+            ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Quitar'),
+            child: Text(tr('Quitar')),
           ),
         ],
       ),
@@ -922,29 +1155,48 @@ class _DocumentsState extends State<_Documents> {
   /// distintos. Con uno tocado --lo normal-- esto es exactamente lo de
   /// siempre: un diálogo y un commit.
   Future<void> _save() async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final saved =
+        <({String repo, String before, String after, String message})>[];
     for (final repo in _dirtyRepos.toList()) {
       final before = _loaded[repo] ?? '';
       final after = _text[repo] ?? '';
-      final message = await showDialog<String>(
-        context: context,
-        builder: (context) => CommitDialog(
-          before: before,
-          after: after,
-          suggested: _suggested(repo),
-        ),
+      final suggested = _suggested(repo);
+      final message = await askSaveMessage(
+        context,
+        widget.session,
+        suggested: suggested,
+        dialog: (context) =>
+            CommitDialog(before: before, after: after, suggested: suggested),
       );
       if (message == null || !mounted) return;
 
       setState(() => _saving = true);
       try {
-        final sha = await widget.session
-            .gatewayFor(repo)
-            .save(
-              path: _pathIn(repo),
-              text: after,
-              sha: _files[repo]?.sha ?? '',
-              message: message,
-            );
+        final gateway = widget.session.gatewayFor(repo);
+        final masters = await _newMasters(repo, before: before, after: after);
+        final String sha;
+        if (masters.isEmpty) {
+          sha = await gateway.save(
+            path: _pathIn(repo),
+            text: after,
+            sha: _files[repo]?.sha ?? '',
+            message: message,
+          );
+        } else {
+          // El `year.yaml` y los masters de lo nuevo, en un solo cambio: un
+          // documento son las dos cosas, y guardadas por separado habría un
+          // commit en el que existe y no compila.
+          await gateway.saveAll(
+            files: [
+              (path: _pathIn(repo), text: after, sha: _files[repo]?.sha ?? ''),
+              for (final master in masters.entries)
+                (path: master.key, text: master.value, sha: ''),
+            ],
+            message: message,
+          );
+          sha = (await gateway.read(_pathIn(repo))).sha;
+        }
         if (!mounted) return;
         setState(() {
           _loaded[repo] = after;
@@ -955,24 +1207,119 @@ class _DocumentsState extends State<_Documents> {
           );
           _saving = false;
         });
+        saved.add((repo: repo, before: before, after: after, message: message));
       } on ContentException catch (thrown) {
         if (!mounted) return;
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(thrown.message),
-            backgroundColor: didactaTeacher,
+            backgroundColor: context.palette.teacher,
             duration: const Duration(seconds: 6),
           ),
         );
         return;
       }
     }
-    if (!mounted) return;
+    if (!mounted || saved.isEmpty) return;
+    // Uno --lo normal--, con su «Ver cambios»; varios, contados.
+    final only = saved.length == 1 ? saved.single : null;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('year.yaml guardado como un commit.')),
+      only == null
+          ? SnackBar(
+              content: Text(
+                widget.session.saveNotice(null, files: saved.length),
+              ),
+            )
+          : savedNotice(
+              notice: widget.session.saveNotice(only.repo),
+              message: only.message,
+              before: only.before,
+              after: only.after,
+              what: _pathIn(only.repo),
+              navigator: navigator,
+              // Lo que se acaba de guardar --quitar un documento, reordenar--
+              // se deshace guardando lo de antes. Un cambio nuevo, con su
+              // mensaje: el deshecho sigue en la historia.
+              followUp: (
+                label: tr('Deshacer'),
+                icon: Icons.undo,
+                onPressed: () =>
+                    _undoSave(only.repo, only.before, only.message),
+              ),
+            ),
     );
     await widget.session.reloadCatalogue();
+  }
+
+  /// Vuelve a guardar el `year.yaml` como estaba antes del último guardado.
+  Future<void> _undoSave(String repo, String before, String message) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final path = _pathIn(repo);
+      final current = await widget.session.gatewayFor(repo).read(path);
+      final sha = await widget.session
+          .gatewayFor(repo)
+          .save(
+            path: path,
+            text: before,
+            sha: current.sha,
+            message: tr('Deshacer: {0}', [message]),
+          );
+      if (mounted) {
+        setState(() {
+          _loaded[repo] = before;
+          _text[repo] = before;
+          _order[repo] = CompositionFile(before).documentIds();
+          _files[repo] = ContentFile(path: path, text: before, sha: sha);
+        });
+      }
+      messenger.showSnackBar(
+        SnackBar(content: Text(tr('Deshecho: el curso está como antes.'))),
+      );
+      await widget.session.reloadCatalogue();
+    } on ContentException catch (thrown) {
+      showProblemIn(messenger, thrown);
+    }
+  }
+
+  /// Los masters que les faltan a los documentos nuevos de [repo], por ruta.
+  ///
+  /// El motor escribe la composición dentro del `<id>.tex` pero no lo crea, y
+  /// sin él el documento no compila. Uno que ya exista --de un documento que
+  /// se quitó y se vuelve a poner-- se deja como está.
+  Future<Map<String, String>> _newMasters(
+    String repo, {
+    required String before,
+    required String after,
+  }) async {
+    final existing = CompositionFile(before).documentIds().toSet();
+    final gateway = widget.session.gatewayFor(repo);
+    final folder = 'courses/${widget.course.id}/${widget.year}';
+    final masters = <String, String>{};
+    for (final draft in CompositionFile(after).documentDrafts()) {
+      if (existing.contains(draft.id) || draft.link.isNotEmpty) continue;
+      final path = '$folder/${draft.id}.tex';
+      try {
+        await gateway.read(path);
+        continue;
+      } on ContentException catch (thrown) {
+        if (thrown.kind != ContentFailure.missing) rethrow;
+      }
+      final language = widget.session.language;
+      masters[path] = documentMaster(
+        id: draft.id,
+        kind: draft.kind,
+        title:
+            draft.titles[language] ??
+            draft.titles[widget.course.language] ??
+            draft.titles.values.firstOrNull ??
+            draft.id,
+        courseTitle: widget.course.title(language),
+        teacher: widget.course.teacher,
+      );
+    }
+    return masters;
   }
 
   /// Qué ha cambiado, en palabras.
@@ -984,19 +1331,102 @@ class _DocumentsState extends State<_Documents> {
     final where = '${widget.course.id} ${widget.year}';
 
     if (added.length == 1 && gone.isEmpty) {
-      return 'Añadir el grupo ${added.first} a $where';
+      return tr('Añadir el grupo {0} a {1}', [added.first, where]);
     }
     if (gone.length == 1 && added.isEmpty) {
-      return 'Quitar el grupo ${gone.first} de $where';
+      return tr('Quitar el grupo {0} de {1}', [gone.first, where]);
     }
     if (added.isEmpty && gone.isEmpty) {
-      return 'Cambiar el orden de los grupos de $where';
+      return tr('Cambiar el orden de los grupos de {0}', [where]);
     }
-    return 'Cambiar los grupos de $where';
+    return tr('Cambiar los grupos de {0}', [where]);
   }
 
   @override
-  Widget build(BuildContext context) {
+  void dispose() {
+    widget.session.unsaved.mark(this, null);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => PaletteCommands(
+    commands: _paletteCommands,
+    child: ListenableBuilder(
+      listenable: sessionOf(context).libraryPrefs,
+      builder: (context, _) => _listenedBuild(context),
+    ),
+  );
+
+  /// Lo que ofrece la paleta de órdenes en un curso: lo mismo que la barra de
+  /// encima de los documentos.
+  List<PaletteCommand> _paletteCommands(BuildContext context) {
+    if (_loading || _error != null) return const [];
+    final session = widget.session;
+    final canWrite = _writable.any(session.canWriteIn) && !session.isFrozen;
+    final title = '${widget.course.title(session.language)} ${widget.year}';
+    return [
+      if (_dirty && canWrite)
+        PaletteCommand(
+          title: tr('Guardar el orden y los grupos de {0}', [title]),
+          keywords: tr('guardar composición'),
+          icon: Icons.save_outlined,
+          shortcut: AppShortcut.save,
+          run: _save,
+        ),
+      if (session.canCompile) ...[
+        PaletteCommand(
+          title: tr('Compilar lo desactualizado'),
+          detail: title,
+          keywords: tr('pdf compilar pendientes'),
+          icon: Icons.update,
+          run: () => _buildStale(),
+        ),
+        PaletteCommand(
+          title: tr('Compilar todo el curso'),
+          detail: title,
+          keywords: tr('pdf compilar documentos'),
+          icon: Icons.play_arrow_outlined,
+          run: () => _buildAll(languages: _tapLanguages()),
+        ),
+      ],
+      if (canWrite) ...[
+        PaletteCommand(
+          title: tr('Nuevo tema'),
+          detail: title,
+          keywords: tr('añadir crear'),
+          icon: Icons.create_new_folder_outlined,
+          run: _addTheme,
+        ),
+        PaletteCommand(
+          title: tr('Nuevo documento suelto'),
+          detail: title,
+          keywords: tr('añadir crear'),
+          icon: Icons.note_add_outlined,
+          run: () => _add(),
+        ),
+        PaletteCommand(
+          title: tr('Nuevo examen u hoja de problemas'),
+          detail: title,
+          keywords: tr('añadir crear prueba ejercicios'),
+          icon: Icons.quiz_outlined,
+          run: _addProblemSet,
+        ),
+      ],
+    ];
+  }
+
+  Widget _listenedBuild(BuildContext context) {
+    widget.session.unsaved.mark(
+      this,
+      _dirty
+          ? tr(
+              'El orden y los grupos de '
+              '{0} {1}',
+              [widget.course.title(widget.session.language), widget.year],
+            )
+          : null,
+      place: Routes.year(widget.course.id, widget.year),
+    );
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1026,138 +1456,195 @@ class _DocumentsState extends State<_Documents> {
     };
 
     final blocks = _blocksHere;
+    final groups = _groups(byId);
+    final firstFull = groups.indexWhere(
+      (group) => group.byRepo.values.any((ids) => ids.isNotEmpty),
+    );
 
-    return Column(
-      children: [
-        // Discreto y arriba del todo: es una forma de mirar, no una acción.
-        // Solo con más de uno -- con uno, la única respuesta posible es «todo
-        // lo que hay», y una barra que no puede cambiar nada es una barra que
-        // solo quita alto a la lista.
-        if (blocks.length > 1)
-          _BlockBar(
-            blocks: blocks,
-            chosen: _block,
-            language: session.language,
-            onChanged: (value) => setState(() => _block = value),
-          ),
-        if (_dirty || _saving)
-          _SaveBar(
-            added: added,
-            removed: removed,
-            saving: _saving,
-            onDiscard: _saving
-                ? null
-                : () => setState(() {
-                    for (final repo in _text.keys.toList()) {
-                      final original = _loaded[repo] ?? '';
-                      _text[repo] = original;
-                      _order[repo] = CompositionFile(original).documentIds();
-                    }
-                  }),
-            onSave: canWrite && !_saving ? _save : null,
-          ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 72),
-            children: [
-              for (final group in _groups(byId))
-                _ThemeCard(
-                  key: ValueKey('theme-${group.theme?.id ?? 'loose'}'),
-                  group: group,
-                  course: widget.course,
-                  year: widget.year,
-                  session: session,
-                  collapsed: _isCollapsed(group),
-                  canWrite: canWrite,
-                  drafts: draftsById,
-                  outputs: _outputs,
-                  onBuild: (languages) =>
-                      _buildAll(theme: group.theme?.id, languages: languages),
-                  onBuildDocument: (id, languages) =>
-                      _buildAll(document: id, languages: languages),
-                  buildLanguages: _buildLanguages,
-                  onEditTitle:
-                      group.theme != null &&
-                          widget.session.canWriteIn(group.theme!.repo)
-                      ? () => _editThemeTitle(group.theme!)
-                      : null,
-                  onEditDocumentTitle: canWrite ? _editDocumentTitle : null,
-                  onOpenPdfs: _openPdfs,
-                  onToggle: () => _toggleCollapsed(group),
-                  onReorder: _reorderWithin,
-                  onRemove: (id, title) => _remove(id, title),
-                  onAdd: () => _add(theme: group.theme?.id),
-                ),
-            ],
-          ),
-        ),
-        if (canWrite)
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: didactaPanel,
-              border: Border(top: BorderSide(color: didactaRule)),
+    return SaveShortcut(
+      onSave: canWrite && _dirty && !_saving ? _save : null,
+      child: Column(
+        children: [
+          // Discreto y arriba del todo: es una forma de mirar, no una acción.
+          // Solo con más de uno -- con uno, la única respuesta posible es «todo
+          // lo que hay», y una barra que no puede cambiar nada es una barra que
+          // solo quita alto a la lista.
+          if (blocks.length > 1)
+            _BlockBar(
+              blocks: blocks,
+              chosen: _block,
+              language: session.language,
+              onChanged: (value) => setState(() => _block = value),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            // En `Wrap` y no en `Row`: en una pantalla estrecha los dos
-            // botones no caben en una línea, y una fila que no cabe no se
-            // parte, se desborda.
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              crossAxisAlignment: WrapCrossAlignment.center,
+          if (_dirty || _saving)
+            _SaveBar(
+              added: added,
+              removed: removed,
+              saving: _saving,
+              onDiscard: _saving
+                  ? null
+                  : () => setState(() {
+                      for (final repo in _text.keys.toList()) {
+                        final original = _loaded[repo] ?? '';
+                        _text[repo] = original;
+                        _order[repo] = CompositionFile(original).documentIds();
+                      }
+                    }),
+              onSave: canWrite && !_saving ? _save : null,
+            ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 72),
               children: [
-                // Un tema y no un documento: es el nivel que se crea primero.
-                // Los documentos van dentro de un tema, y tienen su botón
-                // allí -- crearlos aquí obligaba a decir después a cuál
-                // pertenecen, que es el paso que se olvida.
-                FilledButton.icon(
-                  key: const Key('add-theme'),
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('Nuevo tema'),
-                  onPressed: _addTheme,
-                ),
-                // Para lo que no es de ningún tema: la FAQ, la notación, el
-                // calendario. Existe, así que tiene por dónde crearse.
-                TextButton(
-                  key: const Key('add-document'),
-                  onPressed: () => _add(),
-                  child: const Text('Documento suelto'),
-                ),
-                // El curso entero. Detrás y con otro relieve: es la
-                // operación más larga que hay aquí --puede ser media hora-- y
-                // no se pulsa por error al ir a crear algo. En el mismo
-                // `Wrap` que los demás, porque `Spacer` no cabe en uno y una
-                // fila que no cabe se desborda.
-                GestureDetector(
-                  onLongPressStart: _buildLanguages.length < 2
-                      ? null
-                      : (details) async {
-                          final chosen = await askBuildLanguages(
-                            context,
-                            at: details.globalPosition,
-                            options: _buildLanguages,
-                            current: widget.session.language,
-                          );
-                          if (chosen != null) {
-                            await _buildAll(languages: chosen);
-                          }
-                        },
-                  child: OutlinedButton.icon(
-                    key: const Key('build-year'),
-                    icon: const Icon(Icons.play_circle_outline, size: 16),
-                    label: Text(
-                      _buildLanguages.length < 2
-                          ? 'Compilar el curso'
-                          : 'Compilar el curso en ${_currentLanguageName()}',
+                for (final (index, group) in groups.indexed)
+                  _ThemeCard(
+                    key: ValueKey('theme-${group.theme?.id ?? 'loose'}'),
+                    // El primero con algo dentro es el que señala el tour: un
+                    // tema recién creado y vacío no enseña qué es un tema.
+                    first: index == firstFull,
+                    group: group,
+                    course: widget.course,
+                    year: widget.year,
+                    session: session,
+                    collapsed: _isCollapsed(group),
+                    canWrite: canWrite,
+                    drafts: draftsById,
+                    outputs: _outputs,
+                    onBuild: (choice) => _buildAll(
+                      theme: group.theme?.id,
+                      languages: choice.languages,
+                      everyVersion: choice.everyVersion,
                     ),
-                    onPressed: () => _buildAll(languages: _tapLanguages()),
+                    stale: _staleIn(
+                      group.byRepo.values.expand((ids) => ids),
+                    ).length,
+                    onBuildStale: () => _buildStale(theme: group.theme?.id),
+                    onBuildDocument: (id, choice) => _buildAll(
+                      document: id,
+                      languages: choice.languages,
+                      everyVersion: choice.everyVersion,
+                    ),
+                    buildLanguages: _buildLanguages,
+                    onEditTitle:
+                        group.theme != null &&
+                            widget.session.canWriteIn(group.theme!.repo)
+                        ? () => _editThemeTitle(group.theme!)
+                        : null,
+                    onEditDocumentTitle: canWrite ? _editDocumentTitle : null,
+                    onOpenPdfs: _openPdfs,
+                    onToggle: () => _toggleCollapsed(group),
+                    onReorder: _reorderWithin,
+                    onRemove: (id, title) => _remove(id, title),
+                    onAdd: () => _add(theme: group.theme?.id),
                   ),
-                ),
               ],
             ),
           ),
-      ],
+          if (canWrite)
+            TourTarget(
+              id: 'year-actions',
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: context.palette.panel,
+                  border: Border(top: BorderSide(color: context.palette.rule)),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                // En `Wrap` y no en `Row`: en una pantalla estrecha los dos
+                // botones no caben en una línea, y una fila que no cabe no se
+                // parte, se desborda.
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    // Un tema y no un documento: es el nivel que se crea primero.
+                    // Los documentos van dentro de un tema, y tienen su botón
+                    // allí -- crearlos aquí obligaba a decir después a cuál
+                    // pertenecen, que es el paso que se olvida.
+                    FilledButton.icon(
+                      key: const Key('add-theme'),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: Text(tr('Nuevo tema')),
+                      onPressed: _addTheme,
+                    ),
+                    // Para lo que no es de ningún tema: la FAQ, la notación, el
+                    // calendario. Existe, así que tiene por dónde crearse.
+                    TextButton(
+                      key: const Key('add-document'),
+                      onPressed: () => _add(),
+                      child: Text(tr('Documento suelto')),
+                    ),
+                    // Un examen o una hoja, elegidos los problemas en el
+                    // mismo paso: es el documento que más se crea a lo largo
+                    // del curso, y el único que se compone de algo que ya
+                    // existe.
+                    TextButton.icon(
+                      key: const Key('add-problem-set'),
+                      icon: const Icon(Icons.quiz_outlined, size: 16),
+                      onPressed: _addProblemSet,
+                      label: Text(tr('Examen u hoja de problemas')),
+                    ),
+                    // El curso entero. Detrás y con otro relieve: es la
+                    // operación más larga que hay aquí --puede ser media hora-- y
+                    // no se pulsa por error al ir a crear algo. En el mismo
+                    // `Wrap` que los demás, porque `Spacer` no cabe en uno y una
+                    // fila que no cabe se desborda.
+                    GestureDetector(
+                      onLongPressStart: (details) async {
+                        final chosen = await askBuildLanguages(
+                          context,
+                          at: details.globalPosition,
+                          options: _buildLanguages,
+                          current: widget.session.language,
+                        );
+                        if (chosen != null) {
+                          await _buildAll(
+                            languages: chosen.languages,
+                            everyVersion: chosen.everyVersion,
+                          );
+                        }
+                      },
+                      child: OutlinedButton.icon(
+                        key: const Key('build-year'),
+                        icon: const Icon(Icons.play_circle_outline, size: 16),
+                        label: Text(
+                          _buildLanguages.length < 2
+                              ? tr('Compilar el curso')
+                              : tr('Compilar el curso en {0}', [
+                                  _currentLanguageName(),
+                                ]),
+                        ),
+                        onPressed: () => _buildAll(languages: _tapLanguages()),
+                      ),
+                    ),
+                    // Solo lo que ha cambiado desde la última vez. Solo cuando
+                    // hay algo: un botón que dice «0» es un botón que sobra.
+                    if (_staleIn(
+                          widget.entry.documents.map((document) => document.id),
+                        ).length
+                        case final stale when stale > 0)
+                      OutlinedButton.icon(
+                        key: const Key('build-stale-year'),
+                        icon: Icon(
+                          Icons.change_circle_outlined,
+                          size: 16,
+                          color: context.palette.ex,
+                        ),
+                        label: Text(
+                          tr('Compilar lo desactualizado ({0})', [stale]),
+                        ),
+                        onPressed: () => _buildStale(),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -1193,8 +1680,8 @@ class _BlockBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    decoration: const BoxDecoration(
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
     child: Wrap(
@@ -1202,11 +1689,11 @@ class _BlockBar extends StatelessWidget {
       runSpacing: 4,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(right: 4),
           child: Text(
-            'Bloque',
-            style: TextStyle(fontSize: 11, color: didactaMuted),
+            tr('Bloque'),
+            style: TextStyle(fontSize: 11, color: context.palette.muted),
           ),
         ),
         _BlockChoice(
@@ -1250,16 +1737,18 @@ class _BlockChoice extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
         color: selected
-            ? didactaAccent.withValues(alpha: 0.12)
-            : (hovering ? didactaPanel : Colors.transparent),
-        border: Border.all(color: selected ? didactaAccent : didactaRule),
+            ? context.palette.accent.withValues(alpha: 0.12)
+            : (hovering ? context.palette.panel : Colors.transparent),
+        border: Border.all(
+          color: selected ? context.palette.accent : context.palette.rule,
+        ),
         borderRadius: BorderRadius.circular(Radii.control),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 11.5,
-          color: selected ? didactaAccentDark : didactaInk,
+          color: selected ? context.palette.accentDark : context.palette.ink,
           fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
@@ -1318,6 +1807,7 @@ class _CardGroup {
 class _ThemeCard extends StatelessWidget {
   const _ThemeCard({
     super.key,
+    this.first = false,
     required this.group,
     required this.course,
     required this.year,
@@ -1329,6 +1819,8 @@ class _ThemeCard extends StatelessWidget {
     required this.onBuild,
     required this.onBuildDocument,
     required this.buildLanguages,
+    this.stale = 0,
+    this.onBuildStale,
     this.onEditTitle,
     this.onEditDocumentTitle,
     required this.onOpenPdfs,
@@ -1337,6 +1829,9 @@ class _ThemeCard extends StatelessWidget {
     required this.onRemove,
     required this.onAdd,
   });
+
+  /// Si es el tema que señala el tour, y dentro, su primer documento.
+  final bool first;
 
   final _CardGroup group;
   final Course course;
@@ -1354,6 +1849,11 @@ class _ThemeCard extends StatelessWidget {
   /// Compilar todas las versiones de todo lo que cuelga de este tema.
   final BuildRequest onBuild;
 
+  /// Cuántos documentos del tema tienen algo desactualizado, y compilar solo
+  /// eso.
+  final int stale;
+  final VoidCallback? onBuildStale;
+
   /// Los idiomas entre los que elegir al mantener pulsado el botón.
   final List<LanguageOption> buildLanguages;
 
@@ -1365,7 +1865,7 @@ class _ThemeCard extends StatelessWidget {
   final void Function(Document document)? onEditDocumentTitle;
 
   /// Compilar todas las versiones de un documento.
-  final void Function(String id, List<String> languages) onBuildDocument;
+  final void Function(String id, BuildChoice choice) onBuildDocument;
 
   /// Ver lo compilado de un documento, con una pestaña por versión.
   final void Function(String id, String title) onOpenPdfs;
@@ -1390,14 +1890,18 @@ class _ThemeCard extends StatelessWidget {
     // Los sueltos no llevan tarjeta: son los de siempre, y enmarcarlos diría
     // que son un grupo, que es justo lo que no son.
     if (group.isLoose) {
-      return Column(children: _tiles(byId));
+      return TourTarget.first(
+        id: 'year-theme-first',
+        when: first,
+        child: Column(children: _tiles(byId)),
+      );
     }
 
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.fromLTRB(10, 10, 10, 2),
       decoration: BoxDecoration(
-        color: didactaPanel,
-        border: Border.all(color: didactaRule),
+        color: context.palette.panel,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(8),
       ),
       clipBehavior: Clip.antiAlias,
@@ -1407,7 +1911,7 @@ class _ThemeCard extends StatelessWidget {
           _header(context),
           if (!collapsed)
             Container(
-              color: didactaCard,
+              color: context.palette.card,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1420,7 +1924,7 @@ class _ThemeCard extends StatelessWidget {
                         child: TextButton.icon(
                           key: Key('add-document-${group.theme!.id}'),
                           icon: const Icon(Icons.add, size: 15),
-                          label: const Text('Documento en este tema'),
+                          label: Text(tr('Documento en este tema')),
                           onPressed: onAdd,
                         ),
                       ),
@@ -1431,6 +1935,7 @@ class _ThemeCard extends StatelessWidget {
         ],
       ),
     );
+    return TourTarget.first(id: 'year-theme-first', when: first, child: card);
   }
 
   Widget _header(BuildContext context) => InkWell(
@@ -1443,7 +1948,7 @@ class _ThemeCard extends StatelessWidget {
           Icon(
             collapsed ? Icons.chevron_right : Icons.expand_more,
             size: 18,
-            color: didactaMuted,
+            color: context.palette.muted,
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -1464,7 +1969,7 @@ class _ThemeCard extends StatelessWidget {
               _count(),
               overflow: TextOverflow.ellipsis,
               softWrap: false,
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ),
           // El título del tema en todos los idiomas. Solo en el repositorio
@@ -1473,14 +1978,35 @@ class _ThemeCard extends StatelessWidget {
           if (onEditTitle != null)
             TitleButton(
               id: 'theme-${group.theme!.id}',
-              what: 'este tema',
+              what: tr('este tema'),
               onPressed: onEditTitle!,
+            ),
+          // Lo que se ha quedado viejo del tema, a un clic, y solo cuando hay:
+          // se ve de un vistazo qué temas hay que volver a compilar.
+          if (stale > 0 && onBuildStale != null)
+            TextButton.icon(
+              key: Key('build-stale-theme-${group.theme!.id}'),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              icon: Icon(
+                Icons.change_circle_outlined,
+                size: 15,
+                color: context.palette.ex,
+              ),
+              label: Text(
+                stale == 1
+                    ? tr('1 desactualizado')
+                    : tr('{0} desactualizados', [stale]),
+                style: TextStyle(fontSize: 12, color: context.palette.ex),
+              ),
+              onPressed: onBuildStale,
             ),
           // Compilar el tema entero. En la cabecera y no dentro: es una
           // operación sobre el bloque, y desde aquí se ve sin desplegarlo.
           BuildButton(
             id: 'theme-${group.theme!.id}',
-            what: 'todo el tema «${group.theme!.title(session.language)}»',
+            what: tr('todo el tema «{0}»', [
+              group.theme!.title(session.language),
+            ]),
             options: buildLanguages,
             current: session.language,
             onBuild: onBuild,
@@ -1507,8 +2033,8 @@ class _ThemeCard extends StatelessWidget {
             .length;
       }
     }
-    if (total > visible) return '$visible de $total documentos';
-    return visible == 1 ? '1 documento' : '$visible documentos';
+    if (total > visible) return tr('{0} de {1} documentos', [visible, total]);
+    return visible == 1 ? tr('1 documento') : tr('{0} documentos', [visible]);
   }
 
   /// Una sublista arrastrable por repositorio.
@@ -1532,6 +2058,13 @@ class _ThemeCard extends StatelessWidget {
           final document = byId[id];
           return _DocumentTile(
             key: ValueKey('document-${group.theme?.id ?? 'loose'}-$id'),
+            first:
+                first &&
+                index == 0 &&
+                entry.key ==
+                    group.byRepo.entries
+                        .firstWhere((each) => each.value.isNotEmpty)
+                        .key,
             index: index,
             course: course,
             year: year,
@@ -1540,7 +2073,7 @@ class _ThemeCard extends StatelessWidget {
             session: session,
             canWrite: session.canWriteIn(entry.key),
             outputs: outputs[id] ?? const [],
-            onBuild: (languages) => onBuildDocument(id, languages),
+            onBuild: (choice) => onBuildDocument(id, choice),
             buildLanguages: buildLanguages,
             onEditTitle:
                 document != null &&
@@ -1589,23 +2122,23 @@ class _SaveBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
-      color: Color(0xFFF3F7F1),
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.tint(context.palette.accent, 0.05),
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
     child: Row(
       children: [
-        const Icon(Icons.edit_outlined, size: 15, color: didactaAccentDark),
+        Icon(Icons.edit_outlined, size: 15, color: context.palette.accentDark),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            'Sin guardar · +$added −$removed en year.yaml',
-            style: const TextStyle(fontSize: 12.5, color: didactaMuted),
+            tr('Sin guardar · +{0} −{1} en year.yaml', [added, removed]),
+            style: TextStyle(fontSize: 12.5, color: context.palette.muted),
           ),
         ),
         if (onDiscard != null)
-          TextButton(onPressed: onDiscard, child: const Text('Descartar')),
+          TextButton(onPressed: onDiscard, child: Text(tr('Descartar'))),
         const SizedBox(width: 4),
         FilledButton.icon(
           key: const Key('documents-save'),
@@ -1616,7 +2149,7 @@ class _SaveBar extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.check, size: 16),
-          label: Text(saving ? 'Guardando…' : 'Guardar'),
+          label: Text(saving ? tr('Guardando…') : tr('Guardar')),
           onPressed: onSave,
         ),
       ],
@@ -1645,17 +2178,17 @@ class _LoadFailed extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'No se pudo leer la composición',
+            Text(
+              tr('No se pudo leer la composición'),
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
             SelectableText(
               path,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontFamily: 'monospace',
-                color: didactaMuted,
+                color: context.palette.muted,
               ),
             ),
             const SizedBox(height: 10),
@@ -1665,7 +2198,7 @@ class _LoadFailed extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: FilledButton.icon(
                 icon: const Icon(Icons.refresh, size: 16),
-                label: const Text('Reintentar'),
+                label: Text(tr('Reintentar')),
                 onPressed: onRetry,
               ),
             ),
@@ -1679,6 +2212,7 @@ class _LoadFailed extends StatelessWidget {
 class _DocumentTile extends StatelessWidget {
   const _DocumentTile({
     super.key,
+    this.first = false,
     required this.index,
     required this.course,
     required this.year,
@@ -1694,6 +2228,9 @@ class _DocumentTile extends StatelessWidget {
     this.onOpenPdfs,
     required this.onRemove,
   });
+
+  /// Si es el documento que señala el tour.
+  final bool first;
 
   final int index;
   final Course course;
@@ -1747,13 +2284,13 @@ class _DocumentTile extends StatelessWidget {
     final linked =
         session.catalogue.sharedById(document.content)?.placements.length ?? 1;
 
-    return Hoverable(
+    final tile = Hoverable(
       onTap: () => context.go(Routes.document(course.id, year, document.id)),
       builder: (context, hovering) => AnimatedContainer(
         duration: const Duration(milliseconds: 90),
         decoration: BoxDecoration(
-          color: hovering ? didactaHover : Colors.transparent,
-          border: const Border(bottom: BorderSide(color: didactaRule)),
+          color: hovering ? context.palette.hover : Colors.transparent,
+          border: Border(bottom: BorderSide(color: context.palette.rule)),
         ),
         padding: const EdgeInsets.fromLTRB(6, 10, 12, 10),
         // Con `LayoutBuilder` porque la fila tiene un suelo: asa, barra del
@@ -1768,12 +2305,12 @@ class _DocumentTile extends StatelessWidget {
               if (canWrite)
                 ReorderableDragStartListener(
                   index: index,
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     child: Icon(
                       Icons.drag_indicator,
                       size: 17,
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     ),
                   ),
                 )
@@ -1784,7 +2321,7 @@ class _DocumentTile extends StatelessWidget {
                 height: 34,
                 margin: const EdgeInsets.only(top: 2, right: 10),
                 decoration: BoxDecoration(
-                  color: kindColour(document.kind),
+                  color: context.palette.kind(document.kind),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1812,7 +2349,7 @@ class _DocumentTile extends StatelessWidget {
                           const SizedBox(width: 8),
                           LinkBadge(
                             places: linked,
-                            what: 'Este tema',
+                            what: tr('Este tema'),
                             onPressed: () => _showLinkedPlaces(context),
                           ),
                         ],
@@ -1841,40 +2378,40 @@ class _DocumentTile extends StatelessWidget {
                       children: [
                         Text(
                           document.id,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11.5,
                             fontFamily: 'monospace',
-                            color: didactaMuted,
+                            color: context.palette.muted,
                           ),
                         ),
                         Text(
                           kindName(document.kind),
                           style: TextStyle(
                             fontSize: 11,
-                            color: kindColour(document.kind),
+                            color: context.palette.kind(document.kind),
                           ),
                         ),
                         Text(
-                          '${document.unitRefs.length} unidades',
-                          style: const TextStyle(
+                          tr('{0} unidades', [document.unitRefs.length]),
+                          style: TextStyle(
                             fontSize: 11,
-                            color: didactaMuted,
+                            color: context.palette.muted,
                           ),
                         ),
                         if (broken > 0)
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.link_off,
                                 size: 12,
-                                color: didactaTeacher,
+                                color: context.palette.teacher,
                               ),
                               const SizedBox(width: 2),
                               Text(
                                 '$broken',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
-                                  color: didactaTeacher,
+                                  color: context.palette.teacher,
                                 ),
                               ),
                             ],
@@ -1904,29 +2441,6 @@ class _DocumentTile extends StatelessWidget {
                 outputs: outputs,
                 onPressed: onOpenPdfs ?? () {},
               ),
-              // Llevárselo, con la misma regla que el de mirarlo: sin nada
-              // compilado no hay nada que exportar, y un botón que solo sabe
-              // decir «no había nada» es un botón que estorba.
-              if (outputs.isNotEmpty)
-                IconButton(
-                  key: Key('export-document-$id'),
-                  tooltip: 'Exportar este documento a una carpeta',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.file_download_outlined, size: 16),
-                  onPressed: () => exportDocument(
-                    context,
-                    session: session,
-                    course: course,
-                    year: year,
-                    document: document,
-                  ),
-                ),
-              if (onEditTitle != null)
-                TitleButton(
-                  id: 'document-$id',
-                  what: 'este documento',
-                  onPressed: onEditTitle!,
-                ),
               if (onBuild != null)
                 BuildButton(
                   id: 'document-$id',
@@ -1936,12 +2450,14 @@ class _DocumentTile extends StatelessWidget {
                   onBuild: onBuild!,
                 ),
               // Mirando una versión congelada no se edita nada, así que en
-              // lugar del menú de reutilizar sale lo único que tiene sentido
-              // desde aquí: traerse este tema tal como estaba.
+              // lugar del menú sale lo único que tiene sentido desde aquí:
+              // traerse este tema tal como estaba.
               if (session.isFrozen)
                 IconButton(
                   key: Key('restore-document-$id'),
-                  tooltip: 'Restaurar este tema como estaba en esta versión',
+                  tooltip: tr(
+                    'Restaurar este tema como estaba en esta versión',
+                  ),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.restore, size: 16),
                   onPressed: () => showRestore(
@@ -1955,27 +2471,38 @@ class _DocumentTile extends StatelessWidget {
                     label: document.title(session.language),
                     content: document.content,
                   ),
-                )
-              else if (canWrite)
-                _ReuseMenu(
-                  session: session,
-                  course: course,
-                  year: year,
-                  document: document,
                 ),
-              if (canWrite)
-                IconButton(
-                  key: Key('remove-document-$id'),
-                  tooltip: 'Quitar este documento',
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.close, size: 15),
-                  onPressed: onRemove,
-                ),
-              const Icon(Icons.chevron_right, size: 18, color: didactaMuted),
+              // Lo demás, en «…»: PDF y ▶ son lo que se usa cada día, y seis
+              // botones por fila hacían que no se viera ninguno. Llevárselo
+              // solo con algo compilado, con la misma regla que el de mirarlo.
+              _DocumentMenu(
+                session: session,
+                course: course,
+                year: year,
+                document: document,
+                reuse: canWrite && !session.isFrozen,
+                onExport: outputs.isEmpty
+                    ? null
+                    : () => exportDocument(
+                        context,
+                        session: session,
+                        course: course,
+                        year: year,
+                        document: document,
+                      ),
+                onEditTitle: onEditTitle,
+                onRemove: canWrite ? onRemove : null,
+              ),
+              Icon(Icons.chevron_right, size: 18, color: context.palette.muted),
             ],
           ),
         ),
       ),
+    );
+    return TourTarget.first(
+      id: 'year-document-first',
+      when: first,
+      child: tile,
     );
   }
 
@@ -1994,9 +2521,10 @@ class _DocumentTile extends StatelessWidget {
         year: year,
         document: id,
       ),
-      explanation:
-          'Es el mismo tema en todas ellas, no copias: lo que se edite desde '
-          'cualquiera se ve en las demás.',
+      explanation: tr(
+        'Es el mismo tema en todas ellas, no copias: lo que se edite desde '
+        'cualquiera se ve en las demás.',
+      ),
     );
   }
 
@@ -2013,8 +2541,8 @@ class _DocumentTile extends StatelessWidget {
     final kind = draft?.kind ?? 'theory';
 
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: didactaRule)),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: context.palette.rule)),
       ),
       padding: const EdgeInsets.fromLTRB(6, 10, 12, 10),
       child: Row(
@@ -2023,12 +2551,12 @@ class _DocumentTile extends StatelessWidget {
           if (canWrite)
             ReorderableDragStartListener(
               index: index,
-              child: const Padding(
+              child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                 child: Icon(
                   Icons.drag_indicator,
                   size: 17,
-                  color: didactaMuted,
+                  color: context.palette.muted,
                 ),
               ),
             )
@@ -2041,7 +2569,7 @@ class _DocumentTile extends StatelessWidget {
             decoration: BoxDecoration(
               // Atenuada, como el resto de la fila: el tipo se ve, y se ve
               // que esto aún no está del todo.
-              color: kindColour(kind).withValues(alpha: 0.45),
+              color: context.palette.kind(kind).withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -2052,10 +2580,10 @@ class _DocumentTile extends StatelessWidget {
                 Text(
                   title,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: didactaMuted,
+                    color: context.palette.muted,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -2063,15 +2591,18 @@ class _DocumentTile extends StatelessWidget {
                   children: [
                     Text(
                       kind,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
-                        color: didactaMuted,
+                        color: context.palette.muted,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'sin indexar todavía',
-                      style: TextStyle(fontSize: 11.5, color: didactaEx),
+                    Text(
+                      tr('sin indexar todavía'),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: context.palette.ex,
+                      ),
                     ),
                   ],
                 ),
@@ -2081,7 +2612,7 @@ class _DocumentTile extends StatelessWidget {
           if (canWrite)
             IconButton(
               key: Key('remove-document-$id'),
-              tooltip: 'Quitar este documento',
+              tooltip: tr('Quitar este documento'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.close, size: 15),
               onPressed: onRemove,
@@ -2111,12 +2642,16 @@ class _LanguageSummary extends StatelessWidget {
                   .length;
               final complete = present == units.length;
               final colour = present == 0
-                  ? didactaMuted
+                  ? context.palette.muted
                   : complete
-                  ? didactaAccentDark
-                  : didactaEx;
+                  ? context.palette.accentDark
+                  : context.palette.ex;
               return Tooltip(
-                message: '$code: $present de ${units.length} unidades',
+                message: tr('{0}: {1} de {2} unidades', [
+                  code,
+                  present,
+                  units.length,
+                ]),
                 child: Container(
                   margin: const EdgeInsets.only(right: 4),
                   padding: const EdgeInsets.symmetric(
@@ -2126,7 +2661,7 @@ class _LanguageSummary extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: present == 0 ? null : colour.withValues(alpha: 0.10),
                     border: Border.all(
-                      color: present == 0 ? didactaRule : colour,
+                      color: present == 0 ? context.palette.rule : colour,
                     ),
                     borderRadius: BorderRadius.circular(3),
                   ),
@@ -2134,7 +2669,7 @@ class _LanguageSummary extends StatelessWidget {
                     complete ? code : '$code $present/${units.length}',
                     style: TextStyle(
                       fontSize: 10.5,
-                      color: present == 0 ? didactaMuted : colour,
+                      color: present == 0 ? context.palette.muted : colour,
                       fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),
@@ -2159,8 +2694,8 @@ class _NotHere extends StatelessWidget {
     return Column(
       children: [
         PageHeader(
-          title: 'No encontrado',
-          breadcrumbs: [('Asignaturas', Routes.courses())],
+          title: tr('No encontrado'),
+          breadcrumbs: [(tr('Asignaturas'), Routes.courses())],
         ),
         Expanded(
           child: Center(
@@ -2184,7 +2719,7 @@ class _NotHere extends StatelessWidget {
                     const SizedBox(height: 18),
                     FilledButton(
                       onPressed: () => context.go(Routes.courses()),
-                      child: const Text('Ver las asignaturas'),
+                      child: Text(tr('Ver las asignaturas')),
                     ),
                   ],
                 ),
@@ -2221,16 +2756,16 @@ class _OpenButton extends StatelessWidget {
     return IconButton(
       key: Key('open-pdf-$id'),
       tooltip: stale
-          ? 'Ver el PDF (de antes del último cambio)'
+          ? tr('Ver el PDF (de antes del último cambio)')
           : outputs.length == 1
-          ? 'Ver el PDF'
-          : 'Ver los ${outputs.length} PDF',
+          ? tr('Ver el PDF')
+          : tr('Ver los {0} PDF', [outputs.length]),
       visualDensity: VisualDensity.compact,
       icon: Icon(
         stale ? Icons.picture_as_pdf_outlined : Icons.picture_as_pdf,
         size: 17,
       ),
-      color: stale ? didactaMuted : didactaThm,
+      color: stale ? context.palette.muted : context.palette.thm,
       onPressed: onPressed,
     );
   }
@@ -2242,12 +2777,22 @@ class _OpenButton extends StatelessWidget {
 /// dividir son cuatro cosas distintas, y confundirlas es cómo se pierde
 /// material. Cada una dice lo que hace en el diálogo que abre, que es donde
 /// importa la diferencia.
-class _ReuseMenu extends StatelessWidget {
-  const _ReuseMenu({
+/// El «…» de un documento: lo que no se usa cada día.
+///
+/// Llevárselo, cambiarle el título, reutilizarlo en otro sitio y quitarlo.
+/// Antes eran seis botones en cada fila, más la flecha, y en una lista de
+/// treinta documentos eso es una pared de iconos donde no se distingue el
+/// que se busca. Fuera se quedan el PDF y ▶, que son los de cada día.
+class _DocumentMenu extends StatelessWidget {
+  const _DocumentMenu({
     required this.session,
     required this.course,
     required this.year,
     required this.document,
+    required this.reuse,
+    this.onExport,
+    this.onEditTitle,
+    this.onRemove,
   });
 
   final Session session;
@@ -2255,60 +2800,118 @@ class _ReuseMenu extends StatelessWidget {
   final String year;
   final Document document;
 
+  /// Si se ofrece mover, vincular y duplicar.
+  final bool reuse;
+  final VoidCallback? onExport;
+  final VoidCallback? onEditTitle;
+  final VoidCallback? onRemove;
+
   List<ContentPlacement> get _places => placementsOf(session, document);
 
   @override
-  Widget build(BuildContext context) => MenuAnchor(
-    builder: (context, controller, child) => IconButton(
-      key: Key('reuse-menu-${document.id}'),
-      tooltip: 'Reutilizar este tema en otro sitio',
-      visualDensity: VisualDensity.compact,
-      icon: const Icon(Icons.more_horiz, size: 17),
-      onPressed: () =>
-          controller.isOpen ? controller.close() : controller.open(),
-    ),
-    menuChildren: [
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: sessionOf(context).settings,
+    builder: (context, _) => _listenedBuild(context),
+  );
+
+  Widget _listenedBuild(BuildContext context) {
+    if (!reuse && onExport == null && onEditTitle == null && onRemove == null) {
+      return const SizedBox(width: 40);
+    }
+    return MenuAnchor(
+      builder: (context, controller, child) => IconButton(
+        key: Key('document-menu-${document.id}'),
+        tooltip: tr('Más: exportar, título, reutilizar, quitar'),
+        visualDensity: VisualDensity.compact,
+        icon: const Icon(Icons.more_horiz, size: 17),
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
+      ),
+      menuChildren: [
+        if (onExport != null)
+          MenuItemButton(
+            key: Key('export-document-${document.id}'),
+            leadingIcon: const Icon(Icons.file_download_outlined, size: 15),
+            onPressed: onExport,
+            child: Text(tr('Exportar a una carpeta…')),
+          ),
+        if (onEditTitle != null)
+          MenuItemButton(
+            key: Key('edit-title-document-${document.id}'),
+            leadingIcon: const Icon(Icons.edit_outlined, size: 15),
+            onPressed: onEditTitle,
+            child: Text(tr('Cambiar el título…')),
+          ),
+        if (reuse) ...[
+          if (onExport != null || onEditTitle != null) const Divider(height: 1),
+          ..._reuseItems(context),
+        ],
+        if (onRemove != null) ...[
+          const Divider(height: 1),
+          MenuItemButton(
+            key: Key('remove-document-${document.id}'),
+            leadingIcon: Icon(
+              Icons.close,
+              size: 15,
+              color: context.palette.teacher,
+            ),
+            onPressed: onRemove,
+            child: Text(
+              tr('Quitar de este curso…'),
+              style: TextStyle(color: context.palette.teacher),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Mover y gestionar la vinculación, en Completa: son de reorganizar el
+  // repositorio, no de dar clase. Añadir vinculado, duplicar, ver dónde se da
+  // y separarlo de los demás son de todos.
+  List<Widget> _reuseItems(BuildContext context) => [
+    if (session.completeInterface)
       MenuItemButton(
         key: Key('document-move-${document.id}'),
         leadingIcon: const Icon(Icons.drive_file_move_outlined, size: 15),
         onPressed: () => _reuse(context, ReuseMode.move),
-        child: const Text('Mover a…'),
+        child: Text(tr('Mover a…')),
       ),
+    MenuItemButton(
+      key: Key('document-link-${document.id}'),
+      leadingIcon: const Icon(Icons.link, size: 15),
+      onPressed: () => _reuse(context, ReuseMode.link),
+      child: Text(tr('Añadir vinculado a…')),
+    ),
+    MenuItemButton(
+      key: Key('document-duplicate-${document.id}'),
+      leadingIcon: const Icon(Icons.content_copy_outlined, size: 15),
+      onPressed: () => _reuse(context, ReuseMode.duplicate),
+      child: Text(tr('Duplicar en…')),
+    ),
+    if (document.isLinked) ...[
+      const Divider(height: 1),
       MenuItemButton(
-        key: Key('document-link-${document.id}'),
-        leadingIcon: const Icon(Icons.link, size: 15),
-        onPressed: () => _reuse(context, ReuseMode.link),
-        child: const Text('Añadir vinculado a…'),
+        key: Key('document-places-${document.id}'),
+        leadingIcon: const Icon(Icons.travel_explore, size: 15),
+        onPressed: () => _showPlaces(context),
+        child: Text(tr('Ver ubicaciones vinculadas ({0})', [_places.length])),
       ),
-      MenuItemButton(
-        key: Key('document-duplicate-${document.id}'),
-        leadingIcon: const Icon(Icons.content_copy_outlined, size: 15),
-        onPressed: () => _reuse(context, ReuseMode.duplicate),
-        child: const Text('Duplicar en…'),
-      ),
-      if (document.isLinked) ...[
-        const Divider(height: 1),
-        MenuItemButton(
-          key: Key('document-places-${document.id}'),
-          leadingIcon: const Icon(Icons.travel_explore, size: 15),
-          onPressed: () => _showPlaces(context),
-          child: Text('Ver ubicaciones vinculadas (${_places.length})'),
-        ),
+      if (session.completeInterface)
         MenuItemButton(
           key: Key('document-split-${document.id}'),
           leadingIcon: const Icon(Icons.call_split, size: 15),
           onPressed: () => _split(context),
-          child: const Text('Gestionar vinculación…'),
+          child: Text(tr('Gestionar vinculación…')),
         ),
-        MenuItemButton(
-          key: Key('document-unlink-${document.id}'),
-          leadingIcon: const Icon(Icons.link_off, size: 15),
-          onPressed: () => _unlink(context),
-          child: const Text('Crear copia independiente'),
-        ),
-      ],
+      MenuItemButton(
+        key: Key('document-unlink-${document.id}'),
+        leadingIcon: const Icon(Icons.link_off, size: 15),
+        onPressed: () => _unlink(context),
+        child: Text(tr('Crear copia independiente')),
+      ),
     ],
-  );
+  ];
 
   Future<void> _reuse(BuildContext context, ReuseMode mode) async {
     final target = await askReuseTarget(
@@ -2342,10 +2945,11 @@ class _ReuseMenu extends StatelessWidget {
       year: year,
       document: document.id,
     ),
-    explanation:
-        'Es el mismo tema en todas ellas, no copias: lo que se edite desde '
-        'cualquiera se ve en las demás. Para separarlas, «Gestionar '
-        'vinculación».',
+    explanation: tr(
+      'Es el mismo tema en todas ellas, no copias: lo que se edite desde '
+      'cualquiera se ve en las demás. Para que este deje de serlo, «Crear '
+      'copia independiente», en este mismo menú.',
+    ),
   );
 
   Future<void> _split(BuildContext context) =>
@@ -2356,26 +2960,30 @@ class _ReuseMenu extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          '¿Separar «${document.title(session.language)}» de las demás?',
+          tr('¿Separar «{0}» de las demás?', [
+            document.title(session.language),
+          ]),
         ),
-        content: const SizedBox(
+        content: SizedBox(
           width: 460,
           child: Note(
-            'Esta ubicación se queda con una copia del tema tal como está '
-            'ahora, con identidad propia. A partir de ahí van por su lado: lo '
-            'que se edite aquí deja de verse en las demás, y al revés.\n\n'
-            'No se pierde nada: las otras ubicaciones siguen igual.',
+            tr(
+              'Esta ubicación se queda con una copia del tema tal como está '
+              'ahora, con identidad propia. A partir de ahí van por su lado: lo '
+              'que se edite aquí deja de verse en las demás, y al revés.\n\n'
+              'No se pierde nada: las otras ubicaciones siguen igual.',
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             key: const Key('confirm-unlink'),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Separar'),
+            child: Text(tr('Separar')),
           ),
         ],
       ),
@@ -2389,7 +2997,7 @@ class _ReuseMenu extends StatelessWidget {
         year: year,
         document: document.id,
       ),
-      done: 'Separado. A partir de ahora es un tema aparte.',
+      done: tr('Separado. A partir de ahora es un tema aparte.'),
       repo: document.repo,
     );
     if (ok) await session.reloadCatalogue();

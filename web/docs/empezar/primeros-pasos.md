@@ -7,8 +7,13 @@ description: Un recorrido completo: encontrar una lección, editarla, compilarla
 
 Con Didacta abierta y un repositorio dentro, este es el recorrido entero: de
 buscar una lección a tener un PDF y un commit. Si prefieres que te lo cuente
-la propia aplicación, el **tour guiado** está en
-:material-cog-outline: **Ajustes → Volver a ver la presentación**.
+la propia aplicación, el **recorrido guiado** está en
+:material-cog-outline: **Ajustes → Ayuda → Ver el recorrido guiado**: va de pantalla
+en pantalla --una asignatura y su curso por dentro, un documento, la
+biblioteca con sus filtros y una lección con sus idiomas y lo que se
+compila-- y al terminar te deja donde estabas. Con el
+[repositorio de ejemplo](primer-repositorio.md#2-abrir-un-repositorio-de-contenido)
+abierto tiene de todo que enseñar.
 
 ## El armazón
 
@@ -23,6 +28,12 @@ uno:
 | :material-library-books: | **Biblioteca** | todo el material, ordenado por materia. Es cómo se busca |
 | :material-translate: | **Traducción** | qué falta por traducir, en el orden que merece la pena hacerlo |
 | :material-cog: | **Ajustes** | tu cuenta, tus repositorios, LaTeX, actualizaciones |
+
+Abajo del todo en el carril, **el sol y la luna**: pasa la aplicación de claro
+a oscuro y al revés. Lo que viene es «como el sistema», y eso se vuelve a
+elegir en [Ajustes → Apariencia](../app/ajustes.md#apariencia).
+
+![Una lección, en oscuro](../img/app/oscuro-unidad.png)
 
 Arriba, la **barra de sincronización**: en qué repositorio estás trabajando,
 cuántos cambios tienes sin enviar y cuántos hay en GitHub que no tienes. Está

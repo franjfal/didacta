@@ -23,9 +23,10 @@ preparar una clase, y eso empieza en la asignatura que se da mañana.
 Después de unos años, la lista son veinte asignaturas de las que se dan tres.
 Dos formas de arreglarlo, y ninguna toca el material:
 
-- **ocultar** una asignatura o un curso académico, con el ojo de su fila. Sigue
-  en el repositorio, sigue compilando y sigue en la biblioteca: lo que cambia
-  es esta lista;
+- **ocultar** una asignatura o un curso académico, en el `⋯` de su fila:
+  **Ocultar de esta lista**. Sigue en el repositorio, sigue compilando y sigue
+  en la biblioteca: lo que cambia es esta lista. Lo oculto lleva un ojo a la
+  vista, que es el camino de vuelta;
 - **plegar** una asignatura pulsando su título. Plegada dice cuántos cursos
   lleva dentro.
 
@@ -70,7 +71,9 @@ que se leen. Y en el listado de documentos, cada documento tiene el suyo, para
 cuando lo que hay que subir al aula virtual es solo el Tema 3.
 
 Exportar **copia**: el repositorio no se toca, y no hace falta poder escribir
-en él. Los detalles, en [Exportar un curso](exportar.md).
+en él. Y de salida solo se lleva lo del estudiante: las resoluciones y las
+copias del profesor se piden aparte. Los detalles, en
+[Exportar un curso](exportar.md).
 
 ### Duplicar un año
 
@@ -84,6 +87,24 @@ Copia la estructura. **No copia contenido**, porque no hay contenido que
 copiar: las unidades siguen siendo las mismas. Lo que corrijas este año lo
 hereda el siguiente, y el PDF del año pasado sigue exactamente como se dio,
 porque sigue en su commit.
+
+Copiando de un curso, el diálogo trae marcada la casilla **Congelar
+2025-2026 tal como quedó**: antes de copiar, deja una versión congelada del
+curso de origen --«Tal como quedó»-- para poder volver a verlo y compilarlo
+como se dio, pase lo que pase después. Se copian también sus temas, y los
+documentos quedan agrupados bajo ellos igual que estaban.
+
+!!! warning "Los documentos vinculados se comparten, no se copian"
+
+    Si el curso de origen tiene documentos vinculados, el nuevo los comparte:
+    lo que cambies en ellos en 2026-2027 cambia también en 2025-2026. El
+    diálogo lo dice, con cuántos son. Para separarlos, en el curso nuevo,
+    **Crear copia independiente** en el menú de cada uno. La congelación es la
+    que guarda 2025-2026 como se dio, en cualquier caso.
+
+En una asignatura repartida entre varios repositorios, duplicar, quitar y
+congelar se hacen **en todos** los que tienen algo de ella, con una sola
+espera. Si uno falla a medio camino, el aviso dice en cuáles sí se hizo.
 
 Y hay una variante que es la de septiembre: crear el curso nuevo **a partir de
 una versión congelada**, de modo que el punto de partida sea el curso tal como
@@ -113,13 +134,56 @@ Y dice qué **no** se lleva: las unidades no se tocan. Lo que se pierde es la
 selección y el orden. Sin esa frase, borrar una asignatura parece borrar el
 material, y nadie lo pulsaría.
 
+Si tiene versiones congeladas, también lo dice: viven en la carpeta del curso y
+se van con él. Sus commits siguen en la historia, pero dejan de tener nombre.
+
+### Deshacer
+
+**El aviso de después trae «Deshacer».** Quitar una asignatura, un curso
+académico o un documento --y cualquier otro guardado de un curso: reordenar,
+cambiar un título-- se deshace desde el aviso que sale al terminar. Deshacer
+es un cambio más, con su mensaje: lo que había vuelve y lo deshecho sigue en la
+historia.
+
+**Cuando el aviso ya se fue, «Cambios recientes».** El botón con el reloj, en
+la cabecera de Asignaturas, enseña lo último que se ha guardado en cada
+repositorio, con quién y cuándo, y un **Deshacer** en cada uno. Solo deshace
+si nadie ha vuelto a tocar esos ficheros después: si alguno cambió, lo dice y
+no hace nada, porque deshacer encima se llevaría también lo de después. Para
+eso está el [historial](historial.md) de cada fichero.
+
 ## Los documentos
 
 Un documento es un tema, una hoja de problemas, un guion de prácticas o un
 examen. Se crea vacío --sin unidades-- porque elegirlas es el paso siguiente y
 tiene su propia pantalla.
 
-El identificador se deduce del título, y se puede cambiar a mano.
+El identificador se deduce del título, y se puede cambiar a mano. Al guardar
+se escribe también su `<documento>.tex`, el fichero que compila LaTeX, en el
+mismo cambio que `year.yaml`.
+
+En su fila, a la vista, lo de cada día: **el PDF** y **▶** para compilarlo. Lo
+demás está en `⋯`: exportarlo, cambiarle el título, darlo en otro sitio y
+quitarlo del curso. Quitar el curso académico entero está en el `⋯` de su
+cabecera, junto a congelarlo.
+
+### Un examen o una hoja, a partir de los problemas
+
+Abajo, **Examen u hoja de problemas** lo hace de una vez: el tipo, el título,
+el tema al que va y los problemas, y un solo guardado. La lista ofrece solo
+problemas, con un buscador y un filtro por carpeta, y marca los que ya
+salieron en un examen de la asignatura --«examen 2024-2025»--; la casilla
+**Sin los que ya salieron** los quita de la lista.
+
+Van en el orden en que se eligen, y se reordenan después en la composición.
+El repositorio no se pregunta: lo dicen los problemas, porque un documento y
+lo que llama viven en el mismo. Al guardar se abre el documento, listo para
+compilar el examen y su hoja de corrección.
+
+!!! note "Qué exámenes cuenta"
+
+    Los de los cursos que siguen en el repositorio. Un curso que se quitó no
+    cuenta: su versión congelada es la que guarda qué salió entonces.
 
 ### Qué salidas tiene un tema
 
@@ -157,6 +221,12 @@ Con un solo bloque la tira no aparece.
 En el menú `⋯` de cada tema: **Mover a…**, **Añadir vinculado a…** y
 **Duplicar en…**, con la asignatura actual elegida por defecto y cualquier
 otra a un desplegable.
+
+**Duplicar** es una copia de la composición con identidad propia: cambiar el
+orden o los apartados de una no toca la otra, y un tema vinculado deja de
+estarlo en la copia. Las lecciones siguen siendo las mismas --corregir una se
+ve en las dos-- salvo que se marque **Duplicar también las lecciones**, que
+copia cada una con su propia identidad.
 
 Vinculado quiere decir que es **el mismo tema**: lo que se edite desde
 cualquiera de los cursos que lo dan se ve desde todos. Un eslabón con un

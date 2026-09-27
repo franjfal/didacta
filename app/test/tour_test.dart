@@ -55,9 +55,13 @@ Future<TourController> pumpShell(
       value: session,
       child: MaterialApp(
         theme: didactaTheme(),
-        home: Stack(
+        home: const DidactaShell(location: '/', child: SizedBox.shrink()),
+        // En el `builder`, por encima del `Navigator`, como en `main.dart`:
+        // ahí no hay `Overlay`, y un globo que lo necesite --una ayuda
+        // emergente-- solo se cae en ese sitio.
+        builder: (context, child) => Stack(
           children: [
-            const DidactaShell(location: '/', child: SizedBox.shrink()),
+            child ?? const SizedBox.shrink(),
             TourOverlay(controller: controller),
           ],
         ),
@@ -74,14 +78,14 @@ void main() {
     tour.start();
     await settle(tester);
 
-    expect(find.text('Cuatro sitios'), findsOneWidget);
+    expect(find.text('Dónde está cada cosa'), findsOneWidget);
     expect(find.text('1 de ${defaultTour.length}'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('tour-next')));
     await settle(tester);
 
-    expect(find.text('La biblioteca'), findsOneWidget);
-    expect(find.text('Cuatro sitios'), findsNothing);
+    expect(find.text('Dónde va lo que escribes'), findsOneWidget);
+    expect(find.text('Dónde está cada cosa'), findsNothing);
   });
 
   testWidgets('salirse lo da por hecho', (tester) async {
@@ -102,7 +106,7 @@ void main() {
 
     expect(tour.running, isFalse);
     expect(apuntado, isTrue);
-    expect(find.text('Cuatro sitios'), findsNothing);
+    expect(find.text('Dónde está cada cosa'), findsNothing);
   });
 
   testWidgets('llegar al final también', (tester) async {
@@ -172,5 +176,182 @@ void main() {
     // enseñar nada es peor que no tenerlo.
     expect(apuntado, isTrue);
     expect(tester.takeException(), isNull);
+  });
+
+  group('cambiando de pantalla', () {
+    // Sin router de verdad: una dirección en un `ValueNotifier` y una
+    // pantalla que enseña su objetivo solo cuando se está en ella. Es lo que
+    // hace falta para ver que el tour va, espera y vuelve.
+    Future<({TourController tour, ValueNotifier<String> at})> pumpPlaces(
+      WidgetTester tester,
+      List<TourStep> steps, {
+      Future<void> Function()? onFinished,
+    }) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      tourTargets.clear();
+
+      final catalogue = catalogueWith(defaultUnits());
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogue,
+      );
+      await session.primeForTest(catalogue);
+
+      final at = ValueNotifier('/');
+      final tour = TourController(steps: steps, onFinished: onFinished)
+        ..attach(
+          navigate: (location) => at.value = location,
+          locate: () => at.value,
+          session: session,
+        );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: didactaTheme(),
+          builder: (context, child) => Stack(
+            children: [
+              child ?? const SizedBox.shrink(),
+              TourOverlay(controller: tour),
+            ],
+          ),
+          home: Stack(
+            children: [
+              Scaffold(
+                body: ValueListenableBuilder<String>(
+                  valueListenable: at,
+                  builder: (context, location, _) => Column(
+                    children: [
+                      TourTarget(
+                        id: 'siempre',
+                        child: const SizedBox(width: 200, height: 40),
+                      ),
+                      if (location == '/otra')
+                        TourTarget(
+                          id: 'otra',
+                          child: const SizedBox(width: 200, height: 40),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await settle(tester);
+      return (tour: tour, at: at);
+    }
+
+    testWidgets('va a la pantalla del paso, y al acabar vuelve', (
+      tester,
+    ) async {
+      var apuntado = false;
+      final it = await pumpPlaces(tester, [
+        const TourStep(id: 'siempre', title: 'Aquí', body: 'En el armazón.'),
+        TourStep(
+          id: 'otra',
+          title: 'Allí',
+          body: 'En otra pantalla.',
+          place: (_) => '/otra',
+        ),
+      ], onFinished: () async => apuntado = true);
+
+      it.tour.start();
+      await settle(tester);
+      expect(find.text('Aquí'), findsOneWidget);
+      expect(it.at.value, '/');
+
+      await tester.tap(find.byKey(const Key('tour-next')));
+      await settle(tester);
+      expect(it.at.value, '/otra');
+      expect(find.text('Allí'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tour-next')));
+      await settle(tester);
+      // A donde se estaba: dejar a alguien en una pantalla que no ha elegido
+      // es dejarle perdido justo al acabar de orientarle.
+      expect(it.at.value, '/');
+      expect(it.tour.running, isFalse);
+      expect(apuntado, isTrue);
+    });
+
+    testWidgets('un sitio que no hay se salta', (tester) async {
+      // Sin asignaturas no hay curso que enseñar, y el capítulo entero se
+      // salta en lugar de señalar una pantalla vacía.
+      final it = await pumpPlaces(tester, [
+        TourStep(
+          id: 'otra',
+          title: 'Sin sitio',
+          body: 'No hay a dónde ir.',
+          place: (_) => null,
+        ),
+        const TourStep(id: 'siempre', title: 'Aquí', body: 'En el armazón.'),
+      ]);
+
+      it.tour.start();
+      await settle(tester);
+
+      expect(find.text('Sin sitio'), findsNothing);
+      expect(find.text('Aquí'), findsOneWidget);
+      expect(it.at.value, '/');
+    });
+
+    testWidgets('un objetivo que no llega a salir se salta, esperándolo', (
+      tester,
+    ) async {
+      final it = await pumpPlaces(tester, [
+        TourStep(
+          id: 'nunca',
+          title: 'Nunca',
+          body: 'La pantalla no lo tiene.',
+          place: (_) => '/otra',
+        ),
+        const TourStep(id: 'siempre', title: 'Aquí', body: 'En el armazón.'),
+      ]);
+
+      it.tour.start();
+      // Lo que espera a una pantalla que carga: unos segundos, no más.
+      for (var i = 0; i < 12; i += 1) {
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+
+      expect(find.text('Nunca'), findsNothing);
+      expect(find.text('Aquí'), findsOneWidget);
+    });
+
+    testWidgets('«Atrás» vuelve al paso anterior y a su pantalla', (
+      tester,
+    ) async {
+      final it = await pumpPlaces(tester, [
+        TourStep(
+          id: 'otra',
+          title: 'Allí',
+          body: 'En otra pantalla.',
+          place: (_) => '/otra',
+        ),
+        TourStep(
+          id: 'siempre',
+          title: 'Aquí',
+          body: 'De vuelta.',
+          place: (_) => '/',
+        ),
+      ]);
+
+      it.tour.start();
+      await settle(tester);
+      expect(find.text('Allí'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('tour-next')));
+      await settle(tester);
+      expect(find.text('Aquí'), findsOneWidget);
+      expect(it.at.value, '/');
+
+      await tester.tap(find.byKey(const Key('tour-back')));
+      await settle(tester);
+      expect(find.text('Allí'), findsOneWidget);
+      expect(it.at.value, '/otra');
+    });
   });
 }

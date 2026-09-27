@@ -15,9 +15,17 @@
 /// es el otro: el fichero no lleva Unicode y la paleta no lleva órdenes.
 library;
 
+import '../l10n/tr.dart';
+
 /// Algo que la barra escribe.
 class TexSnippet {
-  const TexSnippet(this.label, this.before, {this.after = '', this.tooltip});
+  const TexSnippet(
+    this.label,
+    this.before, {
+    this.after = '',
+    this._tooltip,
+    this.opensMath = false,
+  });
 
   /// Lo que se ve en la paleta: el glifo, o un nombre corto.
   final String label;
@@ -28,24 +36,43 @@ class TexSnippet {
   /// Y lo que se escribe detrás. Vacío en un símbolo suelto.
   final String after;
 
-  /// Qué es, para quien no reconozca el glifo.
-  final String? tooltip;
+  /// Qué es, para quien no reconozca el glifo, en el idioma de la interfaz.
+  String? get tooltip => _tooltip == null ? null : tr(_tooltip);
+  final String? _tooltip;
 
   bool get wraps => after.isNotEmpty;
+
+  /// Si esto **es** una fórmula --`$…$`, `\[…\]`-- y no algo que va dentro
+  /// de una. Lo demás, pulsado en mitad de un párrafo, se envuelve en `$…$`:
+  /// un `\alpha` suelto en el texto no compila.
+  final bool opensMath;
 }
 
 /// Un grupo de la paleta.
 class TexPalette {
-  const TexPalette(this.name, this.items);
+  const TexPalette(this._name, this.items);
 
-  final String name;
+  String get name => tr(_name);
+  final String _name;
   final List<TexSnippet> items;
 }
 
 /// Las estructuras: lo que tiene huecos que rellenar.
 const TexPalette texMathPalette = TexPalette('Matemáticas', [
-  TexSnippet(r'$x$', r'$', after: r'$', tooltip: 'Fórmula en la línea'),
-  TexSnippet(r'\[x\]', '\\[\n', after: '\n\\]', tooltip: 'Fórmula aparte'),
+  TexSnippet(
+    r'$x$',
+    r'$',
+    after: r'$',
+    tooltip: 'Fórmula en la línea',
+    opensMath: true,
+  ),
+  TexSnippet(
+    r'\[x\]',
+    '\\[\n',
+    after: '\n\\]',
+    tooltip: 'Fórmula aparte',
+    opensMath: true,
+  ),
   TexSnippet('a/b', r'\frac{', after: '}{}', tooltip: 'Fracción'),
   TexSnippet('√', r'\sqrt{', after: '}', tooltip: 'Raíz'),
   TexSnippet('xⁿ', '^{', after: '}', tooltip: 'Exponente'),

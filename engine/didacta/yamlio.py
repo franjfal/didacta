@@ -120,32 +120,96 @@ def load_file(path):
         raise YamlError("%s: %s" % (path, exc))
 
 
+#: `clave: |`, sola o como primer par de un elemento de lista (`- clave: |`).
+_LITERAL = re.compile(r"^(?P<lead>-\s+)?(?P<key>[^:#]+?)\s*:\s*\|(?P<chomp>[-+]?)$")
+
+#: Lo que ocupa el sitio de un bloque literal hasta que se lee su valor.
+_LITERAL_MARK = "\x00literal:"
+
+#: Los bloques literales del fichero que se está leyendo, por línea.
+_literals = {}
+
+
 def _loads_subset(text):
     """Parse the supported YAML subset into nested dicts and lists.
 
     Supported, because it is all the schemas need: nested block mappings, block
     sequences (including sequences of mappings, as in ``users:``), inline
     ``[a, b]`` lists, inline ``{k: v}`` mappings, quoted and bare scalars,
-    comments and blank lines.
+    literal ``|`` blocks, comments and blank lines.
 
     Anything else raises :class:`SidecarError`, so a hand-edited file that
     drifts outside the subset is reported rather than silently misread.
+
+    Los bloques literales entraron con los snippets, que guardan LaTeX de
+    varias líneas --una definición, un texto de ejemplo-- y no caben en una
+    cadena entre comillas sin escapar cada barra. Se recogen aquí, antes que
+    nada, porque dentro de uno una línea que empieza por `#` es LaTeX y no un
+    comentario, y una línea en blanco es parte del texto.
     """
+    raw_lines = text.split("\n")
     lines = []
-    for number, raw in enumerate(text.split("\n"), start=1):
+    literals = {}
+    number = 0
+    while number < len(raw_lines):
+        raw = raw_lines[number]
+        number += 1
         stripped = raw.strip()
         if not stripped or stripped.startswith("#") or stripped in ("---", "..."):
             continue
         if raw.lstrip().startswith("\t") or "\t" in raw[: len(raw) - len(raw.lstrip())]:
             raise YamlError("line %d: tabs are not valid YAML indentation" % number)
-        lines.append((len(raw) - len(raw.lstrip()), stripped, number))
+        indent = len(raw) - len(raw.lstrip())
+        literal = _LITERAL.match(stripped)
+        at = number
+        if literal:
+            # El cuerpo es lo que está más sangrado que la clave. La clave de
+            # `- clave: |` está dos columnas más adentro que el guion.
+            key_indent = indent + (len(literal.group("lead")) if literal.group("lead") else 0)
+            body = []
+            while number < len(raw_lines):
+                candidate = raw_lines[number]
+                if candidate.strip() and (
+                    len(candidate) - len(candidate.lstrip()) <= key_indent
+                ):
+                    break
+                body.append(candidate)
+                number += 1
+            literals[at] = _literal_text(body, literal.group("chomp"))
+            stripped = "%s%s: %s%d" % (
+                literal.group("lead") or "", literal.group("key"),
+                _LITERAL_MARK, at,
+            )
+        lines.append((indent, stripped, at))
 
     if not lines:
         return {}
-    value, index = _parse_block(lines, 0, lines[0][0])
+    global _literals
+    previous, _literals = _literals, literals
+    try:
+        value, index = _parse_block(lines, 0, lines[0][0])
+    finally:
+        _literals = previous
     if index != len(lines):
         raise YamlError("line %d: unexpected indentation" % lines[index][2])
     return value if isinstance(value, (dict, list)) else {}
+
+
+def _literal_text(body, chomp):
+    """El texto de un bloque `|`, sin su sangría y con el final que pide.
+
+    La sangría es la de la primera línea con algo, como en YAML. `|` deja un
+    salto al final, `|-` ninguno y `|+` todos los que hubiera.
+    """
+    filled = [line for line in body if line.strip()]
+    if not filled:
+        return ""
+    margin = min(len(line) - len(line.lstrip()) for line in filled)
+    text = "\n".join(line[margin:] if line.strip() else "" for line in body)
+    if chomp == "+":
+        return text + "\n"
+    text = text.rstrip("\n")
+    return text if chomp == "-" else text + "\n"
 
 
 def _parse_block(lines, index, indent):
@@ -236,6 +300,8 @@ def _parse_mapping(lines, index, indent):
 
 
 def _parse_value(raw, number):
+    if raw.startswith(_LITERAL_MARK):
+        return _literals.get(int(raw[len(_LITERAL_MARK):]), "")
     if raw.startswith("[") and raw.endswith("]"):
         return _parse_inline_list(raw)
     if raw.startswith("{") and raw.endswith("}"):

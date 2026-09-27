@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import '../model/catalogue.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 class DidactaTab extends StatelessWidget {
   const DidactaTab({
@@ -65,11 +66,11 @@ class DidactaTab extends StatelessWidget {
           // página: así se lee como la hoja que está delante y no como un
           // botón más de una fila de botones.
           color: selected
-              ? didactaCard
-              : (hovering ? didactaHover : Colors.transparent),
+              ? context.palette.card
+              : (hovering ? context.palette.hover : Colors.transparent),
           border: Border(
             bottom: BorderSide(
-              color: selected ? didactaAccentDark : Colors.transparent,
+              color: selected ? context.palette.accentDark : Colors.transparent,
               width: 2,
             ),
           ),
@@ -81,7 +82,10 @@ class DidactaTab extends StatelessWidget {
                 icon,
                 size: 15,
                 color:
-                    iconColour ?? (selected ? didactaAccentDark : didactaMuted),
+                    iconColour ??
+                    (selected
+                        ? context.palette.accentDark
+                        : context.palette.muted),
               ),
               const SizedBox(width: 5),
             ],
@@ -96,24 +100,36 @@ class DidactaTab extends StatelessWidget {
                 // roja que nadie mira; aquí es *esta* unidad, y es lo que hay
                 // que ir a arreglar.
                 color: state != null && !state.exists
-                    ? didactaTeacher
-                    : (selected ? didactaInk : didactaMuted),
+                    ? context.palette.teacher
+                    : (selected ? context.palette.ink : context.palette.muted),
               ),
             ),
             if (state != null) ...[
               const SizedBox(width: 6),
-              Container(
-                width: 7,
-                height: 7,
-                decoration: BoxDecoration(
-                  color: state.exists
-                      ? statusColour(state)
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: state.exists ? statusColour(state) : didactaTeacher,
-                    width: state.exists ? 1 : 1.4,
+              // El estado, también con palabras: el color solo no lo lee un
+              // lector de pantalla, ni quien no distingue el verde del azul.
+              Tooltip(
+                message: state.exists ? statusName(state) : tr('no existe'),
+                child: Semantics(
+                  label: tr('estado: {0}', [
+                    state.exists ? statusName(state) : tr('no existe'),
+                  ]),
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: state.exists
+                          ? context.palette.status(state)
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: state.exists
+                            ? context.palette.status(state)
+                            : context.palette.teacher,
+                        width: state.exists ? 1 : 1.4,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                  shape: BoxShape.circle,
                 ),
               ),
             ],
@@ -121,16 +137,30 @@ class DidactaTab extends StatelessWidget {
               const SizedBox(width: 4),
               // A dot rather than a word: it has to survive in a 38-pixel tab
               // and "sin guardar" is already spelled out in the editor bar.
-              const Icon(Icons.circle, size: 6, color: didactaEx),
+              Icon(
+                Icons.circle,
+                size: 6,
+                color: context.palette.ex,
+                semanticLabel: tr('sin guardar'),
+              ),
             ],
             if (onClose != null) ...[
               const SizedBox(width: 4),
+              // Con una etiqueta que diga qué cierra, y el blanco más grande
+              // que cabe en la pestaña: una cruz de dieciséis píxeles cuesta
+              // acertarla.
               InkWell(
                 onTap: onClose,
-                borderRadius: BorderRadius.circular(9),
-                child: const Padding(
-                  padding: EdgeInsets.all(2),
-                  child: Icon(Icons.close, size: 12, color: didactaMuted),
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: Icon(
+                    Icons.close,
+                    size: 12,
+                    color: context.palette.muted,
+                    semanticLabel: tr('Cerrar la pestaña'),
+                  ),
                 ),
               ),
             ],

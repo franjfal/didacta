@@ -849,5 +849,101 @@ class UseUnitTests(RepoCase):
                            "am-i@2025-2026/series")
 
 
+class MoveUnitTests(RepoCase):
+    """Mover una lección: otra carpeta, la misma lección.
+
+    Lo que tiene que quedar igual es todo lo que la encontraba: cada
+    composición que la nombra por su ruta, los temas vinculados, los
+    prerrequisitos de las demás, y lo que la nombra por su id.
+    """
+
+    def move(self, reference="a/b/c", to="a/z/c"):
+        return reuse.move_unit(self.root, self.settings, reference, to)
+
+    def units(self):
+        return repo_mod.scan_units(self.root, self.settings)[0]
+
+    def test_la_carpeta_cambia_de_sitio_con_todo_dentro(self):
+        self.write("content/a/b/c/figures/f.pdf", "pdf")
+        self.move()
+        self.assertFalse(os.path.exists(os.path.join(self.root, "content/a/b/c")))
+        self.assertEqual(self.read("content/a/z/c/es.tex"), "el texto de a/b/c\n")
+        self.assertEqual(self.read("content/a/z/c/figures/f.pdf"), "pdf")
+
+    def test_las_composiciones_la_siguen_encontrando(self):
+        self.move()
+        self.assertEqual(
+            self.document("am-i", "2025-2026", "series").unit_refs, ["a/z/c"])
+        # Los comentarios del `year.yaml` siguen donde estaban.
+        text = self.read("courses/am-i/2025-2026/year.yaml")
+        self.assertIn("      # TODO: va\n", text)
+        self.assertIn("      # - unit: a/b/d\n", text)
+
+    def test_un_tema_vinculado_se_reescribe_una_vez_para_todos(self):
+        self.link("am-i@2025-2026/series", "mat@2026-2027", as_id="series")
+        self.move()
+        for course, year in (("am-i", "2025-2026"), ("mat", "2026-2027")):
+            self.assertEqual(
+                self.document(course, year, "series").unit_refs, ["a/z/c"])
+
+    def test_el_id_no_cambia_aunque_saliera_de_la_ruta(self):
+        before = reuse.find_unit(self.root, self.units(), "a/b/c").id
+        self.move()
+        after = reuse.find_unit(self.root, self.units(), "a/z/c")
+        self.assertEqual(after.id, before)
+        self.assertIn("id: %s" % before, self.read("content/a/z/c/unit.yaml"))
+
+    def test_lo_que_la_nombra_por_id_no_se_toca(self):
+        self.write("content/a/b/c/unit.yaml",
+                   "id: u-123456789abc\nkind: theory\ntitle:\n  es: C\n")
+        text = self.read("courses/am-i/2025-2026/year.yaml").replace(
+            "- unit: a/b/c", "- unit: u-123456789abc")
+        self.write("courses/am-i/2025-2026/year.yaml", text)
+        self.move()
+        self.assertEqual(
+            self.document("am-i", "2025-2026", "series").unit_refs,
+            ["u-123456789abc"])
+
+    def test_los_prerrequisitos_de_las_demas(self):
+        self.write("content/a/b/d/unit.yaml",
+                   "kind: theory\ntitle:\n  es: d\n"
+                   "prerequisites: [a/b/e, a/b/c]\n")
+        self.write("content/a/b/e/unit.yaml",
+                   "kind: theory\ntitle:\n  es: e\n"
+                   "prerequisites:\n  - a/b/c\n  - a/b/d\ntags: []\n")
+        self.move()
+        self.assertIn("prerequisites: [a/b/e, a/z/c]",
+                      self.read("content/a/b/d/unit.yaml"))
+        self.assertIn("prerequisites:\n  - a/z/c\n  - a/b/d\ntags: []",
+                      self.read("content/a/b/e/unit.yaml"))
+
+    def test_la_categoria_y_el_tema_siguen_a_la_carpeta_si_la_seguian(self):
+        self.write("content/a/b/c/unit.yaml",
+                   "kind: theory\ntitle:\n  es: C\ncategory: a\n"
+                   "topic: otro-tema\n")
+        self.move(to="x/y/c")
+        text = self.read("content/x/y/c/unit.yaml")
+        self.assertIn("category: x\n", text)
+        # El tema no era el de la carpeta: es una clasificación que alguien
+        # puso a propósito, y mover no la deshace.
+        self.assertIn("topic: otro-tema\n", text)
+
+    def test_las_carpetas_vacias_se_van(self):
+        self.move(reference="a/b/c", to="a/z/c")
+        self.move(reference="a/b/d", to="a/z/d")
+        self.move(reference="a/b/e", to="a/z/e")
+        self.assertFalse(os.path.exists(os.path.join(self.root, "content/a/b")))
+        self.assertTrue(os.path.isdir(os.path.join(self.root, "content")))
+
+    def test_no_pisa_otra_leccion(self):
+        with self.assertRaises(reuse.ReuseError):
+            self.move(to="a/b/d")
+        self.assertTrue(os.path.isdir(os.path.join(self.root, "content/a/b/c")))
+
+    def test_ni_una_ruta_que_sale_del_area(self):
+        with self.assertRaises(reuse.ReuseError):
+            self.move(to="../fuera/c")
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

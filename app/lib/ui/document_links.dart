@@ -20,6 +20,7 @@ import '../model/composition_file.dart';
 import '../state/session.dart';
 import 'course_admin_ui.dart';
 import 'reuse.dart';
+import '../l10n/tr.dart';
 
 /// Los sitios donde se da este tema. Vacío cuando no está vinculado: uno
 /// solo no es una lista, es donde estás.
@@ -90,7 +91,9 @@ Future<void> splitDocumentLinks(
   if (places.length < 2) return;
   final request = await askSplit(
     context,
-    title: 'Dividir la vinculación de «${document.title(session.language)}»',
+    title: tr('Dividir la vinculación de «{0}»', [
+      document.title(session.language),
+    ]),
     places: [
       for (final place in places)
         SyncPlace(key: place.key, label: placementLabel(session, place)),
@@ -109,12 +112,18 @@ Future<void> splitDocumentLinks(
       paths: [
         for (final place in places) 'courses/${place.course}/${place.year}',
       ],
-      message:
-          'Dividir la vinculación de «${document.title(session.language)}» '
-          'en ${groups.length + 1} grupo(s)'
-          '${request.deep ? ', con sus lecciones' : ''}',
+      message: tr(
+        'Dividir la vinculación de «{0}» '
+        'en {1} grupo(s)'
+        '{2}',
+        [
+          document.title(session.language),
+          groups.length + 1,
+          request.deep ? tr(', con sus lecciones') : '',
+        ],
+      ),
     ),
-    done: 'Vinculación dividida. Cada grupo sigue sincronizado por dentro.',
+    done: tr('Vinculación dividida. Cada grupo sigue sincronizado por dentro.'),
     repo: document.repo,
   );
   if (ok) await session.reloadCatalogue();

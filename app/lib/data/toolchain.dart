@@ -33,6 +33,7 @@ class ToolState {
     this.version,
     this.problem,
     this.searched = const [],
+    this.notes = const [],
   });
 
   final Tool tool;
@@ -52,6 +53,10 @@ class ToolState {
 
   /// Los directorios donde se ha mirado, para poder decirlo.
   final List<String> searched;
+
+  /// Lo que le falta sin dejar de funcionar: LaTeX sin `biber` compila, pero
+  /// no las bibliografías. Se enseña debajo del tick, sin quitárselo.
+  final List<String> notes;
 
   bool get ready => path != null && problem == null;
 }

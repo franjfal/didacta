@@ -13,7 +13,7 @@ import 'package:didacta_app/model/tex_outline.dart';
 import 'package:didacta_app/ui/tex_highlight.dart';
 import 'package:didacta_app/ui/theme.dart';
 
-const TextStyle base = TextStyle(color: didactaInk);
+final TextStyle base = TextStyle(color: DidactaPalette.light.ink);
 
 /// El color con el que sale un trozo del texto.
 Color? colourOf(TextSpan root, String needle) {
@@ -33,60 +33,64 @@ TextSpan highlight(String text, {bool dim = false}) {
     slice: outline.slices.single,
     dim: dim,
     colourOf: (block) => switch (block.kind) {
-      TexBlockKind.slide => didactaAccentDark,
-      TexBlockKind.exercise => didactaEx,
-      _ => didactaThm,
+      TexBlockKind.slide => DidactaPalette.light.accentDark,
+      TexBlockKind.exercise => DidactaPalette.light.ex,
+      _ => DidactaPalette.light.thm,
     },
+    palette: DidactaPalette.light,
   );
 }
 
 void main() {
   test('el begin y el end llevan el color de su entorno', () {
     final span = highlight('\\begin{frame}\nUna cosa.\n\\end{frame}\n');
-    expect(colourOf(span, '\\begin{frame}'), didactaAccentDark);
-    expect(colourOf(span, '\\end{frame}'), didactaAccentDark);
-    expect(colourOf(span, 'Una cosa.'), didactaInk);
+    expect(colourOf(span, '\\begin{frame}'), DidactaPalette.light.accentDark);
+    expect(colourOf(span, '\\end{frame}'), DidactaPalette.light.accentDark);
+    expect(colourOf(span, 'Una cosa.'), DidactaPalette.light.ink);
   });
 
   test('un entorno sin cerrar sale en rojo, en su línea', () {
     final span = highlight('\\begin{frame}\nSin cerrar.\n');
     // El aviso, donde se causó: la banda de arriba dice el fichero, esto dice
     // la línea sin buscarla.
-    expect(colourOf(span, '\\begin{frame}'), didactaTeacher);
+    expect(colourOf(span, '\\begin{frame}'), DidactaPalette.light.teacher);
   });
 
   test('un comentario no se pinta como un entorno', () {
     final span = highlight('% \\begin{frame}\nProsa.\n');
     final comment = colourOf(span, '\\begin{frame}');
-    expect(comment, isNot(didactaAccentDark));
-    expect(comment, isNot(didactaInk));
+    expect(comment, isNot(DidactaPalette.light.accentDark));
+    expect(comment, isNot(DidactaPalette.light.ink));
   });
 
   test('lo que no se proyecta se apaga, y solo si se pide', () {
     const text = 'Prosa fuera.\n\\begin{frame}\nDentro.\n\\end{frame}\n';
-    expect(colourOf(highlight(text), 'Prosa fuera.'), didactaInk);
+    expect(colourOf(highlight(text), 'Prosa fuera.'), DidactaPalette.light.ink);
     expect(
       colourOf(highlight(text, dim: true), 'Prosa fuera.'),
-      isNot(didactaInk),
+      isNot(DidactaPalette.light.ink),
     );
     // Lo de dentro de la diapositiva no se apaga.
-    expect(colourOf(highlight(text, dim: true), 'Dentro.'), didactaInk);
+    expect(
+      colourOf(highlight(text, dim: true), 'Dentro.'),
+      DidactaPalette.light.ink,
+    );
   });
 
   test('una orden, unas matemáticas y un comentario van de tres colores', () {
     final span = highlight(r'\section{Normas} con $a+b$ % nota');
-    expect(colourOf(span, r'\section'), didactaAlgo);
-    expect(colourOf(span, 'a+b'), didactaProp);
-    expect(colourOf(span, '% nota'), isNot(didactaInk));
+    expect(colourOf(span, r'\section'), DidactaPalette.light.algo);
+    expect(colourOf(span, 'a+b'), DidactaPalette.light.prop);
+    expect(colourOf(span, '% nota'), isNot(DidactaPalette.light.ink));
     // Y lo que es prosa, prosa.
-    expect(colourOf(span, ' con '), didactaInk);
+    expect(colourOf(span, ' con '), DidactaPalette.light.ink);
   });
 
   test('el nombre del entorno manda sobre el color de la orden', () {
     final span = highlight('\\begin{frame}\nA\n\\end{frame}\n');
     // `\begin{frame}` entero va del color de la diapositiva, no del añil de
     // las órdenes: es lo que se busca al recorrer un fichero.
-    expect(colourOf(span, '\\begin{frame}'), didactaAccentDark);
+    expect(colourOf(span, '\\begin{frame}'), DidactaPalette.light.accentDark);
   });
 
   test('el texto entero sobrevive, carácter a carácter', () {

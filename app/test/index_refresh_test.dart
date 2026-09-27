@@ -11,6 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:didacta_app/data/course_admin.dart';
 import 'package:didacta_app/main.dart';
 import 'package:didacta_app/state/session.dart';
 
@@ -28,7 +29,72 @@ FakeSession sessionWith(FakeCompiler compiler, {int? reloads}) => FakeSession(
   compilerOverride: compiler,
 );
 
+/// Un motor que cuenta cuántas veces se le pregunta si el índice está viejo:
+/// cada pregunta es un proceso de Python.
+class CountingCompiler extends FakeCompiler {
+  int checks = 0;
+
+  @override
+  Future<({bool stale, String? reason})> indexStale() async {
+    checks += 1;
+    return super.indexStale();
+  }
+}
+
 void main() {
+  group('recargas de vuelo único', () {
+    FakeSession reloading(FakeCompiler compiler) => FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      compilerOverride: compiler,
+      reloadsForReal: true,
+    );
+
+    test('tres recargas a la vez miran el índice una vez', () async {
+      // Un guardado disparaba varias: la pantalla, la vigilancia del disco,
+      // el que llamó. Cada una lanzaba el motor.
+      final compiler = CountingCompiler();
+      final session = reloading(compiler);
+      await session.primeForTest(catalogueWith(defaultUnits()));
+
+      await Future.wait([
+        session.reloadCatalogue(),
+        session.reloadCatalogue(),
+        session.reloadCatalogue(),
+      ]);
+      expect(compiler.checks, 1);
+    });
+
+    test('recién comprobado, recargar no lo vuelve a mirar', () async {
+      final compiler = CountingCompiler();
+      final session = reloading(compiler);
+      await session.primeForTest(catalogueWith(defaultUnits()));
+
+      await session.refreshIndex();
+      expect(compiler.checks, 1);
+      await session.reloadCatalogue();
+      expect(compiler.checks, 1);
+      // Una vez: la marca se gasta, y la siguiente recarga vuelve a mirar.
+      await session.reloadCatalogue();
+      expect(compiler.checks, 2);
+    });
+  });
+
+  test('una operación del motor avisa de que deja el índice hecho', () async {
+    // Es lo que permite que la recarga de después no lo compruebe otra vez.
+    var indexed = 0;
+    final admin = CourseAdmin(
+      compiler: FakeCompiler(),
+      clone: FakeClone(),
+      author: (name: 'Javier', email: 'javier@uv.es'),
+      token: '',
+      pushOnCommit: false,
+      onIndexed: () => indexed += 1,
+    );
+    await admin.removeYear('am-iii', '2025-2026');
+    expect(indexed, 1);
+  });
+
   group('al recargar después de escribir', () {
     // El fallo que esto arregla, y que pasó de verdad: se cambia el título de
     // un grado, Didacta escribe `degrees.yaml`, dice que lo ha guardado... y

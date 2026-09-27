@@ -13,12 +13,20 @@
 /// quiere repetirlo por exportar, y quien lo necesita lo marca. Lo que no
 /// esté compilado no se exporta y se dice cuál falta, en lugar de salir un
 /// reparto al que le faltan tres PDF sin que nadie se entere.
+///
+/// Lo que sí viene apagado es todo lo que no es para el estudiante. La
+/// carpeta acaba en el aula virtual, y la plantilla de corrección del examen
+/// no puede ir detrás solo porque estaba compilada: las resoluciones se
+/// piden con una casilla y las copias del profesor con otra, aparte y en
+/// rojo, que es el color de lo que no se reparte.
 library;
 
 import 'package:flutter/material.dart';
 
+import '../data/compiler.dart';
 import '../model/catalogue.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// Lo que la pantalla decide.
 class ExportRequest {
@@ -26,7 +34,21 @@ class ExportRequest {
     required this.languages,
     required this.documents,
     required this.rebuild,
+    this.reach = ExportReach.students,
+    this.rebuildOnly = const [],
+    this.zip = false,
+    this.html = false,
   });
+
+  /// Si, además de los PDF, salen los apuntes en HTML accesible.
+  final bool html;
+
+  /// Los documentos que hay que compilar antes, cuando no se compila todo:
+  /// los que tienen algún PDF viejo o sin compilar en lo que se exporta.
+  final List<String> rebuildOnly;
+
+  /// Si, además de la carpeta, sale un .zip con todo.
+  final bool zip;
 
   final List<String> languages;
 
@@ -37,6 +59,9 @@ class ExportRequest {
 
   /// Si hay que compilarlos antes de copiarlos.
   final bool rebuild;
+
+  /// Hasta dónde puede enseñar lo que sale.
+  final ExportReach reach;
 }
 
 class ExportYearDialog extends StatefulWidget {
@@ -47,11 +72,27 @@ class ExportYearDialog extends StatefulWidget {
     required this.entry,
     required this.languages,
     required this.language,
+    this.outputs,
+    this.reveals = const {},
+    this.publishTo,
   });
+
+  /// Dónde se publica, cuando esto es «Publicar» y no «Exportar»: la
+  /// carpeta de este curso dentro de la de reparto.
+  final String? publishTo;
 
   final Course course;
   final String year;
   final CourseYear entry;
+
+  /// Lo que hay compilado de cada documento, por id. Null si no se sabe: sin
+  /// motor no hay a quién preguntar, y entonces no se avisa de nada en vez
+  /// de avisar de todo.
+  final Map<String, List<ExistingOutput>>? outputs;
+
+  /// Hasta dónde enseña cada plantilla, por id: una copia del profesor vieja
+  /// no es motivo de aviso en un reparto que no la lleva.
+  final Map<String, String> reveals;
 
   /// Los idiomas entre los que elegir: los de la asignatura.
   final List<String> languages;
@@ -71,6 +112,54 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
     for (final document in widget.entry.documents) document.id,
   };
   bool _rebuild = false;
+
+  /// Compilar antes lo que está viejo o sin compilar. Marcado: repartir un
+  /// PDF de antes de la última corrección es justo lo que no se nota hasta
+  /// que un estudiante pregunta.
+  bool _rebuildBehind = true;
+  bool _zip = false;
+  bool _html = false;
+  ExportReach _reach = ExportReach.students;
+
+  static const List<String> _revealOrder = [
+    'statements',
+    'answers',
+    'solutions',
+    'teacher',
+  ];
+
+  /// Si esta versión sale con el alcance elegido.
+  bool _exported(ExistingOutput output) {
+    final reveals = widget.reveals[output.profile];
+    if (reveals == null) return true;
+    return _revealOrder.indexOf(reveals) <=
+        _revealOrder.indexOf(_reach.engineName);
+  }
+
+  /// Los documentos elegidos con algún PDF viejo o sin compilar en lo que se
+  /// va a exportar, en el orden del curso.
+  List<Document> get _behind {
+    final outputs = widget.outputs;
+    if (outputs == null) return const [];
+    return [
+      for (final document in widget.entry.documents)
+        if (_documents.contains(document.id) &&
+            _isBehind(outputs[document.id] ?? const []))
+          document,
+    ];
+  }
+
+  bool _isBehind(List<ExistingOutput> found) {
+    for (final language in _languages) {
+      final here = [
+        for (final output in found)
+          if (output.language == language && _exported(output)) output,
+      ];
+      if (here.isEmpty) return true;
+      if (here.any((output) => !output.exists || output.stale)) return true;
+    }
+    return false;
+  }
 
   /// Los temas con lo que llevan, y los sueltos al final.
   late final List<ThemedDocuments> _groups = widget.entry.byTheme;
@@ -94,26 +183,56 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
     }
   });
 
+  /// «Tema 1, Hoja 2 y 3 más».
+  String _names(List<Document> documents) {
+    final titles = [
+      for (final document in documents.take(3))
+        '«${document.title(widget.language)}»',
+    ];
+    final rest = documents.length - titles.length;
+    if (rest > 0) return tr('{0} y {1} más', [titles.join(', '), rest]);
+    if (titles.length == 1) return titles.single;
+    return '${titles.sublist(0, titles.length - 1).join(', ')} y ${titles.last}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final everything = _documents.length == widget.entry.documents.length;
+    final behind = _behind;
     return AlertDialog(
-      title: Text('Exportar ${widget.course.title()} · ${widget.year}'),
+      title: Text(
+        '${widget.publishTo == null ? tr('Exportar') : tr('Publicar')} '
+        '${widget.course.title()} · ${widget.year}',
+      ),
       content: SizedBox(
         width: 600,
-        height: 560,
+        // Lo que quepa en la ventana, sin pasar de lo que hace falta: en una
+        // pantalla baja la lista de documentos se encoge, que es la parte que
+        // ya se desplaza.
+        height: (MediaQuery.sizeOf(context).height - 200).clamp(360, 760),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Saca los PDF a una carpeta, ordenados por tema. Con más de un '
-              'idioma, cada uno va en su propia carpeta.',
-              style: TextStyle(fontSize: 12.5, color: didactaMuted),
+            Text(
+              widget.publishTo == null
+                  ? tr(
+                      'Saca los PDF a una carpeta, ordenados por tema. Con más de '
+                      'un idioma, cada uno va en su propia carpeta. Sin tocar '
+                      'nada, solo sale lo que puede ver un estudiante.',
+                    )
+                  : tr(
+                      'A la carpeta de reparto, que se sincroniza sola: '
+                      '{0}. Ordenado por tema, y sin tocar '
+                      'nada, solo lo que puede ver un estudiante.',
+                      [widget.publishTo],
+                    ),
+              key: const Key('export-intro'),
+              style: TextStyle(fontSize: 12.5, color: context.palette.muted),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Idiomas',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('Idiomas'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 5),
             Wrap(
@@ -137,9 +256,12 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Text(
-                  'Qué se exporta',
-                  style: TextStyle(fontSize: 11.5, color: didactaMuted),
+                Text(
+                  tr('Qué se exporta'),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
                 ),
                 const Spacer(),
                 TextButton(
@@ -153,7 +275,7 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
                       );
                     }
                   }),
-                  child: Text(everything ? 'Ninguno' : 'Todos'),
+                  child: Text(everything ? tr('Ninguno') : tr('Todos')),
                 ),
               ],
             ),
@@ -162,9 +284,9 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
               // pinta su fondo y su pulsación sobre el `Material` más
               // cercano, y una caja de color en medio los tapa.
               child: Material(
-                color: didactaCard,
+                color: context.palette.card,
                 shape: RoundedRectangleBorder(
-                  side: const BorderSide(color: didactaRule),
+                  side: BorderSide(color: context.palette.rule),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -177,6 +299,100 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
               ),
             ),
             const SizedBox(height: 8),
+            // Las resoluciones van incluidas en las copias del profesor: con
+            // esa marcada, esta se ve marcada y no se puede quitar, que es
+            // la verdad de lo que va a salir.
+            CheckboxListTile(
+              key: const Key('export-solutions'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _reach != ExportReach.students,
+              onChanged: _reach == ExportReach.teacher
+                  ? null
+                  : (on) => setState(
+                      () => _reach = (on ?? false)
+                          ? ExportReach.solutions
+                          : ExportReach.students,
+                    ),
+              title: Text(
+                tr('Con las resoluciones completas'),
+                style: TextStyle(fontSize: 13),
+              ),
+              subtitle: Text(
+                tr(
+                  'Los apuntes y las hojas resueltas. Sin marcar, salen los '
+                  'enunciados y, como mucho, los resultados.',
+                ),
+                style: TextStyle(fontSize: 11.5),
+              ),
+            ),
+            CheckboxListTile(
+              key: const Key('export-teacher'),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: context.palette.teacher,
+              value: _reach == ExportReach.teacher,
+              onChanged: (on) => setState(
+                () => _reach = (on ?? false)
+                    ? ExportReach.teacher
+                    : ExportReach.students,
+              ),
+              title: Text(
+                tr('También las copias del profesor'),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: context.palette.teacher,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                tr(
+                  'La plantilla de corrección del examen y las notas de clase. '
+                  'No es para el aula virtual.',
+                ),
+                style: TextStyle(fontSize: 11.5),
+              ),
+            ),
+            if (behind.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Note(
+                key: const Key('export-stale'),
+                tr(
+                  '{0} '
+                  'algún PDF desactualizado o sin compilar: '
+                  '{1}.',
+                  [
+                    behind.length == 1
+                        ? tr('Un documento tiene')
+                        : tr('{0} documentos tienen', [behind.length]),
+                    _names(behind),
+                  ],
+                ),
+                tone: context.palette.teacher,
+              ),
+              CheckboxListTile(
+                key: const Key('export-rebuild-stale'),
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: _rebuild || _rebuildBehind,
+                onChanged: _rebuild
+                    ? null
+                    : (on) => setState(() => _rebuildBehind = on ?? false),
+                title: Text(
+                  behind.length == 1
+                      ? tr('Compilar antes solo ese')
+                      : tr('Compilar antes solo esos {0}', [behind.length]),
+                  style: const TextStyle(fontSize: 13),
+                ),
+                subtitle: Text(
+                  tr('Lo demás está al día y se copia tal cual.'),
+                  style: TextStyle(fontSize: 11.5),
+                ),
+              ),
+            ],
             CheckboxListTile(
               key: const Key('export-rebuild'),
               dense: true,
@@ -184,14 +400,72 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
               controlAffinity: ListTileControlAffinity.leading,
               value: _rebuild,
               onChanged: (on) => setState(() => _rebuild = on ?? false),
-              title: const Text(
-                'Compilarlo todo antes de exportar',
+              title: Text(
+                tr('Compilarlo todo antes de exportar'),
                 style: TextStyle(fontSize: 13),
               ),
-              subtitle: const Text(
-                'Puede tardar. Sin marcar, se exporta lo que ya esté '
-                'compilado y se dice qué falta.',
+              subtitle: Text(
+                tr(
+                  'Puede tardar. Sin marcar, se exporta lo que ya esté '
+                  'compilado y se dice qué falta.',
+                ),
                 style: TextStyle(fontSize: 11.5),
+              ),
+            ),
+            // Los dos formatos de más, en una fila: son decisiones pequeñas y
+            // cada casilla le quitaba a la lista de documentos el alto de
+            // una fila y media. Lo que hace cada una, al pasar por encima.
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    tr('También:'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: context.palette.muted,
+                    ),
+                  ),
+                  Tooltip(
+                    message: tr(
+                      'Para el aula virtual: Moodle lo descomprime en un '
+                      'recurso Carpeta, con los temas dentro.',
+                    ),
+                    child: FilterChip(
+                      key: const Key('export-zip'),
+                      avatar: const Icon(Icons.folder_zip_outlined, size: 16),
+                      label: Text(tr('un .zip con todo')),
+                      selected: _zip,
+                      showCheckmark: false,
+                      onSelected: (on) => setState(() => _zip = on),
+                    ),
+                  ),
+                  // Para quien lee con un lector de pantalla o necesita el
+                  // texto grande: lo que piden los servicios de
+                  // accesibilidad.
+                  Tooltip(
+                    message: tr(
+                      'Para leerlos con un lector de pantalla o con el '
+                      'texto grande: una página al lado de cada PDF, con las '
+                      'mismas reglas. Las diapositivas no: se leen en sus '
+                      'apuntes.',
+                    ),
+                    child: FilterChip(
+                      key: const Key('export-html'),
+                      avatar: const Icon(
+                        Icons.accessibility_new_outlined,
+                        size: 16,
+                      ),
+                      label: Text(tr('los apuntes en HTML')),
+                      selected: _html,
+                      showCheckmark: false,
+                      onSelected: (on) => setState(() => _html = on),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -200,7 +474,7 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('export-confirm'),
@@ -216,10 +490,19 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
                         if (_documents.contains(document.id)) document.id,
                     ],
                     rebuild: _rebuild,
+                    rebuildOnly: _rebuild || !_rebuildBehind
+                        ? const []
+                        : [for (final document in behind) document.id],
+                    reach: _reach,
+                    zip: _zip,
+                    html: _html,
                   ),
                 )
               : null,
-          child: Text('Exportar ${_documents.length}'),
+          child: Text(
+            '${widget.publishTo == null ? tr('Exportar') : tr('Publicar')} '
+            '${_documents.length}',
+          ),
         ),
       ],
     );
@@ -227,7 +510,7 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
 
   List<Widget> _groupTiles(ThemedDocuments group) {
     final title = group.isLoose
-        ? 'Sin tema'
+        ? tr('Sin tema')
         : group.theme!.title(widget.language);
     return [
       CheckboxListTile(

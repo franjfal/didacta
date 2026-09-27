@@ -1,0 +1,168 @@
+{
+  "courses": [
+    {
+      "code": "10001",
+      "degree": {
+        "en": "BSc in Mathematics",
+        "es": "Grado en Matemáticas",
+        "va": "Grau en Matemàtiques"
+      },
+      "degreeId": null,
+      "department": {
+        "en": "Department of Mathematics",
+        "es": "Departamento de Matemáticas",
+        "va": "Departament de Matemàtiques"
+      },
+      "id": "calculo-i",
+      "institution": "Universidad de ejemplo",
+      "language": "es",
+      "languages": [
+        "es",
+        "va",
+        "en"
+      ],
+      "teacher": "Tu nombre",
+      "title": {
+        "en": "Calculus I",
+        "es": "Cálculo I",
+        "va": "Càlcul I"
+      },
+      "years": {
+        "2026-2027": {
+          "documents": [
+            {
+              "content": null,
+              "id": "tema-1",
+              "kind": "theory",
+              "language": "es",
+              "profiles": [
+                "slides",
+                "slides-flat",
+                "notes",
+                "slides-teacher",
+                "notes-teacher"
+              ],
+              "structure": [
+                {
+                  "section": {
+                    "en": "The limit of a function",
+                    "es": "Límite de una función",
+                    "va": "Límit d'una funció"
+                  }
+                },
+                {
+                  "unit": "calculo/limites/definicion-de-limite"
+                },
+                {
+                  "unit": "calculo/limites/limite-por-definicion"
+                },
+                {
+                  "unit": "calculo/limites/algebra-de-limites"
+                },
+                {
+                  "section": {
+                    "en": "Continuity",
+                    "es": "Continuidad",
+                    "va": "Continuïtat"
+                  }
+                },
+                {
+                  "unit": "calculo/continuidad/funcion-continua"
+                },
+                {
+                  "unit": "calculo/continuidad/teorema-de-bolzano"
+                }
+              ],
+              "themes": [],
+              "title": {
+                "en": "Unit 1: limits and continuity",
+                "es": "Tema 1: límites y continuidad",
+                "va": "Tema 1: límits i continuïtat"
+              },
+              "unitRefs": [
+                "calculo/limites/definicion-de-limite",
+                "calculo/limites/limite-por-definicion",
+                "calculo/limites/algebra-de-limites",
+                "calculo/continuidad/funcion-continua",
+                "calculo/continuidad/teorema-de-bolzano"
+              ]
+            },
+            {
+              "content": null,
+              "id": "hoja-1",
+              "kind": "problems",
+              "language": "es",
+              "profiles": [
+                "problems",
+                "problems-answers",
+                "problems-teacher"
+              ],
+              "structure": [
+                {
+                  "problem": "calculo/limites/limites-de-cocientes"
+                },
+                {
+                  "problem": "calculo/continuidad/discontinuidades-evitables"
+                },
+                {
+                  "problem": "calculo/continuidad/tres-raices-por-bolzano"
+                }
+              ],
+              "themes": [],
+              "title": {
+                "en": "Problem sheet 1: limits and continuity",
+                "es": "Hoja 1: límites y continuidad",
+                "va": "Full 1: límits i continuïtat"
+              },
+              "unitRefs": [
+                "calculo/limites/limites-de-cocientes",
+                "calculo/continuidad/discontinuidades-evitables",
+                "calculo/continuidad/tres-raices-por-bolzano"
+              ]
+            },
+            {
+              "content": null,
+              "id": "parcial-1",
+              "kind": "exam",
+              "language": "es",
+              "profiles": [
+                "exam",
+                "exam-marking"
+              ],
+              "structure": [
+                {
+                  "problem": "calculo/continuidad/discontinuidades-evitables"
+                },
+                {
+                  "problem": "calculo/continuidad/tres-raices-por-bolzano"
+                }
+              ],
+              "themes": [],
+              "title": {
+                "en": "First midterm exam",
+                "es": "Primer parcial",
+                "va": "Primer parcial"
+              },
+              "unitRefs": [
+                "calculo/continuidad/discontinuidades-evitables",
+                "calculo/continuidad/tres-raices-por-bolzano"
+              ]
+            }
+          ],
+          "freezes": [],
+          "group": {
+            "en": "Group A",
+            "es": "Grupo A",
+            "va": "Grup A"
+          },
+          "language": "es",
+          "themes": [],
+          "year": "2026-2027"
+        }
+      }
+    }
+  ],
+  "degrees": [],
+  "schemaVersion": 1,
+  "shared": []
+}

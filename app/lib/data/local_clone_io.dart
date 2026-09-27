@@ -7,17 +7,22 @@
 /// source of truth for two thousand units.
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import '../model/file_history.dart';
+import '../model/text_search.dart';
+import 'diagnostics.dart';
+import 'git_path_io.dart';
 import 'local_clone.dart';
+import '../l10n/tr.dart';
 
 bool get supported => true;
 
 Future<bool> gitAvailable() async {
   try {
-    final result = await Process.run('git', ['--version']);
+    final result = await Process.run(gitExecutable(), ['--version']);
     return result.exitCode == 0;
   } on ProcessException {
     return false;
@@ -51,7 +56,8 @@ Future<String?> discoverClone({
     if (repo != null && repo.isNotEmpty) repo,
     'didacta_db',
   };
-  final home = Platform.environment['HOME'] ?? '';
+  final home =
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
   final candidates = <String>[];
 
   // Una variable de entorno, para quien lo tenga en un sitio raro y no
@@ -115,19 +121,25 @@ Future<LocalClone> cloneInto({
       // rather than refusing, because "the folder is not empty" is not
       // something an author can act on when the folder is the right one.
       onProgress?.call(
-        'La carpeta ya es un clon de $owner/$repo; '
-        'actualizándolo.',
+        tr(
+          'La carpeta ya es una copia de {0}/{1}; '
+          'actualizándolo.',
+          [owner, repo],
+        ),
       );
       await existing.pull(token: token, onProgress: onProgress);
       return existing;
     }
     throw CloneException(
-      'La carpeta $directory no está vacía y no es un clon de '
-      '$owner/$repo. Elige otra carpeta.',
+      tr(
+        'La carpeta {0} no está vacía y no es una copia de '
+        '{1}/{2}. Elige otra carpeta.',
+        [directory, owner, repo],
+      ),
     );
   }
 
-  onProgress?.call('Preguntando a GitHub por $owner/$repo…');
+  onProgress?.call(tr('Preguntando a GitHub por {0}/{1}…', [owner, repo]));
   // Antes de crear nada. Un repositorio recién creado en GitHub no tiene
   // ninguna rama, y git lo cuenta como «Remote branch main not found», que
   // ni dice lo que pasa ni deja ver que tiene arreglo.
@@ -152,7 +164,7 @@ Future<LocalClone> cloneInto({
       directory: directory,
       token: token,
       onProgress: onProgress,
-      what: 'clonar $owner/$repo',
+      what: tr('clonar {0}/{1}', [owner, repo]),
     ),
   );
   return _GitClone(directory: directory);
@@ -168,14 +180,19 @@ Future<LocalClone> initializeInto({
   required String authorName,
   required String authorEmail,
   String? url,
+  Map<String, String>? files,
+  String? message,
   void Function(String line)? onProgress,
 }) async {
   final remote = url ?? _url(owner, repo);
   final target = Directory(directory);
   if (await target.exists() && target.listSync().isNotEmpty) {
     throw CloneException(
-      'La carpeta $directory no está vacía. Vacíala o elige otra antes de '
-      'preparar $owner/$repo.',
+      tr(
+        'La carpeta {0} no está vacía. Vacíala o elige otra antes de '
+        'preparar {1}/{2}.',
+        [directory, owner, repo],
+      ),
     );
   }
 
@@ -183,8 +200,11 @@ Future<LocalClone> initializeInto({
   // aceptó, alguien puede haber empujado.
   if (!await _remoteIsEmpty(remote, token: token, label: '$owner/$repo')) {
     throw CloneException(
-      '$owner/$repo ya no está vacío: alguien ha subido algo mientras tanto. '
-      'Vuelve a añadirlo desde GitHub.',
+      tr(
+        '{0}/{1} ya no está vacío: alguien ha subido algo mientras tanto. '
+        'Vuelve a añadirlo desde GitHub.',
+        [owner, repo],
+      ),
     );
   }
 
@@ -202,7 +222,7 @@ Future<LocalClone> initializeInto({
   );
 
   await _intoFresh(target, () async {
-    await git(['clone', remote, '.'], 'clonar $owner/$repo');
+    await git(['clone', remote, '.'], tr('clonar {0}/{1}', [owner, repo]));
 
     // Un clon vacío apunta HEAD a la rama por defecto de *esta* máquina, que
     // puede ser `master`. La que manda es la del repositorio en GitHub.
@@ -210,18 +230,29 @@ Future<LocalClone> initializeInto({
       'symbolic-ref',
       'HEAD',
       'refs/heads/$branch',
-    ], 'elegir la rama $branch');
+    ], tr('elegir la rama {0}', [branch]));
 
-    File(
-      '$directory/$_marker',
-    ).writeAsStringSync(LocalClone.settingsFor(title));
-    File('$directory/.gitignore').writeAsStringSync(LocalClone.ignoredFiles);
-    await git([
-      'add',
-      '--',
-      _marker,
-      '.gitignore',
-    ], 'preparar el primer commit');
+    final seed = <String, String>{
+      ...files ??
+          {
+            _marker: LocalClone.settingsFor(title),
+            '.gitignore': LocalClone.ignoredFiles,
+          },
+    };
+    seed.putIfAbsent('.gitattributes', () => LocalClone.textAttributes);
+    for (final MapEntry(key: path, value: text) in seed.entries) {
+      // Nada fuera de la carpeta: una ruta con `..` o absoluta escribiría en
+      // el disco de alguien lo que venía para el repositorio.
+      if (path.startsWith('/') || path.split('/').contains('..')) {
+        throw CloneException(
+          tr('{0} no es una ruta dentro del repositorio.', [path]),
+        );
+      }
+      final file = File('$directory/$path');
+      file.parent.createSync(recursive: true);
+      file.writeAsStringSync(text);
+    }
+    await git(['add', '--all'], tr('preparar el primer cambio'));
 
     await git(
       [
@@ -231,9 +262,9 @@ Future<LocalClone> initializeInto({
         'user.email=$authorEmail',
         'commit',
         '--message',
-        'Preparar el repositorio de contenido de Didacta',
+        message ?? tr('Preparar el repositorio de contenido de Didacta'),
       ],
-      'hacer el primer commit',
+      tr('guardar el primer cambio'),
       environment: {
         'GIT_AUTHOR_NAME': authorName,
         'GIT_AUTHOR_EMAIL': authorEmail,
@@ -249,7 +280,7 @@ Future<LocalClone> initializeInto({
       '--set-upstream',
       'origin',
       branch,
-    ], 'enviar el primer commit a GitHub');
+    ], tr('enviar el primer cambio a GitHub'));
   });
   return _GitClone(directory: directory);
 }
@@ -267,7 +298,7 @@ Future<bool> _remoteIsEmpty(
     ['ls-remote', remote],
     // En una carpeta que seguro que existe: la de destino todavía no.
     directory: Directory.systemTemp.path,
-    what: 'consultar $label',
+    what: tr('consultar {0}', [label]),
     token: token,
   );
   return refs.trim().isEmpty;
@@ -363,22 +394,25 @@ class _GitClone implements LocalClone {
     // confirmar enseñaría una carpeta en vez de decir qué ficheros lleva
     // dentro. Un commit que se firma sin ver qué contiene es como se envía
     // por error media traducción.
+    //
+    // Con `-z`: los campos separados por un nulo y las rutas tal cual. Sin
+    // él, git entrecomilla y escapa en octal lo que no es ASCII, así que
+    // `análisis` llegaba como `"an\303\241lisis"` y la ruta no era la de
+    // ningún fichero: se descartaba al confirmar sin decir nada, que en un
+    // material en castellano y valenciano es casi todo.
     final dirty = await _run([
       'status',
       '--porcelain',
+      '-z',
       '--untracked-files=all',
-    ], what: 'ver el estado');
+    ], what: tr('ver el estado'));
     return CloneStatus(
       directory: directory,
       branch: branch,
       head: head,
       ahead: ahead,
       behind: behind,
-      dirtyPaths: [
-        for (final line in dirty.split('\n'))
-          if (_porcelain.firstMatch(line) case final match?)
-            _pathOf(match.group(2)!),
-      ],
+      dirtyPaths: _dirtyPathsOf(dirty),
     );
   }
 
@@ -394,20 +428,21 @@ class _GitClone implements LocalClone {
   }
 
   @override
-  Future<void> setAuthor({required String name, required String email}) async {
-    await _run([
-      'config',
-      '--local',
-      'user.name',
-      name,
-    ], what: 'guardar el nombre del autor');
-    await _run([
-      'config',
-      '--local',
-      'user.email',
-      email,
-    ], what: 'guardar el correo del autor');
-  }
+  Future<void> setAuthor({required String name, required String email}) =>
+      _exclusive(directory, () async {
+        await _run([
+          'config',
+          '--local',
+          'user.name',
+          name,
+        ], what: tr('guardar el nombre del autor'));
+        await _run([
+          'config',
+          '--local',
+          'user.email',
+          email,
+        ], what: tr('guardar el correo del autor'));
+      });
 
   /// A git command whose failure means "not set" rather than "broken".
   Future<String?> _optional(List<String> arguments) async {
@@ -422,7 +457,10 @@ class _GitClone implements LocalClone {
   Future<({String text, String sha})> readFile(String path) async {
     final file = File('$directory/$path');
     if (!await file.exists()) {
-      throw CloneException('$path no existe en el clon.');
+      throw CloneException(
+        tr('{0} no existe en tu copia del repositorio.', [path]),
+        kind: CloneFailure.missing,
+      );
     }
     final text = await file.readAsString();
     return (text: text, sha: await _hashOf(path));
@@ -452,7 +490,22 @@ class _GitClone implements LocalClone {
       '--',
       path,
     ]);
+    return _commitsIn(output);
+  }
 
+  @override
+  Future<List<FileCommit>> recent({int limit = 20}) async {
+    final output = await _text([
+      'log',
+      '--max-count=$limit',
+      '--date=iso-strict',
+      '--format=%H$_fieldSeparator%an$_fieldSeparator%ae$_fieldSeparator'
+          '%aI$_fieldSeparator%s$_fieldSeparator%b$_recordSeparator',
+    ]);
+    return _commitsIn(output);
+  }
+
+  List<FileCommit> _commitsIn(String output) {
     final commits = <FileCommit>[];
     for (final record in output.split(_recordSeparator)) {
       final trimmed = record.trim();
@@ -503,7 +556,10 @@ class _GitClone implements LocalClone {
       // `_run` y no `_text`: recortar los espacios de un fichero sería
       // enseñar un contenido que no es el que hay. Lo único que se quita es
       // el salto final, que git escribe siempre y que como línea no existe.
-      final text = await _run(['show', '$sha:$path'], what: 'leer $path');
+      final text = await _run([
+        'show',
+        '$sha:$path',
+      ], what: tr('leer {0}', [path]));
       return text.endsWith('\n') ? text.substring(0, text.length - 1) : text;
     } on CloneException {
       // En ese commit no había ningún fichero con ese nombre: o todavía no
@@ -517,13 +573,13 @@ class _GitClone implements LocalClone {
     required String path,
     required String text,
     required String expectedSha,
-  }) async {
+  }) => _exclusive(directory, () async {
     final file = File('$directory/$path');
     await _guard(file, path, expectedSha);
     await file.parent.create(recursive: true);
     await file.writeAsString(text);
     return _hashOf(path);
-  }
+  });
 
   /// El compare-and-set, antes de escribir nada.
   ///
@@ -534,19 +590,27 @@ class _GitClone implements LocalClone {
     final exists = await file.exists();
     if (expectedSha.isEmpty && exists) {
       throw CloneException(
-        '$path ya existe en el clon. Vuelve a cargarlo antes de guardar.',
+        tr('{0} ya existe en tu copia. Vuelve a cargarlo antes de guardar.', [
+          path,
+        ]),
+        kind: CloneFailure.conflict,
       );
     }
     if (expectedSha.isEmpty) return;
     if (!exists) {
       throw CloneException(
-        '$path ha desaparecido del clon desde que lo abriste.',
+        tr('{0} ha desaparecido de tu copia desde que lo abriste.', [path]),
+        kind: CloneFailure.conflict,
       );
     }
     if (await _hashOf(path) != expectedSha) {
       throw CloneException(
-        '$path ha cambiado en el clon desde que lo abriste. Vuelve a '
-        'cargarlo para no perder el otro cambio.',
+        tr(
+          '{0} ha cambiado en tu copia desde que lo abriste. Vuelve a '
+          'cargarlo para no perder el otro cambio.',
+          [path],
+        ),
+        kind: CloneFailure.conflict,
       );
     }
   }
@@ -561,13 +625,13 @@ class _GitClone implements LocalClone {
     required String authorEmail,
     required String token,
     bool push = true,
-  }) async {
+  }) => _exclusive(directory, () async {
     final file = File('$directory/$path');
     await _guard(file, path, expectedSha);
     await file.parent.create(recursive: true);
     await file.writeAsString(text);
 
-    await _run(['add', '--', path], what: 'preparar $path');
+    await _run(['add', '--', path], what: tr('preparar {0}', [path]));
     final staged = await _text(['diff', '--cached', '--name-only', '--', path]);
     if (staged.trim().isEmpty) {
       // Nothing actually changed. Returning the hash rather than making an
@@ -586,7 +650,7 @@ class _GitClone implements LocalClone {
         '--message', message,
         '--', path,
       ],
-      what: 'hacer el commit de $path',
+      what: tr('guardar {0} en el historial', [path]),
       environment: {
         'GIT_AUTHOR_NAME': authorName,
         'GIT_AUTHOR_EMAIL': authorEmail,
@@ -597,11 +661,16 @@ class _GitClone implements LocalClone {
 
     if (push) {
       // Deliberately after the commit and not instead of it: if the push
-      // fails the work is committed and recoverable, and the caller is told.
-      await this.push(token: token);
+      // fails the work is committed and recoverable, and the caller is told
+      // --as that, and not as a failed save--.
+      try {
+        await this.push(token: token);
+      } on CloneException catch (failed) {
+        throw UnsentException(sha: await _hashOf(path), cause: failed);
+      }
     }
     return _hashOf(path);
-  }
+  });
 
   @override
   Future<bool> commitPaths({
@@ -612,7 +681,7 @@ class _GitClone implements LocalClone {
     required String token,
     bool push = true,
     void Function(String line)? onProgress,
-  }) async {
+  }) => _exclusive(directory, () async {
     if (paths.isEmpty) return false;
 
     // Las rutas de las que git puede decir algo.
@@ -642,8 +711,8 @@ class _GitClone implements LocalClone {
     // de esas rutas, que es lo que hace falta: una asignatura que se va son
     // borrados, y una que se crea son ficheros nuevos.
     final plural = known.length == 1 ? 'ruta' : 'rutas';
-    onProgress?.call('\$ git add -A -- ${known.length} $plural');
-    await _run(['add', '-A', '--', ...known], what: 'preparar los cambios');
+    onProgress?.call(tr('\$ git add -A -- {0} {1}', [known.length, plural]));
+    await _run(['add', '-A', '--', ...known], what: tr('preparar los cambios'));
 
     final staged = await _text([
       'diff',
@@ -666,7 +735,7 @@ class _GitClone implements LocalClone {
         '--',
         ...known,
       ],
-      what: 'hacer el commit',
+      what: tr('guardar en el historial'),
       onProgress: onProgress,
       environment: {
         'GIT_AUTHOR_NAME': authorName,
@@ -676,26 +745,37 @@ class _GitClone implements LocalClone {
       },
     );
 
-    if (push) await this.push(token: token, onProgress: onProgress);
+    if (push) {
+      try {
+        await this.push(token: token, onProgress: onProgress);
+      } on CloneException catch (failed) {
+        throw UnsentException(sha: '', cause: failed);
+      }
+    }
     return true;
-  }
+  });
 
   @override
-  Future<void> fetch({required String token}) => _run(
-    // Solo las ramas: traerse las etiquetas de un repositorio de contenido es
-    // tráfico por nada.
-    ['fetch', '--no-tags', '--quiet'],
-    token: token,
-    what: 'mirar si hay cambios en el repositorio',
+  Future<void> fetch({required String token, Duration? timeout}) => _exclusive(
+    directory,
+    () => _run(
+      // Solo las ramas: traerse las etiquetas de un repositorio de contenido es
+      // tráfico por nada.
+      ['fetch', '--no-tags', '--quiet'],
+      token: token,
+      what: tr('mirar si hay cambios en el repositorio'),
+      timeout: timeout,
+    ),
   );
 
   @override
   Future<void> pull({
     required String token,
     void Function(String line)? onProgress,
-  }) {
+  }) => _exclusive(directory, () async {
+    await _discardGeneratedIndex(onProgress);
     onProgress?.call(r'$ git pull --ff-only');
-    return _run(
+    await _run(
       // `--ff-only`: a merge commit made behind someone's back is not a
       // thing an editor should produce. Diverged history is a conversation,
       // not an automatic resolution.
@@ -704,39 +784,73 @@ class _GitClone implements LocalClone {
       // a una tubería, y lo que se calla es justo el rato largo.
       ['pull', '--ff-only', if (onProgress != null) '--progress'],
       token: token,
-      what: 'traer los cambios del repositorio',
+      what: tr('traer los cambios del repositorio'),
       onProgress: onProgress,
     );
+  });
+
+  /// Deja `generated/` como está en el último commit, si tiene cambios.
+  ///
+  /// El índice está versionado y casi siempre sucio en local, porque la
+  /// aplicación lo regenera al abrir. En cuanto otra máquina enviaba el suyo,
+  /// `pull --ff-only` se negaba --«would be overwritten»-- y traer dejaba de
+  /// funcionar sin que la persona hubiera tocado nada. Como el índice es
+  /// determinista y se regenera después de traer, descartarlo no pierde
+  /// nada: lo que dice sale de los ficheros de al lado.
+  Future<void> _discardGeneratedIndex(
+    void Function(String line)? onProgress,
+  ) async {
+    if (!await Directory('$directory/generated').exists()) return;
+    final dirty = await _run([
+      'status',
+      '--porcelain',
+      '-z',
+      '--untracked-files=no',
+      '--',
+      'generated',
+    ], what: tr('mirar el índice'));
+    if (dirty.trim().isEmpty) return;
+    onProgress?.call(r'$ git checkout -- generated');
+    await _run([
+      'checkout',
+      '--',
+      'generated',
+    ], what: tr('dejar el índice como en el último commit'));
   }
 
   @override
   Future<void> push({
     required String token,
     void Function(String line)? onProgress,
-  }) {
+  }) => _exclusive(directory, () {
     onProgress?.call(r'$ git push');
     return _run(
       ['push', if (onProgress != null) '--progress'],
       token: token,
-      what: 'enviar los commits al repositorio',
+      what: tr('enviar los cambios a GitHub'),
       onProgress: onProgress,
     );
-  }
+  });
 
   Future<String> _hashOf(String path) => _text(['hash-object', '--', path]);
 
-  /// Two status characters, whitespace, then the path.
-  static final RegExp _porcelain = RegExp(r'^(..)\s+(\S.*)$');
-
   /// A rename is written `old -> new`; the new name is the one that exists.
-  static String _pathOf(String rest) {
-    final arrow = rest.indexOf(' -> ');
-    final path = arrow < 0 ? rest : rest.substring(arrow + 4);
-    // Paths with awkward characters come back quoted by git.
-    if (path.length >= 2 && path.startsWith('"') && path.endsWith('"')) {
-      return path.substring(1, path.length - 1);
+  /// Las rutas de `status --porcelain -z`.
+  ///
+  /// Cada entrada es `XY ruta`, y un renombrado o una copia traen detrás un
+  /// campo más con la ruta de origen, que no es un fichero pendiente: es de
+  /// dónde viene el que sí lo es.
+  static List<String> _dirtyPathsOf(String raw) {
+    final fields = raw.split('\u0000');
+    final paths = <String>[];
+    for (var i = 0; i < fields.length; i += 1) {
+      final field = fields[i];
+      if (field.length < 4) continue;
+      final code = field.substring(0, 2);
+      paths.add(field.substring(3));
+      if (code.contains('R') || code.contains('C')) i += 1;
     }
-    return path;
+    return paths;
   }
 
   // -- Congelaciones: commits, árboles aparte y diferencias ---------------
@@ -782,7 +896,7 @@ class _GitClone implements LocalClone {
     String sha, {
     required String token,
     void Function(FetchDepth step) onStep = _ignoreStep,
-  }) async {
+  }) => _exclusive(directory, () async {
     if (await hasCommit(sha)) return;
 
     // 1. Pedirlo por su nombre. Es lo barato, y es lo que GitHub permite
@@ -792,7 +906,7 @@ class _GitClone implements LocalClone {
       await _run(
         ['fetch', '--no-tags', '--quiet', 'origin', sha],
         token: token,
-        what: 'traer el commit $sha',
+        what: tr('traer la versión {0}', [sha]),
       );
       if (await hasCommit(sha)) return;
     } on CloneException {
@@ -809,7 +923,7 @@ class _GitClone implements LocalClone {
           await _run(
             ['fetch', '--no-tags', '--quiet', '--deepen=$depth'],
             token: token,
-            what: 'traer más historia',
+            what: tr('traer más historia'),
           );
         } on CloneException {
           break;
@@ -822,7 +936,7 @@ class _GitClone implements LocalClone {
       await _run(
         ['fetch', '--no-tags', '--quiet', '--unshallow'],
         token: token,
-        what: 'traer la historia entera',
+        what: tr('traer la historia entera'),
       );
       if (await hasCommit(sha)) return;
     } else {
@@ -832,21 +946,24 @@ class _GitClone implements LocalClone {
       await _run(
         ['fetch', '--no-tags', '--quiet', 'origin'],
         token: token,
-        what: 'traer los commits del repositorio',
+        what: tr('traer los cambios de GitHub'),
       );
       if (await hasCommit(sha)) return;
     }
 
     throw CloneException(
-      'El commit $sha no está en el repositorio, ni aquí ni en GitHub. '
-      'Puede que quien lo hizo no lo haya enviado todavía.',
+      tr(
+        'La versión {0} no está en el repositorio, ni aquí ni en GitHub. '
+        'Puede que quien lo hizo no lo haya enviado todavía.',
+        [sha],
+      ),
     );
-  }
+  });
 
   static void _ignoreStep(FetchDepth step) {}
 
   @override
-  Future<Worktree> worktreeAt(String sha) async {
+  Future<Worktree> worktreeAt(String sha) => _exclusive(directory, () async {
     final full = await _text(['rev-parse', '$sha^{commit}']);
     final path = '$_worktreeBase/$full';
 
@@ -869,17 +986,17 @@ class _GitClone implements LocalClone {
       // una foto, y crear una rama por cada una llenaría el repositorio de
       // ramas que nadie pidió.
       ['worktree', 'add', '--detach', '--quiet', path, full],
-      what: 'preparar la versión congelada $full',
+      what: tr('preparar la versión congelada {0}', [full]),
     );
     return Worktree(directory: path, commit: full);
-  }
+  });
 
   @override
-  Future<void> removeWorktree(String sha) async {
+  Future<void> removeWorktree(String sha) => _exclusive(directory, () async {
     if (sha.isEmpty) return;
     final full = await _optional(['rev-parse', '$sha^{commit}']);
     await _dropWorktree('$_worktreeBase/${(full ?? sha).trim()}');
-  }
+  });
 
   Future<void> _dropWorktree(String path) async {
     if (await Directory(path).exists()) {
@@ -892,7 +1009,7 @@ class _GitClone implements LocalClone {
           'remove',
           '--force',
           path,
-        ], what: 'quitar la versión congelada');
+        ], what: tr('quitar la versión congelada'));
       } on CloneException {
         await Directory(path).delete(recursive: true);
       }
@@ -907,8 +1024,12 @@ class _GitClone implements LocalClone {
     final found = <Worktree>[];
     for (final entry in base.listSync()) {
       if (entry is! Directory) continue;
+      // Por los dos separadores: en Windows la ruta viene con `\`.
       found.add(
-        Worktree(directory: entry.path, commit: entry.path.split('/').last),
+        Worktree(
+          directory: entry.path,
+          commit: entry.path.split(RegExp(r'[\\/]')).last,
+        ),
       );
     }
     found.sort((a, b) => a.commit.compareTo(b.commit));
@@ -916,7 +1037,7 @@ class _GitClone implements LocalClone {
   }
 
   @override
-  Future<int> clearWorktrees() async {
+  Future<int> clearWorktrees() => _exclusive(directory, () async {
     final found = await worktrees();
     for (final tree in found) {
       await _dropWorktree(tree.directory);
@@ -925,7 +1046,7 @@ class _GitClone implements LocalClone {
     if (await base.exists()) await base.delete(recursive: true);
     await _optional(['worktree', 'prune']);
     return found.length;
-  }
+  });
 
   @override
   Future<List<TreeChange>> changesBetween({
@@ -948,7 +1069,7 @@ class _GitClone implements LocalClone {
       to,
       '--',
       ...paths,
-    ], what: 'comparar $from con $to');
+    ], what: tr('comparar {0} con {1}', [from, to]));
     return _parseNameStatus(output);
   }
 
@@ -972,6 +1093,30 @@ class _GitClone implements LocalClone {
   }
 
   @override
+  Future<List<TextHit>> grep(String pattern, {int perFile = 3}) async {
+    try {
+      final output = await _run([
+        'grep',
+        '-n',
+        '-I',
+        '-E',
+        '--null',
+        '--max-count',
+        '$perFile',
+        '-e',
+        pattern,
+        '--',
+        '*.tex',
+      ], what: tr('buscar en el texto'));
+      return parseGrep(output);
+    } on CloneException catch (error) {
+      // Sin nada encontrado, git sale con 1 y no dice nada: no es un fallo.
+      if (error.stderr.trim().isEmpty) return const [];
+      rethrow;
+    }
+  }
+
+  @override
   Future<List<String>> pathsAt({required String sha, String under = ''}) async {
     try {
       final output = await _zText([
@@ -982,7 +1127,7 @@ class _GitClone implements LocalClone {
         sha,
         '--',
         if (under.isNotEmpty) under,
-      ], what: 'leer el árbol de $sha');
+      ], what: tr('leer el árbol de {0}', [sha]));
       return [
         for (final name in output.split(_nul))
           if (name.isNotEmpty) name,
@@ -1005,30 +1150,47 @@ class _GitClone implements LocalClone {
   Future<List<TreeChange>> restoreFrom({
     required String sha,
     required List<String> paths,
-  }) async {
+  }) => _exclusive(directory, () async {
     final changes = await previewRestore(sha: sha, paths: paths);
+    final rewrite = <String>[];
     for (final change in changes) {
       switch (change.kind) {
         // `added` aquí quiere decir «está en el commit congelado y no ahora»,
         // así que restaurarlo es volver a escribirlo.
         case TreeChangeKind.added:
         case TreeChangeKind.modified:
-          await _restoreOne(sha, change.path);
+          rewrite.add(change.path);
         case TreeChangeKind.removed:
           await _deleteOne(change.path);
         case TreeChangeKind.renamed:
-          await _restoreOne(sha, change.path);
+          rewrite.add(change.path);
           if (change.from.isNotEmpty) await _deleteOne(change.from);
       }
     }
+    if (rewrite.isNotEmpty) await _restoreAll(sha, rewrite);
     return changes;
-  }
+  });
 
-  Future<void> _restoreOne(String sha, String path) async {
-    final text = await _run(['show', '$sha:$path'], what: 'leer $path');
-    final file = File('$directory/$path');
-    await file.parent.create(recursive: true);
-    await file.writeAsString(text);
+  /// Escribe [paths] como estaban en [sha], byte a byte y sin tocar el
+  /// índice: queda como un cambio pendiente, igual que si se hubiera editado.
+  ///
+  /// Con `git restore` y no leyendo con `show` para escribir el texto, que es
+  /// como estaba: eso pasaba el fichero por un lector de líneas en UTF-8, así
+  /// que una figura PNG o PDF rompía la restauración a medias --y un `.tex`
+  /// con saltos de Windows volvía con los de Unix--.
+  Future<void> _restoreAll(String sha, List<String> paths) async {
+    // De cien en cien: una lista de rutas sin tope acaba pasándose de lo que
+    // el sistema deja poner en una línea de órdenes.
+    for (var start = 0; start < paths.length; start += 100) {
+      final end = start + 100 < paths.length ? start + 100 : paths.length;
+      await _run([
+        'restore',
+        '--source=$sha',
+        '--worktree',
+        '--',
+        ...paths.sublist(start, end),
+      ], what: tr('restaurar la versión congelada'));
+    }
   }
 
   Future<void> _deleteOne(String path) async {
@@ -1105,6 +1267,7 @@ class _GitClone implements LocalClone {
     String? token,
     void Function(String line)? onProgress,
     Map<String, String>? environment,
+    Duration? timeout,
   }) => _runIn(
     arguments,
     directory: directory,
@@ -1112,6 +1275,7 @@ class _GitClone implements LocalClone {
     token: token,
     onProgress: onProgress,
     environment: environment,
+    timeout: timeout,
   );
 }
 
@@ -1131,7 +1295,138 @@ Future<String> _run(
   environment: environment,
 );
 
+/// Lo último que se ha pedido hacer en cada clon, por su carpeta.
+final Map<String, Future<void>> _tails = {};
+
+/// Qué clones tiene ya cogidos la tarea en curso, para no esperarse a sí
+/// misma: guardar confirma y luego envía, y enviar también pide el clon.
+final Object _holding = Object();
+
+/// Hace [work] cuando nadie más esté escribiendo en el clon de [directory].
+///
+/// Una cola por carpeta y no por objeto: se crea un `LocalClone` nuevo en
+/// cada sitio que lo necesita, y dos objetos sobre la misma carpeta son el
+/// mismo repositorio. Sin esto chocaban dos guardados seguidos, las
+/// preferencias que se confirman solas a los cinco segundos y un «traer»
+/// pulsado desde dos sitios: `index.lock`, «cannot lock ref», o peor, un
+/// commit que se llevaba el fichero que estaba añadiendo el otro.
+///
+/// Solo lo que escribe --en el árbol, el índice o las referencias--. Leer
+/// (el estado, el historial, un fichero de otro commit) va por su lado: no
+/// tiene por qué esperar a que termine un envío lento.
+Future<T> _exclusive<T>(String directory, Future<T> Function() work) {
+  final key = Directory(directory).absolute.path;
+  final held = Zone.current[_holding] as Set<String>?;
+  if (held != null && held.contains(key)) return work();
+
+  final previous = _tails[key] ?? Future<void>.value();
+  final done = Completer<void>();
+  _tails[key] = done.future;
+  return previous
+      .then(
+        (_) => runZoned(
+          work,
+          zoneValues: {
+            _holding: {...?held, key},
+          },
+        ),
+      )
+      .whenComplete(() {
+        done.complete();
+        if (identical(_tails[key], done.future)) {
+          // Lo que se quita es el propio `done`, que ya ha terminado.
+          _tails.remove(key)?.ignore();
+        }
+      });
+}
+
+/// Las órdenes de git que hablan con GitHub.
+const Set<String> _overTheNetwork = {
+  'clone',
+  'fetch',
+  'pull',
+  'push',
+  'ls-remote',
+};
+
+/// La orden de git de una lista de argumentos: lo primero que no es un `-c`
+/// con su valor.
+String? _commandOf(List<String> arguments) {
+  for (var i = 0; i < arguments.length; i += 1) {
+    if (arguments[i] == '-c') {
+      i += 1;
+      continue;
+    }
+    if (!arguments[i].startsWith('-')) return arguments[i];
+  }
+  return null;
+}
+
+/// Cuánto se le deja a git antes de pararlo.
+///
+/// Generoso: el tope es para lo que se ha colgado, no para lo que va lento.
+/// Clonar un repositorio grande por una red de aula puede ser un cuarto de
+/// hora de verdad; lo que no es de verdad es quedarse esperando a un
+/// servidor que no contesta, y de eso se encarga además `lowSpeedLimit`.
+///
+/// Público para poder probarlo sin lanzar git: un tope que se pierde no
+/// falla en ningún test que lance git de verdad, solo el día que la red se
+/// queda a medias.
+Duration gitTimeLimit(List<String> arguments) =>
+    switch (_commandOf(arguments)) {
+      'clone' => const Duration(minutes: 15),
+      final c when _overTheNetwork.contains(c) => const Duration(minutes: 5),
+      _ => const Duration(minutes: 2),
+    };
+
+/// Lo que se le pasa a git de verdad para [arguments]: los `-c` de siempre
+/// delante, los de la red si es una orden de red y el ayudante del token si
+/// lo hay.
+///
+/// Aparte de [_runIn] por lo mismo que [gitTimeLimit]: `lowSpeedLimit` es lo
+/// que corta una conexión muerta antes del tope, y quitarlo sin querer no lo
+/// nota nadie hasta que un guardado se queda cinco minutos esperando.
+List<String> gitArguments(List<String> arguments, {String? token}) => [
+  // Las rutas tal cual en todo lo que las enseña --`diff --name-only`,
+  // `ls-files`--, y no entrecomilladas con los acentos en octal: se
+  // comparan con rutas de verdad, y `"an\303\241lisis"` no es igual a
+  // `análisis`.
+  '-c', 'core.quotePath=false',
+  // Los ficheros como están en el repositorio, sin convertir el fin de
+  // línea: el Git de Windows lo trae encendido de serie, y un `.tex` que
+  // vuelve con `\r\n` sale entero en cada diff. Lo que se normaliza lo
+  // dice el `.gitattributes`, no la máquina de cada uno.
+  '-c', 'core.autocrlf=false',
+  if (_overTheNetwork.contains(_commandOf(arguments))) ...[
+    // Menos de 1 KB/s durante 30 s es una conexión muerta.
+    '-c', 'http.lowSpeedLimit=1000',
+    '-c', 'http.lowSpeedTime=30',
+  ],
+  if (token != null && token.isNotEmpty) ...[
+    // An empty value first, which clears any helper git would otherwise
+    // inherit -- osxkeychain, a manager, a stale entry. Without this a
+    // wrong cached credential wins over the token that was just pasted.
+    '-c', 'credential.helper=',
+    // Then a helper that answers from the environment. The token is not in
+    // this string: `$DIDACTA_GIT_TOKEN` is expanded by the shell git runs
+    // the helper in, which inherits the environment below. So the token
+    // never appears in a command line, and never in .git/config.
+    '-c',
+    r'credential.helper=!f() { test "$1" = get && '
+        r'printf "username=x-access-token\npassword=%s\n" '
+        r'"$DIDACTA_GIT_TOKEN"; }; f',
+  ],
+  ...arguments,
+];
+
 /// Runs git, with the token in the environment and never anywhere else.
+///
+/// **Con tope de tiempo, y matándolo al vencer.** Sin él, un `fetch` con la
+/// red a medias --un portal cautivo, una wifi que se cae a mitad-- se quedaba
+/// esperando para siempre, y con él el guardado que lo había pedido: el
+/// editor en «guardando…» sin forma de salir. Las órdenes de red llevan
+/// además `http.lowSpeedLimit`, que corta en cuanto la transferencia se
+/// estanca en vez de esperar al tope entero.
 Future<String> _runIn(
   List<String> arguments, {
   required String directory,
@@ -1139,27 +1434,15 @@ Future<String> _runIn(
   String? token,
   void Function(String line)? onProgress,
   Map<String, String>? environment,
+  Duration? timeout,
 }) async {
-  final full = <String>[
-    if (token != null && token.isNotEmpty) ...[
-      // An empty value first, which clears any helper git would otherwise
-      // inherit -- osxkeychain, a manager, a stale entry. Without this a
-      // wrong cached credential wins over the token that was just pasted.
-      '-c', 'credential.helper=',
-      // Then a helper that answers from the environment. The token is not in
-      // this string: `$DIDACTA_GIT_TOKEN` is expanded by the shell git runs
-      // the helper in, which inherits the environment below. So the token
-      // never appears in a command line, and never in .git/config.
-      '-c',
-      r'credential.helper=!f() { test "$1" = get && '
-          r'printf "username=x-access-token\npassword=%s\n" '
-          r'"$DIDACTA_GIT_TOKEN"; }; f',
-    ],
-    ...arguments,
-  ];
+  final network = _overTheNetwork.contains(_commandOf(arguments));
+  final limit = timeout ?? gitTimeLimit(arguments);
+  final full = gitArguments(arguments, token: token);
 
+  final watch = Stopwatch()..start();
   final process = await Process.start(
-    'git',
+    gitExecutable(),
     full,
     workingDirectory: directory,
     environment: {
@@ -1178,15 +1461,19 @@ Future<String> _runIn(
 
   final out = StringBuffer();
   final err = StringBuffer();
+  // Sin reventar con lo que no es UTF-8: un `.tex` antiguo en Latin-1 en el
+  // historial lanzaba un `FormatException` que nadie espera de git, y la
+  // pantalla se quedaba sin contestar. Un carácter raro en lo que se enseña
+  // es mucho mejor que eso.
   final outDone = process.stdout
-      .transform(utf8.decoder)
+      .transform(const Utf8Decoder(allowMalformed: true))
       .transform(const LineSplitter())
       .forEach((line) {
         out.writeln(line);
         onProgress?.call(line);
       });
   final errDone = process.stderr
-      .transform(utf8.decoder)
+      .transform(const Utf8Decoder(allowMalformed: true))
       .transform(const LineSplitter())
       .forEach((line) {
         err.writeln(line);
@@ -1194,9 +1481,41 @@ Future<String> _runIn(
         onProgress?.call(line);
       });
 
-  final code = await process.exitCode;
-  await outDone;
-  await errDone;
+  var timedOut = false;
+  final code = await process.exitCode.timeout(
+    limit,
+    onTimeout: () {
+      timedOut = true;
+      process.kill(ProcessSignal.sigkill);
+      return -1;
+    },
+  );
+  // Con plazo también esto: si git se ha matado a medias, un hijo suyo
+  // --`git-remote-https`-- puede seguir con las tuberías abiertas, y esperar
+  // a que se cierren sería colgarse igual que antes.
+  await Future.wait([
+    outDone,
+    errDone,
+  ]).timeout(const Duration(seconds: 3), onTimeout: () => const []);
+  // Lo que se lanzó, sin la configuración que lleva delante: el ayudante de
+  // credenciales es ruido, y el token nunca va en los argumentos.
+  Diagnostics.instance.process(
+    program: 'git',
+    arguments: arguments,
+    exitCode: code,
+    took: watch.elapsed,
+    stderr: _redact(err.toString(), token),
+  );
+
+  if (timedOut) {
+    throw CloneException(
+      network
+          ? 'git no terminó de $what en ${_describe(limit)} y lo he parado. '
+                'Suele ser la red: vuelve a intentarlo cuando vaya bien.'
+          : 'git no terminó de $what en ${_describe(limit)} y lo he parado.',
+      stderr: _redact(err.toString().trim(), token),
+    );
+  }
 
   if (code != 0) {
     throw CloneException(
@@ -1207,13 +1526,17 @@ Future<String> _runIn(
   return out.toString();
 }
 
+String _describe(Duration limit) => limit.inMinutes >= 1
+    ? tr('{0} min', [limit.inMinutes])
+    : '${limit.inSeconds} s';
+
 /// Removes the token from anything about to be shown or logged.
 ///
 /// git does not normally echo a credential, but a URL it was given can end up
 /// in an error message, and an error message ends up in a screenshot.
 String _redact(String text, String? token) {
   if (token == null || token.isEmpty) return text;
-  return text.replaceAll(token, '«token»');
+  return text.replaceAll(token, tr('«token»'));
 }
 
 /// Qué hay en la carpeta donde iría un clon, sin tocarla.

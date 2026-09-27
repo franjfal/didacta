@@ -235,7 +235,7 @@ void main() {
           units: {'content/analysis/normed/definition': 'teoria'},
           repo: 'test/repo',
         ),
-        const SettingsPage(),
+        const SettingsPage(section: 'material'),
       );
 
       await openBlocks(tester);
@@ -271,7 +271,7 @@ void main() {
       final session = await pumpPage(
         tester,
         catalogue,
-        const SettingsPage(),
+        const SettingsPage(section: 'material'),
         size: const Size(1280, 2200),
         gateway: gateway,
       );
@@ -302,7 +302,7 @@ void main() {
           },
           repo: 'test/repo',
         ),
-        const SettingsPage(),
+        const SettingsPage(section: 'material'),
       );
 
       await openBlocks(tester);

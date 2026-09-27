@@ -45,7 +45,7 @@ quitarla de la lista obligaría a sumar uno de cabeza.
 |---|---|
 | **Mover a…** | cambia de sitio esta ubicación |
 | **Añadir vinculado a…** | otra ubicación del mismo tema |
-| **Duplicar en…** | una copia con identidad propia |
+| **Duplicar en…** | una copia con identidad propia, ya no vinculada; con **Duplicar también las lecciones**, con las suyas |
 | **Ver ubicaciones vinculadas** | dónde más se da |
 | **Gestionar vinculación…** | partir el grupo |
 | **Crear copia independiente** | separar solo esta ubicación |

@@ -196,7 +196,7 @@ void main() {
           ],
         ),
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       await openTemplates(tester);
 
       expect(find.byKey(const Key('template-slides')), findsOneWidget);
@@ -210,7 +210,7 @@ void main() {
       // Un repositorio recién abierto: se compila con las de serie, y la
       // pantalla tiene que poder enseñarlas para poder editarlas.
       final (session, _) = await sessionWith(catalogue: catalogueOf());
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       await openTemplates(tester);
 
       expect(find.byKey(const Key('template-book')), findsOneWidget);
@@ -232,7 +232,7 @@ void main() {
         ),
         files: {'templates.yaml': templatesYaml},
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       await openTemplates(tester);
 
       await tester.tap(find.byKey(const Key('template-active-slides')));
@@ -253,7 +253,7 @@ void main() {
         ),
         files: {'templates.yaml': templatesYaml},
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       await openTemplates(tester);
 
       await tester.tap(find.byKey(const Key('template-preamble-notes')));
@@ -274,7 +274,7 @@ void main() {
       // La única forma de que nadie se encuentre su material compilando
       // distinto sin saber por qué.
       final (session, gateway) = await sessionWith(catalogue: catalogueOf());
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       await openTemplates(tester);
 
       await tester.tap(find.byKey(const Key('template-edit-book')));
@@ -310,7 +310,7 @@ void main() {
         ),
         files: {'taxonomy.yaml': taxonomyYaml},
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
 
       // Desde la pantalla de bloques, que es donde se dice qué es cada parte
       // de la asignatura.
@@ -342,7 +342,7 @@ void main() {
         ),
         files: {'taxonomy.yaml': taxonomyYaml},
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       unawaited(showBlocks(tester.element(find.byType(SettingsPage)), session));
       await settle(tester);
       await tester.tap(find.byKey(const Key('block-templates-theory')));
@@ -375,14 +375,18 @@ void main() {
         ),
         files: {'taxonomy.yaml': taxonomyYaml},
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       unawaited(showBlocks(tester.element(find.byType(SettingsPage)), session));
       await settle(tester);
       await tester.tap(find.byKey(const Key('block-templates-theory')));
       await settle(tester);
 
-      // Se dice que hay algo que no se puede enseñar.
-      expect(find.textContaining('book'), findsOneWidget);
+      // Se dice que hay algo que no se puede enseñar, en el diálogo: el
+      // catálogo de la misma sección de Ajustes también lo avisa.
+      expect(
+        find.textContaining('que no se pueden enseñar aquí'),
+        findsOneWidget,
+      );
 
       await tester.tap(find.byKey(const Key('pick-template-slides')));
       await settle(tester);
@@ -407,7 +411,7 @@ void main() {
         ),
         files: {'taxonomy.yaml': taxonomyYaml},
       );
-      await pump(tester, session, const SettingsPage());
+      await pump(tester, session, const SettingsPage(section: 'material'));
       unawaited(showBlocks(tester.element(find.byType(SettingsPage)), session));
       await settle(tester);
       await tester.tap(find.byKey(const Key('block-templates-theory')));

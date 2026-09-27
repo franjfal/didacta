@@ -2,12 +2,14 @@
 
 Esta carpeta contiene el sistema LaTeX, el modelo de contenido, el motor de
 compilación, la herramienta, el migrador, los índices derivados y la aplicación
-completa: las siete rutas, el editor multilingüe, la edición de `unit.yaml` y el
+completa: las nueve rutas, el editor multilingüe, la edición de `unit.yaml` y el
 constructor de composiciones, sobre clones locales de varios repositorios a la
-vez, con la identidad de GitHub. Las 15 salidas funcionan; 255 tests de Python y 213 de Dart.
+vez, con la identidad de GitHub. Las 15 salidas funcionan; hay unos 800 tests de
+Python y unos 2100 de Dart, y `./build.command todo` los pasa todos.
 
-Lo hecho está al principio con lo que se aprendió haciéndolo, y lo que queda
-después, en orden de dependencia.
+Lo hecho está al principio con lo que se aprendió haciéndolo, y lo que queda,
+en «Pendiente», al final. La lista detallada de mejoras que faltan, con su
+tamaño y su orden, está en [`PLAN-DE-MEJORAS.md`](PLAN-DE-MEJORAS.md).
 
 ## Hecho: la migración
 
@@ -103,7 +105,9 @@ Lo que se puede hacer desde ella:
   comentarios ni los `TODO` del fichero;
 - **recomponer un documento** arrastrando, activando y desactivando entradas,
   escribiendo el `structure:` del `year.yaml`;
-- **ver el diff** de cualquiera de las dos cosas antes de hacer el commit.
+- **ver el diff** de cualquiera de las dos cosas antes de hacer el commit;
+- **crear una unidad** desde cero, con su `unit.yaml`, o a partir de otra;
+- **compilar** una unidad, un documento o un curso, y ver el PDF al lado.
 
 Tres reglas que impone siempre: todo cambio es un commit con autor y mensaje; una escritura es compare-and-set contra el `sha` con el que se leyó;
 y un conflicto se cuenta y se ofrece recargar, nunca reintentar.
@@ -120,41 +124,41 @@ Lo que se aprendió construyéndola, y que está en las decisiones D39–D63:
   sandbox no puede ejecutar `git` ni volver a abrir una carpeta elegida en otra
   sesión.
 
-Lo que falta:
+## Hecho: compilar desde la interfaz
 
-- **compilar desde la interfaz.** Con el clon en disco y LaTeX instalado ya es
-  posible: falta mostrar el log con los errores localizados en el fichero y la
-  línea correctos;
-- **crear una unidad desde cero.** Hoy se editan las que hay;
-- **regenerar el índice** desde la aplicación, en lugar de `didacta index`;
-- **indicador de qué PDF están desactualizados**, calculado por hashes sin
-  compilar.
+Se lanza `didacta build` o `didacta preview` desde la aplicación, en una cola
+que se puede detener, y la consola enseña el log. Lo que importa de él sale
+arriba: cada error con el fichero y la línea **de la unidad** --no la del
+`.tex` de arranque que la incluye--, un enlace que abre el editor en esa línea
+y, en diapositivas, qué transparencias se salen por abajo. Del PDF se vuelve a
+la fuente con ⌘ o Ctrl y clic, por SyncTeX.
 
-## 1. Compilar desde la interfaz
+Qué PDF están desactualizados se sabe **sin compilar**: al compilar bien se
+apunta junto al PDF la huella (sha256) de cada fichero que entró, y basta
+compararlas. Cambiar una lección marca el tema que la incluye.
 
-En escritorio ya es posible y es lo que más cambia el día a día: el clon
-está en disco y `didacta build` existe, así que falta lanzarlo, mostrar el
-log con los errores en el fichero y la línea correctos, y abrir el PDF. Las
-19 unidades que hoy no compilan de 2025-2026 se arreglarían leyéndolo.
+## Hecho: la bibliografía
 
-## 2. Bibliografía
+`latex/didacta-bibliography.sty`. El material citaba con `\cite` y `\cites`
+de biblatex, y sin biblatex esas unidades no compilaban. Ahora el `.bib` vive
+en `shared/bibliography.bib` del repositorio de contenido (o donde diga
+`didacta.yaml`), biblatex se carga solo si existe, y `didacta check` avisa
+antes de compilar de las citas que no tienen dónde resolverse.
 
-13 unidades del material citan con `\cite` y 5 de ellas con `\cites` de
-biblatex. Didacta no tiene nada de eso: ni `\addbibresource`, ni estilo, ni un
-sitio para el `.bib` en el modelo de contenido. Las que usan `\cites` no
-compilan, y el informe de migración lo dice unidad por unidad.
+## Pendiente
 
-Lo que hay que decidir: dónde vive la bibliografía (una por asignatura, una
-compartida, o las dos), y si se usa biblatex — que es lo que el material ya
-supone — o algo más simple.
+### El CI del material
 
-## 3. CI
+*Hecho.* `.github/workflows/material.yml` es un workflow reutilizable: comprueba,
+pone el índice al día, compila y reparte en dos paquetes --lo que se reparte y
+lo del profesor-- con `didacta export`. Cada repositorio de contenido lo llama
+con dos líneas fijando la versión; el ejemplo lo trae y Ajustes lo añade a los
+que ya existen (D81). Queda probarlo contra GitHub la primera vez que se
+publique una versión con él: aquí solo se ha probado lo que no depende de
+Actions.
 
-Compilar en cada push, publicar los PDF como artefactos, regenerar los índices.
-Los PDF no se versionan: se generan a partir del origen que está al lado.
+### Lo demás
 
-Lo que **sí** está hecho es el otro CI, el de la aplicación: «Publish Didacta
-Release» compila macOS, Windows y Linux, calcula los SHA-256 y publica el
-release aquí mismo, desde donde Didacta se actualiza sola; y «Publish the
-documentation site» construye la web, genera las capturas y reescribe la
-página de descarga. Está en [`docs/DISTRIBUTION.md`](docs/DISTRIBUTION.md).
+En [`PLAN-DE-MEJORAS.md`](PLAN-DE-MEJORAS.md): terminar de dividir `Session`
+--que las pantallas lean de cada pieza y no de la fachada-- y firmar la
+aplicación, que necesita los certificados de Apple y de Windows.

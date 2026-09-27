@@ -1,0 +1,89 @@
+# Cálculo I -- curso 2026-2027
+#
+# Selección, orden y estructura. Nada de contenido: cada `unit:` y cada
+# `problem:` de abajo es una referencia a una lección de `content/` o de
+# `problems/`, por su ruta. La lección vive una sola vez en la biblioteca, y
+# todos los documentos que la usan la usan a ella.
+#
+# Empezar el curso que viene es copiar este fichero y retocar la lista. Las
+# lecciones no se copian: el curso nuevo apunta a las mismas, así que una
+# errata corregida se corrige en todos los cursos a la vez.
+
+course: calculo-i
+year: 2026-2027
+
+# Traducible, como cualquier texto que se imprime.
+group:
+  es: Grupo A
+  va: Grup A
+  en: Group A
+
+language: es
+
+documents:
+  - id: tema-1
+    # Un tema de teoría.
+    kind: theory
+    # Entre comillas porque lleva dos puntos.
+    title:
+      es: "Tema 1: límites y continuidad"
+      va: "Tema 1: límits i continuïtat"
+      en: "Unit 1: limits and continuity"
+    # Qué salidas se compilan. Todas salen de los mismos `.tex`: las
+    # diapositivas para proyectar, las mismas sin pausas para colgar en el
+    # aula virtual, los apuntes, y las dos copias del profesor, que son las
+    # únicas donde salen las notas de `teaching`.
+    #
+    # Sin esta línea se compilaría «lo que toque» para un tema de teoría.
+    templates: [slides, slides-flat, notes, slides-teacher, notes-teacher]
+    structure:
+      # Los apartados son lo único de prosa que vive fuera de una lección,
+      # así que llevan su título en cada idioma.
+      - section:
+          es: Límite de una función
+          va: Límit d'una funció
+          en: The limit of a function
+      - unit: calculo/limites/definicion-de-limite
+      - unit: calculo/limites/limite-por-definicion
+      # Una línea comentada es una lección que existe y que este año no se da.
+      # Volver a darla es quitar la almohadilla.
+      # - unit: calculo/limites/historia-del-epsilon
+      - unit: calculo/limites/algebra-de-limites
+      - section:
+          es: Continuidad
+          va: Continuïtat
+          en: Continuity
+      - unit: calculo/continuidad/funcion-continua
+      - unit: calculo/continuidad/teorema-de-bolzano
+
+  - id: hoja-1
+    # Una hoja de problemas.
+    kind: problems
+    title:
+      es: "Hoja 1: límites y continuidad"
+      va: "Full 1: límits i continuïtat"
+      en: "Problem sheet 1: limits and continuity"
+    # Los tres niveles de un problema: solo enunciados (para repartir), con
+    # los resultados (para que se corrijan solos) y la copia del profesor,
+    # con la solución entera y los criterios de corrección.
+    templates: [problems, problems-answers, problems-teacher]
+    structure:
+      - problem: calculo/limites/limites-de-cocientes
+      - problem: calculo/continuidad/discontinuidades-evitables
+      - problem: calculo/continuidad/tres-raices-por-bolzano
+
+  - id: parcial-1
+    # Un examen.
+    kind: exam
+    title:
+      es: Primer parcial
+      va: Primer parcial
+      en: First midterm exam
+    # El examen y su corrección. En los dos desaparecen las pistas, y el del
+    # alumno deja espacio para contestar.
+    templates: [exam, exam-marking]
+    structure:
+      # Los mismos dos problemas que están en la hoja 1: no son copias, son
+      # referencias a las mismas lecciones.
+      - problem: calculo/continuidad/discontinuidades-evitables
+      - problem: calculo/continuidad/tres-raices-por-bolzano

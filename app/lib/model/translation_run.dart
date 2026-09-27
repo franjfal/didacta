@@ -18,6 +18,7 @@ library;
 
 import 'latex_protect.dart';
 import 'translation_memory.dart';
+import '../l10n/tr.dart';
 
 /// Lo que se hizo al traducir, para poder contarlo.
 class TranslationStats {
@@ -65,9 +66,16 @@ class TranslationStats {
   );
 
   @override
-  String toString() =>
-      '$segments segmentos · $reused de memoria · $translated traducidos'
-      '${refused > 0 ? ' · $refused sin aplicar' : ''}';
+  String toString() => tr(
+    '{0} segmentos · {1} de memoria · {2} traducidos'
+    '{3}',
+    [
+      segments,
+      reused,
+      translated,
+      refused > 0 ? tr(' · {0} sin aplicar', [refused]) : '',
+    ],
+  );
 }
 
 /// El resultado de traducir un fichero.
@@ -107,6 +115,69 @@ class TermCheck {
 
   /// Cómo tiene que aparecer traducido.
   final String target;
+}
+
+/// Cuánto costaría traducir algo, antes de pedirlo.
+class TranslationEstimate {
+  const TranslationEstimate({
+    this.files = 0,
+    this.segments = 0,
+    this.reused = 0,
+    this.characters = 0,
+    this.unreadable = 0,
+  });
+
+  final int files;
+
+  /// Los originales que no se han podido leer: de esos no se sabe cuánto
+  /// costarían, y no se puede decir que no cuestan nada.
+  final int unreadable;
+
+  /// Los párrafos con texto.
+  final int segments;
+
+  /// Los que ya están en la memoria y no se piden.
+  final int reused;
+
+  /// Los caracteres que se mandarían al proveedor, que es lo que se paga.
+  final int characters;
+
+  TranslationEstimate plus(TranslationEstimate other) => TranslationEstimate(
+    files: files + other.files,
+    segments: segments + other.segments,
+    reused: reused + other.reused,
+    characters: characters + other.characters,
+    unreadable: unreadable + other.unreadable,
+  );
+}
+
+/// Lo que se mandaría al traducir [text] con [memory], sin mandarlo.
+///
+/// La misma cuenta que hace [translateLatex] --los mismos segmentos, la misma
+/// memoria--, para que lo que se anuncia antes de pulsar sea lo que se paga
+/// después. Los párrafos repetidos dentro del mismo texto se cuentan una vez:
+/// la segunda vez ya están en la memoria.
+TranslationEstimate estimateLatex(String text, TranslationMemory memory) {
+  var segments = 0;
+  var reused = 0;
+  var characters = 0;
+  final asked = <String>{};
+  for (final segment in protectLatex(text)) {
+    if (segment.verbatim || segment.letters == 0) continue;
+    segments += 1;
+    if (memory.lookup(segment.text) != null || asked.contains(segment.text)) {
+      reused += 1;
+      continue;
+    }
+    asked.add(segment.text);
+    characters += segment.text.length;
+  }
+  return TranslationEstimate(
+    files: 1,
+    segments: segments,
+    reused: reused,
+    characters: characters,
+  );
 }
 
 /// Traduce un `.tex` entero.
@@ -158,8 +229,11 @@ Future<TranslationResult> translateLatex(
       // pondría cada traducción en el párrafo de al lado, que es peor que no
       // traducir: el fichero quedaría plausible y mal.
       throw StateError(
-        'El proveedor devolvió ${answers.length} traducciones para '
-        '${asked.length} trozos. No se aplica nada.',
+        tr(
+          'El proveedor devolvió {0} traducciones para '
+          '{1} trozos. No se aplica nada.',
+          [answers.length, asked.length],
+        ),
       );
     }
     for (var i = 0; i < pending.length; i += 1) {
@@ -187,8 +261,11 @@ Future<TranslationResult> translateLatex(
       // Etiquetas perdidas, duplicadas o inventadas. Se queda el original.
       refused += 1;
       warnings.add(
-        'Un párrafo volvió con la sintaxis cambiada y se ha dejado sin '
-        'traducir. Empieza por «${_preview(segment.text)}».',
+        tr(
+          'Un párrafo volvió con la sintaxis cambiada y se ha dejado sin '
+          'traducir. Empieza por «{0}».',
+          [_preview(segment.text)],
+        ),
       );
       out.write(segment.restore(segment.text) ?? segment.text);
       continue;
@@ -220,8 +297,11 @@ Future<TranslationResult> translateLatex(
     if (!text.toLowerCase().contains(term.source.toLowerCase())) continue;
     if (body.toLowerCase().contains(term.target.toLowerCase())) continue;
     warnings.add(
-      '«${term.source}» tendría que decirse «${term.target}», y no aparece '
-      'así en la traducción.',
+      tr(
+        '«{0}» tendría que decirse «{1}», y no aparece '
+        'así en la traducción.',
+        [term.source, term.target],
+      ),
     );
   }
 
@@ -242,4 +322,46 @@ Future<TranslationResult> translateLatex(
 String _preview(String text) {
   final clean = text.replaceAll(RegExp(r'<x id="\d+"/>'), '…').trim();
   return clean.length <= 48 ? clean : '${clean.substring(0, 48)}…';
+}
+
+/// Lo que se aprende de una traducción revisada: cada párrafo del original
+/// con el suyo corregido.
+///
+/// Es lo que hace que la memoria aprenda de las personas y no solo de la
+/// máquina: la frase que alguien corrigió al revisar sale corregida la
+/// próxima vez que aparezca, en cualquier lección. Solo cuando las dos
+/// versiones tienen la misma forma --los mismos párrafos, con las mismas
+/// fórmulas y órdenes en el mismo orden--: emparejar a ojo una traducción
+/// que añadió o quitó un párrafo enseñaría a la memoria frases cambiadas de
+/// sitio.
+List<MemoryEntry> learnFromReview(
+  String original,
+  String translation, {
+  String unit = '',
+  String by = '',
+  DateTime? when,
+}) {
+  final source = [
+    for (final segment in protectLatex(original))
+      if (!segment.verbatim && segment.letters > 0) segment,
+  ];
+  final target = [
+    for (final segment in protectLatex(translation))
+      if (!segment.verbatim && segment.letters > 0) segment,
+  ];
+  if (source.length != target.length) return const [];
+  final learned = <MemoryEntry>[];
+  for (var i = 0; i < source.length; i += 1) {
+    final a = source[i];
+    final b = target[i];
+    if (a.parts.length != b.parts.length) return const [];
+    for (var k = 0; k < a.parts.length; k += 1) {
+      if (a.parts[k].trim() != b.parts[k].trim()) return const [];
+    }
+    if (a.text == b.text) continue;
+    learned.add(
+      MemoryEntry(source: a.text, target: b.text, unit: unit, at: when, by: by),
+    );
+  }
+  return learned;
 }

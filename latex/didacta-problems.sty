@@ -36,6 +36,9 @@
 %% ---------------------------------------------------------------------------
 
 \newcounter{didactaproblem}
+%% Lo mismo que los teoremas en `didacta-theorems.sty`: en unas diapositivas
+%% con pausas, sin esto cada diapositiva del frame sumaba uno al problema.
+\@ifundefined{resetcounteronoverlays}{}{\resetcounteronoverlays{didactaproblem}}
 \newcommand{\didactaresetproblems}{\setcounter{didactaproblem}{0}}
 
 %% A stable label for cross-referencing a problem across outputs.

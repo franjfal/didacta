@@ -31,6 +31,7 @@ Future<void> settle(WidgetTester tester) async {
 Future<FakeGateway> pumpMetadata(
   WidgetTester tester, {
   FakeGateway? gateway,
+  List<Map<String, dynamic>>? units,
 }) async {
   // A tall window on purpose: the form is a `ListView`, which does not build
   // what is off screen, and scroll choreography in a dozen tests is noise
@@ -40,7 +41,7 @@ Future<FakeGateway> pumpMetadata(
   addTearDown(tester.view.reset);
 
   final used = gateway ?? FakeGateway();
-  final catalogue = catalogueWith([unitJson()]);
+  final catalogue = catalogueWith(units ?? [unitJson()]);
   final session = FakeSession(gatewayOverride: used, catalogue: catalogue);
   await session.primeForTest(catalogue);
 
@@ -98,6 +99,7 @@ void main() {
 
   testWidgets('saving shows the diff and then commits', (tester) async {
     final gateway = await pumpMetadata(tester);
+    await reviewEachSave(tester);
 
     await tester.tap(find.widgetWithText(ChoiceChip, kindName('handout')));
     await settle(tester);
@@ -111,7 +113,7 @@ void main() {
     // And the message names the field, not the file.
     expect(find.textContaining('Cambiar kind'), findsOneWidget);
 
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(gateway.commits, hasLength(1));
@@ -143,7 +145,7 @@ void main() {
     await tester.tap(save);
     await settle(tester);
     expect(find.textContaining('Cambiar título va'), findsOneWidget);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     final written = gateway.commits.single.text;
@@ -161,7 +163,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     // `duration_minutes: '50'` is a string and the schema wants a number.
@@ -180,7 +182,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(
@@ -205,7 +207,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(gateway.commits.single.text, contains('tags: [banach]'));
@@ -225,6 +227,9 @@ void main() {
 
   testWidgets('the raw file is one tap away', (tester) async {
     await pumpMetadata(tester);
+    // En la interfaz completa: en la esencial, el fichero en bruto no sale.
+    expect(find.byKey(const Key('metadata-raw')), findsNothing);
+    await useCompleteInterface(tester);
 
     await tester.tap(find.byIcon(Icons.code));
     await settle(tester);
@@ -248,7 +253,7 @@ void main() {
     await settle(tester);
     await tester.tap(save);
     await settle(tester);
-    await tester.tap(commit);
+    await tapIfShown(tester, commit);
     await settle(tester);
 
     expect(find.textContaining('ha cambiado'), findsWidgets);
@@ -287,10 +292,68 @@ void main() {
     );
     await settle(tester);
 
-    await tester.tap(find.text('unit.yaml'));
+    await tester.tap(find.byKey(const Key('metadata-tab')));
     await settle(tester);
 
     expect(find.text('IDENTIDAD'), findsOneWidget);
     expect(find.text('CLASIFICACIÓN'), findsOneWidget);
+  });
+
+  group('sugerencias', () {
+    Finder field(String key) => find.descendant(
+      of: find.byKey(ValueKey(key)),
+      matching: find.byType(TextField),
+    );
+
+    testWidgets('una categoría que no existe se dice', (tester) async {
+      await pumpMetadata(tester, units: defaultUnits());
+      expect(find.byKey(const Key('note-categoría')), findsNothing);
+      await tester.enterText(field('unit-category'), 'analisys');
+      await settle(tester);
+      expect(find.byKey(const Key('note-categoría')), findsOneWidget);
+      expect(find.textContaining('Categoría nueva'), findsOneWidget);
+    });
+
+    testWidgets('elegir una sugerencia la escribe', (tester) async {
+      final gateway = await pumpMetadata(tester, units: defaultUnits());
+      await tester.enterText(field('unit-category'), 'alg');
+      await settle(tester);
+      expect(find.byKey(const Key('suggestions')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('suggestion-algebra')));
+      await settle(tester);
+      expect(find.byKey(const Key('note-categoría')), findsNothing);
+
+      await tester.tap(save);
+      await settle(tester);
+      await tapIfShown(tester, commit);
+      await settle(tester);
+      expect(gateway.commits.single.text, contains('category: algebra'));
+    });
+
+    testWidgets('una etiqueta, de las que ya hay o nueva', (tester) async {
+      final gateway = await pumpMetadata(tester, units: defaultUnits());
+      final tag = find.descendant(
+        of: find.byKey(const Key('add-tag')),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(tag, 'ejer');
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('suggestion-ejercicios')));
+      await settle(tester);
+      // Una nueva, con Intro: va la primera de la lista, marcada.
+      await tester.enterText(tag, 'hilbert');
+      await settle(tester);
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(tester);
+
+      await tester.tap(save);
+      await settle(tester);
+      await tapIfShown(tester, commit);
+      await settle(tester);
+      expect(
+        gateway.commits.single.text,
+        contains('tags: [norma, banach, ejercicios, hilbert]'),
+      );
+    });
   });
 }

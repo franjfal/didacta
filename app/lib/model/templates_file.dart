@@ -14,6 +14,8 @@
 /// distintas a la misma pregunta.
 library;
 
+import '../l10n/tr.dart';
+
 /// Lo que no se puede hacer con este fichero.
 class TemplatesException implements Exception {
   const TemplatesException(this.message);
@@ -149,11 +151,11 @@ class TemplatesFile {
     List<String> languages = const [],
   }) {
     if (ids.contains(id)) {
-      throw TemplatesException('este repositorio ya declara `$id`');
+      throw TemplatesException(tr('este repositorio ya declara `{0}`', [id]));
     }
     if (documentClass.trim().isEmpty) {
-      throw const TemplatesException(
-        'una plantilla sin clase de documento no se puede compilar',
+      throw TemplatesException(
+        tr('una plantilla sin clase de documento no se puede compilar'),
       );
     }
     final kept = <String, String>{
@@ -174,10 +176,10 @@ class TemplatesFile {
         for (final code in languages)
           if (!kept.containsKey(code)) '      # TODO: $code',
       ],
-      '    class: ${documentClass.trim()}',
+      tr('    class: {0}', [documentClass.trim()]),
       if (classOptions.trim().isNotEmpty)
-        '    options: ${_quote(classOptions.trim())}',
-      if (pairs.isNotEmpty) '    axes: {${pairs.join(', ')}}',
+        tr('    options: {0}', [_quote(classOptions.trim())]),
+      if (pairs.isNotEmpty) tr('    axes: {{0}}', [pairs.join(', ')]),
     ];
 
     final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'templates');
@@ -219,7 +221,7 @@ class TemplatesFile {
     _lines.removeRange(template.firstLine, end + 1);
     if (ids.isEmpty) {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'templates');
-      if (at >= 0) _lines[at] = 'templates: []';
+      if (at >= 0) _lines[at] = tr('templates: []');
     }
   }
 
@@ -264,7 +266,7 @@ class TemplatesFile {
   _Template _require(String id) {
     final found = _find(id);
     if (found == null) {
-      throw TemplatesException('no se declara la plantilla `$id`');
+      throw TemplatesException(tr('no se declara la plantilla `{0}`', [id]));
     }
     return found;
   }

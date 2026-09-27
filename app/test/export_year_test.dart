@@ -8,7 +8,9 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/model/catalogue.dart';
+import 'package:didacta_app/ui/export_actions.dart';
 import 'package:didacta_app/ui/export_year.dart';
 import 'package:didacta_app/ui/theme.dart';
 
@@ -40,6 +42,7 @@ CourseYear entry() => CourseYear(
 Future<ExportRequest?> open(
   WidgetTester tester, {
   List<String> languages = const ['es', 'va'],
+  void Function(ExportRequest?)? onAnswer,
 }) async {
   tester.view.physicalSize = const Size(1100, 1200);
   tester.view.devicePixelRatio = 1.0;
@@ -68,6 +71,7 @@ Future<ExportRequest?> open(
                   language: 'es',
                 ),
               );
+              onAnswer?.call(answer);
             },
             child: const Text('abrir'),
           ),
@@ -78,6 +82,12 @@ Future<ExportRequest?> open(
   await tester.tap(find.text('abrir'));
   await tester.pumpAndSettle();
   return answer;
+}
+
+Future<void> tapKey(WidgetTester tester, String key) async {
+  await tester.ensureVisible(find.byKey(Key(key)));
+  await tester.tap(find.byKey(Key(key)));
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -206,5 +216,78 @@ void main() {
       find.byKey(const Key('export-rebuild')),
     );
     expect(box.value, isFalse);
+  });
+
+  group('lo que no es para el estudiante', () {
+    // La carpeta acaba en el aula virtual: la plantilla de corrección del
+    // examen no puede salir solo porque estaba compilada.
+    testWidgets('por defecto sale solo lo del estudiante', (tester) async {
+      ExportRequest? answer;
+      await open(tester, onAnswer: (a) => answer = a);
+      await tapKey(tester, 'export-confirm');
+      expect(answer?.reach, ExportReach.students);
+    });
+
+    testWidgets('las resoluciones se piden con su casilla', (tester) async {
+      ExportRequest? answer;
+      await open(tester, onAnswer: (a) => answer = a);
+      await tapKey(tester, 'export-solutions');
+      await tapKey(tester, 'export-confirm');
+      expect(answer?.reach, ExportReach.solutions);
+    });
+
+    testWidgets('las del profesor, con otra aparte y en rojo', (tester) async {
+      ExportRequest? answer;
+      await open(tester, onAnswer: (a) => answer = a);
+      final teacher = tester.widget<CheckboxListTile>(
+        find.byKey(const Key('export-teacher')),
+      );
+      expect(teacher.value, isFalse);
+      expect(teacher.activeColor, DidactaPalette.light.teacher);
+
+      await tapKey(tester, 'export-teacher');
+      // Llevan las resoluciones dentro: la otra casilla lo dice y no se
+      // puede quitar, que sería mentir sobre lo que sale.
+      final solutions = tester.widget<CheckboxListTile>(
+        find.byKey(const Key('export-solutions')),
+      );
+      expect(solutions.value, isTrue);
+      expect(solutions.onChanged, isNull);
+
+      await tapKey(tester, 'export-confirm');
+      expect(answer?.reach, ExportReach.teacher);
+    });
+
+    testWidgets('quitar las del profesor vuelve a lo del estudiante', (
+      tester,
+    ) async {
+      ExportRequest? answer;
+      await open(tester, onAnswer: (a) => answer = a);
+      await tapKey(tester, 'export-teacher');
+      await tapKey(tester, 'export-teacher');
+      await tapKey(tester, 'export-confirm');
+      expect(answer?.reach, ExportReach.students);
+    });
+  });
+
+  group('el aviso de después', () {
+    test('cuenta aparte lo que falta y lo que se ha dejado fuera', () {
+      final text = exportSummary(
+        copied: 4,
+        missing: 1,
+        withheld: 2,
+        to: '/aula',
+      );
+      expect(text, contains('4 fichero(s) exportados a /aula.'));
+      expect(text, contains('1 sin compilar'));
+      expect(text, contains('2 con soluciones o del profesor'));
+    });
+
+    test('sin nada fuera, solo lo que ha salido', () {
+      expect(
+        exportSummary(copied: 3, missing: 0, withheld: 0, to: '/aula'),
+        '3 fichero(s) exportados a /aula.',
+      );
+    });
   });
 }

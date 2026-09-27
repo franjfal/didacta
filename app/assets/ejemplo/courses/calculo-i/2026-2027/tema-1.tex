@@ -1,0 +1,45 @@
+% Tema 1: límites y continuidad.
+%
+% Un documento de Didacta es una portada y una lista de lecciones. Nada más:
+% ni preámbulo de sesenta líneas, ni \import con rutas ../../../, ni una copia
+% del contenido. Las lecciones están en la biblioteca y aquí solo se nombran.
+%
+% El mismo fichero da todas las salidas del tema. Desde la aplicación se elige
+% cuál con el botón de compilar; en el terminal,
+%
+%   didacta build tema-1                   todas las de year.yaml
+%   didacta build tema-1 -p slides -l va   las diapositivas, en valenciano
+
+\input{didacta-bootstrap}
+\usepackage{didacta}
+
+%% El título y los datos de la asignatura salen de `course.yaml` y
+%% `year.yaml`, en el idioma que se está compilando: Didacta los inyecta al
+%% compilar. Lo de aquí abajo es solo un respaldo, para que este fichero
+%% compilado fuera de Didacta siga teniendo una portada con título.
+\DidactaCourse{
+  title   = {Cálculo I},
+  teacher = {Tu nombre},
+}
+\DidactaDocument{Tema 1: límites y continuidad}
+
+\begin{document}
+\DidactaTitlePage
+\DidactaContents
+
+%% A partir de aquí va la composición, y la escribe el motor a partir de
+%% `year.yaml`, que es quien manda: lo que se añada, se quite o se reordene
+%% desde la aplicación se pone al día aquí al compilar. Una línea que empieza
+%% por `%%` es una lección comentada, que este año no se da.
+
+\DidactaSection{es={Límite de una función}, va={Límit d'una funció}, en={The limit of a function}}
+\DidactaUnit{calculo/limites/definicion-de-limite}
+\DidactaUnit{calculo/limites/limite-por-definicion}
+%% \DidactaUnit{calculo/limites/historia-del-epsilon}
+\DidactaUnit{calculo/limites/algebra-de-limites}
+
+\DidactaSection{es={Continuidad}, va={Continuïtat}, en={Continuity}}
+\DidactaUnit{calculo/continuidad/funcion-continua}
+\DidactaUnit{calculo/continuidad/teorema-de-bolzano}
+
+\end{document}

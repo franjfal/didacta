@@ -20,6 +20,7 @@ import 'shell.dart';
 import '../state/session.dart';
 import 'theme.dart';
 import 'translate_unit.dart';
+import '../l10n/tr.dart';
 
 class TranslationsPage extends StatefulWidget {
   const TranslationsPage({super.key});
@@ -90,12 +91,18 @@ class _TranslationsPageState extends State<TranslationsPage> {
     return Column(
       children: [
         PageHeader(
-          title: 'Traducción',
+          title: tr('Traducción'),
           subtitle: pending.length == all.length
-              ? '${all.length} de ${catalogue.units.length} unidades '
-                    'necesitan trabajo en $language'
-              : '${pending.length} de ${all.length} que necesitan trabajo '
-                    'en $language',
+              ? tr(
+                  '{0} de {1} unidades '
+                  'necesitan trabajo en {2}',
+                  [all.length, catalogue.units.length, language],
+                )
+              : tr(
+                  '{0} de {1} que necesitan trabajo '
+                  'en {2}',
+                  [pending.length, all.length, language],
+                ),
           bottom: Padding(
             padding: const EdgeInsets.only(bottom: 10),
             // Desplazable en horizontal: los dos selectores con sus tres
@@ -111,7 +118,7 @@ class _TranslationsPageState extends State<TranslationsPage> {
               child: Row(
                 children: [
                   _Picker(
-                    label: 'Idioma',
+                    label: tr('Idioma'),
                     child: SegmentedButton<String>(
                       showSelectedIcon: false,
                       style: const ButtonStyle(
@@ -133,7 +140,7 @@ class _TranslationsPageState extends State<TranslationsPage> {
                   // La clase de trabajo, con la misma forma y al lado del
                   // idioma: son la misma decisión partida en dos.
                   _Picker(
-                    label: 'Trabajo',
+                    label: tr('Trabajo'),
                     child: SegmentedButton<TranslationStatus>(
                       key: const Key('work-picker'),
                       showSelectedIcon: false,
@@ -176,10 +183,12 @@ class _TranslationsPageState extends State<TranslationsPage> {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Note(
-              'Su original ha cambiado desde que se tradujeron, así que '
-              'dicen algo que ya no es cierto — y compilan sin queja. Por eso '
-              'van primero.',
-              tone: statusColour(TranslationStatus.outdated),
+              tr(
+                'Su original ha cambiado desde que se tradujeron, así que '
+                'dicen algo que ya no es cierto — y compilan sin queja. Por eso '
+                'van primero.',
+              ),
+              tone: context.palette.status(TranslationStatus.outdated),
             ),
           ),
         // Lo marcado, y qué hacer con ello. Solo cuando hay algo: una barra
@@ -213,12 +222,14 @@ class _TranslationsPageState extends State<TranslationsPage> {
                         Icon(
                           Icons.check_circle_outline,
                           size: 32,
-                          color: statusColour(TranslationStatus.reviewed),
+                          color: context.palette.status(
+                            TranslationStatus.reviewed,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Nada pendiente en $language.',
-                          style: const TextStyle(color: didactaMuted),
+                          tr('Nada pendiente en {0}.', [language]),
+                          style: TextStyle(color: context.palette.muted),
                         ),
                       ],
                     ),
@@ -260,9 +271,9 @@ class _TranslationsPageState extends State<TranslationsPage> {
   /// Cómo se llama cada pestaña: **qué trabajo es**, no cómo se llama el
   /// estado. «En borrador» no dice qué hay que hacer; «sin revisar», sí.
   static String _tabName(TranslationStatus status) => switch (status) {
-    TranslationStatus.outdated => 'Desactualizadas',
-    TranslationStatus.missing => 'Sin traducir',
-    TranslationStatus.draft => 'Sin revisar',
+    TranslationStatus.outdated => tr('Desactualizadas'),
+    TranslationStatus.missing => tr('Sin traducir'),
+    TranslationStatus.draft => tr('Sin revisar'),
     _ => statusName(status),
   };
 
@@ -283,9 +294,16 @@ class _TranslationsPageState extends State<TranslationsPage> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          '${result.done} traducidos'
-          '${result.failed > 0 ? ', ${result.failed} sin hacer' : ''}'
-          '${result.warnings.isEmpty ? '' : ' — hay algo que mirar'}',
+          tr(
+            '{0} traducidos'
+            '{1}'
+            '{2}',
+            [
+              result.done,
+              result.failed > 0 ? tr(', {0} sin hacer', [result.failed]) : '',
+              result.warnings.isEmpty ? '' : tr(' — hay algo que mirar'),
+            ],
+          ),
         ),
       ),
     );
@@ -310,7 +328,7 @@ class _Picker extends StatelessWidget {
     children: [
       Text(
         '$label:',
-        style: const TextStyle(fontSize: 12, color: didactaMuted),
+        style: TextStyle(fontSize: 12, color: context.palette.muted),
       ),
       const SizedBox(width: 8),
       child,
@@ -335,34 +353,36 @@ class _PickedBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    decoration: const BoxDecoration(
-      color: didactaPanel,
-      border: Border(bottom: BorderSide(color: didactaRule)),
+    decoration: BoxDecoration(
+      color: context.palette.panel,
+      border: Border(bottom: BorderSide(color: context.palette.rule)),
     ),
     padding: const EdgeInsets.fromLTRB(16, 6, 12, 6),
     child: Row(
       children: [
         Expanded(
           child: Text(
-            count == 1 ? '1 lección marcada' : '$count lecciones marcadas',
+            count == 1
+                ? tr('1 lección marcada')
+                : tr('{0} lecciones marcadas', [count]),
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ),
         TextButton(
           key: const Key('pick-all'),
           onPressed: onAll,
-          child: const Text('Todas'),
+          child: Text(tr('Todas')),
         ),
         TextButton(
           key: const Key('pick-none'),
           onPressed: onClear,
-          child: const Text('Ninguna'),
+          child: Text(tr('Ninguna')),
         ),
         const SizedBox(width: 4),
         FilledButton.icon(
           key: const Key('translate-picked'),
           icon: const Icon(Icons.auto_awesome_outlined, size: 15),
-          label: const Text('Traducir'),
+          label: Text(tr('Traducir')),
           onPressed: onTranslate,
         ),
       ],
@@ -422,13 +442,20 @@ class _PendingRow extends StatelessWidget {
             SizedBox(
               width: 40,
               child: uses == 0
-                  ? const Text(
+                  ? Text(
                       '—',
-                      style: TextStyle(fontSize: 12, color: didactaMuted),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.palette.muted,
+                      ),
                     )
                   : Row(
                       children: [
-                        const Icon(Icons.link, size: 12, color: didactaMuted),
+                        Icon(
+                          Icons.link,
+                          size: 12,
+                          color: context.palette.muted,
+                        ),
                         const SizedBox(width: 3),
                         Text(
                           '$uses',
@@ -446,7 +473,7 @@ class _PendingRow extends StatelessWidget {
               height: 26,
               margin: const EdgeInsets.only(right: 9),
               decoration: BoxDecoration(
-                color: kindColour(unit.kind),
+                color: context.palette.kind(unit.kind),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -465,10 +492,10 @@ class _PendingRow extends StatelessWidget {
                     unit.path,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontFamily: 'monospace',
-                      color: didactaMuted,
+                      color: context.palette.muted,
                     ),
                   ),
                 ],
@@ -477,7 +504,10 @@ class _PendingRow extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               statusName(status),
-              style: TextStyle(fontSize: 11, color: statusColour(status)),
+              style: TextStyle(
+                fontSize: 11,
+                color: context.palette.status(status),
+              ),
             ),
             const SizedBox(width: 8),
             StatusBadge(
@@ -490,12 +520,12 @@ class _PendingRow extends StatelessWidget {
             if (onTranslate != null)
               IconButton(
                 key: Key('translate-${unit.path}'),
-                tooltip: 'Traducir a $language con la máquina',
+                tooltip: tr('Traducir a {0} con la máquina', [language]),
                 visualDensity: VisualDensity.compact,
                 icon: const Icon(Icons.auto_awesome_outlined, size: 16),
                 onPressed: () => onTranslate!(unit),
               ),
-            const Icon(Icons.chevron_right, size: 18, color: didactaMuted),
+            Icon(Icons.chevron_right, size: 18, color: context.palette.muted),
           ],
         ),
       ),

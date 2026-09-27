@@ -20,6 +20,8 @@
 /// push. Lo que sale es un commit más, encima, como cualquier edición.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../data/frozen.dart';
@@ -28,7 +30,9 @@ import '../model/catalogue.dart';
 import '../state/session.dart';
 import 'compare_view.dart';
 import 'course_admin_ui.dart';
+import 'sync_bar.dart';
 import 'theme.dart';
+import '../l10n/tr.dart';
 
 /// La lista de versiones congeladas de un curso.
 Future<void> showFreezes(
@@ -62,18 +66,17 @@ class _FreezesDialogState extends State<FreezesDialog> {
   List<Freeze> get _freezes =>
       widget.session.freezesOf(widget.course.id, widget.year);
 
-  String? get _repo =>
-      widget.course.years[widget.year]?.repos.firstOrNull ??
-      widget.course.sources.keys.firstOrNull;
-
   @override
   Widget build(BuildContext context) {
     final freezes = _freezes;
     final session = widget.session;
     return AlertDialog(
       title: Text(
-        'Versiones congeladas · ${widget.course.title(session.language)} '
-        '${widget.year}',
+        tr(
+          'Versiones congeladas · {0} '
+          '{1}',
+          [widget.course.title(session.language), widget.year],
+        ),
       ),
       content: SizedBox(
         width: 640,
@@ -81,23 +84,30 @@ class _FreezesDialogState extends State<FreezesDialog> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Note(
-              'Cada una es un commit con nombre: el estado exacto del '
-              'material en ese punto. No hay ninguna copia detrás, así que '
-              'tener diez no ocupa diez veces más -- y quitar una no borra '
-              'ningún commit.',
+            Note(
+              tr(
+                'Cada una es un momento del historial con nombre: el estado exacto '
+                'del material en ese punto. No hay ninguna copia detrás, así que '
+                'tener diez no ocupa diez veces más, y quitar una no borra nada '
+                'del historial.',
+              ),
             ),
             const SizedBox(height: Space.medium),
             Expanded(
               child: freezes.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: Text(
-                          'Este curso no tiene ninguna versión congelada '
-                          'todavía.',
+                          tr(
+                            'Este curso no tiene ninguna versión congelada '
+                            'todavía.',
+                          ),
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 13, color: didactaMuted),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: context.palette.muted,
+                          ),
                         ),
                       ),
                     )
@@ -128,18 +138,21 @@ class _FreezesDialogState extends State<FreezesDialog> {
               SnackBar(
                 content: Text(
                   count == 0
-                      ? 'No había nada guardado en la caché.'
-                      : 'Caché vaciada: $count versión(es). Se vuelven a '
-                            'preparar solas al abrirlas.',
+                      ? tr('No había nada guardado en la caché.')
+                      : tr(
+                          'Caché vaciada: {0} versión(es). Se vuelven a '
+                          'preparar solas al abrirlas.',
+                          [count],
+                        ),
                 ),
               ),
             );
           },
-          child: const Text('Vaciar la caché'),
+          child: Text(tr('Vaciar la caché')),
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cerrar'),
+          child: Text(tr('Cerrar')),
         ),
         FilledButton.icon(
           key: const Key('freeze-new'),
@@ -150,11 +163,10 @@ class _FreezesDialogState extends State<FreezesDialog> {
               session,
               widget.course,
               widget.year,
-              repo: _repo,
             );
             if (made && mounted) setState(() {});
           },
-          label: const Text('Congelar esto ahora…'),
+          label: Text(tr('Congelar esto ahora…')),
         ),
       ],
     );
@@ -179,38 +191,64 @@ class _FreezeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final open = session.frozen?.freeze.id == freeze.id;
+    final open =
+        session.frozen?.freeze.id == freeze.id &&
+        session.frozen?.freeze.repo == freeze.repo;
+    final split = (course.years[year]?.presentIn.length ?? 0) > 1;
     return Container(
       margin: const EdgeInsets.only(bottom: Space.small),
       padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
       decoration: BoxDecoration(
-        color: open ? didactaSelected : didactaCard,
-        border: Border.all(color: didactaRule),
+        color: open ? context.palette.selected : context.palette.card,
+        border: Border.all(color: context.palette.rule),
         borderRadius: BorderRadius.circular(Radii.card),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 1, right: 10),
-            child: Icon(Icons.ac_unit, size: 16, color: didactaThm),
+            child: Icon(Icons.ac_unit, size: 16, color: context.palette.thm),
           ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  freeze.name,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        freeze.name,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    // De qué repositorio, cuando el curso está en más de
+                    // uno: congelar lo congela en cada uno con el mismo
+                    // nombre, y sin esto salen dos iguales.
+                    if (split && freeze.repo.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      RepoChip(
+                        key: Key('freeze-repo-${freeze.id}-${freeze.repo}'),
+                        colour: session.colourOf(freeze.repo) ?? 0xFF62697A,
+                        label:
+                            session.workspace.byId(freeze.repo)?.label ??
+                            freeze.repo,
+                        compact: true,
+                      ),
+                    ],
+                  ],
                 ),
                 if (freeze.description.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     freeze.description,
-                    style: const TextStyle(fontSize: 12, color: didactaMuted),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.palette.muted,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 3),
@@ -222,9 +260,9 @@ class _FreezeTile extends StatelessWidget {
                     else
                       '',
                   ].where((piece) => piece.isNotEmpty).join('  ·  '),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
-                    color: didactaMuted,
+                    color: context.palette.muted,
                     fontFamily: 'monospace',
                   ),
                 ),
@@ -234,7 +272,7 @@ class _FreezeTile extends StatelessWidget {
           MenuAnchor(
             builder: (context, controller, child) => IconButton(
               key: Key('freeze-menu-${freeze.id}'),
-              tooltip: 'Qué hacer con esta versión',
+              tooltip: tr('Qué hacer con esta versión'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.more_horiz, size: 18),
               onPressed: () =>
@@ -245,49 +283,49 @@ class _FreezeTile extends StatelessWidget {
                 key: Key('freeze-open-${freeze.id}'),
                 leadingIcon: const Icon(Icons.visibility_outlined, size: 15),
                 onPressed: () => _open(context),
-                child: const Text('Abrir'),
+                child: Text(tr('Abrir')),
               ),
               MenuItemButton(
                 key: Key('freeze-compare-head-${freeze.id}'),
                 leadingIcon: const Icon(Icons.compare_arrows, size: 15),
                 onPressed: () => _compare(context, against: null),
-                child: const Text('Comparar con la versión actual'),
+                child: Text(tr('Comparar con la versión actual')),
               ),
               MenuItemButton(
                 key: Key('freeze-compare-other-${freeze.id}'),
                 leadingIcon: const Icon(Icons.difference_outlined, size: 15),
                 onPressed: () => _compareWith(context),
-                child: const Text('Comparar con…'),
+                child: Text(tr('Comparar con…')),
               ),
               const Divider(height: 1),
               MenuItemButton(
                 key: Key('freeze-year-${freeze.id}'),
                 leadingIcon: const Icon(Icons.add, size: 15),
                 onPressed: () => _newYear(context),
-                child: const Text('Crear un curso desde aquí…'),
+                child: Text(tr('Crear un curso desde aquí…')),
               ),
               MenuItemButton(
                 key: Key('freeze-restore-${freeze.id}'),
                 leadingIcon: const Icon(Icons.restore, size: 15),
                 onPressed: () => _restore(context),
-                child: const Text('Restaurar…'),
+                child: Text(tr('Restaurar…')),
               ),
               const Divider(height: 1),
               MenuItemButton(
                 key: Key('freeze-rename-${freeze.id}'),
                 leadingIcon: const Icon(Icons.edit_outlined, size: 15),
                 onPressed: () => _rename(context),
-                child: const Text('Renombrar…'),
+                child: Text(tr('Renombrar…')),
               ),
               MenuItemButton(
                 key: Key('freeze-remove-${freeze.id}'),
-                leadingIcon: const Icon(
+                leadingIcon: Icon(
                   Icons.delete_outline,
                   size: 15,
-                  color: didactaTeacher,
+                  color: context.palette.teacher,
                 ),
                 onPressed: () => _remove(context),
-                child: const Text('Quitar esta versión…'),
+                child: Text(tr('Quitar esta versión…')),
               ),
             ],
           ),
@@ -330,12 +368,12 @@ class _FreezeTile extends StatelessWidget {
     final chosen = await showDialog<Freeze>(
       context: context,
       builder: (context) => SimpleDialog(
-        title: const Text('Comparar con'),
+        title: Text(tr('Comparar con')),
         children: [
           SimpleDialogOption(
             key: const Key('compare-with-head'),
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('La versión actual'),
+            child: Text(tr('La versión actual')),
           ),
           if (others.isNotEmpty) const Divider(height: 1),
           for (final other in others)
@@ -369,10 +407,10 @@ class _FreezeTile extends StatelessWidget {
     final done = await showDialog<({String name, String description})>(
       context: context,
       builder: (context) => _NameDialog(
-        title: 'Renombrar la versión congelada',
+        title: tr('Renombrar la versión congelada'),
         name: freeze.name,
         description: freeze.description,
-        confirm: 'Guardar',
+        confirm: tr('Guardar'),
       ),
     );
     if (done == null || !context.mounted) return;
@@ -386,7 +424,7 @@ class _FreezeTile extends StatelessWidget {
         name: done.name,
         description: done.description,
       ),
-      done: 'Versión congelada renombrada.',
+      done: tr('Versión congelada renombrada.'),
       repo: freeze.repo.isEmpty ? null : freeze.repo,
     );
     if (ok) {
@@ -399,26 +437,30 @@ class _FreezeTile extends StatelessWidget {
     final yes = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('¿Quitar «${freeze.name}»?'),
-        content: const SizedBox(
+        title: Text(tr('¿Quitar «{0}»?', [freeze.name])),
+        content: SizedBox(
           width: 460,
           child: Note(
-            'Se quita su entrada y su carpeta de la caché, y nada más.\n\n'
-            'El commit sigue donde estaba, la historia no se toca, el curso '
-            'no cambia y las demás versiones congeladas siguen igual -- '
-            'también las que apunten a este mismo commit.',
+            tr(
+              'Se quita su entrada y su carpeta de la caché, y nada más.\n\n'
+              'Ese momento sigue en el historial, que no se toca; el curso no '
+              'cambia y las demás versiones congeladas siguen igual, también '
+              'las que apunten al mismo momento.',
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(tr('Cancelar')),
           ),
           FilledButton(
             key: const Key('confirm-remove-freeze'),
-            style: FilledButton.styleFrom(backgroundColor: didactaTeacher),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.palette.teacher,
+            ),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Quitar'),
+            child: Text(tr('Quitar')),
           ),
         ],
       ),
@@ -434,7 +476,7 @@ class _FreezeTile extends StatelessWidget {
         id: freeze.id,
         name: freeze.name,
       ),
-      done: 'Versión congelada quitada. Ningún commit se ha borrado.',
+      done: tr('Versión congelada quitada. El historial sigue entero.'),
       repo: freeze.repo.isEmpty ? null : freeze.repo,
     );
     if (!ok) return;
@@ -451,6 +493,12 @@ class _FreezeTile extends StatelessWidget {
 }
 
 /// Crea una congelación del estado que hay ahora mismo.
+///
+/// En cada repositorio donde está el curso, con el mismo nombre: una
+/// congelación es un commit de **un** repositorio, y en una asignatura
+/// repartida entre teoría y problemas congelar solo el primero dejaba la
+/// otra mitad cambiando por debajo de una foto que decía ser del curso.
+/// Con [repo], solo en ese.
 Future<bool> createFreeze(
   BuildContext context,
   Session session,
@@ -459,49 +507,78 @@ Future<bool> createFreeze(
   String? repo,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
+  final repos = repo != null
+      ? <String?>[repo]
+      : <String?>[...?course.years[year]?.presentIn];
+  if (repos.isEmpty) repos.add(null);
+  String name(String? repo) => repo == null || repo.isEmpty
+      ? ''
+      : session.workspace.byId(repo)?.label ?? repo;
 
   // Lo que está sin guardar no entra: una congelación apunta a un commit.
   // Decirlo antes y no después es la diferencia entre una foto incompleta y
   // una decisión.
-  final pending = await session.pendingIn(repo);
+  final pending = [for (final each in repos) ...await session.pendingIn(each)];
   if (!context.mounted) return false;
 
-  final String head;
+  final heads = <String?, String>{};
   try {
-    head = await session.headOf(repo);
+    for (final each in repos) {
+      heads[each] = await session.headOf(each);
+    }
   } on FrozenException catch (error) {
     messenger.showSnackBar(SnackBar(content: Text(error.message)));
     return false;
   }
   if (!context.mounted) return false;
+  String short(String commit) =>
+      commit.length > 7 ? commit.substring(0, 7) : commit;
+  final hint = heads.length == 1
+      ? tr(
+          'Apuntará a {0}, que es el momento que hay '
+          'ahora.',
+          [short(heads.values.single)],
+        )
+      : tr(
+          'Apuntará a {0}: '
+          'lo que hay ahora en cada repositorio de la asignatura.',
+          [
+            [
+              for (final entry in heads.entries)
+                '${short(entry.value)} (${name(entry.key)})',
+            ].join(' y '),
+          ],
+        );
 
   final done = await showDialog<({String name, String description})>(
     context: context,
     builder: (context) => _NameDialog(
-      title: 'Congelar ${course.title(session.language)} $year',
+      title: tr('Congelar {0} {1}', [course.title(session.language), year]),
       name: '',
       description: '',
-      confirm: 'Congelar',
-      hint: head,
+      confirm: tr('Congelar'),
+      hint: hint,
       pending: pending,
     ),
   );
   if (done == null || !context.mounted) return false;
 
-  final ok = await runAdmin(
+  final ok = await runAdminIn(
     context,
     session,
-    (admin) => admin.addFreeze(
+    repos,
+    (admin, each) => admin.addFreeze(
       course: course.id,
       year: year,
       name: done.name,
-      commit: head,
+      commit: heads[each]!,
       description: done.description,
     ),
-    done:
-        'Congelada «${done.name}». No se ha copiado nada: es el commit el '
-        'que guarda el estado.',
-    repo: repo,
+    done: tr(
+      'Congelada «{0}». No se ha copiado nada: es el historial '
+      'el que guarda el estado.',
+      [done.name],
+    ),
   );
   if (ok) await session.reloadCatalogue();
   return ok;
@@ -523,7 +600,7 @@ class _NameDialog extends StatefulWidget {
   final String description;
   final String confirm;
 
-  /// El commit al que apuntará, para poder verlo antes.
+  /// A qué commit apuntará, dicho ya como frase, para poder verlo antes.
   final String hint;
 
   /// Lo que hay sin guardar y por tanto no entra.
@@ -561,9 +638,9 @@ class _NameDialogState extends State<_NameDialog> {
             key: const Key('freeze-name'),
             controller: _name,
             autofocus: true,
-            decoration: const InputDecoration(
-              labelText: 'Nombre',
-              hintText: 'Inicio curso 2026-27',
+            decoration: InputDecoration(
+              labelText: tr('Nombre'),
+              hintText: tr('Inicio curso 2026-27'),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -572,31 +649,35 @@ class _NameDialogState extends State<_NameDialog> {
             key: const Key('freeze-description'),
             controller: _description,
             maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Descripción (opcional)',
-              hintText: 'Como se repartió el primer día.',
+            decoration: InputDecoration(
+              labelText: tr('Descripción (opcional)'),
+              hintText: tr('Como se repartió el primer día.'),
             ),
           ),
           if (widget.hint.isNotEmpty) ...[
             const SizedBox(height: Space.medium),
             Text(
-              'Apuntará al commit ${widget.hint.substring(0, 7)}, que es el '
-              'que hay ahora.',
-              style: const TextStyle(fontSize: 11.5, color: didactaMuted),
+              widget.hint,
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ],
           if (widget.pending.isNotEmpty) ...[
             const SizedBox(height: Space.medium),
             Note(
               widget.pending.length == 1
-                  ? 'Hay 1 fichero sin guardar, y no entra en la versión '
-                        'congelada: una congelación apunta a un commit. '
-                        'Guárdalo antes si quieres que forme parte de esta.'
-                  : 'Hay ${widget.pending.length} ficheros sin guardar, y no '
-                        'entran en la versión congelada: una congelación '
-                        'apunta a un commit. Guárdalos antes si quieres que '
-                        'formen parte de esta.',
-              tone: didactaEx,
+                  ? tr(
+                      'Hay 1 fichero sin guardar, y no entra en la versión '
+                      'congelada: una congelación apunta a lo ya guardado. '
+                      'Guárdalo antes si quieres que forme parte de esta.',
+                    )
+                  : tr(
+                      'Hay {0} ficheros sin guardar, y no '
+                      'entran en la versión congelada: una congelación '
+                      'apunta a lo ya guardado. Guárdalos antes si quieres que '
+                      'formen parte de esta.',
+                      [widget.pending.length],
+                    ),
+              tone: context.palette.ex,
             ),
           ],
         ],
@@ -605,7 +686,7 @@ class _NameDialogState extends State<_NameDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancelar'),
+        child: Text(tr('Cancelar')),
       ),
       FilledButton(
         key: const Key('freeze-confirm'),
@@ -632,7 +713,11 @@ Future<bool> showYearFromFreeze(
   final service = session.frozenIn(freeze.repo.isEmpty ? null : freeze.repo);
   if (service == null) {
     messenger.showSnackBar(
-      const SnackBar(content: Text('Esto necesita el clon del repositorio.')),
+      SnackBar(
+        content: Text(
+          tr('Esto necesita la copia del repositorio en tu ordenador.'),
+        ),
+      ),
     );
     return false;
   }
@@ -663,7 +748,7 @@ Future<bool> showYearFromFreeze(
           '${view.directory}/courses/${freeze.course}/${freeze.year}',
       fromLabel: freeze.name,
     ),
-    done: 'Curso ${target.year} creado desde «${freeze.name}».',
+    done: tr('Curso {0} creado desde «{1}».', [target.year, freeze.name]),
     repo: freeze.repo.isEmpty ? null : freeze.repo,
   );
   if (ok) await session.reloadCatalogue();
@@ -712,16 +797,16 @@ class _YearFromFreezeDialogState extends State<_YearFromFreezeDialog> {
     final taken = session.courseById(_course)?.years.keys ?? const <String>[];
     final clash = taken.contains(_year.text.trim());
     return AlertDialog(
-      title: Text('Crear un curso desde «${widget.freeze.name}»'),
+      title: Text(tr('Crear un curso desde «{0}»', [widget.freeze.name])),
       content: SizedBox(
         width: 520,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'En qué asignatura',
-              style: TextStyle(fontSize: 11.5, color: didactaMuted),
+            Text(
+              tr('En qué asignatura'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
             const SizedBox(height: 4),
             DropdownButtonFormField<String>(
@@ -740,23 +825,25 @@ class _YearFromFreezeDialogState extends State<_YearFromFreezeDialog> {
             TextField(
               key: const Key('from-freeze-year'),
               controller: _year,
-              decoration: const InputDecoration(
-                labelText: 'Curso académico',
+              decoration: InputDecoration(
+                labelText: tr('Curso académico'),
                 hintText: '2026-2027',
               ),
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: Space.medium),
-            const Note(
-              'Se copia la composición tal como estaba en esa versión: qué '
-              'temas lleva y en qué orden. Las lecciones son las de ahora, no '
-              'copias de las de entonces -- para eso está restaurar.',
+            Note(
+              tr(
+                'Se copia la composición tal como estaba en esa versión: qué '
+                'temas lleva y en qué orden. Las lecciones son las de ahora, no '
+                'copias de las de entonces -- para eso está restaurar.',
+              ),
             ),
             if (clash) ...[
               const SizedBox(height: Space.small),
-              const Note(
-                'Esa asignatura ya tiene ese curso académico.',
-                tone: didactaTeacher,
+              Note(
+                tr('Esa asignatura ya tiene ese curso académico.'),
+                tone: context.palette.teacher,
               ),
             ],
           ],
@@ -765,7 +852,7 @@ class _YearFromFreezeDialogState extends State<_YearFromFreezeDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('from-freeze-confirm'),
@@ -774,7 +861,7 @@ class _YearFromFreezeDialogState extends State<_YearFromFreezeDialog> {
               : () => Navigator.of(
                   context,
                 ).pop((course: _course, year: _year.text.trim())),
-          child: const Text('Crear'),
+          child: Text(tr('Crear')),
         ),
       ],
     );
@@ -866,13 +953,17 @@ class _RestoreDialogState extends State<RestoreDialog> {
   @override
   void initState() {
     super.initState();
-    _look();
+    unawaited(_look());
   }
 
   Future<void> _look() async {
     final service = widget.session.frozenIn(_repo);
     if (service == null) {
-      setState(() => _problem = 'Esto necesita el clon del repositorio.');
+      setState(
+        () => _problem = tr(
+          'Esto necesita la copia del repositorio en tu ordenador.',
+        ),
+      );
       return;
     }
     try {
@@ -896,37 +987,46 @@ class _RestoreDialogState extends State<RestoreDialog> {
   Widget build(BuildContext context) {
     final preview = _preview;
     final what = switch (widget.scope) {
-      RestoreScope.course =>
-        'el curso ${widget.course.title(widget.session.language)} '
-            '${widget.year}',
-      RestoreScope.document => 'el tema «${widget.label}»',
-      RestoreScope.lesson => 'la lección «${widget.label}»',
+      RestoreScope.course => tr(
+        'el curso {0} '
+        '{1}',
+        [widget.course.title(widget.session.language), widget.year],
+      ),
+      RestoreScope.document => tr('el tema «{0}»', [widget.label]),
+      RestoreScope.lesson => tr('la lección «{0}»', [widget.label]),
     };
     return AlertDialog(
-      title: Text('Restaurar $what desde «${widget.freeze.name}»'),
+      title: Text(tr('Restaurar {0} desde «{1}»', [what, widget.freeze.name])),
       content: SizedBox(
         width: 620,
         height: 400,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Note(
-              'Restaurar trae el contenido de aquel commit al estado de ahora '
-              'y lo deja como un cambio pendiente. No se reescribe la '
-              'historia, no se borra ningún commit y no se pierde nada de lo '
-              'que hay publicado: lo que sale es un commit más, encima.',
+            Note(
+              tr(
+                'Restaurar trae el contenido de aquel momento al de ahora y lo deja '
+                'como un cambio pendiente. No se reescribe el historial ni se '
+                'pierde nada de lo que hay publicado: lo que sale es un cambio '
+                'más, encima.',
+              ),
             ),
             if (_pending.isNotEmpty) ...[
               const SizedBox(height: Space.small),
               Note(
                 _pending.length == 1
-                    ? 'Hay 1 fichero sin guardar en el repositorio. Si está '
-                          'entre los de abajo, se perderá lo que tenga sin '
-                          'confirmar.'
-                    : 'Hay ${_pending.length} ficheros sin guardar en el '
-                          'repositorio. Si alguno está entre los de abajo, se '
-                          'perderá lo que tenga sin confirmar.',
-                tone: didactaEx,
+                    ? tr(
+                        'Hay 1 fichero sin guardar en el repositorio. Si está '
+                        'entre los de abajo, se perderá lo que tenga sin '
+                        'guardar.',
+                      )
+                    : tr(
+                        'Hay {0} ficheros sin guardar en el '
+                        'repositorio. Si alguno está entre los de abajo, se '
+                        'perderá lo que tenga sin guardar.',
+                        [_pending.length],
+                      ),
+                tone: context.palette.ex,
               ),
             ],
             const SizedBox(height: Space.medium),
@@ -935,21 +1035,26 @@ class _RestoreDialogState extends State<RestoreDialog> {
                   ? Center(
                       child: Text(
                         '$_problem',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: didactaTeacher,
+                          color: context.palette.teacher,
                         ),
                       ),
                     )
                   : preview == null
                   ? const Center(child: CircularProgressIndicator())
                   : preview.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
-                        'No hay ninguna diferencia: lo que hay ahora ya es lo '
-                        'que había entonces.',
+                        tr(
+                          'No hay ninguna diferencia: lo que hay ahora ya es lo '
+                          'que había entonces.',
+                        ),
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 13, color: didactaMuted),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.palette.muted,
+                        ),
                       ),
                     )
                   : ListView(
@@ -965,7 +1070,7 @@ class _RestoreDialogState extends State<RestoreDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+          child: Text(tr('Cancelar')),
         ),
         FilledButton(
           key: const Key('confirm-restore'),
@@ -974,8 +1079,8 @@ class _RestoreDialogState extends State<RestoreDialog> {
               : _restore,
           child: Text(
             preview == null || preview.isEmpty
-                ? 'Restaurar'
-                : 'Restaurar ${preview.length} fichero(s)',
+                ? tr('Restaurar')
+                : tr('Restaurar {0} fichero(s)', [preview.length]),
           ),
         ),
       ],
@@ -1005,9 +1110,12 @@ class _RestoreDialogState extends State<RestoreDialog> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Restaurados ${done.length} fichero(s) desde '
-            '«${widget.freeze.name}». Están sin confirmar: revísalos y '
-            'guárdalos como un cambio más.',
+            tr(
+              'Restaurados {0} fichero(s) desde '
+              '«{1}». Están sin guardar: revísalos y '
+              'guárdalos como un cambio más.',
+              [done.length, widget.freeze.name],
+            ),
           ),
           duration: const Duration(seconds: 8),
         ),
@@ -1039,9 +1147,11 @@ extension on _RestoreDialogState {
         fromDirectory: view.directory,
         fromLabel: widget.freeze.name,
       ),
-      done:
-          '«${widget.label}» restaurado desde «${widget.freeze.name}». Está '
-          'sin confirmar: revísalo y guárdalo como un cambio más.',
+      done: tr(
+        '«{0}» restaurado desde «{1}». Está '
+        'sin guardar: revísalo y guárdalo como un cambio más.',
+        [widget.label, widget.freeze.name],
+      ),
       repo: _repo,
     );
     if (!ok || !mounted) return;
@@ -1059,13 +1169,21 @@ class _ChangeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (IconData icon, Color colour, String what) = switch (change.kind) {
-      TreeChangeKind.added => (Icons.add, didactaProp, 'vuelve'),
-      TreeChangeKind.removed => (Icons.remove, didactaTeacher, 'se quita'),
-      TreeChangeKind.modified => (Icons.edit_outlined, didactaThm, 'cambia'),
+      TreeChangeKind.added => (Icons.add, context.palette.prop, 'vuelve'),
+      TreeChangeKind.removed => (
+        Icons.remove,
+        context.palette.teacher,
+        tr('se quita'),
+      ),
+      TreeChangeKind.modified => (
+        Icons.edit_outlined,
+        context.palette.thm,
+        'cambia',
+      ),
       TreeChangeKind.renamed => (
         Icons.drive_file_move_outlined,
-        didactaEx,
-        'se mueve',
+        context.palette.ex,
+        tr('se mueve'),
       ),
     };
     return Padding(

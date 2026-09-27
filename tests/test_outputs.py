@@ -54,6 +54,29 @@ def pdf_text(path):
     return re.sub(rb"[^A-Za-z]", b"", text).decode("latin-1")
 
 
+def pdf_strings(path):
+    """The text a PDF shows, digits and all, one string per content stream.
+
+    [pdf_text] drops everything but letters, which is what a marker word
+    needs; a theorem number needs the digits. So this keeps the strings pdfTeX
+    passes to its show operators --what is inside the parentheses-- and leaves
+    out the kerning numbers between them, which would otherwise read as part
+    of the text.
+    """
+    with open(path, "rb") as handle:
+        data = handle.read()
+    found = []
+    for match in re.finditer(rb"stream\r?\n(.*?)endstream", data, re.S):
+        try:
+            stream = zlib.decompress(match.group(1))
+        except Exception:
+            continue
+        strings = re.findall(rb"\((.*?)(?<!\\)\)", stream)
+        if strings:
+            found.append(b"".join(strings).decode("latin-1"))
+    return found
+
+
 @unittest.skipUnless(toolchain_available(), "latexmk and pdflatex are required")
 class OutputMatrixTests(unittest.TestCase):
     """Every profile of the example, compiled and inspected."""
@@ -167,6 +190,28 @@ class OutputMatrixTests(unittest.TestCase):
             without.pages,
             "pauses did not add an overlay page",
         )
+
+    def test_pauses_do_not_bump_the_numbering(self):
+        """Every slide of a frame shows the same numbers.
+
+        Beamer typesets a frame with a pause once per slide, and a counter
+        stepped inside it went up once per slide: the example after the
+        `\\dpause` was 1.2 on the first slide and 1.3 on the second, and
+        everything after it one too many. The slides have to number like the
+        notes do.
+        """
+        def numbers(result):
+            found = set()
+            for page in pdf_strings(result.pdf):
+                found.update(re.findall(r"Ejemplo(\d+\.\d+)", page))
+                found.update(re.findall(r"Proposici\\363n(\d+\.\d+)", page))
+            return found
+
+        slides = self.compile(self.theory, "slides", "es")
+        notes = self.compile(self.theory, "notes", "es")
+        self.assertTrue(slides.ok and notes.ok)
+        self.assertEqual(numbers(notes), {"1.2", "1.3"})
+        self.assertEqual(numbers(slides), numbers(notes))
 
     def test_slides_and_notes_differ(self):
         # \onlyslides and \onlynotes must actually route content.
@@ -379,6 +424,112 @@ class OutputMatrixTests(unittest.TestCase):
         self.assertIn("es", name)
         for character in ':/\\*?"<>|':
             self.assertNotIn(character, name)
+
+
+
+@unittest.skipUnless(toolchain_available(), "latexmk and pdflatex are required")
+class SpanishFunctionNamesTests(unittest.TestCase):
+    """`\\sen`, `\\tg`, `\\arcsen`… en todos los idiomas, no solo en castellano.
+
+    Los define babel-spanish y solo mientras el castellano está activo. Una
+    lección escrita en castellano que los usa compila, y su traducción --que
+    copia las fórmulas tal cual-- fallaba en valenciano con «Undefined control
+    sequence». Didacta los define en todos, con el nombre de cada idioma.
+    """
+
+    SAMPLE = (
+        "\\input{didacta-bootstrap}\n\\usepackage{didacta}\n"
+        "\\DidactaDocument{Funciones}\n\\begin{document}\n"
+        "$\\sen x + \\tg x + \\arcsen x + \\arctg x + \\cotg x"
+        " + \\cosec x + \\senh x + \\tgh x$\n"
+        "\\end{document}\n"
+    )
+
+    def compile(self, language, profile):
+        import subprocess
+        import tempfile
+
+        work = tempfile.mkdtemp(prefix="didacta-sen-")
+        self.addCleanup(shutil.rmtree, work, True)
+        with open(os.path.join(work, "muestra.tex"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(self.SAMPLE)
+        env = dict(os.environ, TEXINPUTS=os.pathsep.join(
+            [LATEX_DIR, os.path.join(LATEX_DIR, "lang"), ""]))
+        done = subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", "-halt-on-error",
+             "\\def\\DidactaProfile{%s}\\def\\DidactaLanguage{%s}"
+             "\\input{muestra.tex}" % (profile, language)],
+            cwd=work, env=env, capture_output=True, text=True,
+            errors="replace",
+        )
+        return done
+
+    def test_compiles_in_every_language_that_did_not_have_them(self):
+        for language in ("va", "ca", "en", "gl", "pt"):
+            for profile in ("notes", "slides"):
+                with self.subTest(language=language, profile=profile):
+                    done = self.compile(language, profile)
+                    self.assertEqual(done.returncode, 0, done.stdout[-1500:])
+                    self.assertNotIn("Undefined control sequence", done.stdout)
+
+    def test_castilian_still_uses_babel(self):
+        done = self.compile("es", "notes")
+        self.assertEqual(done.returncode, 0, done.stdout[-1500:])
+
+
+@unittest.skipUnless(toolchain_available(), "latexmk and pdflatex are required")
+class ProblemNumberingOnOverlaysTests(unittest.TestCase):
+    """Un ejercicio después de una pausa no suma uno por diapositiva.
+
+    Beamer compone una vez por diapositiva el frame que tiene pausas, y el
+    contador de los ejercicios subía en cada una: en unas diapositivas el
+    segundo ejercicio salía como el 4. Es el mismo fallo que tenían los
+    teoremas, con su propio contador, y tiene su propio arreglo en
+    `didacta-problems.sty`.
+    """
+
+    SAMPLE = (
+        "\\input{didacta-bootstrap}\n\\usepackage{didacta}\n"
+        "\\DidactaDocument{Ejercicios}\n\\begin{document}\n"
+        "\\begin{frame}\n"
+        "\\begin{exercise}Uno.\\end{exercise}\n\\dpause\n"
+        "Una pista.\n\\dpause\n"
+        "\\begin{exercise}Dos.\\end{exercise}\n"
+        "\\end{frame}\n"
+        "\\begin{frame}\n\\begin{exercise}Tres.\\end{exercise}\n\\end{frame}\n"
+        "\\end{document}\n"
+    )
+
+    def numbers(self, profile):
+        import subprocess
+        import tempfile
+
+        work = tempfile.mkdtemp(prefix="didacta-ejercicios-")
+        self.addCleanup(shutil.rmtree, work, True)
+        with open(os.path.join(work, "muestra.tex"), "w",
+                  encoding="utf-8") as handle:
+            handle.write(self.SAMPLE)
+        env = dict(os.environ, TEXINPUTS=os.pathsep.join(
+            [LATEX_DIR, os.path.join(LATEX_DIR, "lang"), ""]))
+        done = subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", "-halt-on-error",
+             "\\def\\DidactaProfile{%s}\\def\\DidactaLanguage{es}"
+             "\\input{muestra.tex}" % profile],
+            cwd=work, env=env, capture_output=True, text=True,
+            errors="replace",
+        )
+        self.assertEqual(done.returncode, 0, done.stdout[-1500:])
+        found = []
+        for page in pdf_strings(os.path.join(work, "muestra.pdf")):
+            found.extend(re.findall(r"Ejercicio([\d.]+)", page))
+        return found
+
+    def test_every_slide_of_a_frame_shows_the_same_number(self):
+        notes = self.numbers("notes")
+        slides = self.numbers("slides")
+        self.assertEqual(sorted(set(notes)), sorted(set(slides)))
+        self.assertEqual(len(set(notes)), 3, notes)
 
 
 if __name__ == "__main__":

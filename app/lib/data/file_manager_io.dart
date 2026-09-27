@@ -8,11 +8,9 @@ import '../model/toolchain.dart';
 
 bool get supported => true;
 
-String get openLabel => switch (_host) {
-  Host.macos => 'Abrir en el Finder',
-  Host.windows => 'Abrir en el Explorador',
-  Host.linux => 'Abrir la carpeta',
-};
+String get openLabel => openFolderLabel(_host);
+
+String get revealIn => revealInLabel(_host);
 
 String get home =>
     Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';

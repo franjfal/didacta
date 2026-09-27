@@ -16,6 +16,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../model/translation.dart';
+import 'diagnostics.dart';
+import '../l10n/tr.dart';
 
 /// Lo que sabe guardar y devolver credenciales.
 abstract class TranslationSecrets {
@@ -68,7 +70,8 @@ class KeychainTranslationSecrets implements TranslationSecrets {
       return Credentials.fromJson(
         (jsonDecode(raw) as Map).cast<String, dynamic>(),
       );
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('translation_secrets.read', caught, trace);
       // Algo ilegible en el llavero: se trata como si no hubiera nada. Lo que
       // no se hace es incluirlo en el error para enseñar qué había.
       return const Credentials();
@@ -81,9 +84,11 @@ class KeychainTranslationSecrets implements TranslationSecrets {
     Credentials credentials,
   ) async {
     if (!canStoreSafely) {
-      throw const TranslationSecretsException(
-        'Un navegador no puede guardar una clave de API de forma segura. '
-        'Usa la aplicación de escritorio.',
+      throw TranslationSecretsException(
+        tr(
+          'Un navegador no puede guardar una clave de API de forma segura. '
+          'Usa la aplicación de escritorio.',
+        ),
       );
     }
     if (credentials.isEmpty) {
@@ -131,7 +136,7 @@ class MemoryTranslationSecrets implements TranslationSecrets {
     Credentials credentials,
   ) async {
     if (!safe) {
-      throw const TranslationSecretsException('aquí no se puede guardar');
+      throw TranslationSecretsException(tr('aquí no se puede guardar'));
     }
     if (credentials.isEmpty) {
       stored.remove(provider);

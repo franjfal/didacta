@@ -26,6 +26,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'diagnostics.dart';
+import '../model/github_credential.dart';
+import '../l10n/tr.dart';
 
 /// Lo que GitHub devuelve para empezar: el código que se enseña y el que se
 /// usa para preguntar si ya está.
@@ -67,10 +70,13 @@ class GitHubException implements Exception {
 
   /// Si GitHub ha dicho que esta credencial ya no vale.
   ///
-  /// 401 es «no te reconozco» y 403 «tú no». Cualquier otra cosa --un 500, o
-  /// no llegar-- no dice nada de la credencial, y tratarlo como si lo dijera
-  /// echaría de la aplicación a quien solo se ha quedado sin red.
-  bool get rejectsCredential => status == 401 || status == 403;
+  /// Solo 401, «no te reconozco». Un 403 no habla de la credencial: es el
+  /// límite de peticiones por hora, o una organización que pide SSO, o un
+  /// repositorio al que esta cuenta no llega. Tratarlo como un 401 echaba de
+  /// la aplicación --y borraba el token del llavero-- a quien solo había
+  /// hecho demasiadas peticiones seguidas. Lo mismo para cualquier otra cosa,
+  /// un 500 o no llegar: no dice nada de la credencial.
+  bool get rejectsCredential => status == 401;
 
   @override
   String toString() => message;
@@ -139,7 +145,8 @@ class GitHubUser {
         name: json['name'] as String?,
         email: json['email'] as String?,
       );
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('github.fromJson', caught, trace);
       // Lo que no se puede leer es como si no estuviera: se vuelve a
       // preguntar a GitHub en cuanto haya red.
       return null;
@@ -147,36 +154,77 @@ class GitHubUser {
   }
 }
 
+/// El Client ID de la GitHub App de Didacta, con la que se entra por defecto
+/// cuando existe. Vacío mientras no está registrada: entonces se entra con
+/// la OAuth App de siempre. Ver «La GitHub App» en `docs/DISTRIBUTION.md`.
+const String didactaAppClientId = String.fromEnvironment(
+  'DIDACTA_GITHUB_APP_CLIENT',
+  defaultValue: '',
+);
+
+/// Su nombre corto en GitHub: el de `github.com/apps/<nombre>`, que es donde
+/// se eligen los repositorios a los que llega.
+const String didactaAppSlug = String.fromEnvironment(
+  'DIDACTA_GITHUB_APP_SLUG',
+  defaultValue: 'didacta-app',
+);
+
+/// Si [clientId] es el de una GitHub App y no el de una OAuth App.
+bool isGitHubAppClientId(String clientId) => clientId.trim().startsWith('Iv');
+
+/// Dónde se elige, en GitHub, a qué repositorios llega la App de [slug]:
+/// instalarla por primera vez o cambiar los que ya tiene.
+String githubAppInstallUrl(String slug) =>
+    'https://github.com/apps/$slug/installations/new';
+
 /// El sign in por device flow.
 class GitHubAuth {
   GitHubAuth({required this.clientId, http.Client? client})
-    : _client = client ?? http.Client();
+    : _client = LoggedClient(client ?? http.Client());
 
-  /// El de la OAuth App. Público por definición: va en el binario.
+  /// El de la OAuth App, o el de la GitHub App. Público por definición: va
+  /// en el binario.
   final String clientId;
+
+  /// Si es el de una GitHub App: sus Client ID empiezan por `Iv` (`Iv1.…`,
+  /// `Iv23li…`), los de una OAuth App por `Ov`. Con una App no se piden
+  /// permisos al entrar --son los de la App, los mismos para todos-- y el
+  /// token caduca y se renueva.
+  bool get isApp => isGitHubAppClientId(clientId);
 
   final http.Client _client;
 
   static const String _codeUrl = 'https://github.com/login/device/code';
   static const String _tokenUrl = 'https://github.com/login/oauth/access_token';
 
-  /// `repo` y nada más: leer y escribir repositorios, que es lo que la
-  /// aplicación hace. Sin `delete_repo`, sin `admin`, sin `user`.
-  static const String scope = 'repo';
+  /// `repo` y `workflow`: leer y escribir repositorios, que es lo que la
+  /// aplicación hace, y poder escribir en `.github/workflows/`. Sin
+  /// `delete_repo`, sin `admin`, sin `user`.
+  ///
+  /// `workflow` porque GitHub **rechaza el envío** de un commit que toca un
+  /// workflow si el token no lo tiene, aunque tenga `repo`: el ejemplo trae
+  /// el de la web del curso, y el CI del material es un workflow. Con solo
+  /// `repo`, el primer envío del ejemplo fallaba contra GitHub --no contra
+  /// las pruebas, que envían a un repositorio del disco--.
+  static const String scope = 'repo workflow';
 
   /// Pide el código que se le enseña a la persona.
   Future<DeviceCode> start() async {
     final response = await _client.post(
       Uri.parse(_codeUrl),
       headers: const {'Accept': 'application/json'},
-      body: {'client_id': clientId, 'scope': scope},
+      body: {'client_id': clientId, if (!isApp) 'scope': scope},
     );
     final json = _json(response.body);
     final error = json['error'];
     if (error != null) {
       throw GitHubException(
-        'GitHub no acepta este Client ID ($error). Compruébalo en Ajustes: '
-        'tiene que ser el de una OAuth App con «Device flow» activado.',
+        tr(
+          'GitHub no acepta este Client ID ({0}). Compruébalo en Ajustes: '
+          'tiene que ser el de una GitHub App o una OAuth App con «Device '
+          'flow» activado.',
+          [error],
+        ),
       );
     }
     return DeviceCode(
@@ -191,10 +239,18 @@ class GitHubAuth {
   }
 
   /// Pregunta hasta que la persona autoriza, y devuelve el token.
+  Future<String> waitForToken(
+    DeviceCode code, {
+    Future<void> Function(Duration)? sleep,
+    DateTime Function()? now,
+  }) async => (await waitForCredential(code, sleep: sleep, now: now)).token;
+
+  /// Pregunta hasta que la persona autoriza, y devuelve la credencial: con el
+  /// de renovar y cuándo caduca cada uno, si es de una GitHub App.
   ///
   /// Respeta el ritmo que pide GitHub, incluido el `slow_down`: preguntar más
   /// deprisa de lo que dice es cómo se acaba bloqueado a mitad de un sign in.
-  Future<String> waitForToken(
+  Future<GitHubCredential> waitForCredential(
     DeviceCode code, {
     Future<void> Function(Duration)? sleep,
     DateTime Function()? now,
@@ -217,7 +273,13 @@ class GitHubAuth {
       );
       final json = _json(response.body);
       final token = json['access_token'] as String?;
-      if (token != null && token.isNotEmpty) return token;
+      if (token != null && token.isNotEmpty) {
+        return GitHubCredential.fromResponse(
+          json,
+          now: clock(),
+          clientId: clientId,
+        );
+      }
 
       switch (json['error']) {
         case 'authorization_pending':
@@ -226,16 +288,59 @@ class GitHubAuth {
           interval += const Duration(seconds: 5);
           continue;
         case 'expired_token':
-          throw const GitHubException(
-            'El código ha caducado. Vuelve a empezar.',
-          );
+          throw GitHubException(tr('El código ha caducado. Vuelve a empezar.'));
         case 'access_denied':
-          throw const GitHubException('Se ha denegado el acceso desde GitHub.');
+          throw GitHubException(tr('Se ha denegado el acceso desde GitHub.'));
         default:
-          throw GitHubException('GitHub respondió ${json['error']}');
+          throw GitHubException(tr('GitHub respondió {0}', [json['error']]));
       }
     }
-    throw const GitHubException('El código ha caducado. Vuelve a empezar.');
+    throw GitHubException(tr('El código ha caducado. Vuelve a empezar.'));
+  }
+
+  /// Pide una credencial nueva con la de renovar, sin que nadie vuelva a
+  /// entrar. Sin client secret: con el device flow GitHub no lo pide.
+  ///
+  /// Si GitHub dice que la de renovar ya no vale --seis meses sin usarla, o
+  /// revocada--, lanza con `status: 401`, que es lo que cierra la sesión.
+  /// Sin red, lanza sin `status`: se vuelve a intentar más tarde.
+  Future<GitHubCredential> refresh(
+    String refreshToken, {
+    DateTime Function()? now,
+  }) async {
+    final response = await _client.post(
+      Uri.parse(_tokenUrl),
+      headers: const {'Accept': 'application/json'},
+      body: {
+        'client_id': clientId,
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+      },
+    );
+    final json = _json(response.body);
+    final token = json['access_token'] as String?;
+    if (token != null && token.isNotEmpty) {
+      return GitHubCredential.fromResponse(
+        json,
+        now: (now ?? DateTime.now)(),
+        clientId: clientId,
+      );
+    }
+    final error = json['error'];
+    if (error == 'bad_refresh_token' ||
+        error == 'incorrect_client_credentials' ||
+        response.statusCode == 401) {
+      throw GitHubException(
+        tr('La sesión de GitHub ha caducado: vuelve a entrar.'),
+        status: 401,
+      );
+    }
+    throw GitHubException(
+      tr('GitHub no ha renovado la sesión ({0}).', [
+        error ?? response.statusCode,
+      ]),
+      status: response.statusCode,
+    );
   }
 
   void close() => _client.close();
@@ -244,15 +349,17 @@ class GitHubAuth {
     try {
       final decoded = jsonDecode(body);
       if (decoded is Map) return decoded.cast<String, dynamic>();
-    } catch (_) {}
-    throw const GitHubException('GitHub devolvió algo que no se entiende.');
+    } catch (caught, trace) {
+      Diagnostics.instance.note('github._json', caught, trace);
+    }
+    throw GitHubException(tr('GitHub devolvió algo que no se entiende.'));
   }
 }
 
 /// Lo que se le pregunta a GitHub una vez dentro.
 class GitHubApi {
   GitHubApi({required this.token, http.Client? client})
-    : _client = client ?? http.Client();
+    : _client = LoggedClient(client ?? http.Client());
 
   final String token;
   final http.Client _client;
@@ -261,7 +368,7 @@ class GitHubApi {
 
   Map<String, String> get _headers => {
     'Accept': 'application/vnd.github+json',
-    'Authorization': 'Bearer $token',
+    'Authorization': tr('Bearer {0}', [token]),
     'X-GitHub-Api-Version': '2022-11-28',
   };
 
@@ -272,8 +379,11 @@ class GitHubApi {
     );
     if (response.statusCode != 200) {
       throw GitHubException(
-        'GitHub no reconoce la sesión (${response.statusCode}). '
-        'Vuelve a entrar.',
+        tr(
+          'GitHub no reconoce la sesión ({0}). '
+          'Vuelve a entrar.',
+          [response.statusCode],
+        ),
         status: response.statusCode,
       );
     }
@@ -283,6 +393,34 @@ class GitHubApi {
       name: json['name'] as String?,
       email: json['email'] as String?,
     );
+  }
+
+  /// Los permisos del token, como los dice GitHub en `X-OAuth-Scopes`.
+  ///
+  /// Null cuando GitHub no los dice, que es lo que pasa con los tokens que no
+  /// son de una OAuth App --los de una GitHub App, los de grano fino--: esos
+  /// no tienen permisos por nombre, y lo que dejan hacer se ve al hacerlo.
+  Future<Set<String>?> scopes() async {
+    final response = await _client.get(
+      Uri.parse('$_base/user'),
+      headers: _headers,
+    );
+    if (response.statusCode != 200) {
+      throw GitHubException(
+        tr(
+          'GitHub no reconoce la sesión ({0}). '
+          'Vuelve a entrar.',
+          [response.statusCode],
+        ),
+        status: response.statusCode,
+      );
+    }
+    final header = response.headers['x-oauth-scopes'];
+    if (header == null) return null;
+    return {
+      for (final scope in header.split(','))
+        if (scope.trim().isNotEmpty) scope.trim(),
+    };
   }
 
   /// Los repositorios a los que esta persona llega, los suyos y los que le
@@ -299,7 +437,9 @@ class GitHubApi {
       );
       if (response.statusCode != 200) {
         throw GitHubException(
-          'No se pudieron listar los repositorios (${response.statusCode}).',
+          tr('No se pudieron listar los repositorios ({0}).', [
+            response.statusCode,
+          ]),
         );
       }
       final list = jsonDecode(response.body) as List;
@@ -343,7 +483,11 @@ class GitHubApi {
     if (response.statusCode == 404) return null;
     if (response.statusCode != 200) {
       throw GitHubException(
-        'GitHub no contestó sobre $owner/$name (${response.statusCode}).',
+        tr('GitHub no contestó sobre {0}/{1} ({2}).', [
+          owner,
+          name,
+          response.statusCode,
+        ]),
         status: response.statusCode,
       );
     }
@@ -375,5 +519,71 @@ class GitHubApi {
     return response.statusCode == 200;
   }
 
+  /// Crea un repositorio vacío en la cuenta de quien ha entrado.
+  ///
+  /// Vacío de verdad --sin `auto_init`, sin README ni licencia de GitHub--
+  /// porque el primer commit lo hace Didacta con sus ficheros, y uno de
+  /// GitHub delante obligaría a mezclar dos historias. Si el nombre ya está
+  /// cogido, GitHub contesta 422 y eso sale en [GitHubException.status].
+  Future<GitHubRepo> createRepository({
+    required String name,
+    String description = '',
+    bool private = true,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_base/user/repos'),
+      headers: {..._headers, 'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'name': name,
+        'description': description,
+        'private': private,
+        'auto_init': false,
+      }),
+    );
+    if (response.statusCode != 201) {
+      throw GitHubException(
+        response.statusCode == 422
+            ? tr('Ya tienes un repositorio que se llama {0}.', [name])
+            : tr('GitHub no dejó crear {0} ({1}).', [
+                name,
+                response.statusCode,
+              ]),
+        status: response.statusCode,
+      );
+    }
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    return GitHubRepo(
+      owner: ((json['owner'] as Map?)?['login'] as String?) ?? '',
+      name: json['name'] as String? ?? name,
+      defaultBranch: json['default_branch'] as String? ?? 'main',
+      private: json['private'] as bool? ?? private,
+      canWrite: true,
+    );
+  }
+
   void close() => _client.close();
+}
+
+/// Un cliente que apunta en el registro lo que GitHub contesta cuando no es
+/// un sí: el código, el método y la ruta, nunca la cabecera ni el cuerpo.
+class LoggedClient extends http.BaseClient {
+  LoggedClient(this.inner);
+
+  final http.Client inner;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final response = await inner.send(request);
+    if (response.statusCode >= 300) {
+      Diagnostics.instance.github(
+        method: request.method,
+        path: request.url.path,
+        status: response.statusCode,
+      );
+    }
+    return response;
+  }
+
+  @override
+  void close() => inner.close();
 }

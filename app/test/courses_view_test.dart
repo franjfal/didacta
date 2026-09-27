@@ -93,6 +93,20 @@ Future<void> chooseView(WidgetTester tester, CoursesView view) async {
   await settle(tester);
 }
 
+/// Ocultar o volver a enseñar. Ocultar está en «…»; el ojo solo se ve, fuera
+/// del menú, en lo que ya está oculto, que es el camino de vuelta.
+Future<void> toggleHidden(WidgetTester tester, String id) async {
+  final direct = find.byKey(Key('hide-$id'));
+  if (direct.evaluate().isEmpty) {
+    final menu = id.startsWith('course-')
+        ? 'course-menu-${id.substring('course-'.length)}'
+        : 'year-menu-${id.substring('year-'.length)}';
+    await tester.tap(find.byKey(Key(menu)));
+    await settle(tester);
+  }
+  await tester.tap(find.byKey(Key('hide-$id')));
+}
+
 void main() {
   testWidgets('ocultar una asignatura la saca de la lista, no del material', (
     tester,
@@ -100,7 +114,7 @@ void main() {
     final session = await pumpCourses(tester);
     expect(find.text('Álgebra'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('hide-course-alg')));
+    await toggleHidden(tester, 'course-alg');
     await settle(tester);
 
     expect(find.text('Álgebra'), findsNothing);
@@ -116,14 +130,14 @@ void main() {
   ) async {
     // Sin esta vista, ocultar sería un viaje sin vuelta.
     final session = await pumpCourses(tester);
-    await tester.tap(find.byKey(const Key('hide-course-alg')));
+    await toggleHidden(tester, 'course-alg');
     await settle(tester);
 
     await chooseView(tester, CoursesView.hidden);
     expect(find.text('Álgebra'), findsOneWidget);
     expect(find.text('Análisis Matemático I'), findsNothing);
 
-    await tester.tap(find.byKey(const Key('hide-course-alg')));
+    await toggleHidden(tester, 'course-alg');
     await settle(tester);
     expect(session.isHiddenCourse('alg'), isFalse);
   });
@@ -132,7 +146,7 @@ void main() {
     final session = await pumpCourses(tester);
     expect(find.text('2024-2025'), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('hide-year-am-i-2024-2025')));
+    await toggleHidden(tester, 'year-am-i-2024-2025');
     await settle(tester);
 
     expect(find.text('2024-2025'), findsNothing);
@@ -145,7 +159,7 @@ void main() {
   ) async {
     // Si no, sus cursos ocultos no se podrían recuperar desde ningún sitio.
     await pumpCourses(tester);
-    await tester.tap(find.byKey(const Key('hide-year-am-i-2024-2025')));
+    await toggleHidden(tester, 'year-am-i-2024-2025');
     await settle(tester);
 
     await chooseView(tester, CoursesView.hidden);
@@ -157,7 +171,7 @@ void main() {
 
   testWidgets('«todas» las enseña, y dice cuál está oculta', (tester) async {
     await pumpCourses(tester);
-    await tester.tap(find.byKey(const Key('hide-course-alg')));
+    await toggleHidden(tester, 'course-alg');
     await settle(tester);
 
     await chooseView(tester, CoursesView.all);
@@ -199,7 +213,7 @@ void main() {
 
   testWidgets('y sigue puesta al volver a la pantalla', (tester) async {
     final session = await pumpCourses(tester);
-    await tester.tap(find.byKey(const Key('hide-course-alg')));
+    await toggleHidden(tester, 'course-alg');
     await chooseView(tester, CoursesView.hidden);
 
     // Fuera de la pantalla y de vuelta, como al entrar en un curso: el árbol
@@ -227,7 +241,7 @@ void main() {
     // lista: lo que no se entiende es la vista de siempre.
     final session = await pumpCourses(tester);
     await session.setCoursesView('loquesea');
-    await tester.tap(find.byKey(const Key('hide-course-alg')));
+    await toggleHidden(tester, 'course-alg');
     await settle(tester);
 
     expect(find.text('Álgebra'), findsNothing);

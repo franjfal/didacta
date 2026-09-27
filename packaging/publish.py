@@ -412,13 +412,19 @@ def publish(args, reader=None):
     # ---- la versión -------------------------------------------------------
     published, build = release.read_version()
     planned = release.planned_part()
+    planned_test = release.planned_prerelease()
+    test = bool(getattr(args, "prueba", False)) or planned_test
     _title("La versión")
     _say("Última publicada:  %s (build %d)" % (published, build))
 
     if release.SEMVER.match(published).group(4):
         part = planned
-        _say("Es una preliberación: sale como su final, %s." %
-             release.next_version(published, part))
+        if test:
+            _say("Es una versión de prueba: sale otra prueba, %s." %
+                 release.next_version(published, part, True))
+        else:
+            _say("Es una preliberación: sale como su final, %s." %
+                 release.next_version(published, part))
     elif args.part:
         part = release.canonical_part(args.part)
     else:
@@ -436,8 +442,11 @@ def publish(args, reader=None):
             default=planned,
             why="la de release.yaml",
         )
-    version = release.next_version(published, part)
+    version = release.next_version(published, part, test)
     tag = "v%s" % version
+    if test:
+        _say("Versión de prueba: %s. Solo la reciben quienes piden las de "
+             "prueba en Ajustes → Actualizaciones." % version)
 
     # Un número publicado no se vuelve a publicar: sería una 0.2.0 distinta de
     # la 0.2.0 de al lado. Por el tag de git, que no necesita `gh`, y por el
@@ -457,6 +466,14 @@ def publish(args, reader=None):
         notes = release.read_notes(version)
     except Problem:
         pending = release.pending_section(published)
+        if test:
+            # Una prueba lee las notas de la sección de arriba sin ponerle
+            # número: el número es de la final. Sin sección de arriba no hay
+            # qué decir de ella.
+            raise Stop(
+                "El CHANGELOG no tiene nada sin publicar. Escribe arriba del\n"
+                "todo lo que trae esta versión y vuelve a ejecutar esto:\n\n"
+                "    ## Próxima\n\n    - Lo que cambia…\n")
         if pending is None:
             raise Stop(
                 "El CHANGELOG no tiene nada sin publicar. Escribe arriba del\n"
@@ -524,7 +541,8 @@ def publish(args, reader=None):
             raise Stop("No he tocado nada.")
 
     # ---- el plan ----------------------------------------------------------
-    changes_plan = part != planned or not os.path.exists(release.PLAN)
+    changes_plan = (part != planned or test != planned_test
+                    or not os.path.exists(release.PLAN))
     changelog_dirty = any(path == "CHANGELOG.md" for _, path in _dirty())
 
     _title("Voy a")
@@ -540,7 +558,8 @@ def publish(args, reader=None):
         _say("  %d. %s" % (step, text))
 
     if changes_plan:
-        item("release.yaml: bump: %s" % part)
+        item("release.yaml: bump: %s%s" % (
+            part, " · prerelease: true" if test else ""))
     if retitle:
         item("CHANGELOG.md: «%s» pasa a «%s»" % (retitle[1], version))
     if changes_plan or retitle or changelog_dirty:
@@ -576,6 +595,7 @@ def publish(args, reader=None):
     _say()
     if changes_plan:
         release.write_plan("bump", part)
+        release.write_plan("prerelease", "true" if test else "false")
     if retitle:
         release.retitle_section(retitle[0], version)
     touched = [path for _, path in _dirty() if path in OWN_FILES]
@@ -645,6 +665,10 @@ def main(argv=None, reader=None):
     parser.add_argument(
         "--dry-run", action="store_true",
         help="ensayo: compila y prueba, pero no publica")
+    parser.add_argument(
+        "--prueba", action="store_true",
+        help="una versión de prueba (1.5.0-rc.1): solo la reciben quienes "
+             "las piden en Ajustes")
     parser.add_argument(
         "--yes", action="store_true",
         help="contestar que sí a todo; las comprobaciones siguen parando")

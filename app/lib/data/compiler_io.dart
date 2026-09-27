@@ -10,8 +10,12 @@ import 'dart:io';
 
 import '../model/catalogue.dart';
 import '../model/launch.dart';
+import '../model/review.dart';
 import '../model/toolchain.dart' show Host;
 import 'compiler.dart';
+import 'diagnostics.dart';
+import 'pdf_inputs.dart';
+import '../l10n/tr.dart';
 
 bool get supported => true;
 
@@ -20,11 +24,17 @@ Compiler makeCompiler({
   required String repositoryPath,
   String? texPath,
   List<String> templateDirs = const [],
+  int jobs = 0,
+  bool overfullLines = false,
+  bool accessible = false,
 }) => _ProcessCompiler(
   enginePath: enginePath,
   repositoryPath: repositoryPath,
   texPath: texPath,
   templateDirs: templateDirs,
+  jobs: jobs,
+  overfullLines: overfullLines,
+  accessible: accessible,
 );
 
 /// El script del motor dentro de su repositorio.
@@ -64,7 +74,7 @@ List<String> pythonDirectories() {
   final versions = <(int, String)>[];
   for (final root in [
     if (local.isNotEmpty) '$local\\Programs\\Python',
-    r'C:\Program Files',
+    tr(r'C:\Program Files'),
   ]) {
     final directory = Directory(root);
     if (!directory.existsSync()) continue;
@@ -118,13 +128,14 @@ Future<LaunchCommand?> engineCommand(
 }
 
 /// Lo que se le dice a quien no tiene Python en Windows.
-const String noPythonProblem =
-    'El motor de Didacta está escrito en Python, y en este ordenador no '
-    'encuentro ninguno.\n\n'
-    'Instala Python 3 desde https://www.python.org/downloads/ --basta con la '
-    'versión 3.9 o posterior, y no hace falta instalar nada más--. Si ya lo '
-    'tienes, puede que sea el de la Microsoft Store, que no es un Python sino '
-    'un acceso directo a la tienda.';
+String get noPythonProblem => tr(
+  'El motor de Didacta está escrito en Python, y en este ordenador no '
+  'encuentro ninguno.\n\n'
+  'Instala Python 3 desde https://www.python.org/downloads/ --basta con la '
+  'versión 3.9 o posterior, y no hace falta instalar nada más--. Si ya lo '
+  'tienes, puede que sea el de la Microsoft Store, que no es un Python sino '
+  'un acceso directo a la tienda.',
+);
 
 /// Dónde vive TeX, además de lo que diga el PATH.
 ///
@@ -195,8 +206,8 @@ List<String> texDirectories({String? configured}) {
     found.addAll([
       if (local.isNotEmpty) '$local\\Programs\\MiKTeX\\miktex\\bin\\x64',
       if (roaming.isNotEmpty) '$roaming\\TinyTeX\\bin\\windows',
-      r'C:\Program Files\MiKTeX\miktex\bin\x64',
-      r'C:\Program Files (x86)\MiKTeX\miktex\bin\x64',
+      tr(r'C:\Program Files\MiKTeX\miktex\bin\x64'),
+      tr(r'C:\Program Files (x86)\MiKTeX\miktex\bin\x64'),
     ]);
   }
 
@@ -254,7 +265,7 @@ Future<String?> discover({String? configured, String? repositoryPath}) async {
     candidates.add('$parent/didacta');
   }
   candidates.addAll([
-    '${Platform.environment['HOME'] ?? ''}/didacta',
+    '${Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? ''}/didacta',
     '/usr/local/share/didacta',
   ]);
 
@@ -279,16 +290,36 @@ Future<String?> discover({String? configured, String? repositoryPath}) async {
   return null;
 }
 
+/// Los motores que están compilando ahora mismo, para «Detener».
+///
+/// De todos los compiladores y no de uno: la sesión crea uno por repositorio
+/// y por pantalla, y lo que se quiere parar es lo que esté compilando, lo
+/// haya lanzado quien lo haya lanzado.
+final Set<Process> _compiling = {};
+
 class _ProcessCompiler implements Compiler {
   _ProcessCompiler({
     required this.enginePath,
     required this.repositoryPath,
     this.texPath,
     this.templateDirs = const [],
+    this.jobs = 0,
+    this.overfullLines = false,
+    this.accessible = false,
   });
 
   final String enginePath;
   final String repositoryPath;
+
+  /// Cuántas salidas de un documento a la vez; 0, lo que decida el motor.
+  final int jobs;
+
+  /// Si avisar de las líneas que se salen por la derecha fuera de las
+  /// diapositivas (`--overfull-lines`).
+  final bool overfullLines;
+
+  /// PDF accesibles (`--accessible`): lo que no son diapositivas, etiquetado.
+  final bool accessible;
 
   /// Los demás sitios donde hay plantillas de compilación declaradas.
   ///
@@ -308,19 +339,20 @@ class _ProcessCompiler implements Compiler {
   @override
   Future<CompilerStatus> status() async {
     if (enginePath.isEmpty) {
-      return const CompilerStatus(
+      return CompilerStatus(
         ready: false,
         enginePath: null,
-        problem:
-            'No se encuentra el motor. Es el repositorio que tiene '
-            '`cli/didacta`; se elige en Ajustes.',
+        problem: tr(
+          'No se encuentra el motor. Es el repositorio que tiene '
+          '`cli/didacta`; se elige en Ajustes.',
+        ),
       );
     }
     if (!await File(cliIn(enginePath)).exists()) {
       return CompilerStatus(
         ready: false,
         enginePath: enginePath,
-        problem: 'No existe ${cliIn(enginePath)}.',
+        problem: tr('No existe {0}.', [cliIn(enginePath)]),
       );
     }
     // Con qué se lanza. Sólo puede faltar en Windows, y hay que decirlo aquí:
@@ -337,9 +369,10 @@ class _ProcessCompiler implements Compiler {
       return CompilerStatus(
         ready: false,
         enginePath: enginePath,
-        problem:
-            'Compilar lee los ficheros del disco, así que hace falta un clon '
-            'del repositorio de contenido. Se elige en Ajustes.',
+        problem: tr(
+          'Compilar lee los ficheros del disco, así que hace falta la copia '
+          'del repositorio de contenido en tu ordenador. Se elige en Ajustes.',
+        ),
       );
     }
     // latexmk: lo comprueba el motor, pero preguntar aquí permite decirlo
@@ -349,16 +382,18 @@ class _ProcessCompiler implements Compiler {
       return CompilerStatus(
         ready: false,
         enginePath: enginePath,
-        problem:
-            'No encuentro latexmk. Didacta necesita una distribución de TeX '
-            '--en macOS MacTeX o BasicTeX, en Windows MiKTeX o TeX Live, en '
-            'Linux el texlive de la distribución-- o TinyTeX, que vale en '
-            'las tres.\n\n'
-            // Dónde se ha mirado, porque el caso frecuente no es que falte
-            // TeX: es que esté en un sitio que no está en esta lista. Sin
-            // decirlo, «instálalo» es el consejo equivocado y no hay forma
-            // de saberlo.
-            'He mirado en: ${texDirectories(configured: texPath).join(', ')}.',
+        problem: tr(
+          'No encuentro latexmk. Didacta necesita una distribución de TeX '
+          '--en macOS MacTeX o BasicTeX, en Windows MiKTeX o TeX Live, en '
+          'Linux el texlive de la distribución-- o TinyTeX, que vale en '
+          'las tres.\n\n'
+          // Dónde se ha mirado, porque el caso frecuente no es que falte
+          // TeX: es que esté en un sitio que no está en esta lista. Sin
+          // decirlo, «instálalo» es el consejo equivocado y no hay forma
+          // de saberlo.
+          'He mirado en: {0}.',
+          [texDirectories(configured: texPath).join(', ')],
+        ),
       );
     }
     return CompilerStatus(ready: true, enginePath: enginePath);
@@ -396,7 +431,7 @@ class _ProcessCompiler implements Compiler {
       decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
     } catch (error) {
       throw CompileException(
-        'El motor no devolvió un estado legible.',
+        tr('El motor no devolvió un estado legible.'),
         detail: output.trim(),
       );
     }
@@ -420,7 +455,7 @@ class _ProcessCompiler implements Compiler {
       decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
     } catch (error) {
       throw CompileException(
-        'El motor no dijo si el índice está al día.',
+        tr('El motor no dijo si el índice está al día.'),
         detail: output.trim(),
       );
     }
@@ -459,7 +494,7 @@ class _ProcessCompiler implements Compiler {
       decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
     } catch (error) {
       throw CompileException(
-        'El motor no devolvió un estado legible.',
+        tr('El motor no devolvió un estado legible.'),
         detail: output.trim(),
       );
     }
@@ -485,6 +520,7 @@ class _ProcessCompiler implements Compiler {
       modified: when == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch((when * 1000).round()),
+      quick: json['quick'] == true,
     );
   }
 
@@ -492,6 +528,9 @@ class _ProcessCompiler implements Compiler {
   Future<bool> isStale({required String pdf, required String unitPath}) async {
     final file = File(pdf);
     if (!await file.exists()) return false;
+    // Por el contenido de lo que entró, si el motor lo apuntó al compilar.
+    final hashed = await staleByInputs(pdf);
+    if (hashed != null) return hashed;
     final built = await file.lastModified();
 
     // Cualquier fichero del directorio de la unidad, por lo mismo que en el
@@ -522,6 +561,7 @@ class _ProcessCompiler implements Compiler {
       for (final language in languages) ...['-l', language],
       for (final profile in profiles) ...['-p', profile],
       if (fast) '--fast',
+      if (overfullLines) '--overfull-lines',
       // Solo cuando hay quien lo lea: el motor abre un pseudoterminal para
       // que LaTeX escriba línea a línea, y eso no se paga por una
       // compilación que nadie está mirando.
@@ -533,6 +573,7 @@ class _ProcessCompiler implements Compiler {
       arguments,
       allowFailure: true,
       onOutput: onOutput,
+      stoppable: true,
     );
 
     final Map<String, dynamic> decoded;
@@ -540,7 +581,7 @@ class _ProcessCompiler implements Compiler {
       decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
     } catch (error) {
       throw CompileException(
-        'El motor no devolvió un resultado legible.',
+        tr('El motor no devolvió un resultado legible.'),
         detail: output.trim(),
       );
     }
@@ -570,29 +611,46 @@ class _ProcessCompiler implements Compiler {
     required String to,
     List<String> languages = const [],
     List<String> documents = const [],
+    ExportReach reach = ExportReach.students,
+    String? zip,
+    bool appendZip = false,
+    bool html = false,
   }) async {
+    // Los posicionales juntos y al final, detrás de `--`: partidos --el
+    // curso delante de las opciones y los documentos detrás-- argparse da la
+    // lista de documentos por vacía al leer el curso y rechaza el resto.
     final output = await _run([
       'export',
-      where,
       '--to',
       to,
       for (final code in languages) ...['--language', code],
+      '--reveal-up-to',
+      reach.engineName,
+      if (zip != null) ...['--zip', zip],
+      if (zip != null && appendZip) '--zip-append',
+      if (html) '--html',
       '--json',
-      if (documents.isNotEmpty) ...['--', ...documents],
+      '--',
+      where,
+      ...documents,
     ]);
     final Map<String, dynamic> decoded;
     try {
       decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
     } catch (error) {
       throw CompileException(
-        'El motor no dijo qué había exportado.',
+        tr('El motor no dijo qué había exportado.'),
         detail: output.trim(),
       );
     }
     return ExportResult(
       copied: [for (final name in decoded['copied'] as List? ?? []) '$name'],
       missing: [for (final name in decoded['missing'] as List? ?? []) '$name'],
+      withheld: [
+        for (final name in decoded['withheld'] as List? ?? []) '$name',
+      ],
       to: decoded['to'] as String? ?? to,
+      zip: decoded['zip'] as String?,
     );
   }
 
@@ -606,7 +664,7 @@ class _ProcessCompiler implements Compiler {
       decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
     } catch (error) {
       throw CompileException(
-        'El motor no devolvió un estado legible.',
+        tr('El motor no devolvió un estado legible.'),
         detail: output.trim(),
       );
     }
@@ -635,10 +693,14 @@ class _ProcessCompiler implements Compiler {
         for (final language in languages) ...['-l', language],
         for (final profile in profiles) ...['-p', profile],
         if (fast) '--fast',
+        if (overfullLines) '--overfull-lines',
+        if (accessible) '--accessible',
         if (onOutput != null) '--progress',
+        if (jobs > 0) ...['--jobs', '$jobs'],
       ],
       allowFailure: true,
       onOutput: onOutput,
+      stoppable: true,
     );
 
     return [
@@ -679,7 +741,7 @@ class _ProcessCompiler implements Compiler {
       // comprobación de dos líneas vale más que la confianza.
       if (!pdf.endsWith('.pdf') || !_insideClone(pdf)) {
         throw CompileException(
-          'No borro nada fuera del directorio de compilación.',
+          tr('No borro nada fuera del directorio de compilación.'),
           detail: pdf,
         );
       }
@@ -712,7 +774,7 @@ class _ProcessCompiler implements Compiler {
       ];
     } catch (error) {
       throw CompileException(
-        'El motor no devolvió un resultado legible para $what.',
+        tr('El motor no devolvió un resultado legible para {0}.', [what]),
         detail: output.trim(),
       );
     }
@@ -736,13 +798,19 @@ class _ProcessCompiler implements Compiler {
       pdf: json['pdf'] as String?,
       pages: (json['pages'] as num?)?.toInt() ?? 0,
       seconds: (json['seconds'] as num?)?.toDouble() ?? 0,
+      quick: json['quick'] == true,
       errors: [
         for (final d in diagnostics)
           if (d['severity'] == 'error') _describe(d.cast<String, dynamic>()),
       ],
       warnings: [
         for (final d in diagnostics)
-          if (d['severity'] != 'error') _describe(d.cast<String, dynamic>()),
+          if (d['severity'] != 'error' && d['code'] == null)
+            _describe(d.cast<String, dynamic>()),
+      ],
+      diagnostics: [
+        for (final d in diagnostics)
+          CompileDiagnostic.fromJson(d.cast<String, dynamic>()),
       ],
     );
   }
@@ -777,17 +845,19 @@ class _ProcessCompiler implements Compiler {
     List<String> arguments, {
     bool allowFailure = false,
     void Function(String line)? onOutput,
+    bool stoppable = false,
   }) async {
     // Con el intérprete delante en Windows, y el script tal cual en los
     // demás. Ver `engineCommand`.
     final command = await engineCommand(enginePath, texPath: texPath);
-    if (command == null) throw const CompileException(noPythonProblem);
+    if (command == null) throw CompileException(noPythonProblem);
     // Delante de la orden, que es donde van las opciones globales.
     arguments = [
       for (final directory in templateDirs) ...['--templates-from', directory],
       ...arguments,
     ];
     final Process process;
+    final clock = Stopwatch()..start();
     try {
       process = await Process.start(
         command.executable,
@@ -808,16 +878,19 @@ class _ProcessCompiler implements Compiler {
       );
     } on ProcessException catch (error) {
       throw CompileException(
-        'No se pudo lanzar el motor ($command).',
+        tr('No se pudo lanzar el motor ({0}).', [command]),
         detail: error.message,
       );
     }
+
+    if (stoppable) _compiling.add(process);
 
     // Sin entrada: el motor no pregunta nada, y un proceso esperando en una
     // tubería que nadie va a escribir se queda colgado para siempre.
     try {
       await process.stdin.close();
-    } catch (_) {
+    } catch (caught, trace) {
+      Diagnostics.instance.note('compiler_io.Function', caught, trace);
       // Ya había terminado. No es un problema: no tenía nada que leer.
     }
 
@@ -839,20 +912,137 @@ class _ProcessCompiler implements Compiler {
       ),
     ];
     final code = await process.exitCode;
+    _compiling.remove(process);
     // Después del código de salida: las corrientes pueden tener cola
     // pendiente cuando el proceso ya ha muerto, y quedarse con media línea
     // del error es quedarse sin el error.
     await Future.wait(reading);
+    Diagnostics.instance.process(
+      program: command.executable,
+      arguments: command.then(arguments),
+      exitCode: code,
+      took: clock.elapsed,
+      stderr: errors.toString(),
+    );
 
     if (code != 0 && !allowFailure) {
       throw CompileException(
-        'El motor falló (código $code).',
+        tr('El motor falló (código {0}).', [code]),
         detail: errors.toString().trim().isEmpty
             ? out.toString().trim()
             : errors.toString().trim(),
       );
     }
     return out.toString();
+  }
+
+  @override
+  Future<void> stopCompiling() async {
+    for (final process in _compiling.toList()) {
+      if (Platform.isWindows) {
+        // Con sus hijos: en Windows no hay SIGTERM que el motor pueda
+        // atender, y matar solo a Python dejaría a LaTeX compilando.
+        await Process.run('taskkill', ['/PID', '${process.pid}', '/T', '/F']);
+      } else {
+        // El motor lo atiende parando latexmk con todo su grupo.
+        process.kill(ProcessSignal.sigterm);
+      }
+    }
+  }
+
+  @override
+  Future<SourceSpot?> sourceAt({
+    required String pdf,
+    required int page,
+    required double x,
+    required double y,
+    String? word,
+    String? text,
+  }) async {
+    final output = await _run([
+      'synctex',
+      pdf,
+      '--page',
+      '$page',
+      '--x',
+      x.toStringAsFixed(2),
+      '--y',
+      y.toStringAsFixed(2),
+      if (word != null && word.isNotEmpty) ...['--word', word],
+      if (text != null && text.isNotEmpty) ...['--text', text],
+      '--json',
+    ], allowFailure: true);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (caught, trace) {
+      Diagnostics.instance.note('compiler_io.sourceAt', caught, trace);
+      throw CompileException(
+        tr('El motor no supo decir de dónde sale eso.'),
+        detail: output.trim(),
+      );
+    }
+    if (decoded['error'] case final String error) {
+      throw CompileException(error);
+    }
+    final found = decoded['found'];
+    return found is Map
+        ? SourceSpot.fromJson(found.cast<String, dynamic>())
+        : null;
+  }
+
+  @override
+  Future<ReviewReport> review({
+    List<String> within = const [],
+    List<String> extra = const [],
+  }) async {
+    // `check` sale con 1 cuando hay errores, y eso no es un fallo de la
+    // llamada: el informe es justo lo que se pedía.
+    final output = await _run([
+      'check',
+      '--json',
+      for (final where in within) ...['--in', where],
+      if (extra.isNotEmpty) ...['--with', extra.join(',')],
+    ], allowFailure: true);
+    try {
+      return ReviewReport.fromJson(
+        jsonDecode(_jsonIn(output)) as Map<String, dynamic>,
+      );
+    } catch (caught, trace) {
+      Diagnostics.instance.note('compiler_io.review', caught, trace);
+      throw CompileException(
+        tr('El motor no devolvió una revisión legible.'),
+        detail: output.trim(),
+      );
+    }
+  }
+
+  @override
+  Future<BuildFolder> buildFolder() => _clean(['--size']);
+
+  @override
+  Future<BuildFolder> cleanBuild() => _clean(const []);
+
+  Future<BuildFolder> _clean(List<String> extra) async {
+    final output = await _run([
+      'clean',
+      '--json',
+      ...extra,
+    ], allowFailure: true);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(_jsonIn(output)) as Map<String, dynamic>;
+    } catch (caught, trace) {
+      Diagnostics.instance.note('compiler_io._clean', caught, trace);
+      throw CompileException(
+        tr('El motor no dijo cuánto ocupa la carpeta de compilación.'),
+        detail: output.trim(),
+      );
+    }
+    if (decoded['error'] case final String error) {
+      throw CompileException(error);
+    }
+    return BuildFolder.fromJson(decoded);
   }
 
   @override
@@ -875,13 +1065,13 @@ class _ProcessCompiler implements Compiler {
       // En un Linux sin `xdg-open`, que existe: un servidor, un escritorio
       // mínimo. El PDF se sigue viendo dentro de Didacta.
       throw CompileException(
-        'No se pudo abrir el PDF con otro programa ($command).',
+        tr('No se pudo abrir el PDF con otro programa ({0}).', [command]),
         detail: error.message,
       );
     }
     if (exitCodeMeansFailure(_host) && result.exitCode != 0) {
       throw CompileException(
-        'No se pudo abrir el PDF.',
+        tr('No se pudo abrir el PDF.'),
         detail: (result.stderr as String?)?.trim() ?? '',
       );
     }

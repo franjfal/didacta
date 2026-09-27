@@ -30,6 +30,7 @@
 @TestOn('vm')
 library;
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -43,6 +44,7 @@ import 'package:didacta_app/model/file_history.dart';
 import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/router.dart';
 import 'package:didacta_app/state/mcp_service.dart';
+import 'package:didacta_app/state/appearance.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
 import 'package:didacta_app/ui/theme.dart';
@@ -61,7 +63,14 @@ import 'screenshot_material.dart';
 const String shownUnit = 'content/analysis/normed/espacios-normados';
 
 /// Dónde se escriben. Relativo a `app/`, que es desde donde corre el arnés.
-const String outputDir = '../web/docs/img/app';
+///
+/// `DIDACTA_SHOTS_OUT` lo cambia, y `DIDACTA_SHOTS_DARK=1` pinta **todas** en
+/// oscuro: es cómo se repasa el modo oscuro pantalla a pantalla sin tocar las
+/// de la web, que buscar a ojo un resto de blanco en veinte pantallas es la
+/// única forma de encontrarlo.
+final String outputDir =
+    Platform.environment['DIDACTA_SHOTS_OUT'] ?? '../web/docs/img/app';
+final bool darkRun = Platform.environment['DIDACTA_SHOTS_DARK'] == '1';
 
 /// El tamaño de ventana de las capturas, en puntos.
 ///
@@ -290,8 +299,8 @@ const String shotFamily = 'Roboto';
 /// verdad eso da igual, porque sin familia el sistema pone la suya; en un
 /// test, lo que pone es la fuente de caja, y esas etiquetas salían como
 /// rectángulos negros mientras el resto se leía perfectamente.
-ThemeData shotTheme() {
-  final base = didactaTheme();
+ThemeData shotTheme([DidactaPalette palette = DidactaPalette.light]) {
+  final base = didactaTheme(palette);
   TextStyle? family(TextStyle? style) =>
       style?.copyWith(fontFamily: shotFamily);
   WidgetStateProperty<TextStyle?>? property(
@@ -423,13 +432,26 @@ Future<FakeSession> buildSession() async {
 /// El recorrido guiado, para su captura.
 final TourController tour = TourController();
 
-Future<void> mount(WidgetTester tester, Session session) async {
+Future<void> mount(
+  WidgetTester tester,
+  Session session, {
+  bool dark = false,
+}) async {
   tester.view.physicalSize = Size(
     window.width * density,
     window.height * density,
   );
   tester.view.devicePixelRatio = density;
   addTearDown(tester.view.reset);
+
+  // El modo, sin esperar: lo que se guarda va a las preferencias, y el cambio
+  // de modo es síncrono en lo que se ve.
+  final appearance = Appearance();
+  unawaited(
+    appearance.setMode(
+      darkRun || dark ? AppearanceMode.dark : AppearanceMode.light,
+    ),
+  );
 
   await tester.pumpWidget(
     RepaintBoundary(
@@ -438,6 +460,9 @@ Future<void> mount(WidgetTester tester, Session session) async {
         providers: [
           ChangeNotifierProvider<Session>.value(value: session),
           ChangeNotifierProvider<UpdateService>.value(value: offlineUpdates()),
+          // Para que el botón del sol y la luna salga en el carril, en el
+          // modo en que se está pintando.
+          ChangeNotifierProvider<Appearance>.value(value: appearance),
           // Apagado, que es como se abre Didacta: encenderlo es una decisión
           // de la persona. La captura del servidor enseña, por tanto, lo que
           // ve quien entra a mirar qué es esto.
@@ -450,7 +475,9 @@ Future<void> mount(WidgetTester tester, Session session) async {
         ],
         child: MaterialApp.router(
           debugShowCheckedModeBanner: false,
-          theme: shotTheme(),
+          theme: shotTheme(
+            darkRun || dark ? DidactaPalette.dark : DidactaPalette.light,
+          ),
           routerConfig: buildRouter(session),
           // El velo del tour por encima de todo, igual que en `main.dart`:
           // señala partes del armazón, así que va fuera de las pantallas.
@@ -521,6 +548,18 @@ final List<Shot> shots = [
       await settle(tester);
     },
   ),
+  Shot(
+    'paleta',
+    '/unit/$shownUnit',
+    note: 'la paleta de órdenes, buscando',
+    prepare: (tester) => _palette(tester, 'espac'),
+  ),
+  Shot(
+    'paleta-aqui',
+    '/unit/$shownUnit',
+    note: 'la paleta de órdenes, sin escribir nada',
+    prepare: (tester) => _palette(tester, ''),
+  ),
   const Shot('asignaturas', '/courses', note: 'las asignaturas'),
   const Shot('curso', '/courses/am-iii/2025-2026', note: 'un curso académico'),
   const Shot(
@@ -543,7 +582,50 @@ final List<Shot> shots = [
     },
   ),
   const Shot('ajustes', '/settings', note: 'los ajustes'),
+  const Shot(
+    'ajustes-idiomas',
+    '/settings?s=idiomas',
+    note: 'los idiomas, en Ajustes',
+  ),
+  const Shot(
+    'ajustes-apariencia',
+    '/settings?s=apariencia',
+    note: 'claro, oscuro o el del sistema',
+  ),
   const Shot('mcp', '/mcp', note: 'el servidor MCP'),
+];
+
+/// Abre la paleta de órdenes con su atajo y escribe [text]. Ctrl y no ⌘:
+/// en una prueba el sistema no es macOS.
+Future<void> _palette(WidgetTester tester, String text) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+  await settle(tester);
+  if (text.isEmpty) return;
+  await tester.enterText(find.byKey(const Key('palette-field')), text);
+  await settle(tester);
+}
+
+/// Las que salen además en oscuro, con `oscuro-` delante.
+final List<Shot> darkShots = [
+  const Shot('oscuro-biblioteca', '/', note: 'la biblioteca, en oscuro'),
+  const Shot(
+    'oscuro-unidad',
+    '/unit/$shownUnit',
+    note: 'una unidad, en oscuro',
+  ),
+  Shot(
+    'oscuro-paleta',
+    '/unit/$shownUnit',
+    note: 'la paleta de órdenes, en oscuro',
+    prepare: (tester) => _palette(tester, 'espac'),
+  ),
+  const Shot(
+    'oscuro-curso',
+    '/courses/am-iii/2025-2026',
+    note: 'un curso, en oscuro',
+  ),
 ];
 
 void main() {
@@ -578,6 +660,21 @@ void main() {
     }
   });
 
+  testWidgets('unas cuantas, en oscuro', (tester) async {
+    // Unas pocas y no todas: la documentación enseña que existe y cómo se
+    // ve, no cada pantalla dos veces. Para repasar el oscuro entero está
+    // `DIDACTA_SHOTS_DARK=1`.
+    if (darkRun) return;
+    for (final shot in darkShots) {
+      final session = await buildSession();
+      await mount(tester, session, dark: true);
+      routerFor(tester).go(shot.route);
+      await settle(tester);
+      await shot.prepare?.call(tester);
+      await capture(tester, shot.name);
+    }
+  });
+
   testWidgets('la pantalla de bienvenida', (tester) async {
     // Aparte del resto porque no está dentro del router: es lo que se enseña
     // **en lugar de** la aplicación la primera vez, y montarla con el carril
@@ -597,7 +694,9 @@ void main() {
           value: session,
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
-            theme: shotTheme(),
+            theme: shotTheme(
+              darkRun ? DidactaPalette.dark : DidactaPalette.light,
+            ),
             home: WelcomeScreen(session: session),
           ),
         ),

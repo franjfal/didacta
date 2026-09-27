@@ -38,6 +38,7 @@ resolves against the content root, so no document contains ``../../../../``.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 
@@ -469,6 +470,37 @@ class Settings:
 # --------------------------------------------------------------------------
 
 
+#: El espacio en blanco que no cuenta al comparar un original con el que se
+#: tradujo: solo el ASCII, para que la aplicación --que calcula lo mismo en
+#: Dart-- no pueda discrepar en qué es un espacio.
+_WHITESPACE = re.compile(r"[ \t\n\r\f\v]+")
+
+
+def content_hash(text):
+    """La huella de un original, para saber si una traducción se ha quedado atrás.
+
+    Del texto con el espacio en blanco reducido a un espacio: re-sangrar el
+    original, o que git lo traiga con otros finales de línea, no cambia lo que
+    dice y no puede dejar desactualizadas todas sus traducciones. La
+    aplicación calcula la misma huella al marcar una traducción (en
+    `app/lib/model/source_hash.dart`), y las dos tienen que coincidir byte a
+    byte: hay un test a cada lado con el mismo ejemplo.
+    """
+    normalized = " ".join(
+        piece for piece in _WHITESPACE.split(text) if piece)
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    return "sha256:" + digest[:16]
+
+
+def file_content_hash(path):
+    """[content_hash] de un fichero, o None si no se puede leer."""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as handle:
+            return content_hash(handle.read())
+    except OSError:
+        return None
+
+
 class LanguageFile:
     """One language of a unit."""
 
@@ -595,8 +627,23 @@ class Unit:
         parts = self.relpath.split("/")
         return "/".join(parts[1:]) if len(parts) > 1 else self.relpath
 
+    def reference_hash(self):
+        """La huella del original **tal como está en el disco**.
+
+        Calculada y no leída: antes se comparaba con un `source_hash`
+        declarado también para el original, que no escribía nadie, así que
+        una traducción no se quedaba nunca desactualizada.
+        """
+        reference = self.languages.get(self.reference)
+        if reference is None or not reference.exists or not self.directory:
+            return None
+        return file_content_hash(
+            os.path.join(self.directory, "%s.tex" % self.reference))
+
     def statuses(self, reference_hash=None):
         """Effective status per language."""
+        if reference_hash is None:
+            reference_hash = self.reference_hash()
         return {
             code: entry.status(self.reference, reference_hash)
             for code, entry in self.languages.items()

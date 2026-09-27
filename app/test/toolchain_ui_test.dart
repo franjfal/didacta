@@ -80,6 +80,16 @@ void main() {
     expect(find.text('1.2.3'), findsNWidgets(ToolId.values.length));
   });
 
+  testWidgets('LaTeX sin biber vale, pero lo dice', (tester) async {
+    await pumpCheck(tester, _NoBiberToolchain(present: ToolId.values.toSet()));
+
+    // Está todo: sin biber se compila lo que no cita. Pero se avisa, y sin
+    // botón de instalar, que la distribución ya está.
+    expect(find.textContaining('Está todo'), findsOneWidget);
+    expect(find.textContaining('Falta biber'), findsOneWidget);
+    expect(find.byKey(const Key('install-latex')), findsNothing);
+  });
+
   testWidgets('lo que falta se dice, y con un botón al lado', (tester) async {
     await pumpCheck(
       tester,
@@ -404,5 +414,23 @@ class _EngineSession extends FakeSession {
   }) async {
     installs += 1;
     return '/de/mentira/didacta';
+  }
+}
+
+/// Una máquina con LaTeX y sin biber.
+class _NoBiberToolchain extends FakeToolchain {
+  _NoBiberToolchain({super.present});
+
+  @override
+  Future<ToolState> inspect(ToolId id) async {
+    final state = await super.inspect(id);
+    if (id != ToolId.latex) return state;
+    return ToolState(
+      tool: state.tool,
+      path: state.path,
+      version: state.version,
+      searched: state.searched,
+      notes: [missingBiber(host)],
+    );
   }
 }

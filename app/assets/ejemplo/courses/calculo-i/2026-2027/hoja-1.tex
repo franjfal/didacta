@@ -1,0 +1,31 @@
+% Hoja 1: límites y continuidad.
+%
+% Una hoja de problemas tiene la misma forma que un tema; lo que cambia son
+% las salidas. Del mismo fichero salen tres hojas distintas:
+%
+%   problems           los enunciados, con las pistas
+%   problems-answers   y el resultado de cada problema
+%   problems-teacher   y la solución entera y los criterios de corrección
+
+\input{didacta-bootstrap}
+\usepackage{didacta}
+
+%% Solo un respaldo: Didacta inyecta estos datos desde `course.yaml` y
+%% `year.yaml`, en el idioma que se compila. Ver tema-1.tex.
+\DidactaCourse{
+  title   = {Cálculo I},
+  teacher = {Tu nombre},
+}
+\DidactaDocument{Hoja 1: límites y continuidad}
+
+\begin{document}
+%% Una hoja no quiere portada: quiere una cabecera en la primera página.
+\DidactaSheetHeader
+
+%% La composición, que el motor escribe a partir de `year.yaml`.
+
+\DidactaProblem{calculo/limites/limites-de-cocientes}
+\DidactaProblem{calculo/continuidad/discontinuidades-evitables}
+\DidactaProblem{calculo/continuidad/tres-raices-por-bolzano}
+
+\end{document}

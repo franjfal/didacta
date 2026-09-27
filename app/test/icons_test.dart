@@ -307,6 +307,6 @@ void main() {
   test('el color de la marca es el del tema, no un verde parecido', () {
     // Que el icono y la interfaz no puedan separarse: si alguien cambia el
     // acento del tema, esto recuerda que hay que regenerar los iconos.
-    expect(didactaAccentDark, const Color(0xFF346E34));
+    expect(DidactaPalette.light.accentDark, const Color(0xFF346E34));
   });
 }
