@@ -12,6 +12,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/translation_secrets.dart';
@@ -431,6 +432,48 @@ void selectorTests() {
     expect(find.byKey(const Key('work-picker')), findsOneWidget);
     expect(find.text('Idioma:'), findsOneWidget);
     expect(find.text('Trabajo:'), findsOneWidget);
+  });
+
+  testWidgets('cada fila abre la lección en el idioma que falta', (
+    tester,
+  ) async {
+    // Se viene a traducir: abrirla en el idioma de siempre obligaba a buscar
+    // la pestaña, que es justo el paso que sobra desde esta lista.
+    final session = await sessionWith([
+      unitJson('content/a/uno', statuses: {'es': 'source'}),
+    ]);
+    session.language = 'va';
+    String? opened;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Scaffold(body: TranslationsPage()),
+        ),
+        GoRoute(
+          path: '/unit/:path(.*)',
+          builder: (context, state) {
+            opened = state.uri.toString();
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ChangeNotifierProvider<Session>.value(
+        value: session,
+        child: MaterialApp.router(theme: didactaTheme(), routerConfig: router),
+      ),
+    );
+    await settle(tester);
+
+    await tester.tap(find.textContaining('content/a/uno').first);
+    await settle(tester);
+    expect(opened, '/unit/content/a/uno?lang=va');
   });
 
   testWidgets('cada trabajo lleva su cuenta dentro', (tester) async {

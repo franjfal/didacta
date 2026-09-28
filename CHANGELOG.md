@@ -51,6 +51,9 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   Ver cambios», «Deshacer» y los demás se quedaban puestos hasta pulsarlos y
   tapaban la barra de abajo, la que dice si hay cambios sin enviar. Ahora
   duran sus segundos, como antes.
+- **La cola de traducción abre en el idioma que falta.** Pulsar una lección
+  en Traducción la abría en la pestaña de siempre, y había que buscar la del
+  idioma que se venía a traducir.
 
 ## 0.3.0 — 2026-09-28
 

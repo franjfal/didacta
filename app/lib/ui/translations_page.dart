@@ -421,7 +421,9 @@ class _PendingRow extends StatelessWidget {
     final uses = unit.usedBy.length;
 
     return InkWell(
-      onTap: () => context.go(Routes.unit(unit.path)),
+      // En el idioma que falta, que es a lo que se viene desde esta lista:
+      // abrir el de siempre obligaba a buscar la pestaña.
+      onTap: () => context.go(Routes.unit(unit.path, language: language)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 8, 12, 8),
         child: Row(
