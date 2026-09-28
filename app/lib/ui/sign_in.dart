@@ -40,6 +40,16 @@ import '../l10n/tr.dart';
 /// Un widget y no dos copias, porque se usa en dos sitios que no se pueden
 /// fundir: la pantalla que tapa la aplicación cuando no hay sesión, y la
 /// ficha de Ajustes de quien ya entró y quiere salir o cambiar de cuenta.
+/// Quién habla con GitHub al entrar.
+///
+/// Lo cambian las pruebas y el arnés de los videotutoriales
+/// (`tool/shots_video.dart`), que necesitan el diálogo del código sin
+/// preguntarle a github.com: le dan un [GitHubAuth] con un cliente que
+/// contesta lo que haría falta.
+@visibleForTesting
+GitHubAuth Function(String clientId) signInAuth = (clientId) =>
+    GitHubAuth(clientId: clientId);
+
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key, required this.session, this.onSignedIn});
 
@@ -97,7 +107,7 @@ class _SignInFormState extends State<SignInForm> {
       _working = true;
       _problem = null;
     });
-    final auth = GitHubAuth(clientId: clientId);
+    final auth = signInAuth(clientId);
     try {
       final code = await auth.start();
       if (!mounted) return;

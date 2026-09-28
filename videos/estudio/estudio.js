@@ -316,15 +316,24 @@
         if (!z) throw new Error(`no hay zona «${nombre}»`);
         return { x: v.x + z[0] * escala, y: v.y + barra + z[1] * escala, w: z[2] * escala, h: z[3] * escala };
       },
-      /** Pasa a otra captura fundiendo, entre t0 y t0 + dur. */
+      /** Pasa a otra captura fundiendo, entre t0 y t0 + dur.
+       *
+       * Cada imagen parte de como estaba justo antes: si no, volver a una
+       * captura que ya salió la dejaba transparente desde el principio del
+       * vídeo (su primera clave manda en todo lo anterior). */
       cambiar(t0, nombre, dur = 0.45) {
-        const img = imagen(nombre);
-        anim(img, [
-          [t0, { o: 0 }],
-          [t0 + dur, { o: 1 }, 'suave'],
-        ]);
+        const destino = imagen(nombre);
+        for (const [n, img] of Object.entries(imagenes)) {
+          const antes = valor(img, 'o', t0 - 0.0001, n === o.captura ? 1 : 0);
+          const despues = img === destino ? 1 : 0;
+          if (antes === despues) continue;
+          anim(img, [
+            [t0, { o: antes }],
+            [t0 + dur, { o: despues }, 'suave'],
+          ]);
+        }
         v.actual = nombre;
-        return img;
+        return destino;
       },
       imagen,
     };

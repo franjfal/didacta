@@ -140,7 +140,7 @@ def capturas(carpeta: Path, obra: Path, forzar: bool) -> dict:
         correr(
             [exe, "test", "tool/shots_video.dart", "--reporter", "compact"],
             cwd=RAIZ / "app",
-            env={**os.environ, "DIDACTA_VIDEO": carpeta.name},
+            env={**os.environ, "DIDACTA_VIDEO": carpeta.name, **motor_neutro()},
         )
         sello.touch()
     else:
@@ -158,6 +158,23 @@ def capturas(carpeta: Path, obra: Path, forzar: bool) -> dict:
             "direccion": datos.get("direccion", ""),
         }
     return resultado
+
+
+def motor_neutro() -> dict:
+    """Dónde enseña la aplicación que está el motor, en las capturas.
+
+    El de verdad es este clon, y su ruta lleva el nombre de quien graba. Un
+    enlace en `/Users/Shared/Didacta/motor` (en macOS) se lee como el de una
+    instalación cualquiera. Si no se puede crear, se enseña la de verdad.
+    """
+    enlace = Path("/Users/Shared/Didacta/motor")
+    try:
+        if not enlace.exists():
+            enlace.parent.mkdir(parents=True, exist_ok=True)
+            enlace.symlink_to(RAIZ)
+        return {"DIDACTA_MOTOR_VIDEO": str(enlace)}
+    except OSError:
+        return {}
 
 
 def capturas_web(carpeta: Path, destino: Path, forzar: bool) -> None:
@@ -253,13 +270,19 @@ def tiempos(guion: dict, dichas: dict) -> dict:
 
 def pagina(carpeta: Path, obra: Path, datos: dict) -> Path:
     (obra / "datos.js").write_text("window.DATOS = " + json.dumps(datos, ensure_ascii=False) + ";\n", encoding="utf-8")
+    # El montaje: el del vídeo si tiene uno; si no, el que sale de su guion.
+    if (carpeta / "escenas.js").exists():
+        propio = f'<script src="{(carpeta / "escenas.js").as_uri()}"></script>'
+    else:
+        propio = "<script>window.montaje = (E, G, D) => Recorrido.montar(E, G, D);</script>"
     html = f"""<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <link rel="stylesheet" href="{(VIDEOS / 'estudio' / 'estudio.css').as_uri()}">
 </head><body><div id="lienzo"></div>
 <script src="{(obra / 'datos.js').as_uri()}"></script>
 <script src="{(VIDEOS / 'estudio' / 'estudio.js').as_uri()}"></script>
-<script src="{(carpeta / 'escenas.js').as_uri()}"></script>
+<script src="{(VIDEOS / 'estudio' / 'recorrido.js').as_uri()}"></script>
+{propio}
 <script>Estudio.arrancar();</script>
 </body></html>
 """
@@ -431,6 +454,9 @@ def hacer(codigo: str, opciones: dict) -> None:
             # de los instaladores, por ejemplo.
             "version": version.group(1) if version else "",
         },
+        # El guion entero: el montaje genérico (`estudio/recorrido.js`) lee
+        # de él lo que se ve en cada frase.
+        "guion": guion,
         "capturas": capturas(carpeta, obra, "capturas" in opciones["rehacer"]),
         "pdf": pdfs(guion, carpeta, obra, "pdf" in opciones["rehacer"]),
     }
@@ -451,7 +477,8 @@ def hacer(codigo: str, opciones: dict) -> None:
 
     h = hashlib.sha1()
     for f in (obra / "datos.js", carpeta / "escenas.js", *sorted((VIDEOS / "estudio").glob("*"))):
-        h.update(f.read_bytes())
+        if f.is_file():
+            h.update(f.read_bytes())
     h.update(str(opciones["fps"]).encode())
     huella = obra / "imagen.huella"
     if mudo.exists() and huella.exists() and huella.read_text() == h.hexdigest() and "imagen" not in opciones["rehacer"]:

@@ -34,13 +34,19 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/catalogue_source.dart';
+import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/data/preferences.dart';
+import 'package:didacta_app/data/toolchain.dart';
 import 'package:didacta_app/l10n/tr.dart';
+import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/model/workspace.dart';
 import 'package:didacta_app/router.dart';
 import 'package:didacta_app/state/appearance.dart';
@@ -48,6 +54,8 @@ import 'package:didacta_app/state/mcp_service.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
 import 'package:didacta_app/ui/theme.dart';
+import 'package:didacta_app/ui/sign_in.dart';
+import 'package:didacta_app/ui/tour.dart';
 import 'package:didacta_app/ui/welcome.dart';
 import 'package:didacta_app/ui/welcome_art.dart';
 
@@ -87,6 +95,10 @@ String engineRoot() {
 void main() {
   final video = Platform.environment['DIDACTA_VIDEO'];
   final engine = engineRoot();
+  // Dónde dice la aplicación que está el motor. Por defecto este clon, que
+  // en un vídeo enseñaría la carpeta de quien lo graba; `hacer.py` da un
+  // enlace con un nombre neutro.
+  final shownEngine = Platform.environment['DIDACTA_MOTOR_VIDEO'] ?? engine;
 
   late Directory root;
   late String work;
@@ -105,6 +117,14 @@ void main() {
   setUpAll(() async {
     if (video == null) return;
     await loadFonts();
+    // El visor de PDF pide una carpeta temporal a `path_provider`, que en una
+    // prueba no existe: la de esta ejecución, como en los tests del visor.
+    final cache = Directory.systemTemp.createTempSync('didacta-pdfrx-');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => cache.path,
+        );
     // Los dibujos de la bienvenida son un `CustomPainter` y no heredan la
     // tipografía: sin esto, sus etiquetas salen como rectángulos negros.
     welcomeArtFontFamily = shotFamily;
@@ -153,15 +173,71 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
-  Future<Session> openSession() async {
+  /// Deja el repositorio como lo pide la captura antes de abrirlo:
+  /// `"preparar": [{"en_github": 1}, {"sin_enviar": 2}]` son cambios que otra
+  /// máquina ya envió a GitHub, y cambios guardados aquí sin enviar. Lo que se
+  /// prepara se queda para las capturas siguientes del mismo vídeo.
+  Future<void> prepare(Map<String, dynamic> shot) async {
+    Future<void> commit(String where, String message) => run('git', [
+      '-c',
+      'user.name=Otra máquina',
+      '-c',
+      'user.email=profe@uv.es',
+      'commit',
+      '--allow-empty',
+      '-m',
+      message,
+    ], where);
+    for (final raw in (shot['preparar'] as List?) ?? const []) {
+      final step = (raw as Map).cast<String, dynamic>();
+      if (step['en_github'] case final num n) {
+        final other = Directory.systemTemp.createTempSync('didacta-otra-');
+        await run('git', [
+          'clone',
+          '-q',
+          '${root.path}/$owner/$repoName.git',
+          other.path,
+        ], root.path);
+        for (var i = 0; i < n; i += 1) {
+          await commit(other.path, 'Un cambio desde el despacho');
+        }
+        await run('git', ['push', '-q', 'origin', 'main'], other.path);
+        await run('git', ['fetch', '-q', 'origin'], work);
+        other.deleteSync(recursive: true);
+      }
+      if (step['sin_enviar'] case final num n) {
+        for (var i = 0; i < n; i += 1) {
+          await commit(work, 'Corregir una errata');
+        }
+      }
+    }
+  }
+
+  /// La sesión de una captura. `sin_sesion`: sin haber entrado en GitHub;
+  /// `sin_repositorios`: sin ningún repositorio abierto, como la primera vez.
+  Future<Session> openSession([Map<String, dynamic> shot = const {}]) async {
     final source = CatalogueSource.inClone(work, repo: repoId)!;
-    final session = LocalSession(
+    final session = VideoSession(
+      missing: {
+        for (final name in (shot['falta'] as List?) ?? const [])
+          ToolId.values.byName(name as String),
+      },
       catalogueSource: source,
-      tokenStore: StubStore(),
-      preferences: MemoryPreferences()..engine = engine,
+      tokenStore: shot['sin_sesion'] == true
+          ? StubStore(token: null)
+          : StubStore(),
+      // Con el Client ID de la aplicación, como la de verdad: sin él, la
+      // bienvenida pide uno, que es lo que no ve nunca quien la instala.
+      preferences: MemoryPreferences(
+        engine: shownEngine,
+        clientId: didactaAppClientId.isEmpty
+            ? 'Iv23liDidacta'
+            : didactaAppClientId,
+      ),
     );
     session.repositories.workspace = Workspace([
-      ContentRepo(owner: owner, name: repoName, directory: work),
+      if (shot['sin_repositorios'] != true)
+        ContentRepo(owner: owner, name: repoName, directory: work),
     ]);
     await session.findEngine();
     // Marcado para tests, y esto es una herramienta: el mismo uso que en
@@ -170,6 +246,9 @@ void main() {
     // ignore: invalid_use_of_visible_for_testing_member
     await session.primeForTest(await source.load());
     await session.setCloneAuthor(name: 'Profe de Prueba', email: 'profe@uv.es');
+    // Los ajustes no se leen de las preferencias en una sesión así: el Client
+    // ID de la aplicación, dicho a mano.
+    await session.setGithubClientId(didactaAppClientId);
     return session;
   }
 
@@ -188,34 +267,63 @@ void main() {
     addTearDown(tester.view.reset);
     final appearance = Appearance();
     await tester.runAsync(() => appearance.setMode(AppearanceMode.light));
+    // El recorrido guiado, como lo monta `main.dart`: enganchado al router
+    // para poder cambiar de pantalla, y su capa por encima de la aplicación.
+    final tour = TourController();
+    final router = buildRouter(session);
+    tour.attach(
+      navigate: router.go,
+      locate: () => router.routeInformationProvider.value.uri.toString(),
+      session: session,
+    );
     await tester.pumpWidget(
       RepaintBoundary(
         key: _frame,
-        child: MultiProvider(
-          providers: [
-            ChangeNotifierProvider<Session>.value(value: session),
-            ChangeNotifierProvider<UpdateService>.value(
-              value: offlineUpdates(),
-            ),
-            ChangeNotifierProvider<Appearance>.value(value: appearance),
-            ChangeNotifierProvider<McpService>.value(
-              value: McpService(
-                openRunner: () =>
-                    const UnavailableRunner('Sin servidor en un vídeo.'),
+        // Una clave nueva cada vez: si no, Flutter reaprovecha el estado de
+        // la captura anterior --la bienvenida seguía en el paso donde se
+        // quedó--.
+        child: KeyedSubtree(
+          key: UniqueKey(),
+          child: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<Session>.value(value: session),
+              ChangeNotifierProvider<UpdateService>.value(
+                value: offlineUpdates(),
               ),
-            ),
-          ],
-          child: welcome
-              ? MaterialApp(
-                  debugShowCheckedModeBanner: false,
-                  theme: shotTheme(DidactaPalette.light),
-                  home: WelcomeScreen(session: session),
-                )
-              : MaterialApp.router(
-                  debugShowCheckedModeBanner: false,
-                  theme: shotTheme(DidactaPalette.light),
-                  routerConfig: buildRouter(session),
+              ChangeNotifierProvider<Appearance>.value(value: appearance),
+              ChangeNotifierProvider<TourController>.value(value: tour),
+              ChangeNotifierProvider<McpService>.value(
+                value: McpService(
+                  openRunner: () =>
+                      const UnavailableRunner('Sin servidor en un vídeo.'),
                 ),
+              ),
+            ],
+            child: welcome
+                ? MaterialApp(
+                    debugShowCheckedModeBanner: false,
+                    theme: shotTheme(DidactaPalette.light),
+                    home: WelcomeScreen(session: session),
+                  )
+                : ListenableBuilder(
+                    listenable: appearance,
+                    builder: (context, _) => MaterialApp.router(
+                      debugShowCheckedModeBanner: false,
+                      theme: shotTheme(
+                        appearance.brightness == Brightness.dark
+                            ? DidactaPalette.dark
+                            : DidactaPalette.light,
+                      ),
+                      routerConfig: router,
+                      builder: (context, child) => Stack(
+                        children: [
+                          child ?? const SizedBox.shrink(),
+                          TourOverlay(controller: tour),
+                        ],
+                      ),
+                    ),
+                  ),
+          ),
         ),
       ),
     );
@@ -306,13 +414,17 @@ void main() {
     if (index >= elements.length) return null;
     final element = elements[index];
     var rect = tester.getRect(find.byElementPredicate((e) => e == element));
+    // `fila`: la zona crece hasta lo primero que la contiene con al menos ese
+    // ancho (la fila entera de una lista); `alto`, con al menos ese alto (la
+    // tarjeta entera de un título).
     final minWidth = (what['fila'] as num?)?.toDouble();
-    if (minWidth != null) {
+    final minHeight = (what['alto'] as num?)?.toDouble();
+    if (minWidth != null || minHeight != null) {
       element.visitAncestorElements((ancestor) {
         final box = ancestor.renderObject;
         if (box is RenderBox && box.hasSize) {
           final r = box.localToGlobal(Offset.zero) & box.size;
-          if (r.width >= minWidth) {
+          if (r.width >= (minWidth ?? 0) && r.height >= (minHeight ?? 0)) {
             rect = r;
             return false;
           }
@@ -489,6 +601,46 @@ void main() {
     stdout.writeln('    $frame fotogramas de «$name»');
   }
 
+  LogicalKeyboardKey keyFor(String name) => switch (name.toLowerCase()) {
+    'meta' || 'cmd' => LogicalKeyboardKey.meta,
+    'control' || 'ctrl' => LogicalKeyboardKey.control,
+    'shift' => LogicalKeyboardKey.shift,
+    'alt' => LogicalKeyboardKey.alt,
+    'escape' || 'esc' => LogicalKeyboardKey.escape,
+    'enter' => LogicalKeyboardKey.enter,
+    'tab' => LogicalKeyboardKey.tab,
+    'slash' || '/' => LogicalKeyboardKey.slash,
+    _ => LogicalKeyboardKey(
+      LogicalKeyboardKey.keyA.keyId + name.codeUnitAt(0) - 'a'.codeUnitAt(0),
+    ),
+  };
+
+  /// GitHub, sin preguntarle: da un código de ejemplo y deniega la espera
+  /// en cuanto el reloj de la prueba llega al primer sondeo.
+  GitHubAuth fakeGitHub(String clientId) => GitHubAuth(
+    clientId: clientId,
+    client: MockClient((request) async {
+      if (request.url.path.contains('device/code')) {
+        return http.Response(
+          jsonEncode({
+            'device_code': 'video',
+            'user_code': 'WDJB-MJHT',
+            'verification_uri': 'https://github.com/login/device',
+            'expires_in': 900,
+            'interval': 5,
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode({'error': 'access_denied'}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    }),
+  );
+
   Future<void> act(
     WidgetTester tester,
     Session session,
@@ -524,6 +676,30 @@ void main() {
       stdout.writeln('  $name.png');
     } else if (action['esperar'] case final num rounds) {
       await settleReal(tester, rounds: rounds.toInt());
+    } else if (action['escribir'] case final Map what) {
+      // Escribir en un campo: `{"en": {"clave": ...}, "texto": "..."}`.
+      final finder = finderFor((what['en'] as Map).cast<String, dynamic>());
+      if (finder == null || finder.evaluate().isEmpty) {
+        stdout.writeln('    (no encuentro dónde escribir: $what)');
+        return;
+      }
+      await tester.enterText(finder.first, what['texto'] as String);
+      await settleReal(tester, rounds: (what['esperar'] as num?)?.toInt() ?? 8);
+    } else if (action['tecla'] case final String combo) {
+      // Un atajo: «meta+k», «control+f», «escape».
+      final keys = combo.split('+').map(keyFor).toList();
+      for (final key in keys) {
+        await tester.sendKeyDownEvent(key);
+      }
+      for (final key in keys.reversed) {
+        await tester.sendKeyUpEvent(key);
+      }
+      await settleReal(tester, rounds: 8);
+    } else if (action['avanzar'] case final num seconds) {
+      // El reloj de la prueba, hacia delante: lo que espera un tiempo
+      // --el sondeo de GitHub, por ejemplo-- termina y no deja temporizadores.
+      await tester.pump(Duration(milliseconds: (seconds * 1000).round()));
+      await settleReal(tester, rounds: 4);
     }
   }
 
@@ -539,11 +715,15 @@ void main() {
         return;
       }
       stdout.writeln('capturas de $video a $out:');
+      // Marcado para tests, y esto es una herramienta (como `primeForTest`).
+      // ignore: invalid_use_of_visible_for_testing_member
+      signInAuth = fakeGitHub;
       for (final raw in spec['capturas'] as List) {
         final shot = (raw as Map).cast<String, dynamic>();
         final name = shot['nombre'] as String;
         late Session session;
-        await tester.runAsync(() async => session = await openSession());
+        await tester.runAsync(() => prepare(shot));
+        await tester.runAsync(() async => session = await openSession(shot));
         final welcome = shot['bienvenida'] == true;
         await mount(tester, session, welcome: welcome);
         await settleReal(tester, rounds: 3);
@@ -584,4 +764,58 @@ void main() {
     // y un campo de texto no saca las asas de selección de un móvil.
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
+}
+
+/// La sesión de los vídeos: la de las pruebas, con la opción de fingir que
+/// falta alguna herramienta (`"falta": ["latex"]` en la captura). Lo demás
+/// es lo de esta máquina, con sus rutas de verdad.
+class VideoSession extends LocalSession {
+  VideoSession({
+    required super.catalogueSource,
+    required super.tokenStore,
+    super.preferences,
+    this.missing = const {},
+  });
+
+  final Set<ToolId> missing;
+
+  @override
+  Toolchain toolchain() {
+    final real = super.toolchain();
+    return missing.isEmpty ? real : _Missing(real, missing);
+  }
+}
+
+/// Las herramientas de esta máquina, menos las que se dice que faltan: de
+/// esas se enseña dónde se buscaron, que es lo que ve quien no las tiene.
+class _Missing implements Toolchain {
+  _Missing(this.real, this.missing);
+
+  final Toolchain real;
+  final Set<ToolId> missing;
+
+  ToolState _hide(ToolState found) => missing.contains(found.tool.id)
+      ? ToolState(tool: found.tool, searched: found.searched)
+      : found;
+
+  @override
+  Host get host => real.host;
+
+  @override
+  Future<ToolState> inspect(ToolId id) async => _hide(await real.inspect(id));
+
+  @override
+  Future<List<ToolState>> inspectAll() async => [
+    for (final found in await real.inspectAll()) _hide(found),
+  ];
+
+  @override
+  Future<InstallPlan> choose(List<InstallPlan> candidates) =>
+      real.choose(candidates);
+
+  @override
+  Future<void> install(
+    InstallPlan plan, {
+    void Function(String line)? onOutput,
+  }) async {}
 }
