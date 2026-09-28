@@ -1,0 +1,61 @@
+{
+  "codigo": "D5",
+  "titulo": "Fórmulas y símbolos sin saberse las órdenes",
+  "fichero": "D05-formulas-y-simbolos.mp4",
+  "duracion": 55.66,
+  "megas": 4.9,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Fórmulas y símbolos sin saberse las órdenes"
+    },
+    {
+      "t": 7.77,
+      "titulo": "Símbolos"
+    },
+    {
+      "t": 21.24,
+      "titulo": "Matemáticas"
+    },
+    {
+      "t": 30.03,
+      "titulo": "El porcentaje"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás escribir fórmulas y símbolos con las paletas, sin saberte las órdenes de LaTeX."
+    },
+    {
+      "t": 8.27,
+      "texto": "En Símbolos, cada uno se busca por cómo se ve: menor o igual."
+    },
+    {
+      "t": 13.54,
+      "texto": "En mitad de un párrafo, lo mete entre dólares, con el cursor dentro, porque fuera de una fórmula no compilaría."
+    },
+    {
+      "t": 21.74,
+      "texto": "En Matemáticas están las estructuras: una fracción, un sumatorio, una raíz, con sus huecos listos para rellenar."
+    },
+    {
+      "t": 30.53,
+      "texto": "Ojo con el tanto por ciento: para LaTeX empieza un comentario, y el resto de la línea desaparece. El editor lo pinta de gris."
+    },
+    {
+      "t": 39.63,
+      "texto": "Con una barra delante, es un tanto por ciento de verdad."
+    },
+    {
+      "t": 44.03,
+      "texto": "Un símbolo suelto en el texto no compila, y la paleta lo sabe."
+    },
+    {
+      "t": 48.3,
+      "texto": "En el siguiente vídeo, arreglar lo que no va a compilar, antes de compilar."
+    }
+  ]
+}

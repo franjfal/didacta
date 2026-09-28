@@ -1,0 +1,61 @@
+{
+  "codigo": "D6",
+  "titulo": "Arreglar lo que no va a compilar, antes de compilar",
+  "fichero": "D06-lo-que-no-va-a-compilar.mp4",
+  "duracion": 48.08,
+  "megas": 3.0,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Arreglar lo que no va a compilar, antes de compilar"
+    },
+    {
+      "t": 7.47,
+      "titulo": "Una llave"
+    },
+    {
+      "t": 16.05,
+      "titulo": "Lo que avisa"
+    },
+    {
+      "t": 30.78,
+      "titulo": "Guardar igual"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás leer el aviso «Esto no va a compilar», y saltar a cada línea que lo causa."
+    },
+    {
+      "t": 7.97,
+      "texto": "Si se borra una llave de cierre, abajo sale el aviso, con su línea."
+    },
+    {
+      "t": 12.88,
+      "texto": "Al pulsarlo, el cursor va a esa línea."
+    },
+    {
+      "t": 16.55,
+      "texto": "También una fórmula sin cerrar, un entorno sin su final, o una orden de otro idioma, como lgem, en castellano."
+    },
+    {
+      "t": 24.38,
+      "texto": "Solo avisa de lo que sabe seguro: si sale algo, es que LaTeX no lo va a compilar."
+    },
+    {
+      "t": 31.28,
+      "texto": "Y se puede guardar igual: un fichero a medias no se pierde, y se termina otro día."
+    },
+    {
+      "t": 38.15,
+      "texto": "Si sale el aviso, es que no va a compilar."
+    },
+    {
+      "t": 41.52,
+      "texto": "En el siguiente vídeo, buscar y reemplazar en una lección."
+    }
+  ]
+}

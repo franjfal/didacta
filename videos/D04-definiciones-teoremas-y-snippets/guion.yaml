@@ -1,0 +1,125 @@
+# D4 · Definiciones, teoremas y snippets
+#
+# Montado desde este guion, con las capturas de «Funciones continuas» dentro
+# del arnés (una frase nueva, envuelta en una definición y desenvuelta) y la
+# caja compilada de «Límite de una función en un punto».
+codigo: D4
+titulo: Definiciones, teoremas y snippets
+subtitulo: Poner un entorno, y quitarlo sin tocar lo de dentro
+ruta: Escribir una lección
+siguiente: "D5 · Fórmulas y símbolos sin saberse las órdenes"
+voz: narrador
+lema: ["El nombre de la caja", "lo pone el idioma del documento."]
+lema_en: "lo pone"
+
+pdf:
+  - nombre: diapositivas
+    documento: tema-1
+    version: slides
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+      entrada: {desde: "se acerca a", hasta: "decir «se acerca»"}
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás poner una definición o un teorema, y quitarlos sin
+          tocar lo que hay dentro.
+
+  - id: envolver
+    capitulo: Envolver
+    antes: 0.5
+    pantalla: seleccion
+    frases:
+      - id: marcar
+        texto: >-
+          Marca el texto, abre Snippets, y escribe «defi».
+        pasos:
+          - {al: inicio, enfoca: [seleccion, menu], max: 1.5}
+          - {en: Marca, resalta: seleccion, hasta: 1.6}
+          - {en: Snippets, pulsa: menu}
+          - {en: escribe, cambia: buscar}
+          - {en: escribe, resalta: buscador, captura: buscar}
+      - id: elegir
+        texto: >-
+          Elige Definición: el texto queda dentro, con su principio y su
+          final.
+        pasos:
+          - {en: Definición, pulsa: definicion, captura: buscar}
+          - {en: queda, cambia: envuelta}
+          - {en: queda, enfoca: [envuelta], max: 1.9, captura: envuelta}
+          - {en: principio, resalta: begin, captura: envuelta, hasta: 1.2}
+          - {en: final, resalta: end, captura: envuelta}
+
+  - id: escribir
+    capitulo: Escribiéndolo
+    antes: 0.5
+    pantalla: completar
+    frases:
+      - id: begin
+        texto: >-
+          Si prefieres escribirlo, al teclear barra begin y la llave, salen los
+          entornos; al elegir uno, se escribe también su final.
+        pasos:
+          - {al: inicio, enfoca: [escrito, lista], max: 2}
+          - {en: salen, resalta: lista, etiqueta: "Los entornos de Didacta", lado: derecha}
+
+  - id: quitar
+    capitulo: Quitar
+    antes: 0.5
+    pantalla: quitar
+    frases:
+      - id: quitar
+        texto: >-
+          Y con el cursor dentro, Snippets ofrece quitar el que lo rodea: se va
+          la caja, y el texto se queda.
+        pasos:
+          - {al: inicio, enfoca: [cabecera, quitar], max: 1.8}
+          - {en: quitar, resalta: quitar, etiqueta: "Quitar «Definición»", lado: izquierda}
+
+  - id: caja
+    capitulo: La caja
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      ancho: 900
+      hojas:
+        - {pdf: diapositivas, rotulo: "Al compilar", color: diapositivas, en: compilar, resalta: [{zona: definicion, etiqueta: "Su nombre y su número", en: nombre}]}
+    frases:
+      - id: compilada
+        texto: >-
+          Al compilar, sale como una caja, con su nombre y su número.
+
+  - id: idiomas
+    capitulo: En cada idioma
+    antes: 0.5
+    grafico:
+      tipo: puntos
+      titulo: La misma caja, en cada idioma
+      por_fila: 2
+      ancho: 460
+      items:
+        - {titulo: Definición, texto: "En un documento en castellano", icono: idioma, color: verde, en: Definición}
+        - {titulo: Definition, texto: "En uno en inglés", icono: idioma, color: azul, en: Definition}
+    frases:
+      - id: nombre
+        texto: >-
+          Y el nombre lo pone el idioma del documento: Definición en
+          castellano, Definition en inglés. Tú no lo escribes.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El nombre de la caja lo pone el idioma del documento.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, fórmulas y símbolos sin saberse las órdenes.

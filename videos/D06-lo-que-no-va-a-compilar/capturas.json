@@ -1,0 +1,131 @@
+{
+  "capturas": [
+    {
+      "nombre": "guardada",
+      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\didactatitle{El teorema de Bolzano}",
+            "poner": "\\didactatitle{El teorema de Bolzano"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "llave",
+            "cajas": {
+              "panel": {
+                "clave": "tex-warnings"
+              },
+              "aviso": {
+                "clave": "tex-warning-0"
+              },
+              "titulo": {
+                "editor": "\\didactatitle{El teorema de Bolzano"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "tex-warning-0"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "salto",
+            "cajas": {
+              "panel": {
+                "clave": "tex-warnings"
+              },
+              "titulo": {
+                "editor": "\\didactatitle{El teorema de Bolzano"
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "tal que $f(c) = 0$.",
+            "poner": "tal que $f(c) = 0."
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\end{theorem}",
+            "poner": ""
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "tienen signos opuestos,",
+            "poner": "tienen signos opuestos, \\lgem,"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "varios",
+            "cajas": {
+              "panel": {
+                "clave": "tex-warnings"
+              },
+              "aviso0": {
+                "clave": "tex-warning-0"
+              },
+              "aviso1": {
+                "clave": "tex-warning-1"
+              },
+              "aviso2": {
+                "clave": "tex-warning-2"
+              },
+              "aviso3": {
+                "clave": "tex-warning-3"
+              },
+              "lgem": {
+                "editor": "\\lgem"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "editor-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 6
+        }
+      ],
+      "cajas": {
+        "panel": {
+          "clave": "tex-warnings"
+        },
+        "estado": {
+          "clave": "sync-state"
+        },
+        "guardar": {
+          "clave": "editor-save"
+        },
+        "guardado": {
+          "contiene": "Guardado en el historial",
+          "fila": 600
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+# D7 · Buscar y reemplazar en una lección
+#
+# Montado desde este guion, con capturas de «El teorema de Bolzano» con la
+# interfaz Completa, que es donde está Reemplazar.
+codigo: D7
+titulo: Buscar y reemplazar en una lección
+subtitulo: Encontrar dentro del texto, y cambiarlo de una vez
+ruta: Escribir una lección
+siguiente: "D8 · Escribir un problema"
+voz: narrador
+lema: ["Reemplazar todas es un solo cambio,", "y se deshace de una vez."]
+lema_en: "y se deshace"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás buscar dentro de la lección que editas, y
+          cambiarlo todo de una vez.
+
+  - id: buscar
+    capitulo: Buscar
+    antes: 0.5
+    pantalla: encontrado
+    frases:
+      - id: atajo
+        texto: >-
+          Con Comando F en el editor, escribes lo que buscas, y se pintan todas
+          las veces que sale.
+        pasos:
+          - {al: inicio, enfoca: [barra, primera], max: 1.6, dy: 60}
+          - {en: Comando, teclas: "⌘ F"}
+          - {en: escribes, resalta: busca, hasta: 1.6}
+          - {en: pintan, resalta: primera, etiqueta: "Todas pintadas", lado: derecha}
+      - id: siguiente
+        texto: >-
+          Arriba dice cuál es la que miras, y con Intro, o la flecha, vas a la
+          siguiente.
+        pasos:
+          - {en: Arriba, resalta: cuenta, hasta: 1.8}
+          - {en: siguiente, pulsa: siguiente}
+          - {en: siguiente, cambia: siguiente}
+          - {en: siguiente, resalta: cuenta, captura: siguiente}
+
+  - id: opciones
+    capitulo: Mayúsculas y expresiones
+    antes: 0.5
+    pantalla: opciones
+    frases:
+      - id: opciones
+        texto: >-
+          Aa distingue mayúsculas, y el punto y la estrella buscan con una
+          expresión regular.
+        pasos:
+          - {al: inicio, enfoca: [mayusculas, reemplazar], max: 2.2}
+          - {en: Aa, resalta: mayusculas, hasta: 1.6}
+          - {en: estrella, resalta: regex}
+
+  - id: reemplazar
+    capitulo: Reemplazar
+    antes: 0.5
+    pantalla: reemplazo
+    frases:
+      - id: por
+        texto: >-
+          Con la interfaz completa, Reemplazar pide por qué.
+        pasos:
+          - {al: inicio, enfoca: [por, todas], max: 2}
+          - {en: por qué, resalta: por}
+      - id: todas
+        texto: >-
+          Y Todas lo cambia en toda la lección, en un solo cambio, que se
+          deshace de una vez.
+        pasos:
+          - {en: Todas, pulsa: todas}
+          - {en: toda la lección, cambia: todas}
+          - {en: toda la lección, enfoca: [cuenta, cambiada], max: 1.6, captura: todas}
+          - {en: solo cambio, resalta: cuenta, captura: todas, hasta: 1.8}
+          - {en: deshace, resalta: cambiada, captura: todas}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Reemplazar todas es un solo cambio, y se deshace de una vez.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, escribir un problema.

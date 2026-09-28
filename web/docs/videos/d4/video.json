@@ -1,0 +1,73 @@
+{
+  "codigo": "D4",
+  "titulo": "Definiciones, teoremas y snippets",
+  "fichero": "D04-definiciones-teoremas-y-snippets.mp4",
+  "duracion": 60.4,
+  "megas": 4.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Definiciones, teoremas y snippets"
+    },
+    {
+      "t": 7.49,
+      "titulo": "Envolver"
+    },
+    {
+      "t": 18.11,
+      "titulo": "Escribiéndolo"
+    },
+    {
+      "t": 27.95,
+      "titulo": "Quitar"
+    },
+    {
+      "t": 35.81,
+      "titulo": "La caja"
+    },
+    {
+      "t": 41.35,
+      "titulo": "En cada idioma"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás poner una definición o un teorema, y quitarlos sin tocar lo que hay dentro."
+    },
+    {
+      "t": 7.99,
+      "texto": "Marca el texto, abre Snippets, y escribe «defi»."
+    },
+    {
+      "t": 12.26,
+      "texto": "Elige Definición: el texto queda dentro, con su principio y su final."
+    },
+    {
+      "t": 18.61,
+      "texto": "Si prefieres escribirlo, al teclear barra begin y la llave, salen los entornos; al elegir uno, se escribe también su final."
+    },
+    {
+      "t": 28.45,
+      "texto": "Y con el cursor dentro, Snippets ofrece quitar el que lo rodea: se va la caja, y el texto se queda."
+    },
+    {
+      "t": 36.31,
+      "texto": "Al compilar, sale como una caja, con su nombre y su número."
+    },
+    {
+      "t": 41.85,
+      "texto": "Y el nombre lo pone el idioma del documento: Definición en castellano, Definition en inglés. Tú no lo escribes."
+    },
+    {
+      "t": 50.16,
+      "texto": "El nombre de la caja lo pone el idioma del documento."
+    },
+    {
+      "t": 53.37,
+      "texto": "En el siguiente vídeo, fórmulas y símbolos sin saberse las órdenes."
+    }
+  ]
+}

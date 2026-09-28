@@ -1,0 +1,101 @@
+# D10 · Rellenar los metadatos de una lección
+#
+# Montado desde este guion, con la pestaña de metadatos de «El teorema de
+# Bolzano». La errata de la categoría se escribe de verdad dentro del arnés:
+# el aviso y el «+1 −1» del fichero son los de la aplicación.
+codigo: D10
+titulo: Rellenar los metadatos de una lección
+subtitulo: El título, la clasificación, los prerrequisitos y las salidas
+ruta: Escribir una lección
+siguiente: "D11 · Crear una lección nueva"
+voz: narrador
+lema: ["Cambiar un campo", "cambia solo esa línea del fichero."]
+lema_en: "cambia solo"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás cambiar el título, la clasificación, los
+          prerrequisitos, y en qué versiones sale una lección.
+
+  - id: formulario
+    capitulo: Un formulario
+    antes: 0.5
+    pantalla: formulario
+    frases:
+      - id: titulos
+        texto: >-
+          Los metadatos son un formulario, no un fichero que escribir: el
+          título, en cada idioma.
+        pasos:
+          - {al: inicio, enfoca: [titulos, tema], max: 1.5}
+          - {en: título, resalta: [es, va, en], etiqueta: "Un título por idioma"}
+      - id: clasificacion
+        texto: >-
+          La categoría, el tema y las etiquetas te sugieren lo que ya existe.
+        pasos:
+          - {en: categoría, resalta: [categoria, tema], etiqueta: "Sugiere lo que ya hay"}
+
+  - id: errata
+    capitulo: Con una errata
+    antes: 0.5
+    pantalla: errata
+    frases:
+      - id: nueva
+        texto: >-
+          Si escribes una que no existe, te avisa: es una categoría nueva, que
+          ninguna otra lección usa.
+        pasos:
+          - {al: inicio, enfoca: [categoria, aviso], max: 1.7}
+          - {en: avisa, resalta: aviso, etiqueta: "Categoría nueva", color: ambar, lado: derecha}
+      - id: linea
+        texto: >-
+          Y cambiar un campo cambia solo esa línea del fichero: lo demás, con
+          sus comentarios, sigue ahí.
+        pasos:
+          - {en: línea, enfoca: [fichero, cambio], max: 1.8}
+          - {en: línea, resalta: cambio, etiqueta: "Una línea", lado: abajo}
+
+  - id: abajo
+    capitulo: Prerrequisitos y salidas
+    antes: 0.5
+    pantalla: abajo
+    frases:
+      - id: prerrequisitos
+        texto: >-
+          Más abajo, los prerrequisitos, que se buscan por su título, y los
+          objetivos.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: prerrequisitos, resalta: prerrequisito, etiqueta: "Lo que hay que saber antes", lado: arriba}
+      - id: salidas
+        texto: >-
+          Y en qué versiones sale. Lo normal es no elegir: sale lo que diga su
+          bloque.
+        pasos:
+          - {en: versiones, resalta: plantillas, hasta: 2.2}
+          - {en: elegir, pulsa: elegir}
+          - {en: bloque, cambia: elegir}
+          - {en: bloque, enfoca: [dialogo, estas], max: 1.5, captura: elegir, dy: 120}
+          - {en: bloque, resalta: dialogo, etiqueta: "Las de su bloque", lado: derecha, captura: elegir}
+      - id: apartar
+        texto: >-
+          Elegir aquí es apartar esta lección de algunas: de las diapositivas,
+          por ejemplo.
+        pasos:
+          - {en: apartar, resalta: estas, etiqueta: "Solo estas", lado: derecha, captura: elegir}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Cambiar un campo cambia solo esa línea del fichero.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, crear una lección nueva.

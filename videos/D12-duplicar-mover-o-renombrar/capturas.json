@@ -1,0 +1,148 @@
+{
+  "capturas": [
+    {
+      "nombre": "duplicar",
+      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "info-menu"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "info": {
+                "clave": "info-menu"
+              },
+              "duplicar": {
+                "clave": "info-duplicate"
+              },
+              "mover": {
+                "clave": "info-move"
+              },
+              "usar": {
+                "clave": "info-use"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "info-duplicate"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "duplicate-unit-title"
+            },
+            "texto": "Límites de cocientes con raíces"
+          }
+        },
+        {
+          "esperar": 4
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "clave": "duplicate-unit-title"
+        },
+        "donde": {
+          "clave": "duplicate-unit-where"
+        },
+        "crear": {
+          "clave": "duplicate-unit-create"
+        },
+        "dialogo": {
+          "texto": "Duplicar la lección",
+          "alto": 200
+        }
+      }
+    },
+    {
+      "nombre": "mover",
+      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "info-menu"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "info-move"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "move-unit-path"
+            },
+            "texto": "calculo/limites/cocientes"
+          }
+        },
+        {
+          "esperar": 6
+        }
+      ],
+      "cajas": {
+        "carpeta": {
+          "clave": "move-unit-path"
+        },
+        "donde": {
+          "clave": "move-unit-where"
+        },
+        "dialogo": {
+          "texto": "Mover o renombrar",
+          "alto": 200
+        },
+        "aviso": {
+          "contiene": "Se reescribirá",
+          "fila": 300
+        },
+        "curso": {
+          "contiene": "En Cálculo I"
+        }
+      }
+    },
+    {
+      "nombre": "darla",
+      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "info-menu"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "info-use"
+          },
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "dialogo": {
+          "contiene": "otro tema",
+          "alto": 200
+        }
+      }
+    }
+  ]
+}

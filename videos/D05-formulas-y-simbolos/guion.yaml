@@ -1,0 +1,98 @@
+# D5 · Fórmulas y símbolos sin saberse las órdenes
+#
+# Montado desde este guion, con capturas de «Funciones continuas» dentro del
+# arnés: las paletas escriben de verdad en el editor, y el «%» se queda sin
+# escapar para que se vea lo que le hace a la línea.
+codigo: D5
+titulo: Fórmulas y símbolos sin saberse las órdenes
+subtitulo: Las paletas, y el carácter que LaTeX se reserva
+ruta: Escribir una lección
+siguiente: "D6 · Arreglar lo que no va a compilar, antes de compilar"
+voz: narrador
+lema: ["Un símbolo suelto en el texto no compila,", "y la paleta lo sabe."]
+lema_en: "y la paleta"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás escribir fórmulas y símbolos con las paletas, sin
+          saberte las órdenes de LaTeX.
+
+  - id: simbolos
+    capitulo: Símbolos
+    antes: 0.5
+    pantalla: antes
+    frases:
+      - id: buscar
+        texto: >-
+          En Símbolos, cada uno se busca por cómo se ve: menor o igual.
+        pasos:
+          - {al: inicio, enfoca: [linea, simbolos], max: 1.6}
+          - {en: Símbolos, pulsa: simbolos}
+          - {en: Símbolos, cambia: menu-simbolos}
+          - {en: menor, enfoca: [leq], max: 1.8, captura: menu-simbolos}
+          - {en: menor, resalta: leq, captura: menu-simbolos}
+      - id: dolares
+        texto: >-
+          En mitad de un párrafo, lo mete entre dólares, con el cursor dentro,
+          porque fuera de una fórmula no compilaría.
+        pasos:
+          - {al: inicio, pulsa: leq, captura: menu-simbolos}
+          - {en: párrafo, cambia: leq}
+          - {en: párrafo, enfoca: [linea, leq], max: 2, captura: leq}
+          - {en: dólares, resalta: leq, etiqueta: "Entre dólares", captura: leq}
+
+  - id: matematicas
+    capitulo: Matemáticas
+    antes: 0.5
+    pantalla: leq
+    frases:
+      - id: fraccion
+        texto: >-
+          En Matemáticas están las estructuras: una fracción, un sumatorio, una
+          raíz, con sus huecos listos para rellenar.
+        pasos:
+          - {al: inicio, cambia: menu-mates}
+          - {al: inicio, enfoca: [mates, suma], max: 1.6, captura: menu-mates}
+          - {en: fracción, resalta: fraccion, captura: menu-mates, hasta: 1.4}
+          - {en: sumatorio, resalta: suma, captura: menu-mates, hasta: 1.4}
+          - {en: huecos, pulsa: fraccion, captura: menu-mates}
+          - {en: huecos, cambia: frac}
+          - {en: rellenar, enfoca: [linea, frac], max: 2, captura: frac}
+          - {en: rellenar, resalta: frac, captura: frac}
+
+  - id: porcentaje
+    capitulo: El porcentaje
+    antes: 0.5
+    pantalla: porcentaje
+    frases:
+      - id: comentario
+        texto: >-
+          Ojo con el tanto por ciento: para LaTeX empieza un comentario, y el
+          resto de la línea desaparece. El editor lo pinta de gris.
+        pasos:
+          - {al: inicio, enfoca: [linea], max: 2}
+          - {en: comentario, resalta: comentario, etiqueta: "Esto ya no sale", color: ambar}
+      - id: escapar
+        texto: >-
+          Con una barra delante, es un tanto por ciento de verdad.
+        pasos:
+          - {en: barra, cambia: arreglado}
+          - {en: barra, resalta: arreglado, captura: arreglado}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un símbolo suelto en el texto no compila, y la paleta lo sabe.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, arreglar lo que no va a compilar, antes de
+          compilar.

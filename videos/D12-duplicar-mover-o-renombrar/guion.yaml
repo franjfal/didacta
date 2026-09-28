@@ -1,0 +1,93 @@
+# D12 · Duplicar, mover o renombrar una lección
+#
+# Montado desde este guion, con la ⓘ de «Límites de cocientes» y sus tres
+# diálogos, tal como salen en la aplicación antes de confirmar.
+codigo: D12
+titulo: Duplicar, mover o renombrar una lección
+subtitulo: Empezar a partir de otra, y reorganizar sin romper nada
+ruta: Escribir una lección
+siguiente: "E1 · La pantalla de Asignaturas"
+voz: narrador
+lema: ["Duplicar da dos lecciones;", "darla en otro tema, una en dos sitios."]
+lema_en: "darla"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás empezar una lección a partir de otra, y
+          reorganizarlas sin romper nada.
+
+  - id: info
+    capitulo: La i
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: menu
+        texto: >-
+          Todo está en la i de la lección: duplicar, mover, y darla en otro
+          tema.
+        pasos:
+          - {al: inicio, enfoca: [info, usar], max: 1.7}
+          - {en: duplicar, resalta: duplicar, hasta: 1}
+          - {en: mover, resalta: mover, hasta: 1}
+          - {en: otro tema, resalta: usar}
+
+  - id: duplicar
+    capitulo: Duplicar
+    antes: 0.5
+    pantalla: duplicar
+    frases:
+      - id: dos
+        texto: >-
+          Duplicar pide otro título. Desde ese momento son dos lecciones:
+          cambiar una no cambia la otra.
+        pasos:
+          - {al: inicio, enfoca: [dialogo, crear], max: 1.6}
+          - {en: título, resalta: titulo, hasta: 1.8}
+          - {en: dos lecciones, resalta: donde, etiqueta: "Otra carpeta, otra lección", lado: abajo}
+
+  - id: mover
+    capitulo: Mover o renombrar
+    antes: 0.5
+    pantalla: mover
+    frases:
+      - id: mover
+        texto: >-
+          Mover o renombrar le cambia la carpeta. Antes de confirmar, dice qué
+          documentos la usan, de qué cursos, y los reescribe en el mismo
+          cambio.
+        pasos:
+          - {al: inicio, enfoca: [dialogo, curso], max: 1.6}
+          - {en: carpeta, resalta: carpeta, hasta: 2}
+          - {en: documentos, resalta: aviso, etiqueta: "Lo que la usa", lado: derecha, hasta: 2}
+          - {en: cursos, resalta: curso}
+
+  - id: darla
+    capitulo: Darla en otro tema
+    antes: 0.5
+    pantalla: darla
+    frases:
+      - id: misma
+        texto: >-
+          Y darla en otro tema no la copia: es la misma lección, en dos sitios.
+          Corregirla una vez la corrige en los dos.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.5}
+          - {en: misma, resalta: dialogo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Duplicar da dos lecciones; darla en otro tema, una en dos sitios.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, empiezas a preparar una asignatura: la
+          pantalla de Asignaturas.

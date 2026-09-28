@@ -1,0 +1,31 @@
+{
+  "capturas": [
+    {
+      "nombre": "campos",
+      "ruta": "/unit/problems/calculo/continuidad/tres-raices-por-bolzano",
+      "acciones": [{"esperar": 10}],
+      "cajas": {
+        "titulo": {"texto": "Tres raíces con el teorema de Bolzano", "n": 0},
+        "enunciado": {"texto": "Enunciado", "alto": 200},
+        "resultado": {"texto": "Resultado", "alto": 100},
+        "solucion": {"texto": "Solución detallada", "alto": 200},
+        "latex": {"texto": "LaTeX", "n": 0},
+        "campos": {"texto": "Campos", "n": 0}
+      }
+    },
+    {
+      "nombre": "latex",
+      "ruta": "/unit/problems/calculo/continuidad/tres-raices-por-bolzano",
+      "acciones": [
+        {"esperar": 8},
+        {"pulsar": {"texto": "LaTeX", "n": 0}, "esperar": 10}
+      ],
+      "cajas": {
+        "pista": {"editor": "\\begin{hint}", "hasta": "\\end{hint}"},
+        "resultado": {"editor": "\\begin{answer}", "hasta": "\\end{answer}"},
+        "correccion": {"editor": "\\begin{marking}", "hasta": "\\end{marking}"},
+        "puntos": {"editor": "\\dmarks{3}"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "capturas": [
+    {
+      "nombre": "elegir",
+      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "metadata-tab"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "formulario",
+            "cajas": {
+              "titulos": {
+                "texto": "TÍTULOS"
+              },
+              "es": {
+                "clave": "title-es"
+              },
+              "va": {
+                "clave": "title-va"
+              },
+              "en": {
+                "clave": "title-en"
+              },
+              "categoria": {
+                "clave": "unit-category"
+              },
+              "tema": {
+                "clave": "unit-topic"
+              },
+              "bloque": {
+                "clave": "unit-block"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "unit-category"
+            },
+            "texto": "calclo"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "errata",
+            "cajas": {
+              "categoria": {
+                "clave": "unit-category"
+              },
+              "aviso": {
+                "texto": "categoría nueva"
+              },
+              "fichero": {
+                "contiene": "unit.yaml"
+              },
+              "cambio": {
+                "contiene": "+1"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "unit-category"
+            },
+            "texto": "calculo"
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "mostrar": {
+            "clave": "unit-templates"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "abajo",
+            "cajas": {
+              "elegir": {
+                "clave": "unit-templates"
+              },
+              "plantillas": {
+                "contiene": "Libro · Examen",
+                "fila": 500
+              },
+              "prerrequisito": {
+                "texto": "calculo/continuidad/funcion-continua",
+                "fila": 500
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "unit-templates"
+          },
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "dialogo": {
+          "contiene": "Lo que toque",
+          "fila": 400
+        },
+        "estas": {
+          "texto": "Estas",
+          "fila": 300
+        }
+      }
+    }
+  ]
+}

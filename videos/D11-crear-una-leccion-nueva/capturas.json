@@ -1,0 +1,149 @@
+{
+  "capturas": [
+    {
+      "nombre": "creada",
+      "ruta": "/?en=calculo/continuidad",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "tema",
+            "cajas": {
+              "nueva": {
+                "clave": "library-new-unit"
+              },
+              "continuidad": {
+                "texto": "Continuidad",
+                "n": 1,
+                "fila": 150
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "library-new-unit"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "new-unit-title"
+            },
+            "texto": "Continuidad uniforme"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "titulo": {
+                "clave": "new-unit-title"
+              },
+              "tema": {
+                "clave": "new-unit-topic"
+              },
+              "tipo": {
+                "clave": "new-unit-kind"
+              },
+              "donde": {
+                "clave": "new-unit-where"
+              },
+              "crear": {
+                "clave": "new-unit-create"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "new-unit-kind"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "texto": "problemas",
+            "ultimo": true
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "problema",
+            "cajas": {
+              "tipo": {
+                "clave": "new-unit-kind"
+              },
+              "donde": {
+                "clave": "new-unit-where"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "new-unit-kind"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "texto": "teoría",
+            "ultimo": true
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "new-unit-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "creada"
+          },
+          "max": 400,
+          "despues": 12
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Continuidad uniforme",
+          "n": 0
+        },
+        "es": {
+          "clave": "language-tab-es"
+        },
+        "aviso": {
+          "contiene": "creada",
+          "fila": 400
+        }
+      }
+    },
+    {
+      "nombre": "otra",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "Añadir una lección"
+          },
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "crear": {
+          "contiene": "Crear una nueva"
+        }
+      }
+    }
+  ]
+}

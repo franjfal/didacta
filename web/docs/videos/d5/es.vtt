@@ -1,0 +1,46 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:05.050
+Al terminar sabrás escribir fórmulas
+y símbolos con las paletas,
+
+00:00:05.220 --> 00:00:07.417
+sin saberte las órdenes de LaTeX.
+
+00:00:08.267 --> 00:00:13.470
+En Símbolos, cada uno se busca
+por cómo se ve: menor o igual.
+
+00:00:13.540 --> 00:00:18.130
+En mitad de un párrafo, lo mete
+entre dólares, con el cursor dentro,
+
+00:00:18.420 --> 00:00:20.944
+porque fuera de una fórmula no compilaría.
+
+00:00:21.744 --> 00:00:27.474
+En Matemáticas están las estructuras:
+una fracción, un sumatorio, una raíz,
+
+00:00:27.604 --> 00:00:29.731
+con sus huecos listos para rellenar.
+
+00:00:30.531 --> 00:00:34.791
+Ojo con el tanto por ciento: para
+LaTeX empieza un comentario,
+
+00:00:34.831 --> 00:00:39.562
+y el resto de la línea desaparece.
+El editor lo pinta de gris.
+
+00:00:39.632 --> 00:00:43.235
+Con una barra delante, es un
+tanto por ciento de verdad.
+
+00:00:44.035 --> 00:00:48.054
+Un símbolo suelto en el texto no
+compila, y la paleta lo sabe.
+
+00:00:48.304 --> 00:00:53.055
+En el siguiente vídeo, arreglar lo que
+no va a compilar, antes de compilar.

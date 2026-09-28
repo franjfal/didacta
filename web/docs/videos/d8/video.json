@@ -1,0 +1,61 @@
+{
+  "codigo": "D8",
+  "titulo": "Escribir un problema",
+  "fichero": "D08-escribir-un-problema.mp4",
+  "duracion": 56.95,
+  "megas": 3.4,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Escribir un problema"
+    },
+    {
+      "t": 9.98,
+      "titulo": "Por campos"
+    },
+    {
+      "t": 22.38,
+      "titulo": "La pista y la corrección"
+    },
+    {
+      "t": 36.05,
+      "titulo": "Dónde sale cada cosa"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás escribir un problema entero: el enunciado, la pista, el resultado, la solución y la corrección."
+    },
+    {
+      "t": 10.48,
+      "texto": "Un problema se escribe por campos, cada uno en su caja, en lugar de un fichero lleno de órdenes que recordar."
+    },
+    {
+      "t": 17.22,
+      "texto": "El resultado va en una línea: es lo que usa el alumno para corregirse solo."
+    },
+    {
+      "t": 22.88,
+      "texto": "En LaTeX, el mismo problema, con la pista y los puntos que vale."
+    },
+    {
+      "t": 27.86,
+      "texto": "Y la corrección: cuánto vale cada parte, y dónde se suelen equivocar. Nunca sale en un documento del alumno."
+    },
+    {
+      "t": 36.55,
+      "texto": "Al compilar, la hoja para repartir lleva la pista; la de resultados, el resultado; y la corrección del examen, los criterios."
+    },
+    {
+      "t": 46.81,
+      "texto": "La solución vive con su enunciado: no se queda resolviendo otra cosa."
+    },
+    {
+      "t": 51.81,
+      "texto": "En el siguiente vídeo, poner una figura."
+    }
+  ]
+}

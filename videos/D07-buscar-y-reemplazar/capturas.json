@@ -1,0 +1,47 @@
+{
+  "capturas": [
+    {
+      "nombre": "todas",
+      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+      "completa": true,
+      "acciones": [
+        {"esperar": 10},
+        {"seleccionar_texto": {"buscar": "\\begin{frame}", "vacio": true}},
+        {"tecla": "meta+f"},
+        {"escribir": {"en": {"clave": "find-query"}, "texto": "función"}},
+        {"capturar": {"nombre": "encontrado", "cajas": {
+          "barra": {"clave": "find-bar"},
+          "busca": {"clave": "find-query"},
+          "cuenta": {"clave": "find-count"},
+          "siguiente": {"clave": "find-next"},
+          "primera": {"editor": "función"}
+        }}},
+        {"pulsar": {"clave": "find-next"}, "esperar": 6},
+        {"capturar": {"nombre": "siguiente", "cajas": {
+          "cuenta": {"clave": "find-count"},
+          "siguiente": {"clave": "find-next"}
+        }}},
+        {"capturar": {"nombre": "opciones", "cajas": {
+          "mayusculas": {"clave": "find-case"},
+          "regex": {"clave": "find-regex"},
+          "reemplazar": {"clave": "find-replace-toggle"}
+        }}},
+        {"pulsar": {"clave": "find-replace-toggle"}, "esperar": 6},
+        {"escribir": {"en": {"clave": "find-replacement"}, "texto": "aplicación"}},
+        {"capturar": {"nombre": "reemplazo", "cajas": {
+          "por": {"clave": "find-replacement"},
+          "una": {"clave": "find-replace-one"},
+          "todas": {"clave": "find-replace-all"},
+          "cuenta": {"clave": "find-count"}
+        }}},
+        {"pulsar": {"clave": "find-replace-all"}, "esperar": 8}
+      ],
+      "cajas": {
+        "cuenta": {"clave": "find-count"},
+        "todas": {"clave": "find-replace-all"},
+        "cambiada": {"editor": "aplicación"},
+        "es": {"clave": "language-tab-es"}
+      }
+    }
+  ]
+}

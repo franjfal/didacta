@@ -1,0 +1,164 @@
+{
+  "capturas": [
+    {
+      "nombre": "frac",
+      "ruta": "/unit/content/calculo/continuidad/funcion-continua",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\begin{remark}",
+            "poner": "Si $x$ está cerca de $a$, entonces $|f(x) - f(a)|$ \n\n\\begin{remark}",
+            "cursor": 51
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "antes",
+            "cajas": {
+              "linea": {
+                "editor": "Si $x$ está cerca",
+                "hasta": "f(a)|$"
+              },
+              "simbolos": {
+                "clave": "palette-symbols"
+              },
+              "mates": {
+                "clave": "palette-math"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "palette-symbols"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu-simbolos",
+            "cajas": {
+              "leq": {
+                "clave": "snippet-≤"
+              },
+              "simbolos": {
+                "clave": "palette-symbols"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-≤"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "leq",
+            "cajas": {
+              "leq": {
+                "editor": "$\\leq"
+              },
+              "linea": {
+                "editor": "Si $x$ está cerca",
+                "hasta": "f(a)|$"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "palette-math"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu-mates",
+            "cajas": {
+              "fraccion": {
+                "clave": "snippet-a/b"
+              },
+              "suma": {
+                "clave": "snippet-∑"
+              },
+              "mates": {
+                "clave": "palette-math"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-a/b"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "frac": {
+          "editor": "\\frac{"
+        },
+        "linea": {
+          "editor": "Si $x$ está cerca",
+          "hasta": "f(a)|$"
+        }
+      }
+    },
+    {
+      "nombre": "arreglado",
+      "ruta": "/unit/content/calculo/continuidad/funcion-continua",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\begin{remark}",
+            "poner": "Casi el 60% de la clase confunde las dos definiciones.\n\n\\begin{remark}"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "porcentaje",
+            "cajas": {
+              "linea": {
+                "editor": "Casi el 60",
+                "hasta": "definiciones."
+              },
+              "comentario": {
+                "editor": "% de la clase",
+                "hasta": "definiciones."
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "60%",
+            "poner": "60\\%"
+          }
+        },
+        {
+          "esperar": 6
+        }
+      ],
+      "cajas": {
+        "linea": {
+          "editor": "Casi el 60",
+          "hasta": "definiciones."
+        },
+        "arreglado": {
+          "editor": "60\\%"
+        }
+      }
+    }
+  ]
+}

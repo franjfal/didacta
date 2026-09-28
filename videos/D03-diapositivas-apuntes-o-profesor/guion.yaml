@@ -1,0 +1,128 @@
+# D3 · Escribir para diapositivas, apuntes o profesor
+#
+# Montado desde este guion. Las marcas se ponen de verdad en «Funciones
+# continuas», dentro del arnés; los PDF del final son los de «Límite de una
+# función en un punto», que ya usa los tres canales, compilados con el motor.
+codigo: D3
+titulo: Escribir para diapositivas, apuntes o profesor
+subtitulo: Que un trozo salga solo donde tiene que salir
+ruta: Escribir una lección
+siguiente: "D4 · Definiciones, teoremas y snippets"
+voz: narrador
+lema: ["Lo que no dice nada sale en todas partes;", "lo marcado, solo en su canal."]
+lema_en: "lo marcado"
+
+pdf:
+  - nombre: diapositivas
+    documento: tema-1
+    version: slides
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+      entrada: {desde: "se acerca a", hasta: "decir «se acerca»"}
+  - nombre: profesor
+    documento: tema-1
+    version: slides-teacher
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      nota: {desde: "Nota didáctica", hasta: "la pizarra.", caja: true}
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+  - nombre: apuntes
+    documento: tema-1
+    version: notes
+    idioma: es
+    pagina: "La idea intuitiva"
+    ppp: 220
+    zonas:
+      intuicion: {desde: "La idea intuitiva", hasta: "puede comprobar."}
+      solo-apuntes: {desde: "La condición", hasta: "de f(x)."}
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás hacer que un trozo salga solo en las diapositivas,
+          solo en los apuntes, o solo en tu copia.
+
+  - id: apuntes
+    capitulo: Solo en los apuntes
+    antes: 0.5
+    pantalla: seleccion
+    frases:
+      - id: marcar
+        texto: >-
+          Marca el párrafo que explica, y pulsa Apuntes en la barra.
+        pasos:
+          - {al: inicio, enfoca: [seleccion, barra], max: 1.6}
+          - {en: Marca, resalta: seleccion, hasta: 2}
+          - {en: Apuntes, pulsa: apuntes}
+          - {en: barra, cambia: apuntes}
+          - {en: barra, resalta: envuelto, etiqueta: "Solo en los apuntes", captura: apuntes, color: apuntes}
+      - id: fuera
+        texto: >-
+          En las diapositivas ya no sale; en los apuntes, sí, entero.
+
+  - id: diapositivas
+    capitulo: Solo en las diapositivas
+    antes: 0.5
+    pantalla: apuntes
+    frases:
+      - id: corta
+        texto: >-
+          Una frase corta, pensada para el proyector: Diapositivas.
+        pasos:
+          - {en: Diapositivas, pulsa: diapositivas}
+          - {en: Diapositivas, cambia: diapositivas}
+          - {en: Diapositivas, resalta: envuelto, etiqueta: "Solo en las diapositivas", captura: diapositivas, color: diapositivas}
+
+  - id: profesor
+    capitulo: Solo en tu copia
+    antes: 0.5
+    pantalla: diapositivas
+    frases:
+      - id: nota
+        texto: >-
+          Y una nota para ti, «aquí se atascan»: Profesor. En la copia del
+          alumno no está escondida: no existe.
+        pasos:
+          - {en: Profesor, pulsa: profesor}
+          - {en: Profesor, cambia: profesor}
+          - {en: Profesor, resalta: envuelto, etiqueta: "Solo en tu copia", captura: profesor, color: profesor}
+      - id: sin-marca
+        texto: >-
+          Lo que no lleva ninguna marca sale en todas partes.
+        pasos:
+          - {en: ninguna, resalta: sinmarca, captura: profesor}
+
+  - id: resultado
+    capitulo: Dónde sale cada trozo
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      ancho: 560
+      hojas:
+        - {pdf: diapositivas, rotulo: Diapositivas, color: diapositivas, en: proyector}
+        - {pdf: apuntes, rotulo: Apuntes, color: apuntes, alto: 420, desde: 150, en: apuntes, resalta: [{zona: solo-apuntes, etiqueta: "Solo en los apuntes", en: párrafo, color: apuntes}]}
+        - {pdf: profesor, rotulo: "Del profesor", color: profesor, en: nota, resalta: [{zona: nota, etiqueta: "Solo en tu copia", en: nota, color: profesor}]}
+    frases:
+      - id: asi
+        texto: >-
+          Así queda en una lección que ya lo usa: lo del proyector, el párrafo
+          de los apuntes, y la nota del profesor, cada uno en su PDF.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo que no dice nada sale en todas partes; lo marcado, solo en su
+          canal.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, definiciones, teoremas y snippets.

@@ -1,0 +1,197 @@
+{
+  "capturas": [
+    {
+      "nombre": "menu",
+      "ruta": "/?en=calculo/limites",
+      "idioma": "en",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "todo",
+            "cajas": {
+              "cabecera": {
+                "contiene": "9 unidades"
+              },
+              "traduccion": {
+                "texto": "Traducción",
+                "n": 1
+              },
+              "limites": {
+                "texto": "Límites",
+                "n": 1,
+                "fila": 150
+              },
+              "continuidad": {
+                "texto": "Continuidad",
+                "fila": 150
+              },
+              "lecciones": {
+                "texto": "5 unidades",
+                "alto": 380
+              },
+              "idioma": {
+                "clave": "language-picker"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Traducción",
+            "n": 1
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "falta": {
+          "texto": "Falta en este idioma"
+        },
+        "revisar": {
+          "texto": "Por revisar o desactualizada"
+        },
+        "menu": {
+          "texto": "Cualquier estado",
+          "alto": 150
+        }
+      }
+    },
+    {
+      "nombre": "falta",
+      "ruta": "/?en=calculo/limites&estado=falta",
+      "idioma": "en",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "cabecera": {
+          "contiene": "de 9 unidades"
+        },
+        "limites": {
+          "texto": "Límites",
+          "n": 1,
+          "fila": 150
+        },
+        "continuidad": {
+          "texto": "Continuidad",
+          "fila": 150
+        },
+        "lecciones": {
+          "contiene": "unidades",
+          "n": 1,
+          "alto": 380
+        },
+        "chip": {
+          "texto": "falta en en"
+        },
+        "categoria": {
+          "texto": "Cálculo",
+          "n": 1,
+          "fila": 150
+        }
+      }
+    },
+    {
+      "nombre": "tipo",
+      "ruta": "/?en=calculo/limites&estado=falta",
+      "idioma": "en",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "Tipo"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "tipo": {
+          "texto": "Tipo"
+        },
+        "menu": {
+          "texto": "Cualquier tipo",
+          "alto": 150
+        }
+      }
+    },
+    {
+      "nombre": "bloque",
+      "ruta": "/?en=calculo&bloque=problems",
+      "idioma": "en",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "bloques": {
+          "texto": "Todo",
+          "n": 0,
+          "fila": 150
+        },
+        "problemas": {
+          "contiene": "Proble",
+          "n": 0
+        },
+        "etiquetas": {
+          "texto": "Etiquetas",
+          "fila": 500
+        }
+      }
+    },
+    {
+      "nombre": "orden",
+      "ruta": "/?en=calculo/limites",
+      "idioma": "en",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "Orden"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "orden": {
+          "texto": "Orden"
+        },
+        "pendiente": {
+          "texto": "Por traducir primero"
+        },
+        "menu": {
+          "texto": "Por ruta",
+          "alto": 150
+        }
+      }
+    },
+    {
+      "nombre": "guardar",
+      "ruta": "/?q=limite&estado=falta",
+      "idioma": "en",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "guardar": {
+          "clave": "save-search"
+        },
+        "resumen": {
+          "clave": "search-summary"
+        }
+      }
+    }
+  ]
+}

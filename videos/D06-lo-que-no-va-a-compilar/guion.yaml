@@ -1,0 +1,88 @@
+# D6 · Arreglar lo que no va a compilar, antes de compilar
+#
+# Montado desde este guion. Los errores se hacen de verdad en «El teorema de
+# Bolzano», dentro del arnés, y el panel es el de la aplicación: lo que dice
+# cada línea es lo que comprueba antes de llamar a LaTeX.
+codigo: D6
+titulo: Arreglar lo que no va a compilar, antes de compilar
+subtitulo: El aviso de abajo, y saltar a cada línea
+ruta: Escribir una lección
+siguiente: "D7 · Buscar y reemplazar en una lección"
+voz: narrador
+lema: ["Si sale el aviso,", "es que no va a compilar."]
+lema_en: "es que"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás leer el aviso «Esto no va a compilar», y saltar a
+          cada línea que lo causa.
+
+  - id: llave
+    capitulo: Una llave
+    antes: 0.5
+    pantalla: llave
+    frases:
+      - id: borrar
+        texto: >-
+          Si se borra una llave de cierre, abajo sale el aviso, con su línea.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: llave, resalta: titulo, etiqueta: "Falta la llave", color: ambar, hasta: 2.4}
+          - {en: abajo, resalta: aviso, etiqueta: "Con su línea", lado: arriba}
+      - id: saltar
+        texto: >-
+          Al pulsarlo, el cursor va a esa línea.
+        pasos:
+          - {al: inicio, pulsa: aviso}
+          - {en: cursor, cambia: salto}
+          - {en: cursor, resalta: titulo, captura: salto}
+
+  - id: varios
+    capitulo: Lo que avisa
+    antes: 0.5
+    pantalla: varios
+    frases:
+      - id: otros
+        texto: >-
+          También una fórmula sin cerrar, un entorno sin su final, o una orden
+          de otro idioma, como lgem, en castellano.
+        pasos:
+          - {al: inicio, enfoca: [panel], max: 1.7, dy: -80}
+          - {en: fórmula, resalta: aviso3, hasta: 1.6}
+          - {en: entorno, resalta: aviso1, hasta: 1.6}
+          - {en: otro idioma, resalta: aviso2, etiqueta: "Una orden de otro idioma", lado: arriba}
+      - id: seguro
+        texto: >-
+          Solo avisa de lo que sabe seguro: si sale algo, es que LaTeX no lo va
+          a compilar.
+        pasos:
+          - {en: seguro, resalta: panel}
+
+  - id: guardar
+    capitulo: Guardar igual
+    antes: 0.5
+    pantalla: guardada
+    frases:
+      - id: igual
+        texto: >-
+          Y se puede guardar igual: un fichero a medias no se pierde, y se
+          termina otro día.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: guardar, resalta: guardado, etiqueta: "Guardado", lado: arriba}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Si sale el aviso, es que no va a compilar.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, buscar y reemplazar en una lección.

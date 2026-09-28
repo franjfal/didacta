@@ -1,0 +1,120 @@
+{
+  "capturas": [
+    {
+      "nombre": "profesor",
+      "ruta": "/unit/content/calculo/continuidad/funcion-continua",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "seleccionar_texto": {
+            "buscar": "Si $a$ no es un extremo",
+            "hasta": "exactamente que"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "seleccion",
+            "cajas": {
+              "seleccion": {
+                "editor": "Si $a$ no es un extremo",
+                "hasta": "exactamente que"
+              },
+              "diapositivas": {
+                "clave": "wrap-onlyslides"
+              },
+              "apuntes": {
+                "clave": "wrap-onlynotes"
+              },
+              "profesor": {
+                "clave": "wrap-onlyteacher"
+              },
+              "barra": {
+                "clave": "wrap-onlyslides",
+                "fila": 600
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "wrap-onlynotes"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "apuntes",
+            "cajas": {
+              "envuelto": {
+                "editor": "\\onlynotes{",
+                "hasta": "exactamente que"
+              },
+              "apuntes": {
+                "clave": "wrap-onlynotes"
+              }
+            }
+          }
+        },
+        {
+          "seleccionar_texto": {
+            "buscar": "Es \\keyterm{continua en $I$}",
+            "hasta": "todos sus puntos."
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "wrap-onlyslides"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "diapositivas",
+            "cajas": {
+              "envuelto": {
+                "editor": "\\onlyslides{",
+                "hasta": "todos sus puntos."
+              },
+              "diapositivas": {
+                "clave": "wrap-onlyslides"
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\end{definition}\n",
+            "poner": "\\end{definition}\nAquí se atascan: confunden quién elige $\\varepsilon$ y quién $\\delta$.\n"
+          }
+        },
+        {
+          "seleccionar_texto": {
+            "buscar": "Aquí se atascan",
+            "hasta": "quién $\\delta$."
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "wrap-onlyteacher"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "envuelto": {
+          "editor": "\\onlyteacher{",
+          "hasta": "quién $\\delta$."
+        },
+        "profesor": {
+          "clave": "wrap-onlyteacher"
+        },
+        "sinmarca": {
+          "editor": "\\begin{keyformula}",
+          "hasta": "\\end{keyformula}"
+        }
+      }
+    }
+  ]
+}

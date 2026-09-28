@@ -1,0 +1,115 @@
+# D8 · Escribir un problema
+#
+# Montado desde este guion, con «Tres raíces con el teorema de Bolzano» del
+# repositorio de ejemplo: el editor por campos, su LaTeX, y los PDF de verdad
+# de la Hoja 1 y del Primer parcial, compilados con el motor.
+codigo: D8
+titulo: Escribir un problema
+subtitulo: El enunciado, la pista, el resultado, la solución y la corrección
+ruta: Escribir una lección
+siguiente: "D9 · Poner una figura"
+voz: narrador
+lema: ["La solución vive con su enunciado:", "no se queda resolviendo otra cosa."]
+lema_en: "no se queda"
+
+pdf:
+  - nombre: hoja
+    documento: hoja-1
+    version: problems
+    idioma: es
+    pagina: "Tres raíces con el teorema de Bolzano"
+    zonas:
+      ej: {desde: "Ejercicio 3", hasta: "Bolzano)"}
+      pista: {desde: "Indicación:", hasta: "cambios de signo."}
+  - nombre: respuestas
+    documento: hoja-1
+    version: problems-answers
+    idioma: es
+    pagina: "Tres raíces con el teorema de Bolzano"
+    zonas:
+      ej: {desde: "Ejercicio 3", hasta: "Bolzano)"}
+      respuesta: {desde: "Respuesta:", hasta: "(1, 2)."}
+  - nombre: correccion
+    documento: parcial-1
+    version: exam-marking
+    idioma: es
+    pagina: "Un punto por evaluar"
+    zonas:
+      correccion: {desde: "Corrección:", hasta: "no evaluar en"}
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás escribir un problema entero: el enunciado, la
+          pista, el resultado, la solución y la corrección.
+
+  - id: campos
+    capitulo: Por campos
+    antes: 0.5
+    pantalla: campos
+    frases:
+      - id: campos
+        texto: >-
+          Un problema se escribe por campos, cada uno en su caja, en lugar de
+          un fichero lleno de órdenes que recordar.
+        pasos:
+          - {al: inicio, enfoca: [titulo, solucion], max: 1.5, dy: 40}
+          - {en: campos, resalta: enunciado, hasta: 1.4}
+          - {en: caja, resalta: [resultado, solucion]}
+      - id: resultado
+        texto: >-
+          El resultado va en una línea: es lo que usa el alumno para
+          corregirse solo.
+        pasos:
+          - {en: resultado, resalta: resultado, etiqueta: "En una línea", lado: derecha}
+
+  - id: latex
+    capitulo: La pista y la corrección
+    antes: 0.5
+    pantalla: latex
+    frases:
+      - id: pista
+        texto: >-
+          En LaTeX, el mismo problema, con la pista y los puntos que vale.
+        pasos:
+          - {al: inicio, enfoca: [puntos, correccion], max: 1.6}
+          - {en: pista, resalta: pista, etiqueta: "La pista", lado: derecha, hasta: 2}
+          - {en: puntos, resalta: puntos, etiqueta: "Lo que vale", lado: derecha}
+      - id: correccion
+        texto: >-
+          Y la corrección: cuánto vale cada parte, y dónde se suelen
+          equivocar. Nunca sale en un documento del alumno.
+        pasos:
+          - {en: corrección, resalta: correccion, etiqueta: "Solo para quien corrige", color: profesor, lado: derecha}
+
+  - id: salidas
+    capitulo: Dónde sale cada cosa
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      ancho: 560
+      hojas:
+        - {pdf: hoja, rotulo: "Para repartir", color: apuntes, desde_zona: ej, izquierda_zona: ej, zoom: 1.32, alto: 420, en: repartir, resalta: [{zona: pista, etiqueta: "Con la pista", en: pista}]}
+        - {pdf: respuestas, rotulo: "Con resultados", color: ambar, desde_zona: ej, izquierda_zona: ej, zoom: 1.32, alto: 420, en: resultado, resalta: [{zona: respuesta, etiqueta: "El resultado", en: resultado, color: ambar}]}
+        - {pdf: correccion, rotulo: "Corrección del examen", color: profesor, desde_zona: correccion, izquierda_zona: correccion, margen: 30, zoom: 1.25, alto: 420, en: examen, resalta: [{zona: correccion, etiqueta: "Los criterios", en: criterios, color: profesor}]}
+    frases:
+      - id: tres
+        texto: >-
+          Al compilar, la hoja para repartir lleva la pista; la de resultados,
+          el resultado; y la corrección del examen, los criterios.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La solución vive con su enunciado: no se queda resolviendo otra
+          cosa.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, poner una figura.

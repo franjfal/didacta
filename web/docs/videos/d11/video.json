@@ -1,0 +1,69 @@
+{
+  "codigo": "D11",
+  "titulo": "Crear una lección nueva",
+  "fichero": "D11-crear-una-leccion-nueva.mp4",
+  "duracion": 54.08,
+  "megas": 2.8,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Crear una lección nueva"
+    },
+    {
+      "t": 5.52,
+      "titulo": "Nueva lección"
+    },
+    {
+      "t": 16.3,
+      "titulo": "Dónde va a quedar"
+    },
+    {
+      "t": 28.02,
+      "titulo": "Se abre"
+    },
+    {
+      "t": 35.6,
+      "titulo": "La otra puerta"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás crear una lección nueva, en el tema que le toca."
+    },
+    {
+      "t": 6.02,
+      "texto": "En la biblioteca, dentro de Continuidad, pulsa «Nueva lección en Continuidad»."
+    },
+    {
+      "t": 11.6,
+      "texto": "Pide el título, el tema, que ya viene puesto, y el tipo."
+    },
+    {
+      "t": 16.8,
+      "texto": "Antes de crearla, dice dónde va a quedar: esa carpeta es la dirección con la que la nombran los documentos."
+    },
+    {
+      "t": 24.0,
+      "texto": "Y el tipo decide si va con la teoría o con los problemas."
+    },
+    {
+      "t": 28.52,
+      "texto": "Al crearla, se abre en el editor, en el idioma de referencia, con un esqueleto para empezar a escribir."
+    },
+    {
+      "t": 36.1,
+      "texto": "La otra puerta está al añadir lecciones a un tema: Crear una nueva, que la deja ya puesta en él."
+    },
+    {
+      "t": 43.36,
+      "texto": "El nombre de la carpeta es la dirección con la que la llaman."
+    },
+    {
+      "t": 47.31,
+      "texto": "En el siguiente vídeo, duplicar, mover o renombrar una lección."
+    }
+  ]
+}

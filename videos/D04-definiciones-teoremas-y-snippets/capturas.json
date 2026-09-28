@@ -1,0 +1,137 @@
+{
+  "capturas": [
+    {
+      "nombre": "quitar",
+      "ruta": "/unit/content/calculo/continuidad/funcion-continua",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\begin{remark}",
+            "poner": "Una función es uniformemente continua en $I$ si el mismo $\\delta$ vale para todos los puntos.\n\n\\begin{remark}"
+          }
+        },
+        {
+          "seleccionar_texto": {
+            "buscar": "Una función es uniformemente",
+            "hasta": "todos los puntos."
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "seleccion",
+            "cajas": {
+              "seleccion": {
+                "editor": "Una función es uniformemente",
+                "hasta": "todos los puntos."
+              },
+              "menu": {
+                "clave": "wrap-menu"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "wrap-menu"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "snippet-search"
+            },
+            "texto": "defi"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "buscar",
+            "cajas": {
+              "buscador": {
+                "clave": "snippet-search"
+              },
+              "definicion": {
+                "clave": "wrap-item-definition"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "wrap-item-definition"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "envuelta",
+            "cajas": {
+              "envuelta": {
+                "editor": "\\begin{definition}\nUna función es uniformemente",
+                "hasta": "\\end{definition}"
+              },
+              "begin": {
+                "editor": "\\begin{definition}\nUna"
+              },
+              "end": {
+                "editor": "puntos.\n\\end{definition}"
+              }
+            }
+          }
+        },
+        {
+          "seleccionar_texto": {
+            "buscar": "mismo $\\delta$",
+            "vacio": true
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "wrap-menu"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "quitar": {
+          "clave": "unwrap-item-definition"
+        },
+        "cabecera": {
+          "texto": "Quitar lo que rodea al cursor"
+        }
+      }
+    },
+    {
+      "nombre": "completar",
+      "ruta": "/unit/content/calculo/continuidad/funcion-continua",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\begin{remark}",
+            "poner": "\\begin{th\n\n\\begin{remark}",
+            "cursor": 9
+          }
+        },
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "escrito": {
+          "editor": "\\begin{th"
+        },
+        "lista": {
+          "texto": "Teorema",
+          "fila": 200
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+# D11 · Crear una lección nueva
+#
+# Montado desde este guion: la lección se crea de verdad dentro del arnés,
+# desde la biblioteca, y se abre en el editor como la abriría cualquiera.
+codigo: D11
+titulo: Crear una lección nueva
+subtitulo: En el tema que le toca, y en su carpeta
+ruta: Escribir una lección
+siguiente: "D12 · Duplicar, mover o renombrar una lección"
+voz: narrador
+lema: ["El nombre de la carpeta", "es la dirección con la que la llaman."]
+lema_en: "es la dirección"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás crear una lección nueva, en el tema que le toca.
+
+  - id: nueva
+    capitulo: Nueva lección
+    antes: 0.5
+    pantalla: tema
+    frases:
+      - id: boton
+        texto: >-
+          En la biblioteca, dentro de Continuidad, pulsa «Nueva lección en
+          Continuidad».
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Continuidad, resalta: continuidad, hasta: 1.6}
+          - {en: pulsa, resalta: nueva, hasta: 1.4}
+          - {en: pulsa, pulsa: nueva}
+      - id: campos
+        texto: >-
+          Pide el título, el tema, que ya viene puesto, y el tipo.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [titulo, donde], max: 1.8, captura: dialogo}
+          - {en: título, resalta: titulo, captura: dialogo, hasta: 1.2}
+          - {en: tema, resalta: tema, captura: dialogo, hasta: 1.6}
+          - {en: tipo, resalta: tipo, captura: dialogo}
+
+  - id: donde
+    capitulo: Dónde va a quedar
+    antes: 0.5
+    pantalla: dialogo
+    frases:
+      - id: carpeta
+        texto: >-
+          Antes de crearla, dice dónde va a quedar: esa carpeta es la dirección
+          con la que la nombran los documentos.
+        pasos:
+          - {al: inicio, enfoca: [titulo, donde], max: 1.8}
+          - {en: dónde, resalta: donde, etiqueta: "Su carpeta", lado: abajo}
+      - id: tipo
+        texto: >-
+          Y el tipo decide si va con la teoría o con los problemas.
+        pasos:
+          - {en: tipo, cambia: problema}
+          - {en: tipo, resalta: [tipo, donde], captura: problema}
+
+  - id: creada
+    capitulo: Se abre
+    antes: 0.5
+    pantalla: creada
+    frases:
+      - id: abre
+        texto: >-
+          Al crearla, se abre en el editor, en el idioma de referencia, con un
+          esqueleto para empezar a escribir.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: idioma, resalta: es, etiqueta: "En el idioma de referencia", lado: abajo}
+
+  - id: otra
+    capitulo: La otra puerta
+    antes: 0.5
+    pantalla: otra
+    frases:
+      - id: tema
+        texto: >-
+          La otra puerta está al añadir lecciones a un tema: Crear una nueva,
+          que la deja ya puesta en él.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Crear una nueva, resalta: crear, etiqueta: "Crear una nueva", lado: arriba}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El nombre de la carpeta es la dirección con la que la llaman.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, duplicar, mover o renombrar una lección.

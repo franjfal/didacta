@@ -1,0 +1,69 @@
+{
+  "codigo": "D3",
+  "titulo": "Escribir para diapositivas, apuntes o profesor",
+  "fichero": "D03-diapositivas-apuntes-o-profesor.mp4",
+  "duracion": 60.9,
+  "megas": 3.9,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Escribir para diapositivas, apuntes o profesor"
+    },
+    {
+      "t": 8.48,
+      "titulo": "Solo en los apuntes"
+    },
+    {
+      "t": 18.36,
+      "titulo": "Solo en las diapositivas"
+    },
+    {
+      "t": 23.76,
+      "titulo": "Solo en tu copia"
+    },
+    {
+      "t": 38.29,
+      "titulo": "Dónde sale cada trozo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás hacer que un trozo salga solo en las diapositivas, solo en los apuntes, o solo en tu copia."
+    },
+    {
+      "t": 8.98,
+      "texto": "Marca el párrafo que explica, y pulsa Apuntes en la barra."
+    },
+    {
+      "t": 12.99,
+      "texto": "En las diapositivas ya no sale; en los apuntes, sí, entero."
+    },
+    {
+      "t": 18.86,
+      "texto": "Una frase corta, pensada para el proyector: Diapositivas."
+    },
+    {
+      "t": 24.26,
+      "texto": "Y una nota para ti, «aquí se atascan»: Profesor. En la copia del alumno no está escondida: no existe."
+    },
+    {
+      "t": 35.15,
+      "texto": "Lo que no lleva ninguna marca sale en todas partes."
+    },
+    {
+      "t": 38.79,
+      "texto": "Así queda en una lección que ya lo usa: lo del proyector, el párrafo de los apuntes, y la nota del profesor, cada uno en su PDF."
+    },
+    {
+      "t": 48.7,
+      "texto": "Lo que no dice nada sale en todas partes; lo marcado, solo en su canal."
+    },
+    {
+      "t": 54.24,
+      "texto": "En el siguiente vídeo, definiciones, teoremas y snippets."
+    }
+  ]
+}

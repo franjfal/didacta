@@ -1,0 +1,37 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:04.420
+Al terminar sabrás leer el
+aviso «Esto no va a compilar»,
+
+00:00:04.460 --> 00:00:07.118
+y saltar a cada línea que lo causa.
+
+00:00:07.968 --> 00:00:12.807
+Si se borra una llave de cierre,
+abajo sale el aviso, con su línea.
+
+00:00:12.877 --> 00:00:15.753
+Al pulsarlo, el cursor va a esa línea.
+
+00:00:16.553 --> 00:00:22.473
+También una fórmula sin cerrar, un entorno
+sin su final, o una orden de otro idioma,
+
+00:00:22.513 --> 00:00:24.314
+como lgem, en castellano.
+
+00:00:24.384 --> 00:00:30.481
+Solo avisa de lo que sabe seguro: si sale
+algo, es que LaTeX no lo va a compilar.
+
+00:00:31.281 --> 00:00:37.348
+Y se puede guardar igual: un fichero a
+medias no se pierde, y se termina otro día.
+
+00:00:38.148 --> 00:00:41.271
+Si sale el aviso, es que no va a compilar.
+
+00:00:41.521 --> 00:00:45.482
+En el siguiente vídeo, buscar
+y reemplazar en una lección.

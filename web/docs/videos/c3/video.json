@@ -1,0 +1,77 @@
+{
+  "codigo": "C3",
+  "titulo": "Filtrar lo que falta, por tipo o por bloque",
+  "fichero": "C03-filtrar-lo-que-falta.mp4",
+  "duracion": 62.58,
+  "megas": 4.1,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Filtrar lo que falta, por tipo o por bloque"
+    },
+    {
+      "t": 6.59,
+      "titulo": "Lo que falta"
+    },
+    {
+      "t": 22.8,
+      "titulo": "Por tipo, por bloque"
+    },
+    {
+      "t": 38.19,
+      "titulo": "Ordenar"
+    },
+    {
+      "t": 44.39,
+      "titulo": "Guardar una búsqueda"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás quedarte solo con lo que te interesa, y cuánto te queda por hacer."
+    },
+    {
+      "t": 7.09,
+      "texto": "Mirando en inglés, abre Traducción, y elige «Falta en este idioma»."
+    },
+    {
+      "t": 11.95,
+      "texto": "El árbol y sus números se recortan a lo que falta, y la cabecera dice cuántas quedan: siete de nueve."
+    },
+    {
+      "t": 19.04,
+      "texto": "Cada filtro puesto sale aquí, y la cruz lo quita."
+    },
+    {
+      "t": 23.3,
+      "texto": "También te puedes quedar con un tipo: solo los ejemplos, o solo los problemas."
+    },
+    {
+      "t": 28.86,
+      "texto": "O con un bloque, como la teoría o los problemas; o con una etiqueta."
+    },
+    {
+      "t": 33.88,
+      "texto": "Y si tienes varios repositorios abiertos, también por repositorio."
+    },
+    {
+      "t": 38.69,
+      "texto": "En Orden, lo que está por traducir sale primero: así se ve por dónde empezar."
+    },
+    {
+      "t": 44.89,
+      "texto": "Y con la interfaz completa, lo que estás mirando, con sus filtros, se guarda con un nombre, y vuelve de un clic."
+    },
+    {
+      "t": 53.2,
+      "texto": "Los filtros recortan también el árbol, no solo la búsqueda."
+    },
+    {
+      "t": 57.15,
+      "texto": "En el siguiente vídeo, la pantalla de una lección."
+    }
+  ]
+}
