@@ -85,6 +85,7 @@ theme:
 
 extra_css:
   - stylesheets/didacta.css
+  - stylesheets/videos.css
 
 extra:
   social:
@@ -94,9 +95,27 @@ extra:
   # Sin analítica y sin cookies. No hay ningún banner que aceptar porque no
   # hay nada que aceptar, que es la única forma de no tener que pedirlo.
 
+  # Los videotutoriales. La galería, la página de cada vídeo y el recuadro
+  # «En vídeo» de cada página los pinta `hooks/videos.py` a partir de
+  # `docs/videos/catalogo.yaml`; aquí solo se dice dónde están los MP4 (ver
+  # «Los vídeos» en `web/README.md`).
+  #
+  # Van en el repositorio, en `docs/videos/media/`, donde los deja
+  # `videos/hacer.py`. Si algún día se sirven desde otro sitio, basta con
+  # poner aquí su dirección completa --o darla en `DIDACTA_VIDEOS_BASE`--. Un
+  # vídeo cuyo MP4 no está sale como «Próximamente», no como un reproductor
+  # que no carga.
+  videos:
+    base: !ENV [DIDACTA_VIDEOS_BASE, "videos/media/"]
+
 plugins:
   - search:
       lang: es
+
+# No es un plugin: un fichero de este repositorio que MkDocs ejecuta al
+# construir. Pinta los videotutoriales a partir de su catálogo.
+hooks:
+  - hooks/videos.py
 
 markdown_extensions:
   - abbr
@@ -150,10 +169,12 @@ markdown_extensions:
 
 extra_javascript:
   - javascripts/mathjax.js
+  - javascripts/videos.js
   - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
 
 not_in_nav: |
   _snippets/*
+  videos/[a-l][0-9]*.md
 
 nav:
   - Didacta: index.md
@@ -163,6 +184,7 @@ nav:
       - empezar/latex.md
       - empezar/primer-repositorio.md
       - empezar/primeros-pasos.md
+  - Videotutoriales: videos/index.md
   - Cómo funciona:
       - conceptos/index.md
       - conceptos/unidades.md

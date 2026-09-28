@@ -1,0 +1,346 @@
+/* La identidad de los vídeos de Didacta.
+ *
+ * Los colores son los de la aplicación, la web y los PDF
+ * (`app/lib/ui/theme.dart`, `latex/didacta-colours.sty`): quien ve un vídeo y
+ * luego abre la aplicación tiene que reconocer que es lo mismo. La tipografía
+ * es la de la web --Inter y JetBrains Mono--, que llegan por npm y no se
+ * copian al repositorio.
+ *
+ * Todo lo que se mueve lo mueve `estudio.js` fotograma a fotograma: aquí no
+ * hay ni una transición ni una animación de CSS, porque un vídeo tiene que
+ * salir igual cada vez que se pinta. */
+
+@font-face { font-family: Inter; font-weight: 400; src: url(../node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2); }
+@font-face { font-family: Inter; font-weight: 500; src: url(../node_modules/@fontsource/inter/files/inter-latin-500-normal.woff2); }
+@font-face { font-family: Inter; font-weight: 600; src: url(../node_modules/@fontsource/inter/files/inter-latin-600-normal.woff2); }
+@font-face { font-family: Inter; font-weight: 700; src: url(../node_modules/@fontsource/inter/files/inter-latin-700-normal.woff2); }
+@font-face { font-family: Inter; font-weight: 800; src: url(../node_modules/@fontsource/inter/files/inter-latin-800-normal.woff2); }
+@font-face { font-family: Inter; font-weight: 400; src: url(../node_modules/@fontsource/inter/files/inter-latin-ext-400-normal.woff2); unicode-range: U+0100-024F; }
+@font-face { font-family: Inter; font-weight: 700; src: url(../node_modules/@fontsource/inter/files/inter-latin-ext-700-normal.woff2); unicode-range: U+0100-024F; }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; src: url(../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 600; src: url(../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-600-normal.woff2); }
+
+:root {
+  --verde: #55aa55;
+  --verde-claro: #5fb35f;
+  --verde-oscuro: #346e34;
+  --verde-tinta: #275227;
+  --tinta: #1c1f26;
+  --apagado: #62697a;
+  --tenue: #9aa1ab;
+  --regla: #e4e7e2;
+  --superficie: #f6f7f4;
+  --tarjeta: #ffffff;
+  --panel: #eef0eb;
+  /* Los canales, con los colores que tienen en los PDF. */
+  --diapositivas: #2d5fa0;
+  --apuntes: #3c876e;
+  --profesor: #aa4b4b;
+  --ambar: #be8237;
+  --pendiente: #c08a3e;
+  --sombra: 28, 31, 38;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  background: var(--superficie);
+  font-family: Inter, system-ui, sans-serif;
+  color: var(--tinta);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+#lienzo {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.capa, .abs { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+
+/* ---------------------------------------------------------------- fondo -- */
+
+.fondo {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(1200px 700px at 12% -8%, rgba(85, 170, 85, 0.13), transparent 60%),
+    radial-gradient(1000px 800px at 105% 110%, rgba(52, 110, 52, 0.10), transparent 62%),
+    linear-gradient(180deg, #f8f9f6 0%, #eef1ea 100%);
+}
+
+/* Una retícula muy suave, de papel milimetrado: se nota sin verse. */
+.reticula {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(52, 110, 52, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 110, 52, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(1400px 900px at 50% 45%, #000 40%, transparent 85%);
+}
+
+/* -------------------------------------------------------------- textos -- */
+
+.titular {
+  font-weight: 800;
+  letter-spacing: -0.028em;
+  line-height: 1.02;
+  color: var(--tinta);
+}
+
+.palabra { display: inline-block; will-change: transform, opacity; }
+
+.antetitulo {
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--verde-oscuro);
+}
+
+.entradilla { font-weight: 500; color: var(--apagado); }
+
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+/* ------------------------------------------------------------ piezas -- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px 10px 14px;
+  border-radius: 999px;
+  background: var(--tarjeta);
+  box-shadow: 0 1px 0 rgba(var(--sombra), 0.04), 0 8px 24px rgba(var(--sombra), 0.10);
+  font-weight: 600;
+  font-size: 24px;
+  white-space: nowrap;
+}
+
+.chip .punto { width: 14px; height: 14px; border-radius: 50%; background: var(--verde); }
+
+.capitulo {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  color: var(--verde-oscuro);
+  padding: 10px 20px 10px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 6px 18px rgba(var(--sombra), 0.08);
+  white-space: nowrap;
+}
+
+.capitulo .numero {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--verde-oscuro);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+/* La ventana de la aplicación, con su barra de título de macOS. */
+.ventana {
+  position: absolute;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--tarjeta);
+  box-shadow:
+    0 0 0 1px rgba(var(--sombra), 0.10),
+    0 24px 48px -12px rgba(var(--sombra), 0.28),
+    0 60px 120px -40px rgba(var(--sombra), 0.32);
+}
+
+.ventana .barra {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 36px;
+  background: linear-gradient(#f3f4f1, #eceee9);
+  border-bottom: 1px solid #dfe2dc;
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  gap: 9px;
+}
+
+.ventana .barra i { width: 13px; height: 13px; border-radius: 50%; display: block; }
+.ventana .barra i:nth-child(1) { background: #ff5f57; }
+.ventana .barra i:nth-child(2) { background: #febc2e; }
+.ventana .barra i:nth-child(3) { background: #28c840; }
+.ventana .barra b {
+  position: absolute; left: 0; right: 0; text-align: center;
+  font-weight: 600; font-size: 14px; color: #6b707a;
+}
+
+.ventana .contenido { position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
+.ventana .contenido img { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+/* Un recuadro que señala algo de la pantalla. */
+.resalte {
+  position: absolute;
+  z-index: 41;
+  border-radius: 12px;
+  border: 3px solid var(--color, var(--verde));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color, var(--verde)) 18%, transparent);
+  pointer-events: none;
+}
+
+.foco {
+  position: absolute;
+  z-index: 40;
+  border-radius: 14px;
+  box-shadow: 0 0 0 4000px rgba(20, 24, 22, 0.42);
+  pointer-events: none;
+}
+
+.etiqueta {
+  position: absolute;
+  z-index: 42;
+  display: inline-flex;
+  line-height: 1;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 12px;
+  background: var(--color, var(--verde-oscuro));
+  color: #fff;
+  font-weight: 700;
+  font-size: 26px;
+  white-space: nowrap;
+  box-shadow: 0 10px 28px rgba(var(--sombra), 0.28);
+}
+
+/* Una hoja de papel: un PDF, un fichero. */
+.hoja {
+  position: absolute;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(var(--sombra), 0.08),
+    0 18px 40px -10px rgba(var(--sombra), 0.28),
+    0 40px 90px -30px rgba(var(--sombra), 0.30);
+}
+
+.hoja img { display: block; width: 100%; height: auto; }
+
+.rotulo-hoja {
+  position: absolute;
+  font-weight: 700;
+  font-size: 30px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.fichero {
+  position: absolute;
+  width: 250px;
+  height: 108px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(var(--sombra), 0.07), 0 10px 26px rgba(var(--sombra), 0.12);
+  padding: 18px 20px 0 76px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.fichero::before {
+  content: "";
+  position: absolute;
+  left: 20px; top: 20px;
+  width: 40px; height: 52px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, var(--panel), #fff);
+  box-shadow: inset 0 0 0 2px #d5d9d2;
+}
+
+.fichero small {
+  display: block;
+  margin-top: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--apagado);
+}
+
+.carpeta {
+  position: absolute;
+  font-weight: 700;
+  font-size: 22px;
+  color: var(--apagado);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.carpeta::before {
+  content: "";
+  width: 30px; height: 22px;
+  border-radius: 4px;
+  background: #c9cfc5;
+}
+
+.salida {
+  position: absolute;
+  width: 360px;
+  height: 92px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(var(--sombra), 0.06), 0 14px 32px rgba(var(--sombra), 0.12);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  font-weight: 700;
+  font-size: 27px;
+}
+
+.salida .icono {
+  width: 50px; height: 50px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--color) 14%, #fff);
+  color: var(--color);
+}
+
+.leccion-madre {
+  position: absolute;
+  width: 440px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--verde), 0 24px 60px rgba(52, 110, 52, 0.22);
+  padding: 30px 32px;
+}
+
+.progreso {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--verde-oscuro), var(--verde));
+  transform-origin: 0 50%;
+}
+
+.cursor { position: absolute; z-index: 45; width: 34px; height: 44px; margin: -3px 0 0 -5px; }
+
+.onda {
+  position: absolute;
+  z-index: 44;
+  width: 60px; height: 60px;
+  margin: -30px 0 0 -30px;
+  border-radius: 50%;
+  border: 3px solid rgba(52, 110, 52, 0.9);
+}

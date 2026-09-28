@@ -1,0 +1,757 @@
+# El catálogo de los videotutoriales: una sola lista para la web y, más
+# adelante, para la aplicación (PLAN-DE-VIDEOTUTORIALES.md § 8).
+#
+# Lo escribe una persona. Sale del plan --§ 3, § 4, § 5 y § 6-- y es la fuente
+# de la galería (`/videos/`), del recuadro «En vídeo» de cada página de la
+# documentación y de la cabecera de la portada. Todo eso lo pinta
+# `web/hooks/videos.py` al construir la web: aquí no hay HTML.
+#
+# **Lo que no se escribe aquí** es lo de cada vídeo ya hecho --su duración
+# exacta, los capítulos, la transcripción, la miniatura y el MP4--: eso lo
+# deja el estudio (`python3 videos/hacer.py A01`) en `videos/a1/` y
+# `videos/media/` al terminarlo, y un vídeo está publicado cuando esa carpeta
+# tiene su `video.json` y su MP4. Mientras no, la galería lo enseña como
+# «Próximamente», con un enlace a lo que ya hay escrito sobre lo mismo.
+#
+# Cada vídeo:
+#
+#   codigo    la letra de la ruta y un número; es también su dirección
+#             (`/videos/a1/`) y el principio de su fichero (`A01-…`)
+#   titulo    la tarea, en infinitivo
+#   minutos   lo que se espera que dure, hasta que exista
+#   marca     Opcional | Completa (§ 2, «Tres marcas de nivel»)
+#   nota      lo que el plan dice al lado del título
+#   sabras    lo que se aprende; sale debajo del título
+#   idea      el porqué, en una frase
+#   mas       dónde seguir leyendo: página de `web/docs/` y, si hace falta, la
+#             sección. En esas páginas sale el vídeo: arriba, en el recuadro
+#             «En vídeo», y justo debajo de esa sección si se nombra una.
+
+rutas:
+
+  - letra: A
+    titulo: Empezar
+    contesta: ¿Cómo lo instalo y tengo mi primer PDF?
+    intro: >-
+      La ruta del primer día. Se ve entera y en orden: de un ordenador sin
+      nada a un PDF compilado dentro de Didacta.
+    videos:
+      - codigo: A1
+        titulo: Didacta en dos minutos
+        minutos: 2
+        sabras: qué problema resuelve Didacta y qué vas a poder hacer con ella.
+        idea: el contenido se escribe una vez, las asignaturas son composiciones, los idiomas son variantes de lo mismo y los PDF se generan.
+        mas:
+          - {titulo: la portada de la web, pagina: index.md}
+          - {titulo: Empezar, pagina: empezar/index.md}
+      - codigo: A2
+        titulo: Instalar Didacta
+        minutos: 1.5
+        nota: "tres versiones: macOS, Windows y Linux"
+        sabras: instalarla y abrirla la primera vez sin desactivar ninguna protección del sistema.
+        idea: el aviso del sistema es por la firma que falta, no por la aplicación; basta con abrirla una vez desde el menú.
+        mas:
+          - {titulo: Instalar Didacta, pagina: empezar/index.md}
+      - codigo: A3
+        titulo: Entrar con tu cuenta de GitHub
+        minutos: 1.5
+        sabras: entrar sin darle tu contraseña a Didacta.
+        idea: la contraseña solo se escribe en github.com, y quién puede leer o escribir cada repositorio lo decide GitHub, no Didacta. Una vez dentro, se abre también sin conexión.
+        mas:
+          - {titulo: Entrar y abrir el primer repositorio, pagina: empezar/primer-repositorio.md}
+      - codigo: A4
+        titulo: Abrir tu primer repositorio
+        minutos: 2.5
+        sabras: elegir entre los cuatro caminos, y empezar por el ejemplo para practicar sin miedo.
+        idea: Didacta no guarda tu material; lo guarda GitHub, y tú trabajas en una copia en tu ordenador.
+        mas:
+          - {titulo: Repositorios de contenido, pagina: conceptos/repositorios.md}
+      - codigo: A5
+        titulo: Dejar el ordenador listo para compilar
+        minutos: 2.5
+        sabras: comprobar git, Python, LaTeX y el motor, e instalar lo que falte.
+        idea: "Didacta no lleva LaTeX dentro a propósito: tú eliges qué distribución, y con el tamaño delante."
+        mas:
+          - {titulo: La distribución de TeX, pagina: empezar/latex.md}
+      - codigo: A6
+        titulo: Conocer la ventana
+        minutos: 2
+        sabras: para qué sirve cada parte de la ventana y dónde está el recorrido guiado.
+        idea: dónde va a parar lo que escribes está siempre a la vista.
+        mas:
+          - {titulo: La aplicación, pagina: app/index.md}
+      - codigo: A7
+        titulo: Tu primer PDF
+        minutos: 2.5
+        sabras: ir de una asignatura a un PDF abierto dentro de Didacta.
+        idea: un tema con una lección sin traducir se puede dar igual, y nadie deja de enterarse.
+        mas:
+          - {titulo: Los primeros diez minutos, pagina: empezar/primeros-pasos.md}
+
+  - letra: B
+    titulo: Cómo piensa Didacta
+    contesta: ¿Por qué funciona así?
+    intro: >-
+      Cinco vídeos de ideas, con el ejemplo en pantalla y un esquema sencillo
+      encima. Son los que convierten «sé dónde está el botón» en «sé qué va a
+      pasar al pulsarlo». Los vídeos de tareas los enlazan en lugar de volver
+      a explicarlo.
+    videos:
+      - codigo: B1
+        titulo: "Lecciones, documentos y cursos: nada se copia"
+        minutos: 2
+        sabras: qué es una lección, un documento, un curso académico y una asignatura, y cómo se relacionan.
+        idea: corriges una errata una vez y queda corregida en todos los documentos que usan esa lección.
+        mas:
+          - {titulo: Cómo funciona, pagina: conceptos/index.md}
+          - {titulo: Microlecciones, pagina: conceptos/unidades.md}
+      - codigo: B2
+        titulo: Una lección, quince PDF
+        minutos: 2.5
+        sabras: qué sale en cada versión y por qué la copia del profesor nunca llega al alumno.
+        idea: el fichero no elige su formato; lo elige la versión con la que se compila. Y en las versiones del alumno el canal del profesor no existe, que es distinto de estar oculto.
+        mas:
+          - {titulo: Las quince salidas, pagina: conceptos/perfiles.md}
+      - codigo: B3
+        titulo: Los niveles de un problema
+        minutos: 1.5
+        sabras: qué enseña cada versión de una hoja y de un examen.
+        idea: todo en un fichero, así que el enunciado y su solución no se pueden desincronizar.
+        mas:
+          - {titulo: Los cuatro niveles de un problema, pagina: conceptos/problemas.md}
+      - codigo: B4
+        titulo: Un fichero por idioma
+        minutos: 2
+        sabras: cómo sabe Didacta qué está traducido, qué falta y qué se ha quedado viejo.
+        idea: "nadie escribe el estado; Didacta lo calcula. Y desactualizada es peor que sin traducir: compila sin quejarse y dice algo que ya no es cierto."
+        mas:
+          - {titulo: Los idiomas, pagina: conceptos/idiomas.md}
+      - codigo: B5
+        titulo: Todo vive en GitHub
+        minutos: 1.5
+        sabras: dónde está tu material, quién lo ve y por qué no se pierde.
+        idea: la copia de seguridad es GitHub, siempre que envíes.
+        mas:
+          - {titulo: Repositorios de contenido, pagina: conceptos/repositorios.md}
+
+  - letra: C
+    titulo: Encontrar material
+    contesta: ¿Dónde está lo que escribí?
+    videos:
+      - codigo: C1
+        titulo: Recorrer la biblioteca
+        minutos: 2
+        sabras: llegar a cualquier lección en tres clics y leer lo que dice cada fila.
+        idea: la biblioteca respeta la organización que el material ya tiene en lugar de enseñar una lista de miles.
+        mas:
+          - {titulo: La biblioteca, pagina: app/biblioteca.md}
+      - codigo: C2
+        titulo: Buscar una lección
+        minutos: 2
+        sabras: encontrarla aunque no recuerdes el título o lo escribas mal.
+        idea: «¿dónde usé el teorema de Bolzano?» se contesta aunque la lección se llame de otra forma.
+        mas:
+          - {titulo: La biblioteca, pagina: "app/biblioteca.md#dos-vistas-dos-preguntas"}
+      - codigo: C3
+        titulo: Filtrar lo que falta, por tipo o por bloque
+        minutos: 1.5
+        sabras: quedarte con lo que te interesa y saber cuánto queda.
+        idea: los filtros recortan también el árbol, no solo la búsqueda.
+        mas:
+          - {titulo: Los filtros, pagina: "app/biblioteca.md#los-filtros"}
+
+  - letra: D
+    titulo: Escribir una lección
+    contesta: ¿Cómo edito, y qué pongo dentro?
+    videos:
+      - codigo: D1
+        titulo: La pantalla de una lección
+        minutos: 2
+        sabras: qué hay en cada pestaña y en el panel de la derecha.
+        idea: "el orden de las pestañas dice cuánto se usa cada una: compilar va antes que los metadatos."
+        mas:
+          - {titulo: La unidad, pagina: app/unidad.md}
+      - codigo: D2
+        titulo: Corregir una errata y guardarla
+        minutos: 2
+        sabras: editar, guardar y enviar el cambio a GitHub.
+        idea: cada guardado queda en el historial con tu nombre. Guardar no necesita conexión; enviar, sí.
+        mas:
+          - {titulo: Guardar es un commit, pagina: "app/unidad.md#guardar-es-un-commit"}
+      - codigo: D3
+        titulo: Escribir para diapositivas, apuntes o profesor
+        minutos: 2.5
+        sabras: hacer que un trozo salga solo en las diapositivas, solo en los apuntes o solo en tu copia.
+        idea: lo que no dice nada sale en todas partes; lo marcado, solo en su canal.
+        mas:
+          - {titulo: Los tres canales, pagina: "escribir/index.md#los-tres-canales"}
+      - codigo: D4
+        titulo: Definiciones, teoremas y snippets
+        minutos: 2
+        sabras: poner un entorno de Didacta y quitarlo sin tocar lo de dentro.
+        idea: "el nombre de la caja lo pone el idioma del documento: «Definición», «Definició», «Definition»."
+        mas:
+          - {titulo: El editor, pagina: "app/unidad.md#el-editor"}
+          - {titulo: Los teoremas, pagina: "escribir/index.md#los-teoremas"}
+      - codigo: D5
+        titulo: Fórmulas y símbolos sin saberse las órdenes
+        minutos: 1.5
+        sabras: escribir fórmulas con las paletas y evitar los caracteres que LaTeX se reserva.
+        idea: "un `\\alpha` suelto en el texto no compila, y la paleta lo sabe."
+      - codigo: D6
+        titulo: Arreglar lo que no va a compilar, antes de compilar
+        minutos: 1.5
+        sabras: leer el panel «Esto no va a compilar» y saltar a cada línea.
+        idea: solo avisa de lo que sabe seguro; si sale algo, es que no va a compilar.
+        mas:
+          - {titulo: Lo que no va a compilar, pagina: "app/unidad.md#lo-que-no-va-a-compilar-antes-de-compilar"}
+      - codigo: D7
+        titulo: Buscar y reemplazar en una lección
+        minutos: 1
+        sabras: encontrar dentro del texto que editas y cambiarlo de una vez.
+        idea: 
+      - codigo: D8
+        titulo: Escribir un problema
+        minutos: 2
+        sabras: rellenar el enunciado, la pista, el resultado, la solución y la corrección.
+        idea: la solución vive con su enunciado, así que renumerar o mejorar el enunciado no la deja resolviendo otra cosa.
+        mas:
+          - {titulo: Un problema se edita distinto, pagina: "app/unidad.md#un-problema-se-edita-distinto"}
+      - codigo: D9
+        titulo: Poner una figura
+        minutos: 2
+        sabras: dónde va una imagen, cómo se llama desde la lección y por qué lleva texto alternativo.
+        idea: la figura vive dentro de su lección, así que moverla o darla en otra asignatura no la rompe. El texto alternativo es lo que oye quien no la ve.
+        mas:
+          - {titulo: Las figuras, pagina: "escribir/index.md#las-figuras"}
+      - codigo: D10
+        titulo: Rellenar los metadatos de una lección
+        minutos: 2
+        sabras: cambiar el título, la clasificación, los prerrequisitos y en qué se compila una lección.
+        idea: "cambiar un campo cambia solo esa línea del fichero; los comentarios y los `TODO` que había siguen ahí."
+        mas:
+          - {titulo: unit.yaml, pagina: "app/unidad.md#unityaml"}
+      - codigo: D11
+        titulo: Crear una lección nueva
+        minutos: 1.5
+        sabras: crear una lección en el tema correcto.
+        idea: el nombre de la carpeta es la dirección con la que la llaman los documentos.
+        mas:
+          - {titulo: Crear una lección, pagina: "app/biblioteca.md#crear-una-leccion"}
+      - codigo: D12
+        titulo: Duplicar, mover o renombrar una lección
+        minutos: 2
+        sabras: empezar una lección a partir de otra, y reorganizar sin romper nada.
+        idea: duplicar da dos lecciones; darla en otro tema da una lección en dos sitios.
+        mas:
+          - {titulo: El icono de información, pagina: "app/unidad.md#el-icono-de-informacion"}
+
+  - letra: E
+    titulo: Preparar una asignatura
+    contesta: ¿Cómo monto un tema, una hoja, un examen?
+    videos:
+      - codigo: E1
+        titulo: La pantalla de Asignaturas
+        minutos: 1.5
+        sabras: moverte entre asignatura, curso y documento, y dejar a la vista solo lo que das.
+        idea: "ocultar no borra: la asignatura sigue compilando y sigue en la biblioteca."
+        mas:
+          - {titulo: Qué se ve, y qué no, pagina: "app/asignaturas.md#que-se-ve-y-que-no"}
+      - codigo: E2
+        titulo: Crear una asignatura y su curso académico
+        minutos: 2
+        sabras: dar de alta una asignatura nueva y su primer curso.
+        idea: la asignatura guarda lo que no cambia entre años; el curso, qué se da este año y en qué orden.
+        mas:
+          - {titulo: Asignaturas y cursos, pagina: app/asignaturas.md}
+      - codigo: E3
+        titulo: Crear temas y documentos
+        minutos: 1.5
+        sabras: organizar el curso en temas y crear dentro sus documentos.
+        idea: el documento se crea vacío porque elegir sus lecciones es el paso siguiente, y tiene su propia pantalla.
+        mas:
+          - {titulo: Los documentos, pagina: "app/asignaturas.md#los-documentos"}
+      - codigo: E4
+        titulo: Componer un tema
+        minutos: 2.5
+        sabras: añadir lecciones a un documento, ordenarlas y guardarlo.
+        idea: "el documento no lleva materia: apunta a lecciones que viven una sola vez."
+        mas:
+          - {titulo: La composición, pagina: app/composicion.md}
+      - codigo: E5
+        titulo: Apartados, y lo que este año no se da
+        minutos: 1.5
+        sabras: dividir un tema en apartados y dejar fuera una lección sin borrarla.
+        idea: quitar desactiva, no borra; el año que viene se vuelve a activar con un clic.
+        mas:
+          - {titulo: Editar, pagina: "app/composicion.md#editar"}
+      - codigo: E6
+        titulo: Hacer un examen o una hoja a partir de los problemas
+        minutos: 2
+        sabras: montar un examen de una vez, sin repetir problemas de otros años.
+        idea: "un examen es una composición más: una lista de problemas que ya existen."
+        mas:
+          - {titulo: Un examen o una hoja, pagina: "app/asignaturas.md#un-examen-o-una-hoja-a-partir-de-los-problemas"}
+      - codigo: E7
+        titulo: Elegir qué PDF salen de un tema
+        minutos: 1.5
+        sabras: decidir qué versiones se compilan de un tema.
+        idea: una lista vacía nunca quiere decir «ninguna»; quiere decir «lo que toque».
+        mas:
+          - {titulo: Qué salidas tiene un tema, pagina: "app/asignaturas.md#que-salidas-tiene-un-tema"}
+      - codigo: E8
+        titulo: Deshacer y borrar sin miedo
+        minutos: 1.5
+        sabras: deshacer lo que acabas de hacer y saber qué se lleva un borrado antes de hacerlo.
+        idea: deshacer es un cambio más; lo deshecho sigue en el historial.
+        mas:
+          - {titulo: Deshacer, pagina: "app/asignaturas.md#deshacer"}
+
+  - letra: F
+    titulo: Compilar y revisar
+    contesta: ¿Cómo saco los PDF, y qué hago si fallan?
+    videos:
+      - codigo: F1
+        titulo: Compilar una lección o un tema
+        minutos: 2
+        sabras: elegir versiones e idiomas, y compilar todos los idiomas a la vez.
+        idea: lo que no ha cambiado no se vuelve a compilar.
+        mas:
+          - {titulo: Compilar, pagina: app/compilar.md}
+      - codigo: F2
+        titulo: Leer los PDF dentro de Didacta
+        minutos: 2.5
+        sabras: comparar versiones, moverte por el documento y buscar dentro.
+        idea: comparar es mirar dos cosas a la vez, sin salir a otra aplicación.
+        mas:
+          - {titulo: El PDF, dentro, pagina: "app/compilar.md#el-pdf-dentro"}
+      - codigo: F3
+        titulo: Del PDF a la línea que lo escribe
+        minutos: 1
+        sabras: ir de lo que ves mal en el PDF a su línea en la lección.
+        idea: lo que se ve mal se arregla donde se ve, sin buscarlo en el fichero.
+        mas:
+          - {titulo: Del PDF a la lección, pagina: "app/compilar.md#del-pdf-a-la-leccion"}
+      - codigo: F4
+        titulo: Cuando la compilación falla
+        minutos: 2
+        sabras: ir directo al error, y ver las diapositivas que se salen.
+        idea: el error se dice en la lección que hay que arreglar, no en el documento que la incluye.
+        mas:
+          - {titulo: Cuando falla, pagina: "app/compilar.md#cuando-falla"}
+          - {titulo: Cuando algo falla, pagina: ayuda/problemas.md}
+      - codigo: F5
+        titulo: Compilar un curso entero, o solo lo desactualizado
+        minutos: 2.5
+        sabras: compilar mucho sin quedarte mirando, y rehacer solo lo que ha cambiado.
+        idea: "viejo es que haya cambiado lo que entró en el PDF, no su fecha: traer cambios de GitHub no deja todo viejo."
+        mas:
+          - {titulo: Compilar lo desactualizado, pagina: "app/compilar.md#compilar-lo-desactualizado"}
+      - codigo: F6
+        titulo: Vista rápida
+        minutos: 1
+        marca: Opcional
+        sabras: ver cómo queda un cambio en la mitad de tiempo.
+        idea: la mitad de tiempo, a cambio de que el índice y las referencias puedan ser de la compilación anterior.
+        mas:
+          - {titulo: Vista rápida, pagina: "app/compilar.md#vista-rapida"}
+      - codigo: F7
+        titulo: Revisar todo el material de una vez
+        minutos: 2
+        sabras: encontrar lo que está mal antes de que salga en clase.
+        idea: busca lo que compila --o casi-- y está mal, que es lo que no se ve hasta que un alumno pregunta.
+        mas:
+          - {titulo: Revisar, pagina: "app/biblioteca.md#revisar"}
+      - codigo: F8
+        titulo: Apuntes accesibles
+        minutos: 2.5
+        marca: Opcional
+        sabras: sacar los apuntes para quien lee con un lector de pantalla o necesita el texto grande.
+        idea: "sale todo del mismo origen y con las mismas reglas: el HTML del alumno no enseña una solución por ser HTML."
+        mas:
+          - {titulo: Apuntes accesibles, pagina: "app/compilar.md#apuntes-accesibles"}
+
+  - letra: G
+    titulo: Traducir
+    contesta: ¿Qué falta, y cómo lo traduzco?
+    videos:
+      - codigo: G1
+        titulo: El idioma que miras, y con cuáles trabajas
+        minutos: 1.5
+        sabras: cambiar el idioma en que se mira el material y quitarte de delante los que no usas.
+        idea: elegir con qué idiomas trabajas es solo tuyo y no cambia ningún fichero.
+        mas:
+          - {titulo: Idiomas, pagina: "app/ajustes.md#idiomas"}
+      - codigo: G2
+        titulo: La cola de traducción
+        minutos: 1.5
+        sabras: por dónde empezar a traducir.
+        idea: traducir una lección que usan seis cursos compra seis documentos; y cuando lo que queda no lo usa nadie, se puede parar.
+        mas:
+          - {titulo: Traducción, pagina: app/traduccion.md}
+      - codigo: G3
+        titulo: Traducir con el original al lado
+        minutos: 2
+        sabras: traducir una lección sin estropear el original.
+        idea: el original se ve y no se puede guardar por error.
+        mas:
+          - {titulo: Ver dos idiomas a la vez, pagina: "app/unidad.md#ver-dos-idiomas-a-la-vez"}
+      - codigo: G4
+        titulo: Revisar y aprobar traducciones
+        minutos: 2.5
+        sabras: revisar traducciones seguidas y ponerlas al día cuando cambia el original.
+        idea: revisar treinta traducciones es leer treinta y pulsar treinta veces.
+        mas:
+          - {titulo: Revisar una traducción, pagina: "app/unidad.md#revisar-una-traduccion"}
+      - codigo: G5
+        titulo: Traducción automática
+        minutos: 3
+        sabras: pedir un primer borrador sin que se rompa el LaTeX ni te lleves un susto con la factura.
+        idea: la máquina hace el borrador; lo que se firma hay que leerlo.
+        mas:
+          - {titulo: Traducción automática, pagina: "app/traduccion.md#traduccion-automatica"}
+      - codigo: G6
+        titulo: El valenciano con Apertium, y el glosario
+        minutos: 2
+        sabras: conseguir un valenciano que no suene a catalán central y que respete tus términos.
+        idea: el glosario avisa en lugar de sustituir, porque cambiar la palabra sola deja frases que no concuerdan y que parecen revisadas.
+        mas:
+          - {titulo: El glosario, pagina: "app/traduccion.md#el-glosario"}
+      - codigo: G7
+        titulo: Añadir o quitar un idioma
+        minutos: 2
+        sabras: en qué orden se añade un idioma y por qué a veces no deja quitarlo.
+        idea: cada lista vive dentro de la anterior.
+        mas:
+          - {titulo: Qué idiomas hay, pagina: "conceptos/idiomas.md#que-idiomas-hay"}
+
+  - letra: H
+    titulo: Repartir
+    contesta: ¿Cómo lo subo al aula virtual?
+    videos:
+      - codigo: H1
+        titulo: Exportar un curso para el aula virtual
+        minutos: 2.5
+        sabras: sacar los PDF de un curso a una carpeta sin repartir soluciones por error.
+        idea: de salida no sale nada que no pueda ver un estudiante.
+        mas:
+          - {titulo: Exportar un curso, pagina: app/exportar.md}
+      - codigo: H2
+        titulo: Exportar un documento o el PDF que miras
+        minutos: 1
+        sabras: llevarte solo el Tema 3, o solo el PDF abierto.
+        idea: 
+      - codigo: H3
+        titulo: Un .zip para Moodle, y los apuntes en HTML
+        minutos: 1.5
+        sabras: subir un curso entero al aula virtual en un solo fichero.
+        idea: se sube un fichero en lugar de cuarenta.
+        mas:
+          - {titulo: Un .zip para el aula virtual, pagina: "app/exportar.md#un-zip-para-el-aula-virtual"}
+      - codigo: H4
+        titulo: Publicar en una carpeta de OneDrive o Drive
+        minutos: 1.5
+        sabras: repartir sin elegir carpeta cada vez.
+        idea: 
+        mas:
+          - {titulo: Publicar en una carpeta que se sincroniza, pagina: "app/exportar.md#publicar-en-una-carpeta-que-se-sincroniza"}
+
+  - letra: I
+    titulo: No perder nada
+    contesta: ¿Dónde está mi trabajo, y cómo vuelvo atrás?
+    videos:
+      - codigo: I1
+        titulo: Guardar, enviar y traer
+        minutos: 2.5
+        sabras: dónde está tu trabajo en cada momento y cómo llevarlo a GitHub.
+        idea: lo que no se envía solo está en tu ordenador; la copia de seguridad es GitHub.
+        mas:
+          - {titulo: Guardar y sincronizar, pagina: "app/ajustes.md#guardar"}
+      - codigo: I2
+        titulo: Ver cómo estaba un fichero, y recuperarlo
+        minutos: 2
+        sabras: mirar cualquier versión anterior de una lección y traer de vuelta lo que se quitó.
+        idea: no hay un «revertir» que deshaga meses de trabajo de un clic.
+        mas:
+          - {titulo: El historial, pagina: app/historial.md}
+      - codigo: I3
+        titulo: Congelar un curso
+        minutos: 1.5
+        sabras: guardar cómo estaba un curso en un momento --«Antes del primer parcial»--.
+        idea: "es un cambio guardado con nombre: no ocupa, y quitarla no borra nada. Tampoco es una copia de seguridad: eso es enviar."
+        mas:
+          - {titulo: Versiones congeladas, pagina: app/congelaciones.md}
+      - codigo: I4
+        titulo: Mirar, comparar y restaurar una versión congelada
+        minutos: 3
+        sabras: volver a ver un curso como estaba, compararlo con el de hoy y recuperar lo que haga falta.
+        idea: restaurar no reescribe la historia; deja un cambio pendiente encima, que se revisa como cualquier otro.
+        mas:
+          - {titulo: Abrir, comparar y restaurar, pagina: "app/congelaciones.md#abrir-una"}
+      - codigo: I5
+        titulo: Cuando sale un aviso al guardar o sincronizar
+        minutos: 2.5
+        sabras: qué hacer con cada aviso, sin saber git.
+        idea: el aviso dice qué ha pasado y qué hacer, y no se va solo.
+        mas:
+          - {titulo: Cuando algo falla, pagina: "ayuda/problemas.md#al-guardar-y-sincronizar"}
+      - codigo: I6
+        titulo: Recuperar lo escrito tras un cierre inesperado
+        minutos: 1
+        sabras: que lo escrito sin guardar no se pierde.
+        idea: lo escrito se va copiando fuera del repositorio mientras escribes.
+
+  - letra: J
+    titulo: El curso que viene y el temario compartido
+    contesta: ¿Cómo reutilizo sin copiar?
+    videos:
+      - codigo: J1
+        titulo: Preparar el curso que viene
+        minutos: 2.5
+        sabras: empezar 2027-2028 a partir de 2026-2027 sin copiar material.
+        idea: lo que corrijas este año lo hereda el que viene, y el PDF del año pasado sigue como se dio.
+        mas:
+          - {titulo: Duplicar un año, pagina: "app/asignaturas.md#duplicar-un-ano"}
+      - codigo: J2
+        titulo: "Una lección en varios cursos: cambiarla en todos o solo en uno"
+        minutos: 2
+        sabras: qué pasa al tocar una lección que se da en varios sitios, y cómo separarla.
+        idea: una lección compartida se corrige una vez; se separa solo cuando dejan de ir juntas.
+        mas:
+          - {titulo: Dar una lección en otro tema, pagina: "app/vinculos.md#dar-una-leccion-en-otro-tema"}
+      - codigo: J3
+        titulo: Dar un tema en otra asignatura sin copiarlo
+        minutos: 2.5
+        sabras: vincular, duplicar o mover un tema, y saber en cuántos sitios está.
+        idea: "vincular no copia: es el mismo tema en varios sitios."
+        mas:
+          - {titulo: Temario compartido, pagina: app/vinculos.md}
+      - codigo: J4
+        titulo: Separar temas que iban juntos
+        minutos: 2.5
+        nota: parte en Completa
+        sabras: separar un tema vinculado cuando las asignaturas dejan de darlo igual.
+        idea: dentro de cada grupo siguen sincronizados; entre grupos, no. Y se hace entera o no se hace.
+        mas:
+          - {titulo: Separar lo que estaba junto, pagina: "app/vinculos.md#separar-lo-que-estaba-junto"}
+
+  - letra: K
+    titulo: A tu manera
+    contesta: ¿Cómo la ajusto a mí?
+    videos:
+      - codigo: K1
+        titulo: Claro u oscuro, tamaño del texto e idioma de Didacta
+        minutos: 1.5
+        sabras: ajustar la aplicación al proyector, a la noche o a tu idioma.
+        idea: "el idioma de Didacta no es el del material, y los PDF no cambian con el modo oscuro: se compilan siempre en claro."
+        mas:
+          - {titulo: Apariencia, pagina: "app/ajustes.md#apariencia"}
+      - codigo: K2
+        titulo: "Ir más rápido: la paleta y los atajos"
+        minutos: 2
+        sabras: ir a cualquier sitio y hacer casi cualquier cosa escribiendo.
+        idea: cada orden de la paleta dice su atajo a la derecha, para aprenderlo sin estudiarlo.
+        mas:
+          - {titulo: Los atajos, pagina: "app/index.md#los-atajos"}
+      - codigo: K3
+        titulo: Trabajar con varios repositorios
+        minutos: 2
+        sabras: tener abierto el material del departamento y el tuyo a la vez.
+        idea: "no hay un repositorio activo: se ven todos juntos y cada cambio va al suyo."
+        mas:
+          - {titulo: Varios repositorios, pagina: "empezar/primer-repositorio.md#varios-repositorios-a-la-vez"}
+      - codigo: K4
+        titulo: Pedir ayuda y tener Didacta al día
+        minutos: 1.5
+        sabras: qué hacer cuando algo no va y cómo se actualiza Didacta.
+        idea: "actualizar nunca te deja sin aplicación: la versión anterior se aparta hasta que la nueva arranca."
+        mas:
+          - {titulo: Ayuda, pagina: "app/ajustes.md#ayuda"}
+          - {titulo: Actualizaciones, pagina: "app/ajustes.md#actualizaciones"}
+
+  - letra: L
+    titulo: Para quien mantiene el repositorio
+    contesta: ¿Cómo organizo el material de todos?
+    intro: >-
+      Todo con la interfaz *Completa*. Es la ruta de quien organiza el
+      material de un departamento; un profesor que da sus clases no la
+      necesita.
+    videos:
+      - codigo: L1
+        titulo: La interfaz Completa
+        minutos: 1.5
+        marca: Completa
+        sabras: qué aparece al encenderla y dónde.
+        idea: un solo interruptor, porque lo que se elige es qué clase de uso se hace, no cada botón.
+        mas:
+          - {titulo: Interfaz, pagina: "app/ajustes.md#interfaz"}
+      - codigo: L2
+        titulo: Un repositorio para el departamento
+        minutos: 3
+        marca: Completa
+        sabras: repartir el material entre repositorios y comprobar que cuadra.
+        idea: un documento y sus lecciones viven en el mismo repositorio; si no, compila en tu máquina y no en la de quien solo tiene uno.
+        mas:
+          - {titulo: Entre repositorios, pagina: app/entre-repos.md}
+      - codigo: L3
+        titulo: "Bloques: teoría, problemas y prácticas"
+        minutos: 2
+        marca: Completa
+        sabras: dividir una asignatura en partes y decidir con qué se compila cada una.
+        idea: "renombrar un bloque es cambiar una línea: no se mueve ningún fichero."
+        mas:
+          - {titulo: Bloques, pagina: "app/ajustes.md#bloques"}
+      - codigo: L4
+        titulo: "Plantillas: tus propias salidas"
+        minutos: 3
+        marca: Completa
+        sabras: crear una salida propia --unos apuntes en A5-- o retocar una de las quince.
+        idea: la cabecera va al final del preámbulo de Didacta, así que puede redefinir lo que Didacta acaba de definir.
+        mas:
+          - {titulo: Plantillas, pagina: "app/ajustes.md#plantillas"}
+          - {titulo: Las plantillas, pagina: "conceptos/perfiles.md#las-plantillas-tus-propias-salidas"}
+      - codigo: L5
+        titulo: Snippets propios
+        minutos: 3
+        marca: Completa
+        sabras: crear una caja propia --«Resumen»-- y ofrecerla en la barra del editor.
+        idea: una definición va al preámbulo de todo el repositorio; por eso se prueba antes de guardar.
+        mas:
+          - {titulo: Snippets de LaTeX, pagina: "app/ajustes.md#snippets"}
+      - codigo: L6
+        titulo: Titulaciones
+        minutos: 1.5
+        marca: Completa
+        sabras: agrupar las asignaturas por grado.
+        idea: 
+        mas:
+          - {titulo: Las titulaciones, pagina: "app/asignaturas.md#las-titulaciones"}
+      - codigo: L7
+        titulo: Compilar en GitHub y publicar la web del curso
+        minutos: 2.5
+        marca: Completa
+        sabras: hacer que GitHub compruebe y compile el material cada vez que envías.
+        idea: "los dos paquetes van separados con la misma regla que al exportar: descargar el primero no puede traer una solución."
+        mas:
+          - {titulo: Compilar en GitHub, pagina: "app/ajustes.md#compilar-en-github"}
+          - {titulo: Una web del curso, pagina: "cli/index.md#una-web-del-curso"}
+      - codigo: L8
+        titulo: Un asistente de IA sobre tu material
+        minutos: 3
+        marca: Completa
+        sabras: conectar Claude u otro cliente MCP a tu material, y ver lo que hace.
+        idea: "dos interruptores: leer es inocuo; escribir se concede repositorio a repositorio."
+        mas:
+          - {titulo: El servidor MCP, pagina: app/mcp.md}
+      - codigo: L9
+        titulo: Didacta desde el terminal
+        minutos: 3
+        marca: Completa
+        sabras: hacer desde el terminal lo mismo que desde la ventana, y en lote.
+        idea: "la aplicación y el terminal usan el mismo motor: lo que se hace en uno se ve en el otro."
+        mas:
+          - {titulo: didacta, en el terminal, pagina: cli/index.md}
+
+# La ruta del primer día (§ 2): lo que se ofrece a quien llega.
+primer_dia: [A1, A2, A3, A4, A5, A6, A7]
+
+# Qué vídeos ve cada uno (§ 3).
+perfiles:
+  - quien: Das clase con material que ya existe
+    mira: A · C1 · C2 · E1 · F1–F4 · H1 · I1
+    tiempo: unos 35 min
+  - quien: Traduces o revisas traducciones
+    mira: A · B4 · C3 · D1 · D2 · G
+    tiempo: unos 35 min
+  - quien: Escribes tus apuntes y preparas tus asignaturas
+    mira: A · B · C · D · E · F · H · I · J
+    tiempo: casi dos horas, en varios días
+  - quien: Coordinas el repositorio del departamento
+    mira: Todo, y la ruta L
+    tiempo: dos horas y media
+
+# El índice por pregunta (§ 6), con las palabras de quien pregunta.
+preguntas:
+  - grupo: Al empezar
+    filas:
+      - [saber qué es Didacta y qué me ahorra, [A1]]
+      - [instalarla, [A2]]
+      - [probar sin arriesgar mi material, [A4]]
+      - ["que compile: no encuentra LaTeX", [A5]]
+      - [saber dónde está cada cosa, [A6, K2]]
+      - [entender por qué una lección no pertenece a una asignatura, [B1]]
+      - [saber qué PDF salen de una lección, [B2]]
+  - grupo: Preparando clase
+    filas:
+      - [encontrar una lección que sé que escribí, [C2]]
+      - [saber dónde usé un teorema, [C2]]
+      - [corregir una errata, [D2]]
+      - [que un párrafo salga solo en los apuntes, [D3]]
+      - [una nota que solo vea yo, [D3]]
+      - [poner una definición o un teorema, [D4]]
+      - [escribir una fórmula sin saber la orden, [D5]]
+      - [poner una imagen, [D9]]
+      - [escribir un problema con su solución, [D8, B3]]
+      - [crear una lección nueva, [D11]]
+      - [partir de una lección que ya tengo, [D12]]
+      - [cambiar una lección de carpeta sin romper nada, [D12]]
+      - [crear una asignatura, [E2]]
+      - [preparar el tema 3, [E3, E4]]
+      - [quitar una lección este año sin borrarla, [E5]]
+      - [hacer un examen sin repetir problemas, [E6]]
+      - [que un tema no salga en diapositivas, [E7]]
+      - [ver el tema en diapositivas y en apuntes a la vez, [F1, F2]]
+      - [arreglar algo que he visto mal en el PDF, [F3]]
+      - [comprobar que no hay nada roto antes de clase, [F7]]
+  - grupo: Traduciendo
+    filas:
+      - [saber qué significa cada color, [B4, G1]]
+      - [saber por dónde empiezo, [G2]]
+      - [traducir una lección, [G3]]
+      - ["revisar lo que tradujo otro, o la máquina", [G4]]
+      - [saber por qué una traducción sale en ámbar, [B4, G4]]
+      - [traducir automáticamente, [G5]]
+      - [un valenciano que no suene a catalán central, [G6]]
+      - [añadir el inglés a mi asignatura, [G7]]
+  - grupo: Repartiendo
+    filas:
+      - [subir los PDF al aula virtual, [H1, H3]]
+      - [no repartir soluciones por error, [H1, B2]]
+      - [llevarme solo un tema, [H2]]
+      - [dejar los PDF en OneDrive o Drive, [H4]]
+      - [apuntes para un estudiante con discapacidad visual, [F8]]
+  - grupo: Cuando algo va mal
+    filas:
+      - [saber por qué no compila, [F4, D6]]
+      - [arreglar una diapositiva que se corta, [F4]]
+      - [entender un aviso al guardar o al enviar, [I5]]
+      - [recuperar lo que escribí antes de que se cerrara, [I6]]
+      - [deshacer algo que he borrado, [E8, I2]]
+      - [contar un fallo, [K4]]
+  - grupo: Día a día
+    filas:
+      - [saber si mis cambios están en GitHub, [I1]]
+      - [trabajar en casa y en el despacho, [I1, K3]]
+      - [ver cómo estaba una lección el año pasado, [I2, I4]]
+      - [letra más grande para el proyector, [K1]]
+      - [modo oscuro, [K1]]
+      - [Didacta en valenciano o en inglés, [K1]]
+      - [tener el material del departamento y el mío, [K3, L2]]
+  - grupo: A final de curso
+    filas:
+      - [guardar el curso tal como lo di, [I3]]
+      - [comparar el curso con el de hace meses, [I4]]
+      - [preparar el curso que viene, [J1]]
+      - [dar la misma lección en dos asignaturas, [J2, J3]]
+      - [cambiar una lección solo en un curso, [J2]]
+      - [separar un tema que compartían dos asignaturas, [J4]]
+  - grupo: Coordinando el departamento
+    filas:
+      - [ver todas las opciones, [L1]]
+      - [organizar el material de varias personas, [L2]]
+      - [añadir «Prácticas» a la teoría y los problemas, [L3]]
+      - [unos apuntes con otro formato o con el membrete del departamento, [L4]]
+      - [una caja propia en la barra del editor, [L5]]
+      - [que GitHub compile solo, [L7]]
+      - [usar un asistente de IA con el material, [L8]]
+      - [usar el terminal, [L9]]

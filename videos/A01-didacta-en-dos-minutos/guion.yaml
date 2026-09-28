@@ -1,0 +1,153 @@
+# A1 · Didacta en dos minutos
+#
+# Lo que se dice, escena a escena. El montaje (`escenas.js`) no lleva ningún
+# tiempo escrito a mano: engancha cada movimiento a una frase o a una palabra
+# de aquí, así que si una frase cambia, o se dice más despacio, la imagen la
+# sigue sola.
+#
+# Cada frase se locuta por separado y se comprueba con Whisper; los
+# subtítulos salen de este mismo texto.
+codigo: A1
+titulo: Didacta en dos minutos
+subtitulo: Qué es y qué te ahorra
+ruta: Empezar
+siguiente: "A2 · Instalar Didacta"
+voz: narrador
+
+# Los PDF que salen en el vídeo, compilados de verdad del repositorio de
+# ejemplo con el motor de Didacta. La página se busca por su texto y las
+# zonas también: si mañana la plantilla mueve algo, el vídeo lo sigue.
+pdf:
+  - nombre: diapositivas
+    documento: tema-1
+    version: slides
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+  - nombre: profesor
+    documento: tema-1
+    version: slides-teacher
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      nota: {desde: "Nota didáctica", hasta: "la pizarra.", caja: true}
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+  - nombre: apuntes
+    documento: tema-1
+    version: notes
+    idioma: es
+    pagina: "La idea intuitiva"
+    ppp: 220
+    zonas:
+      intuicion: {desde: "La idea intuitiva", hasta: "puede comprobar."}
+      solo-apuntes: {desde: "La condición", hasta: "de f(x)."}
+  - nombre: diapositivas-en
+    documento: tema-1
+    version: slides
+    idioma: en
+    pagina: "The definition says what"
+
+escenas:
+  - id: apertura
+    capitulo: ""
+    antes: 1.2
+    despues: 0.7
+    frases:
+      - id: presentacion
+        texto: En dos minutos vas a ver qué es Didacta y qué te ahorra.
+
+  - id: problema
+    capitulo: El problema
+    antes: 0.5
+    frases:
+      - id: te-suena
+        texto: >-
+          Si das clase, esto te suena: las mismas diapositivas, los mismos
+          apuntes y los mismos exámenes, copiados en una carpeta por curso y
+          por idioma.
+      - id: errata
+        texto: Corriges una errata en un sitio… y sigue en todos los demás.
+        pausa: 0.5
+
+  - id: idea
+    capitulo: La idea
+    antes: 0.6
+    frases:
+      - id: vuelta
+        texto: Didacta le da la vuelta.
+      - id: una-vez
+        texto: >-
+          Cada lección se escribe una sola vez, y de ella salen todos los
+          documentos que necesitas: las diapositivas, los apuntes, tu copia de
+          profesor… en cada idioma.
+
+  - id: leccion
+    capitulo: Una lección
+    antes: 0.8
+    frases:
+      - id: asi-se-ve
+        texto: Así se ve una lección en Didacta.
+      - id: marcas
+        texto: >-
+          Es LaTeX de siempre, con unas pocas marcas que dicen a dónde va cada
+          trozo: esta frase, a las diapositivas; este párrafo, a los apuntes.
+
+  - id: salidas
+    capitulo: Muchas salidas
+    antes: 0.4
+    frases:
+      - id: compilar
+        texto: >-
+          Pulsas Compilar, y del mismo fichero salen las diapositivas para
+          proyectar, los apuntes para estudiar y tu copia de profesor, con tus
+          notas de clase.
+      - id: no-existen
+        texto: >-
+          En las versiones del alumno, esas notas no están ocultas:
+          sencillamente, no existen.
+        pausa: 0.4
+
+  - id: idiomas
+    capitulo: Idiomas
+    antes: 0.6
+    frases:
+      - id: un-fichero
+        texto: >-
+          Cada lección guarda un fichero por idioma, y Didacta sabe cuáles
+          están traducidos y cuáles faltan.
+      - id: mismo-tema
+        texto: El mismo tema sale en castellano o en inglés, sin tocar nada más.
+
+  - id: composicion
+    capitulo: Asignaturas
+    antes: 0.8
+    frases:
+      - id: lista
+        texto: Un tema es solo una lista de lecciones, y se ordena arrastrando.
+        pausa: 0.9
+      - id: sin-copiar
+        texto: >-
+          La misma lección puede estar en la hoja de problemas y en el examen
+          sin copiarse: corriges una errata una vez, y queda corregida en
+          todas partes.
+
+  - id: guardado
+    capitulo: Nada se pierde
+    antes: 0.5
+    frases:
+      - id: historial
+        texto: >-
+          Cada cambio queda guardado con tu nombre, y todo vive en tu cuenta de
+          GitHub: nada se pierde.
+
+  - id: cierre
+    capitulo: ""
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: Se escribe una vez. Lo demás, se genera.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, instalamos Didacta.

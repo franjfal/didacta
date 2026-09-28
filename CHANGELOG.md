@@ -42,6 +42,13 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## Próxima
 
+- **Videotutoriales.** La web de Didacta estrena una galería de vídeos cortos,
+  de uno a tres minutos, ordenados por rutas --empezar, escribir, preparar una
+  asignatura, compilar, traducir…--, con un índice por pregunta y el recorrido
+  que conviene según lo que hagas. Todos con subtítulos, capítulos y la
+  transcripción al lado. El primero, *Didacta en dos minutos*, se ve pulsando
+  la ventana de la portada; los demás van saliendo, y cada página de la ayuda
+  enseña los suyos.
 - **Entrar en GitHub solo con los repositorios que elijas.** Didacta entra
   ahora con su GitHub App: GitHub pregunta a qué repositorios puede llegar, en
   lugar de darle todos los tuyos, y la sesión se renueva sola. Si ya habías

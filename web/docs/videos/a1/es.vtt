@@ -1,0 +1,92 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:05.465
+En dos minutos vas a ver qué
+es Didacta y qué te ahorra.
+
+00:00:06.415 --> 00:00:10.665
+Si das clase, esto te suena:
+las mismas diapositivas,
+
+00:00:10.855 --> 00:00:13.755
+los mismos apuntes y los mismos exámenes,
+
+00:00:13.795 --> 00:00:16.802
+copiados en una carpeta
+por curso y por idioma.
+
+00:00:16.872 --> 00:00:21.286
+Corriges una errata en un sitio…
+y sigue en todos los demás.
+
+00:00:22.186 --> 00:00:23.795
+Didacta le da la vuelta.
+
+00:00:23.865 --> 00:00:25.665
+Cada lección se escribe una sola vez,
+
+00:00:25.705 --> 00:00:31.535
+y de ella salen todos los documentos que
+necesitas: las diapositivas, los apuntes,
+
+00:00:31.665 --> 00:00:34.412
+tu copia de profesor… en cada idioma.
+
+00:00:35.512 --> 00:00:37.899
+Así se ve una lección en Didacta.
+
+00:00:37.969 --> 00:00:42.679
+Es LaTeX de siempre, con unas pocas
+marcas que dicen a dónde va cada trozo:
+
+00:00:43.209 --> 00:00:48.026
+esta frase, a las diapositivas;
+este párrafo, a los apuntes.
+
+00:00:48.726 --> 00:00:53.136
+Pulsas Compilar, y del mismo fichero
+salen las diapositivas para proyectar,
+
+00:00:53.406 --> 00:00:57.961
+los apuntes para estudiar y tu copia
+de profesor, con tus notas de clase.
+
+00:00:58.031 --> 00:01:04.216
+En las versiones del alumno, esas notas no
+están ocultas: sencillamente, no existen.
+
+00:01:05.116 --> 00:01:07.056
+Cada lección guarda un fichero por idioma,
+
+00:01:07.096 --> 00:01:11.034
+y Didacta sabe cuáles están
+traducidos y cuáles faltan.
+
+00:01:11.104 --> 00:01:15.710
+El mismo tema sale en castellano
+o en inglés, sin tocar nada más.
+
+00:01:16.810 --> 00:01:21.139
+Un tema es solo una lista de
+lecciones, y se ordena arrastrando.
+
+00:01:21.789 --> 00:01:26.439
+La misma lección puede estar en la hoja
+de problemas y en el examen sin copiarse:
+
+00:01:27.049 --> 00:01:31.142
+corriges una errata una vez, y
+queda corregida en todas partes.
+
+00:01:31.942 --> 00:01:36.172
+Cada cambio queda guardado con tu nombre,
+y todo vive en tu cuenta de GitHub:
+
+00:01:36.382 --> 00:01:37.632
+nada se pierde.
+
+00:01:38.425 --> 00:01:42.037
+Se escribe una vez. Lo demás, se genera.
+
+00:01:42.287 --> 00:01:44.801
+En el siguiente vídeo, instalamos Didacta.

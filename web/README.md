@@ -55,6 +55,39 @@ buena y una vieja, y la vieja siempre es la que alguien está leyendo.
 
 Si cambias uno de esos ficheros, la web cambia con él.
 
+## Los vídeos
+
+La galería de videotutoriales (`/videos/`), la página de cada vídeo --con su
+reproductor, sus capítulos y su transcripción, que es lo que encuentra el
+buscador-- y el recuadro «En vídeo» de las páginas de la documentación **no se
+escriben a mano**: los pinta `hooks/videos.py` al construir. No es un plugin,
+es un fichero de este repositorio que MkDocs ejecuta (`hooks:` en
+`mkdocs.yml`), así que no hay nada que instalar.
+
+Salen de dos sitios:
+
+- **`docs/videos/catalogo.yaml`**, escrito a mano a partir del
+  [plan de videotutoriales](../PLAN-DE-VIDEOTUTORIALES.md): las doce rutas,
+  los 77 vídeos, el índice por pregunta y los perfiles. El campo `mas` de cada
+  vídeo dice en qué páginas sale --arriba, en el recuadro, y debajo de la
+  sección si se nombra una--. Una sección que ya no existe es un aviso, y con
+  `--strict`, un despliegue que no sale.
+- **Lo que deja el estudio de vídeo** al terminar cada uno
+  (`python3 videos/hacer.py A01`): `docs/videos/a1/` con la miniatura, la
+  portada, los subtítulos, los capítulos y la transcripción, y el MP4 en
+  `docs/videos/media/`. **Un vídeo está publicado cuando tiene las dos
+  cosas**; mientras no, la galería lo enseña como «Próximamente», con un
+  enlace a lo que ya hay escrito sobre lo mismo.
+
+Los MP4 van en el repositorio, en la versión ligera que prepara el estudio
+(unos 4 MB por minuto). Si algún día pesan demasiado para él, se sirven desde
+otro sitio cambiando `extra.videos.base` en `mkdocs.yml`, sin tocar nada más.
+
+Todo lo que se pulsa para ver un vídeo --una tarjeta de la galería, el
+recuadro de una página, la ventana de la cabecera de la portada-- lo abre
+encima de la página (`docs/javascripts/videos.js`), y sin JavaScript lleva a
+su página. `…/videos/#video-a1` es el enlace para compartir uno.
+
 ## Publicar
 
 Sola: `.github/workflows/site.yml` la construye y la despliega en GitHub Pages

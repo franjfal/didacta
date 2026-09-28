@@ -1,0 +1,109 @@
+{
+  "codigo": "A1",
+  "titulo": "Didacta en dos minutos",
+  "fichero": "A01-didacta-en-dos-minutos.mp4",
+  "duracion": 107.4,
+  "megas": 7.4,
+  "fecha": "2026-09-28",
+  "version": "0.2.1",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Didacta en dos minutos"
+    },
+    {
+      "t": 5.92,
+      "titulo": "El problema"
+    },
+    {
+      "t": 21.59,
+      "titulo": "La idea"
+    },
+    {
+      "t": 34.71,
+      "titulo": "Una lección"
+    },
+    {
+      "t": 48.33,
+      "titulo": "Muchas salidas"
+    },
+    {
+      "t": 64.52,
+      "titulo": "Idiomas"
+    },
+    {
+      "t": 76.01,
+      "titulo": "Asignaturas"
+    },
+    {
+      "t": 91.44,
+      "titulo": "Nada se pierde"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "En dos minutos vas a ver qué es Didacta y qué te ahorra."
+    },
+    {
+      "t": 6.42,
+      "texto": "Si das clase, esto te suena: las mismas diapositivas, los mismos apuntes y los mismos exámenes, copiados en una carpeta por curso y por idioma."
+    },
+    {
+      "t": 16.87,
+      "texto": "Corriges una errata en un sitio… y sigue en todos los demás."
+    },
+    {
+      "t": 22.19,
+      "texto": "Didacta le da la vuelta."
+    },
+    {
+      "t": 23.86,
+      "texto": "Cada lección se escribe una sola vez, y de ella salen todos los documentos que necesitas: las diapositivas, los apuntes, tu copia de profesor… en cada idioma."
+    },
+    {
+      "t": 35.51,
+      "texto": "Así se ve una lección en Didacta."
+    },
+    {
+      "t": 37.97,
+      "texto": "Es LaTeX de siempre, con unas pocas marcas que dicen a dónde va cada trozo: esta frase, a las diapositivas; este párrafo, a los apuntes."
+    },
+    {
+      "t": 48.73,
+      "texto": "Pulsas Compilar, y del mismo fichero salen las diapositivas para proyectar, los apuntes para estudiar y tu copia de profesor, con tus notas de clase."
+    },
+    {
+      "t": 58.03,
+      "texto": "En las versiones del alumno, esas notas no están ocultas: sencillamente, no existen."
+    },
+    {
+      "t": 65.12,
+      "texto": "Cada lección guarda un fichero por idioma, y Didacta sabe cuáles están traducidos y cuáles faltan."
+    },
+    {
+      "t": 71.1,
+      "texto": "El mismo tema sale en castellano o en inglés, sin tocar nada más."
+    },
+    {
+      "t": 76.81,
+      "texto": "Un tema es solo una lista de lecciones, y se ordena arrastrando."
+    },
+    {
+      "t": 81.79,
+      "texto": "La misma lección puede estar en la hoja de problemas y en el examen sin copiarse: corriges una errata una vez, y queda corregida en todas partes."
+    },
+    {
+      "t": 91.94,
+      "texto": "Cada cambio queda guardado con tu nombre, y todo vive en tu cuenta de GitHub: nada se pierde."
+    },
+    {
+      "t": 98.42,
+      "texto": "Se escribe una vez. Lo demás, se genera."
+    },
+    {
+      "t": 102.29,
+      "texto": "En el siguiente vídeo, instalamos Didacta."
+    }
+  ]
+}

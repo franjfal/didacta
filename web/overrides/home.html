@@ -65,7 +65,36 @@
 
       {#- La ventana. El marco y los tres puntos son CSS: una captura de una
           aplicación de escritorio sin ventana alrededor se lee como un
-          pantallazo suelto. -#}
+          pantallazo suelto.
+
+          Con el A1 publicado, la ventana es además el vídeo: se pulsa y se
+          reproduce encima de la página (`javascripts/videos.js`). La imagen
+          es la misma; lo que cambia es que se ve que se puede pulsar. Sin
+          JavaScript, el enlace lleva a la página del vídeo. -#}
+      {%- set video = (config.extra.didacta_videos or {}).get('A1') -%}
+      {%- if video %}
+      <div class="didacta-hero__shot">
+        <a class="didacta-hero__video" href="{{ video.url | url }}" data-video="A1"
+           aria-label="Ver el vídeo «{{ video.titulo }}» ({{ video.duracion }})">
+          <div class="didacta-window">
+            <div class="didacta-window__bar">
+              <span></span><span></span><span></span>
+            </div>
+            <img
+              src="{{ 'img/app/unidad.png' | url }}"
+              alt=""
+            >
+          </div>
+          <span class="didacta-hero__playbtn" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+          </span>
+          <span class="didacta-hero__caption" aria-hidden="true">
+            <span class="dv-code">A1</span>
+            <span><strong>{{ video.titulo }}</strong><br><small>Vídeo · {{ video.duracion }}</small></span>
+          </span>
+        </a>
+      </div>
+      {%- else %}
       <div class="didacta-hero__shot">
         <div class="didacta-window">
           <div class="didacta-window__bar">
@@ -78,6 +107,7 @@
           >
         </div>
       </div>
+      {%- endif %}
     </div>
 
     <div class="didacta-claims md-grid">

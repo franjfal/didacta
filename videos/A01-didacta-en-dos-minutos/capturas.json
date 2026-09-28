@@ -1,0 +1,212 @@
+{
+  "capturas": [
+    {
+      "nombre": "asignaturas",
+      "ruta": "/courses",
+      "cajas": {
+        "asignatura": {
+          "texto": "Cálculo I",
+          "fila": 500
+        }
+      }
+    },
+    {
+      "nombre": "curso",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "cajas": {
+        "tema": {
+          "texto": "Tema 1: límites y continuidad",
+          "fila": 500
+        },
+        "hoja": {
+          "texto": "Hoja 1: límites y continuidad",
+          "fila": 500
+        },
+        "parcial": {
+          "texto": "Primer parcial",
+          "fila": 500
+        },
+        "compilar-curso": {
+          "contiene": "Compilar el curso"
+        }
+      }
+    },
+    {
+      "nombre": "leccion",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "cajas": {
+        "titulo": {
+          "texto": "Límite de una función en un punto"
+        },
+        "castellano": {
+          "texto": "Castellano",
+          "n": 1
+        },
+        "ingles": {
+          "texto": "English"
+        },
+        "compilar": {
+          "texto": "compilar"
+        },
+        "canales": {
+          "texto": "Diapositivas"
+        },
+        "editor-titulo": {
+          "editor": "\\didactatitle",
+          "hasta": "en un punto}"
+        },
+        "editor-medio": {
+          "editor": "\\bymedium",
+          "hasta": "desigualdad que se puede comprobar."
+        },
+        "editor-diapositivas": {
+          "editor": "$f(x)$ se acerca a $L$ cuando",
+          "hasta": "«se acerca»."
+        },
+        "editor-apuntes": {
+          "editor": "La idea intuitiva",
+          "hasta": "desigualdad que se puede comprobar."
+        },
+        "editor-definicion": {
+          "editor": "\\begin{definition}",
+          "hasta": "\\end{definition}"
+        },
+        "usos": {
+          "texto": "tema-1",
+          "fila": 250
+        },
+        "sincro": {
+          "contiene": "Guardado en GitHub"
+        },
+        "repositorio": {
+          "texto": "profe/didacta-ejemplo"
+        }
+      }
+    },
+    {
+      "nombre": "discontinuidades",
+      "ruta": "/unit/problems/calculo/continuidad/discontinuidades-evitables",
+      "cajas": {
+        "titulo": {
+          "texto": "Discontinuidades evitables"
+        },
+        "hoja": {
+          "texto": "hoja-1",
+          "fila": 290
+        },
+        "parcial": {
+          "texto": "parcial-1",
+          "fila": 290
+        }
+      }
+    },
+    {
+      "nombre": "composicion",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "pulsar": {
+            "consejo": "Editar la composición"
+          },
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "composicion-antes",
+            "cajas": {
+              "definicion": {
+                "texto": "Límite de una función en un punto",
+                "fila": 1000
+              },
+              "por-definicion": {
+                "texto": "Límites por la definición",
+                "fila": 1000
+              },
+              "historia": {
+                "texto": "Una breve historia de la épsilon",
+                "fila": 1000
+              },
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "apartado": {
+                "texto": "Límite de una función",
+                "fila": 1000
+              },
+              "lista": {
+                "texto": "Límite de una función",
+                "fila": 900
+              }
+            }
+          }
+        },
+        {
+          "arrastrar": {
+            "fila": "Álgebra de límites",
+            "dy": -112,
+            "fotogramas": 22,
+            "quieto": 6,
+            "despues": 14,
+            "guardar": false
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "composicion-despues",
+            "cajas": {
+              "definicion": {
+                "texto": "Límite de una función en un punto",
+                "fila": 1000
+              },
+              "por-definicion": {
+                "texto": "Límites por la definición",
+                "fila": 1000
+              },
+              "historia": {
+                "texto": "Una breve historia de la épsilon",
+                "fila": 1000
+              },
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "apartado": {
+                "texto": "Límite de una función",
+                "fila": 1000
+              },
+              "lista": {
+                "texto": "Límite de una función",
+                "fila": 900
+              },
+              "guardar": {
+                "texto": "Guardar"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Guardar"
+          },
+          "esperar": 24
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "Guardado en el historial",
+          "fila": 400
+        },
+        "ver-cambios": {
+          "texto": "Ver cambios"
+        },
+        "subir": {
+          "clave": "sync-push"
+        },
+        "sincro-abajo": {
+          "contiene": "GitHub"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+# El entorno de voz de los vídeos: `python3 videos/hacer.py preparar` lo instala.
+# Todo es de código abierto y corre en local.
+qwen-tts>=0.1.1        # la voz (Apache 2.0)
+openai-whisper         # el oído que comprueba cada frase (MIT)
+soundfile
+pyyaml
+scipy
+librosa

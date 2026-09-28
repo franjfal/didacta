@@ -1,0 +1,64 @@
+# La voz de los videotutoriales de Didacta: un profesor universitario.
+#
+# No es la voz de nadie: la inventa el modelo de diseño de voz de Qwen3-TTS a
+# partir de una descripción. Se busca una vez --`python3 videos/hacer.py voz
+# narrador`-- probando varias descripciones y semillas, y quedándose con la
+# que distingue la «z» de la «s» como en España, tiene voz de barítono y se
+# mueve lo justo: seria, pero no plana (ver `herramientas/casting.py`). La
+# ganadora queda en `narrador.wav`, al lado.
+#
+# A partir de ahí, cada frase de cada vídeo se dice **clonando esa muestra**:
+# así la voz es la misma en el vídeo 1 y en el 77, y en uno que se rehaga
+# dentro de un año.
+idioma: Spanish
+
+# La misma voz, dicha de tres maneras: el modelo entiende instrucciones en
+# inglés y en chino, y en español a veces le cuesta más quedarse con el
+# acento. El casting prueba las tres.
+descripciones:
+  en: >-
+    A Spanish university professor from Madrid, male, around fifty years old,
+    native speaker of Castilian Spanish from Spain with a clear peninsular
+    accent: he pronounces "z" and "c" before "e" and "i" as a soft interdental
+    "th" sound, distinct from "s". Deep, warm baritone voice. Serious and
+    authoritative, yet dynamic and engaging, like an excellent lecturer
+    explaining to his students: crisp diction, natural emphasis on key words,
+    lively but controlled intonation, never theatrical or overly enthusiastic.
+    Medium pace. Studio recording with a close microphone, no background
+    noise, no reverb.
+  es: >-
+    Voz masculina de un catedrático de universidad de Madrid, de unos cincuenta
+    años, con acento castellano de España: pronuncia la «z» y la «c» delante de
+    «e» e «i» como en España, distinguiéndolas de la «s». Timbre grave y cálido
+    de barítono. Tono serio y con autoridad, pero dinámico y cercano, como un
+    buen profesor explicando en clase: dicción nítida, énfasis natural en las
+    palabras importantes, entonación viva pero contenida, nada teatral.
+    Ritmo pausado. Grabación de estudio, sin ruido ni reverberación.
+  zh: >-
+    一位来自马德里的西班牙大学教授，男性，约五十岁，说地道的西班牙本土卡斯蒂利亚口音西班牙语：
+    z 以及 e、i 前的 c 发成清齿间擦音（类似英语 th），与 s 明确区分。声音低沉温暖，男中音。
+    语气严肃、有权威感，但生动、有感染力，像一位优秀的大学老师在课堂上讲解：吐字清晰，
+    重点词自然重读，语调有起伏但克制，不夸张、不做作。语速适中。录音室录音，近距离麦克风，
+    无背景噪音，无混响。
+
+# Lo que dice la muestra. Frases del tipo de las de los vídeos, con palabras
+# que solo llevan /θ/ («hace», «empezar», «lección», «fácil») y otras que solo
+# llevan /s/, para poder medir si distingue. Unos quince segundos.
+texto: >-
+  Buenas tardes. Hoy vamos a empezar por lo más sencillo: cómo se hace una
+  lección, cómo se organiza un curso y cómo se generan, en un solo paso, las
+  diapositivas y los apuntes. Veréis que es más fácil de lo que parece.
+
+# Lo que ganó el casting. Lo escribe `hacer.py voz narrador`.
+elegida:
+  descripcion: es
+  muestreo: estable
+  semilla: 29
+  escogida_por: Javier, escuchando las cuatro mejores del casting
+  medidas:
+    mos: 4.08
+    distincion: 11.1
+    hz: 111
+    semitonos: 13.9
+    ppm: 161
+    parecido: 1.0

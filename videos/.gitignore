@@ -1,0 +1,6 @@
+# Lo que se regenera: el entorno, las dependencias y todo lo que sale.
+.venv/
+node_modules/
+.build/
+salida/
+.DS_Store

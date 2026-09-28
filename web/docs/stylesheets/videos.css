@@ -1,0 +1,1044 @@
+/* Los videotutoriales: la galería, el recuadro «En vídeo», la página de cada
+ * vídeo, el reproductor emergente y la cabecera de la portada.
+ *
+ * El HTML lo escribe `web/hooks/videos.py` y el reproductor
+ * `javascripts/videos.js`. Los colores son los de `didacta.css`: el verde de
+ * la casa para lo que se puede pulsar, y el negro del vídeo solo donde hay
+ * un vídeo. */
+
+:root {
+  --dv-rule: var(--didacta-rule);
+  --dv-card: #ffffff;
+  --dv-soft: #f3f7f1;
+  --dv-soft-2: #e4eee0;
+  --dv-ink-soft: #346e3438;
+  --dv-accent: var(--didacta-green-dark);
+}
+
+[data-md-color-scheme="slate"] {
+  --dv-rule: #2f343c;
+  --dv-card: #1e2229;
+  --dv-soft: #1f2a22;
+  --dv-soft-2: #26352a;
+  --dv-ink-soft: #8ccf8c33;
+  --dv-accent: #8ccf8c;
+}
+
+/* ---------------------------------------------------------- piezas comunes */
+
+.dv-code {
+  display: inline-block;
+  padding: 0.05rem 0.42rem;
+  border-radius: 0.3rem;
+  background: var(--didacta-green-dark);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+.dv-time {
+  position: absolute;
+  right: 0.45rem;
+  bottom: 0.45rem;
+  padding: 0.05rem 0.38rem;
+  border-radius: 0.25rem;
+  background: #14171cc7;
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* El botón de reproducir: redondo, verde, y a la vista en cuanto el puntero
+ * pasa por encima. En una pantalla táctil no hay «por encima», así que se ve
+ * siempre. */
+.dv-play {
+  position: absolute;
+  inset: 0;
+  width: 3rem;
+  height: 3rem;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #346e34eb;
+  box-shadow: 0 6px 22px #0000004d;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.18s, transform 0.18s;
+}
+
+.dv-play svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-left: 0.12rem;
+  fill: #ffffff;
+}
+
+@media (hover: none) {
+  .dv-play {
+    opacity: 0.95;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------- galería -- */
+
+.md-typeset .dv-doors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.8rem;
+  margin: 1.2rem 0 0.6rem;
+}
+
+.md-typeset .dv-door {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--dv-rule);
+  border-radius: 0.6rem;
+  background: var(--dv-card);
+  color: var(--md-default-fg-color);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.md-typeset .dv-door:hover,
+.md-typeset .dv-door:focus-visible {
+  border-color: var(--didacta-green);
+  transform: translateY(-2px);
+  box-shadow: var(--md-shadow-z2);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .dv-door svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-bottom: 0.25rem;
+  fill: none;
+  stroke: var(--dv-accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.md-typeset .dv-door strong {
+  font-size: 0.8rem;
+}
+
+.md-typeset .dv-door span {
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset .dv-count,
+.md-typeset .dv-lead {
+  font-size: 0.74rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset .dv-lead--small {
+  font-size: 0.68rem;
+}
+
+.md-typeset .dv-lead em {
+  color: var(--md-default-fg-color);
+  font-style: normal;
+  font-weight: 600;
+}
+
+/* La rejilla: tres o cuatro por fila en un portátil, una en el móvil. Con
+ * `:not([hidden])` porque así pone Material las listas en `flow-root`, y sin
+ * él esa regla gana. */
+.md-typeset .dv-grid:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+  gap: 1.1rem;
+  margin: 1rem 0 2.2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.md-typeset ol.dv-grid > li {
+  margin: 0;
+  display: flex;
+}
+
+.md-typeset ol.dv-grid > li > .dv-card {
+  flex: 1;
+}
+
+.md-typeset .dv-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--dv-rule);
+  border-radius: 0.6rem;
+  background: var(--dv-card);
+  color: var(--md-default-fg-color);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.md-typeset a.dv-card:hover,
+.md-typeset a.dv-card:focus-visible {
+  border-color: var(--didacta-green);
+  transform: translateY(-3px);
+  box-shadow: var(--md-shadow-z2);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset a.dv-card:hover .dv-play,
+.md-typeset a.dv-card:focus-visible .dv-play,
+.md-typeset a.dv-mini:hover .dv-play,
+.md-typeset a.dv-mini:focus-visible .dv-play {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.md-typeset .dv-card__thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--dv-soft);
+  border-bottom: 1px solid var(--dv-rule);
+}
+
+.md-typeset .dv-card__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+  transition: transform 0.35s;
+}
+
+.md-typeset a.dv-card:hover .dv-card__thumb img {
+  transform: scale(1.035);
+}
+
+.md-typeset .dv-card__thumb .dv-code {
+  position: absolute;
+  left: 0.45rem;
+  top: 0.45rem;
+}
+
+.md-typeset .dv-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.65rem 0.8rem 0.8rem;
+}
+
+.md-typeset .dv-card__title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.md-typeset .dv-card__text {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.66rem;
+  line-height: 1.5;
+  color: var(--md-default-fg-color--light);
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.md-typeset .dv-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+}
+
+.md-typeset .dv-tag {
+  padding: 0 0.45rem;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 1rem;
+  font-size: 0.56rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset .dv-tag--completa {
+  border-color: #2d5fa0;
+  color: #2d5fa0;
+}
+
+.md-typeset .dv-tag--opcional {
+  border-color: #9a6a1c;
+  color: #9a6a1c;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .dv-tag--completa {
+  border-color: #8fb2e3;
+  color: #8fb2e3;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .dv-tag--opcional {
+  border-color: #e0b56a;
+  color: #e0b56a;
+}
+
+/* Los que aún no están: la misma tarjeta, con el código en grande donde irá
+ * la imagen, y un enlace a lo que ya hay escrito sobre lo mismo. */
+.md-typeset .dv-card--pronto .dv-card__thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--dv-soft), var(--dv-soft-2));
+}
+
+.md-typeset .dv-card__big {
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--dv-ink-soft);
+}
+
+.md-typeset .dv-card__soon {
+  position: absolute;
+  left: 0.45rem;
+  top: 0.45rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.3rem;
+  background: var(--dv-card);
+  color: var(--md-default-fg-color--light);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.md-typeset .dv-card--pronto .dv-card__title {
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset .dv-card__read {
+  margin-top: auto;
+  padding-top: 0.25rem;
+  font-size: 0.64rem;
+  font-weight: 600;
+}
+
+/* El mapa de las rutas. */
+.md-typeset .dv-routes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14.5rem, 1fr));
+  gap: 0.7rem;
+  margin: 1rem 0 1.6rem;
+}
+
+.md-typeset .dv-route {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--dv-rule);
+  border-radius: 0.6rem;
+  background: var(--dv-card);
+  color: var(--md-default-fg-color);
+  transition: border-color 0.15s;
+}
+
+.md-typeset .dv-route:hover,
+.md-typeset .dv-route:focus-visible {
+  border-color: var(--didacta-green);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .dv-route__letter {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.45rem;
+  background: var(--didacta-green-dark);
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.md-typeset .dv-route__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.md-typeset .dv-route__body strong {
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.md-typeset .dv-route__body span {
+  font-size: 0.64rem;
+  line-height: 1.4;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset .dv-route__body small {
+  font-size: 0.58rem;
+  color: var(--md-default-fg-color--lighter);
+}
+
+/* Por perfil. */
+.md-typeset .dv-profiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.7rem;
+  margin: 1rem 0 0.8rem;
+}
+
+.md-typeset .dv-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid var(--didacta-green);
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: var(--dv-soft);
+}
+
+.md-typeset .dv-profile strong {
+  font-size: 0.74rem;
+}
+
+.md-typeset .dv-profile__mira {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.md-typeset .dv-profile small {
+  font-size: 0.62rem;
+  color: var(--md-default-fg-color--light);
+}
+
+/* Las fichas con el código de un vídeo, en el índice por pregunta. */
+.md-typeset .dv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  margin: 0.08rem 0.1rem;
+  padding: 0.02rem 0.45rem;
+  border: 1px solid var(--didacta-green-dark);
+  border-radius: 1rem;
+  background: var(--didacta-green-dark);
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.md-typeset .dv-chip:hover,
+.md-typeset .dv-chip:focus-visible {
+  background: var(--didacta-green);
+  border-color: var(--didacta-green);
+  color: #ffffff;
+}
+
+.md-typeset .dv-chip svg {
+  width: 0.62rem;
+  height: 0.62rem;
+  fill: currentcolor;
+}
+
+.md-typeset .dv-chip--pronto,
+.md-typeset .dv-chip--texto {
+  border-color: var(--md-default-fg-color--lighter);
+  background: transparent;
+  color: var(--md-default-fg-color--light);
+  font-weight: 600;
+}
+
+.md-typeset .dv-chip--pronto:hover,
+.md-typeset .dv-chip--pronto:focus-visible {
+  background: transparent;
+  border-color: var(--md-default-fg-color--light);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .dv-chip--ruta {
+  border-color: var(--dv-accent);
+  background: transparent;
+  color: var(--dv-accent);
+}
+
+.md-typeset .dv-chip--ruta:hover,
+.md-typeset .dv-chip--ruta:focus-visible {
+  background: var(--dv-accent);
+  border-color: var(--dv-accent);
+  color: var(--md-default-bg-color);
+}
+
+/* ------------------------------------------ en las páginas de la ayuda -- */
+
+.md-typeset .dv-box {
+  margin: 0 0 1.4rem;
+  padding: 0.55rem 0.7rem 0.65rem;
+  border: 1px solid var(--dv-rule);
+  border-radius: 0.6rem;
+  background: linear-gradient(180deg, var(--dv-soft), transparent 85%);
+}
+
+.md-typeset .dv-box__label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dv-accent);
+}
+
+.md-typeset .dv-box__label svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  fill: currentcolor;
+}
+
+.md-typeset .dv-box__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.md-typeset .dv-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: 24rem;
+  padding: 0.3rem 0.5rem 0.3rem 0.3rem;
+  border-radius: 0.5rem;
+  color: var(--md-default-fg-color);
+  transition: background 0.15s;
+}
+
+.md-typeset .dv-mini:hover,
+.md-typeset .dv-mini:focus-visible {
+  background: var(--md-accent-fg-color--transparent);
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset .dv-mini__thumb {
+  position: relative;
+  flex: none;
+  width: 7.5rem;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--dv-rule);
+  border-radius: 0.35rem;
+}
+
+.md-typeset .dv-mini__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+
+.md-typeset .dv-mini .dv-play {
+  width: 1.8rem;
+  height: 1.8rem;
+  opacity: 0.92;
+  transform: none;
+}
+
+.md-typeset .dv-mini .dv-play svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.md-typeset .dv-mini__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.md-typeset .dv-mini__body strong {
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.md-typeset .dv-mini__body small {
+  font-size: 0.62rem;
+  color: var(--md-default-fg-color--light);
+  font-variant-numeric: tabular-nums;
+}
+
+.md-typeset .dv-inline {
+  margin: -0.2rem 0 0.9rem;
+}
+
+.md-typeset .dv-inline a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-right: 0.4rem;
+  padding: 0.2rem 0.65rem 0.2rem 0.25rem;
+  border-radius: 1rem;
+  background: var(--md-accent-fg-color--transparent);
+  font-size: 0.68rem;
+}
+
+.md-typeset .dv-inline svg {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0.22rem 0.18rem 0.22rem 0.26rem;
+  border-radius: 50%;
+  background: var(--didacta-green-dark);
+  fill: #ffffff;
+}
+
+/* ---------------------------------------------- la página de un vídeo --- */
+
+.md-typeset .dv-page__meta {
+  margin-top: -0.6rem;
+  font-size: 0.7rem;
+  color: var(--md-default-fg-color--light);
+}
+
+.md-typeset .dv-player {
+  margin: 1rem 0 1.4rem;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: #000000;
+  box-shadow: 0 2px 6px #1c1f2614, 0 18px 50px #1c1f2626;
+}
+
+.md-typeset .dv-player video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000000;
+}
+
+.md-typeset ol.dv-chapters:not([hidden]) {
+  margin: 0.6rem 0 1.4rem;
+  padding: 0;
+  list-style: none;
+  columns: 2 16rem;
+  column-gap: 1.6rem;
+}
+
+.md-typeset ol.dv-chapters li {
+  margin: 0 0 0.25rem;
+  break-inside: avoid;
+}
+
+.md-typeset ol.dv-chapters a {
+  display: flex;
+  gap: 0.7rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.3rem;
+  color: var(--md-default-fg-color);
+}
+
+.md-typeset ol.dv-chapters a:hover,
+.md-typeset ol.dv-chapters a:focus-visible,
+.md-typeset ol.dv-chapters a.dv-activo {
+  background: var(--md-accent-fg-color--transparent);
+}
+
+.md-typeset ol.dv-chapters span,
+.md-typeset .dv-t {
+  font-variant-numeric: tabular-nums;
+  color: var(--dv-accent);
+  font-weight: 600;
+}
+
+/* ------------------------------------------------- el reproductor --- */
+
+dialog.dv-lightbox {
+  width: min(94vw, 76rem);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  overflow: visible;
+}
+
+dialog.dv-lightbox::backdrop {
+  background: #0a0c0fdb;
+  backdrop-filter: blur(4px);
+}
+
+dialog.dv-lightbox[open] .dv-lightbox__panel {
+  animation: dv-entra 0.22s ease-out;
+}
+
+@keyframes dv-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog.dv-lightbox[open] .dv-lightbox__panel {
+    animation: none;
+  }
+}
+
+.dv-lightbox__panel {
+  overflow: hidden;
+  border-radius: 0.7rem;
+  background: #111317;
+  box-shadow: 0 30px 90px #00000080;
+  font-family: var(--md-text-font-family);
+}
+
+.dv-lightbox__head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.6rem 0.55rem 0.9rem;
+}
+
+.dv-lightbox__head h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #ffffff;
+}
+
+.dv-lightbox__head small {
+  color: #ffffff99;
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.dv-lightbox__close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 50%;
+  background: #ffffff14;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.dv-lightbox__close:hover,
+.dv-lightbox__close:focus-visible {
+  background: #ffffff2e;
+}
+
+.dv-lightbox__close svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.dv-lightbox__stage {
+  position: relative;
+  background: #000000;
+}
+
+.dv-lightbox video {
+  display: block;
+  width: 100%;
+  max-height: calc(100vh - 9.5rem);
+  aspect-ratio: 16 / 9;
+  background: #000000;
+}
+
+/* Al terminar: el siguiente, encima del último fotograma. */
+.dv-lightbox__end {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  background: #0a0c0fcc;
+  text-align: center;
+}
+
+.dv-lightbox__end.dv-visible {
+  display: flex;
+}
+
+.dv-lightbox__end small {
+  color: #ffffffa8;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dv-lightbox__end strong {
+  max-width: 30rem;
+  font-size: 1.1rem;
+}
+
+.dv-lightbox__end div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+}
+
+.dv-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #ffffff40;
+  border-radius: 2rem;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.dv-boton:hover,
+.dv-boton:focus-visible {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.dv-boton--verde {
+  border-color: var(--didacta-green);
+  background: var(--didacta-green-dark);
+}
+
+.dv-boton--verde:hover,
+.dv-boton--verde:focus-visible {
+  background: var(--didacta-green);
+  border-color: var(--didacta-green);
+}
+
+.dv-boton svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  fill: currentcolor;
+}
+
+.dv-lightbox__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.55rem 0.8rem 0.65rem;
+}
+
+.dv-lightbox__chapters {
+  display: flex;
+  flex: 1;
+  gap: 0.35rem;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.dv-lightbox__chapters button {
+  flex: none;
+  padding: 0.22rem 0.6rem;
+  border: 1px solid #ffffff26;
+  border-radius: 1rem;
+  background: transparent;
+  color: #ffffffc7;
+  font: inherit;
+  font-size: 0.62rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dv-lightbox__chapters button span {
+  margin-right: 0.35rem;
+  color: #8ccf8c;
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-lightbox__chapters button:hover,
+.dv-lightbox__chapters button:focus-visible,
+.dv-lightbox__chapters button.dv-activo {
+  border-color: var(--didacta-green);
+  background: #55aa5526;
+  color: #ffffff;
+}
+
+.dv-lightbox__links {
+  display: flex;
+  flex: none;
+  gap: 0.5rem;
+}
+
+@media screen and (max-width: 44.9em) {
+  dialog.dv-lightbox {
+    width: 100vw;
+  }
+  .dv-lightbox__panel {
+    border-radius: 0;
+  }
+  .dv-lightbox__foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dv-lightbox__links {
+    justify-content: flex-end;
+  }
+}
+
+/* --------------------------------------------- la cabecera de la portada */
+
+/* La misma ventana de siempre, que ahora se puede pulsar: un botón de
+ * reproducir en medio y, abajo, qué vídeo es y cuánto dura. Tiene que verse
+ * sin pasar el puntero por encima --quien no sabe que hay un vídeo no va a
+ * ir a buscarlo--, y al pasarlo, la ventana se levanta un poco. */
+.didacta-hero__video {
+  position: relative;
+  display: block;
+  color: inherit;
+  cursor: pointer;
+}
+
+.didacta-hero__video .didacta-window {
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.didacta-hero__video:hover .didacta-window,
+.didacta-hero__video:focus-visible .didacta-window {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 10px #1c1f2614, 0 26px 60px #1c1f262e;
+}
+
+.didacta-hero__video:focus-visible {
+  outline: none;
+}
+
+.didacta-hero__video:focus-visible .didacta-window {
+  outline: 3px solid var(--didacta-green);
+  outline-offset: 3px;
+}
+
+.didacta-hero__playbtn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 50%;
+  background: #346e34eb;
+  box-shadow: 0 0 0 0.55rem #ffffff66, 0 12px 34px #0000004d;
+  transform: translate(-50%, -50%);
+  transition: transform 0.25s, background 0.25s;
+}
+
+.didacta-hero__playbtn svg {
+  width: 1.9rem;
+  height: 1.9rem;
+  margin-left: 0.2rem;
+  fill: #ffffff;
+}
+
+.didacta-hero__video:hover .didacta-hero__playbtn,
+.didacta-hero__video:focus-visible .didacta-hero__playbtn {
+  background: var(--didacta-green);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .didacta-hero__playbtn::after {
+    content: "";
+    position: absolute;
+    inset: -0.55rem;
+    border-radius: 50%;
+    border: 2px solid #ffffffb3;
+    animation: dv-latido 2.4s ease-out infinite;
+  }
+}
+
+@keyframes dv-latido {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+.didacta-hero__caption {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0.85rem 0.4rem 0.45rem;
+  border-radius: 2rem;
+  background: #14171ce0;
+  color: #ffffff;
+  box-shadow: 0 6px 20px #0000003d;
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.didacta-hero__caption .dv-code {
+  background: var(--didacta-green);
+}
+
+.didacta-hero__caption strong {
+  font-weight: 700;
+}
+
+.didacta-hero__caption small {
+  color: #ffffffb3;
+  font-variant-numeric: tabular-nums;
+}
+
+/* En el móvil la ventana es pequeña: botón y rótulo más pequeños, para que
+ * no se pisen. */
+@media screen and (max-width: 44.9em) {
+  .didacta-hero__playbtn {
+    width: 3rem;
+    height: 3rem;
+    box-shadow: 0 0 0 0.35rem #ffffff66, 0 8px 24px #0000004d;
+  }
+  .didacta-hero__playbtn svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+  .didacta-hero__caption {
+    left: 0.5rem;
+    bottom: 0.5rem;
+    padding: 0.25rem 0.6rem 0.25rem 0.3rem;
+    font-size: 0.6rem;
+  }
+}

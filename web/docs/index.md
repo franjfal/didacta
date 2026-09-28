@@ -192,6 +192,15 @@ vez que la abres.
 
     [:octicons-arrow-right-24: Empezar](empezar/index.md)
 
+-   :material-play-circle-outline: __Prefiero verlo__
+
+    ---
+
+    Vídeos de uno a tres minutos: de instalar Didacta a cada tarea del día a
+    día, con subtítulos y capítulos.
+
+    [:octicons-arrow-right-24: Videotutoriales](videos/index.md)
+
 -   :material-application-outline: __Enséñame la aplicación__
 
     ---

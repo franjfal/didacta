@@ -1,0 +1,12 @@
+{
+  "name": "didacta-videos",
+  "private": true,
+  "description": "El estudio de los videotutoriales de Didacta: pinta cada fotograma en un navegador sin ventana y se lo pasa a ffmpeg.",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "playwright-core": "^1.57.0"
+  }
+}

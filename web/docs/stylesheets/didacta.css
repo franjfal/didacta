@@ -322,8 +322,12 @@
 }
 
 @media screen and (max-width: 59.9em) {
+  /* `minmax(0, 1fr)` y no `1fr`: con `1fr` la columna mide al menos lo que
+   * la línea más larga del bloque de LaTeX, y en un móvil eso ensancha la
+   * página entera --y descentra todo lo que se centra en ella, como el
+   * reproductor de los vídeos--. */
   .md-typeset .didacta-feature {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
   .md-typeset .didacta-feature:nth-of-type(even) .didacta-feature__text {
