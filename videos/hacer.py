@@ -481,6 +481,10 @@ def hacer(codigo: str, opciones: dict) -> None:
     for f in (obra / "datos.js", carpeta / "escenas.js", *sorted((VIDEOS / "estudio").glob("*"))):
         if f.is_file():
             h.update(f.read_bytes())
+    # Y las capturas: `datos.js` las nombra, pero una captura nueva con las
+    # mismas zonas --a otra resolución, por ejemplo-- no lo cambia.
+    for f in sorted((obra / "capturas").glob("*.png")):
+        h.update(f"{f.name} {f.stat().st_size} {f.stat().st_mtime_ns}".encode())
     h.update(str(opciones["fps"]).encode())
     huella = obra / "imagen.huella"
     if mudo.exists() and huella.exists() and huella.read_text() == h.hexdigest() and "imagen" not in opciones["rehacer"]:

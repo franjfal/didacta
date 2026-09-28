@@ -1,0 +1,132 @@
+{
+  "capturas": [
+    {
+      "nombre": "leccion",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Límite de una función en un punto"
+        },
+        "ruta": {
+          "texto": "content/calculo/limites/definicion-de-limite"
+        },
+        "castellano": {
+          "texto": "Castellano",
+          "n": 1
+        },
+        "valenciano": {
+          "texto": "Valencià"
+        },
+        "ingles": {
+          "texto": "English"
+        },
+        "metadatos": {
+          "texto": "metadatos"
+        }
+      }
+    },
+    {
+      "nombre": "tema",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Tema 1: límites y continuidad"
+        },
+        "definicion": {
+          "texto": "Límite de una función en un punto",
+          "fila": 1000
+        },
+        "algebra": {
+          "texto": "Álgebra de límites",
+          "fila": 1000
+        },
+        "bolzano": {
+          "texto": "El teorema de Bolzano",
+          "fila": 1000
+        },
+        "apartado": {
+          "texto": "Límite de una función",
+          "fila": 1000
+        }
+      }
+    },
+    {
+      "nombre": "problema",
+      "ruta": "/unit/problems/calculo/continuidad/discontinuidades-evitables",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Discontinuidades evitables"
+        },
+        "usos": {
+          "contiene": "SE USA EN",
+          "fila": 400
+        },
+        "hoja": {
+          "texto": "hoja-1",
+          "fila": 290
+        },
+        "parcial": {
+          "texto": "parcial-1",
+          "fila": 290
+        }
+      }
+    },
+    {
+      "nombre": "curso",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "tema": {
+          "texto": "Tema 1: límites y continuidad",
+          "fila": 500
+        },
+        "hoja": {
+          "texto": "Hoja 1: límites y continuidad",
+          "fila": 500
+        },
+        "parcial": {
+          "texto": "Primer parcial",
+          "fila": 500
+        }
+      }
+    },
+    {
+      "nombre": "asignaturas",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "asignatura": {
+          "texto": "Cálculo I",
+          "fila": 500
+        },
+        "curso": {
+          "texto": "2026-2027",
+          "fila": 500
+        }
+      }
+    }
+  ]
+}

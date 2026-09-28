@@ -1,0 +1,131 @@
+# B3 · Los niveles de un problema
+#
+# Montado desde este guion. Los PDF son de verdad: la Hoja 1 en sus tres
+# versiones y el Primer parcial en las dos suyas.
+codigo: B3
+titulo: Los niveles de un problema
+subtitulo: Qué enseña cada versión de una hoja y de un examen
+ruta: Cómo piensa Didacta
+siguiente: "B4 · Un fichero por idioma"
+voz: narrador
+lema: ["Enunciado y solución, en un fichero:", "no se pueden desincronizar."]
+lema_en: "no se pueden"
+
+pdf:
+  - nombre: hoja
+    documento: hoja-1
+    version: problems
+    idioma: es
+    pagina: "Límites de cocientes"
+    zonas:
+      ej: {desde: "Ejercicio 1", hasta: "Calcula los siguientes"}
+      pista: {desde: "Indicación:", hasta: "multiplica y divide por"}
+  - nombre: respuestas
+    documento: hoja-1
+    version: problems-answers
+    idioma: es
+    pagina: "Límites de cocientes"
+    zonas:
+      ej: {desde: "Ejercicio 1", hasta: "Calcula los siguientes"}
+      respuesta: {desde: "Respuesta:", hasta: "(iii) 1/2."}
+  - nombre: profesor
+    documento: hoja-1
+    version: problems-teacher
+    idioma: es
+    pagina: "Límites de cocientes"
+    zonas:
+      ej: {desde: "Ejercicio 1", hasta: "Calcula los siguientes"}
+      solucion: {desde: "Solución:", hasta: "evaluar después."}
+  - nombre: examen
+    documento: parcial-1
+    version: exam
+    idioma: es
+    pagina: "Primer parcial"
+    zonas:
+      ej: {desde: "Ejercicio 1", hasta: "evitables"}
+      puntos: {desde: "[4", hasta: "puntos]"}
+  - nombre: correccion
+    documento: parcial-1
+    version: exam-marking
+    idioma: es
+    pagina: "Dos puntos: uno por el límite"
+    zonas:
+      correccion: {desde: "Corrección:", hasta: "vale medio punto."}
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué enseña cada versión de una hoja de problemas y
+          de un examen.
+
+  - id: fichero
+    capitulo: Un fichero
+    antes: 0.5
+    pantalla: campos
+    frases:
+      - id: partes
+        texto: >-
+          Un problema se escribe entero en un solo fichero: el enunciado, el
+          resultado y la solución, cada uno en su sitio.
+        pasos:
+          - {en: problema, enfoca: [titulo, enunciado, resultado], max: 1.6, dy: 60}
+          - {en: enunciado, resalta: enunciado, etiqueta: "En todas las versiones", lado: derecha, hasta: 1.8}
+          - {en: resultado, resalta: resultado, etiqueta: "Con los resultados", lado: derecha, hasta: 1.8}
+          - {en: solución, resalta: solucion, etiqueta: "Con las soluciones", lado: derecha}
+      - id: debajo
+        texto: Debajo de cada parte, la pantalla te dice en qué versiones sale.
+        pasos:
+          - {en: debajo, rotulo: "Dice en qué versiones sale"}
+      - id: pista
+        texto: Y en LaTeX, además, una pista y los criterios de corrección.
+        pasos:
+          - {en: LaTeX, cambia: latex}
+          - {en: LaTeX, enfoca: [enunciado, pista, resultado], max: 1.7, captura: latex}
+          - {en: pista, resalta: pista, etiqueta: "La pista", lado: derecha, captura: latex}
+
+  - id: hoja
+    capitulo: La hoja
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      ancho: 560
+      hojas:
+        - {pdf: hoja, rotulo: "Para repartir", color: apuntes, desde_zona: ej, izquierda_zona: ej, zoom: 1.32, alto: 540, en: repartir, resalta: [{zona: pista, etiqueta: "Con la pista", en: repartir}]}
+        - {pdf: respuestas, rotulo: "Con resultados", color: ambar, desde_zona: ej, izquierda_zona: ej, zoom: 1.32, alto: 540, en: resultados, resalta: [{zona: respuesta, etiqueta: "El resultado", en: corrijan, color: ambar}]}
+        - {pdf: profesor, rotulo: "Del profesor", color: profesor, desde_zona: ej, izquierda_zona: ej, zoom: 1.32, alto: 540, en: profesor, resalta: [{zona: solucion, etiqueta: "La solución entera", en: todo, color: profesor}]}
+    frases:
+      - id: tres
+        texto: >-
+          La hoja sale en tres versiones: solo los enunciados, para repartir;
+          con los resultados, para que se corrijan solos; y la del profesor,
+          con todo.
+
+  - id: examen
+    capitulo: El examen
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      ancho: 760
+      hojas:
+        - {pdf: examen, rotulo: Examen, color: verde, desde_zona: ej, izquierda_zona: ej, zoom: 1.2, alto: 560, en: examen, resalta: [{zona: puntos, etiqueta: "Lo que puntúa", en: puntúa}]}
+        - {pdf: correccion, rotulo: "Su corrección", color: profesor, desde_zona: correccion, izquierda_zona: correccion, margen: 30, zoom: 1.25, alto: 560, en: corrección, resalta: [{zona: correccion, etiqueta: "Cómo se corrige", en: criterios, color: profesor}]}
+    frases:
+      - id: sin-pistas
+        texto: >-
+          El examen no lleva pistas, y cada problema dice lo que puntúa. Su
+          corrección añade la solución y los criterios.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Enunciado y solución, en un fichero: no se pueden desincronizar.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, un fichero por idioma.

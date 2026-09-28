@@ -1,0 +1,112 @@
+# A7 · Tu primer PDF
+#
+# Montado desde este guion, con compilaciones de verdad dentro del arnés de
+# capturas. El plan decía que lo que no está traducido sale en castellano con
+# un aviso; la aplicación de hoy hace otra cosa, mejor, y es lo que se cuenta:
+# no compila un tema a medias y dice qué falta traducir.
+codigo: A7
+titulo: Tu primer PDF
+subtitulo: De una asignatura a un PDF abierto dentro de Didacta
+ruta: Empezar
+siguiente: "B1 · Lecciones, documentos y cursos"
+voz: narrador
+lema: ["Un tema no sale a medias:", "Didacta te dice qué falta traducir."]
+lema_en: "Didacta te dice"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar habrás compilado tu primer PDF, y lo tendrás abierto
+          dentro de Didacta.
+
+  - id: abrir
+    capitulo: El tema
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: tema
+        texto: >-
+          En Asignaturas, Cálculo I, curso 2026-2027, abre el Tema 1.
+        pasos:
+          - {en: Cálculo, enfoca: [tema], max: 1.8, dy: 120}
+          - {en: Tema 1, pulsa: tema, mas: 0.3}
+
+  - id: compilar
+    capitulo: Compilar
+    antes: 0.4
+    pantalla: tema
+    frases:
+      - id: pestana
+        texto: >-
+          En la pestaña Compilar, elige las versiones que quieras, y pulsa
+          «Compilar».
+        pasos:
+          - {en: pestaña Compilar, pulsa: pestana}
+          - {en: elige, cambia: panel}
+          - {en: elige, enfoca: [versiones, compilar], max: 1.9, captura: panel, dy: 60}
+          - {en: versiones, resalta: versiones, etiqueta: "Las versiones que quieras", captura: panel, hasta: 2.2}
+          - {en: pulsa, pulsa: compilar, captura: panel, mas: 0.6}
+      - id: consola
+        texto: >-
+          Mientras tanto, la consola cuenta lo que va haciendo LaTeX, y abajo
+          se ve qué se compila.
+        pasos:
+          - {al: inicio, cambia: compilando}
+          - {al: inicio, reposo: true}
+          - {en: consola, resalta: consola, etiqueta: "Lo que va haciendo LaTeX", captura: compilando, lado: arriba, hasta: 2.6}
+          - {en: abajo, resalta: tira, etiqueta: "Qué se compila", captura: compilando, lado: arriba}
+      - id: pestanas
+        texto: >-
+          Al terminar, cada versión se abre como una pestaña más, dentro de la
+          ventana.
+        pasos:
+          - {al: inicio, cambia: pdf}
+          - {en: pestaña, resalta: pestanas, etiqueta: "Una pestaña por versión", captura: pdf}
+
+  - id: idioma
+    capitulo: En otro idioma
+    antes: 0.5
+    pantalla: panel-en
+    frases:
+      - id: ingles
+        texto: >-
+          Si lo pides en inglés y le faltan lecciones por traducir, no lo
+          compila a medias.
+        pasos:
+          - {en: inglés, enfoca: [en, titulo-aviso, bolzano], max: 1.5, dy: 40}
+          - {en: inglés, resalta: en, etiqueta: "En inglés", lado: izquierda, hasta: 2}
+          - {en: a medias, resalta: titulo-aviso, etiqueta: "No lo compila a medias", color: ambar, lado: arriba}
+      - id: cuales
+        texto: Te dice cuáles faltan, y te lleva a traducirlas.
+        pasos:
+          - {en: cuáles, resalta: [lista, bolzano], hasta: 2.5}
+          - {en: traducirlas, resalta: traducir, etiqueta: "Traducir", lado: izquierda}
+
+  - id: lado
+    capitulo: Lado a lado
+    antes: 0.5
+    pantalla: leccion-dos
+    frases:
+      - id: dos-a-la-vez
+        texto: >-
+          Una lección que sí está en los dos idiomas se compila en los dos a la
+          vez, y salen lado a lado.
+        pasos:
+          - {en: lado a lado, resalta: juntas, etiqueta: "Las páginas se mueven juntas"}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un tema no sale a medias: Didacta te dice qué falta traducir.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, entiendes cómo piensa Didacta: lecciones,
+          documentos y cursos.

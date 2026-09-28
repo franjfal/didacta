@@ -1,0 +1,138 @@
+{
+  "capturas": [
+    {
+      "nombre": "ventana",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "asignaturas": {
+          "texto": "Asignaturas",
+          "alto": 56
+        },
+        "biblioteca": {
+          "texto": "Biblioteca",
+          "alto": 56
+        },
+        "traduccion": {
+          "texto": "Traducción",
+          "alto": 56
+        },
+        "ajustes": {
+          "texto": "Ajustes",
+          "alto": 56
+        },
+        "repo": {
+          "texto": "profe/didacta-ejemplo"
+        },
+        "idioma": {
+          "texto": "Castellano"
+        },
+        "traer": {
+          "clave": "sync-pull"
+        },
+        "enviar": {
+          "clave": "sync-push"
+        },
+        "estado": {
+          "clave": "sync-state"
+        },
+        "tema": {
+          "clave": "appearance-toggle"
+        }
+      }
+    },
+    {
+      "nombre": "oscuro",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "appearance-toggle"
+          }
+        }
+      ],
+      "cajas": {
+        "tema": {
+          "clave": "appearance-toggle"
+        }
+      }
+    },
+    {
+      "nombre": "ayuda",
+      "ruta": "/settings?s=ayuda",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "ayuda": {
+          "texto": "Ayuda",
+          "n": 1
+        },
+        "recorrido": {
+          "texto": "Ver el recorrido guiado"
+        }
+      }
+    },
+    {
+      "nombre": "recorrido",
+      "ruta": "/settings?s=ayuda",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "Ver el recorrido guiado"
+          },
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "saltar": {
+          "clave": "tour-skip"
+        }
+      }
+    },
+    {
+      "nombre": "estado",
+      "ruta": "/courses",
+      "preparar": [
+        {
+          "en_github": 1
+        },
+        {
+          "sin_enviar": 2
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 16
+        }
+      ],
+      "cajas": {
+        "estado": {
+          "clave": "sync-state"
+        },
+        "traerlos": {
+          "contiene": "en GitHub",
+          "n": 1
+        },
+        "traer": {
+          "clave": "sync-pull"
+        },
+        "enviar": {
+          "clave": "sync-push"
+        }
+      }
+    }
+  ]
+}

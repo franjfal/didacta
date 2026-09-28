@@ -1,0 +1,124 @@
+# C1 · Recorrer la biblioteca
+#
+# Montado desde este guion, con capturas del repositorio de ejemplo. Lo que se
+# ve en cursiva es de verdad: el arnés le quita el título en inglés a la nota
+# histórica (`"preparar"` en capturas.json), que es lo que tiene una lección
+# que nadie ha traducido todavía.
+codigo: C1
+titulo: Recorrer la biblioteca
+subtitulo: Llegar a cualquier lección en tres clics, y leer lo que dice cada fila
+ruta: Encontrar material
+siguiente: "C2 · Buscar una lección"
+voz: narrador
+lema: ["La biblioteca respeta", "el orden que tu material ya tiene."]
+lema_en: "el orden"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar llegarás a cualquier lección en tres clics, y sabrás leer
+          lo que dice cada fila.
+
+  - id: columnas
+    capitulo: Tres columnas
+    antes: 0.5
+    pantalla: columnas
+    frases:
+      - id: orden
+        texto: >-
+          La biblioteca enseña el material como ya está ordenado: la categoría,
+          el tema, y sus lecciones.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: categoría, resalta: calculo, hasta: 1.3}
+          - {en: tema, resalta: limites, hasta: 1.3}
+          - {en: lecciones, resalta: lecciones}
+      - id: cuanto
+        texto: >-
+          Cada nivel dice cuánto contiene, y cuánto está traducido al idioma
+          que miras.
+        pasos:
+          - {en: cuánto contiene, resalta: cabecera, etiqueta: "Cuánto hay", hasta: 2}
+          - {en: traducido, resalta: limites, etiqueta: "Y cuánto, traducido", lado: derecha}
+
+  - id: fila
+    capitulo: Lo que dice una fila
+    antes: 0.5
+    pantalla: columnas
+    frases:
+      - id: partes
+        texto: >-
+          Cada fila lleva el título, el tipo, y el estado de cada idioma, con
+          su color y sus dos letras.
+        pasos:
+          - {al: inicio, enfoca: [tarjeta], max: 2.1, dy: 40}
+          - {en: título, resalta: titulo, hasta: 1.2}
+          - {en: tipo, resalta: tipo, hasta: 1.2}
+          - {en: estado, resalta: [en, es, va], etiqueta: "Un estado por idioma"}
+      - id: cursiva
+        texto: >-
+          Y mirando en inglés, lo que no tiene título en inglés sale con el
+          del original, en cursiva y gris: así no parece traducido.
+        pasos:
+          - {al: inicio, cambia: ingles}
+          - {al: inicio, enfoca: [tarjeta, historia_tarjeta], max: 1.9, captura: ingles}
+          - {en: cursiva, resalta: historia, etiqueta: "Sin título en inglés", color: ambar, captura: ingles}
+
+  - id: ojear
+    capitulo: Ojear sin entrar
+    antes: 0.5
+    pantalla: apuntada
+    frases:
+      - id: ojear
+        texto: >-
+          Si una lección ya está compilada, puedes ojearla encima de la lista,
+          sin entrar en ella.
+        pasos:
+          - {al: inicio, enfoca: [tarjeta], max: 1.6}
+          - {en: ojearla, pulsa: ojo}
+          - {en: encima, cambia: ojear}
+          - {en: encima, reposo: true, captura: ojear}
+      - id: cual
+        texto: >-
+          Es la pregunta de quien prepara una clase: ¿cuál era la que tenía el
+          dibujo?
+        pasos:
+          - {en: dibujo, resalta: abrir, etiqueta: "Y si es esa, se abre", lado: abajo}
+
+  - id: volver
+    capitulo: Ir y volver
+    antes: 0.5
+    pantalla: leccion
+    frases:
+      - id: atras
+        texto: >-
+          Abre una lección, y vuelve con la flecha de atrás: la biblioteca
+          sigue como la dejaste.
+        pasos:
+          - {al: inicio, enfoca: [atras, titulo], max: 1.6, dy: 160}
+          - {en: atrás, pulsa: atras}
+          - {en: sigue, cambia: vuelta}
+          - {en: sigue, reposo: true, captura: vuelta}
+      - id: recientes
+        texto: >-
+          Y en la raíz, Abiertas hace poco: las últimas lecciones que has
+          abierto, a un clic.
+        pasos:
+          - {al: inicio, cambia: recientes}
+          - {al: inicio, enfoca: [recientes], max: 1.5, captura: recientes, dy: 180}
+          - {en: Abiertas, resalta: recientes, etiqueta: "Abiertas hace poco", captura: recientes}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La biblioteca respeta el orden que tu material ya tiene.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, buscar una lección.

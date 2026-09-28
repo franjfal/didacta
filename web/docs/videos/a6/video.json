@@ -1,0 +1,85 @@
+{
+  "codigo": "A6",
+  "titulo": "Conocer la ventana",
+  "fichero": "A06-conocer-la-ventana.mp4",
+  "duracion": 71.2,
+  "megas": 3.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Conocer la ventana"
+    },
+    {
+      "t": 7.34,
+      "titulo": "El carril"
+    },
+    {
+      "t": 24.6,
+      "titulo": "La barra de arriba"
+    },
+    {
+      "t": 36.63,
+      "titulo": "La barra de abajo"
+    },
+    {
+      "t": 45.54,
+      "titulo": "Claro u oscuro"
+    },
+    {
+      "t": 49.28,
+      "titulo": "El recorrido guiado"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás para qué sirve cada parte de la ventana de Didacta, y dónde está el recorrido guiado."
+    },
+    {
+      "t": 7.84,
+      "texto": "A la izquierda, el carril: Asignaturas, lo de cada día; la Biblioteca, donde se busca; Traducción, y Ajustes."
+    },
+    {
+      "t": 17.32,
+      "texto": "Dos más aparecen solo cuando hacen falta: con varios repositorios, y con el servidor para asistentes."
+    },
+    {
+      "t": 25.1,
+      "texto": "Arriba, el repositorio que tienes abierto, y el idioma en el que miras el material."
+    },
+    {
+      "t": 30.51,
+      "texto": "Al lado, traer y enviar: lo que hay nuevo en GitHub, y lo que tienes sin enviar."
+    },
+    {
+      "t": 37.13,
+      "texto": "Abajo, cómo está lo tuyo, dicho sin jerga."
+    },
+    {
+      "t": 40.64,
+      "texto": "Si hay algo pendiente, lo dice, y te ofrece traer lo nuevo."
+    },
+    {
+      "t": 46.04,
+      "texto": "El sol y la luna cambian entre claro y oscuro."
+    },
+    {
+      "t": 49.78,
+      "texto": "Y si quieres que te la enseñe ella misma, en Ajustes, Ayuda, está el recorrido guiado."
+    },
+    {
+      "t": 55.59,
+      "texto": "Te lleva por cada pantalla, paso a paso, y lo puedes dejar cuando quieras."
+    },
+    {
+      "t": 61.59,
+      "texto": "Dónde va a parar lo que escribes, siempre a la vista."
+    },
+    {
+      "t": 65.26,
+      "texto": "En el siguiente vídeo, compilas tu primer PDF."
+    }
+  ]
+}

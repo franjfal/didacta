@@ -1,0 +1,125 @@
+# A6 · Conocer la ventana
+#
+# Montado desde este guion. El estado con cambios pendientes sale de un
+# repositorio preparado así (`"preparar"` en capturas.json).
+codigo: A6
+titulo: Conocer la ventana
+subtitulo: Para qué sirve cada parte, y el recorrido guiado
+ruta: Empezar
+siguiente: "A7 · Tu primer PDF"
+voz: narrador
+lema: ["Dónde va a parar lo que escribes,", "siempre a la vista."]
+lema_en: "siempre"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás para qué sirve cada parte de la ventana de
+          Didacta, y dónde está el recorrido guiado.
+
+  - id: carril
+    capitulo: El carril
+    antes: 0.5
+    pantalla: ventana
+    frases:
+      - id: cuatro
+        texto: >-
+          A la izquierda, el carril: Asignaturas, lo de cada día; la
+          Biblioteca, donde se busca; Traducción, y Ajustes.
+        pasos:
+          - {en: carril, enfoca: [asignaturas, ajustes], max: 2.0, dx: 360, dy: 30}
+          - {en: Asignaturas, resalta: asignaturas, etiqueta: "Lo de cada día", lado: derecha, hasta: 2.4}
+          - {en: Biblioteca, resalta: biblioteca, etiqueta: "Donde se busca", lado: derecha, hasta: 2.2}
+          - {en: Traducción, resalta: traduccion, hasta: 1.4}
+          - {en: Ajustes, resalta: ajustes, hasta: 1.6}
+      - id: dos-mas
+        texto: >-
+          Dos más aparecen solo cuando hacen falta: con varios repositorios, y
+          con el servidor para asistentes.
+        pasos:
+          - {en: aparecen, rotulo: "Entre repos y Servidor: solo si hacen falta"}
+
+  - id: arriba
+    capitulo: La barra de arriba
+    antes: 0.5
+    pantalla: ventana
+    frases:
+      - id: repo
+        texto: >-
+          Arriba, el repositorio que tienes abierto, y el idioma en el que
+          miras el material.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: repositorio, resalta: repo, etiqueta: "El repositorio abierto", hasta: 2.6}
+          - {en: idioma, resalta: idioma, etiqueta: "El idioma que miras", alinear: derecha}
+      - id: traer-enviar
+        texto: >-
+          Al lado, traer y enviar: lo que hay nuevo en GitHub, y lo que tienes
+          sin enviar.
+        pasos:
+          - {en: traer, enfoca: [idioma, enviar], max: 2.4, dy: 120, dx: -200}
+          - {en: nuevo en GitHub, resalta: traer, etiqueta: Traer, hasta: 2.4, alinear: derecha}
+          - {en: sin enviar, resalta: enviar, etiqueta: Enviar, alinear: derecha}
+
+  - id: abajo
+    capitulo: La barra de abajo
+    antes: 0.5
+    pantalla: ventana
+    frases:
+      - id: al-dia
+        texto: Abajo, cómo está lo tuyo, dicho sin jerga.
+        pasos:
+          - {al: inicio, enfoca: [estado], max: 1.4, dy: -260}
+          - {en: cómo está, resalta: estado, etiqueta: "Guardado en GitHub, al día", lado: arriba}
+      - id: pendiente
+        texto: Si hay algo pendiente, lo dice, y te ofrece traer lo nuevo.
+        pasos:
+          - {en: pendiente, cambia: estado}
+          - {en: pendiente, resalta: estado, etiqueta: "Dos sin enviar, uno nuevo en GitHub", lado: arriba, captura: estado, hasta: 2.2}
+          - {en: traer, resalta: traerlos, etiqueta: Traerlos, lado: arriba, alinear: derecha, captura: estado}
+
+  - id: tema
+    capitulo: Claro u oscuro
+    antes: 0.5
+    pantalla: ventana
+    corta: true
+    frases:
+      - id: sol-luna
+        texto: El sol y la luna cambian entre claro y oscuro.
+        pasos:
+          - {al: inicio, enfoca: [tema, asignaturas], max: 1.6, dy: -60, dx: 600}
+          - {en: luna, pulsa: tema}
+          - {en: oscuro, cambia: oscuro}
+
+  - id: recorrido
+    capitulo: El recorrido guiado
+    antes: 0.5
+    pantalla: ayuda
+    frases:
+      - id: ayuda
+        texto: >-
+          Y si quieres que te la enseñe ella misma, en Ajustes, Ayuda, está el
+          recorrido guiado.
+        pasos:
+          - {en: Ayuda, enfoca: [ayuda, recorrido], max: 1.8}
+          - {en: recorrido guiado, pulsa: recorrido}
+      - id: pasos
+        texto: Te lleva por cada pantalla, paso a paso, y lo puedes dejar cuando quieras.
+        pasos:
+          - {al: inicio, cambia: recorrido}
+          - {al: inicio, reposo: true}
+          - {en: dejar, resalta: saltar, captura: recorrido, etiqueta: "Dejarlo", lado: derecha}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: Dónde va a parar lo que escribes, siempre a la vista.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, compilas tu primer PDF.

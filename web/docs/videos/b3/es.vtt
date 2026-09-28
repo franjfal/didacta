@@ -1,0 +1,45 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:06.414
+Al terminar sabrás qué enseña cada versión
+de una hoja de problemas y de un examen.
+
+00:00:07.264 --> 00:00:11.674
+Un problema se escribe entero en
+un solo fichero: el enunciado,
+
+00:00:11.924 --> 00:00:15.550
+el resultado y la solución,
+cada uno en su sitio.
+
+00:00:15.620 --> 00:00:19.799
+Debajo de cada parte, la pantalla
+te dice en qué versiones sale.
+
+00:00:19.869 --> 00:00:24.153
+Y en LaTeX, además, una pista
+y los criterios de corrección.
+
+00:00:24.953 --> 00:00:30.323
+La hoja sale en tres versiones:
+solo los enunciados, para repartir;
+
+00:00:30.773 --> 00:00:36.610
+con los resultados, para que se corrijan
+solos; y la del profesor, con todo.
+
+00:00:37.410 --> 00:00:41.540
+El examen no lleva pistas, y cada
+problema dice lo que puntúa.
+
+00:00:42.210 --> 00:00:45.504
+Su corrección añade la
+solución y los criterios.
+
+00:00:46.304 --> 00:00:51.198
+Enunciado y solución, en un fichero:
+no se pueden desincronizar.
+
+00:00:51.448 --> 00:00:54.362
+En el siguiente vídeo,
+un fichero por idioma.

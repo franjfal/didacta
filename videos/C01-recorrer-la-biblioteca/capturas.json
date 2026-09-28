@@ -1,0 +1,276 @@
+{
+  "capturas": [
+    {
+      "nombre": "columnas",
+      "ruta": "/?en=calculo/limites",
+      "acciones": [
+        {
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "cabecera": {
+          "texto": "9 unidades · 1 categorías · 2 temas"
+        },
+        "categorias": {
+          "texto": "Cálculo",
+          "n": 1,
+          "alto": 380
+        },
+        "temas": {
+          "texto": "Continuidad",
+          "alto": 380
+        },
+        "lecciones": {
+          "texto": "5 unidades",
+          "alto": 380
+        },
+        "calculo": {
+          "texto": "Cálculo",
+          "n": 1,
+          "fila": 150
+        },
+        "limites": {
+          "texto": "Límites",
+          "n": 1,
+          "fila": 150
+        },
+        "continuidad": {
+          "texto": "Continuidad",
+          "fila": 150
+        },
+        "tarjeta": {
+          "texto": "Límite de una función en un punto",
+          "alto": 60
+        },
+        "titulo": {
+          "texto": "Límite de una función en un punto"
+        },
+        "tipo": {
+          "texto": "teoría",
+          "n": 1
+        },
+        "en": {
+          "texto": "en TR",
+          "n": 0
+        },
+        "es": {
+          "texto": "es OR",
+          "n": 1
+        },
+        "va": {
+          "texto": "va TR",
+          "n": 1
+        },
+        "uso": {
+          "texto": "1",
+          "n": 1
+        },
+        "historia": {
+          "texto": "Una breve historia de la épsilon",
+          "alto": 60
+        }
+      }
+    },
+    {
+      "nombre": "ojear",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 30
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "slides · es"
+          },
+          "despues": 10
+        },
+        {
+          "ir": "/?en=calculo/limites",
+          "esperar": 12
+        },
+        {
+          "apuntar": {
+            "texto": "Límite de una función en un punto"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "apuntada",
+            "cajas": {
+              "ojo": {
+                "clave": "quick-look-content/calculo/limites/definicion-de-limite"
+              },
+              "tarjeta": {
+                "texto": "Límite de una función en un punto",
+                "alto": 60
+              },
+              "lecciones": {
+                "texto": "5 unidades",
+                "alto": 380
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "quick-look-content/calculo/limites/definicion-de-limite"
+          },
+          "esperar": 24
+        }
+      ],
+      "cajas": {
+        "abrir": {
+          "texto": "Abrir la unidad"
+        },
+        "titulo": {
+          "texto": "Límite de una función en un punto",
+          "n": 1
+        },
+        "version": {
+          "texto": "Diapositivas · es"
+        }
+      }
+    },
+    {
+      "nombre": "recientes",
+      "ruta": "/?en=calculo/limites",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "Álgebra de límites"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "leccion",
+            "cajas": {
+              "atras": {
+                "clave": "go-back"
+              },
+              "titulo": {
+                "texto": "Álgebra de límites",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "go-back"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "vuelta",
+            "cajas": {
+              "tarjeta": {
+                "texto": "Álgebra de límites",
+                "alto": 60
+              },
+              "limites": {
+                "texto": "Límites",
+                "n": 1,
+                "fila": 150
+              },
+              "lecciones": {
+                "texto": "5 unidades",
+                "alto": 380
+              },
+              "migas": {
+                "texto": "Límites",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+          "esperar": 10
+        },
+        {
+          "ir": "/unit/content/calculo/limites/definicion-de-limite",
+          "esperar": 10
+        },
+        {
+          "ir": "/",
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "recientes": {
+          "clave": "library-shortcuts"
+        }
+      }
+    },
+    {
+      "nombre": "ingles",
+      "ruta": "/?en=calculo/limites",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/historia-del-epsilon/unit.yaml",
+            "buscar": "  en: A short history of epsilon\n",
+            "poner": "",
+            "mensaje": "La nota histórica, sin título en inglés",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "language-picker"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "pick-language-en"
+          },
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "idioma": {
+          "clave": "language-picker"
+        },
+        "historia": {
+          "texto": "Una breve historia de la épsilon"
+        },
+        "historia_tarjeta": {
+          "texto": "Una breve historia de la épsilon",
+          "alto": 60
+        },
+        "tarjeta": {
+          "texto": "The limit of a function at a point",
+          "alto": 60
+        },
+        "lecciones": {
+          "texto": "5 unidades",
+          "alto": 380
+        }
+      }
+    }
+  ]
+}

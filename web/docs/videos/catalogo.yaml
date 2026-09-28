@@ -106,12 +106,13 @@ rutas:
           - {titulo: Cómo funciona, pagina: conceptos/index.md}
           - {titulo: Microlecciones, pagina: conceptos/unidades.md}
       - codigo: B2
-        titulo: Una lección, quince PDF
+        titulo: Una lección, muchas versiones
         minutos: 2.5
-        sabras: qué sale en cada versión y por qué la copia del profesor nunca llega al alumno.
-        idea: el fichero no elige su formato; lo elige la versión con la que se compila. Y en las versiones del alumno el canal del profesor no existe, que es distinto de estar oculto.
+        sabras: qué cambia de una versión a otra, por qué la copia del profesor nunca llega al alumno y quién decide qué versiones salen.
+        idea: "el fichero no elige su formato: lo eligen las versiones, y las versiones las decides tú. Didacta trae unas de serie que se retocan, se apagan o se amplían, y cada documento se queda con las suyas."
         mas:
-          - {titulo: Las quince salidas, pagina: conceptos/perfiles.md}
+          - {titulo: Qué es una versión, pagina: conceptos/perfiles.md}
+          - {titulo: Las plantillas, pagina: "conceptos/perfiles.md#las-plantillas-tus-propias-salidas"}
       - codigo: B3
         titulo: Los niveles de un problema
         minutos: 1.5
@@ -605,7 +606,7 @@ rutas:
         titulo: "Plantillas: tus propias salidas"
         minutos: 3
         marca: Completa
-        sabras: crear una salida propia --unos apuntes en A5-- o retocar una de las quince.
+        sabras: crear una salida propia --unos apuntes en A5-- o retocar una de las que trae Didacta.
         idea: la cabecera va al final del preámbulo de Didacta, así que puede redefinir lo que Didacta acaba de definir.
         mas:
           - {titulo: Plantillas, pagina: "app/ajustes.md#plantillas"}

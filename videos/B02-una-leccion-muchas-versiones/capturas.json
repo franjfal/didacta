@@ -1,0 +1,162 @@
+{
+  "capturas": [
+    {
+      "nombre": "composicion",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "salidas-panel",
+            "cajas": {
+              "titulo": {
+                "texto": "Tema 1: límites y continuidad"
+              },
+              "cabecera": {
+                "texto": "SALIDAS (5)"
+              },
+              "elige": {
+                "texto": "Este tema elige sus salidas, en su `year.yaml`."
+              },
+              "elegir": {
+                "clave": "choose-document-templates"
+              },
+              "diapositivas": {
+                "texto": "Diapositivas",
+                "fila": 250
+              },
+              "profesor": {
+                "texto": "Apuntes (profesor)",
+                "fila": 250
+              },
+              "lista": {
+                "texto": "Diapositivas (sin pausas)",
+                "fila": 250
+              },
+              "apuntes": {
+                "texto": "Apuntes",
+                "fila": 250
+              },
+              "dprof": {
+                "texto": "Diapositivas (profesor)",
+                "fila": 250
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "choose-document-templates"
+          },
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "toque": {
+          "texto": "Lo que toque",
+          "fila": 320
+        },
+        "estas": {
+          "texto": "Estas",
+          "fila": 320
+        }
+      }
+    },
+    {
+      "nombre": "ejes",
+      "ruta": "/settings?s=material",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "open-templates"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "plantillas",
+            "cajas": {
+              "serie": {
+                "texto": "viene con Didacta",
+                "n": 0
+              },
+              "editar": {
+                "clave": "template-edit-book"
+              },
+              "duplicar": {
+                "clave": "template-copy-book"
+              },
+              "casilla": {
+                "clave": "template-active-book"
+              },
+              "nueva": {
+                "texto": "Nueva plantilla"
+              },
+              "tarjeta": {
+                "clave": "template-book"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "template-edit-slides-teacher"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "template-edit-slides-teacher"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "editar",
+            "cajas": {
+              "aviso": {
+                "contiene": "Esta viene con Didacta",
+                "fila": 330
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "template-axis-layout"
+          }
+        },
+        {
+          "esperar": 4
+        }
+      ],
+      "cajas": {
+        "clase": {
+          "texto": "beamer"
+        },
+        "medio": {
+          "clave": "template-axis-medium"
+        },
+        "detalle": {
+          "clave": "template-axis-detail"
+        },
+        "audiencia": {
+          "clave": "template-axis-audience"
+        },
+        "soluciones": {
+          "clave": "template-axis-solutions"
+        },
+        "pausas": {
+          "clave": "template-axis-pauses"
+        },
+        "maqueta": {
+          "clave": "template-axis-layout"
+        }
+      }
+    }
+  ]
+}

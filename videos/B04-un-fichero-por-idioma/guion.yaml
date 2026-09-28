@@ -1,0 +1,107 @@
+# B4 · Un fichero por idioma
+#
+# Montado desde este guion. La traducción desactualizada es la de verdad: el
+# arnés le pone al inglés la huella de un original que ya no es el de ahora
+# (`"preparar"` en capturas.json), que es lo que pasa al cambiar una frase.
+codigo: B4
+titulo: Un fichero por idioma
+subtitulo: Qué está traducido, qué falta y qué se ha quedado viejo
+ruta: Cómo piensa Didacta
+siguiente: "B5 · Todo vive en GitHub"
+voz: narrador
+lema: ["El estado no se escribe:", "Didacta lo calcula."]
+lema_en: "Didacta lo calcula"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás cómo sabe Didacta qué está traducido, qué falta, y
+          qué se ha quedado viejo.
+
+  - id: ficheros
+    capitulo: Un fichero por idioma
+    antes: 0.5
+    pantalla: leccion
+    frases:
+      - id: pestanas
+        texto: >-
+          Cada lección guarda un fichero por idioma, y cada uno tiene su
+          pestaña: el original, y sus traducciones.
+        pasos:
+          - {en: lección, enfoca: [titulo, castellano, ingles], max: 1.8, dy: 30}
+          - {en: original, resalta: castellano, etiqueta: "El original", hasta: 2.5}
+          - {en: traducciones, resalta: [valenciano, ingles], etiqueta: "Sus traducciones"}
+
+  - id: estados
+    capitulo: Los estados
+    antes: 0.5
+    grafico:
+      tipo: puntos
+      titulo: Cada idioma, en qué está
+      por_fila: 3
+      ancho: 460
+      alto_fila: 250
+      items:
+        - {titulo: "OR · original", texto: "De donde salen las demás.", icono: ok, color: verde, en: original}
+        - {titulo: "TR · traducida", texto: "Al día con el original.", icono: idioma, color: azul, en: traducida}
+        - {titulo: "RV · revisada", texto: "Y además, revisada.", icono: ojo, color: apuntes, en: revisada}
+        - {titulo: "BO · sin revisar", texto: "Un borrador, o de la máquina.", icono: lapiz, color: ambar, en: sin revisar}
+        - {titulo: "DE · desactualizada", texto: "El original ha cambiado después.", icono: aviso, color: rojo, en: desactualizada}
+        - {titulo: "·· · no existe", texto: "Falta el fichero.", icono: "no", color: gris, en: no existe}
+    frases:
+      - id: seis
+        texto: >-
+          Un idioma puede ser el original, estar traducido, revisado, sin
+          revisar, desactualizado, o no existir.
+      - id: letras
+        texto: >-
+          Cada estado tiene su color y sus dos letras, para que no dependa solo
+          del color.
+
+  - id: calcula
+    capitulo: Lo calcula Didacta
+    antes: 0.5
+    pantalla: leccion
+    frases:
+      - id: nadie
+        texto: >-
+          Nadie escribe el estado a mano: Didacta lo calcula mirando los
+          ficheros.
+        pasos:
+          - {al: inicio, enfoca: [titulo, castellano, ingles], max: 1.8, dy: 30, mas: 0.2}
+          - {en: calcula, rotulo: "Lo calcula, nadie lo escribe"}
+      - id: cambia
+        texto: >-
+          Si cambias una frase del original, su traducción pasa sola a
+          desactualizada.
+        pasos:
+          - {en: pasa sola, cambia: desactualizada}
+          - {en: desactualizada, resalta: ingles, etiqueta: "Desactualizada", color: rojo, captura: desactualizada}
+
+  - id: peor
+    capitulo: Peor que no tenerla
+    antes: 0.5
+    grafico:
+      tipo: comparar
+      titulo: Peor que no tenerla
+      izquierda: {titulo: "Sin traducir", texto: "Se ve que falta, y Didacta no compila el tema a medias.", icono: "no", color: gris, en: falta}
+      derecha: {titulo: "Desactualizada", texto: "Compila sin quejarse, y dice algo que ya no es cierto.", ok: false, en: compila}
+    frases:
+      - id: peor
+        texto: >-
+          Y una desactualizada es peor que una que falta: compila sin quejarse,
+          y dice algo que ya no es cierto.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: El estado no se escribe. Didacta lo calcula.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, por qué todo vive en GitHub.

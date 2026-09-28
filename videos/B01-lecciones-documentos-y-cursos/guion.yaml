@@ -1,0 +1,120 @@
+# B1 · Lecciones, documentos y cursos: nada se copia
+#
+# Montado desde este guion.
+codigo: B1
+titulo: "Lecciones, documentos y cursos"
+subtitulo: Nada se copia
+ruta: Cómo piensa Didacta
+siguiente: "B2 · Una lección, muchas versiones"
+voz: narrador
+lema: ["Se corrige una vez.", "Queda corregido en todas partes."]
+lema_en: "Queda"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué es una lección, un documento, un curso y una
+          asignatura, y por qué en Didacta nada se copia.
+
+  - id: leccion
+    capitulo: La lección
+    antes: 0.5
+    grafico:
+      tipo: arbol
+      titulo: Una lección es una carpeta
+      lineas:
+        - {texto: "definicion-de-limite/", en: carpeta}
+        - {texto: "unit.yaml", nivel: 1, nota: "su título, su tema, sus etiquetas", en: datos}
+        - {texto: "es.tex", nivel: 1, nota: "en castellano", en: fichero}
+        - {texto: "en.tex", nivel: 1, nota: "en inglés", en: idioma}
+    frases:
+      - id: carpeta
+        texto: >-
+          La pieza de todo es la lección: un trozo pequeño de materia, en una
+          carpeta.
+      - id: dentro
+        texto: Dentro, sus datos, y un fichero por idioma.
+
+  - id: en-la-app
+    capitulo: La lección
+    antes: 0.3
+    pantalla: leccion
+    frases:
+      - id: asi
+        texto: En Didacta se ve así, con una pestaña por idioma.
+        pasos:
+          - {al: inicio, enfoca: [titulo, ruta, castellano, ingles], max: 1.7, mas: 0.2}
+          - {en: pestaña, resalta: [castellano, valenciano, ingles], etiqueta: "Un fichero por idioma"}
+
+  - id: documento
+    capitulo: El documento
+    antes: 0.5
+    pantalla: tema
+    frases:
+      - id: lista
+        texto: >-
+          Un documento, como el Tema 1, la Hoja 1 o el Primer parcial, es una
+          lista ordenada de lecciones.
+        pasos:
+          - {en: Tema 1, enfoca: [titulo, definicion, bolzano], max: 1.5, dy: 40}
+          - {en: lista ordenada, resalta: [definicion, algebra, bolzano], etiqueta: "Lecciones, en orden"}
+      - id: no-copia
+        texto: >-
+          El documento no copia las lecciones: solo dice cuáles lleva, y en qué orden.
+        pasos:
+          - {en: no copia, rotulo: "Las nombra, no las copia"}
+
+  - id: dos-sitios
+    capitulo: Una lección, dos sitios
+    antes: 0.5
+    pantalla: problema
+    frases:
+      - id: hoja-y-examen
+        texto: >-
+          Este problema, «Discontinuidades evitables», está en la hoja de
+          problemas y en el examen.
+        pasos:
+          - {en: Discontinuidades, enfoca: [titulo, hoja, parcial], max: 1.4}
+          - {en: hoja, resalta: hoja, etiqueta: "En la hoja", lado: izquierda, color: ambar, hasta: escena}
+          - {en: examen, resalta: parcial, etiqueta: "Y en el examen", lado: izquierda, hasta: escena}
+      - id: una-sola
+        texto: No son dos copias. Es una sola lección, en dos sitios.
+        pasos:
+          - {en: una sola, rotulo: "Una sola, en dos sitios"}
+      - id: errata
+        texto: Corriges una errata aquí, y queda corregida en los dos.
+
+  - id: curso
+    capitulo: El curso y la asignatura
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: curso-academico
+        texto: >-
+          El curso académico guarda qué documentos se dan este año, y en qué
+          orden.
+        pasos:
+          - {en: curso académico, enfoca: [tema, hoja, parcial], max: 1.5}
+          - {en: documentos, resalta: [tema, hoja, parcial], etiqueta: "Este curso"}
+      - id: asignatura
+        texto: >-
+          Y la asignatura, lo que no cambia de un año a otro: su nombre, su
+          código, sus idiomas.
+        pasos:
+          - {al: inicio, cambia: asignaturas}
+          - {al: inicio, reposo: true}
+          - {en: asignatura, resalta: asignatura, etiqueta: "La asignatura", captura: asignaturas}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: Se corrige una vez. Queda corregido en todas partes.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, una lección y sus muchas versiones.

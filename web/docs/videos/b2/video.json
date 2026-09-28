@@ -1,0 +1,109 @@
+{
+  "codigo": "B2",
+  "titulo": "Una lección, muchas versiones",
+  "fichero": "B02-una-leccion-muchas-versiones.mp4",
+  "duracion": 117.48,
+  "megas": 6.1,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Una lección, muchas versiones"
+    },
+    {
+      "t": 10.0,
+      "titulo": "Muchas versiones"
+    },
+    {
+      "t": 25.72,
+      "titulo": "Las pausas"
+    },
+    {
+      "t": 37.82,
+      "titulo": "Los apuntes"
+    },
+    {
+      "t": 45.23,
+      "titulo": "La copia del profesor"
+    },
+    {
+      "t": 60.44,
+      "titulo": "Unos pocos ejes"
+    },
+    {
+      "t": 78.95,
+      "titulo": "Las versiones son tuyas"
+    },
+    {
+      "t": 92.97,
+      "titulo": "No todo sale en todo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué cambia de una versión a otra, por qué la copia del profesor nunca llega al alumno, y quién decide qué versiones salen."
+    },
+    {
+      "t": 10.5,
+      "texto": "Una lección no se escribe para un formato: se compila en versiones. Diapositivas, apuntes, la copia del profesor, o las que tú definas."
+    },
+    {
+      "t": 20.7,
+      "texto": "No son copias: es el mismo fichero, compilado de maneras distintas."
+    },
+    {
+      "t": 26.22,
+      "texto": "Las diapositivas respetan las pausas: en clase, la diapositiva sale por partes."
+    },
+    {
+      "t": 32.13,
+      "texto": "Las diapositivas sin pausas la dan entera, que es lo que se cuelga en el aula virtual."
+    },
+    {
+      "t": 38.32,
+      "texto": "En los apuntes aparece lo que en una diapositiva no cabe: el párrafo que explica, entero."
+    },
+    {
+      "t": 45.73,
+      "texto": "Y en la copia del profesor, tus notas de clase: el ritmo, dónde se atascan, qué dibujar en la pizarra."
+    },
+    {
+      "t": 53.2,
+      "texto": "En la del alumno esas notas no están ocultas: no existen. No hay descuido que las reparta."
+    },
+    {
+      "t": 60.94,
+      "texto": "Cada versión es una combinación de unos pocos ejes: el medio, el detalle, para quién es, qué soluciones enseña, y si respeta las pausas."
+    },
+    {
+      "t": 71.12,
+      "texto": "La copia del profesor de las diapositivas, por ejemplo: para el profesor, con la solución entera, y sin pausas."
+    },
+    {
+      "t": 79.45,
+      "texto": "Didacta trae unas cuantas de serie, pero no son fijas: puedes retocarlas, apagar las que no uses, o crear las tuyas."
+    },
+    {
+      "t": 88.28,
+      "texto": "Lo que cambias se guarda en tu repositorio, y la de serie se queda como estaba."
+    },
+    {
+      "t": 93.47,
+      "texto": "Y no todo se compila en todas. Este tema, por ejemplo, sale en cinco."
+    },
+    {
+      "t": 99.22,
+      "texto": "Cada documento elige las suyas, o se queda con las de sus bloques. Y una lección también puede quedarse con menos."
+    },
+    {
+      "t": 107.66,
+      "texto": "Un fichero, muchas versiones: las que tú decidas."
+    },
+    {
+      "t": 112.03,
+      "texto": "En el siguiente vídeo, los niveles de un problema."
+    }
+  ]
+}

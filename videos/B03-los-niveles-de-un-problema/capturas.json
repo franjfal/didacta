@@ -1,0 +1,69 @@
+{
+  "capturas": [
+    {
+      "nombre": "campos",
+      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Límites de cocientes",
+          "n": 0
+        },
+        "enunciado": {
+          "texto": "Enunciado",
+          "alto": 200
+        },
+        "resultado": {
+          "texto": "Resultado",
+          "alto": 100
+        },
+        "solucion": {
+          "texto": "Solución detallada",
+          "alto": 200
+        },
+        "latex": {
+          "texto": "LaTeX",
+          "n": 0
+        },
+        "hoja": {
+          "texto": "hoja-1",
+          "fila": 290
+        }
+      }
+    },
+    {
+      "nombre": "latex",
+      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "LaTeX",
+            "n": 0
+          },
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "pista": {
+          "editor": "\\begin{hint}",
+          "hasta": "\\end{hint}"
+        },
+        "resultado": {
+          "editor": "\\begin{answer}",
+          "hasta": "\\end{answer}"
+        },
+        "enunciado": {
+          "editor": "\\begin{exercise}",
+          "hasta": "\\dmarks{3}"
+        }
+      }
+    }
+  ]
+}

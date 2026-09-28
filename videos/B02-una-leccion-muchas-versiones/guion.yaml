@@ -1,0 +1,201 @@
+# B2 · Una lección, muchas versiones
+#
+# Montado desde este guion, con un gráfico propio en `escenas.js` (la
+# diapositiva con pausas). Los PDF son de verdad, compilados con el motor; las
+# plantillas y las salidas del tema son capturas de la aplicación.
+#
+# Las versiones de serie son un punto de partida y no un número: cada
+# repositorio las retoca, apaga las que no usa o declara las suyas, y cada
+# documento elige con cuáles se compila. Eso es lo que cuenta la segunda mitad.
+codigo: B2
+titulo: Una lección, muchas versiones
+subtitulo: Qué cambia de una a otra, y quién decide cuáles salen
+ruta: Cómo piensa Didacta
+siguiente: "B3 · Los niveles de un problema"
+voz: narrador
+lema: ["Un fichero, muchas versiones:", "las que tú decidas."]
+lema_en: "las que"
+
+pdf:
+  - nombre: diapositivas
+    documento: tema-1
+    version: slides
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+      entrada: {desde: "se acerca a", hasta: "decir «se acerca»"}
+  - nombre: profesor
+    documento: tema-1
+    version: slides-teacher
+    idioma: es
+    pagina: "decir «se acerca»"
+    zonas:
+      nota: {desde: "Nota didáctica", hasta: "la pizarra.", caja: true}
+      definicion: {desde: "Definición 1.1", hasta: "tal que"}
+  - nombre: apuntes
+    documento: tema-1
+    version: notes
+    idioma: es
+    pagina: "La idea intuitiva"
+    ppp: 220
+    zonas:
+      intuicion: {desde: "La idea intuitiva", hasta: "puede comprobar."}
+      solo-apuntes: {desde: "La condición", hasta: "de f(x)."}
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué cambia de una versión a otra, por qué la copia
+          del profesor nunca llega al alumno, y quién decide qué versiones
+          salen.
+
+  - id: versiones
+    capitulo: Muchas versiones
+    antes: 0.5
+    grafico:
+      tipo: flujo
+      origen: {ante: "Un fichero", titulo: "Tu lección", sub: "definicion-de-limite/es.tex"}
+      destinos:
+        - {titulo: Diapositivas, icono: diapositivas, color: diapositivas, en: Diapositivas}
+        - {titulo: Apuntes, icono: apuntes, color: apuntes, en: apuntes}
+        - {titulo: "Del profesor", icono: profesor, color: profesor, en: profesor}
+        - {titulo: "Las tuyas", icono: lapiz, color: gris, en: definas}
+    frases:
+      - id: formatos
+        texto: >-
+          Una lección no se escribe para un formato: se compila en versiones.
+          Diapositivas, apuntes, la copia del profesor, o las que tú definas.
+      - id: no-copias
+        texto: >-
+          No son copias: es el mismo fichero, compilado de maneras distintas.
+
+  - id: pausas
+    capitulo: Las pausas
+    antes: 0.5
+    frases:
+      - id: por-partes
+        texto: >-
+          Las diapositivas respetan las pausas: en clase, la diapositiva sale
+          por partes.
+      - id: entera
+        texto: >-
+          Las diapositivas sin pausas la dan entera, que es lo que se cuelga en
+          el aula virtual.
+
+  - id: apuntes
+    capitulo: Los apuntes
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      hojas:
+        - {pdf: diapositivas, rotulo: Diapositivas, color: diapositivas, ancho: 760, en: diapositiva}
+        - {pdf: apuntes, rotulo: Apuntes, color: apuntes, ancho: 760, alto: 560, desde: 150, en: apuntes, resalta: [{zona: solo-apuntes, etiqueta: "Solo en los apuntes", en: párrafo, color: apuntes}]}
+    frases:
+      - id: parrafo
+        texto: >-
+          En los apuntes aparece lo que en una diapositiva no cabe: el párrafo
+          que explica, entero.
+
+  - id: profesor
+    capitulo: La copia del profesor
+    antes: 0.5
+    grafico:
+      tipo: pdfs
+      hojas:
+        - {pdf: diapositivas, rotulo: "Del alumno", color: diapositivas, ancho: 760}
+        - {pdf: profesor, rotulo: "Del profesor", color: profesor, ancho: 760, en: profesor, resalta: [{zona: nota, etiqueta: "Tus notas de clase", en: notas, color: profesor}]}
+    frases:
+      - id: notas
+        texto: >-
+          Y en la copia del profesor, tus notas de clase: el ritmo, dónde se
+          atascan, qué dibujar en la pizarra.
+      - id: no-existen
+        texto: >-
+          En la del alumno esas notas no están ocultas: no existen. No hay
+          descuido que las reparta.
+
+
+  - id: ejes
+    capitulo: Unos pocos ejes
+    antes: 0.5
+    pantalla: ejes
+    frases:
+      - id: combinacion
+        texto: >-
+          Cada versión es una combinación de unos pocos ejes: el medio, el
+          detalle, para quién es, qué soluciones enseña, y si respeta las
+          pausas.
+        pasos:
+          - {al: inicio, enfoca: [clase, maqueta], max: 1.45, dy: 20}
+          - {en: medio, resalta: medio, hasta: 1.1}
+          - {en: detalle, resalta: detalle, hasta: 1.1}
+          - {en: para quién, resalta: audiencia, hasta: 1.2}
+          - {en: soluciones, resalta: soluciones, hasta: 1.2}
+          - {en: pausas, resalta: pausas}
+      - id: ejemplo
+        texto: >-
+          La copia del profesor de las diapositivas, por ejemplo: para el
+          profesor, con la solución entera, y sin pausas.
+        pasos:
+          - {en: para el profesor, resalta: [audiencia, soluciones, pausas], etiqueta: "Diapositivas (profesor)", color: profesor, lado: derecha}
+
+  - id: tuyas
+    capitulo: Las versiones son tuyas
+    antes: 0.5
+    pantalla: plantillas
+    frases:
+      - id: de-serie
+        texto: >-
+          Didacta trae unas cuantas de serie, pero no son fijas: puedes
+          retocarlas, apagar las que no uses, o crear las tuyas.
+        pasos:
+          - {al: inicio, enfoca: [tarjeta, nueva], max: 1.5}
+          - {en: de serie, resalta: serie, etiqueta: "Viene con Didacta", hasta: 1.8}
+          - {en: retocarlas, resalta: editar, etiqueta: "Retocarla", hasta: 1.4}
+          - {en: apagar, resalta: casilla, etiqueta: "Apagarla", lado: izquierda, hasta: 1.4}
+          - {en: crear, resalta: nueva, etiqueta: "Una tuya", lado: izquierda}
+      - id: repositorio
+        texto: >-
+          Lo que cambias se guarda en tu repositorio, y la de serie se queda
+          como estaba.
+        pasos:
+          - {al: inicio, cambia: editar}
+          - {al: inicio, enfoca: [aviso], max: 1.8, captura: editar, dy: 80}
+          - {en: repositorio, resalta: aviso, captura: editar}
+
+  - id: cuales
+    capitulo: No todo sale en todo
+    antes: 0.5
+    pantalla: salidas-panel
+    frases:
+      - id: cinco
+        texto: >-
+          Y no todo se compila en todas. Este tema, por ejemplo, sale en cinco.
+        pasos:
+          - {al: inicio, enfoca: [cabecera, profesor], max: 1.8, dy: 40}
+          - {en: cinco, resalta: [diapositivas, lista, apuntes, dprof, profesor], etiqueta: "Sus cinco versiones", lado: izquierda}
+      - id: elegir
+        texto: >-
+          Cada documento elige las suyas, o se queda con las de sus bloques. Y
+          una lección también puede quedarse con menos.
+        pasos:
+          - {en: elige, cambia: composicion}
+          - {en: elige, enfoca: [toque, estas], max: 1.35, captura: composicion, dy: 120}
+          - {en: elige, resalta: estas, etiqueta: "Las suyas", captura: composicion, hasta: 2}
+          - {en: bloques, resalta: toque, etiqueta: "Las de sus bloques", lado: derecha, captura: composicion}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un fichero, muchas versiones: las que tú decidas.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, los niveles de un problema.

@@ -1,0 +1,50 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:06.777
+Al terminar habrás compilado tu primer PDF,
+y lo tendrás abierto dentro de Didacta.
+
+00:00:07.627 --> 00:00:14.546
+En Asignaturas, Cálculo I,
+curso 2026-2027, abre el Tema 1.
+
+00:00:15.246 --> 00:00:20.481
+En la pestaña Compilar, elige las
+versiones que quieras, y pulsa «Compilar».
+
+00:00:20.551 --> 00:00:24.041
+Mientras tanto, la consola
+cuenta lo que va haciendo LaTeX,
+
+00:00:24.231 --> 00:00:26.200
+y abajo se ve qué se compila.
+
+00:00:26.270 --> 00:00:31.562
+Al terminar, cada versión se abre como
+una pestaña más, dentro de la ventana.
+
+00:00:32.362 --> 00:00:37.416
+Si lo pides en inglés y le faltan lecciones
+por traducir, no lo compila a medias.
+
+00:00:37.486 --> 00:00:40.645
+Te dice cuáles faltan, y
+te lleva a traducirlas.
+
+00:00:41.445 --> 00:00:45.545
+Una lección que sí está en los dos
+idiomas se compila en los dos a la vez,
+
+00:00:45.585 --> 00:00:47.489
+y salen lado a lado.
+
+00:00:48.289 --> 00:00:53.002
+Un tema no sale a medias: Didacta
+te dice qué falta traducir.
+
+00:00:53.252 --> 00:00:57.602
+En el siguiente vídeo, entiendes
+cómo piensa Didacta: lecciones,
+
+00:00:57.832 --> 00:00:59.179
+documentos y cursos.

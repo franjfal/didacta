@@ -1,0 +1,77 @@
+{
+  "codigo": "C1",
+  "titulo": "Recorrer la biblioteca",
+  "fichero": "C01-recorrer-la-biblioteca.mp4",
+  "duracion": 69.91,
+  "megas": 4.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Recorrer la biblioteca"
+    },
+    {
+      "t": 6.88,
+      "titulo": "Tres columnas"
+    },
+    {
+      "t": 19.6,
+      "titulo": "Lo que dice una fila"
+    },
+    {
+      "t": 35.67,
+      "titulo": "Ojear sin entrar"
+    },
+    {
+      "t": 46.78,
+      "titulo": "Ir y volver"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar llegarás a cualquier lección en tres clics, y sabrás leer lo que dice cada fila."
+    },
+    {
+      "t": 7.38,
+      "texto": "La biblioteca enseña el material como ya está ordenado: la categoría, el tema, y sus lecciones."
+    },
+    {
+      "t": 14.37,
+      "texto": "Cada nivel dice cuánto contiene, y cuánto está traducido al idioma que miras."
+    },
+    {
+      "t": 20.1,
+      "texto": "Cada fila lleva el título, el tipo, y el estado de cada idioma, con su color y sus dos letras."
+    },
+    {
+      "t": 26.97,
+      "texto": "Y mirando en inglés, lo que no tiene título en inglés sale con el del original, en cursiva y gris: así no parece traducido."
+    },
+    {
+      "t": 36.17,
+      "texto": "Si una lección ya está compilada, puedes ojearla encima de la lista, sin entrar en ella."
+    },
+    {
+      "t": 41.98,
+      "texto": "Es la pregunta de quien prepara una clase: ¿cuál era la que tenía el dibujo?"
+    },
+    {
+      "t": 47.28,
+      "texto": "Abre una lección, y vuelve con la flecha de atrás: la biblioteca sigue como la dejaste."
+    },
+    {
+      "t": 53.57,
+      "texto": "Y en la raíz, Abiertas hace poco: las últimas lecciones que has abierto, a un clic."
+    },
+    {
+      "t": 61.06,
+      "texto": "La biblioteca respeta el orden que tu material ya tiene."
+    },
+    {
+      "t": 64.84,
+      "texto": "En el siguiente vídeo, buscar una lección."
+    }
+  ]
+}

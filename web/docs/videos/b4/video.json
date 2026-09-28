@@ -1,0 +1,69 @@
+{
+  "codigo": "B4",
+  "titulo": "Un fichero por idioma",
+  "fichero": "B04-un-fichero-por-idioma.mp4",
+  "duracion": 57.6,
+  "megas": 3.4,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Un fichero por idioma"
+    },
+    {
+      "t": 7.87,
+      "titulo": "Un fichero por idioma"
+    },
+    {
+      "t": 15.61,
+      "titulo": "Los estados"
+    },
+    {
+      "t": 28.59,
+      "titulo": "Lo calcula Didacta"
+    },
+    {
+      "t": 39.46,
+      "titulo": "Peor que no tenerla"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás cómo sabe Didacta qué está traducido, qué falta, y qué se ha quedado viejo."
+    },
+    {
+      "t": 8.37,
+      "texto": "Cada lección guarda un fichero por idioma, y cada uno tiene su pestaña: el original, y sus traducciones."
+    },
+    {
+      "t": 16.11,
+      "texto": "Un idioma puede ser el original, estar traducido, revisado, sin revisar, desactualizado, o no existir."
+    },
+    {
+      "t": 23.73,
+      "texto": "Cada estado tiene su color y sus dos letras, para que no dependa solo del color."
+    },
+    {
+      "t": 29.09,
+      "texto": "Nadie escribe el estado a mano: Didacta lo calcula mirando los ficheros."
+    },
+    {
+      "t": 34.03,
+      "texto": "Si cambias una frase del original, su traducción pasa sola a desactualizada."
+    },
+    {
+      "t": 39.96,
+      "texto": "Y una desactualizada es peor que una que falta: compila sin quejarse, y dice algo que ya no es cierto."
+    },
+    {
+      "t": 47.99,
+      "texto": "El estado no se escribe. Didacta lo calcula."
+    },
+    {
+      "t": 51.69,
+      "texto": "En el siguiente vídeo, por qué todo vive en GitHub."
+    }
+  ]
+}

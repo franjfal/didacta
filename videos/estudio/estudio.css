@@ -61,7 +61,10 @@ html, body {
   overflow: hidden;
 }
 
-.capa, .abs { position: absolute; left: 0; top: 0; will-change: transform, opacity; }
+/* Sin `will-change`: con él, Chrome pinta la capa una vez a escala uno y al
+   acercar la cámara amplía ese mapa de bits, y el texto sale borroso. Cada
+   fotograma se fotografía aparte, así que repintar no cuesta nada. */
+.capa, .abs { position: absolute; left: 0; top: 0; }
 
 /* ---------------------------------------------------------------- fondo -- */
 
@@ -94,7 +97,7 @@ html, body {
   color: var(--tinta);
 }
 
-.palabra { display: inline-block; will-change: transform, opacity; }
+.palabra { display: inline-block; }
 
 .antetitulo {
   font-weight: 700;

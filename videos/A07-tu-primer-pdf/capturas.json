@@ -1,0 +1,238 @@
+{
+  "capturas": [
+    {
+      "nombre": "curso",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "tema": {
+          "texto": "Tema 1: límites y continuidad",
+          "fila": 500
+        }
+      }
+    },
+    {
+      "nombre": "tema-final",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "tema",
+            "cajas": {
+              "pestana": {
+                "texto": "Compilar",
+                "n": 0
+              },
+              "titulo": {
+                "texto": "Tema 1: límites y continuidad"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Compilar",
+            "n": 0
+          },
+          "esperar": 60
+        },
+        {
+          "capturar": {
+            "nombre": "panel",
+            "cajas": {
+              "compilar": {
+                "clave": "compile"
+              },
+              "versiones": {
+                "clave": "profile-notes",
+                "fila": 900
+              },
+              "es": {
+                "clave": "language-es"
+              },
+              "en": {
+                "clave": "language-en"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "compilando",
+            "cajas": {
+              "consola": {
+                "texto": "Compilando este tema: 5 versiones",
+                "alto": 400
+              },
+              "tira": {
+                "clave": "build-strip"
+              }
+            }
+          }
+        },
+        {
+          "hasta_que": {
+            "texto": "slides · es"
+          },
+          "despues": 16
+        },
+        {
+          "pulsar": {
+            "texto": "slides · es"
+          },
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "pdf",
+            "cajas": {
+              "pestanas": {
+                "texto": "notes · es",
+                "fila": 1200
+              },
+              "diapositivas": {
+                "texto": "slides · es"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Compilar",
+            "n": 0
+          },
+          "esperar": 30
+        },
+        {
+          "pulsar": {
+            "clave": "profile-slides"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "profile-slides-flat"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "profile-slides-teacher"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "profile-notes-teacher"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "language-en"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "panel-en",
+            "cajas": {
+              "en": {
+                "clave": "language-en"
+              },
+              "aviso": {
+                "contiene": "Faltan por traducir",
+                "fila": 1100
+              },
+              "titulo-aviso": {
+                "texto": "No se puede compilar en en"
+              },
+              "lista": {
+                "texto": "Límites por la definición",
+                "fila": 1100
+              },
+              "bolzano": {
+                "texto": "El teorema de Bolzano",
+                "fila": 1100
+              },
+              "traducir": {
+                "texto": "traducir a en",
+                "n": 0
+              }
+            }
+          }
+        }
+      ],
+      "cajas": {}
+    },
+    {
+      "nombre": "leccion-dos",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 60
+        },
+        {
+          "capturar": {
+            "nombre": "leccion-panel",
+            "cajas": {
+              "en": {
+                "clave": "language-en"
+              },
+              "compilar": {
+                "clave": "compile"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "language-en"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "las páginas se mueven juntas"
+          },
+          "despues": 16
+        },
+        {
+          "pulsar": {
+            "contiene": "slides · es"
+          },
+          "esperar": 20
+        }
+      ],
+      "cajas": {
+        "juntas": {
+          "contiene": "las páginas se mueven juntas"
+        },
+        "pestana": {
+          "contiene": "slides · es"
+        }
+      }
+    }
+  ]
+}

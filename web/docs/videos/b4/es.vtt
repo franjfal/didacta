@@ -1,0 +1,49 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:05.260
+Al terminar sabrás cómo sabe Didacta
+qué está traducido, qué falta,
+
+00:00:05.300 --> 00:00:07.521
+y qué se ha quedado viejo.
+
+00:00:08.371 --> 00:00:13.391
+Cada lección guarda un fichero por idioma,
+y cada uno tiene su pestaña: el original,
+
+00:00:13.431 --> 00:00:15.313
+y sus traducciones.
+
+00:00:16.113 --> 00:00:21.243
+Un idioma puede ser el original, estar
+traducido, revisado, sin revisar,
+
+00:00:21.333 --> 00:00:23.663
+desactualizado, o no existir.
+
+00:00:23.733 --> 00:00:28.286
+Cada estado tiene su color y sus dos
+letras, para que no dependa solo del color.
+
+00:00:29.086 --> 00:00:33.959
+Nadie escribe el estado a mano: Didacta
+lo calcula mirando los ficheros.
+
+00:00:34.029 --> 00:00:39.158
+Si cambias una frase del original, su
+traducción pasa sola a desactualizada.
+
+00:00:39.958 --> 00:00:44.738
+Y una desactualizada es peor que
+una que falta: compila sin quejarse,
+
+00:00:44.778 --> 00:00:47.188
+y dice algo que ya no es cierto.
+
+00:00:47.988 --> 00:00:51.435
+El estado no se escribe.
+Didacta lo calcula.
+
+00:00:51.685 --> 00:00:54.999
+En el siguiente vídeo, por
+qué todo vive en GitHub.

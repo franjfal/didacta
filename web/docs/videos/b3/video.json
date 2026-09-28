@@ -1,0 +1,61 @@
+{
+  "codigo": "B3",
+  "titulo": "Los niveles de un problema",
+  "fichero": "B03-los-niveles-de-un-problema.mp4",
+  "duracion": 56.96,
+  "megas": 3.6,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Los niveles de un problema"
+    },
+    {
+      "t": 6.76,
+      "titulo": "Un fichero"
+    },
+    {
+      "t": 24.45,
+      "titulo": "La hoja"
+    },
+    {
+      "t": 36.91,
+      "titulo": "El examen"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué enseña cada versión de una hoja de problemas y de un examen."
+    },
+    {
+      "t": 7.26,
+      "texto": "Un problema se escribe entero en un solo fichero: el enunciado, el resultado y la solución, cada uno en su sitio."
+    },
+    {
+      "t": 15.62,
+      "texto": "Debajo de cada parte, la pantalla te dice en qué versiones sale."
+    },
+    {
+      "t": 19.87,
+      "texto": "Y en LaTeX, además, una pista y los criterios de corrección."
+    },
+    {
+      "t": 24.95,
+      "texto": "La hoja sale en tres versiones: solo los enunciados, para repartir; con los resultados, para que se corrijan solos; y la del profesor, con todo."
+    },
+    {
+      "t": 37.41,
+      "texto": "El examen no lleva pistas, y cada problema dice lo que puntúa. Su corrección añade la solución y los criterios."
+    },
+    {
+      "t": 46.3,
+      "texto": "Enunciado y solución, en un fichero: no se pueden desincronizar."
+    },
+    {
+      "t": 51.45,
+      "texto": "En el siguiente vídeo, un fichero por idioma."
+    }
+  ]
+}

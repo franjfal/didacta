@@ -1,0 +1,73 @@
+{
+  "codigo": "A7",
+  "titulo": "Tu primer PDF",
+  "fichero": "A07-tu-primer-pdf.mp4",
+  "duracion": 61.78,
+  "megas": 3.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Tu primer PDF"
+    },
+    {
+      "t": 7.13,
+      "titulo": "El tema"
+    },
+    {
+      "t": 14.85,
+      "titulo": "Compilar"
+    },
+    {
+      "t": 31.86,
+      "titulo": "En otro idioma"
+    },
+    {
+      "t": 40.95,
+      "titulo": "Lado a lado"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar habrás compilado tu primer PDF, y lo tendrás abierto dentro de Didacta."
+    },
+    {
+      "t": 7.63,
+      "texto": "En Asignaturas, Cálculo I, curso 2026-2027, abre el Tema 1."
+    },
+    {
+      "t": 15.25,
+      "texto": "En la pestaña Compilar, elige las versiones que quieras, y pulsa «Compilar»."
+    },
+    {
+      "t": 20.55,
+      "texto": "Mientras tanto, la consola cuenta lo que va haciendo LaTeX, y abajo se ve qué se compila."
+    },
+    {
+      "t": 26.27,
+      "texto": "Al terminar, cada versión se abre como una pestaña más, dentro de la ventana."
+    },
+    {
+      "t": 32.36,
+      "texto": "Si lo pides en inglés y le faltan lecciones por traducir, no lo compila a medias."
+    },
+    {
+      "t": 37.49,
+      "texto": "Te dice cuáles faltan, y te lleva a traducirlas."
+    },
+    {
+      "t": 41.45,
+      "texto": "Una lección que sí está en los dos idiomas se compila en los dos a la vez, y salen lado a lado."
+    },
+    {
+      "t": 48.29,
+      "texto": "Un tema no sale a medias: Didacta te dice qué falta traducir."
+    },
+    {
+      "t": 53.25,
+      "texto": "En el siguiente vídeo, entiendes cómo piensa Didacta: lecciones, documentos y cursos."
+    }
+  ]
+}

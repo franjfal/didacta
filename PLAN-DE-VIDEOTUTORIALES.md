@@ -278,13 +278,14 @@ guiado.
 2. **Compilar**; la tira de abajo dice qué se compila, y la consola lo que va
    haciendo.
 3. El PDF se abre como una pestaña más.
-4. Manteniendo pulsado **Compilar**: los apuntes en valenciano, lado a lado con
-   los de castellano.
-5. El aviso: «Teorema de Bolzano» no está en valenciano, así que sale en
-   castellano y se dice.
+4. Pedido en inglés, el Tema 1 no se compila: le faltan lecciones por
+   traducir, y la pantalla dice cuáles con un enlace para traducir cada una.
+5. Una lección que sí está en los dos idiomas: compilada en los dos a la vez,
+   salen lado a lado.
 
-**La idea:** un tema con una lección sin traducir se puede dar igual, y nadie
-deja de enterarse.
+**La idea:** un tema no sale con partes en otro idioma; Didacta dice qué
+falta traducir. (El plan decía que salía en castellano con un aviso: la
+aplicación de hoy lo hace mejor, y es lo que cuenta el vídeo.)
 
 **Más:** [Los primeros diez minutos](web/docs/empezar/primeros-pasos.md) · sigue
 en B1.
@@ -315,10 +316,10 @@ documentos que usan esa lección.
 
 **Más:** [Cómo funciona](web/docs/conceptos/index.md) · [Microlecciones](web/docs/conceptos/unidades.md).
 
-#### B2 · Una lección, quince PDF · 2,5 min
+#### B2 · Una lección, muchas versiones · 2,5 min
 
-**Sabrás** qué sale en cada versión y por qué la copia del profesor nunca llega
-al alumno.
+**Sabrás** qué cambia de una versión a otra, por qué la copia del profesor nunca
+llega al alumno y quién decide qué versiones salen.
 
 **Parte de** el Tema 1 compilado en sus cinco versiones.
 
@@ -326,14 +327,21 @@ al alumno.
    se proyecta por partes y se cuelga entera.
 2. Apuntes: aparece el párrafo que era solo para los apuntes.
 3. Copias del profesor: aparecen las notas didácticas.
-4. Los cinco ejes --medio, clase, audiencia, soluciones y pausas--, en una
-   tabla sobre la imagen.
+4. Los ejes de una versión --medio, detalle, audiencia, soluciones, pausas--,
+   en el editor de la plantilla.
+5. Las de serie no son fijas: se retocan, se apagan o se crean otras
+   (Ajustes → Bloques y plantillas).
+6. No todo sale en todo: el tema elige sus cinco, o se queda con las de sus
+   bloques.
 
-**La idea:** el fichero no elige su formato; lo elige la versión con la que se
-compila. Y en las versiones del alumno el canal del profesor no existe, que es
-distinto de estar oculto.
+**La idea:** el fichero no elige su formato; lo eligen las versiones, y las
+versiones las decide quien escribe. Y en las del alumno el canal del profesor
+no existe, que es distinto de estar oculto.
 
-**Más:** [Las quince salidas](web/docs/conceptos/perfiles.md).
+> Se rehízo el 28 de septiembre: la primera versión hablaba de «quince PDF»,
+> que es la configuración de serie y no un número fijo.
+
+**Más:** [Qué es una versión](web/docs/conceptos/perfiles.md).
 
 #### B3 · Los niveles de un problema · 1,5 min
 

@@ -3,9 +3,9 @@
   "titulo": "Didacta en dos minutos",
   "fichero": "A01-didacta-en-dos-minutos.mp4",
   "duracion": 107.4,
-  "megas": 7.4,
+  "megas": 9.1,
   "fecha": "2026-09-28",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "capitulos": [
     {
       "t": 0.0,

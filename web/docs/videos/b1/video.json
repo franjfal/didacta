@@ -1,0 +1,89 @@
+{
+  "codigo": "B1",
+  "titulo": "Lecciones, documentos y cursos",
+  "fichero": "B01-lecciones-documentos-y-cursos.mp4",
+  "duracion": 76.91,
+  "megas": 4.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Lecciones, documentos y cursos"
+    },
+    {
+      "t": 10.25,
+      "titulo": "La lección"
+    },
+    {
+      "t": 20.48,
+      "titulo": "La lección"
+    },
+    {
+      "t": 24.73,
+      "titulo": "El documento"
+    },
+    {
+      "t": 38.76,
+      "titulo": "Una lección, dos sitios"
+    },
+    {
+      "t": 53.53,
+      "titulo": "El curso y la asignatura"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué es una lección, un documento, un curso y una asignatura, y por qué en Didacta nada se copia."
+    },
+    {
+      "t": 10.75,
+      "texto": "La pieza de todo es la lección: un trozo pequeño de materia, en una carpeta."
+    },
+    {
+      "t": 16.69,
+      "texto": "Dentro, sus datos, y un fichero por idioma."
+    },
+    {
+      "t": 20.78,
+      "texto": "En Didacta se ve así, con una pestaña por idioma."
+    },
+    {
+      "t": 25.23,
+      "texto": "Un documento, como el Tema 1, la Hoja 1 o el Primer parcial, es una lista ordenada de lecciones."
+    },
+    {
+      "t": 32.62,
+      "texto": "El documento no copia las lecciones: solo dice cuáles lleva, y en qué orden."
+    },
+    {
+      "t": 39.26,
+      "texto": "Este problema, «Discontinuidades evitables», está en la hoja de problemas y en el examen."
+    },
+    {
+      "t": 45.1,
+      "texto": "No son dos copias. Es una sola lección, en dos sitios."
+    },
+    {
+      "t": 49.37,
+      "texto": "Corriges una errata aquí, y queda corregida en los dos."
+    },
+    {
+      "t": 54.03,
+      "texto": "El curso académico guarda qué documentos se dan este año, y en qué orden."
+    },
+    {
+      "t": 58.57,
+      "texto": "Y la asignatura, lo que no cambia de un año a otro: su nombre, su código, sus idiomas."
+    },
+    {
+      "t": 66.08,
+      "texto": "Se corrige una vez. Queda corregido en todas partes."
+    },
+    {
+      "t": 70.41,
+      "texto": "En el siguiente vídeo, una lección y sus muchas versiones."
+    }
+  ]
+}

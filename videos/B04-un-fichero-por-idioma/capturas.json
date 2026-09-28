@@ -1,0 +1,67 @@
+{
+  "capturas": [
+    {
+      "nombre": "leccion",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Límite de una función en un punto"
+        },
+        "castellano": {
+          "texto": "Castellano",
+          "n": 1
+        },
+        "valenciano": {
+          "texto": "Valencià"
+        },
+        "ingles": {
+          "texto": "English"
+        },
+        "pestanas": {
+          "texto": "Valencià",
+          "fila": 700
+        }
+      }
+    },
+    {
+      "nombre": "desactualizada",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/unit.yaml",
+            "buscar": "  en: {status: translated}",
+            "poner": "  en: {status: translated, source_hash: antes-del-cambio}",
+            "mensaje": "Cambiar una frase del original",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Límite de una función en un punto"
+        },
+        "castellano": {
+          "texto": "Castellano",
+          "n": 1
+        },
+        "valenciano": {
+          "texto": "Valencià"
+        },
+        "ingles": {
+          "texto": "English"
+        }
+      }
+    }
+  ]
+}
