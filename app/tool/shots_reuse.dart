@@ -288,7 +288,7 @@ void main() {
     await settleReal(tester);
     await shoot(tester, 'vinculos-curso');
 
-    await tester.tap(find.byKey(const Key('reuse-menu-series')));
+    await tester.tap(find.byKey(const Key('document-menu-series')));
     await tester.pumpAndSettle();
     await shoot(tester, 'vinculos-menu');
 
