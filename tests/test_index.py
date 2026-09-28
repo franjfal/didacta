@@ -148,6 +148,18 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(set(named["slides"]["labels"]), {"va", "en"})
         self.assertEqual(named["slides"]["labels"]["en"], "Slides")
 
+    def test_each_profile_carries_its_axes(self):
+        # Son las plantillas de serie: la aplicación las lista diciendo qué
+        # llevan, y las ofrece para editar. Sin los ejes, «Examen (profesor)»
+        # salía como «solo los enunciados» y su editor, con los de por defecto.
+        named = {profile["id"]: profile for profile in self.manifest["profiles"]}
+        teacher = named["slides-teacher"]
+        self.assertEqual(teacher["axes"]["audience"], "teacher")
+        self.assertEqual(teacher["axes"]["pauses"], "off")
+        self.assertEqual(teacher["reveals"], "teacher")
+        self.assertIn("handout", teacher["classOptions"])
+        self.assertEqual(named["problems-answers"]["reveals"], "answers")
+
     def test_the_manifest_carries_the_taxonomy_and_the_blocks(self):
         """Lo que una interfaz necesita para ofrecer la clasificación.
 

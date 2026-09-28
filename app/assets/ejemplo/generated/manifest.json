@@ -77,6 +77,15 @@
   "name": "Ejemplo de Didacta",
   "profiles": [
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "normal",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "hidden"
+      },
+      "classOptions": "11pt,twoside,openright",
       "documentClass": "book",
       "family": "notes",
       "id": "book",
@@ -84,9 +93,19 @@
       "labels": {
         "en": "Book",
         "va": "Llibre"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "brief",
+        "layout": "exam",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "hidden"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "exam",
       "id": "exam",
@@ -94,9 +113,19 @@
       "labels": {
         "en": "Exam",
         "va": "Examen"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "teacher",
+        "detail": "full",
+        "layout": "exam",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "full"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "exam",
       "id": "exam-marking",
@@ -104,9 +133,19 @@
       "labels": {
         "en": "Exam (teacher)",
         "va": "Examen (professor)"
-      }
+      },
+      "reveals": "teacher"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "compact",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "hidden"
+      },
+      "classOptions": "11pt,oneside",
       "documentClass": "article",
       "family": "handout",
       "id": "handout",
@@ -114,9 +153,19 @@
       "labels": {
         "en": "Handout",
         "va": "Guia"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "compact",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "answers"
+      },
+      "classOptions": "11pt,oneside",
       "documentClass": "article",
       "family": "handout",
       "id": "handout-answers",
@@ -124,9 +173,19 @@
       "labels": {
         "en": "Handout (with answers)",
         "va": "Guia (amb resultats)"
-      }
+      },
+      "reveals": "answers"
     },
     {
+      "axes": {
+        "audience": "teacher",
+        "detail": "full",
+        "layout": "compact",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "full"
+      },
+      "classOptions": "11pt,oneside",
       "documentClass": "article",
       "family": "handout",
       "id": "handout-teacher",
@@ -134,9 +193,19 @@
       "labels": {
         "en": "Handout (teacher)",
         "va": "Guia (professor)"
-      }
+      },
+      "reveals": "teacher"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "normal",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "hidden"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "notes",
       "id": "notes",
@@ -144,9 +213,19 @@
       "labels": {
         "en": "Notes",
         "va": "Apunts"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "normal",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "full"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "notes",
       "id": "notes-solutions",
@@ -154,9 +233,19 @@
       "labels": {
         "en": "Notes (with solutions)",
         "va": "Apunts (amb solucions)"
-      }
+      },
+      "reveals": "solutions"
     },
     {
+      "axes": {
+        "audience": "teacher",
+        "detail": "full",
+        "layout": "normal",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "full"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "notes",
       "id": "notes-teacher",
@@ -164,9 +253,19 @@
       "labels": {
         "en": "Notes (teacher)",
         "va": "Apunts (professor)"
-      }
+      },
+      "reveals": "teacher"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "compact",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "hidden"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "problems",
       "id": "problems",
@@ -174,9 +273,19 @@
       "labels": {
         "en": "Problem sheet",
         "va": "Full de problemes"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "full",
+        "layout": "compact",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "answers"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "problems",
       "id": "problems-answers",
@@ -184,9 +293,19 @@
       "labels": {
         "en": "Problem sheet (with answers)",
         "va": "Full de problemes (amb resultats)"
-      }
+      },
+      "reveals": "answers"
     },
     {
+      "axes": {
+        "audience": "teacher",
+        "detail": "full",
+        "layout": "compact",
+        "medium": "document",
+        "pauses": "off",
+        "solutions": "full"
+      },
+      "classOptions": "12pt,oneside",
       "documentClass": "article",
       "family": "problems",
       "id": "problems-teacher",
@@ -194,9 +313,19 @@
       "labels": {
         "en": "Problem sheet (teacher)",
         "va": "Full de problemes (professor)"
-      }
+      },
+      "reveals": "teacher"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "brief",
+        "layout": "normal",
+        "medium": "slides",
+        "pauses": "on",
+        "solutions": "hidden"
+      },
+      "classOptions": "10pt,notheorems",
       "documentClass": "beamer",
       "family": "slides",
       "id": "slides",
@@ -204,9 +333,19 @@
       "labels": {
         "en": "Slides",
         "va": "Diapositives"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "student",
+        "detail": "brief",
+        "layout": "normal",
+        "medium": "slides",
+        "pauses": "off",
+        "solutions": "hidden"
+      },
+      "classOptions": "10pt,handout,notheorems",
       "documentClass": "beamer",
       "family": "slides",
       "id": "slides-flat",
@@ -214,9 +353,20 @@
       "labels": {
         "en": "Slides (no pauses)",
         "va": "Diapositives (sense pauses)"
-      }
+      },
+      "reveals": "statements"
     },
     {
+      "axes": {
+        "audience": "teacher",
+        "detail": "brief",
+        "layout": "normal",
+        "medium": "slides",
+        "notes": "show",
+        "pauses": "off",
+        "solutions": "full"
+      },
+      "classOptions": "10pt,handout,notheorems",
       "documentClass": "beamer",
       "family": "slides",
       "id": "slides-teacher",
@@ -224,7 +374,8 @@
       "labels": {
         "en": "Slides (teacher)",
         "va": "Diapositives (professor)"
-      }
+      },
+      "reveals": "teacher"
     }
   ],
   "schemaVersion": 1,

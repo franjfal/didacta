@@ -273,6 +273,29 @@ void main() {
       expect(catalogue.templatesInUse.first.title('es'), 'Diapositivas');
     });
 
+    test('las de serie traen sus ejes, para enseñarlas y editarlas', () {
+      // Sin ellos, la copia del profesor se listaba como «solo los
+      // enunciados» y su editor empezaba con los ejes por defecto.
+      final catalogue = repoWith(
+        repo: 'x/teoria',
+        profiles: [
+          {
+            'id': 'slides-teacher',
+            'label': 'Diapositivas (profesor)',
+            'family': 'slides',
+            'reveals': 'teacher',
+            'documentClass': 'beamer',
+            'classOptions': '10pt,handout,notheorems',
+            'axes': {'medium': 'slides', 'audience': 'teacher'},
+          },
+        ],
+      );
+      final teacher = catalogue.templatesInUse.single;
+      expect(teacher.reveals, 'teacher');
+      expect(teacher.classOptions, '10pt,handout,notheorems');
+      expect(teacher.axes['audience'], 'teacher');
+    });
+
     test('un bloque sin lista compila con todas las activas', () {
       // Vacía es «las que toquen» y no «ninguna»: declarar un bloque no puede
       // dejar su material sin salidas.

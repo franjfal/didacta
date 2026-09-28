@@ -40,6 +40,14 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **Las plantillas de serie dicen lo que son.** En Ajustes → Bloques y
+  plantillas, la lista decía «solo los enunciados» también de las copias del
+  profesor, y al editar una de las que trae Didacta el editor salía con los
+  ejes por defecto --alumno, sin soluciones, con pausas-- en lugar de los
+  suyos. Ahora cada una enseña lo que lleva y se edita desde lo que es.
+
 ## 0.3.0 — 2026-09-28
 
 - **Videotutoriales.** La web de Didacta estrena una galería de vídeos cortos,

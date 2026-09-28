@@ -601,11 +601,19 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
             #
             # Y en los idiomas de la interfaz de la aplicación, que lo lee en
             # el suyo: se compone igual, de los ejes.
+            #
+            # Con sus ejes, sus opciones y lo que revela: son las plantillas
+            # de serie, y la aplicación las enseña y las ofrece para editar.
+            # Sin esto, «Examen (profesor)» se listaba como «solo los
+            # enunciados» y su editor salía con los ejes por defecto.
             {"id": profile.id, "label": profile.label,
              "labels": {code: profile.label_in(code)
                         for code in ("va", "en")},
              "family": profile.family,
-             "documentClass": profile.document_class}
+             "reveals": profile.reveals,
+             "documentClass": profile.document_class,
+             "classOptions": profile.class_options,
+             "axes": dict(profile.axes)}
             for profile in sorted(profiles.values(), key=lambda item: item.id)
         ],
         # La clasificación con la que se etiqueta una unidad, tal como está

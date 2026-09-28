@@ -1433,6 +1433,8 @@ class OutputProfile {
     this.label = '',
     this.labels = const {},
     this.reveals = 'statements',
+    this.classOptions = '',
+    this.axes = const {},
   });
 
   factory OutputProfile.fromJson(Map<String, dynamic> json) => OutputProfile(
@@ -1446,11 +1448,19 @@ class OutputProfile {
         if (entry.value is String) entry.key: entry.value as String,
     },
     reveals: json['reveals'] as String? ?? 'statements',
+    classOptions: json['classOptions'] as String? ?? '',
+    axes: _stringMap(json['axes']),
   );
 
   final String id;
   final String family;
   final String documentClass;
+
+  /// Las opciones de la clase y los ejes, tal como los declara el programa.
+  /// Vacíos en un índice de antes del 0.3.1: entonces el editor de una
+  /// plantilla de serie empieza con los ejes por defecto.
+  final String classOptions;
+  final Map<String, String> axes;
 
   /// El nombre que se lee: «Diapositivas (sin pausas)», no `slides-flat`.
   ///
@@ -1549,6 +1559,8 @@ class OutputTemplate {
     family: profile.family,
     reveals: profile.reveals,
     documentClass: profile.documentClass,
+    classOptions: profile.classOptions,
+    axes: profile.axes,
   );
 
   final String id;
