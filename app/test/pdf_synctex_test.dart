@@ -20,7 +20,7 @@ import 'package:didacta_app/ui/pdf_tab.dart';
 import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
-import 'pdf_search_test.dart' show minimalPdf, wait;
+import 'pdf_search_test.dart' show minimalPdf, pdfiumLoads, sinPdfium, wait;
 
 /// Una fila de letras de 10 × 10 puntos, de izquierda a derecha, en la
 /// altura [top]; los saltos de línea bajan una fila.
@@ -214,6 +214,9 @@ void main() {
   testWidgets('⌘+clic en el visor pregunta por ese punto y esa palabra', (
     tester,
   ) async {
+    if (!(await tester.runAsync(pdfiumLoads) ?? false)) {
+      return markTestSkipped(sinPdfium);
+    }
     final cache = Directory.systemTemp.createTempSync('didacta-pdfrx-');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(

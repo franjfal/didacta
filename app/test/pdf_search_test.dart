@@ -4,7 +4,7 @@
 library;
 
 import 'dart:convert';
-import 'dart:typed_data' show BytesBuilder;
+import 'dart:typed_data' show BytesBuilder, Uint8List;
 import 'dart:io';
 
 import 'package:flutter/foundation.dart'
@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'package:didacta_app/data/compiler.dart';
 import 'package:didacta_app/model/pdf_query.dart';
@@ -67,6 +68,34 @@ List<int> minimalPdf(List<List<String>> pages) {
   return out.toBytes();
 }
 
+/// Si en esta máquina se puede abrir un PDF de verdad.
+///
+/// Hace falta PDFium, y en un `flutter test` a secas no siempre está: en el
+/// Mac lo deja en `.dart_tool/` la primera compilación, pero en el Linux de
+/// GitHub no hay nada que lo traiga. Sin él, las pruebas que abren un PDF se
+/// saltan diciéndolo --como las que piden LaTeX-- en lugar de fallar por
+/// algo que no es de Didacta.
+Future<bool> pdfiumLoads() async {
+  try {
+    final doc = await PdfDocument.openData(
+      Uint8List.fromList(
+        minimalPdf([
+          ['x'],
+        ]),
+      ),
+    );
+    await doc.dispose();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+/// Lo que se dice al saltar una prueba que necesita PDFium.
+const String sinPdfium =
+    'hace falta PDFium, y este flutter test no lo tiene '
+    '(se genera al compilar la aplicación en esta máquina)';
+
 /// Deja pasar el tiempo de verdad: pdfium lee fuera del reloj falso.
 Future<void> wait(WidgetTester tester, {int rounds = 6}) async {
   for (var i = 0; i < rounds; i += 1) {
@@ -121,8 +150,9 @@ void main() {
 
   group('en el visor', () {
     late String pdf;
+    var conPdfium = false;
 
-    setUpAll(() {
+    setUpAll(() async {
       final cache = Directory.systemTemp.createTempSync('didacta-pdfrx-');
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
@@ -139,6 +169,7 @@ void main() {
           ['El límite es único.'],
         ]),
       );
+      conPdfium = await pdfiumLoads();
     });
 
     Future<void> mount(WidgetTester tester) async {
@@ -176,6 +207,7 @@ void main() {
     testWidgets('encuentra sin tildes y va de uno al siguiente', (
       tester,
     ) async {
+      if (!conPdfium) return markTestSkipped(sinPdfium);
       await mount(tester);
       await tester.tap(find.byKey(const Key('pdf-search')));
       await wait(tester, rounds: 2);
@@ -203,6 +235,7 @@ void main() {
     });
 
     testWidgets('lo que no está lo dice, y Esc cierra', (tester) async {
+      if (!conPdfium) return markTestSkipped(sinPdfium);
       await mount(tester);
       await tester.tap(find.byKey(const Key('pdf-search')));
       await wait(tester, rounds: 2);
@@ -226,6 +259,7 @@ void main() {
     });
 
     testWidgets('también en el diálogo de lo compilado', (tester) async {
+      if (!conPdfium) return markTestSkipped(sinPdfium);
       tester.view.physicalSize = const Size(1100, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -265,6 +299,7 @@ void main() {
     });
 
     testWidgets('⌘F la abre desde el visor', (tester) async {
+      if (!conPdfium) return markTestSkipped(sinPdfium);
       await mount(tester);
       // El visor toma el foco al pulsarlo, como al leer.
       await tester.tap(find.byType(PdfTabView), warnIfMissed: false);
