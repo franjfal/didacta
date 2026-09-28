@@ -1155,6 +1155,9 @@ class _HelpSection extends StatelessWidget {
       SnackBar(
         key: const Key('diagnostics-copied'),
         duration: const Duration(seconds: 8),
+        // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+        // solo, a su tiempo.
+        persist: false,
         content: Text(
           tr(
             'Informe copiado. Revísalo antes de enviarlo: no lleva claves, pero '

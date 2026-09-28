@@ -46,6 +46,9 @@ SnackBar savedNotice({
 }) => SnackBar(
   key: const Key('saved-notice'),
   duration: Duration(seconds: followUp == null ? 6 : 10),
+  // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+  // solo, a su tiempo.
+  persist: false,
   content: Column(
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.start,

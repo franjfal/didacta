@@ -186,6 +186,9 @@ class _MetadataEditorState extends State<MetadataEditor> {
           ),
           backgroundColor: context.palette.teacher,
           duration: const Duration(seconds: 7),
+          // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+          // solo, a su tiempo.
+          persist: false,
           action: SnackBarAction(
             label: tr('Ver el fichero'),
             onPressed: () => setState(() => _showRaw = true),

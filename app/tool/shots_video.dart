@@ -247,6 +247,18 @@ void main() {
           await run('git', ['push', '-q', 'origin', 'main'], work);
         }
       }
+      if (step['copiar'] case final Map copy) {
+        // Un fichero del vídeo dentro del repositorio --una figura, que desde
+        // la aplicación todavía no se puede añadir--, guardado y enviado:
+        // `{"desde": "figura/x.pdf", "a": "content/.../figures/x.pdf"}`.
+        final from = File('$engine/videos/$video/${copy['desde']}');
+        final to = File('$work/${copy['a']}');
+        to.parent.createSync(recursive: true);
+        from.copySync(to.path);
+        await run('git', ['add', '-A'], work);
+        await commit(work, (copy['mensaje'] as String?) ?? 'Una figura');
+        await run('git', ['push', '-q', 'origin', 'main'], work);
+      }
       if (step['sin_enviar'] case final num n) {
         for (var i = 0; i < n; i += 1) {
           await commit(work, 'Corregir una errata');
@@ -445,17 +457,22 @@ void main() {
     return found;
   }
 
-  /// Un trozo del texto del editor --de `from` hasta `to`, incluido--.
-  Rect? editorZone(WidgetTester tester, String from, String? to) {
+  /// El editor de la lección: el campo más grande, que puede haber otros.
+  EditableTextState? mainEditor() {
     final editors = find.byType(EditableText).evaluate().toList();
     if (editors.isEmpty) return null;
-    // El editor de la lección es el más grande: puede haber otros campos.
     editors.sort((a, b) {
       final ra = (a.renderObject! as RenderBox).size;
       final rb = (b.renderObject! as RenderBox).size;
       return (rb.width * rb.height).compareTo(ra.width * ra.height);
     });
-    final state = (editors.first as StatefulElement).state as EditableTextState;
+    return (editors.first as StatefulElement).state as EditableTextState;
+  }
+
+  /// Un trozo del texto del editor --de `from` hasta `to`, incluido--.
+  Rect? editorZone(WidgetTester tester, String from, String? to) {
+    final state = mainEditor();
+    if (state == null) return null;
     final text = state.textEditingValue.text;
     final start = text.indexOf(from);
     if (start < 0) return null;
@@ -735,7 +752,12 @@ void main() {
         stdout.writeln('    (no encuentro qué pulsar: $what)');
         return;
       }
-      await tester.tap(finder.at((what['n'] as num?)?.toInt() ?? 0));
+      // `"ultimo": true`: el que se pintó el último, que en una lista
+      // desplegable es su opción y no el mismo texto de la pantalla de detrás.
+      final index = what['ultimo'] == true
+          ? finder.evaluate().length - 1
+          : (what['n'] as num?)?.toInt() ?? 0;
+      await tester.tap(finder.at(index));
       await settleReal(
         tester,
         rounds: (action['esperar'] as num?)?.toInt() ?? 10,
@@ -807,6 +829,64 @@ void main() {
           finder.at((what['n'] as num?)?.toInt() ?? 0),
         );
       }
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 6,
+      );
+    } else if (action['editar_texto'] case final Map what) {
+      // Cambiar un trozo del editor como lo haría quien escribe, así que la
+      // pestaña se marca sin guardar: `{"buscar": ..., "poner": ...}`, y el
+      // cursor al final de lo puesto (o en `cursor`, contado desde allí).
+      final state = mainEditor();
+      final wanted = what['buscar'] as String;
+      final text = state?.textEditingValue.text ?? '';
+      final at = text.indexOf(wanted);
+      if (state == null || at < 0) {
+        stdout.writeln('    (no encuentro «$wanted» en el editor)');
+        return;
+      }
+      final put = what['poner'] as String;
+      final caret = at + ((what['cursor'] as num?)?.toInt() ?? put.length);
+      // Con el foco dentro, como quien escribe: la lista de `\begin{` solo
+      // se abre en un editor enfocado.
+      state.requestKeyboard();
+      await tester.pump();
+      state.userUpdateTextEditingValue(
+        TextEditingValue(
+          text: text.replaceRange(at, at + wanted.length, put),
+          selection: TextSelection.collapsed(offset: caret),
+        ),
+        SelectionChangedCause.keyboard,
+      );
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 8,
+      );
+    } else if (action['seleccionar_texto'] case final Map what) {
+      // Marcar un trozo del editor, de `buscar` hasta `hasta` incluido; con
+      // `"vacio": true`, solo el cursor al principio de `buscar`.
+      final state = mainEditor();
+      final from = what['buscar'] as String;
+      final text = state?.textEditingValue.text ?? '';
+      final start = text.indexOf(from);
+      if (state == null || start < 0) {
+        stdout.writeln('    (no encuentro «$from» en el editor)');
+        return;
+      }
+      var end = start + from.length;
+      if (what['hasta'] case final String to) {
+        final found = text.indexOf(to, start);
+        if (found >= 0) end = found + to.length;
+      }
+      state.requestKeyboard();
+      state.userUpdateTextEditingValue(
+        state.textEditingValue.copyWith(
+          selection: what['vacio'] == true
+              ? TextSelection.collapsed(offset: start)
+              : TextSelection(baseOffset: start, extentOffset: end),
+        ),
+        SelectionChangedCause.drag,
+      );
       await settleReal(
         tester,
         rounds: (action['esperar'] as num?)?.toInt() ?? 6,
@@ -892,6 +972,13 @@ void main() {
         late Session session;
         await tester.runAsync(() => prepare(shot));
         await tester.runAsync(() async => session = await openSession(shot));
+        // `"idioma": "en"`: el contenido, mirado en ese idioma desde el
+        // principio, sin enseñar cómo se cambia (eso ya lo cuenta otro vídeo).
+        if (shot['idioma'] case final String code) session.language = code;
+        // `"completa": true`: con la interfaz Completa.
+        if (shot['completa'] == true) {
+          await tester.runAsync(() => session.setCompleteInterface(true));
+        }
         final welcome = shot['bienvenida'] == true;
         await mount(tester, session, welcome: welcome);
         await settleReal(tester, rounds: 3);

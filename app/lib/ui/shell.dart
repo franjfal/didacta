@@ -768,6 +768,9 @@ class _GatewayStripState extends State<_GatewayStrip> {
                 : tr('Actualizado. Nada nuevo en GitHub.'),
           ),
           duration: Duration(seconds: behind > 0 || problem != null ? 8 : 3),
+          // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+          // solo, a su tiempo.
+          persist: false,
           // Traerlo es otra decisión, y por eso es otro botón: un `pull`
           // cambia los ficheros de debajo de quien está editando.
           action: behind > 0

@@ -182,6 +182,9 @@ Future<bool> runAdminIn(
       SnackBar(
         content: Text(done),
         duration: Duration(seconds: onUndo == null ? 4 : 10),
+        // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+        // solo, a su tiempo.
+        persist: false,
         action: onUndo == null
             ? null
             : SnackBarAction(

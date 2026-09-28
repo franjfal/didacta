@@ -47,6 +47,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   profesor, y al editar una de las que trae Didacta el editor salía con los
   ejes por defecto --alumno, sin soluciones, con pausas-- en lugar de los
   suyos. Ahora cada una enseña lo que lleva y se edita desde lo que es.
+- **Los avisos con botón vuelven a irse solos.** «Guardado en el historial ·
+  Ver cambios», «Deshacer» y los demás se quedaban puestos hasta pulsarlos y
+  tapaban la barra de abajo, la que dice si hay cambios sin enviar. Ahora
+  duran sus segundos, como antes.
 
 ## 0.3.0 — 2026-09-28
 

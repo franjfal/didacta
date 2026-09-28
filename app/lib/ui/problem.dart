@@ -221,6 +221,9 @@ void _show(
       key: const Key('problem'),
       backgroundColor: palette.teacher,
       duration: const Duration(seconds: 12),
+      // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+      // solo, a su tiempo.
+      persist: false,
       content: Row(
         children: [
           Expanded(

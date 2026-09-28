@@ -169,6 +169,9 @@ Future<void> exportDocument(
                 ),
         ),
         duration: const Duration(seconds: 9),
+        // Con acción, Flutter lo dejaría puesto hasta que se pulse; este se va
+        // solo, a su tiempo.
+        persist: false,
         action: result.withheld.isEmpty
             ? null
             : SnackBarAction(

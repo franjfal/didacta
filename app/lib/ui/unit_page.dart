@@ -932,7 +932,11 @@ class _UnitPageState extends State<UnitPage> {
         unit: unit,
         language: language,
         session: session,
-        onChanged: () => setState(() {}),
+        // Un guardado sigue su curso aunque se cierre la pantalla, y avisa
+        // al terminar: si ya no está, no hay nada que repintar.
+        onChanged: () {
+          if (mounted) setState(() {});
+        },
       ),
     );
     // La del catálogo de ahora, no la de cuando se creó el editor: el editor
