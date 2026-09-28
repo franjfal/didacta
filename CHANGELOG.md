@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 0.3.0 — 2026-09-28
 
 - **Videotutoriales.** La web de Didacta estrena una galería de vídeos cortos,
   de uno a tres minutos, ordenados por rutas --empezar, escribir, preparar una
