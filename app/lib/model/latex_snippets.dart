@@ -110,31 +110,34 @@ class SnippetDeclaration {
 }
 
 /// El nombre con que se enseña cada grupo de los de serie.
-const Map<TexWrapGroup, String> snippetGroupNames = {
-  TexWrapGroup.channel: 'Canales',
-  TexWrapGroup.format: 'Formato',
-  TexWrapGroup.slide: 'Diapositiva',
-  TexWrapGroup.problem: 'Problema',
-  TexWrapGroup.theory: 'Teoría',
-  TexWrapGroup.teacher: 'Profesor',
-  TexWrapGroup.custom: 'Propios',
+Map<TexWrapGroup, String> get snippetGroupNames => {
+  TexWrapGroup.channel: tr('Canales'),
+  TexWrapGroup.format: tr('Formato'),
+  TexWrapGroup.slide: tr('Diapositiva'),
+  TexWrapGroup.problem: tr('Problema'),
+  TexWrapGroup.theory: tr('Teoría'),
+  TexWrapGroup.teacher: tr('Profesor'),
+  TexWrapGroup.custom: tr('Propios'),
 };
 
 /// El texto de ejemplo de los de serie, por grupo: lo que se ve en la vista
 /// previa antes de que nadie escriba el suyo.
-const Map<TexWrapGroup, String> _sampleByGroup = {
-  TexWrapGroup.channel:
-      'Este párrafo solo sale en una de las salidas: compila en las dos para '
-      'ver la diferencia.',
-  TexWrapGroup.format: 'una palabra',
-  TexWrapGroup.slide: 'El contenido de la diapositiva.',
-  TexWrapGroup.problem: r'Calcula la derivada de $f(x) = x^2 \sin x$.',
-  TexWrapGroup.theory:
-      'Toda función continua en un intervalo cerrado y acotado alcanza su '
-      'máximo y su mínimo.',
-  TexWrapGroup.teacher:
-      'Conviene detenerse aquí: es el paso que más cuesta en clase.',
-  TexWrapGroup.custom: 'Un texto de ejemplo para ver cómo queda.',
+Map<TexWrapGroup, String> get _sampleByGroup => {
+  TexWrapGroup.channel: tr(
+    'Este párrafo solo sale en una de las salidas: compila en las dos para '
+    'ver la diferencia.',
+  ),
+  TexWrapGroup.format: tr('una palabra'),
+  TexWrapGroup.slide: tr('El contenido de la diapositiva.'),
+  TexWrapGroup.problem: tr(r'Calcula la derivada de $f(x) = x^2 \sin x$.'),
+  TexWrapGroup.theory: tr(
+    'Toda función continua en un intervalo cerrado y acotado alcanza su '
+    'máximo y su mínimo.',
+  ),
+  TexWrapGroup.teacher: tr(
+    'Conviene detenerse aquí: es el paso que más cuesta en clase.',
+  ),
+  TexWrapGroup.custom: tr('Un texto de ejemplo para ver cómo queda.'),
 };
 
 /// Un snippet ya resuelto: lo de Didacta con lo que retoque el repositorio.
@@ -266,11 +269,7 @@ class LatexSnippet {
     if (!usable) return '';
     final env = environment == null
         ? ''
-        : tr('\\begin{{0}}{1} … \\end{{2}}', [
-            environment,
-            arguments,
-            environment,
-          ]);
+        : '\\begin{$environment}$arguments … \\end{$environment}';
     final cmd = command == null ? '' : '\\$command$arguments{…}';
     return switch (shape) {
       SnippetShape.environment => env,
@@ -316,21 +315,21 @@ class LatexSnippet {
   /// el mismo `\begin{resumen}` sale distinto según el repositorio, y eso es
   /// lo que no puede pasar sin que nadie lo sepa.
   Map<String, String> get comparable => {
-    'rótulo': label,
-    'grupo': group,
-    'descripción': description,
-    'entorno': environment ?? '',
-    'orden': command == null ? '' : '\\$command',
-    'nombres heredados': [
+    tr('rótulo'): label,
+    tr('grupo'): group,
+    tr('descripción'): description,
+    tr('entorno'): environment ?? '',
+    tr('orden'): command == null ? '' : '\\$command',
+    tr('nombres heredados'): [
       ...environmentAliases,
       for (final name in commandAliases) '\\$name',
     ].join(', '),
-    'argumentos': arguments,
-    'siempre como entorno': shape == SnippetShape.either
-        ? (block ? tr('sí') : 'no')
+    tr('argumentos'): arguments,
+    tr('siempre como entorno'): shape == SnippetShape.either
+        ? (block ? tr('sí') : tr('no'))
         : '',
-    'definición': definition.trim(),
-    'texto de ejemplo': sample.trim(),
+    tr('definición'): definition.trim(),
+    tr('texto de ejemplo'): sample.trim(),
   };
 
   /// Lo que se escribe en `snippets.yaml`: de uno de serie, solo lo que

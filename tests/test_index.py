@@ -141,6 +141,13 @@ class BuildTests(unittest.TestCase):
         self.assertIn("problems-teacher", ids)
         self.assertEqual(len(ids), 15)
 
+    def test_each_profile_is_named_in_the_app_languages(self):
+        # La aplicación, en valenciano o en inglés, lo enseña en el suyo.
+        named = {profile["id"]: profile for profile in self.manifest["profiles"]}
+        self.assertEqual(named["notes-teacher"]["label"], "Apuntes (profesor)")
+        self.assertEqual(set(named["slides"]["labels"]), {"va", "en"})
+        self.assertEqual(named["slides"]["labels"]["en"], "Slides")
+
     def test_the_manifest_carries_the_taxonomy_and_the_blocks(self):
         """Lo que una interfaz necesita para ofrecer la clasificación.
 

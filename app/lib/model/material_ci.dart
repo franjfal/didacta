@@ -11,7 +11,6 @@
 library;
 
 import 'app_version.dart';
-import '../l10n/tr.dart';
 
 /// Dónde va, dentro del repositorio de contenido.
 const String materialWorkflowPath = '.github/workflows/material.yml';
@@ -27,11 +26,11 @@ String materialWorkflow({
   required String engineRef,
   String engineOwner = 'franjfal',
   String engineRepo = 'didacta',
-}) => tr(
-  '''
+}) =>
+    '''
 # Compilar el material en GitHub cada vez que se envían cambios.
 #
-# Lo añadió Didacta. Compila todo con el motor {0} y deja los PDF para
+# Lo añadió Didacta. Compila todo con el motor $engineRef y deja los PDF para
 # descargar en la pestaña Actions, en dos paquetes:
 #
 #   «PDF para repartir»  lo que se puede colgar en el aula virtual: como
@@ -60,12 +59,10 @@ concurrency:
 
 jobs:
   compilar:
-    uses: {1}/{2}/.github/workflows/material.yml@{3}
+    uses: $engineOwner/$engineRepo/.github/workflows/material.yml@$engineRef
     with:
-      engine-ref: {4}
-''',
-  [engineRef, engineOwner, engineRepo, engineRef, engineRef],
-);
+      engine-ref: $engineRef
+''';
 
 /// Si [text] es un workflow que añadió Didacta, para no ofrecer añadirlo
 /// otra vez ni tocar uno que alguien ha escrito a mano.

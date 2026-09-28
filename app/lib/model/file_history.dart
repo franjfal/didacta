@@ -24,7 +24,6 @@
 library;
 
 import 'line_diff.dart';
-import '../l10n/tr.dart';
 
 /// Un commit que tocó un fichero.
 class FileCommit {
@@ -147,7 +146,7 @@ FileDiff parseUnifiedDiff(String text) {
     if (header == null) {
       // Todavía en la cabecera del fichero.
       if (line.startsWith('rename from ')) {
-        renamedFrom = line.substring(tr('rename from ').length).trim();
+        renamedFrom = line.substring('rename from '.length).trim();
       } else if (line.startsWith('Binary files ') ||
           line.startsWith('GIT binary patch')) {
         isBinary = true;

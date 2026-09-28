@@ -157,15 +157,16 @@ class _StartOverDialogState extends State<StartOverDialog> {
                 value: _folders,
                 onChanged: (value) => setState(() => _folders = value ?? false),
                 title: Text(
-                  tr(
-                    'Mandar también a la Papelera las carpetas de los '
-                    '{0}',
-                    [
-                      repos.length == 1
-                          ? 'repositorio'
-                          : tr('{0} repositorios', [repos.length]),
-                    ],
-                  ),
+                  repos.length == 1
+                      ? tr(
+                          'Mandar también a la Papelera la carpeta del '
+                          'repositorio',
+                        )
+                      : tr(
+                          'Mandar también a la Papelera las carpetas de los '
+                          '{0} repositorios',
+                          [repos.length],
+                        ),
                   style: const TextStyle(fontSize: 13),
                 ),
                 subtitle: unsent.isEmpty

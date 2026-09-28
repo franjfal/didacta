@@ -1198,8 +1198,7 @@ class _ResultCard extends StatelessWidget {
                 ),
                 if (result.ok)
                   Text(
-                    '${result.pages} '
-                    '${result.pages == 1 ? tr('página') : tr('páginas')} · '
+                    '${result.pages == 1 ? tr('1 página') : tr('{0} páginas', [result.pages])} · '
                     '${result.seconds.toStringAsFixed(1)} s',
                     style: TextStyle(
                       fontSize: 11.5,

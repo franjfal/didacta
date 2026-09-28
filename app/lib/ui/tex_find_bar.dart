@@ -381,7 +381,7 @@ class TexFindBarState extends State<TexFindBar> {
                         key: const Key('find-replacement'),
                         controller: _replacement,
                         hint: _regex
-                            ? r'Reemplazar por ($1, $2…)'
+                            ? tr(r'Reemplazar por ($1, $2…)')
                             : tr('Reemplazar por'),
                         icon: Icons.edit_outlined,
                         onSubmitted: _replaceCurrent,

@@ -68,7 +68,7 @@ enum ToolId {
 class Tool {
   const Tool({
     required this.id,
-    required this.name,
+    required this._name,
     required this._what,
     required this.executables,
     required this.guide,
@@ -80,7 +80,8 @@ class Tool {
   final ToolId id;
 
   /// Como se llama para quien lo lee: «Git», «Python 3».
-  final String name;
+  String get name => tr(_name);
+  final String _name;
 
   /// Para qué la usa Didacta, en una frase. Se enseña siempre, esté o no:
   /// una lista de requisitos sin el porqué de cada uno es una lista de
@@ -391,7 +392,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         arguments: ['install', 'git'],
         needs: 'brew',
         manualSteps: [
-          'En el Terminal: brew install git',
+          tr('En el Terminal: brew install git'),
           tr('O, sin Homebrew: xcode-select --install'),
         ],
       ),
@@ -407,7 +408,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         arguments: ['--install'],
         handsOver: true,
         manualSteps: [
-          'Abre el Terminal y escribe: xcode-select --install',
+          tr('Abre el Terminal y escribe: xcode-select --install'),
           tr('Acepta el instalador que aparece. Tarda unos minutos.'),
         ],
       ),
@@ -430,7 +431,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         ],
         needs: 'winget',
         manualSteps: [
-          'En una consola: winget install --id Git.Git -e',
+          tr('En una consola: winget install --id Git.Git -e'),
           tr('O descarga el instalador de git-scm.com/downloads/win'),
         ],
       ),
@@ -440,7 +441,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
           'Este Windows no tiene winget, así que la instalación es a mano.',
         ),
         manualSteps: [
-          'Descarga el instalador de git-scm.com/downloads/win',
+          tr('Descarga el instalador de git-scm.com/downloads/win'),
           tr('Ejecútalo y acepta las opciones por defecto.'),
           tr('Cierra Didacta y vuelve a abrirla para que vea el PATH nuevo.'),
         ],
@@ -454,7 +455,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
           'teclea en un terminal y no en una ventana de Didacta.',
         ),
         manualSteps: [
-          'Debian o Ubuntu: sudo apt install git',
+          tr('Debian o Ubuntu: sudo apt install git'),
           tr('Fedora: sudo dnf install git'),
           tr('Arch: sudo pacman -S git'),
         ],
@@ -473,7 +474,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         arguments: ['install', 'python'],
         needs: 'brew',
         manualSteps: [
-          'En el Terminal: brew install python',
+          tr('En el Terminal: brew install python'),
           tr('O, sin Homebrew: xcode-select --install'),
         ],
       ),
@@ -488,7 +489,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         arguments: ['--install'],
         handsOver: true,
         manualSteps: [
-          'Abre el Terminal y escribe: xcode-select --install',
+          tr('Abre el Terminal y escribe: xcode-select --install'),
           tr('O descarga Python de python.org/downloads.'),
         ],
       ),
@@ -511,7 +512,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         ],
         needs: 'winget',
         manualSteps: [
-          'En una consola: winget install --id Python.Python.3.12 -e',
+          tr('En una consola: winget install --id Python.Python.3.12 -e'),
           tr(
             'O descarga Python 3 de python.org/downloads/windows, marcando '
             '«Add python.exe to PATH».',
@@ -524,7 +525,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
           'Este Windows no tiene winget, así que la instalación es a mano.',
         ),
         manualSteps: [
-          'Descarga Python 3 de python.org/downloads/windows',
+          tr('Descarga Python 3 de python.org/downloads/windows'),
           tr('En el instalador, marca «Add python.exe to PATH».'),
           tr('Cierra Didacta y vuelve a abrirla.'),
         ],
@@ -538,7 +539,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
           'el gestor de paquetes con la contraseña de administrador.',
         ),
         manualSteps: [
-          'Debian o Ubuntu: sudo apt install python3',
+          tr('Debian o Ubuntu: sudo apt install python3'),
           tr('Fedora: sudo dnf install python3'),
           tr('Arch: sudo pacman -S python'),
         ],
@@ -617,7 +618,9 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         filename: 'install-tinytex.sh',
         texPackages: true,
         manualSteps: [
-          'En el Terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh',
+          tr(
+            'En el Terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh',
+          ),
           tr(
             'Después: ~/Library/TinyTeX/bin/universal-darwin/tlmgr install latexmk beamer pgfplots tcolorbox biblatex biber',
           ),
@@ -645,7 +648,7 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         filename: 'BasicTeX.pkg',
         handsOver: true,
         manualSteps: [
-          'Descarga BasicTeX.pkg de tug.org/mactex/morepackages.html',
+          tr('Descarga BasicTeX.pkg de tug.org/mactex/morepackages.html'),
           tr('Ábrelo y sigue el instalador.'),
         ],
       ),
@@ -671,7 +674,7 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         filename: 'MacTeX.pkg',
         handsOver: true,
         manualSteps: [
-          'Descarga MacTeX.pkg de tug.org/mactex',
+          tr('Descarga MacTeX.pkg de tug.org/mactex'),
           tr('Ábrelo y sigue el instalador. Tarda un rato largo.'),
         ],
       ),
@@ -699,7 +702,7 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         filename: 'install-tinytex.bat',
         texPackages: true,
         manualSteps: [
-          'Descarga yihui.org/tinytex/install-bin-windows.bat y ejecútalo.',
+          tr('Descarga yihui.org/tinytex/install-bin-windows.bat y ejecútalo.'),
         ],
       ),
     ),
@@ -729,7 +732,7 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         ],
         needs: 'winget',
         manualSteps: [
-          'Descarga el instalador básico de miktex.org/download',
+          tr('Descarga el instalador básico de miktex.org/download'),
           tr('Ejecútalo y acepta las opciones por defecto.'),
         ],
       ),
@@ -752,7 +755,7 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         filename: 'install-tl-windows.exe',
         handsOver: true,
         manualSteps: [
-          'Descarga install-tl-windows.exe de tug.org/texlive/windows.html',
+          tr('Descarga install-tl-windows.exe de tug.org/texlive/windows.html'),
           tr('Ejecútalo y sigue el instalador.'),
         ],
       ),
@@ -780,13 +783,15 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         filename: 'install-tinytex.sh',
         texPackages: true,
         manualSteps: [
-          'En un terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh',
+          tr(
+            'En un terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh',
+          ),
         ],
       ),
     ),
     LatexOption(
       id: 'distro',
-      name: 'El TeX Live de tu distribución',
+      name: tr('El TeX Live de tu distribución'),
       size: '1-5 GB',
       what: tr(
         'El que mantiene tu sistema, con sus actualizaciones. Pide la '
@@ -801,7 +806,9 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
           'administrador, y eso se teclea en un terminal.',
         ),
         manualSteps: [
-          'Debian o Ubuntu: sudo apt install texlive-latex-extra texlive-science latexmk',
+          tr(
+            'Debian o Ubuntu: sudo apt install texlive-latex-extra texlive-science latexmk',
+          ),
           tr('Fedora: sudo dnf install texlive-scheme-medium latexmk'),
           tr('Arch: sudo pacman -S texlive-latexextra texlive-binextra'),
         ],

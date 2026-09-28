@@ -327,7 +327,7 @@ class TranslationService {
         final yamlPath = '${unit.path}/unit.yaml';
         final yaml =
             await readFor(unit.repo, yamlPath) ??
-            (text: tr('# Metadatos de la unidad.\nlanguages:\n'), sha: '');
+            (text: '# Metadatos de la unidad.\nlanguages:\n', sha: '');
         final patch = YamlPatch(yaml.text)
           ..setInFlowMap(['languages', task.to], 'status', 'draft');
         // Traducida desde este texto: si el original cambia después, el

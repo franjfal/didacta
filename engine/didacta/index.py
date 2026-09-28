@@ -598,7 +598,12 @@ def _manifest(root, settings, unit_records, course_records, profiles, errors,
             # interfaz que lista versiones tenga que inventárselo y acabe
             # enseñando `slides-flat` donde debería decir «Diapositivas (sin
             # pausas)».
+            #
+            # Y en los idiomas de la interfaz de la aplicación, que lo lee en
+            # el suyo: se compone igual, de los ejes.
             {"id": profile.id, "label": profile.label,
+             "labels": {code: profile.label_in(code)
+                        for code in ("va", "en")},
              "family": profile.family,
              "documentClass": profile.document_class}
             for profile in sorted(profiles.values(), key=lambda item: item.id)

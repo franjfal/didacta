@@ -557,6 +557,8 @@ class _AppearanceSection extends StatelessWidget {
       if (context.watch<Appearance?>() case final appearance?) ...[
         SectionLabel(tr('Tamaño del texto')),
         _TextSize(appearance: appearance),
+        SectionLabel(tr('Idioma de Didacta')),
+        _UiLanguageChoice(appearance: appearance),
       ],
       SectionLabel(tr('Interfaz')),
       _InterfaceChoice(session: watchSession(context)),
@@ -623,6 +625,61 @@ class _AppearanceSection extends StatelessWidget {
       ),
     );
   }
+}
+
+/// El idioma de la interfaz: el del sistema, o uno de los tres.
+///
+/// No es el del material: quien trabaja la interfaz en valenciano prepara
+/// igual los apuntes en castellano y en inglés. Cada idioma, con su nombre
+/// en su idioma, que es como lo busca quien no entiende el que hay puesto.
+class _UiLanguageChoice extends StatelessWidget {
+  const _UiLanguageChoice({required this.appearance});
+
+  final Appearance appearance;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+    child: Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SegmentedButton<String>(
+              key: const Key('ui-language'),
+              segments: [
+                ButtonSegment(
+                  value: 'system',
+                  label: Text(tr('El del sistema')),
+                ),
+                for (final language in UiLanguage.values)
+                  ButtonSegment(
+                    value: language.code,
+                    label: Text(language.label),
+                  ),
+              ],
+              selected: {appearance.languageChoice},
+              onSelectionChanged: (value) =>
+                  appearance.setUiLanguage(value.single),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              tr(
+                'Los menús, los botones y los avisos. No cambia el idioma del '
+                'material, que se elige arriba, en cada pantalla.',
+              ),
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.45,
+                color: context.palette.muted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Más grande o más pequeño: el proyector del aula, una pantalla pequeña.
@@ -1962,8 +2019,8 @@ class _TemplatesSectionState extends State<_TemplatesSection> {
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
               const SizedBox(height: 10),
-              _Fact('salidas', '${all.length}'),
-              _Fact('encendidas', '${active.length}'),
+              _Fact(tr('salidas'), '${all.length}'),
+              _Fact(tr('encendidas'), '${active.length}'),
               _Fact(
                 tr('declaradas por tus repositorios'),
                 declared == 0
@@ -2127,15 +2184,15 @@ class _CatalogueSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Fact('nombre', catalogue.name),
-              _Fact('unidades', '${catalogue.units.length}'),
-              _Fact('asignaturas', '${catalogue.courses.length}'),
+              _Fact(tr('nombre'), catalogue.name),
+              _Fact(tr('unidades'), '${catalogue.units.length}'),
+              _Fact(tr('asignaturas'), '${catalogue.courses.length}'),
               _Fact(tr('perfiles de salida'), '${catalogue.profiles.length}'),
-              _Fact('idiomas', catalogue.languages.join(', ')),
+              _Fact(tr('idiomas'), catalogue.languages.join(', ')),
               // Identifies the content this catalogue describes, so a stale
               // tab can be told from a current one without comparing records.
               _Fact(tr('hash del contenido'), catalogue.contentHash),
-              _Fact('origen', session.catalogueSource.describe),
+              _Fact(tr('origen'), session.catalogueSource.describe),
               const SizedBox(height: 8),
               Row(
                 children: [

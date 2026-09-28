@@ -328,7 +328,7 @@ class _DocumentRow extends StatelessWidget {
               ? change.wasLinked
                     ? tr('ahora está vinculado a otro tema')
                     : tr('ahora está vinculado')
-              : 'ya no está vinculado'
+              : tr('ya no está vinculado')
         : '';
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),

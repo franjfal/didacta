@@ -870,6 +870,139 @@ void main() {
       );
     });
 
+    group('guardar lo confirma con el cambio', () {
+      // Reordenar un tema y pulsar Guardar dejaba el commit de `year.yaml` y,
+      // al recargar, un índice regenerado sin confirmar: al enviar salía «3
+      // ficheros sin guardar en el historial» con `generated/*.json`, que
+      // quien guardó no había tocado. El índice va en el mismo commit.
+      const year = 'courses/calculo/2025/year.yaml';
+      const manifest = 'generated/manifest.json';
+      const units = 'generated/units.json';
+
+      setUp(() async {
+        for (final (path, text) in [
+          (year, 'documents: [a, b]\n'),
+          (manifest, '{"order": "a b"}\n'),
+          (units, '{"n": 1}\n'),
+        ]) {
+          File('${clone.directory}/$path')
+            ..parent.createSync(recursive: true)
+            ..writeAsStringSync(text);
+        }
+        await _git(['add', '.'], clone.directory);
+        await _git(_asSomeone(['commit', '-m', 'Curso']), clone.directory);
+        await _git(['push'], clone.directory);
+      });
+
+      /// Lo que haría el motor: el índice de lo que hay ahora en el disco.
+      Future<void> reindex() async {
+        final text = File('${clone.directory}/$year').readAsStringSync();
+        final order = text.contains('[b, a]') ? 'b a' : 'a b';
+        File(
+          '${clone.directory}/$manifest',
+        ).writeAsStringSync('{"order": "$order"}\n');
+      }
+
+      CloneGateway indexing() => CloneGateway(
+        clone: clone,
+        token: '',
+        author: (name: 'Javier Falcó', email: 'javier@uv.es'),
+        refreshIndex: reindex,
+      );
+
+      Future<List<String>> lastCommitFiles() async {
+        final shown = await Process.run('git', [
+          'show',
+          '--name-only',
+          '--pretty=%s',
+          'HEAD',
+        ], workingDirectory: clone.directory);
+        return (shown.stdout as String)
+            .split('\n')
+            .where((line) => line.trim().isNotEmpty)
+            .toList();
+      }
+
+      test('un fichero y su índice son un solo commit', () async {
+        // Un `.tex` a medias en otro sitio no se cuela: se confirma lo
+        // guardado y el índice, y nada más.
+        File('${clone.directory}/$unitFile').writeAsStringSync('A medias.\n');
+        final gateway = indexing();
+        final file = await gateway.read(year);
+
+        final sha = await gateway.save(
+          path: year,
+          text: 'documents: [b, a]\n',
+          sha: file.sha,
+          message: 'Reordenar Cálculo',
+        );
+
+        expect(await lastCommitFiles(), ['Reordenar Cálculo', year, manifest]);
+        expect((await clone.status()).dirtyPaths, [unitFile]);
+        expect(sha, (await clone.readFile(year)).sha);
+      });
+
+      test('también lo que el índice ya traía sucio de antes', () async {
+        // Al abrir, la aplicación regenera el índice si el del commit no
+        // describe el disco. Ese también es de este contenido, y se va con
+        // el primer cambio en lugar de quedarse esperando a que alguien lo
+        // confirme sin saber qué es.
+        File('${clone.directory}/$units').writeAsStringSync('{"n": 2}\n');
+        final gateway = indexing();
+        final file = await gateway.read(year);
+
+        await gateway.save(
+          path: year,
+          text: 'documents: [b, a]\n',
+          sha: file.sha,
+          message: 'Reordenar Cálculo',
+        );
+
+        expect((await clone.status()).isClean, isTrue);
+      });
+
+      test('varios ficheros a la vez, igual', () async {
+        final gateway = indexing();
+        final file = await gateway.read(year);
+        final tex = await gateway.read(unitFile);
+
+        await gateway.saveAll(
+          files: [
+            (path: year, text: 'documents: [b, a]\n', sha: file.sha),
+            (path: unitFile, text: 'Otro.\n', sha: tex.sha),
+          ],
+          message: 'Mover un tema',
+        );
+
+        expect(await lastCommitFiles(), [
+          'Mover un tema',
+          unitFile,
+          year,
+          manifest,
+        ]);
+        expect((await clone.status()).isClean, isTrue);
+      });
+
+      test('si el índice no se puede regenerar, se guarda igual', () async {
+        final gateway = CloneGateway(
+          clone: clone,
+          token: '',
+          author: (name: 'Javier Falcó', email: 'javier@uv.es'),
+          refreshIndex: () async => throw StateError('sin motor'),
+        );
+        final file = await gateway.read(year);
+
+        await gateway.save(
+          path: year,
+          text: 'documents: [b, a]\n',
+          sha: file.sha,
+          message: 'Reordenar Cálculo',
+        );
+
+        expect(await lastCommitFiles(), ['Reordenar Cálculo', year]);
+      });
+    });
+
     test('lo que no es el índice sí se respeta', () async {
       // Solo `generated/`: un cambio sin guardar en una lección que el
       // commit de fuera también toca tiene que seguir parando el traer.

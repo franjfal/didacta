@@ -259,7 +259,7 @@ class DidactaShell extends StatelessWidget {
                         NavigationRailDestination(
                           icon: _tourable(
                             destination,
-                            destination.label == 'Traducción' && pending > 0
+                            destination.path == '/translations' && pending > 0
                                 ? Badge(
                                     // The number, not a dot: "how much is waiting"
                                     // is the question, and a dot cannot answer it.

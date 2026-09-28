@@ -646,6 +646,7 @@ class _DocumentPageState extends State<DocumentPage> {
                     document: document,
                     profiles: profiles,
                     language: language,
+                    canCompile: session.canCompile,
                     onChoose: session.canWriteIn(document.repo)
                         ? () => _chooseTemplates(session, document)
                         : null,
@@ -664,6 +665,7 @@ class _DocumentPageState extends State<DocumentPage> {
             document: document,
             profiles: profiles,
             language: language,
+            canCompile: session.canCompile,
             onChoose: session.canWriteIn(document.repo)
                 ? () => _chooseTemplates(session, document)
                 : null,
@@ -1322,12 +1324,18 @@ class _OutputsPanel extends StatelessWidget {
     required this.document,
     required this.profiles,
     required this.language,
+    required this.canCompile,
     this.onChoose,
   });
 
   final Document document;
   final List<OutputTemplate> profiles;
   final String language;
+
+  /// Si aquí se compila. En escritorio sí, y el panel no dice cómo: para eso
+  /// está la pestaña Compilar, y el comando del terminal lo copia la cabecera
+  /// en *Completa*. En la web no, y entonces explica por qué y desde dónde.
+  final bool canCompile;
 
   /// Cambiar con qué se compila. Null cuando no se puede escribir en su
   /// repositorio: se ve lo que sale, y no se ofrece un botón que va a fallar.
@@ -1386,20 +1394,22 @@ class _OutputsPanel extends StatelessWidget {
             ),
           ),
 
-        SectionLabel(tr('Compilar')),
-        Padding(
-          padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
-          child: Note(
-            tr(
-              'Compilar necesita LaTeX, y un navegador no lo tiene. Desde el '
-              'repositorio de contenido:',
+        if (!canCompile) ...[
+          SectionLabel(tr('Compilar')),
+          Padding(
+            padding: EdgeInsets.fromLTRB(12, 0, 12, 10),
+            child: Note(
+              tr(
+                'Compilar necesita LaTeX, y un navegador no lo tiene. Desde el '
+                'repositorio de contenido:',
+              ),
             ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: _Command('didacta build ${document.id}'),
-        ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: _Command('didacta build ${document.id}'),
+          ),
+        ],
         const SizedBox(height: 12),
       ],
     );

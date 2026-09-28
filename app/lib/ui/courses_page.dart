@@ -179,9 +179,15 @@ class _CoursesPageState extends State<CoursesPage> {
           subtitle: filtering
               ? tr('{0} de {1} asignaturas', [courses.length, all.length])
               : [
-                  '${courses.length} asignaturas',
-                  tr('{0} cursos académicos', [years]),
-                  tr('{0} documentos', [documents]),
+                  courses.length == 1
+                      ? tr('1 asignatura')
+                      : tr('{0} asignaturas', [courses.length]),
+                  years == 1
+                      ? tr('1 curso académico')
+                      : tr('{0} cursos académicos', [years]),
+                  documents == 1
+                      ? tr('1 documento')
+                      : tr('{0} documentos', [documents]),
                   if (hidden > 0 && view == CoursesView.visible)
                     tr('{0} sin enseñar', [hidden]),
                 ].join(' · '),
@@ -775,7 +781,7 @@ class _CoursesPageState extends State<CoursesPage> {
   /// «Tal como quedó», o con un número si ese nombre ya está: un curso que
   /// se borró y se volvió a crear dejó la primera congelación en su sitio.
   static String _freezeName(CourseYear year) {
-    const base = 'Tal como quedó';
+    final base = tr('Tal como quedó');
     final taken = {for (final freeze in year.freezes) freeze.name};
     if (!taken.contains(base)) return base;
     var n = 2;

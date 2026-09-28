@@ -434,19 +434,19 @@ class _ConflictRow extends StatelessWidget {
           ConflictAbout.degree => tr(
             'Grado {0} · '
             '{1}',
-            [conflict.course, conflict.field],
+            [conflict.course, conflict.fieldLabel],
           ),
           ConflictAbout.block => tr(
             'Bloque {0} · '
             '{1}',
-            [conflict.course, conflict.field],
+            [conflict.course, conflict.fieldLabel],
           ),
           ConflictAbout.template => tr(
             'Plantilla {0} · '
             '{1}',
-            [conflict.course, conflict.field],
+            [conflict.course, conflict.fieldLabel],
           ),
-          ConflictAbout.course => '${conflict.course} · ${conflict.field}',
+          ConflictAbout.course => '${conflict.course} · ${conflict.fieldLabel}',
         }, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
         const SizedBox(height: 6),
         // Un botón por valor: el que se pulsa es el que se queda, y se
@@ -671,7 +671,7 @@ class _SnippetConflictRow extends StatelessWidget {
                     ),
                     Expanded(
                       child: Text(
-                        value.value.isEmpty ? '(nada)' : value.value,
+                        value.value.isEmpty ? tr('(nada)') : value.value,
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                         style: monoStyle.copyWith(

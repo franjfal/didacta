@@ -11,9 +11,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:didacta_app/data/browser.dart';
 import 'package:didacta_app/data/course_admin.dart';
 import 'package:didacta_app/main.dart';
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
 
@@ -282,9 +284,20 @@ void main() {
           Icons.bug_report_outlined,
         ),
       );
-      // Y no revienta al pulsarlo aunque aquí no haya navegador que abrir.
+      // Y pide abrir una incidencia nueva, sin abrirla: quien pasa las
+      // pruebas no tiene por qué ver GitHub en su navegador.
+      final opened = <String>[];
+      final previous = openLinkWith;
+      openLinkWith = (url) async {
+        opened.add(url);
+        return true;
+      };
+      addTearDown(() => openLinkWith = previous);
+
       await tester.tap(button);
       await settle(tester);
+      expect(opened, hasLength(1));
+      expect(opened.single, startsWith('$didactaIssues/new?body='));
     });
   });
 }

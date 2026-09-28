@@ -563,6 +563,37 @@ void main() {
     expect(log, contains('$after/es.tex'));
   });
 
+  test('guardar una composición lleva el índice en el mismo commit', () async {
+    // Lo que hace el editor de composición al pulsar Guardar: `save` y
+    // recargar. El índice se regeneraba al recargar y se quedaba sin
+    // confirmar, así que al enviar salía «2 ficheros sin guardar en el
+    // historial» con `generated/*.json`, que nadie había tocado.
+    final session = await openSession();
+    const path = 'courses/analisis/2025-2026/year.yaml';
+    final gateway = session.gatewayFor('test/repo');
+    final file = await gateway.read(path);
+
+    await gateway.save(
+      path: path,
+      text: file.text.replaceFirst(
+        '# - unit: analisis/series/criterios',
+        '- unit: analisis/series/criterios',
+      ),
+      sha: file.sha,
+      message: 'Series: una lección más',
+    );
+    await session.reloadCatalogue();
+
+    expect(documentOf(session, 'analisis', '2025-2026', 'series').unitRefs, [
+      'analisis/series/convergencia',
+      'analisis/series/criterios',
+    ]);
+    expect(await git(['status', '--porcelain']), isEmpty);
+    final log = await git(['log', '-1', '--pretty=%s', '--name-only']);
+    expect(log, contains(path));
+    expect(log, contains('generated/courses.json'));
+  });
+
   test('el editor lee y reescribe el fichero que escribe el motor', () async {
     // La juntura más fácil de romper de todo esto: el tema compartido lo
     // escribe el motor, en Python, y quien lo edita es el editor de

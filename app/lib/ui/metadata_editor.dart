@@ -571,7 +571,7 @@ class _Form extends StatelessWidget {
       children: [
         SectionLabel(tr('Identidad')),
         _Readonly('id', patch.scalar(['id']) ?? unit.id),
-        _Readonly('ruta', unit.path),
+        _Readonly(tr('ruta'), unit.path),
         // Neither is editable here: the id is what compositions reference by,
         // and the path is the directory. Changing either means moving files
         // and rewriting every year.yaml that mentions it, which is a rename
@@ -609,7 +609,7 @@ class _Form extends StatelessWidget {
 
         SectionLabel(tr('Clasificación')),
         _ChoiceRow(
-          label: 'tipo',
+          label: tr('tipo'),
           value: kind,
           options: unitKinds,
           names: kindName,
@@ -629,7 +629,7 @@ class _Form extends StatelessWidget {
         // sale en ningún filtro.
         _ChoiceRow(
           key: const ValueKey('unit-block'),
-          label: 'bloque',
+          label: tr('bloque'),
           value: _block,
           options: [for (final block in blocks) block.id],
           names: (value) => _blockName(value),
@@ -656,7 +656,7 @@ class _Form extends StatelessWidget {
         ),
         _TextRow(
           key: const ValueKey('unit-topic'),
-          label: 'tema',
+          label: tr('tema'),
           value: patch.scalar(['topic']) ?? '',
           enabled: enabled,
           suggestions: (typed) =>
@@ -702,21 +702,17 @@ class _Form extends StatelessWidget {
         SectionLabel(tr('Para planificar una clase')),
         _NumberRow(
           label: tr('duración'),
-          suffix: 'minutos',
+          suffix: tr('minutos'),
           value: patch.scalar(['duration_minutes']),
           enabled: enabled,
           onChanged: (value) =>
               onEdit((p) => p.setNumber(['duration_minutes'], value)),
         ),
         _ChoiceRow(
-          label: 'dificultad',
+          label: tr('dificultad'),
           value: difficulty,
           options: difficulties,
-          names: (value) => {
-            'easy': tr('fácil'),
-            'medium': 'media',
-            'hard': tr('difícil'),
-          }[value]!,
+          names: difficultyName,
           enabled: enabled,
           allowNone: true,
           onChanged: (value) =>
@@ -1081,7 +1077,7 @@ class _TemplatesRow extends StatelessWidget {
           SizedBox(
             width: 92,
             child: Text(
-              'plantillas',
+              tr('plantillas'),
               style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
           ),
@@ -1164,7 +1160,7 @@ class _TagsRow extends StatelessWidget {
             child: Padding(
               padding: EdgeInsets.only(top: 6),
               child: Text(
-                'etiquetas',
+                tr('etiquetas'),
                 style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ),

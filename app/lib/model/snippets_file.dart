@@ -95,7 +95,7 @@ class SnippetsFile {
     _lines.removeRange(found.firstLine, found.lastLine + 1);
     if (_entries().isEmpty) {
       final head = _head();
-      if (head >= 0) _lines[head] = tr('snippets: []');
+      if (head >= 0) _lines[head] = 'snippets: []';
     }
   }
 
@@ -223,7 +223,7 @@ List<String> renderSnippet(SnippetDeclaration d) {
   names('environment_aliases', d.environmentAliases);
   names('command_aliases', d.commandAliases);
   scalar('arguments', d.arguments);
-  if (d.block != null) out.add(tr('{0}block: {1}', [field, d.block]));
+  if (d.block != null) out.add('${field}block: ${d.block}');
   literal('definition', d.definition);
   literal('sample', d.sample);
   return out;

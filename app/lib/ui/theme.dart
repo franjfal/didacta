@@ -33,7 +33,9 @@ export '../model/catalogue.dart' show statusName;
 /// va en el idioma que sea; esto es solo lo de la aplicación.
 const Locale didactaLocale = Locale('es');
 
-const List<Locale> didactaLocales = [Locale('es')];
+/// Los de la interfaz: castellano, valenciano --con el catalán de Material--
+/// e inglés. Ver `l10n/tr.dart`.
+const List<Locale> didactaLocales = [Locale('es'), Locale('ca'), Locale('en')];
 
 const List<LocalizationsDelegate<Object>> didactaLocalizations = [
   GlobalMaterialLocalizations.delegate,
@@ -397,11 +399,13 @@ const Color didactaBrandLight = Color(0xFF5FB35F);
 /// Two letters: a full word per language per row does not fit, and an icon
 /// alone is not learnable.
 String statusMark(TranslationStatus status) => switch (status) {
-  TranslationStatus.source => 'OR',
-  TranslationStatus.reviewed => 'RV',
-  TranslationStatus.translated => 'TR',
-  TranslationStatus.draft => 'BO',
-  TranslationStatus.outdated => 'DE',
+  // Las iniciales de la palabra en cada idioma: «BO» es *borrador*, y en
+  // inglés un borrador es *draft*, «DR».
+  TranslationStatus.source => tr('OR'),
+  TranslationStatus.reviewed => tr('RV'),
+  TranslationStatus.translated => tr('TR'),
+  TranslationStatus.draft => tr('BO'),
+  TranslationStatus.outdated => tr('DE'),
   TranslationStatus.missing => '··',
 };
 
@@ -409,17 +413,25 @@ String statusMark(TranslationStatus status) => switch (status) {
 /// data is in English.
 String kindName(String kind) => switch (kind) {
   'theory' => tr('teoría'),
-  'problem' || 'problems' => 'problemas',
-  'exam' => 'examen',
+  'problem' || 'problems' => tr('problemas'),
+  'exam' => tr('examen'),
   'handout' => tr('guía'),
-  'seminar' => 'seminario',
+  'seminar' => tr('seminario'),
   'practical' => tr('práctica'),
-  'activity' => 'actividad',
-  'example' => 'ejemplo',
-  'experiment' => 'experimento',
-  'history' => 'historia',
+  'activity' => tr('actividad'),
+  'example' => tr('ejemplo'),
+  'experiment' => tr('experimento'),
+  'history' => tr('historia'),
   'notation' => tr('notación'),
   _ => kind,
+};
+
+/// La dificultad de una lección, como se lee: `easy` es «fácil».
+String difficultyName(String difficulty) => switch (difficulty) {
+  'easy' => tr('fácil'),
+  'medium' => tr('media'),
+  'hard' => tr('difícil'),
+  _ => difficulty,
 };
 
 /// Los radios, con nombre y en un sitio.

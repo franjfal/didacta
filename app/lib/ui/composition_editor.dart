@@ -591,7 +591,7 @@ class _CompositionEditorState extends State<CompositionEditor> {
     // same whether it is the only change or one of several.
     if (reordered) parts.add(tr('cambiar el orden'));
 
-    final what = parts.isEmpty ? 'editar' : parts.join(' y ');
+    final what = parts.isEmpty ? tr('editar') : parts.join(tr(' y '));
     return tr(
       '{0} en la composición de {1} '
       '({2} {3})',

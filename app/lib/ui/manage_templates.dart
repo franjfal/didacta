@@ -995,7 +995,7 @@ class _TemplateDialogState extends State<_TemplateDialog> {
               controller: _class,
               decoration: InputDecoration(
                 labelText: tr('Clase de documento'),
-                hintText: tr('article, book, beamer'),
+                hintText: 'article, book, beamer',
                 isDense: true,
               ),
             ),

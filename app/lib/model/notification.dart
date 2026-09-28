@@ -66,11 +66,8 @@ LaunchCommand notificationLaunch({
     case Host.macos:
       return LaunchCommand('/usr/bin/osascript', [
         '-e',
-        tr(
-          'display notification {0} '
-          'with title "Didacta" subtitle {1}',
-          [_appleScript(body), _appleScript(title)],
-        ),
+        'display notification ${_appleScript(body)} '
+            'with title "Didacta" subtitle ${_appleScript(title)}',
       ]);
     case Host.linux:
       return LaunchCommand('notify-send', [
@@ -83,7 +80,7 @@ LaunchCommand notificationLaunch({
         '-NoProfile',
         '-NonInteractive',
         '-WindowStyle',
-        tr('Hidden'),
+        'Hidden',
         '-EncodedCommand',
         _encoded(
           _toastScript(tr('Didacta · {0}', [_oneLine(title)]), _oneLine(body)),
@@ -105,16 +102,10 @@ String _toastScript(String title, String body) => [
       'GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::'
       'ToastText02)',
   r"$lines = $toast.GetElementsByTagName('text')",
-  tr(
-    '\$lines.Item(0).AppendChild(\$toast.CreateTextNode({0}))'
-    ' | Out-Null',
-    [_powerShell(title)],
-  ),
-  tr(
-    '\$lines.Item(1).AppendChild(\$toast.CreateTextNode({0}))'
-    ' | Out-Null',
-    [_powerShell(body)],
-  ),
+  '\$lines.Item(0).AppendChild(\$toast.CreateTextNode(${_powerShell(title)}))'
+      ' | Out-Null',
+  '\$lines.Item(1).AppendChild(\$toast.CreateTextNode(${_powerShell(body)}))'
+      ' | Out-Null',
   r"$app = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\"
       "powershell.exe'",
   r'[Windows.UI.Notifications.ToastNotificationManager]::'

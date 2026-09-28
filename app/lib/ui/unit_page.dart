@@ -1593,9 +1593,10 @@ class _ViewToggle extends StatelessWidget {
   final bool compact;
   final ValueChanged<bool>? onChanged;
 
-  static const String _noFields =
-      'Solo un problema tiene enunciado, resultado y solución; '
-      'lo demás se escribe de corrido.';
+  static String get _noFields => tr(
+    'Solo un problema tiene enunciado, resultado y solución; '
+    'lo demás se escribe de corrido.',
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -2640,7 +2641,7 @@ class _LanguageTabs extends StatelessWidget {
           TourTarget(
             id: 'unit-compile',
             child: DidactaTab(
-              label: 'compilar',
+              label: tr('compilar'),
               icon: Icons.play_circle_outline,
               selected: active == previewTab,
               dirty: false,
@@ -2649,14 +2650,14 @@ class _LanguageTabs extends StatelessWidget {
           ),
           DidactaTab(
             key: const Key('metadata-tab'),
-            label: 'metadatos',
+            label: tr('metadatos'),
             tooltip: tr('El unit.yaml de la lección'),
             selected: active == metadataTab,
             dirty: false,
             onTap: () => onSelect(metadataTab),
           ),
           DidactaTab(
-            label: 'historial',
+            label: tr('historial'),
             icon: Icons.history,
             selected: active == historyTab,
             dirty: false,
@@ -2713,13 +2714,14 @@ class _UnitPanel extends StatelessWidget {
       children: [
         SectionLabel(tr('Qué es')),
         _Row(
-          'tipo',
+          tr('tipo'),
           kindName(unit.kind),
           colour: context.palette.kind(unit.kind),
         ),
         _Row(tr('categoría'), unit.category),
-        _Row('tema', unit.topic),
-        if (unit.difficulty != null) _Row('dificultad', unit.difficulty!),
+        _Row(tr('tema'), unit.topic),
+        if (unit.difficulty != null)
+          _Row(tr('dificultad'), difficultyName(unit.difficulty!)),
         if (unit.durationMinutes != null)
           _Row(tr('duración'), tr('{0} min', [unit.durationMinutes])),
         if (unit.tags.isNotEmpty)
@@ -3545,7 +3547,10 @@ class SharedLessonStrip extends StatelessWidget {
         ? tr('{0} y {1} más', [shown.join(', '), rest])
         : shown.length == 1
         ? shown.single
-        : '${shown.take(shown.length - 1).join(', ')} y ${shown.last}';
+        : tr('{0} y {1}', [
+            shown.take(shown.length - 1).join(', '),
+            shown.last,
+          ]);
 
     return Padding(
       key: const Key('shared-lesson-strip'),

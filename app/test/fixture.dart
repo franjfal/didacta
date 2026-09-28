@@ -1156,6 +1156,7 @@ class FakeSession extends Session {
     required this.gatewayOverride,
     required Catalogue catalogue,
     this.compilerOverride,
+    this.canCompileOverride = true,
     this.adminOverride,
     this.cloneOverride,
     this.toolchainOverride,
@@ -1196,6 +1197,10 @@ class FakeSession extends Session {
   /// Null means "nothing to compile with", which is a state the screen has to
   /// handle: the web, and a desktop with no engine configured.
   final Compiler? compilerOverride;
+
+  /// Si la plataforma compila: falso para hacer de web, donde
+  /// `Compiler.supported` es falso y una prueba en la VM no llega nunca.
+  final bool canCompileOverride;
 
   /// Null es la web: sin clon y sin motor no se pueden administrar
   /// asignaturas, y la pantalla tiene que decirlo en lugar de ofrecer
@@ -1278,7 +1283,7 @@ class FakeSession extends Session {
   Compiler? liveCompiler({String? repo}) => compilerOverride;
 
   @override
-  bool get canCompile => true;
+  bool get canCompile => canCompileOverride;
 }
 
 /// Nothing in these tests reaches Firebase or a keychain.

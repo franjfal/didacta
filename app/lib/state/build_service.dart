@@ -219,7 +219,7 @@ class BuildService extends ChangeNotifier {
         final reference = '${document.course}@${document.year}/${document.id}';
         console.startStep(document.title);
         if (compiler == null) {
-          console.add('--- sin motor para $reference');
+          console.add('--- ${tr('sin motor para {0}', [reference])}');
           failed += 1;
           console.finishStep();
           continue;

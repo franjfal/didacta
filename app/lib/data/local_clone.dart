@@ -171,59 +171,54 @@ enum CloneFailure {
 CloneFailure classifyGit(String said) {
   final text = said.toLowerCase();
   bool has(List<String> any) => any.any(text.contains);
-  if (has([
-    'index.lock',
-    tr('another git process'),
-    tr('.lock\': file exists'),
-  ])) {
+  if (has(['index.lock', 'another git process', '.lock\': file exists'])) {
     return CloneFailure.locked;
   }
   if (has([
     'authentication failed',
-    tr('could not read username'),
-    tr('invalid username or password'),
-    tr('returned error: 401'),
-    tr('returned error: 403'),
-    tr('permission to'),
-    tr('bad credentials'),
+    'could not read username',
+    'invalid username or password',
+    'returned error: 401',
+    'returned error: 403',
+    'permission to',
+    'bad credentials',
   ])) {
     return CloneFailure.unauthenticated;
   }
   if (has([
     'non-fast-forward',
-    tr('fetch first'),
-    tr('tip of your current branch is behind'),
-    tr('updates were rejected because the remote contains'),
+    'fetch first',
+    'tip of your current branch is behind',
+    'updates were rejected because the remote contains',
   ])) {
     return CloneFailure.behind;
   }
   if (has([
     'protected branch',
-    tr('pre-receive hook declined'),
-    tr('remote rejected'),
+    'pre-receive hook declined',
+    'remote rejected',
   ])) {
     return CloneFailure.rejected;
   }
   if (has([
     'conflict (',
-    tr('automatic merge failed'),
-    tr('would be overwritten by merge'),
-    tr('unmerged files'),
-    tr('needs merge'),
-    tr('not possible to fast-forward'),
-    tr('divergent branches'),
+    'automatic merge failed',
+    'would be overwritten by merge',
+    'unmerged files',
+    'needs merge',
+    'not possible to fast-forward',
+    'divergent branches',
   ])) {
     return CloneFailure.conflict;
   }
   if (has([
     'could not resolve host',
-    tr('unable to access'),
-    tr('failed to connect'),
-    tr('connection timed out'),
-    tr('network is unreachable'),
-    tr('operation timed out'),
-    tr('connection reset'),
-    tr('suele ser la red'),
+    'unable to access',
+    'failed to connect',
+    'connection timed out',
+    'network is unreachable',
+    'operation timed out',
+    'connection reset',
   ])) {
     return CloneFailure.offline;
   }
@@ -417,15 +412,15 @@ abstract class LocalClone {
   /// entiende sin ir a buscar la documentación. El nombre va entre comillas
   /// de JSON, que YAML lee igual, para que unos dos puntos o una almohadilla
   /// en el título no rompan el fichero.
-  static String settingsFor(String title) => tr(
-    '''
+  static String settingsFor(String title) =>
+      '''
 # Un repositorio de contenido de Didacta.
 #
 # Todo tiene un valor por defecto que funciona. El fichero existe sobre todo
 # para marcar la raíz del repositorio: el motor sube buscándolo, igual que git
 # busca .git.
 
-name: {0}
+name: ${jsonEncode(title)}
 
 # Los idiomas que mantiene este repositorio. Didacta trae es, va y en.
 languages: [es, va, en]
@@ -436,9 +431,7 @@ default_language: es
 # Dónde van los PDF. Relativo a la raíz del repositorio, y fuera de git: lo
 # compilado no se versiona.
 build_dir: .didacta-build
-''',
-    [jsonEncode(title)],
-  );
+''';
 
   /// El `.gitattributes` de un repositorio recién preparado.
   ///

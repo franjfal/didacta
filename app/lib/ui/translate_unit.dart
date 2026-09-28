@@ -657,9 +657,11 @@ class _EstimateLine extends StatelessWidget {
     } else if (found.characters == 0 && found.unreadable > 0) {
       text = found.files == 0
           ? tr('No se ha podido leer el original: no se sabe cuánto costaría.')
+          : found.unreadable == 1
+          ? tr('No se ha podido leer 1 original: la cuenta no está completa.')
           : tr(
-              'No se ha podido leer {0} original(es): la '
-              'cuenta no está completa.',
+              'No se ha podido leer {0} originales: la cuenta no está '
+              'completa.',
               [found.unreadable],
             );
     } else if (found.characters == 0) {
@@ -672,7 +674,9 @@ class _EstimateLine extends StatelessWidget {
           ? null
           : found.characters / 1e6 * price;
       text = [
-        '${thousands(found.characters)} caracteres que mandar',
+        found.characters == 1
+            ? tr('1 carácter que mandar')
+            : tr('{0} caracteres que mandar', [thousands(found.characters)]),
         if (found.reused > 0)
           tr(
             '{0} de {1} '
@@ -743,11 +747,12 @@ class _Summary extends StatelessWidget {
         Text(
           [
             result.failed == 0
-                ? tr(
-                    '{0} fichero(s) traducidos y guardados como '
-                    'borrador',
-                    [result.done],
-                  )
+                ? result.done == 1
+                      ? tr('1 fichero traducido y guardado como borrador')
+                      : tr(
+                          '{0} ficheros traducidos y guardados como borrador',
+                          [result.done],
+                        )
                 : tr('{0} traducidos, {1} sin hacer', [
                     result.done,
                     result.failed,

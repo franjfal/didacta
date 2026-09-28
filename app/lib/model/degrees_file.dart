@@ -154,7 +154,7 @@ class DegreesFile {
       for (final code in languages)
         if (!kept.containsKey(code)) '      # TODO: $code',
       if ((institution ?? '').trim().isNotEmpty)
-        tr('    institution: {0}', [_quote(institution!.trim())]),
+        '    institution: ${_quote(institution!.trim())}',
     ];
 
     final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'degrees');
@@ -210,7 +210,7 @@ class DegreesFile {
     // lista vacía: un error de lectura del repositorio entero.
     if (ids.isEmpty) {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'degrees');
-      if (at >= 0) _lines[at] = tr('degrees: []');
+      if (at >= 0) _lines[at] = 'degrees: []';
     }
   }
 

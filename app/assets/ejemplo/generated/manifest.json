@@ -80,91 +80,151 @@
       "documentClass": "book",
       "family": "notes",
       "id": "book",
-      "label": "Libro"
+      "label": "Libro",
+      "labels": {
+        "en": "Book",
+        "va": "Llibre"
+      }
     },
     {
       "documentClass": "article",
       "family": "exam",
       "id": "exam",
-      "label": "Examen"
+      "label": "Examen",
+      "labels": {
+        "en": "Exam",
+        "va": "Examen"
+      }
     },
     {
       "documentClass": "article",
       "family": "exam",
       "id": "exam-marking",
-      "label": "Examen (profesor)"
+      "label": "Examen (profesor)",
+      "labels": {
+        "en": "Exam (teacher)",
+        "va": "Examen (professor)"
+      }
     },
     {
       "documentClass": "article",
       "family": "handout",
       "id": "handout",
-      "label": "Handout"
+      "label": "Handout",
+      "labels": {
+        "en": "Handout",
+        "va": "Guia"
+      }
     },
     {
       "documentClass": "article",
       "family": "handout",
       "id": "handout-answers",
-      "label": "Handout (con resultados)"
+      "label": "Handout (con resultados)",
+      "labels": {
+        "en": "Handout (with answers)",
+        "va": "Guia (amb resultats)"
+      }
     },
     {
       "documentClass": "article",
       "family": "handout",
       "id": "handout-teacher",
-      "label": "Handout (profesor)"
+      "label": "Handout (profesor)",
+      "labels": {
+        "en": "Handout (teacher)",
+        "va": "Guia (professor)"
+      }
     },
     {
       "documentClass": "article",
       "family": "notes",
       "id": "notes",
-      "label": "Apuntes"
+      "label": "Apuntes",
+      "labels": {
+        "en": "Notes",
+        "va": "Apunts"
+      }
     },
     {
       "documentClass": "article",
       "family": "notes",
       "id": "notes-solutions",
-      "label": "Apuntes (con soluciones)"
+      "label": "Apuntes (con soluciones)",
+      "labels": {
+        "en": "Notes (with solutions)",
+        "va": "Apunts (amb solucions)"
+      }
     },
     {
       "documentClass": "article",
       "family": "notes",
       "id": "notes-teacher",
-      "label": "Apuntes (profesor)"
+      "label": "Apuntes (profesor)",
+      "labels": {
+        "en": "Notes (teacher)",
+        "va": "Apunts (professor)"
+      }
     },
     {
       "documentClass": "article",
       "family": "problems",
       "id": "problems",
-      "label": "Hoja de problemas"
+      "label": "Hoja de problemas",
+      "labels": {
+        "en": "Problem sheet",
+        "va": "Full de problemes"
+      }
     },
     {
       "documentClass": "article",
       "family": "problems",
       "id": "problems-answers",
-      "label": "Hoja de problemas (con resultados)"
+      "label": "Hoja de problemas (con resultados)",
+      "labels": {
+        "en": "Problem sheet (with answers)",
+        "va": "Full de problemes (amb resultats)"
+      }
     },
     {
       "documentClass": "article",
       "family": "problems",
       "id": "problems-teacher",
-      "label": "Hoja de problemas (profesor)"
+      "label": "Hoja de problemas (profesor)",
+      "labels": {
+        "en": "Problem sheet (teacher)",
+        "va": "Full de problemes (professor)"
+      }
     },
     {
       "documentClass": "beamer",
       "family": "slides",
       "id": "slides",
-      "label": "Diapositivas"
+      "label": "Diapositivas",
+      "labels": {
+        "en": "Slides",
+        "va": "Diapositives"
+      }
     },
     {
       "documentClass": "beamer",
       "family": "slides",
       "id": "slides-flat",
-      "label": "Diapositivas (sin pausas)"
+      "label": "Diapositivas (sin pausas)",
+      "labels": {
+        "en": "Slides (no pauses)",
+        "va": "Diapositives (sense pauses)"
+      }
     },
     {
       "documentClass": "beamer",
       "family": "slides",
       "id": "slides-teacher",
-      "label": "Diapositivas (profesor)"
+      "label": "Diapositivas (profesor)",
+      "labels": {
+        "en": "Slides (teacher)",
+        "va": "Diapositives (professor)"
+      }
     }
   ],
   "schemaVersion": 1,

@@ -578,18 +578,17 @@ class CompositionFile {
 
     final block = <String>[
       '$pad- id: ${_quote(id)}',
-      tr('{0}kind: {1}', [field, _quote(kind)]),
+      '${field}kind: ${_quote(kind)}',
       '${field}title:',
       for (final entry in title.entries)
         '$field  ${entry.key}: ${_quote(entry.value)}',
       for (final code in pending) '$field  # TODO: $code',
-      if (profiles.isNotEmpty)
-        tr('{0}profiles: [{1}]', [field, profiles.join(', ')]),
+      if (profiles.isNotEmpty) '${field}profiles: [${profiles.join(', ')}]',
       // A qué tema pertenece, si se crea dentro de uno. Una etiqueta y nada
       // más: quién es ese tema lo declara `themes.yaml`, que puede estar en
       // otro repositorio.
-      if (themes.isNotEmpty) tr('{0}themes: [{1}]', [field, themes.join(', ')]),
-      tr('{0}structure: []', [field]),
+      if (themes.isNotEmpty) '${field}themes: [${themes.join(', ')}]',
+      '${field}structure: []',
     ];
 
     if (documents.isEmpty) {

@@ -434,7 +434,8 @@ se pueda ver qué toca no es una herramienta en la que haya motivo para confiar.
 | D80 | Un entorno con nombre se dibuja en una caja con la pestaña del nombre montada en el borde, y es la misma caja en pantalla y en papel | La primera migración cambió la caja de `boiboites` por una raya al margen, y lo que se perdió no fue adorno: la pestaña es **dónde empieza** el teorema y **dónde acaba**, que en una página con tres seguidos y una demostración en medio es lo que se busca al hojear. La raya marcaba el principio y el final con el mismo trazo y sin nada que los separase del párrafo de al lado. Una caja por medio --pestaña, marco y fondo-- lo dice de una sola mirada, que es la única que se le dedica. Misma forma en los dos medios y sólo dos cosas cambian: en pantalla más contraste y una sombra corta, en papel un tinte muy flojo, porque una página lleva ocho cajas seguidas y se lee durante una hora. Y **la usan también las que no son teoremas** --nota didáctica, objetivos, recuadro sin etiqueta--, cada una con su color: una página donde el teorema lleva marco y la nota didáctica lleva una raya se lee como dos documentos pegados. Las respuestas de una hoja de problemas (`answer`, `solution`, `marking`) se quedan con la raya a propósito: van **dentro** de un ejercicio y no son cosas aparte, y veinte cajas anidadas en un folio no se leen |
 | D81 | El CI del material es un workflow reutilizable del motor, y cada repositorio de contenido lo llama fijando la versión | lo que hay que saber para compilar en GitHub --los paquetes de TeX, las órdenes, cómo se separa lo que se reparte de lo del profesor-- es del motor y cambia con él; copiado en cada repositorio se quedaría viejo en todos a la vez. El de cada repositorio son dos líneas (`uses: franjfal/didacta/.github/workflows/material.yml@vX`) y compila con la versión que lo añadió, igual que el motor se fija a la de la aplicación. Reparte con `didacta export`, la misma regla que la aplicación, en dos paquetes: el de repartir no puede llevar una solución. Pedir el permiso `workflow` al entrar va con esto: sin él, GitHub rechaza el envío entero de un commit que toca `.github/workflows/`, y lo que se pregunta antes de escribir uno es si el token puede |
 | D82 | Los apuntes accesibles salen del mismo origen, con las mismas reglas: PDF etiquetado con LuaLaTeX fuera de beamer, y un HTML que escribe el propio motor | etiquetar es `\DocumentMetadata` antes de la clase, así que va en el arranque y lo enciende `build --accessible`; beamer no, porque el etiquetado de LaTeX aún no lo admite. Lo que no se deja etiquetar --sobre todo las opciones de `enumitem` en una lista-- sale sin etiquetar y lo dice: encenderlo no puede dejar a nadie sin apuntes. El HTML no es de tex4ht, pandoc ni LaTeXML --el primero no aguanta el LaTeX de Didacta y los otros son otra instalación en cada ordenador--: lo escribe `engine/didacta/html.py` desde el vocabulario de Didacta, que es conocido, con las reglas de visibilidad de `didacta-formats.sty` copiadas y probadas una a una, porque un HTML del estudiante con una solución sería repartirla. `alt={…}` se acepta siempre, también en `tikzpicture`, para que el mismo fuente compile con y sin etiquetado |
-| D83 | La GitHub App convive con la OAuth App, y se distinguen por el Client ID | una GitHub App llega solo a donde se instala y su credencial caduca: es lo correcto, pero cambia la entrada de todo el mundo, así que no puede romper la de nadie. Las dos se entran por el mismo device flow; la de App trae el de renovar, y se guarda como JSON con su App y sus fechas, mientras que un token de OAuth App se sigue guardando como antes --texto suelto--, que es lo que hace que ninguna sesión de antes se pierda. Lo que no se puede hacer desde aquí es registrar la App: `didactaAppClientId` está vacío hasta que su dueño lo haga, y mientras tanto todo va como siempre (DISTRIBUTION.md, «La GitHub App»). Con la App, que no llegue a un repositorio abierto no lo cierra: es que falta instalarla en él |
+| D83 | La GitHub App convive con la OAuth App, y se distinguen por el Client ID | una GitHub App llega solo a donde se instala y su credencial caduca: es lo correcto, pero cambia la entrada de todo el mundo, así que no puede romper la de nadie. Las dos se entran por el mismo device flow; la de App trae el de renovar, y se guarda como JSON con su App y sus fechas, mientras que un token de OAuth App se sigue guardando como antes --texto suelto--, que es lo que hace que ninguna sesión de antes se pierda. La App es «Didacta App» (`github.com/apps/didacta-app`, de `franjfal`), y su Client ID está en `didactaAppClientId`; la OAuth App con la que se entraba antes se borró antes de la primera versión, porque solo la usaba su autor, y su Client ID guardado no cuenta como elegido (DISTRIBUTION.md, «La GitHub App»). Una OAuth App propia se sigue admitiendo. Con la App, que no llegue a un repositorio abierto no lo cierra: es que falta instalarla en él |
+| D84 | La interfaz se traduce con `tr('texto en castellano')`, y la clave es el propio texto | con claves inventadas (`settingsAppearanceTitle`) el código deja de leerse en castellano, que es como está pensado, y un texto que se olvida sale como un identificador. Con el texto de clave, lo que falte sale en castellano y el código se lee igual. Los marcadores son `{0}`, `{1}`, para que el valenciano y el inglés los pongan donde les toque; los plurales, una clave por forma, porque los tres idiomas pluralizan igual. Las traducciones están en `app/l10n/va.json` y `en.json` --`null` para lo que no es interfaz--, y `tool/l10n.py build` escribe los catálogos que compila la aplicación. `tests/test_l10n.py` falla si un texto nuevo no tiene decidida su traducción. El idioma se cambia sin reiniciar: se repinta el árbol entero, porque `tr` no depende del `BuildContext`. No es el idioma del material, que sigue siendo el de la biblioteca |
 
 ---
 
@@ -795,25 +796,18 @@ cualquier otro. Nunca `reset --hard`, nunca force push.
 
 ## 9. Lo que falta
 
-Esta fase es la infraestructura: el sistema LaTeX, el modelo de contenido, el
-motor de compilación, la herramienta y el migrador. Verificado compilando de
-verdad las 15 salidas, y migrando el material real: 194 unidades tomadas al
+Esta fase era la infraestructura: el sistema LaTeX, el modelo de contenido,
+el motor de compilación, la herramienta y el migrador. Verificado compilando
+de verdad las 15 salidas, y migrando el material real: 194 unidades tomadas al
 azar de 51 categorías compilan sin un solo fallo, y el Tema 1 de 2025-2026
 sale de la composición migrada en sus 7 perfiles.
 
-El migrador (§8), los índices (§8.bis) y la aplicación están hechos sobre el
-material real: las siete rutas, el editor multilingüe, la edición de
-`unit.yaml` y el constructor de composiciones, sobre **clones locales de
-varios repositorios a la vez**, con la identidad de GitHub (D58–D63). Lo
-siguiente, en orden:
-
-1. **Compilar desde la interfaz** — en escritorio, con un clon en disco y
-   LaTeX instalado, ya es posible: falta lanzar `didacta build` y mostrar el
-   log y el PDF. En web no lo es, y la pantalla del documento no lo finge.
-4. **Crear unidades desde la interfaz** — hoy se editan, traducen, reclasifican
-   y recomponen las que hay; una nueva pide crear el directorio a mano.
-5. **CI** — compilar en cada push, `didacta index --check`, publicar los PDF
-   como artefactos.
+Sobre ella está hecho lo que aquí quedaba: el migrador (§8), los índices
+(§8.bis) y la aplicación, sobre clones locales de varios repositorios a la vez
+con la identidad de GitHub (D58–D63); **compilar desde la interfaz**, con la
+consola, los errores en la línea de la unidad y SyncTeX; **crear y duplicar
+lecciones** sin salir de ella; y **el CI del material** (D81). Lo que queda
+por hacer está en `NEXT.md`, «Pendiente».
 
 Nada de eso cambia lo de aquí: el sistema LaTeX y el modelo de contenido son la
 base sobre la que se apoya el resto.

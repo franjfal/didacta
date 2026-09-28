@@ -74,7 +74,7 @@ List<String> pythonDirectories() {
   final versions = <(int, String)>[];
   for (final root in [
     if (local.isNotEmpty) '$local\\Programs\\Python',
-    tr(r'C:\Program Files'),
+    r'C:\Program Files',
   ]) {
     final directory = Directory(root);
     if (!directory.existsSync()) continue;
@@ -206,8 +206,8 @@ List<String> texDirectories({String? configured}) {
     found.addAll([
       if (local.isNotEmpty) '$local\\Programs\\MiKTeX\\miktex\\bin\\x64',
       if (roaming.isNotEmpty) '$roaming\\TinyTeX\\bin\\windows',
-      tr(r'C:\Program Files\MiKTeX\miktex\bin\x64'),
-      tr(r'C:\Program Files (x86)\MiKTeX\miktex\bin\x64'),
+      r'C:\Program Files\MiKTeX\miktex\bin\x64',
+      r'C:\Program Files (x86)\MiKTeX\miktex\bin\x64',
     ]);
   }
 

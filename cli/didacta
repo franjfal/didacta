@@ -1111,6 +1111,8 @@ def cmd_site(args):
     exported.zip = None
     exported.zip_append = False
     exported.json = True
+    # La web ya es el HTML: no hace falta otro de cada documento.
+    exported.html = False
     captured = io.StringIO()
     with contextlib.redirect_stdout(captured):
         cmd_export(exported)

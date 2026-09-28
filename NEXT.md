@@ -145,20 +145,32 @@ en `shared/bibliography.bib` del repositorio de contenido (o donde diga
 `didacta.yaml`), biblatex se carga solo si existe, y `didacta check` avisa
 antes de compilar de las citas que no tienen dónde resolverse.
 
+## Hecho: el CI del material
+
+`.github/workflows/material.yml` es un workflow reutilizable: comprueba, pone
+el índice al día, compila y reparte en dos paquetes --lo que se reparte y lo
+del profesor-- con `didacta export`. Cada repositorio de contenido lo llama
+con dos líneas fijando la versión; el ejemplo lo trae y Ajustes lo añade a los
+que ya existen (D81).
+
+## Hecho: la interfaz en tres idiomas
+
+Cada texto de la aplicación pasa por `tr('…')` con el castellano de clave, y
+`app/l10n/va.json` y `en.json` tienen su traducción (D84). Un texto nuevo se
+traduce añadiéndolo a los dos JSON y con `python3 app/tool/l10n.py build`;
+`python3 app/tool/l10n.py missing` dice cuáles faltan, y `tests/test_l10n.py`
+no deja pasar uno sin decidir. La guía y el glosario, en `app/l10n/GUIDE.md`.
+
 ## Pendiente
 
-### El CI del material
+Del plan de mejoras no queda nada por programar. La GitHub App está
+registrada («Didacta App», `docs/DISTRIBUTION.md`). Lo que queda:
 
-*Hecho.* `.github/workflows/material.yml` es un workflow reutilizable: comprueba,
-pone el índice al día, compila y reparte en dos paquetes --lo que se reparte y
-lo del profesor-- con `didacta export`. Cada repositorio de contenido lo llama
-con dos líneas fijando la versión; el ejemplo lo trae y Ajustes lo añade a los
-que ya existen (D81). Queda probarlo contra GitHub la primera vez que se
-publique una versión con él: aquí solo se ha probado lo que no depende de
-Actions.
+- **Ver correr el CI del material en GitHub** la primera vez que se publique
+  una versión con él: aquí solo se ha probado lo que no depende de Actions.
+- **Entrar una vez con la App de verdad**, instalándola en una cuenta, y ver
+  que llega a los repositorios elegidos. El device flow ya responde con su
+  Client ID.
 
-### Lo demás
-
-En [`PLAN-DE-MEJORAS.md`](PLAN-DE-MEJORAS.md): terminar de dividir `Session`
---que las pantallas lean de cada pieza y no de la fachada-- y firmar la
-aplicación, que necesita los certificados de Apple y de Windows.
+Lo que se dejó fuera a propósito: firmar la aplicación y subir a Moodle por
+sus servicios web --para no atar el reparto a una sola plataforma--.

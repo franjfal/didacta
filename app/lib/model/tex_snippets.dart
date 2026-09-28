@@ -20,15 +20,18 @@ import '../l10n/tr.dart';
 /// Algo que la barra escribe.
 class TexSnippet {
   const TexSnippet(
-    this.label,
+    this._label,
     this.before, {
     this.after = '',
     this._tooltip,
     this.opensMath = false,
   });
 
-  /// Lo que se ve en la paleta: el glifo, o un nombre corto.
-  final String label;
+  /// Lo que se ve en la paleta: el glifo, o un nombre corto --«matriz»,
+  /// «casos»-- en el idioma de la interfaz. Un glifo no está en el catálogo
+  /// y sale tal cual.
+  String get label => tr(_label);
+  final String _label;
 
   /// Lo que se escribe delante de lo marcado.
   final String before;

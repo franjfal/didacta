@@ -256,7 +256,7 @@ class TaxonomyFile {
     // clave sin valor es null y no una lista vacía.
     if (blockIds.isEmpty) {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'blocks');
-      if (at >= 0) _lines[at] = tr('blocks: []');
+      if (at >= 0) _lines[at] = 'blocks: []';
     }
   }
 

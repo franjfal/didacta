@@ -14,6 +14,7 @@ library;
 import 'package:flutter/widgets.dart';
 
 import '../data/preferences.dart';
+import '../l10n/tr.dart';
 import '../ui/theme.dart';
 
 enum AppearanceMode {
@@ -58,6 +59,27 @@ class Appearance extends ChangeNotifier with WidgetsBindingObserver {
   /// que enseñar-- al 150 % --el proyector del aula--.
   static const List<double> textScales = [0.85, 0.9, 1, 1.1, 1.2, 1.35, 1.5];
 
+  /// El idioma de la interfaz elegido: `es`, `va`, `en` o `system`.
+  String _language = 'es';
+  String get languageChoice => _language;
+
+  /// El que se usa, resuelto el del sistema.
+  UiLanguage get uiLanguage =>
+      UiLanguage.parse(_language) ??
+      uiLanguageFor(WidgetsBinding.instance.platformDispatcher.locale);
+
+  Future<void> setUiLanguage(String value) async {
+    if (value == _language) return;
+    _language = value;
+    notifyListeners();
+    await preferences?.setUiLanguage(value);
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    if (_language == 'system') notifyListeners();
+  }
+
   double _textScale = 1;
 
   /// Cuánto más grande se ve el texto: 1 es el normal.
@@ -69,9 +91,11 @@ class Appearance extends ChangeNotifier with WidgetsBindingObserver {
     final stored = await preferences?.appearance();
     final next = AppearanceMode.parse(stored);
     final scale = _nearest(await preferences?.textScale() ?? 1);
-    if (next == _mode && scale == _textScale) return;
+    final language = await preferences?.uiLanguage() ?? _language;
+    if (next == _mode && scale == _textScale && language == _language) return;
     _mode = next;
     _textScale = scale;
+    _language = language;
     notifyListeners();
   }
 

@@ -166,11 +166,11 @@ class _SignInFormState extends State<SignInForm> {
             key: const Key('github-client-id'),
             controller: _clientId,
             decoration: InputDecoration(
-              labelText: tr('Client ID de la OAuth App'),
+              labelText: tr('Client ID de la aplicación de GitHub'),
               helperText: tr(
-                'GitHub → Settings → Developer settings → OAuth Apps, '
-                'con «Enable Device Flow». Es público: no es un '
-                'secreto que haya que proteger.',
+                'GitHub → Settings → Developer settings → GitHub Apps '
+                '(u OAuth Apps), con «Enable Device Flow». Es público: no '
+                'es un secreto que haya que proteger.',
               ),
               helperMaxLines: 3,
               border: OutlineInputBorder(),
@@ -199,7 +199,7 @@ class _SignInFormState extends State<SignInForm> {
               key: const Key('show-client-id'),
               onPressed: () => setState(() => _askedForClientId = true),
               child: Text(
-                tr('Entrar con otra aplicación de OAuth'),
+                tr('Entrar con otra aplicación de GitHub'),
                 style: TextStyle(fontSize: 12),
               ),
             ),

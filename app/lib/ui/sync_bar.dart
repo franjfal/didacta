@@ -315,7 +315,7 @@ class _SyncBarState extends State<SyncBar> {
             id: 'push',
             icon: Icons.upload_outlined,
             tooltip: [
-              'Enviar a GitHub',
+              tr('Enviar a GitHub'),
               if (unsent > 0)
                 tr('{0} cambio(s) guardado(s) sin enviar', [unsent]),
               // Dicho aquí también, porque enviar se los lleva: cierra en un

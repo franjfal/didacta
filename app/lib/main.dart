@@ -8,11 +8,12 @@
 /// carpeta. Antes había que compilar una versión por repositorio, con su
 /// dueño, su nombre y la dirección de un Worker metidos en el binario.
 ///
-/// Lo único que se puede pasar al compilar es el Client ID de la OAuth App, y
-/// tampoco hace falta: se escribe en Ajustes y se guarda.
+/// Lo único que se puede pasar al compilar es el Client ID con el que se entra
+/// en GitHub (`didactaAppClientId`), y tampoco hace falta: el de Didacta ya va
+/// dentro, y otro se escribe en Ajustes y se guarda.
 ///
 ///     flutter build macos --release \
-///       --dart-define=DIDACTA_GITHUB_CLIENT=Iv1.xxxxxxxx
+///       --dart-define=DIDACTA_GITHUB_CLIENT=Iv23li…
 library;
 
 import 'dart:ui' show AppExitResponse, PlatformDispatcher;
@@ -31,7 +32,7 @@ import 'data/diagnostics.dart';
 import 'data/draft_store.dart';
 import 'data/legacy_identity.dart';
 import 'data/app_info.dart';
-import 'data/github.dart' show didactaAppClientId;
+import 'data/github.dart' show didactaAppClientId, retiredOAuthClientId;
 import 'data/catalogue_source.dart';
 import 'data/preferences.dart';
 import 'data/repository_access.dart';
@@ -55,27 +56,6 @@ import 'l10n/tr.dart';
 const String indexBase = String.fromEnvironment(
   'DIDACTA_INDEX',
   defaultValue: 'generated',
-);
-
-/// El Client ID de la OAuth App con la que se entra en GitHub.
-///
-/// **Va escrito aquí a propósito, y no es un descuido.** Un Client ID es
-/// público por definición: viaja en la URL de cada autorización, así que ya lo
-/// ve en la barra de direcciones cualquiera que entre. El secreto de una
-/// aplicación de OAuth es el *client secret*, y el device flow --que es el que
-/// usa Didacta-- no lo usa; existe justamente porque una aplicación de
-/// escritorio no puede esconder un secreto dentro de un binario que reparte.
-/// Lo hacen igual `gh`, VS Code y GitHub Desktop.
-///
-/// Lo que se gana es lo que decide si alguien llega a usar esto: al abrir
-/// Didacta por primera vez hay **un botón**, y no un campo pidiendo que te
-/// crees una aplicación de OAuth en GitHub antes de poder empezar.
-///
-/// Se puede cambiar sin recompilar --en Ajustes, o con la define-- para
-/// quien monte su propio despliegue.
-const String githubClientId = String.fromEnvironment(
-  'DIDACTA_GITHUB_CLIENT',
-  defaultValue: 'Ov23liZqSOY4xMvnXU4Z',
 );
 
 /// A clone already on disk, for a desktop build handed to someone who has
@@ -139,13 +119,10 @@ Future<void> main() async {
     preferences: StoredPreferences(
       defaultClonePath: '',
       defaultEnginePath: enginePath,
-      // La GitHub App, cuando existe; si no, la OAuth App de siempre. Y el de
-      // la OAuth App guardado al entrar deja de valer entonces: era el de
-      // salida, no uno elegido.
-      defaultClientId: didactaAppClientId.isNotEmpty
-          ? didactaAppClientId
-          : githubClientId,
-      replacedClientIds: [if (didactaAppClientId.isNotEmpty) githubClientId],
+      // La GitHub App. El de la OAuth App de antes, guardado al entrar, era
+      // el de salida y no uno elegido: deja de valer.
+      defaultClientId: didactaAppClientId,
+      replacedClientIds: const [retiredOAuthClientId],
     ),
     drafts: diskDrafts(),
   );
@@ -368,6 +345,17 @@ class _BootstrapState extends State<_Bootstrap> {
     return leave ? AppExitResponse.exit : AppExitResponse.cancel;
   }
 
+  /// Reconstruye todo el árbol: los textos no dependen de nada heredado
+  /// que les avise de que ha cambiado el idioma.
+  void _rebuildEverything(BuildContext context) {
+    void mark(Element element) {
+      element.markNeedsBuild();
+      element.visitChildren(mark);
+    }
+
+    (context as Element).visitChildren(mark);
+  }
+
   @override
   Widget build(BuildContext context) {
     // Solo lo que se pinta aquí arriba, y no la sesión entera: la raíz
@@ -377,6 +365,18 @@ class _BootstrapState extends State<_Bootstrap> {
     final textScale = context.select<Appearance, double>(
       (appearance) => appearance.textScale,
     );
+    // El idioma de la interfaz, antes de construir nada: `tr()` lo lee al
+    // pintar cada texto. Y si ha cambiado, todo lo que ya está en pantalla
+    // se vuelve a construir, sin perder lo que haya a medio escribir.
+    final language = context.select<Appearance, UiLanguage>(
+      (appearance) => appearance.uiLanguage,
+    );
+    if (language != uiLanguage) {
+      useUiLanguage(language);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _rebuildEverything(context);
+      });
+    }
     // La paleta va en el tema de cada `MaterialApp`: cambiar de modo es
     // cambiar el tema, y lo que la lee con `context.palette` se vuelve a
     // construir solo, sin perder lo que haya a medio escribir.
@@ -422,7 +422,7 @@ class _BootstrapState extends State<_Bootstrap> {
         themeAnimationDuration: Duration.zero,
         localizationsDelegates: didactaLocalizations,
         supportedLocales: didactaLocales,
-        locale: didactaLocale,
+        locale: uiLanguage.materialLocale,
         builder: scaledText(textScale),
         home: WelcomeScreen(
           session: session,
@@ -450,7 +450,7 @@ class _BootstrapState extends State<_Bootstrap> {
         themeAnimationDuration: Duration.zero,
         localizationsDelegates: didactaLocalizations,
         supportedLocales: didactaLocales,
-        locale: didactaLocale,
+        locale: uiLanguage.materialLocale,
         builder: scaledText(textScale),
         home: SignInGate(session: session),
       );
@@ -464,7 +464,7 @@ class _BootstrapState extends State<_Bootstrap> {
         themeAnimationDuration: Duration.zero,
         localizationsDelegates: didactaLocalizations,
         supportedLocales: didactaLocales,
-        locale: didactaLocale,
+        locale: uiLanguage.materialLocale,
         builder: scaledText(textScale),
         home: _LoadFailure(session: session),
       ),
@@ -525,7 +525,7 @@ class _BootstrapState extends State<_Bootstrap> {
         themeAnimationDuration: Duration.zero,
         localizationsDelegates: didactaLocalizations,
         supportedLocales: didactaLocales,
-        locale: didactaLocale,
+        locale: uiLanguage.materialLocale,
         routerConfig: _router,
         // Lo que va aquí está **por encima** del router, no por debajo: el
         // `builder` envuelve al `Router`, y go_router pone lo suyo más abajo,

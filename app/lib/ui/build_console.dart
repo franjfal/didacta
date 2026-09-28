@@ -344,11 +344,9 @@ class _Problems extends StatelessWidget {
       if (errors > 0) tr('Con errores: {0}', [outputs(errors)]),
       if (overflowing > 0)
         errors > 0
-            ? tr(
-                '{0} que se {1} '
-                'de la página',
-                [overflowing, overflowing == 1 ? 'sale' : 'salen'],
-              )
+            ? (overflowing == 1
+                  ? tr('1 que se sale de la página')
+                  : tr('{0} que se salen de la página', [overflowing]))
             : tr('Se salen de la página: {0}', [outputs(overflowing)]),
     ].join(' · ');
   }

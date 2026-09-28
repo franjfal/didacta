@@ -203,6 +203,10 @@ abstract class Preferences {
   /// De esta máquina, por lo mismo que [appearance]: el proyector del aula
   /// pide más que la pantalla del despacho.
   Future<double> textScale();
+
+  /// El idioma de la interfaz: `es`, `va`, `en` o `system`, el del sistema.
+  Future<String> uiLanguage();
+  Future<void> setUiLanguage(String value);
   Future<void> setTextScale(double value);
 
   /// Si el servidor MCP está encendido.
@@ -294,6 +298,7 @@ class StoredPreferences implements Preferences {
   static const String _tour = 'didacta.tour.done';
   static const String _appearance = 'didacta.appearance';
   static const String _textScale = 'didacta.textScale';
+  static const String _uiLanguage = 'didacta.ui.language';
   static const String _mcp = 'didacta.mcp.enabled';
   static const String _commitOnSave = 'didacta.clone.commitOnSave';
   static const String _review = 'didacta.save.review';
@@ -490,6 +495,15 @@ class StoredPreferences implements Preferences {
   @override
   Future<void> setTextScale(double value) async =>
       (await SharedPreferences.getInstance()).setDouble(_textScale, value);
+
+  @override
+  Future<String> uiLanguage() async =>
+      (await SharedPreferences.getInstance()).getString(_uiLanguage) ??
+      'system';
+
+  @override
+  Future<void> setUiLanguage(String value) async =>
+      (await SharedPreferences.getInstance()).setString(_uiLanguage, value);
 
   @override
   Future<List<String>> mcpWritable() async =>
@@ -878,6 +892,16 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setTextScale(double value) async => scale = value;
+
+  /// En castellano y no «el del sistema»: una prueba no puede pasar a inglés
+  /// porque el ordenador que la ejecuta esté en inglés.
+  String language = 'es';
+
+  @override
+  Future<String> uiLanguage() async => language;
+
+  @override
+  Future<void> setUiLanguage(String value) async => language = value;
 
   @override
   Future<bool> mcpEnabled() async => mcp;

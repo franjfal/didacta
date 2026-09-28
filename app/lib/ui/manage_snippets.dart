@@ -216,7 +216,9 @@ class _SnippetsManagerState extends State<SnippetsManager> {
               const SizedBox(height: 8),
               Text(
                 [
-                  '${library.length} snippets',
+                  library.length == 1
+                      ? tr('1 snippet')
+                      : tr('{0} snippets', [library.length]),
                   tr('{0} propios', [own]),
                   if (conflicts.isNotEmpty)
                     tr('{0} no coinciden', [conflicts.length]),
@@ -306,7 +308,9 @@ class _SnippetsManagerState extends State<SnippetsManager> {
           content: Text(
             written == 0
                 ? tr('No había nada que cambiar.')
-                : '$done ${written == 1 ? tr('en un repositorio') : tr('en {0} repositorios', [written])}.',
+                : written == 1
+                ? tr('{0} en un repositorio.', [done])
+                : tr('{0} en {1} repositorios.', [done, written]),
           ),
         ),
       );
@@ -1413,16 +1417,12 @@ class _SnippetEditorState extends State<SnippetEditor> {
           content: Text(
             written == 0
                 ? tr('No había nada que guardar.')
-                : tr(
-                    '«{0}» guardado '
-                    '{1}.',
-                    [
-                      snippet.label,
-                      written == 1
-                          ? tr('en un repositorio')
-                          : tr('en {0} repositorios', [written]),
-                    ],
-                  ),
+                : written == 1
+                ? tr('«{0}» guardado en un repositorio.', [snippet.label])
+                : tr('«{0}» guardado en {1} repositorios.', [
+                    snippet.label,
+                    written,
+                  ]),
           ),
         ),
       );
@@ -1593,7 +1593,7 @@ class _SnippetEditorState extends State<SnippetEditor> {
             ),
             ButtonSegment(
               value: SnippetShape.command,
-              label: Text(tr('Orden')),
+              label: Text(trAs('LaTeX', 'Orden')),
               icon: Icon(Icons.code, size: 15),
             ),
             ButtonSegment(
@@ -1649,7 +1649,7 @@ class _SnippetEditorState extends State<SnippetEditor> {
                 child: _Field(
                   key: const Key('snippet-command'),
                   controller: _command,
-                  label: tr('Orden'),
+                  label: trAs('LaTeX', 'Orden'),
                   mono: true,
                   prefix: r'\',
                 ),
@@ -1675,7 +1675,7 @@ class _SnippetEditorState extends State<SnippetEditor> {
                 key: const Key('snippet-aliases'),
                 controller: _aliases,
                 label: tr('Nombres heredados (opcional)'),
-                hint: tr(r'thrm, nthm, \onlybook'),
+                hint: r'thrm, nthm, \onlybook',
                 mono: true,
               ),
             ),
@@ -1839,17 +1839,15 @@ class _SnippetEditorState extends State<SnippetEditor> {
     final command = _command.text.trim().isEmpty
         ? 'miOrden'
         : _command.text.trim();
+    final title = _label.text.trim().isEmpty
+        ? tr('Título')
+        : _label.text.trim();
     return switch (_shape) {
       SnippetShape.command => '\\newcommand{\\$command}[1]{\\textbf{#1}}',
-      _ => tr(
-        '\\newenvironment{{0}}\n'
-        '  {\\par\\medskip\\noindent\\textbf{{1}.}\\ }\n'
-        '  {\\par\\medskip}',
-        [
-          environment,
-          _label.text.trim().isEmpty ? tr('Título') : _label.text.trim(),
-        ],
-      ),
+      _ =>
+        '\\newenvironment{$environment}\n'
+            '  {\\par\\medskip\\noindent\\textbf{$title.}\\ }\n'
+            '  {\\par\\medskip}',
     };
   }
 }

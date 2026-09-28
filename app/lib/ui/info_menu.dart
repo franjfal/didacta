@@ -296,7 +296,9 @@ class InfoMenu extends StatelessWidget {
     final many = session.freezesOf(place.course, place.year).length;
     return many == 0
         ? null
-        : tr('{0} guardada{1}', [many, many == 1 ? '' : 's']);
+        : many == 1
+        ? tr('1 guardada')
+        : tr('{0} guardadas', [many]);
   }
 }
 

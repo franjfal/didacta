@@ -66,18 +66,21 @@ class AppAccessMissing implements Exception {
   String get url => githubAppInstallUrl(didactaAppSlug);
 
   @override
-  String toString() => tr(
-    '{0} '
-    'Didacta no {1}: la '
-    'GitHub App no tiene acceso. Dáselo en GitHub ({2}): en cuanto lo '
-    'tenga, llega sin volver a entrar. Mientras tanto, lo de tu ordenador '
-    'se puede leer y guardar, pero no enviar.',
-    [
-      repos.length == 1 ? 'A ${repos.single}' : 'A ${repos.join(', ')}',
-      repos.length == 1 ? 'llega' : tr('llega a ninguno'),
-      url,
-    ],
-  );
+  String toString() => repos.length == 1
+      ? tr(
+          'A {0} Didacta no llega: la GitHub App no tiene acceso. Dáselo en '
+          'GitHub ({1}): en cuanto lo tenga, llega sin volver a entrar. '
+          'Mientras tanto, lo de tu ordenador se puede leer y guardar, pero '
+          'no enviar.',
+          [repos.single, url],
+        )
+      : tr(
+          'A {0} Didacta no llega a ninguno: la GitHub App no tiene acceso. '
+          'Dáselo en GitHub ({1}): en cuanto lo tenga, llega sin volver a '
+          'entrar. Mientras tanto, lo de tu ordenador se puede leer y '
+          'guardar, pero no enviar.',
+          [repos.join(', '), url],
+        );
 }
 
 class Repositories {
@@ -186,6 +189,10 @@ class Repositories {
           session.catalogueStore.forgetIndexFresh(repo.id);
           return session.ensureFresh(repo.id);
         },
+        // El índice, al día antes de confirmar, para que vaya en el mismo
+        // commit. Lo deja apuntado como comprobado, así que la recarga de
+        // después no lo vuelve a mirar.
+        refreshIndex: () => session.refreshIndex(only: repo.id, quiet: true),
         onUnsent: (unsent) => session.repoSync.noteUnsent(repo.id, unsent),
       );
     }

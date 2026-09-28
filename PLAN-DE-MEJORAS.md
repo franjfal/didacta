@@ -95,12 +95,12 @@ se hace, salvo lo que la §8 sigue diciendo que no. En este orden:
    opciones de las listas, y esos documentos salen sin etiquetar.
 7. ~~**Una GitHub App en lugar del token de `repo`**~~: permisos por
    repositorio y tokens que caducan y se renuevan solos. Las cuentas que ya
-   entraron con el token siguen funcionando. *El código, hecho* (D83). **Falta
-   registrar la App en github.com y poner su Client ID**: son los pasos de
-   «La GitHub App» en `docs/DISTRIBUTION.md`, y los tiene que dar su dueño.
-8. **La interfaz en castellano, valenciano e inglés**, *Idioma de Didacta* en
-   Apariencia, siguiendo al del sistema. Al final, porque toca cada texto de
-   la aplicación y así se toca una sola vez. **L**
+   entraron con el token siguen funcionando. *Hecho* (D83): la App es «Didacta App»
+   (`github.com/apps/didacta-app`), registrada el 28 de septiembre de 2026.
+8. ~~**La interfaz en castellano, valenciano e inglés**~~, *Idioma de
+   Didacta* en Apariencia, siguiendo al del sistema. *Hecho* (D84): cada texto
+   pasa por `tr()`, y `tests/test_l10n.py` no deja que uno nuevo se quede sin
+   decidir.
 
 ---
 

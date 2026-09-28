@@ -8,7 +8,6 @@ import 'package:path_provider/path_provider.dart';
 
 import '../model/toolchain.dart';
 import 'legacy_identity.dart';
-import '../l10n/tr.dart';
 
 /// La marca de que ya se trajo. Dentro de la carpeta de ahora: si alguien la
 /// borra entera, lo de antes se vuelve a traer, que es lo que querría.
@@ -61,7 +60,7 @@ String? legacyDataDirectory(Host host, Map<String, String> environment) {
       final home = environment['HOME'];
       return home == null
           ? null
-          : tr('{0}/Library/Application Support/{1}', [home, legacyBundleId]);
+          : '$home/Library/Application Support/$legacyBundleId';
     case Host.linux:
       final data = environment['XDG_DATA_HOME'];
       final home = environment['HOME'];

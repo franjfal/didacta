@@ -182,7 +182,7 @@ class RepoSync extends ChangeNotifier {
         );
         if (committed) done += 1;
         if (!committed) {
-          session.syncConsole.add('--- no había nada que confirmar');
+          session.syncConsole.add('--- ${tr('no había nada que confirmar')}');
         }
       } catch (thrown) {
         // Uno que falle no para a los demás, igual que al enviar: lo que se
@@ -369,22 +369,14 @@ class RepoSync extends ChangeNotifier {
   static String _describeDrift(CloneStatus status) {
     final pieces = [
       if (status.behind > 0)
-        tr(
-          '{0} {1} por '
-          'traer',
-          [status.behind, status.behind == 1 ? 'commit' : 'commits'],
-        ),
+        status.behind == 1
+            ? tr('1 commit por traer')
+            : tr('{0} commits por traer', [status.behind]),
       if (status.ahead > 0) tr('{0} sin enviar', [status.ahead]),
       if (status.dirtyPaths.isNotEmpty)
-        tr(
-          '{0} '
-          '{1} sin '
-          'guardar',
-          [
-            status.dirtyPaths.length,
-            status.dirtyPaths.length == 1 ? 'fichero' : 'ficheros',
-          ],
-        ),
+        status.dirtyPaths.length == 1
+            ? tr('1 fichero sin guardar')
+            : tr('{0} ficheros sin guardar', [status.dirtyPaths.length]),
     ];
     return pieces.join(', ');
   }
@@ -422,8 +414,8 @@ class RepoSync extends ChangeNotifier {
         // algo. Cuántos fueron ya lo dice git ahí arriba.
         session.syncConsole.add(
           before.head == after.head
-              ? '--- ya estaba al día'
-              : '--- ahora en ${after.head}',
+              ? '--- ${tr('ya estaba al día')}'
+              : '--- ${tr('ahora en {0}', [after.head])}',
         );
       } catch (thrown) {
         result[repo.id] = thrown;
@@ -437,7 +429,7 @@ class RepoSync extends ChangeNotifier {
     // segundos más. Cerrarlo al acabar el `pull` devolvería la aplicación a
     // la pantalla quieta que esto viene a quitar, justo antes del final.
     session.syncConsole.startStep(tr('releyendo el índice'));
-    session.syncConsole.add('--- releyendo el índice y el catálogo');
+    session.syncConsole.add('--- ${tr('releyendo el índice y el catálogo')}');
     forgetFreshness();
     await session.refreshAccess();
     // Todo lo de después de traer, una vez: el índice de cada repositorio
@@ -505,7 +497,9 @@ class RepoSync extends ChangeNotifier {
     final author = session.cloneAuthor;
     final boxes = await session.outbox();
     session.syncConsole.expect(boxes.length);
-    if (boxes.isEmpty) session.syncConsole.add('--- no había nada que enviar');
+    if (boxes.isEmpty) {
+      session.syncConsole.add('--- ${tr('no había nada que enviar')}');
+    }
 
     for (final box in boxes) {
       session.syncConsole.startStep(box.repo.label);
@@ -514,7 +508,7 @@ class RepoSync extends ChangeNotifier {
         // Nada confirmado aquí: lo que hay está sin guardar, y eso necesita
         // un mensaje que este camino no tiene.
         result[box.repo.id] = 0;
-        session.syncConsole.add('--- nada confirmado que enviar');
+        session.syncConsole.add('--- ${tr('nada confirmado que enviar')}');
         session.syncConsole.finishStep();
         continue;
       }

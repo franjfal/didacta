@@ -86,8 +86,12 @@ class YearPage extends StatelessWidget {
         PageHeader(
           title: '${course.title(session.language)} · $year',
           subtitle: [
-            '${entry.documents.length} documentos',
-            tr('{0} referencias', [references]),
+            entry.documents.length == 1
+                ? tr('1 documento')
+                : tr('{0} documentos', [entry.documents.length]),
+            references == 1
+                ? tr('1 referencia')
+                : tr('{0} referencias', [references]),
             if (entry.group != null) entry.group!,
             tr('idioma {0}', [entry.language]),
           ].join(' · '),
@@ -145,13 +149,20 @@ class YearPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(12),
             child: Note(
-              tr(
-                '{0} referencia(s) de esta composición no apuntan a ninguna '
-                'unidad del catálogo. Se muestran en su sitio, no se omiten: una '
-                'composición que se salta lo que falta parece completa y compila '
-                'corta.',
-                [broken],
-              ),
+              broken == 1
+                  ? tr(
+                      'Una referencia de esta composición no apunta a ninguna '
+                      'unidad del catálogo. Se muestra en su sitio, no se '
+                      'omite: una composición que se salta lo que falta parece '
+                      'completa y compila corta.',
+                    )
+                  : tr(
+                      '{0} referencias de esta composición no apuntan a '
+                      'ninguna unidad del catálogo. Se muestran en su sitio, no '
+                      'se omiten: una composición que se salta lo que falta '
+                      'parece completa y compila corta.',
+                      [broken],
+                    ),
               tone: context.palette.teacher,
             ),
           ),
@@ -160,18 +171,26 @@ class YearPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             child: Note(
-              tr(
-                '{0} referencia(s) de este curso llaman a '
-                'lecciones de otro repositorio. Compilan aquí, donde están los '
-                'dos abiertos, y no compilan para quien solo tenga uno.\n\n'
-                '{1}'
-                '{2}',
-                [
-                  crossing.length,
-                  crossing.take(3).join('\n'),
-                  crossing.length > 3 ? '\n…' : '',
-                ],
-              ),
+              crossing.length == 1
+                  ? tr(
+                      'Una referencia de este curso llama a una lección de otro '
+                      'repositorio. Compila aquí, donde están los dos '
+                      'abiertos, y no compila para quien solo tenga uno.\n\n'
+                      '{0}',
+                      [crossing.single],
+                    )
+                  : tr(
+                      '{0} referencias de este curso llaman a lecciones de '
+                      'otro repositorio. Compilan aquí, donde están los dos '
+                      'abiertos, y no compilan para quien solo tenga uno.\n\n'
+                      '{1}'
+                      '{2}',
+                      [
+                        crossing.length,
+                        crossing.take(3).join('\n'),
+                        crossing.length > 3 ? '\n…' : '',
+                      ],
+                    ),
               tone: context.palette.teacher,
             ),
           ),
@@ -1697,7 +1716,7 @@ class _BlockBar extends StatelessWidget {
           ),
         ),
         _BlockChoice(
-          label: 'todos',
+          label: tr('todos'),
           selected: chosen == null,
           onTap: () => onChanged(null),
         ),

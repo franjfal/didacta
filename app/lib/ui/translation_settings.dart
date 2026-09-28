@@ -468,7 +468,7 @@ class _ApertiumCardState extends State<_ApertiumCard> {
                 onSubmitted: (_) => _set(true),
                 decoration: InputDecoration(
                   labelText: tr('Servidor (opcional)'),
-                  hintText: 'https://apertium.org/apy, o el tuyo',
+                  hintText: tr('https://apertium.org/apy, o el tuyo'),
                   isDense: true,
                 ),
               ),

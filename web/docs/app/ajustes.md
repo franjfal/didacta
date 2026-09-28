@@ -537,6 +537,19 @@ Se recuerda en cada ordenador por separado, y no viaja con las demás
 preferencias: la pantalla del despacho y la del portátil en el aula no tienen
 por qué querer lo mismo.
 
+### Idioma de Didacta { #idioma-de-didacta }
+
+**Castellano, valenciano o inglés**, o **el del sistema**, que es lo que
+viene: si el ordenador está en catalán o en valenciano, Didacta sale en
+valenciano; en inglés, en inglés; en cualquier otro, en castellano. Cambia al
+momento, sin cerrar nada.
+
+Es el idioma de **la aplicación**, no el del material. Quien trabaja con
+Didacta en valenciano sigue preparando los apuntes en castellano y en inglés,
+y el idioma que se mira en la biblioteca se elige arriba, como siempre.
+
+Como el modo, es de cada ordenador.
+
 ### Tamaño del texto { #tamano-del-texto }
 
 **Más grande o más pequeño**, del 85 % al 150 %, para el proyector del aula o

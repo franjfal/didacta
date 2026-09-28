@@ -213,10 +213,7 @@ class McpService extends ChangeNotifier {
           'url': where,
           // Sin él no contesta. Cambia cada vez que se enciende, como el
           // puerto, así que se vuelve a copiar después de reiniciar.
-          if (token != null)
-            'headers': {
-              'Authorization': tr('Bearer {0}', [token]),
-            },
+          if (token != null) 'headers': {'Authorization': 'Bearer $token'},
         },
       },
     });

@@ -192,7 +192,10 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
     final rest = documents.length - titles.length;
     if (rest > 0) return tr('{0} y {1} más', [titles.join(', '), rest]);
     if (titles.length == 1) return titles.single;
-    return '${titles.sublist(0, titles.length - 1).join(', ')} y ${titles.last}';
+    return tr('{0} y {1}', [
+      titles.sublist(0, titles.length - 1).join(', '),
+      titles.last,
+    ]);
   }
 
   @override
@@ -201,8 +204,9 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
     final behind = _behind;
     return AlertDialog(
       title: Text(
-        '${widget.publishTo == null ? tr('Exportar') : tr('Publicar')} '
-        '${widget.course.title()} · ${widget.year}',
+        widget.publishTo == null
+            ? tr('Exportar {0} · {1}', [widget.course.title(), widget.year])
+            : tr('Publicar {0} · {1}', [widget.course.title(), widget.year]),
       ),
       content: SizedBox(
         width: 600,
@@ -500,8 +504,9 @@ class _ExportYearDialogState extends State<ExportYearDialog> {
                 )
               : null,
           child: Text(
-            '${widget.publishTo == null ? tr('Exportar') : tr('Publicar')} '
-            '${_documents.length}',
+            widget.publishTo == null
+                ? tr('Exportar {0}', [_documents.length])
+                : tr('Publicar {0}', [_documents.length]),
           ),
         ),
       ],

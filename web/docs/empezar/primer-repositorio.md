@@ -39,18 +39,23 @@ Al pulsar **Entrar en GitHub** pasa esto:
     en el llavero del sistema --Keychain en macOS, Credential Manager en
     Windows, Secret Service en Linux-- y nunca en un fichero ni en un log.
 
-    Los permisos que se piden son `repo` y `workflow`, y nada más: leer y
-    escribir tus repositorios, y poder añadirles el workflow que compila el
-    material en GitHub. Sin `delete_repo`, sin `admin`, sin `user`.
+    Didacta entra con su **GitHub App**, «Didacta App», y llega **solo a
+    los repositorios que eliges**, no a todos los tuyos. Lo que puede hacer
+    en ellos: leer y escribir el material, añadir el workflow que lo compila
+    en GitHub y crear un repositorio nuevo cuando se lo pides. De tu cuenta,
+    solo el correo, para firmar los cambios.
 
-!!! note "Si Didacta entra como GitHub App"
+!!! note "La primera vez: instalarla"
 
-    Entonces GitHub te pide también **instalarla** la primera vez, y eliges a
-    qué repositorios llega: solo a esos, y no a todos los tuyos. Para añadir
-    otro después, *Dar acceso a otro* al añadir un repositorio, o *Elegir
-    repositorios en GitHub* en Ajustes → Cuenta y repositorios. La sesión
-    caduca cada ocho horas y se renueva sola; solo hay que volver a entrar
-    si pasan seis meses sin abrir Didacta.
+    Después de autorizar, GitHub te pide **instalar** Didacta App en tu
+    cuenta y elegir a qué repositorios llega. Para añadir otro después, *Dar
+    acceso a otro* al añadir un repositorio, o *Elegir repositorios en
+    GitHub* en Ajustes → Cuenta y repositorios. La sesión caduca cada ocho
+    horas y se renueva sola; solo hay que volver a entrar si pasan seis meses
+    sin abrir Didacta.
+
+    Si habías entrado con una versión anterior, Didacta te pide entrar otra
+    vez: la aplicación de GitHub de antes ya no existe.
 
 Una vez dentro, **Didacta se abre también sin conexión**. Lo que se exige es
 haber entrado alguna vez, no estar conectado ahora: un aula sin wifi no puede

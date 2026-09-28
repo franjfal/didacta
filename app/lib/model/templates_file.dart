@@ -176,10 +176,10 @@ class TemplatesFile {
         for (final code in languages)
           if (!kept.containsKey(code)) '      # TODO: $code',
       ],
-      tr('    class: {0}', [documentClass.trim()]),
+      '    class: ${documentClass.trim()}',
       if (classOptions.trim().isNotEmpty)
-        tr('    options: {0}', [_quote(classOptions.trim())]),
-      if (pairs.isNotEmpty) tr('    axes: {{0}}', [pairs.join(', ')]),
+        '    options: ${_quote(classOptions.trim())}',
+      if (pairs.isNotEmpty) '    axes: {${pairs.join(', ')}}',
     ];
 
     final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'templates');
@@ -221,7 +221,7 @@ class TemplatesFile {
     _lines.removeRange(template.firstLine, end + 1);
     if (ids.isEmpty) {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'templates');
-      if (at >= 0) _lines[at] = tr('templates: []');
+      if (at >= 0) _lines[at] = 'templates: []';
     }
   }
 

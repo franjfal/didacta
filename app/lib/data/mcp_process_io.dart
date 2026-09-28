@@ -166,7 +166,7 @@ class _Session implements McpSession {
           Uri.parse(url),
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': tr('Bearer {0}', [token]),
+            'Authorization': 'Bearer $token',
           },
           body: jsonEncode({
             'jsonrpc': '2.0',

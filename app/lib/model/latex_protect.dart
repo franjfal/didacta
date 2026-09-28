@@ -36,7 +36,6 @@
 library;
 
 import 'tex_scan.dart';
-import '../l10n/tr.dart';
 
 /// Comandos cuyo argumento es prosa que se lee en el PDF.
 ///
@@ -273,7 +272,7 @@ class ProtectedSegment {
 
   static final RegExp _tag = RegExp(r'<x id="(\d+)"/>');
 
-  static String tagFor(int index) => tr('<x id="{0}"/>', [index]);
+  static String tagFor(int index) => '<x id="$index"/>';
 }
 
 /// Si una pieza iba pegada o separada de lo que tenía a cada lado.

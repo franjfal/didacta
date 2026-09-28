@@ -172,7 +172,7 @@ void main() {
       },
     );
 
-    expect(find.textContaining('1 diapositivas'), findsOneWidget);
+    expect(find.textContaining('1 diapositiva'), findsOneWidget);
     // Con diapositivas, marcar lo que no se proyecta significa algo y sale
     // encendido.
     final toggle = tester.widget<Switch>(find.byKey(const Key('source-dim')));

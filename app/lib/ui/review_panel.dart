@@ -266,12 +266,13 @@ class _ReviewDialogState extends State<ReviewDialog> {
   );
 
   static String _summary(ReviewReport report) {
-    String plural(int n, String one, String many) => n == 1 ? one : many;
     final parts = [
       if (report.errors > 0)
-        '${report.errors} ${plural(report.errors, 'error', 'errores')}',
+        report.errors == 1 ? tr('1 error') : tr('{0} errores', [report.errors]),
       if (report.warnings > 0)
-        '${report.warnings} ${plural(report.warnings, 'aviso', 'avisos')}',
+        report.warnings == 1
+            ? tr('1 aviso')
+            : tr('{0} avisos', [report.warnings]),
     ];
     return parts.isEmpty ? tr('Todo en orden') : parts.join(' · ');
   }

@@ -61,7 +61,9 @@ class CatalogueEditor {
   }) async {
     final path = conflict.path;
     if (path == null) {
-      throw ArgumentError(tr('no sé dónde se escribe «{0}»', [conflict.field]));
+      throw ArgumentError(
+        tr('no sé dónde se escribe «{0}»', [conflict.fieldLabel]),
+      );
     }
     final where = 'courses/${conflict.course}/course.yaml';
     var written = 0;
@@ -86,7 +88,10 @@ class CatalogueEditor {
         path: where,
         text: patch.result,
         sha: file.sha,
-        message: tr('Igualar {0} de {1}', [conflict.field, conflict.course]),
+        message: tr('Igualar {0} de {1}', [
+          conflict.fieldLabel,
+          conflict.course,
+        ]),
       );
       written += 1;
     }
@@ -1474,7 +1479,7 @@ class CatalogueEditor {
       sha = file.sha;
     } on ContentException catch (error) {
       if (error.kind != ContentFailure.missing) rethrow;
-      text = tr('# Metadatos de la unidad.\nlanguages:\n');
+      text = '# Metadatos de la unidad.\nlanguages:\n';
     }
 
     // Se escribe también el `true`, aunque sea el valor por defecto: quien
@@ -1744,7 +1749,7 @@ class CatalogueEditor {
       if (error.kind != ContentFailure.missing) rethrow;
       // Una unidad migrada puede no tener metadatos todavía. Se crean con lo
       // único que se está diciendo; lo demás sigue deduciéndose del disco.
-      text = tr('# Metadatos de la unidad.\nlanguages:\n');
+      text = '# Metadatos de la unidad.\nlanguages:\n';
     }
 
     final patch = YamlPatch(text)

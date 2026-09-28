@@ -154,13 +154,31 @@ class GitHubUser {
   }
 }
 
-/// El Client ID de la GitHub App de Didacta, con la que se entra por defecto
-/// cuando existe. Vacío mientras no está registrada: entonces se entra con
-/// la OAuth App de siempre. Ver «La GitHub App» en `docs/DISTRIBUTION.md`.
+/// El Client ID con el que se entra en GitHub: el de la GitHub App de
+/// Didacta, «Didacta App», de `franjfal`. Ver «La GitHub App» en
+/// `docs/DISTRIBUTION.md`.
+///
+/// **Va escrito aquí a propósito, y no es un descuido.** Un Client ID es
+/// público por definición: viaja en cada autorización, así que ya lo ve
+/// cualquiera que entre. El secreto de una aplicación es el *client secret*,
+/// y el device flow --que es el que usa Didacta-- no lo usa; existe
+/// justamente porque una aplicación de escritorio no puede esconder un
+/// secreto dentro de un binario que reparte. Lo hacen igual `gh`, VS Code y
+/// GitHub Desktop. Lo que se gana es que al abrir Didacta por primera vez hay
+/// **un botón**, y no un campo pidiendo que te crees una aplicación en GitHub.
+///
+/// Se puede cambiar sin recompilar --en Ajustes, o con
+/// `--dart-define=DIDACTA_GITHUB_CLIENT=`-- para quien monte su propio
+/// despliegue, con su GitHub App o con una OAuth App.
 const String didactaAppClientId = String.fromEnvironment(
-  'DIDACTA_GITHUB_APP_CLIENT',
-  defaultValue: '',
+  'DIDACTA_GITHUB_CLIENT',
+  defaultValue: 'Iv23liumW0l1zC8E4XxB',
 );
+
+/// El de la OAuth App con la que se entraba antes de la GitHub App, que ya no
+/// existe. Guardado en las preferencias, cuenta como no elegido: al leerlo
+/// vale [didactaAppClientId], y la próxima entrada es con la App.
+const String retiredOAuthClientId = 'Ov23liZqSOY4xMvnXU4Z';
 
 /// Su nombre corto en GitHub: el de `github.com/apps/<nombre>`, que es donde
 /// se eligen los repositorios a los que llega.
@@ -368,7 +386,7 @@ class GitHubApi {
 
   Map<String, String> get _headers => {
     'Accept': 'application/vnd.github+json',
-    'Authorization': tr('Bearer {0}', [token]),
+    'Authorization': 'Bearer $token',
     'X-GitHub-Api-Version': '2022-11-28',
   };
 

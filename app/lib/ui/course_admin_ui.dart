@@ -163,7 +163,10 @@ Future<bool> runAdminIn(
             content: Text(
               admins.length == 1
                   ? status.problem ?? tr('No se puede.')
-                  : 'En ${name(entry.repo)}: ${status.problem ?? tr('no se puede.')}',
+                  : tr('En {0}: {1}', [
+                      name(entry.repo),
+                      status.problem ?? tr('no se puede.'),
+                    ]),
             ),
             duration: const Duration(seconds: 6),
           ),
@@ -388,13 +391,23 @@ class _RemovalDialogState extends State<_RemovalDialog> {
                             ),
                             tr('cursos académicos'),
                           ),
-                          _count(preview.documents, 'documento', 'documentos'),
+                          _count(
+                            preview.documents,
+                            tr('documento'),
+                            tr('documentos'),
+                          ),
                         ],
                       )
                     : tr(
                         'Esto se lleva '
                         '{0}.',
-                        [_count(preview.documents, 'documento', 'documentos')],
+                        [
+                          _count(
+                            preview.documents,
+                            tr('documento'),
+                            tr('documentos'),
+                          ),
+                        ],
                       ),
                 style: const TextStyle(
                   fontSize: 13.5,

@@ -23,7 +23,6 @@
 library;
 
 import 'translation_run.dart' show TermCheck;
-import '../l10n/tr.dart';
 
 /// Dónde vive el glosario dentro de un repositorio.
 const String glossaryPath = 'translation/glossary.tsv';
@@ -93,13 +92,9 @@ class Glossary {
 
   String toTsv() {
     final out = StringBuffer()
-      ..writeln(
-        tr('# Glosario de traducción: un término por fila, un idioma por'),
-      )
-      ..writeln(tr('# columna, separados por tabuladores. Se edita en Didacta'))
-      ..writeln(
-        tr('# (Ajustes → Traducción automática) o en una hoja de cálculo.'),
-      )
+      ..writeln('# Glosario de traducción: un término por fila, un idioma por')
+      ..writeln('# columna, separados por tabuladores. Se edita en Didacta')
+      ..writeln('# (Ajustes → Traducción automática) o en una hoja de cálculo.')
       ..writeln(languages.join('\t'));
     for (final term in terms) {
       out.writeln([for (final code in languages) term[code] ?? ''].join('\t'));

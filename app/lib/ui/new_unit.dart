@@ -641,17 +641,15 @@ class _MoveUnitDialogState extends State<MoveUnitDialog> {
                       'Ningún documento la usa. Su id y sus traducciones no '
                       'cambian.',
                     )
-                  : tr(
-                      'Se reescribirá{0} {1} '
-                      'documento{2} que la '
-                      'usa{3}, en el mismo '
+                  : documents == 1
+                  ? tr(
+                      'Se reescribirá 1 documento que la usa, en el mismo '
                       'cambio. Su id y sus traducciones no cambian.',
-                      [
-                        documents == 1 ? '' : 'n',
-                        documents,
-                        documents == 1 ? '' : 's',
-                        documents == 1 ? '' : 'n',
-                      ],
+                    )
+                  : tr(
+                      'Se reescribirán {0} documentos que la usan, en el '
+                      'mismo cambio. Su id y sus traducciones no cambian.',
+                      [documents],
                     ),
               key: const Key('move-unit-uses'),
               style: TextStyle(fontSize: 13, color: context.palette.muted),
@@ -660,7 +658,7 @@ class _MoveUnitDialogState extends State<MoveUnitDialog> {
               const SizedBox(height: 8),
               Text(
                 courses.length == 1
-                    ? 'En ${courses.single}.'
+                    ? tr('En {0}.', [courses.single])
                     : tr(
                         'En {0} cursos: '
                         '{1}. El cambio les llega a '
@@ -716,7 +714,7 @@ String _listed(List<String> items) {
     return tr('{0} y {1} más', [items.take(5).join(', '), items.length - 5]);
   }
   if (items.length == 1) return items.single;
-  return '${items.take(items.length - 1).join(', ')} y ${items.last}';
+  return tr('{0} y {1}', [items.take(items.length - 1).join(', '), items.last]);
 }
 
 /// Los tipos que acepta el motor, en el orden en que se ofrecen.

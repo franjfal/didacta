@@ -49,11 +49,26 @@ CONST_TEXTS = [
 ]
 
 
+def _literals(source: str):
+    """Cada literal de [source], como `(crudo, cuerpo)`. Un escape no cierra
+    la cadena: `'l\\'aula'` es una sola; en una cruda, sí."""
+    i = 0
+    while True:
+        match = re.compile(r"(r?)('''|\"\"\"|'|\")").search(source, i)
+        if not match:
+            return
+        raw, quote = match.groups()
+        j = match.end()
+        while j < len(source) and not source.startswith(quote, j):
+            j += 2 if source[j] == "\\" and not raw else 1
+        yield raw, source[match.end():j]
+        i = j + len(quote)
+
+
 def decode(literal: str) -> str:
     """El valor de uno o varios literales de Dart pegados."""
     out = []
-    for match in re.finditer(r"(r?)('''|\"\"\"|'|\")(.*?)\2", literal, re.S):
-        raw, _, body = match.groups()
+    for raw, body in _literals(literal):
         if raw:
             out.append(body)
             continue
@@ -141,7 +156,10 @@ TR_CALL = re.compile(r"(?<![\w.])tr\(\s*" + LIT.replace("\\n]", "]")
 
 def tr_keys(path: str, src: str):
     clean = strip_comments(src)
-    for match in re.finditer(r"(?<![\w.])tr\(\s*", clean):
+    # `tr('…')`, o `trAs('sentido', '…')`, cuya clave es `…@sentido`.
+    for match in re.finditer(r"(?<![\w.])(?:tr\(|trAs\(\s*'([^']*)',)\s*",
+                             clean):
+        sense = match.group(1)
         j = match.end()
         pieces = []
         while True:
@@ -161,7 +179,8 @@ def tr_keys(path: str, src: str):
             j = k + rest.end()
         if pieces:
             line = src.count("\n", 0, match.start()) + 1
-            yield decode("".join(pieces)), line
+            key = decode("".join(pieces))
+            yield (key if sense is None else "%s@%s" % (key, sense)), line
 
 
 def extract() -> dict:
@@ -212,6 +231,9 @@ def build() -> int:
             "mano." % language,
             "library;",
             "",
+            "// Lo escribe el generador, una entrada por línea: que `dart format`",
+            "// no lo reparta, o dejaría de estar al día sin haber cambiado.",
+            "// dart format off",
             "const Map<String, String> %sStrings = {" % language,
         ]
         for key in keys:

@@ -400,22 +400,22 @@ class _MacInstaller extends _DesktopInstaller {
 
     await _checkSignature(newBundle.path, target);
 
-    final script = tr(
-      '''
+    final script =
+        '''
 #!/bin/sh
-# Sustituye Didacta cuando el proceso {0} termine. Lo escribe la propia
+# Sustituye Didacta cuando el proceso $pid termine. Lo escribe la propia
 # aplicación y lo ejecuta fuera de ella: un .app no puede reemplazarse a sí
 # mismo mientras corre.
 set -u
 
-TARGET={1}
-NEW={2}
+TARGET=${_DesktopInstaller.sh(target)}
+NEW=${_DesktopInstaller.sh(newBundle.path)}
 BACKUP="\$TARGET.didacta-anterior"
-STAGING={3}
+STAGING=${_DesktopInstaller.sh(staging)}
 
 # Esperar a que cierre, con tope: si no termina en 60 s, no se toca nada.
 i=0
-while kill -0 {4} 2>/dev/null; do
+while kill -0 $pid 2>/dev/null; do
   i=\$((i + 1))
   [ \$i -gt 600 ] && exit 1
   sleep 0.1
@@ -434,15 +434,7 @@ fi
 
 open "\$TARGET"
 rm -rf "\$STAGING"
-''',
-      [
-        pid,
-        _DesktopInstaller.sh(target),
-        _DesktopInstaller.sh(newBundle.path),
-        _DesktopInstaller.sh(staging),
-        pid,
-      ],
-    );
+''';
     await _writeScript(staging, 'instalar.sh', script);
   }
 
@@ -504,20 +496,20 @@ class _WindowsInstaller extends _DesktopInstaller {
     // El instalador es un ejecutable firmado (cuando haya certificado) y ya
     // sabe sustituir ficheros en uso. Lo único que hace falta de este lado es
     // esperar a que Didacta cierre y volver a abrirla después.
-    final script = tr(
-      '''
+    final script =
+        '''
 @echo off
-rem Actualiza Didacta cuando el proceso {0} termine.
+rem Actualiza Didacta cuando el proceso $pid termine.
 setlocal
 
-set "INSTALADOR={1}"
-set "APP={2}"
-set "REGISTRO={3}\\instalacion.log"
+set "INSTALADOR=${update.path}"
+set "APP=$executable"
+set "REGISTRO=$staging\\instalacion.log"
 
 rem Esperar a que cierre, con tope de 60 s.
 set /a intentos=0
 :esperar
-tasklist /FI "PID eq {4}" 2>nul | find "{5}" >nul
+tasklist /FI "PID eq $pid" 2>nul | find "$pid" >nul
 if errorlevel 1 goto instalar
 set /a intentos+=1
 if %intentos% GEQ 60 goto abrir
@@ -531,9 +523,7 @@ rem /SILENT: sin preguntas. Instalación por usuario, sin administrador.
 :abrir
 start "" "%APP%"
 endlocal
-''',
-      [pid, update.path, executable, staging, pid, pid],
-    );
+''';
     await _writeScript(staging, 'instalar.cmd', script);
   }
 }
@@ -593,18 +583,18 @@ class _LinuxInstaller extends _DesktopInstaller {
     }
 
     final staging = File(update.path).parent.path;
-    final script = tr(
-      '''
+    final script =
+        '''
 #!/bin/sh
-# Sustituye el AppImage cuando el proceso {0} termine.
+# Sustituye el AppImage cuando el proceso $pid termine.
 set -u
 
-TARGET={1}
-NEW={2}
-STAGING={3}
+TARGET=${_DesktopInstaller.sh(target)}
+NEW=${_DesktopInstaller.sh(update.path)}
+STAGING=${_DesktopInstaller.sh(staging)}
 
 i=0
-while kill -0 {4} 2>/dev/null; do
+while kill -0 $pid 2>/dev/null; do
   i=\$((i + 1))
   [ \$i -gt 600 ] && exit 1
   sleep 0.1
@@ -629,15 +619,7 @@ fi
 
 "\$TARGET" >/dev/null 2>&1 &
 rm -rf "\$STAGING"
-''',
-      [
-        pid,
-        _DesktopInstaller.sh(target),
-        _DesktopInstaller.sh(update.path),
-        _DesktopInstaller.sh(staging),
-        pid,
-      ],
-    );
+''';
     await _writeScript(staging, 'instalar.sh', script);
   }
 }

@@ -710,8 +710,11 @@ class _GitClone implements LocalClone {
     // `add -A -- <rutas>` recoge lo nuevo, lo cambiado y lo borrado dentro
     // de esas rutas, que es lo que hace falta: una asignatura que se va son
     // borrados, y una que se crea son ficheros nuevos.
-    final plural = known.length == 1 ? 'ruta' : 'rutas';
-    onProgress?.call(tr('\$ git add -A -- {0} {1}', [known.length, plural]));
+    onProgress?.call(
+      known.length == 1
+          ? tr('\$ git add -A -- 1 ruta')
+          : tr('\$ git add -A -- {0} rutas', [known.length]),
+    );
     await _run(['add', '-A', '--', ...known], what: tr('preparar los cambios'));
 
     final staged = await _text([
@@ -1510,16 +1513,25 @@ Future<String> _runIn(
   if (timedOut) {
     throw CloneException(
       network
-          ? 'git no terminó de $what en ${_describe(limit)} y lo he parado. '
-                'Suele ser la red: vuelve a intentarlo cuando vaya bien.'
-          : 'git no terminó de $what en ${_describe(limit)} y lo he parado.',
+          ? tr(
+              'git no terminó de {0} en {1} y lo he parado. '
+              'Suele ser la red: vuelve a intentarlo cuando vaya bien.',
+              [what, _describe(limit)],
+            )
+          : tr('git no terminó de {0} en {1} y lo he parado.', [
+              what,
+              _describe(limit),
+            ]),
       stderr: _redact(err.toString().trim(), token),
+      // Lo dice aquí y no el texto: el mensaje sale en el idioma de la
+      // interfaz, y [classifyGit] solo lee el inglés de git.
+      kind: network ? CloneFailure.offline : null,
     );
   }
 
   if (code != 0) {
     throw CloneException(
-      'git falló al $what (código $code).',
+      tr('git falló al {0} (código {1}).', [what, code]),
       stderr: _redact(err.toString().trim(), token),
     );
   }
@@ -1528,7 +1540,7 @@ Future<String> _runIn(
 
 String _describe(Duration limit) => limit.inMinutes >= 1
     ? tr('{0} min', [limit.inMinutes])
-    : '${limit.inSeconds} s';
+    : tr('{0} s', [limit.inSeconds]);
 
 /// Removes the token from anything about to be shown or logged.
 ///

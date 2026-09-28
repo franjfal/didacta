@@ -72,7 +72,7 @@ List<String> toolDirectories({String? texPath}) {
     final local = Platform.environment['LOCALAPPDATA'] ?? '';
     found.addAll([
       r'C:\Program Files\Git\cmd',
-      tr(r'C:\Program Files\Git\bin'),
+      r'C:\Program Files\Git\bin',
       if (local.isNotEmpty) ...[
         '$local\\Programs\\Git\\cmd',
         '$local\\Microsoft\\WindowsApps',

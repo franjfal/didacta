@@ -329,7 +329,7 @@ class _EventRow extends StatelessWidget {
           if (event.writes)
             Padding(
               padding: EdgeInsets.only(left: 6),
-              child: _Pill(label: 'escribe', tone: context.palette.teacher),
+              child: _Pill(label: tr('escribe'), tone: context.palette.teacher),
             ),
           if (event.milliseconds != null)
             Padding(
@@ -469,7 +469,7 @@ class _ToolTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           if (tool.writes)
-            _Pill(label: 'escribe', tone: context.palette.teacher),
+            _Pill(label: tr('escribe'), tone: context.palette.teacher),
         ],
       ),
       subtitle: Text(
@@ -499,7 +499,7 @@ class _ToolTile extends StatelessWidget {
                     ),
                     if (argument.required)
                       TextSpan(
-                        text: ' obligatorio',
+                        text: tr(' obligatorio'),
                         style: TextStyle(
                           fontSize: 10,
                           color: context.palette.teacher,

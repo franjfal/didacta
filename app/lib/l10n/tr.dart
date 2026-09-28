@@ -16,7 +16,8 @@
 ///
 /// Las traducciones están en `l10n/va.json` y `l10n/en.json`, de donde
 /// `tool/l10n.py` escribe `catalog_va.dart` y `catalog_en.dart`. Qué falta por
-/// traducir lo dice `test/l10n_test.dart`.
+/// traducir lo dice `tool/l10n.py missing`, y `tests/test_l10n.py` no deja
+/// pasar un texto nuevo sin su traducción. Cómo se traduce: `l10n/GUIDE.md`.
 ///
 /// No es el idioma del material --el que se mira en la biblioteca--: una
 /// profesora que trabaja la interfaz en valenciano prepara igual los apuntes
@@ -73,13 +74,22 @@ UiLanguage uiLanguageFor(Locale system) => switch (system.languageCode) {
 };
 
 /// [source], en el idioma de la interfaz, con [args] en sus marcadores.
-String tr(String source, [List<Object?> args = const []]) {
+String tr(String source, [List<Object?> args = const []]) =>
+    _translate(source, source, args);
+
+/// Como [tr], para un texto castellano que en otro idioma se dice distinto
+/// según de qué hable: «Orden» de la biblioteca es *Order*, y el de LaTeX,
+/// *Command*. [sense] lo separa: la clave es `Orden@LaTeX`.
+String trAs(String sense, String source, [List<Object?> args = const []]) =>
+    _translate('$source@$sense', source, args);
+
+String _translate(String key, String source, List<Object?> args) {
   final table = switch (_current) {
     UiLanguage.va => vaStrings,
     UiLanguage.en => enStrings,
     UiLanguage.es => null,
   };
-  var text = table?[source] ?? source;
+  var text = table?[key] ?? source;
   for (var index = 0; index < args.length; index += 1) {
     text = text.replaceAll('{$index}', '${args[index]}');
   }

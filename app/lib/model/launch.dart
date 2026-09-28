@@ -179,11 +179,8 @@ List<LaunchCommand> trashFolderLaunches({
     LaunchCommand('/usr/bin/trash', [folder]),
     LaunchCommand('osascript', [
       '-e',
-      tr(
-        'tell application "Finder" to delete '
-        '(POSIX file {0} as alias)',
-        [_appleScriptString(folder)],
-      ),
+      'tell application "Finder" to delete '
+          '(POSIX file ${_appleScriptString(folder)} as alias)',
     ]),
   ],
   Host.windows => [
@@ -191,13 +188,10 @@ List<LaunchCommand> trashFolderLaunches({
       '-NoProfile',
       '-NonInteractive',
       '-Command',
-      tr(
-        'Add-Type -AssemblyName Microsoft.VisualBasic; '
-        '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory('
-        "{0}, "
-        "'OnlyErrorDialogs', 'SendToRecycleBin')",
-        [_powerShellString(folder.replaceAll('/', r'\'))],
-      ),
+      'Add-Type -AssemblyName Microsoft.VisualBasic; '
+          '[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory('
+          "${_powerShellString(folder.replaceAll('/', r'\'))}, "
+          "'OnlyErrorDialogs', 'SendToRecycleBin')",
     ]),
   ],
   Host.linux => [

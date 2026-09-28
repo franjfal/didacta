@@ -2278,8 +2278,9 @@ class _UnitColumn extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${shown.length} '
-                  '${shown.length == 1 ? 'unidad' : 'unidades'}',
+                  shown.length == 1
+                      ? tr('1 unidad')
+                      : tr('{0} unidades', [shown.length]),
                   style: TextStyle(
                     fontSize: 11.5,
                     color: context.palette.muted,
@@ -2903,12 +2904,12 @@ class _SearchResults extends StatelessWidget {
     final nearNote = near.isEmpty
         ? ''
         : near.length == found.length
-        ? tr(
-            ' · ninguna tal cual, se parece{0} '
-            'a lo que buscas',
-            [near.length == 1 ? '' : 'n'],
-          )
-        : tr(' · {0} parecida{1}', [near.length, near.length == 1 ? '' : 's']);
+        ? (near.length == 1
+              ? tr(' · ninguna tal cual, se parece a lo que buscas')
+              : tr(' · ninguna tal cual, se parecen a lo que buscas'))
+        : near.length == 1
+        ? tr(' · 1 parecida')
+        : tr(' · {0} parecidas', [near.length]);
     final String textNote;
     if (!inText) {
       textNote = '';
@@ -2923,17 +2924,14 @@ class _SearchResults extends StatelessWidget {
         ? (inText && hits == null
               ? tr('Buscando en el texto…')
               : tr('Nada coincide'))
-        : tr(
-            '{0} {1} '
-            'de {2}{3}{4}',
-            [
-              found.length,
-              found.length == 1 ? 'unidad' : 'unidades',
-              facets.total,
-              textNote,
-              nearNote,
-            ],
-          );
+        : found.length == 1
+        ? tr('1 unidad de {0}{1}{2}', [facets.total, textNote, nearNote])
+        : tr('{0} unidades de {1}{2}{3}', [
+            found.length,
+            facets.total,
+            textNote,
+            nearNote,
+          ]);
 
     return LayoutBuilder(
       builder: (context, constraints) {

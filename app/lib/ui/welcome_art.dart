@@ -326,7 +326,7 @@ class ReusePainter extends _ArtPainter {
   const ReusePainter(super.t, super.palette);
 
   static List<String> get _courses => [
-    'Cálculo I',
+    tr('Cálculo I'),
     tr('Análisis I'),
     tr('Métodos numéricos'),
   ];

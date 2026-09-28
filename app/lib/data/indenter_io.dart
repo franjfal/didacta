@@ -6,7 +6,6 @@ import 'dart:io';
 
 import '../model/tex_indent.dart';
 import 'compiler_io.dart' show findTool, texAwarePath;
-import '../l10n/tr.dart';
 
 /// Cuánto se le espera a `latexindent` antes de dar por hecho que no viene.
 ///
@@ -25,7 +24,7 @@ Future<bool> systemIndenterWorks({String? texPath}) async {
   // vacío lo «sangra» hasta un `latexindent` al que le faltan la mitad de los
   // módulos, porque falla después de imprimir nada.
   final probe = await _systemIndent(
-    tr('\\begin{itemize}\n\\item Uno\n\\end{itemize}\n'),
+    '\\begin{itemize}\n\\item Uno\n\\end{itemize}\n',
     texPath: texPath,
   );
   return probe != null;
@@ -59,7 +58,7 @@ Future<String?> _systemIndent(String text, {String? texPath}) async {
       environment: {'PATH': texAwarePath(configured: texPath)},
       stdoutEncoding: systemEncoding,
       stderrEncoding: systemEncoding,
-    ).timeout(_patience, onTimeout: () => ProcessResult(0, 1, '', tr('tardó')));
+    ).timeout(_patience, onTimeout: () => ProcessResult(0, 1, '', 'tardó'));
 
     if (result.exitCode != 0) return null;
     final output = result.stdout as String;

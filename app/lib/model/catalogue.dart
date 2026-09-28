@@ -28,7 +28,7 @@ class CatalogueFormatException implements Exception {
   final String message;
 
   @override
-  String toString() => tr('CatalogueFormatException: {0}', [message]);
+  String toString() => 'CatalogueFormatException: $message';
 }
 
 /// The state of one language of one unit.
@@ -1168,6 +1168,34 @@ class MetadataConflict {
   /// El campo, con el nombre que se lee: «título (es)», «código».
   final String field;
 
+  /// [field] en el idioma de la interfaz.
+  ///
+  /// [field] es también la clave con que se encuentra dónde se escribe
+  /// --[CourseFacts.pathOf]--, así que se queda en castellano y se traduce
+  /// solo al enseñarlo.
+  String get fieldLabel {
+    final localised = RegExp(
+      r'^(título|titulación) \((\w+)\)$',
+    ).firstMatch(field);
+    if (localised != null) {
+      final language = localised.group(2)!;
+      return localised.group(1) == 'título'
+          ? tr('título ({0})', [language])
+          : tr('titulación ({0})', [language]);
+    }
+    return switch (field) {
+      'plantillas' => tr('plantillas'),
+      'institución' => tr('institución'),
+      'idiomas' => tr('idiomas'),
+      'código' => tr('código'),
+      'profesor' => tr('profesor'),
+      'grado' => tr('grado'),
+      'clase' => tr('clase'),
+      'opciones' => tr('opciones'),
+      _ => field,
+    };
+  }
+
   /// Qué dice cada repositorio.
   final Map<String, String> values;
 
@@ -1403,6 +1431,7 @@ class OutputProfile {
     required this.family,
     required this.documentClass,
     this.label = '',
+    this.labels = const {},
     this.reveals = 'statements',
   });
 
@@ -1411,6 +1440,11 @@ class OutputProfile {
     family: json['family'] as String? ?? '',
     documentClass: json['documentClass'] as String? ?? '',
     label: json['label'] as String? ?? '',
+    labels: {
+      for (final entry
+          in (json['labels'] as Map<String, dynamic>? ?? const {}).entries)
+        if (entry.value is String) entry.key: entry.value as String,
+    },
     reveals: json['reveals'] as String? ?? 'statements',
   );
 
@@ -1424,6 +1458,11 @@ class OutputProfile {
   /// en un índice viejo, y entonces se enseña el id, que es feo pero cierto.
   final String label;
 
+  /// [label] en los otros idiomas de la interfaz (`va`, `en`), que el motor
+  /// compone igual, de los ejes. Vacío en un índice de antes: entonces va
+  /// [label], en castellano.
+  final Map<String, String> labels;
+
   /// Cuánto enseña de un ejercicio: `statements`, `answers`, `solutions` o
   /// `teacher`.
   ///
@@ -1433,7 +1472,13 @@ class OutputProfile {
   /// que eso viene a impedir.
   final String reveals;
 
-  String get name => label.isEmpty ? id : label;
+  String get name {
+    // En castellano, el de siempre: es el que ya conoce quien usa Didacta.
+    final shown = uiLanguage == UiLanguage.es
+        ? label
+        : labels[uiLanguage.code] ?? label;
+    return shown.isEmpty ? id : shown;
+  }
 
   bool get isSlides => documentClass == 'beamer';
 }

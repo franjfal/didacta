@@ -172,7 +172,7 @@ class CourseDiff {
     count(
       changes.where((c) => c.thing == ChangedThing.lesson).length,
       tr('lección'),
-      'lecciones',
+      tr('lecciones'),
     );
     if (pieces.isEmpty) return tr('Sin diferencias.');
     return pieces.join(' · ');

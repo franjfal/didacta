@@ -384,10 +384,11 @@ ver un identificador dentro de un repositorio público:
 
 Lo hacen igual `gh`, VS Code y GitHub Desktop, y por el mismo motivo. Lo que se
 gana es lo que decide si alguien llega a usar Didacta: al abrirla por primera
-vez hay **un botón**, y no un campo pidiendo que te crees una aplicación de
-OAuth en GitHub antes de poder empezar. El campo sigue estando, detrás de
-«Entrar con otra aplicación de OAuth», para quien monte su propio despliegue;
-y `--dart-define=DIDACTA_GITHUB_CLIENT=…` lo cambia al compilar.
+vez hay **un botón**, y no un campo pidiendo que te crees una aplicación en
+GitHub antes de poder empezar. El campo sigue estando, detrás de «Entrar con
+otra aplicación de GitHub», para quien monte su propio despliegue --con su
+GitHub App o con una OAuth App--; y `--dart-define=DIDACTA_GITHUB_CLIENT=…` lo
+cambia al compilar.
 
 Lo único que un Client ID ajeno permite es montar una aplicación que enseñe
 «Didacta» en la pantalla de autorización de GitHub. Es así para cualquier
@@ -401,35 +402,43 @@ permiso `repo`; y la credencial **caduca a las ocho horas** y se renueva sola
 con otra que dura seis meses, en lugar de valer para siempre hasta que alguien
 la revoque. Es lo correcto para una herramienta que reparten los departamentos.
 
-El código está hecho y probado (`app/lib/model/github_credential.dart`,
-`GitHubAuth.refresh`, `AuthState.renewIfDue`). **Falta registrar la App**, que
-es un paso en github.com que solo puede dar su dueño:
+Está registrada: es **«Didacta App»**, de la cuenta `franjfal`
+(`github.com/apps/didacta-app`, App ID 5104287), y su Client ID,
+`Iv23liumW0l1zC8E4XxB`, es el de salida en `didactaAppClientId` de
+`app/lib/data/github.dart`. «Didacta» a secas no se pudo: es el nombre de una
+cuenta de GitHub. El código es `app/lib/model/github_credential.dart`,
+`GitHubAuth.refresh` y `AuthState.renewIfDue`.
 
-1. *Settings → Developer settings → GitHub Apps → New GitHub App*, en la cuenta
-   o la organización que publica Didacta.
-2. **Nombre**: `Didacta` (su nombre corto sale en la dirección de su página,
-   `github.com/apps/<nombre-corto>`: apúntalo). **Homepage URL**: la de la web
-   de documentación.
-3. **Callback URL**: ninguna. Marca **Enable Device Flow** y deja marcado
-   **Expire user authorization tokens**.
-4. **Webhook**: desmarca *Active*. Didacta no escucha nada.
-5. **Permisos de repositorio**:
-   - *Contents*: **Read and write** --leer y escribir el material--;
-   - *Metadata*: **Read-only** --lo pide GitHub para todas--;
-   - *Workflows*: **Read and write** --el CI del material y la web del curso
-     (D81)--;
-   - *Administration*: **Read and write** --solo para crear el repositorio de
-     ejemplo y los de una asignatura nueva--.
+Cómo está configurada, por si hay que rehacerla (*Settings → Developer
+settings → GitHub Apps*):
 
-   **Permisos de cuenta**: *Email addresses*: **Read-only**, para firmar los
-   commits con el correo de verdad.
-6. **Where can this GitHub App be installed?**: *Any account*.
-7. Crear. Copia su **Client ID** (empieza por `Iv`) y ponlo, con el nombre
-   corto, en `didactaAppClientId` y `didactaAppSlug` de
-   `app/lib/data/github.dart` --o con `--dart-define=DIDACTA_GITHUB_APP_CLIENT=`
-   y `DIDACTA_GITHUB_APP_SLUG=` al compilar--.
+- **Callback URL**: ninguna. **Enable Device Flow** y **Expire user
+  authorization tokens**, marcadas; *Request user authorization during
+  installation*, no.
+- **Webhook**: apagado. Didacta no escucha nada.
+- **Permisos de repositorio**: *Contents* y *Workflows*, **Read and write**
+  --el material, y el CI del material y la web del curso (D81)--;
+  *Administration*, **Read and write** --solo para crear el repositorio de
+  ejemplo y los de una asignatura nueva--; *Metadata*, **Read-only**, que lo
+  pone GitHub.
+- **Permisos de cuenta**: *Email addresses*, **Read-only**, para firmar los
+  commits con el correo de verdad.
+- **Where can this GitHub App be installed?**: *Any account*.
+- **Sin client secret**: el device flow no lo usa, y en una aplicación de
+  escritorio no sería secreto. GitHub pide **una clave privada** para que se
+  pueda instalar; Didacta no la usa para nada --actuar como la App y no como
+  la persona es justo lo que no hace--, así que no se guarda en ningún sitio.
 
-**Qué cambia para cada persona.** La próxima vez que entre, lo hará con la App:
+Para compilar con otra, `--dart-define=DIDACTA_GITHUB_CLIENT=` con su
+Client ID y `DIDACTA_GITHUB_APP_SLUG=` con su nombre corto.
+
+**La OAuth App de antes ya no está.** Hasta la GitHub App se entraba con una
+OAuth App, «Didacta» (`Ov23liZqSOY4xMvnXU4Z`, `retiredOAuthClientId`). Se
+borró antes de publicar la primera versión, porque solo la usaba su autor: no
+había sesiones de nadie que conservar. Si ese Client ID sigue guardado en unas
+preferencias, no cuenta como elegido y la entrada siguiente es con la App.
+
+**Cómo entra cada persona.** Con la App:
 GitHub le pide autorizarla y, la primera vez, **instalarla** en su cuenta
 eligiendo a qué repositorios llega (Ajustes → Cuenta y repositorios →
 *Elegir repositorios en GitHub*, y *Dar acceso a otro* al añadir uno). Si
@@ -437,11 +446,10 @@ tiene abiertos repositorios a los que la App no llega, **no se cierran**: se
 dice cuáles y dónde darle acceso, y en cuanto lo tiene, llega sin volver a
 entrar.
 
-**Qué no cambia.** Quien entró con la OAuth App **sigue con su sesión**: su
-token no caduca y Didacta lo sigue leyendo como siempre, y el Client ID que
-se guardó al entrar deja de contar como elegido (`replacedClientIds`), así
-que al volver a entrar pasa a la App sin tocar Ajustes. Un Client ID propio,
-el de una OAuth App o el de otra GitHub App, se respeta.
+**Un Client ID propio se respeta**, el de una OAuth App o el de otra GitHub
+App: el de la OAuth App de antes es el único que no cuenta como elegido
+(`replacedClientIds`). Una sesión abierta con una OAuth App propia sigue
+valiendo: su token no caduca, y se guarda como antes, en texto suelto.
 
 **Cómo sabe cuál es cuál.** Por el Client ID: los de una GitHub App empiezan
 por `Iv` y los de una OAuth App por `Ov`. Con una App no se piden permisos al

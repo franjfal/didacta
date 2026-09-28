@@ -40,6 +40,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:didacta_app/l10n/tr.dart';
 import 'package:didacta_app/model/file_history.dart';
 import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/router.dart';
@@ -67,10 +68,14 @@ const String shownUnit = 'content/analysis/normed/espacios-normados';
 /// `DIDACTA_SHOTS_OUT` lo cambia, y `DIDACTA_SHOTS_DARK=1` pinta **todas** en
 /// oscuro: es cómo se repasa el modo oscuro pantalla a pantalla sin tocar las
 /// de la web, que buscar a ojo un resto de blanco en veinte pantallas es la
-/// única forma de encontrarlo.
+/// única forma de encontrarlo. `DIDACTA_SHOTS_LANG=va` (o `en`) las pinta con
+/// la interfaz en ese idioma, para ver que un texto más largo cabe.
 final String outputDir =
     Platform.environment['DIDACTA_SHOTS_OUT'] ?? '../web/docs/img/app';
 final bool darkRun = Platform.environment['DIDACTA_SHOTS_DARK'] == '1';
+final UiLanguage shotLanguage =
+    UiLanguage.parse(Platform.environment['DIDACTA_SHOTS_LANG']) ??
+    UiLanguage.es;
 
 /// El tamaño de ventana de las capturas, en puntos.
 ///
@@ -635,6 +640,7 @@ void main() {
     // hereda el estilo de texto de nadie: sin decírselo, sus etiquetas salen
     // como rectángulos negros justo en la primera pantalla que ve alguien.
     welcomeArtFontFamily = shotFamily;
+    useUiLanguage(shotLanguage);
   });
 
   testWidgets('las capturas de las pantallas', (tester) async {

@@ -46,7 +46,7 @@ Future<EngineVersion> inspectEngine(String engine, AppVersion app) async {
     commit: commit,
     managed: await File(markerIn(engine)).exists(),
     blocked: status == null
-        ? 'git no contesta en esa carpeta'
+        ? tr('git no contesta en esa carpeta')
         : status.isNotEmpty
         ? tr('tiene cambios sin guardar')
         : null,
@@ -91,9 +91,7 @@ Future<void> markManaged(String engine) async {
   final marker = File(markerIn(engine));
   if (!await marker.parent.exists()) return;
   await marker.writeAsString(
-    tr(
-      'Este motor lo instaló Didacta, y lo pone en la versión de la '
-      'aplicación al actualizarla.\n',
-    ),
+    'Este motor lo instaló Didacta, y lo pone en la versión de la '
+    'aplicación al actualizarla.\n',
   );
 }

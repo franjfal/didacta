@@ -101,7 +101,7 @@ String zipNameFor(String courseTitle, String year) {
       .replaceAll(RegExp(r'[/\\:*?"<>|]'), '')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  return tr('{0} {1}.zip', [clean.isEmpty ? 'curso' : clean, year]);
+  return '${clean.isEmpty ? 'curso' : clean} $year.zip';
 }
 
 /// Saca a una carpeta lo que hay compilado de un documento.

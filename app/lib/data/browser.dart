@@ -11,11 +11,22 @@
 /// añade nada que no estuviera, y sí lo añadiría un paquete.
 library;
 
+import 'package:flutter/foundation.dart';
+
 import 'browser_stub.dart' if (dart.library.io) 'browser_io.dart' as platform;
+
+/// Lo que abre de verdad las direcciones.
+///
+/// Cambiable para las pruebas, y `test/flutter_test_config.dart` lo cambia
+/// para todas: con el de verdad, `flutter test` en el Mac lanza `open` y
+/// cada botón que una prueba pulsa abre GitHub en el navegador de quien las
+/// pasa, que ve aparecer la página de incidencias sin haber pedido nada.
+@visibleForTesting
+Future<bool> Function(String url) openLinkWith = platform.openLink;
 
 /// Abre [url] donde el sistema abra las direcciones.
 ///
 /// Devuelve si se pudo. No lanza: que no se abra el navegador no puede
 /// llevarse por delante el flujo que lo pedía, y quien llama tiene siempre el
 /// camino a mano --la dirección en pantalla, y el botón de copiarla--.
-Future<bool> openLink(String url) => platform.openLink(url);
+Future<bool> openLink(String url) => openLinkWith(url);

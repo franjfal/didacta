@@ -206,15 +206,15 @@ class CategoryNode {
 ///
 /// «lo que hay traducido a es» no es castellano; «al castellano» sí.
 String languageName(String code) => switch (code) {
-  'es' => 'castellano',
-  'va' => 'valenciano',
+  'es' => tr('castellano'),
+  'va' => tr('valenciano'),
   'ca' => tr('catalán'),
-  'gl' => 'gallego',
-  'eu' => 'euskera',
+  'gl' => tr('gallego'),
+  'eu' => tr('euskera'),
   'en' => tr('inglés'),
   'fr' => tr('francés'),
   'de' => tr('alemán'),
-  'it' => 'italiano',
+  'it' => tr('italiano'),
   'pt' => tr('portugués'),
   // Lo que Didacta no traiga se dice por su código. Preferible a inventarse
   // un nombre: el código es exactamente lo que hay en el nombre del fichero.

@@ -99,7 +99,7 @@ class GoogleTranslator implements Translator {
   /// ningún proxy por el que pase, ni en un mensaje de error que imprima la
   /// dirección.
   Map<String, String> get _headers => {
-    'Content-Type': tr('application/json; charset=utf-8'),
+    'Content-Type': 'application/json; charset=utf-8',
     'X-goog-api-key': credentials.key.trim(),
   };
 
@@ -190,7 +190,7 @@ class AzureTranslator implements Translator {
       : credentials.endpoint.trim();
 
   Map<String, String> get _headers => {
-    'Content-Type': tr('application/json; charset=utf-8'),
+    'Content-Type': 'application/json; charset=utf-8',
     'Ocp-Apim-Subscription-Key': credentials.key.trim(),
     // La región es obligatoria con un recurso de varios servicios, y sin ella
     // Azure contesta 401 hablando de la suscripción, que despista.

@@ -42,6 +42,14 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## Próxima
 
+- **Entrar en GitHub solo con los repositorios que elijas.** Didacta entra
+  ahora con su GitHub App: GitHub pregunta a qué repositorios puede llegar, en
+  lugar de darle todos los tuyos, y la sesión se renueva sola. Si ya habías
+  entrado con una versión anterior, hay que volver a entrar una vez.
+- **Didacta, en valenciano y en inglés.** En Ajustes → Apariencia, *Idioma
+  de Didacta*: castellano, valenciano, inglés o el del sistema, que es lo que
+  viene. Cambia al momento, sin reiniciar. Es el idioma de la aplicación, no
+  el del material: se sigue pudiendo preparar los apuntes en cualquiera.
 - **Crear una lección sin salir de la aplicación.** En la biblioteca, «Nueva
   lección en…» el tema que se está mirando; en la composición de un
   documento, «Crear una nueva…» al añadir, que la crea y la deja puesta. Se
@@ -184,6 +192,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   lo que ya está guardado, en lugar de cerrar lo demás con el mensaje
   «Enviar»; y ni «Enviado» ni «Traído» salen cuando algo ha fallado: dicen en
   qué repositorio y por qué.
+- **Guardar ya no deja ficheros sueltos.** Después de reordenar un tema y
+  guardar, «Enviar a GitHub» avisaba de tres ficheros sin guardar en el
+  historial que nadie había tocado: el índice que Didacta regenera al
+  guardar. Ahora va en el mismo cambio que lo que se guardó.
 - **«Desactualizada» funciona.** Al traducir y al revisar se guarda la huella
   del original; si luego el original cambia, la traducción se marca como
   desactualizada. Antes no pasaba nunca. Re-sangrar el original no cuenta.
@@ -518,6 +530,9 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 - **Las barras de la biblioteca enseñan lo traducido.** Salían siempre grises,
   como si no hubiera nada hecho, aunque la leyenda de al lado dijera «58 al
   día»: el tramo verde y el ámbar medían cero de alto.
+- **Un aviso que sobraba al lado de la composición.** Las salidas de un tema
+  decían que compilar necesita LaTeX y que un navegador no lo tiene, también
+  en la aplicación de escritorio, que compila. Ahora solo lo dice la web.
 
 ## 0.2.1
 

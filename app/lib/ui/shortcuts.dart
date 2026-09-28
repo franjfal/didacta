@@ -86,7 +86,7 @@ List<SingleActivator> alsoFor(AppShortcut shortcut) => [
 
 /// Pulsar con ⌘ (con Ctrl fuera de macOS): en un PDF, ir a la lección de
 /// donde sale lo pulsado.
-String get sourceClickLabel => _mac ? '⌘+clic' : 'Ctrl+clic';
+String get sourceClickLabel => _mac ? tr('⌘+clic') : tr('Ctrl+clic');
 
 /// Cómo se escribe: «⌘⇧P» en macOS, «Ctrl+Mayús+P» en los demás.
 String labelFor(AppShortcut shortcut) {

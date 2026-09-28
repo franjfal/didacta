@@ -4,20 +4,19 @@ Didacta es una aplicación de escritorio (Flutter) para que el profesorado
 universitario escriba, traduzca, compile (LaTeX) y reparta material docente.
 Su interfaz está escrita en castellano. Cada texto es una clave: el texto en
 castellano tal cual. Hay que dar su traducción al **valenciano** y al
-**inglés**, o decir que **no es un texto de la interfaz**.
+**inglés**. Así se tradujo la primera vez, y así se traduce lo que se añada.
 
-## Qué no se traduce nunca (valor `null`)
+## Qué no se traduce nunca
 
 Lo que no lee una persona en la pantalla y cuyo contenido importa tal cual:
 plantillas de ficheros (YAML, `.gitignore`, scripts de shell, workflows de
 GitHub, README que se escribe en un repositorio), expresiones regulares,
 identificadores, claves, nombres de fichero, textos que se mandan a un
-programa o a una API, textos de ejemplo que se escriben dentro del material
-(LaTeX de muestra). **Ante la duda, abre el fichero** (la ruta está en
-`where`, relativa a `/Users/javier/didacta/app/lib/`) y mira cómo se usa. Si
-se enseña en pantalla (un Text, un tooltip, un SnackBar, un diálogo, un
-mensaje de error que ve la persona, un mensaje de commit propuesto que la
-persona ve y puede cambiar), **sí** es interfaz.
+programa o a una API, cabeceras HTTP, lo que se busca en la salida de git.
+Eso no va en `tr()`. **Ante la duda, mira cómo se usa**
+(`l10n/keys.json` dice dónde está cada clave). Si se enseña en pantalla (un
+Text, un tooltip, un SnackBar, un diálogo, un mensaje de error que ve la
+persona, un mensaje de commit propuesto), **sí** es interfaz.
 
 ## Reglas
 
@@ -99,11 +98,17 @@ persona ve y puede cambiar), **sí** es interfaz.
 | repartir | repartir | hand out |
 | aula virtual | aula virtual | virtual classroom |
 
-## Lo que hay que entregar
+## Dónde va
 
-Un fichero JSON, un objeto: cada clave del lote, tal cual, con
-`["valenciano", "inglés"]` o `null`. Todas las claves del lote, ninguna más.
-Escríbelo con Python (`json.dump(..., ensure_ascii=False, indent=1)`) para no
-equivocarte con los escapes, y compruébalo al final: que es JSON válido, que
-están todas las claves y que cada traducción tiene los mismos marcadores
-`{n}` que su clave.
+En `l10n/va.json` y `l10n/en.json`, la misma clave en los dos: el texto
+castellano tal cual, con su traducción. Un texto que se envolvió en `tr()` sin
+ser de la interfaz se desenvuelve, no se marca: en el código, `tr()` es solo
+para lo que lee una persona.
+
+Qué falta y los catálogos:
+
+    python3 tool/l10n.py missing
+    python3 tool/l10n.py build
+
+Para dos usos de un mismo texto castellano que en otro idioma se dicen
+distinto, `trAs('LaTeX', 'Orden')`: la clave es `Orden@LaTeX`.

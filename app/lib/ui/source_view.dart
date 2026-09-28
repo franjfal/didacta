@@ -743,11 +743,17 @@ class _Header extends StatelessWidget {
           Expanded(
             child: Text(
               [
-                '${reading.files.length} ficheros',
+                reading.files.length == 1
+                    ? tr('1 fichero')
+                    : tr('{0} ficheros', [reading.files.length]),
                 if (outline.slideCount > 0)
-                  tr('{0} diapositivas', [outline.slideCount]),
+                  outline.slideCount == 1
+                      ? tr('1 diapositiva')
+                      : tr('{0} diapositivas', [outline.slideCount]),
                 if (outline.issues.isNotEmpty)
-                  tr('{0} avisos', [outline.issues.length]),
+                  outline.issues.length == 1
+                      ? tr('1 aviso')
+                      : tr('{0} avisos', [outline.issues.length]),
                 if (dirty > 0)
                   dirty == 1
                       ? tr('1 fichero tocado')

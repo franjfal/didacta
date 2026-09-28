@@ -118,7 +118,7 @@ class ReleaseChannel {
     'X-GitHub-Api-Version': '2022-11-28',
     // GitHub rechaza una petición sin `User-Agent`, así que no es cortesía:
     // es lo que hace que la API conteste.
-    'User-Agent': tr('Didacta'),
+    'User-Agent': 'Didacta',
   };
 
   /// El manifiesto del último release, o `null` si no hay ninguno.

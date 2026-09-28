@@ -12,8 +12,6 @@
 /// que se compile-- y un cuerpo vacío que el motor llena.
 library;
 
-import '../l10n/tr.dart';
-
 /// Los caracteres que LaTeX no deja pasar tal cual en un título.
 String latexEscape(String text) {
   final out = StringBuffer();
@@ -47,14 +45,13 @@ String documentMaster({
   };
   final teacherLine = teacher == null || teacher.trim().isEmpty
       ? ''
-      : tr('  teacher = {{0}},\n', [latexEscape(teacher.trim())]);
-  return tr(
-    '''% Un documento de Didacta: {0}.
+      : '  teacher = {${latexEscape(teacher.trim())}},\n';
+  return '''% Un documento de Didacta: ${title.replaceAll('\n', ' ')}.
 %
 % Lo que lleva y en qué orden está en year.yaml. El motor lo escribe aquí
 % debajo cada vez que compila, así que no hace falta tocar este fichero:
 %
-%   didacta build {1}
+%   didacta build $id
 %
 % Los datos del curso de aquí son un respaldo, para que compilarlo a mano en
 % un editor también dé un documento con título. Los que pone el motor mandan.
@@ -63,22 +60,13 @@ String documentMaster({
 \\usepackage{didacta}
 
 \\DidactaCourse{
-  title   = {{2}},
-{3}}
-\\DidactaDocument{{4}}
+  title   = {${latexEscape(courseTitle)}},
+$teacherLine}
+\\DidactaDocument{${latexEscape(title)}}
 
 \\begin{document}
 \\DidactaTitlePage
-{5}
+$contents
 \\end{document}
-''',
-    [
-      title.replaceAll('\n', ' '),
-      id,
-      latexEscape(courseTitle),
-      teacherLine,
-      latexEscape(title),
-      contents,
-    ],
-  );
+''';
 }

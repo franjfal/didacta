@@ -236,7 +236,7 @@ class BuildConsole extends ChangeNotifier {
         : DateTime.now().difference(_startedAt!);
     _failure = failure;
     if (failure != null) add('--- $failure');
-    if (stopped) add('--- Detenida.');
+    if (stopped) add('--- ${tr('Detenida.')}');
     _notifyNow();
   }
 

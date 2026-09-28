@@ -198,8 +198,12 @@ class CloneGateway extends ContentGateway {
     this.pushOnCommit = true,
     this.commitOnSave = true,
     this.beforeWrite,
+    this.refreshIndex,
     this.onUnsent,
   });
+
+  /// El índice del repositorio, versionado al lado del contenido.
+  static const String _index = 'generated';
 
   /// Si guardar confirma el cambio, o solo lo escribe.
   ///
@@ -235,6 +239,23 @@ class CloneGateway extends ContentGateway {
   /// necesita red, y perder trabajo para proteger una sincronización que se
   /// hará después sería el peor cambio posible.
   final Future<void> Function()? beforeWrite;
+
+  /// Poner `generated/` al día con lo que se acaba de escribir, **antes** de
+  /// confirmarlo.
+  ///
+  /// El índice va en el mismo commit que el cambio, como en la
+  /// administración de asignaturas: un commit que reordena un tema y deja el
+  /// índice como estaba describe un repositorio que se contradice, y una
+  /// congelación de ese commit leería el catálogo de antes. Regenerarlo
+  /// después, al recargar, lo dejaba sin confirmar, y quien solo había
+  /// movido un tema se encontraba al enviar con «3 ficheros sin guardar» que
+  /// no había tocado.
+  ///
+  /// No cuesta más que antes: casi todo guardado recarga el catálogo, y
+  /// recargar regeneraba este mismo índice. Lo pone la sesión, que es quien
+  /// tiene el motor; sin él, se confirma el fichero solo. Que falle tampoco
+  /// para el guardado: lo escrito es lo que no se puede perder.
+  final Future<void> Function()? refreshIndex;
 
   /// Qué hacer cuando se guardó pero no se pudo enviar.
   ///
@@ -337,19 +358,42 @@ class CloneGateway extends ContentGateway {
       // Ya lo cuenta quien puso la llamada.
     }
     try {
-      return await clone.commitFile(
+      if (refreshIndex == null) {
+        return await clone.commitFile(
+          path: path,
+          text: text,
+          expectedSha: sha,
+          message: message,
+          authorName: author!.name,
+          authorEmail: author!.email,
+          token: token,
+          // Not attempted without a token: it would fail, and a failed push
+          // reported as a failed save would make an author think their work
+          // was lost when it is committed and safe.
+          push: willPush,
+        );
+      }
+      // Escribir, regenerar el índice y confirmar los dos juntos. El
+      // compare-and-set es el mismo: lo hace `writeFile`.
+      final written = await clone.writeFile(
         path: path,
         text: text,
         expectedSha: sha,
-        message: message,
-        authorName: author!.name,
-        authorEmail: author!.email,
-        token: token,
-        // Not attempted without a token: it would fail, and a failed push
-        // reported as a failed save would make an author think their work
-        // was lost when it is committed and safe.
-        push: willPush,
       );
+      await _refreshIndex();
+      try {
+        await clone.commitPaths(
+          paths: [path, _index],
+          message: message,
+          authorName: author!.name,
+          authorEmail: author!.email,
+          token: token,
+          push: willPush,
+        );
+      } on UnsentException catch (unsent) {
+        throw UnsentException(sha: written, cause: unsent.cause);
+      }
+      return written;
     } on UnsentException catch (unsent) {
       // Guardado. Lo que falló es el envío, y eso se dice aparte.
       onUnsent?.call(unsent);
@@ -401,8 +445,12 @@ class CloneGateway extends ContentGateway {
         );
       }
       if (!commitOnSave) return;
+      await _refreshIndex();
       await clone.commitPaths(
-        paths: [for (final file in files) file.path],
+        paths: [
+          for (final file in files) file.path,
+          if (refreshIndex != null) _index,
+        ],
         message: message,
         authorName: author!.name,
         authorEmail: author!.email,
@@ -420,6 +468,15 @@ class CloneGateway extends ContentGateway {
         kind: _kindOf(thrown),
         cause: thrown,
       );
+    }
+  }
+
+  Future<void> _refreshIndex() async {
+    try {
+      await refreshIndex?.call();
+    } catch (caught, trace) {
+      Diagnostics.instance.note('content_gateway.refreshIndex', caught, trace);
+      // El fichero se confirma igual; el índice lo pone al día la recarga.
     }
   }
 
