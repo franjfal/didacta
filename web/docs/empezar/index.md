@@ -80,13 +80,20 @@ buscarlos y decir dónde ha mirado cuando no los encuentra.
 === ":material-apple: macOS"
 
     1. Abre el `.dmg` y arrastra **Didacta** a la carpeta Aplicaciones.
-    2. La primera vez, ábrela con el botón derecho → **Abrir**.
+    2. Ábrela. La primera vez macOS no la deja abrir y enseña un aviso:
+       ciérralo.
+    3. En **Ajustes del Sistema → Privacidad y seguridad**, baja hasta
+       **Seguridad** y pulsa **Abrir igualmente**. Pide tu contraseña, y ya.
 
-    Ese segundo paso es por Gatekeeper: Didacta todavía no está firmada con un
+    Esos dos pasos son por Gatekeeper: Didacta todavía no está firmada con un
     certificado de Apple Developer ID, así que macOS avisa de que no puede
-    comprobar quién la hizo. Lo que **no** hay que hacer es desactivar
-    Gatekeeper ni quitar la cuarentena a mano; con abrir una vez desde el menú
-    contextual basta, y a partir de ahí se abre normal.
+    comprobar quién la hizo. El botón **Abrir igualmente** está ahí durante
+    una hora después del aviso; si ya no está, vuelve a abrir Didacta y
+    aparece otra vez. Es una sola vez: a partir de ahí se abre con doble clic.
+
+    Lo que **no** hay que hacer es desactivar Gatekeeper ni quitar la
+    cuarentena a mano. Y el truco de antes --abrirla con el botón derecho →
+    **Abrir**-- ya no vale desde macOS 15.
 
     Se instala en `/Aplicaciones` o en `~/Aplicaciones`, y las dos valen. Si
     está en `/Aplicaciones` con una cuenta que no es administradora, Didacta

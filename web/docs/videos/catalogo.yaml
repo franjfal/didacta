@@ -49,7 +49,7 @@ rutas:
         minutos: 1.5
         nota: "tres versiones: macOS, Windows y Linux"
         sabras: instalarla y abrirla la primera vez sin desactivar ninguna protección del sistema.
-        idea: el aviso del sistema es por la firma que falta, no por la aplicación; basta con abrirla una vez desde el menú.
+        idea: el aviso del sistema es por la firma que falta, no por la aplicación; basta con dejarla abrir una vez.
         mas:
           - {titulo: Instalar Didacta, pagina: empezar/index.md}
       - codigo: A3

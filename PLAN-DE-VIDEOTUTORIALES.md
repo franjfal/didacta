@@ -167,8 +167,10 @@ protección del sistema.
 
 **Parte de** la página de descargas.
 
-- **macOS:** abrir el `.dmg`, arrastrar a Aplicaciones, y la primera vez
-  botón derecho → **Abrir**, porque Didacta aún no está firmada por Apple.
+- **macOS:** abrir el `.dmg`, arrastrar a Aplicaciones, abrirla y cerrar el
+  aviso; luego **Ajustes del Sistema → Privacidad y seguridad → Abrir
+  igualmente**, porque Didacta aún no está firmada por Apple. (El botón
+  derecho → **Abrir** de antes ya no vale desde macOS 15.)
 - **Windows:** el instalador se instala para tu usuario, sin contraseña de
   administrador; SmartScreen → **Más información** → **Ejecutar de todas
   formas**. Instalar Python desde python.org: el `python.exe` que trae Windows
@@ -178,7 +180,7 @@ protección del sistema.
 - Las tres: se actualiza sola y **pregunta antes**.
 
 **La idea:** el aviso del sistema es por la firma que falta, no por la
-aplicación; basta con abrirla una vez desde el menú.
+aplicación; basta con dejarla abrir una vez.
 
 **Ojo:** no hay que desactivar Gatekeeper ni quitar la cuarentena a mano.
 

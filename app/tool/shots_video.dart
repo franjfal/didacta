@@ -232,8 +232,9 @@ void main() {
 
   Finder? finderFor(Map<String, dynamic> what) {
     if (what['texto'] case final String text) return find.text(text);
-    if (what['contiene'] case final String text)
+    if (what['contiene'] case final String text) {
       return find.textContaining(text);
+    }
     if (what['consejo'] case final String tip) return find.byTooltip(tip);
     if (what['clave'] case final String key) return find.byKey(Key(key));
     return null;
