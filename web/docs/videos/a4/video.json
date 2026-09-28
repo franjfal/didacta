@@ -1,0 +1,85 @@
+{
+  "codigo": "A4",
+  "titulo": "Abrir tu primer repositorio",
+  "fichero": "A04-abrir-tu-primer-repositorio.mp4",
+  "duracion": 79.92,
+  "megas": 3.1,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Abrir tu primer repositorio"
+    },
+    {
+      "t": 10.0,
+      "titulo": "Qué es"
+    },
+    {
+      "t": 24.72,
+      "titulo": "El ejemplo"
+    },
+    {
+      "t": 38.76,
+      "titulo": "Los otros caminos"
+    },
+    {
+      "t": 55.31,
+      "titulo": "Dónde queda"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué es un repositorio de Didacta, y habrás abierto el primero: el de ejemplo, para practicar sin miedo."
+    },
+    {
+      "t": 10.5,
+      "texto": "Un repositorio de contenido es una carpeta con tu material, que vive en GitHub."
+    },
+    {
+      "t": 15.41,
+      "texto": "Dentro hay un fichero, didacta.yaml, y tres carpetas: las lecciones, los problemas y las asignaturas."
+    },
+    {
+      "t": 25.22,
+      "texto": "Para empezar, pulsa «Crear el ejemplo»."
+    },
+    {
+      "t": 28.67,
+      "texto": "Didacta crea en tu cuenta un repositorio privado, con una asignatura pequeña, y lo abre."
+    },
+    {
+      "t": 34.45,
+      "texto": "Es tuyo para romperlo, y todos estos vídeos están hechos sobre él."
+    },
+    {
+      "t": 39.26,
+      "texto": "Si tu material ya está en GitHub, elígelo ahí; puedes marcar varios."
+    },
+    {
+      "t": 44.67,
+      "texto": "Si ya lo tienes en tu ordenador, elige la carpeta."
+    },
+    {
+      "t": 48.12,
+      "texto": "Y para empezar de cero, crea en GitHub un repositorio vacío y elígelo: Didacta lo prepara."
+    },
+    {
+      "t": 55.81,
+      "texto": "La copia queda en tu carpeta de usuario, dentro de Didacta, con el nombre del repositorio."
+    },
+    {
+      "t": 61.71,
+      "texto": "Nunca dentro de OneDrive, Dropbox o iCloud: esas carpetas y git se pisan."
+    },
+    {
+      "t": 68.83,
+      "texto": "Tu material lo guarda GitHub. Tú trabajas en una copia."
+    },
+    {
+      "t": 73.45,
+      "texto": "En el siguiente vídeo, dejas el ordenador listo para compilar."
+    }
+  ]
+}

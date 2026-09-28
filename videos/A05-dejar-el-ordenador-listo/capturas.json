@@ -1,0 +1,115 @@
+{
+  "capturas": [
+    {
+      "nombre": "todo",
+      "ruta": "/settings?s=herramientas",
+      "cajas": {
+        "plegado": {
+          "clave": "tools-folded"
+        },
+        "detalles": {
+          "clave": "tools-details"
+        }
+      },
+      "acciones": [
+        {
+          "esperar": 25
+        }
+      ]
+    },
+    {
+      "nombre": "lista",
+      "ruta": "/settings?s=herramientas",
+      "acciones": [
+        {
+          "esperar": 25
+        },
+        {
+          "pulsar": {
+            "clave": "tools-details"
+          }
+        }
+      ],
+      "cajas": {
+        "git": {
+          "clave": "tool-git"
+        },
+        "python": {
+          "clave": "tool-python"
+        },
+        "latex": {
+          "clave": "tool-latex"
+        },
+        "motor": {
+          "clave": "tool-engine"
+        }
+      }
+    },
+    {
+      "nombre": "falta",
+      "ruta": "/settings?s=herramientas",
+      "falta": [
+        "latex"
+      ],
+      "cajas": {
+        "git": {
+          "clave": "tool-git"
+        },
+        "python": {
+          "clave": "tool-python"
+        },
+        "latex": {
+          "clave": "tool-latex"
+        },
+        "motor": {
+          "clave": "tool-engine"
+        },
+        "instalar": {
+          "clave": "install-latex"
+        },
+        "comprobar": {
+          "clave": "recheck-tools"
+        }
+      },
+      "acciones": [
+        {
+          "esperar": 25
+        }
+      ]
+    },
+    {
+      "nombre": "elegir",
+      "ruta": "/settings?s=herramientas",
+      "falta": [
+        "latex"
+      ],
+      "acciones": [
+        {
+          "esperar": 25
+        },
+        {
+          "pulsar": {
+            "clave": "install-latex"
+          }
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "¿Qué distribución de TeX?"
+        },
+        "tinytex": {
+          "clave": "latex-tinytex"
+        },
+        "basictex": {
+          "clave": "latex-basictex"
+        },
+        "mactex": {
+          "clave": "latex-mactex"
+        },
+        "elegir": {
+          "clave": "latex-choose"
+        }
+      }
+    }
+  ]
+}

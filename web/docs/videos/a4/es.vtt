@@ -1,0 +1,67 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:06.170
+Al terminar sabrás qué es un repositorio
+de Didacta, y habrás abierto el primero:
+
+00:00:06.640 --> 00:00:09.646
+el de ejemplo, para practicar sin miedo.
+
+00:00:10.496 --> 00:00:15.337
+Un repositorio de contenido es una carpeta
+con tu material, que vive en GitHub.
+
+00:00:15.407 --> 00:00:21.797
+Dentro hay un fichero, didacta.yaml,
+y tres carpetas: las lecciones,
+
+00:00:22.167 --> 00:00:24.418
+los problemas y las asignaturas.
+
+00:00:25.218 --> 00:00:28.597
+Para empezar, pulsa «Crear el ejemplo».
+
+00:00:28.667 --> 00:00:33.007
+Didacta crea en tu cuenta un repositorio
+privado, con una asignatura pequeña,
+
+00:00:33.047 --> 00:00:34.380
+y lo abre.
+
+00:00:34.450 --> 00:00:38.459
+Es tuyo para romperlo, y todos
+estos vídeos están hechos sobre él.
+
+00:00:39.259 --> 00:00:44.601
+Si tu material ya está en GitHub,
+elígelo ahí; puedes marcar varios.
+
+00:00:44.671 --> 00:00:48.050
+Si ya lo tienes en tu
+ordenador, elige la carpeta.
+
+00:00:48.120 --> 00:00:53.230
+Y para empezar de cero, crea en GitHub
+un repositorio vacío y elígelo:
+
+00:00:53.540 --> 00:00:55.009
+Didacta lo prepara.
+
+00:00:55.809 --> 00:00:59.579
+La copia queda en tu carpeta
+de usuario, dentro de Didacta,
+
+00:00:59.649 --> 00:01:01.642
+con el nombre del repositorio.
+
+00:01:01.712 --> 00:01:08.025
+Nunca dentro de OneDrive, Dropbox o
+iCloud: esas carpetas y git se pisan.
+
+00:01:08.825 --> 00:01:13.196
+Tu material lo guarda GitHub.
+Tú trabajas en una copia.
+
+00:01:13.446 --> 00:01:17.322
+En el siguiente vídeo, dejas el
+ordenador listo para compilar.

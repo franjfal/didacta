@@ -1,0 +1,96 @@
+# A3 · Entrar con tu cuenta de GitHub
+#
+# El montaje sale de este guion (`pasos:`, ver `estudio/recorrido.js`); las
+# páginas de github.com, que no se pueden fotografiar sin entrar de verdad,
+# las dibuja `escenas.js`.
+codigo: A3
+titulo: Entrar con tu cuenta de GitHub
+subtitulo: Sin darle tu contraseña a Didacta
+ruta: Empezar
+siguiente: "A4 · Abrir tu primer repositorio"
+voz: narrador
+lema: ["Tu contraseña, solo en github.com.", "Lo que toca Didacta, lo decide GitHub."]
+lema_en: "Lo que"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    promesa: {texto: "La contraseña no pasa por Didacta", en: contraseña}
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar este vídeo habrás entrado en Didacta con tu cuenta de
+          GitHub, sin darle tu contraseña.
+
+  - id: codigo
+    capitulo: El código
+    antes: 0.5
+    pantalla: cuenta
+    frases:
+      - id: entrar
+        texto: En la bienvenida, pulsa «Entrar en GitHub».
+        pasos:
+          - {en: bienvenida, enfoca: [titulo, entrar], max: 1.6, dy: 40}
+          - {en: Entrar en GitHub, pulsa: entrar, mas: 0.5}
+      - id: copiado
+        texto: Didacta te da un código corto, y ya lo ha copiado.
+        pasos:
+          - {al: inicio, cambia: codigo, mas: -0.2}
+          - {en: código, enfoca: [dialogo, codigo, abrir], max: 1.9}
+          - {en: copiado, resalta: codigo, etiqueta: Ya copiado, lado: derecha}
+      - id: abrir
+        texto: Ahora pulsa «Abrir GitHub».
+        pasos:
+          - {en: Abrir GitHub, pulsa: abrir}
+
+  - id: github
+    capitulo: En GitHub
+    antes: 0.5
+    frases:
+      - id: pegar
+        texto: >-
+          En el navegador, pega el código en la página de GitHub, y autoriza a
+          Didacta.
+      - id: contrasena
+        texto: >-
+          Si te pide la contraseña, se escribe ahí, en github.com, y en ningún
+          otro sitio.
+
+  - id: repos
+    capitulo: Tus repositorios
+    antes: 0.5
+    frases:
+      - id: elegir
+        texto: >-
+          Si GitHub te pregunta a qué repositorios puede llegar Didacta, elige
+          solo los que quieras.
+      - id: decide
+        texto: Quién puede leer o escribir cada uno lo decide GitHub, no Didacta.
+
+  - id: dentro
+    capitulo: Dentro
+    antes: 0.5
+    pantalla: dentro
+    frases:
+      - id: sola
+        texto: La ventana del código se cierra sola, y Didacta ya sabe quién eres.
+        pasos:
+          - {en: cierra, enfoca: [titulo, como, sesion], max: 1.7}
+          - {en: quién eres, resalta: como, etiqueta: Tu cuenta de GitHub}
+      - id: sin-conexion
+        texto: Y a partir de aquí, se abre también sin conexión.
+        pasos:
+          - {en: sin conexión, rotulo: "Sin conexión, también"}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Tu contraseña, solo en github.com. Lo que toca Didacta, lo decide
+          GitHub.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, abres tu primer repositorio.

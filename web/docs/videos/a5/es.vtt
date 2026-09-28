@@ -1,0 +1,69 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:05.440
+Al terminar sabrás comprobar que tu
+ordenador tiene lo que Didacta necesita para
+
+00:00:05.480 --> 00:00:05.980
+compilar,
+
+00:00:06.020 --> 00:00:08.185
+e instalar lo que falte.
+
+00:00:09.035 --> 00:00:14.622
+Está en Ajustes, Herramientas: cuatro
+programas que Didacta pide prestados.
+
+00:00:14.692 --> 00:00:19.782
+Git guarda cada cambio, Python
+mueve el motor, LaTeX hace los PDF,
+
+00:00:20.132 --> 00:00:22.722
+y el motor decide qué entra en cada uno.
+
+00:00:22.792 --> 00:00:27.035
+Cada uno dice dónde está y qué
+versión es, para saber cuál se usa.
+
+00:00:27.835 --> 00:00:31.982
+Si falta algo, lo dice, y te
+cuenta qué no saldrá sin él.
+
+00:00:32.052 --> 00:00:38.109
+Pulsa «Instalar»: antes de nada, te enseña
+las opciones y lo que ocupa cada una.
+
+00:00:38.179 --> 00:00:45.057
+TinyTeX son unos cien megas y no pide
+contraseña; MacTeX, seis gigas, con todo.
+
+00:00:45.127 --> 00:00:50.405
+Si la instalación sigue en otra ventana,
+al terminar pulsa «Volver a comprobar».
+
+00:00:51.205 --> 00:00:53.505
+El motor también se instala de un botón,
+
+00:00:53.545 --> 00:00:56.206
+y va siempre en la
+versión de la aplicación.
+
+00:00:57.006 --> 00:01:00.556
+Con todo en su sitio, la lista
+se queda en una sola línea.
+
+00:01:00.626 --> 00:01:03.256
+Y si LaTeX está instalado
+y no lo encuentra,
+
+00:01:03.466 --> 00:01:06.779
+te dice dónde ha mirado y
+te deja escribir la ruta.
+
+00:01:07.579 --> 00:01:13.614
+LaTeX no viene dentro, a propósito:
+lo eliges tú, con el tamaño delante.
+
+00:01:13.864 --> 00:01:17.228
+En el siguiente vídeo,
+conoces la ventana de Didacta.

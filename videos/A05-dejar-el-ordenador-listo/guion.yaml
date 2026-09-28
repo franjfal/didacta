@@ -1,0 +1,123 @@
+# A5 · Dejar el ordenador listo para compilar
+#
+# Montado desde este guion. «Si falta LaTeX» es la aplicación de verdad con
+# una sesión que finge que no está (`"falta": ["latex"]` en capturas.json).
+codigo: A5
+titulo: Dejar el ordenador listo para compilar
+subtitulo: Git, Python, LaTeX y el motor
+ruta: Empezar
+siguiente: "A6 · Conocer la ventana"
+voz: narrador
+lema: ["LaTeX no viene dentro, a propósito:", "lo eliges tú, con el tamaño delante."]
+lema_en: "lo eliges"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás comprobar que tu ordenador tiene lo que Didacta
+          necesita para compilar, e instalar lo que falte.
+
+  - id: lista
+    capitulo: Lo que hace falta
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: ajustes
+        texto: >-
+          Está en Ajustes, Herramientas: cuatro programas que Didacta pide
+          prestados.
+        pasos:
+          - {en: Herramientas, enfoca: [git, python, latex, motor], max: 1.7, dy: 30}
+      - id: cada-uno
+        texto: >-
+          Git guarda cada cambio, Python mueve el motor, LaTeX hace los PDF, y
+          el motor decide qué entra en cada uno.
+        pasos:
+          - {en: Git, resalta: git, hasta: 1.6}
+          - {en: Python, resalta: python, hasta: 1.6}
+          - {en: LaTeX, resalta: latex, hasta: 1.6}
+          - {en: motor decide, resalta: motor, hasta: 2.2}
+      - id: donde
+        texto: Cada uno dice dónde está y qué versión es, para saber cuál se usa.
+        pasos:
+          - {en: dónde está, rotulo: "Dónde está, y qué versión"}
+
+  - id: falta
+    capitulo: Si falta LaTeX
+    antes: 0.5
+    pantalla: falta
+    frases:
+      - id: lo-dice
+        texto: Si falta algo, lo dice, y te cuenta qué no saldrá sin él.
+        pasos:
+          - {al: inicio, enfoca: [git, latex, motor], max: 1.7, mas: 0.2}
+          - {en: falta, resalta: latex, etiqueta: "Falta LaTeX", color: ambar}
+      - id: instalar
+        texto: >-
+          Pulsa «Instalar»: antes de nada, te enseña las opciones y lo que ocupa
+          cada una.
+        pasos:
+          - {en: Instalar, pulsa: instalar}
+          - {en: opciones, cambia: elegir}
+          - {en: opciones, enfoca: [titulo, tinytex, mactex, elegir], max: 1.6, captura: elegir}
+      - id: tamanos
+        texto: >-
+          TinyTeX son unos cien megas y no pide contraseña; MacTeX, seis gigas,
+          con todo.
+        pasos:
+          - {en: TinyTeX, resalta: tinytex, etiqueta: "~100 MB, sin contraseña", captura: elegir, lado: derecha, hasta: 2.8}
+          - {en: MacTeX, resalta: mactex, etiqueta: "~6 GB, con todo", captura: elegir, lado: derecha}
+      - id: volver
+        texto: >-
+          Si la instalación sigue en otra ventana, al terminar pulsa «Volver a
+          comprobar».
+        pasos:
+          - {al: inicio, cambia: falta}
+          - {al: inicio, enfoca: [latex, motor, comprobar], max: 1.7, mas: 0.2}
+          - {en: Volver a comprobar, resalta: comprobar, etiqueta: "Al terminar"}
+
+  - id: motor
+    capitulo: El motor
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: un-boton
+        texto: >-
+          El motor también se instala de un botón, y va siempre en la versión
+          de la aplicación.
+        pasos:
+          - {al: inicio, enfoca: [latex, motor], max: 1.9, mas: 0.2}
+          - {en: versión, resalta: motor, etiqueta: "La versión de la aplicación"}
+
+  - id: listo
+    capitulo: Todo listo
+    antes: 0.5
+    pantalla: todo
+    frases:
+      - id: una-linea
+        texto: Con todo en su sitio, la lista se queda en una sola línea.
+        pasos:
+          - {al: inicio, enfoca: [plegado], max: 1.9, mas: 0.2}
+          - {en: una sola línea, resalta: plegado, etiqueta: "Está todo"}
+      - id: no-lo-ve
+        texto: >-
+          Y si LaTeX está instalado y no lo encuentra, te dice dónde ha mirado
+          y te deja escribir la ruta.
+        pasos:
+          - {en: dónde ha mirado, rotulo: "Dice dónde ha mirado"}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          LaTeX no viene dentro, a propósito: lo eliges tú, con el tamaño
+          delante.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, conoces la ventana de Didacta.

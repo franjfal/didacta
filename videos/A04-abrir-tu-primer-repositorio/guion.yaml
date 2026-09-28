@@ -1,0 +1,116 @@
+# A4 · Abrir tu primer repositorio
+#
+# Montado entero desde este guion (`estudio/recorrido.js`).
+codigo: A4
+titulo: Abrir tu primer repositorio
+subtitulo: Y empezar por el ejemplo, para practicar sin miedo
+ruta: Empezar
+siguiente: "A5 · Dejar el ordenador listo para compilar"
+voz: narrador
+lema: ["Tu material lo guarda GitHub.", "Tú trabajas en una copia."]
+lema_en: "Tú trabajas"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué es un repositorio de Didacta, y habrás abierto
+          el primero: el de ejemplo, para practicar sin miedo.
+
+  - id: que-es
+    capitulo: Qué es
+    antes: 0.5
+    grafico:
+      tipo: arbol
+      titulo: Un repositorio de contenido
+      lineas:
+        - {texto: "didacta-ejemplo/", nota: "en GitHub, y una copia en tu ordenador", en: carpeta}
+        - {texto: "didacta.yaml", nivel: 1, nota: "qué es este repositorio", en: didacta.yaml}
+        - {texto: "content/", nivel: 1, nota: "las lecciones", en: lecciones}
+        - {texto: "problems/", nivel: 1, nota: "los problemas", en: problemas}
+        - {texto: "courses/", nivel: 1, nota: "las asignaturas", en: asignaturas}
+    frases:
+      - id: carpeta
+        texto: >-
+          Un repositorio de contenido es una carpeta con tu material, que vive
+          en GitHub.
+      - id: dentro
+        texto: >-
+          Dentro hay un fichero, didacta.yaml, y tres carpetas: las lecciones,
+          los problemas y las asignaturas.
+
+  - id: ejemplo
+    capitulo: El ejemplo
+    antes: 0.5
+    pantalla: repositorio
+    frases:
+      - id: crear
+        texto: Para empezar, pulsa «Crear el ejemplo».
+        pasos:
+          - {al: inicio, enfoca: [titulo, ejemplo, github, disco], max: 1.5, mas: 0.3}
+          - {en: empezar, resalta: ejemplo, etiqueta: Para empezar, lado: izquierda, hasta: crear}
+          - {en: Crear el ejemplo, pulsa: crear-ejemplo, mas: 0.4}
+      - id: privado
+        texto: >-
+          Didacta crea en tu cuenta un repositorio privado, con una asignatura
+          pequeña, y lo abre.
+        pasos:
+          - {en: privado, cambia: hecho}
+          - {en: abre, resalta: repo, etiqueta: Abierto, captura: hecho, lado: derecha}
+      - id: romperlo
+        texto: Es tuyo para romperlo, y todos estos vídeos están hechos sobre él.
+        pasos:
+          - {en: romperlo, rotulo: "Tuyo, para practicar"}
+
+  - id: otros
+    capitulo: Los otros caminos
+    antes: 0.5
+    pantalla: repositorio
+    corta: true
+    frases:
+      - id: github
+        texto: Si tu material ya está en GitHub, elígelo ahí; puedes marcar varios.
+        pasos:
+          - {al: inicio, enfoca: [ejemplo, github, disco, cero], max: 1.5, mas: 0.2}
+          - {en: GitHub, resalta: github, etiqueta: Ya en GitHub}
+      - id: disco
+        texto: Si ya lo tienes en tu ordenador, elige la carpeta.
+        pasos:
+          - {en: ordenador, resalta: disco, etiqueta: Ya en tu disco}
+      - id: cero
+        texto: >-
+          Y para empezar de cero, crea en GitHub un repositorio vacío y elígelo:
+          Didacta lo prepara.
+        pasos:
+          - {en: de cero, resalta: cero, etiqueta: De cero, lado: abajo}
+
+  - id: donde
+    capitulo: Dónde queda
+    antes: 0.5
+    grafico:
+      tipo: comparar
+      titulo: La copia, en tu ordenador
+      izquierda: {titulo: "~/Didacta/didacta-ejemplo", texto: "En tu carpeta de usuario, con el nombre del repositorio. Ahí la deja Didacta.", ok: true, en: carpeta}
+      derecha: {titulo: "OneDrive, Dropbox o iCloud", texto: "Nunca dentro de una carpeta que se sincroniza sola: se pisa con git.", ok: false, en: Nunca}
+    frases:
+      - id: copia
+        texto: >-
+          La copia queda en tu carpeta de usuario, dentro de Didacta, con el
+          nombre del repositorio.
+      - id: nunca
+        texto: >-
+          Nunca dentro de OneDrive, Dropbox o iCloud: esas carpetas y git se
+          pisan.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: Tu material lo guarda GitHub. Tú trabajas en una copia.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, dejas el ordenador listo para compilar.

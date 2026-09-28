@@ -1,0 +1,35 @@
+{
+  "capturas": [
+    {
+      "nombre": "repositorio",
+      "bienvenida": true,
+      "sin_repositorios": true,
+      "acciones": [
+        {"pulsar": {"texto": "Empezar"}},
+        {"pulsar": {"texto": "Siguiente"}},
+        {"pulsar": {"texto": "Siguiente"}}
+      ],
+      "cajas": {
+        "titulo": {"texto": "Tu primer material"},
+        "ejemplo": {"texto": "Probar con un ejemplo", "alto": 200},
+        "crear-ejemplo": {"clave": "welcome-try-example"},
+        "github": {"texto": "Uno tuyo de GitHub", "alto": 200},
+        "disco": {"texto": "Ya está en tu disco", "alto": 200},
+        "cero": {"contiene": "¿Empezar de cero?"}
+      }
+    },
+    {
+      "nombre": "hecho",
+      "bienvenida": true,
+      "acciones": [
+        {"pulsar": {"texto": "Empezar"}},
+        {"pulsar": {"texto": "Siguiente"}},
+        {"pulsar": {"texto": "Siguiente"}}
+      ],
+      "cajas": {
+        "titulo": {"texto": "Tu material"},
+        "repo": {"texto": "profe/didacta-ejemplo"}
+      }
+    }
+  ]
+}

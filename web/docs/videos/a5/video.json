@@ -1,0 +1,85 @@
+{
+  "codigo": "A5",
+  "titulo": "Dejar el ordenador listo para compilar",
+  "fichero": "A05-dejar-el-ordenador-listo.mp4",
+  "duracion": 79.83,
+  "megas": 4.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Dejar el ordenador listo para compilar"
+    },
+    {
+      "t": 8.54,
+      "titulo": "Lo que hace falta"
+    },
+    {
+      "t": 27.34,
+      "titulo": "Si falta LaTeX"
+    },
+    {
+      "t": 50.7,
+      "titulo": "El motor"
+    },
+    {
+      "t": 56.51,
+      "titulo": "Todo listo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás comprobar que tu ordenador tiene lo que Didacta necesita para compilar, e instalar lo que falte."
+    },
+    {
+      "t": 9.04,
+      "texto": "Está en Ajustes, Herramientas: cuatro programas que Didacta pide prestados."
+    },
+    {
+      "t": 14.69,
+      "texto": "Git guarda cada cambio, Python mueve el motor, LaTeX hace los PDF, y el motor decide qué entra en cada uno."
+    },
+    {
+      "t": 22.79,
+      "texto": "Cada uno dice dónde está y qué versión es, para saber cuál se usa."
+    },
+    {
+      "t": 27.84,
+      "texto": "Si falta algo, lo dice, y te cuenta qué no saldrá sin él."
+    },
+    {
+      "t": 32.05,
+      "texto": "Pulsa «Instalar»: antes de nada, te enseña las opciones y lo que ocupa cada una."
+    },
+    {
+      "t": 38.18,
+      "texto": "TinyTeX son unos cien megas y no pide contraseña; MacTeX, seis gigas, con todo."
+    },
+    {
+      "t": 45.13,
+      "texto": "Si la instalación sigue en otra ventana, al terminar pulsa «Volver a comprobar»."
+    },
+    {
+      "t": 51.2,
+      "texto": "El motor también se instala de un botón, y va siempre en la versión de la aplicación."
+    },
+    {
+      "t": 57.01,
+      "texto": "Con todo en su sitio, la lista se queda en una sola línea."
+    },
+    {
+      "t": 60.63,
+      "texto": "Y si LaTeX está instalado y no lo encuentra, te dice dónde ha mirado y te deja escribir la ruta."
+    },
+    {
+      "t": 67.58,
+      "texto": "LaTeX no viene dentro, a propósito: lo eliges tú, con el tamaño delante."
+    },
+    {
+      "t": 73.86,
+      "texto": "En el siguiente vídeo, conoces la ventana de Didacta."
+    }
+  ]
+}

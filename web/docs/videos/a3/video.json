@@ -1,0 +1,81 @@
+{
+  "codigo": "A3",
+  "titulo": "Entrar con tu cuenta de GitHub",
+  "fichero": "A03-entrar-con-github.mp4",
+  "duracion": 63.86,
+  "megas": 2.6,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Entrar con tu cuenta de GitHub"
+    },
+    {
+      "t": 7.4,
+      "titulo": "El código"
+    },
+    {
+      "t": 18.01,
+      "titulo": "En GitHub"
+    },
+    {
+      "t": 30.08,
+      "titulo": "Tus repositorios"
+    },
+    {
+      "t": 41.45,
+      "titulo": "Dentro"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar este vídeo habrás entrado en Didacta con tu cuenta de GitHub, sin darle tu contraseña."
+    },
+    {
+      "t": 7.9,
+      "texto": "En la bienvenida, pulsa «Entrar en GitHub»."
+    },
+    {
+      "t": 11.6,
+      "texto": "Didacta te da un código corto, y ya lo ha copiado."
+    },
+    {
+      "t": 15.05,
+      "texto": "Ahora pulsa «Abrir GitHub»."
+    },
+    {
+      "t": 18.51,
+      "texto": "En el navegador, pega el código en la página de GitHub, y autoriza a Didacta."
+    },
+    {
+      "t": 23.92,
+      "texto": "Si te pide la contraseña, se escribe ahí, en github.com, y en ningún otro sitio."
+    },
+    {
+      "t": 30.58,
+      "texto": "Si GitHub te pregunta a qué repositorios puede llegar Didacta, elige solo los que quieras."
+    },
+    {
+      "t": 36.12,
+      "texto": "Quién puede leer o escribir cada uno lo decide GitHub, no Didacta."
+    },
+    {
+      "t": 41.95,
+      "texto": "La ventana del código se cierra sola, y Didacta ya sabe quién eres."
+    },
+    {
+      "t": 46.74,
+      "texto": "Y a partir de aquí, se abre también sin conexión."
+    },
+    {
+      "t": 51.07,
+      "texto": "Tu contraseña, solo en github.com. Lo que toca Didacta, lo decide GitHub."
+    },
+    {
+      "t": 57.79,
+      "texto": "En el siguiente vídeo, abres tu primer repositorio."
+    }
+  ]
+}

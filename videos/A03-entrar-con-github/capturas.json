@@ -1,0 +1,46 @@
+{
+  "capturas": [
+    {
+      "nombre": "cuenta",
+      "bienvenida": true,
+      "sin_sesion": true,
+      "acciones": [
+        {"pulsar": {"texto": "Empezar"}}
+      ],
+      "cajas": {
+        "titulo": {"texto": "Entra en GitHub"},
+        "entrar": {"texto": "Entrar en GitHub"},
+        "pasos": {"texto": "Cuenta"}
+      }
+    },
+    {
+      "nombre": "codigo-fin",
+      "bienvenida": true,
+      "sin_sesion": true,
+      "acciones": [
+        {"pulsar": {"texto": "Empezar"}},
+        {"pulsar": {"texto": "Entrar en GitHub"}, "esperar": 14},
+        {"capturar": {"nombre": "codigo", "cajas": {
+          "codigo": {"clave": "device-code"},
+          "abrir": {"clave": "device-open"},
+          "copiar": {"clave": "device-copy"},
+          "direccion": {"contiene": "Se pega en"},
+          "dialogo": {"texto": "Entra en GitHub con este código"}
+        }}},
+        {"avanzar": 7}
+      ]
+    },
+    {
+      "nombre": "dentro",
+      "bienvenida": true,
+      "acciones": [
+        {"pulsar": {"texto": "Empezar"}}
+      ],
+      "cajas": {
+        "titulo": {"texto": "Ya has entrado"},
+        "sesion": {"texto": "Sesión iniciada"},
+        "como": {"contiene": "Como "}
+      }
+    }
+  ]
+}
