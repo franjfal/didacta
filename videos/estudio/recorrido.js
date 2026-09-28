@@ -286,12 +286,20 @@
       const zonaDe = (z, p) => (typeof z === 'string' ? z : null) && z;
 
       const ctx = { E, G, D, v, cam, g, escenas, cuando, hastaDe, palabraEnEscena };
+      // La captura que se ve en cada momento: los pasos se escriben en orden,
+      // así que es la última que ha puesto un `cambia`. Cada paso se queda con
+      // la suya; si no, un recuadro buscaría su zona en la que se ve al final.
+      let actual = nombre;
       for (const escena of escenas) {
         for (const frase of escena.frases) {
-          for (const p of frase.pasos || []) {
-            const t = cuando(frase, p);
+          for (const p0 of frase.pasos || []) {
+            const t = cuando(frase, p0);
+            if (p0.cambia) {
+              v.cambiar(t, p0.cambia, p0.funde ?? 0.35);
+              actual = p0.cambia;
+            }
+            const p = { ...p0, captura: p0.captura || actual };
             const hasta = hastaDe(escena, frase, p, t) ?? ultima.fin - 0.3;
-            if (p.cambia) v.cambiar(t, p.cambia, p.funde ?? 0.35);
             if (p.enfoca) {
               const r = union(lista(p.enfoca).map((z) => v.zona(z, p.captura)));
               cam.enfocar(t - (p.antes ?? 0.5), t + (p.dura ?? 0.8), r, { margen: p.margen ?? 0.12, max: p.max ?? 2.0, dx: p.dx || 0, dy: p.dy || 0 });
@@ -467,7 +475,17 @@
         const ancho = gr.ancho || Math.min(820, (W - 220 - hueco * (n - 1)) / n);
         const x0 = (W - (n * ancho + (n - 1) * hueco)) / 2;
         hojas.forEach((h, i) => {
-          const p = E.hoja({ pdf: h.pdf, x: x0 + i * (ancho + hueco), y: arriba + 90, ancho, alto: h.alto, desde: h.desde, padre: g });
+          // `desde_zona`: la página empieza un poco antes de esa zona, para
+          // enseñar solo el ejercicio que interesa.
+          let desde = h.desde;
+          if (h.desde_zona) {
+            const z = D.pdf[h.pdf].zonas[h.desde_zona];
+            if (!z) throw new Error(`no hay zona «${h.desde_zona}» en ${h.pdf}`);
+            desde = z[1] - (h.margen ?? 60);
+          }
+          let izquierda = h.izquierda || 0;
+          if (h.izquierda_zona) izquierda = D.pdf[h.pdf].zonas[h.izquierda_zona][0] - (h.margen_x ?? 30);
+          const p = E.hoja({ pdf: h.pdf, x: x0 + i * (ancho + hueco), y: arriba + 90, ancho, alto: h.alto, desde, zoom: h.zoom, izquierda, padre: g });
           const t = tDe(escena, h, e.ini + 0.4 + 0.3 * i);
           anim(p.raiz, [
             [t - 0.2, { o: 0, y: 70 }],

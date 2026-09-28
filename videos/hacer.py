@@ -165,14 +165,16 @@ def motor_neutro() -> dict:
 
     El de verdad es este clon, y su ruta lleva el nombre de quien graba. Un
     enlace en `/Users/Shared/Didacta/motor` (en macOS) se lee como el de una
-    instalación cualquiera. Si no se puede crear, se enseña la de verdad.
+    instalación cualquiera. Si no se puede crear, se enseña la de verdad. La
+    copia del repositorio de ejemplo va al lado, en
+    `/Users/Shared/Didacta/didacta-ejemplo`, por lo mismo.
     """
     enlace = Path("/Users/Shared/Didacta/motor")
     try:
         if not enlace.exists():
             enlace.parent.mkdir(parents=True, exist_ok=True)
             enlace.symlink_to(RAIZ)
-        return {"DIDACTA_MOTOR_VIDEO": str(enlace)}
+        return {"DIDACTA_MOTOR_VIDEO": str(enlace), "DIDACTA_RAIZ_VIDEO": str(enlace.parent)}
     except OSError:
         return {}
 

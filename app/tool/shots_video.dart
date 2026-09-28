@@ -32,6 +32,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -67,9 +68,10 @@ import 'generate_screenshots.dart'
 /// Una captura a otro tamaño parece de otra aplicación.
 const Size window = Size(1440, 900);
 
-/// Retina: la nitidez se pide aquí, no al capturar (ver
-/// `generate_screenshots.dart`). A 2880×1800 la cámara del vídeo puede
-/// acercarse al doble sin que se vean los píxeles.
+/// Retina: a 2880×1800 la cámara del vídeo puede acercarse al doble sin que
+/// se vean los píxeles. Se pide dos veces: en la ventana, para que la
+/// interfaz se pinte a esta densidad, y al capturar (`capture`), porque
+/// `toImage` mide en puntos y con un factor de uno devuelve 1440×900.
 const double density = 2.0;
 
 /// Como se llama el repositorio de ejemplo cuando lo crea la aplicación.
@@ -102,6 +104,10 @@ void main() {
 
   late Directory root;
   late String work;
+  late String remote;
+  // Dónde se deja la copia del ejemplo. Por defecto, una carpeta temporal;
+  // `hacer.py` da una con nombre neutro, porque Ajustes enseña la ruta.
+  final neutral = Platform.environment['DIDACTA_RAIZ_VIDEO'];
   late String out;
   late Map<String, dynamic> spec;
 
@@ -141,11 +147,21 @@ void main() {
     // El repositorio de ejemplo, como lo dejaría «Probar con un ejemplo»: una
     // copia con su historial y un remoto que se llama como él --si no se
     // llama igual, la sesión no lo reconoce como suyo--.
-    root = Directory.systemTemp.createTempSync('didacta-video-');
-    work = '${root.path}/$owner/$repoName';
-    Directory('${root.path}/$owner').createSync(recursive: true);
+    if (neutral != null) {
+      root = Directory(neutral)..createSync(recursive: true);
+      work = '${root.path}/$repoName';
+      for (final old in [work, '${root.path}/.remotos']) {
+        if (Directory(old).existsSync()) {
+          Directory(old).deleteSync(recursive: true);
+        }
+      }
+    } else {
+      root = Directory.systemTemp.createTempSync('didacta-video-');
+      work = '${root.path}/$owner/$repoName';
+    }
     await run('cp', ['-R', '$engine/app/assets/ejemplo', work], root.path);
-    final remote = '${root.path}/$owner/$repoName.git';
+    remote = '${root.path}/.remotos/$owner/$repoName.git';
+    Directory('${root.path}/.remotos/$owner').createSync(recursive: true);
     await run('git', [
       'init',
       '--bare',
@@ -170,7 +186,17 @@ void main() {
 
   tearDownAll(() async {
     if (video == null) return;
-    if (await root.exists()) await root.delete(recursive: true);
+    if (neutral == null) {
+      if (await root.exists()) await root.delete(recursive: true);
+      return;
+    }
+    // En la carpeta neutra hay más cosas --el enlace al motor--: solo se
+    // borra lo que ha puesto esta ejecución.
+    for (final mine in [work, '${root.path}/.remotos']) {
+      if (Directory(mine).existsSync()) {
+        Directory(mine).deleteSync(recursive: true);
+      }
+    }
   });
 
   /// Deja el repositorio como lo pide la captura antes de abrirlo:
@@ -192,18 +218,34 @@ void main() {
       final step = (raw as Map).cast<String, dynamic>();
       if (step['en_github'] case final num n) {
         final other = Directory.systemTemp.createTempSync('didacta-otra-');
-        await run('git', [
-          'clone',
-          '-q',
-          '${root.path}/$owner/$repoName.git',
-          other.path,
-        ], root.path);
+        await run('git', ['clone', '-q', remote, other.path], root.path);
         for (var i = 0; i < n; i += 1) {
           await commit(other.path, 'Un cambio desde el despacho');
         }
         await run('git', ['push', '-q', 'origin', 'main'], other.path);
         await run('git', ['fetch', '-q', 'origin'], work);
         other.deleteSync(recursive: true);
+      }
+      if (step['editar'] case final Map edit) {
+        // Cambiar un fichero del repositorio, volver a indexar y guardarlo:
+        // `{"fichero": "...", "buscar": "...", "poner": "..."}`.
+        final file = File('$work/${edit['fichero']}');
+        final text = file.readAsStringSync();
+        final wanted = edit['buscar'] as String;
+        if (!text.contains(wanted)) {
+          stdout.writeln('    (no encuentro «$wanted» en ${edit['fichero']})');
+        }
+        file.writeAsStringSync(
+          text.replaceFirst(wanted, edit['poner'] as String),
+        );
+        await run('$engine/cli/didacta', ['index'], work);
+        await run('git', ['add', '-A'], work);
+        await commit(work, (edit['mensaje'] as String?) ?? 'Un cambio');
+        // `"enviar": true`: y subido, para que la barra diga «al día» y no
+        // «1 cambio sin enviar», que en ese vídeo no viene a cuento.
+        if (edit['enviar'] == true) {
+          await run('git', ['push', '-q', 'origin', 'main'], work);
+        }
       }
       if (step['sin_enviar'] case final num n) {
         for (var i = 0; i < n; i += 1) {
@@ -345,7 +387,7 @@ void main() {
     final boundary =
         _frame.currentContext!.findRenderObject()! as RenderRepaintBoundary;
     final png = await tester.runAsync(() async {
-      final image = await boundary.toImage(pixelRatio: 1.0);
+      final image = await boundary.toImage(pixelRatio: density);
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       image.dispose();
       return bytes;
@@ -356,7 +398,7 @@ void main() {
 
   // ------------------------------------------------------------- zonas ---
 
-  Finder? finderFor(Map<String, dynamic> what) {
+  Finder? plainFinderFor(Map<String, dynamic> what) {
     if (what['texto'] case final String text) return find.text(text);
     if (what['contiene'] case final String text) {
       return find.textContaining(text);
@@ -364,6 +406,43 @@ void main() {
     if (what['consejo'] case final String tip) return find.byTooltip(tip);
     if (what['clave'] case final String key) return find.byKey(Key(key));
     return null;
+  }
+
+  Offset? centerOf(Element element) {
+    final box = element.renderObject;
+    if (box is! RenderBox || !box.hasSize) return null;
+    return box.localToGlobal(box.size.center(Offset.zero));
+  }
+
+  Finder? finderFor(Map<String, dynamic> what) {
+    final found = plainFinderFor(what);
+    // `cerca`: de todos los que casan, el que está a la altura de otra cosa
+    // --el «Editar aquí» de la fila de «Apuntes», no el primero de la lista--.
+    if (found != null && what['cerca'] is Map) {
+      final near = finderFor((what['cerca'] as Map).cast<String, dynamic>());
+      final anchor = near == null || near.evaluate().isEmpty
+          ? null
+          : centerOf(near.evaluate().first);
+      if (anchor == null) return found;
+      Element? best;
+      var distance = double.infinity;
+      for (final element in found.evaluate()) {
+        final center = centerOf(element);
+        if (center == null) continue;
+        // Lo de debajo antes que lo de encima: el botón de una tarjeta va
+        // debajo de su título, y el de la tarjeta de antes puede estar igual
+        // de cerca.
+        final d = center.dy >= anchor.dy - 4
+            ? center.dy - anchor.dy
+            : 10000 + anchor.dy - center.dy;
+        if (d < distance) {
+          distance = d;
+          best = element;
+        }
+      }
+      if (best != null) return find.byElementPredicate((e) => e == best);
+    }
+    return found;
   }
 
   /// Un trozo del texto del editor --de `from` hasta `to`, incluido--.
@@ -641,6 +720,9 @@ void main() {
     }),
   );
 
+  /// Los ratones que apuntan algo en la captura de ahora.
+  final mice = <TestGesture>[];
+
   Future<void> act(
     WidgetTester tester,
     Session session,
@@ -653,10 +735,81 @@ void main() {
         stdout.writeln('    (no encuentro qué pulsar: $what)');
         return;
       }
-      await tester.tap(finder.first);
+      await tester.tap(finder.at((what['n'] as num?)?.toInt() ?? 0));
       await settleReal(
         tester,
         rounds: (action['esperar'] as num?)?.toInt() ?? 10,
+      );
+    } else if (action['apuntar'] case final Map what) {
+      // El ratón encima, sin pulsar: lo que solo aparece al apuntar --el
+      // botón de ojear una lección, por ejemplo--.
+      final finder = finderFor(what.cast<String, dynamic>());
+      if (finder == null || finder.evaluate().isEmpty) {
+        stdout.writeln('    (no encuentro qué apuntar: $what)');
+        return;
+      }
+      // Con ratón: lo que pinta al apuntar con `FocusableActionDetector`
+      // solo lo hace en modo ratón, y los toques de antes lo dejan en táctil.
+      FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.alwaysTraditional;
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(
+        tester.getCenter(finder.at((what['n'] as num?)?.toInt() ?? 0)),
+      );
+      mice.add(mouse);
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 6,
+      );
+    } else if (action['ir'] case final String route) {
+      // Otra pantalla en la misma sesión: lo abierto hace poco se recuerda.
+      // Antes que `esperar`, que también va en la acción.
+      routerFor(tester).go(route);
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 10,
+      );
+    } else if (action['mostrar'] case final Map what) {
+      // Desplazar lo que haga falta para que se vea: los ejes de una
+      // plantilla, al fondo de su diálogo.
+      final finder = finderFor(what.cast<String, dynamic>());
+      if (finder == null) return;
+      if (finder.evaluate().isEmpty) {
+        // En una lista perezosa lo de abajo no existe hasta que se llega:
+        // se baja por la más grande del diálogo de encima, si lo hay (los
+        // campos de texto también son desplazables, y no son esos).
+        final dialogs = find.byType(Dialog);
+        final candidates = dialogs.evaluate().isEmpty
+            ? find.byType(Scrollable)
+            : find.descendant(
+                of: dialogs.last,
+                matching: find.byType(Scrollable),
+              );
+        Element? biggest;
+        var area = 0.0;
+        for (final element in candidates.evaluate()) {
+          final box = element.renderObject;
+          if (box is! RenderBox || !box.hasSize) continue;
+          if (box.size.width * box.size.height > area) {
+            area = box.size.width * box.size.height;
+            biggest = element;
+          }
+        }
+        if (biggest == null) return;
+        await tester.scrollUntilVisible(
+          finder,
+          240,
+          scrollable: find.byElementPredicate((e) => e == biggest),
+        );
+      } else {
+        await tester.ensureVisible(
+          finder.at((what['n'] as num?)?.toInt() ?? 0),
+        );
+      }
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 6,
       );
     } else if (action['lado_a_lado'] == true) {
       await tester.runAsync(() => session.setSplitEditors(true));
@@ -695,6 +848,21 @@ void main() {
         await tester.sendKeyUpEvent(key);
       }
       await settleReal(tester, rounds: 8);
+    } else if (action['hasta_que'] case final Map what) {
+      // Esperar hasta que algo aparezca --un PDF abierto, el final de una
+      // compilación--, con un máximo: lo que tarda depende de la máquina.
+      final finder = finderFor(what.cast<String, dynamic>());
+      final most = (action['max'] as num?)?.toInt() ?? 600;
+      var rounds = 0;
+      while (rounds < most && (finder == null || finder.evaluate().isEmpty)) {
+        await settleReal(tester, rounds: 4);
+        rounds += 4;
+      }
+      if (rounds >= most) stdout.writeln('    (no ha aparecido: $what)');
+      await settleReal(
+        tester,
+        rounds: (action['despues'] as num?)?.toInt() ?? 10,
+      );
     } else if (action['avanzar'] case final num seconds) {
       // El reloj de la prueba, hacia delante: lo que espera un tiempo
       // --el sondeo de GitHub, por ejemplo-- termina y no deja temporizadores.
@@ -753,6 +921,12 @@ void main() {
         };
         writeZones('$out/$name.json', found);
         stdout.writeln('  $name.png  (${found.length} zonas)');
+        for (final mouse in mice) {
+          await mouse.removePointer();
+        }
+        mice.clear();
+        FocusManager.instance.highlightStrategy =
+            FocusHighlightStrategy.automatic;
       }
       // Sin pantallas montadas antes de acabar: la barra de sincronización
       // deja temporizadores, y el arnés se queja de los que siguen vivos.

@@ -544,11 +544,16 @@
     const D = window.DATOS;
     const pdf = D.pdf[o.pdf];
     if (!pdf) throw new Error(`no hay pdf «${o.pdf}»`);
-    const escala = o.ancho / pdf.ancho;
+    // `zoom` acerca la página dentro de su marco, y `izquierda` (en puntos de
+    // la página) la recorta por ese lado: para leer un ejercicio sin la
+    // página entera alrededor.
+    const zoom = o.zoom || 1;
+    const izquierda = o.izquierda || 0;
+    const escala = (o.ancho * zoom) / pdf.ancho;
     const altoPagina = pdf.alto * escala;
     const alto = o.alto || altoPagina;
     const raiz = nodo({ clase: 'hoja', padre: o.padre, estilo: { left: `${o.x}px`, top: `${o.y}px`, width: `${o.ancho}px`, height: `${alto}px` } });
-    const img = nodo({ tag: 'img', padre: raiz, attrs: { src: pdf.src }, estilo: { position: 'absolute', left: 0, top: `${-(o.desde || 0) * escala}px`, width: `${o.ancho}px`, height: `${altoPagina}px` } });
+    const img = nodo({ tag: 'img', padre: raiz, attrs: { src: pdf.src }, estilo: { position: 'absolute', left: `${-izquierda * escala}px`, top: `${-(o.desde || 0) * escala}px`, width: `${pdf.ancho * escala}px`, height: `${altoPagina}px` } });
     return {
       raiz,
       img,
@@ -559,7 +564,12 @@
       zona(nombre) {
         const z = pdf.zonas[nombre];
         if (!z) throw new Error(`no hay zona «${nombre}» en ${o.pdf}`);
-        return { x: o.x + z[0] * escala, y: o.y + (z[1] - (o.desde || 0)) * escala, w: z[2] * escala, h: z[3] * escala };
+        // Recortada al marco: con zoom, la zona puede seguir más allá.
+        const x = o.x + (z[0] - izquierda) * escala;
+        const y = o.y + (z[1] - (o.desde || 0)) * escala;
+        const x1 = Math.min(x + z[2] * escala, o.x + o.ancho - 6);
+        const y1 = Math.min(y + z[3] * escala, o.y + alto - 6);
+        return { x, y, w: Math.max(0, x1 - x), h: Math.max(0, y1 - y) };
       },
     };
   }
