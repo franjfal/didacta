@@ -1,0 +1,61 @@
+{
+  "codigo": "F4",
+  "titulo": "Cuando la compilación falla",
+  "fichero": "F04-cuando-la-compilacion-falla.mp4",
+  "duracion": 48.35,
+  "megas": 3.7,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Cuando la compilación falla"
+    },
+    {
+      "t": 7.12,
+      "titulo": "La tarjeta"
+    },
+    {
+      "t": 16.43,
+      "titulo": "La consola"
+    },
+    {
+      "t": 23.69,
+      "titulo": "Arreglarlo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás ir directo a un error de compilación, sin leer la consola entera."
+    },
+    {
+      "t": 7.62,
+      "texto": "Si algo falla, cada error dice en qué lección está, en qué idioma, en qué línea, y qué ha pasado."
+    },
+    {
+      "t": 14.77,
+      "texto": "Abrir te lleva allí."
+    },
+    {
+      "t": 16.93,
+      "texto": "Y si hace falta, Ver detalles enseña la consola entera, con cada línea marcada con su versión."
+    },
+    {
+      "t": 24.19,
+      "texto": "Abrir lleva a la lección, en su idioma, con el cursor en la línea: aquí sobraba una c."
+    },
+    {
+      "t": 30.66,
+      "texto": "El error se dice en la lección que hay que arreglar, no en el tema que la incluye."
+    },
+    {
+      "t": 35.94,
+      "texto": "El error se dice en la lección que hay que arreglar, no en el documento que la incluye."
+    },
+    {
+      "t": 41.34,
+      "texto": "En el siguiente vídeo, compilar un curso entero, o solo lo desactualizado."
+    }
+  ]
+}

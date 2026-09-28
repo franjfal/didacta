@@ -1,0 +1,86 @@
+# F4 · Cuando la compilación falla
+#
+# Montado desde este guion. La errata es de verdad: el arnés cambia un
+# `\dfrac` por `\fracc` en «Funciones continuas» antes de compilar el Tema 1,
+# y lo que dice la aplicación es lo que ha dicho LaTeX.
+codigo: F4
+titulo: Cuando la compilación falla
+subtitulo: Ir directo al error, en la lección que hay que arreglar
+ruta: Compilar y revisar
+siguiente: "F5 · Compilar un curso entero, o solo lo desactualizado"
+voz: narrador
+lema: ["El error se dice en la lección que hay que arreglar,", "no en el documento que la incluye."]
+lema_en: "no en el documento"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás ir directo a un error de compilación, sin leer la
+          consola entera.
+
+  - id: tarjeta
+    capitulo: La tarjeta
+    antes: 0.5
+    pantalla: falla
+    frases:
+      - id: dice
+        texto: >-
+          Si algo falla, cada error dice en qué lección está, en qué idioma, en
+          qué línea, y qué ha pasado.
+        pasos:
+          - {al: inicio, enfoca: [cabecera, tarjeta], max: 1.5}
+          - {en: falla, resalta: cabecera, hasta: 1.6}
+          - {en: lección, resalta: tarjeta, etiqueta: "«Funciones continuas», es, línea 57", color: rojo, lado: abajo}
+      - id: abrir
+        texto: >-
+          Abrir te lleva allí.
+        pasos:
+          - {en: Abrir, resalta: abrir, lado: izquierda}
+
+  - id: consola
+    capitulo: La consola
+    antes: 0.5
+    pantalla: consola
+    frases:
+      - id: entera
+        texto: >-
+          Y si hace falta, Ver detalles enseña la consola entera, con cada línea
+          marcada con su versión.
+        pasos:
+          - {al: inicio, enfoca: [consola], max: 1.5}
+          - {en: consola, resalta: consola}
+
+  - id: arreglar
+    capitulo: Arreglarlo
+    antes: 0.5
+    pantalla: abierta
+    frases:
+      - id: linea
+        texto: >-
+          Abrir lleva a la lección, en su idioma, con el cursor en la línea:
+          aquí sobraba una c.
+        pasos:
+          - {al: inicio, enfoca: [titulo, linea], max: 1.4}
+          - {en: cursor, resalta: linea, etiqueta: "Aquí", color: rojo, lado: abajo}
+      - id: tema
+        texto: >-
+          El error se dice en la lección que hay que arreglar, no en el tema
+          que la incluye.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El error se dice en la lección que hay que arreglar, no en el
+          documento que la incluye.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, compilar un curso entero, o solo lo
+          desactualizado.

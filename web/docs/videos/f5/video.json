@@ -1,0 +1,69 @@
+{
+  "codigo": "F5",
+  "titulo": "Compilar un curso entero, o solo lo desactualizado",
+  "fichero": "F05-compilar-un-curso-entero.mp4",
+  "duracion": 56.98,
+  "megas": 2.6,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Compilar un curso entero, o solo lo desactualizado"
+    },
+    {
+      "t": 7.29,
+      "titulo": "El curso entero"
+    },
+    {
+      "t": 16.45,
+      "titulo": "La tira de abajo"
+    },
+    {
+      "t": 30.11,
+      "titulo": "Solo lo desactualizado"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás compilar un curso entero sin quedarte mirando, y rehacer solo lo que ha cambiado."
+    },
+    {
+      "t": 7.79,
+      "texto": "Abajo, Compilar el curso: todos sus documentos, uno detrás de otro."
+    },
+    {
+      "t": 12.86,
+      "texto": "La consola se puede ocultar y seguir trabajando."
+    },
+    {
+      "t": 16.95,
+      "texto": "La tira de abajo dice por cuál va, con Ver y Detener. Lo que pulses mientras tanto espera su turno."
+    },
+    {
+      "t": 25.72,
+      "texto": "Al acabar, cuántos han ido bien, y cuántos con errores."
+    },
+    {
+      "t": 30.61,
+      "texto": "Si corriges una frase del Tema 1, su PDF se queda viejo, y los demás no."
+    },
+    {
+      "t": 36.29,
+      "texto": "Y Compilar lo desactualizado rehace solo ese."
+    },
+    {
+      "t": 39.45,
+      "texto": "Viejo quiere decir que ha cambiado lo que entró en el PDF, no su fecha: traer cambios de GitHub no lo deja todo viejo."
+    },
+    {
+      "t": 47.92,
+      "texto": "Viejo es que haya cambiado lo que entró en el PDF, no su fecha."
+    },
+    {
+      "t": 51.94,
+      "texto": "En el siguiente vídeo, la vista rápida."
+    }
+  ]
+}

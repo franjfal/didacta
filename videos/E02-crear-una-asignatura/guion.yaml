@@ -1,0 +1,100 @@
+# E2 · Crear una asignatura y su curso académico
+#
+# Montado desde este guion: «Análisis Matemático» se crea de verdad dentro
+# del arnés, con su primer curso, sobre el repositorio de ejemplo.
+codigo: E2
+titulo: Crear una asignatura y su curso académico
+subtitulo: Dar de alta una asignatura, sus datos y su primer curso
+ruta: Preparar una asignatura
+siguiente: "E3 · Crear temas y documentos"
+voz: narrador
+lema: ["La asignatura guarda lo que no cambia;", "el curso, lo que se da este año."]
+lema_en: "el curso"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dar de alta una asignatura nueva, y su primer
+          curso académico.
+
+  - id: nueva
+    capitulo: Nueva asignatura
+    antes: 0.5
+    pantalla: antes
+    frases:
+      - id: boton
+        texto: >-
+          En Asignaturas, Nueva asignatura.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Nueva, resalta: nueva}
+          - {en: Nueva, pulsa: nueva}
+      - id: campos
+        texto: >-
+          Pide el título, y el identificador sale solo. Después, el idioma en
+          que se da, y si quieres copiar los datos de otra.
+        pasos:
+          - {al: inicio, cambia: nueva}
+          - {al: inicio, enfoca: [titulo, crear], max: 1.6, captura: nueva}
+          - {en: título, resalta: titulo, captura: nueva, hasta: 1.4}
+          - {en: identificador, resalta: id, captura: nueva, hasta: 1.8}
+          - {en: idioma, resalta: idioma, captura: nueva, hasta: 1.8}
+          - {en: copiar, resalta: [blanco, otra], captura: nueva}
+
+  - id: datos
+    capitulo: Sus datos
+    antes: 0.5
+    pantalla: creada
+    frases:
+      - id: lapiz
+        texto: >-
+          Ya está en la lista. El lápiz abre sus datos: en qué idiomas se
+          ofrece, su nombre en cada uno, y la titulación.
+        pasos:
+          - {al: inicio, enfoca: [asignatura, anio], max: 1.5, dy: 60}
+          - {en: lista, resalta: asignatura, hasta: 1.6}
+          - {en: lápiz, resalta: lapiz}
+          - {en: datos, cambia: datos}
+          - {en: datos, enfoca: [idiomas, titulacion], max: 1.4, captura: datos}
+          - {en: idiomas, resalta: idiomas, captura: datos, hasta: 1.6}
+          - {en: nombre, resalta: nombre, captura: datos, hasta: 1.6}
+          - {en: titulación, resalta: titulacion, captura: datos}
+
+  - id: curso
+    capitulo: Su primer curso
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: anio
+        texto: >-
+          Y Nuevo curso académico: dos mil veintiséis, dos mil veintisiete, y
+          empezar de cero.
+        pasos:
+          - {al: inicio, enfoca: [anio, crear], max: 1.6}
+          - {en: curso, resalta: anio, hasta: 2.6}
+          - {en: cero, resalta: vacio}
+      - id: listo
+        texto: >-
+          La asignatura guarda lo que no cambia de un año a otro; el curso, qué
+          se da este año, y en qué orden.
+        pasos:
+          - {al: inicio, cambia: hecho}
+          - {al: inicio, reposo: true, captura: hecho}
+          - {en: asignatura, resalta: asignatura, captura: hecho, hasta: 2.2}
+          - {en: curso, resalta: anio, captura: hecho}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La asignatura guarda lo que no cambia; el curso, lo que se da este
+          año.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, crear temas y documentos.

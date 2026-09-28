@@ -1,0 +1,71 @@
+# F3 · Del PDF a la línea que lo escribe
+#
+# Montado desde este guion. La diapositiva está compilada de verdad; la
+# lección se abre en la línea que escribe esa palabra, que es lo que hace
+# Comando y clic sobre el PDF (la dirección lleva `linea=`, como la que abre
+# el visor).
+codigo: F3
+titulo: Del PDF a la línea que lo escribe
+subtitulo: Ir de lo que ves mal en el PDF a su línea en la lección
+ruta: Compilar y revisar
+siguiente: "F4 · Cuando la compilación falla"
+voz: narrador
+lema: ["Lo que se ve mal", "se arregla donde se ve."]
+lema_en: "donde se ve"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás ir de lo que ves mal en un PDF a la línea de la
+          lección que lo escribe.
+
+  - id: clic
+    capitulo: Comando y clic
+    antes: 0.5
+    pantalla: pdf
+    frases:
+      - id: clic
+        texto: >-
+          Si en la diapositiva ves algo que corregir, Comando y clic sobre esa
+          palabra, o Control y clic.
+        pasos:
+          - {al: inicio, enfoca: [definicion], max: 1.7, dy: 150}
+          - {en: palabra, resalta: palabra, hasta: 2}
+          - {en: Comando, teclas: "⌘ clic"}
+          - {en: Comando, pulsa: palabra}
+
+  - id: linea
+    capitulo: Su línea
+    antes: 0.5
+    pantalla: linea
+    frases:
+      - id: abre
+        texto: >-
+          Se abre la lección, en ese idioma, con el cursor en la línea que la
+          escribe.
+        pasos:
+          - {al: inicio, enfoca: [es, linea], max: 1.4}
+          - {en: idioma, resalta: es, hasta: 1.6}
+          - {en: línea, resalta: linea, etiqueta: "La línea que la escribe", lado: abajo}
+      - id: corregir
+        texto: >-
+          Corriges, guardas, y vuelves a compilar.
+        pasos:
+          - {al: inicio, cambia: corregida}
+          - {al: inicio, enfoca: [es, corregida], max: 1.4, captura: corregida}
+          - {en: Corriges, resalta: corregida, captura: corregida}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo que se ve mal se arregla donde se ve.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, cuando la compilación falla.

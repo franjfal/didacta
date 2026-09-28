@@ -1,0 +1,111 @@
+# D9 · Poner una figura
+#
+# Montado desde este guion. La figura es de verdad (`figura/bolzano.tex`, con
+# TikZ): el arnés la copia a la carpeta de «El teorema de Bolzano», que es lo
+# que hoy se hace a mano, y dentro se escribe el \includegraphics, se guarda y
+# se compila. La que falta, para Revisar, la nombra otra lección.
+codigo: D9
+titulo: Poner una figura
+subtitulo: Dónde va la imagen, cómo se llama, y su texto alternativo
+ruta: Escribir una lección
+siguiente: "D10 · Rellenar los metadatos de una lección"
+voz: narrador
+lema: ["La figura vive dentro de su lección:", "moverla no la rompe."]
+lema_en: "moverla"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dónde va una imagen, cómo se llama desde la
+          lección, y por qué lleva un texto alternativo.
+
+  - id: carpeta
+    capitulo: Dónde va
+    antes: 0.5
+    grafico:
+      tipo: arbol
+      titulo: La carpeta de la lección
+      lineas:
+        - {texto: "teorema-de-bolzano/", en: lección}
+        - {texto: "es.tex", nivel: 1, nota: "el texto", en: lección}
+        - {texto: "unit.yaml", nivel: 1, nota: "sus datos", en: lección}
+        - {texto: "figures/", nivel: 1, nota: "aquí van las imágenes", en: figures}
+        - {texto: "bolzano.pdf", nivel: 2, en: figures}
+    frases:
+      - id: dentro
+        texto: >-
+          La imagen va dentro de la lección, en su carpeta figures. Así viaja
+          con ella: moverla, o darla en otra asignatura, no la rompe.
+
+  - id: repos
+    capitulo: Llegar a la carpeta
+    antes: 0.5
+    pantalla: repos
+    frases:
+      - id: boton
+        texto: >-
+          Hoy se copia a mano: en Ajustes, Cuenta y repositorios, este botón
+          abre la carpeta del repositorio, y de ahí se baja hasta la lección.
+        pasos:
+          - {al: inicio, enfoca: [repo], max: 1.7}
+          - {en: botón, resalta: carpeta, etiqueta: "Abre la carpeta", lado: abajo}
+
+  - id: escribir
+    capitulo: Llamarla
+    antes: 0.5
+    pantalla: escrita
+    frases:
+      - id: orden
+        texto: >-
+          En el editor, includegraphics, con el ancho que ocupa, y el nombre
+          del fichero, sin la extensión.
+        pasos:
+          - {al: inicio, enfoca: [figura], max: 1.8}
+          - {en: includegraphics, resalta: figura, hasta: 1.8}
+          - {en: ancho, resalta: ancho, hasta: 1.6}
+          - {en: nombre, resalta: fichero}
+      - id: alt
+        texto: >-
+          Y alt, el texto alternativo: es lo que oye quien no la ve.
+        pasos:
+          - {en: alt, resalta: alt, etiqueta: "Lo que oye quien no la ve", lado: abajo}
+
+  - id: compilar
+    capitulo: Compilar
+    antes: 0.5
+    pantalla: pdf
+    frases:
+      - id: sale
+        texto: >-
+          Al compilar, la figura sale en su sitio, debajo del teorema.
+        pasos:
+          - {al: inicio, enfoca: [pdf], max: 1.3, dy: 80}
+
+  - id: revisar
+    capitulo: Las que faltan
+    antes: 0.5
+    pantalla: revisar
+    frases:
+      - id: faltan
+        texto: >-
+          Y si una lección llama a una figura que no está, Revisar lo dice, con
+          su lección y su línea.
+        pasos:
+          - {al: inicio, enfoca: [figuras, salto], max: 1.6}
+          - {en: Revisar, resalta: figuras, hasta: 2}
+          - {en: línea, resalta: salto, etiqueta: "Su lección y su línea", lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La figura vive dentro de su lección: moverla no la rompe.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, rellenar los metadatos de una lección.

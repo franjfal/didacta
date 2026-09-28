@@ -1,0 +1,203 @@
+{
+  "capturas": [
+    {
+      "nombre": "guardado",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "lectura",
+            "cajas": {
+              "definicion": {
+                "texto": "Límite de una función en un punto",
+                "fila": 1000
+              },
+              "estado": {
+                "texto": "es OR",
+                "n": 0
+              },
+              "lista": {
+                "texto": "Límite de una función",
+                "fila": 900
+              },
+              "editar": {
+                "consejo": "Editar la composición"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "consejo": "Editar la composición"
+          },
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "editar",
+            "cajas": {
+              "anadir": {
+                "clave": "add-unit"
+              },
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "lista": {
+                "texto": "Límite de una función",
+                "fila": 900
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "add-unit"
+          },
+          "esperar": 10
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "picker-search"
+            },
+            "texto": "cocientes"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "buscar",
+            "cajas": {
+              "busca": {
+                "clave": "picker-search"
+              },
+              "resultado": {
+                "clave": "unit-problems/calculo/limites/limites-de-cocientes"
+              },
+              "anadir": {
+                "clave": "picker-add"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "unit-problems/calculo/limites/limites-de-cocientes"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "picker-add"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "anadida",
+            "cajas": {
+              "nueva": {
+                "texto": "Límites de cocientes",
+                "fila": 1000
+              },
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "lista": {
+                "texto": "Límite de una función",
+                "fila": 900
+              }
+            }
+          }
+        },
+        {
+          "arrastrar": {
+            "fila": "Límites de cocientes",
+            "dy": -170,
+            "fotogramas": 22,
+            "quieto": 6,
+            "despues": 14,
+            "guardar": false
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "reordenada",
+            "cajas": {
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "guardar": {
+                "clave": "composition-save"
+              },
+              "lista": {
+                "texto": "Límite de una función",
+                "fila": 900
+              },
+              "nueva": {
+                "texto": "Límites de cocientes",
+                "fila": 1000
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "composition-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 6
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "Guardado en el historial",
+          "fila": 400
+        },
+        "compilar": {
+          "clave": "saved-follow-up"
+        }
+      }
+    },
+    {
+      "nombre": "rota",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "courses/calculo-i/2026-2027/year.yaml",
+            "buscar": "- unit: calculo/limites/algebra-de-limites",
+            "poner": "- unit: calculo/limites/algebra-de-limites\n      - unit: calculo/limites/limites-laterales",
+            "mensaje": "Una lección que todavía no existe",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "rota": {
+          "contiene": "limites-laterales",
+          "fila": 1000
+        }
+      }
+    }
+  ]
+}

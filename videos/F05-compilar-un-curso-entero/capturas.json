@@ -1,0 +1,144 @@
+{
+  "capturas": [
+    {
+      "nombre": "desactualizado",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "curso",
+            "cajas": {
+              "boton": {
+                "clave": "build-year"
+              },
+              "lista": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "build-year"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "0 de 3"
+          },
+          "max": 200,
+          "despues": 2
+        },
+        {
+          "capturar": {
+            "nombre": "consola",
+            "cajas": {
+              "cabecera": {
+                "contiene": "En marcha",
+                "fila": 700
+              },
+              "ocultar": {
+                "texto": "Ocultar"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Ocultar"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "tira",
+            "cajas": {
+              "tira": {
+                "contiene": "Compilando Cálculo I",
+                "fila": 900
+              },
+              "ver": {
+                "texto": "Ver",
+                "n": 0
+              },
+              "detener": {
+                "texto": "Detener",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "hasta_que": {
+            "contiene": "ninguno con errores"
+          },
+          "max": 1600,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "acabado",
+            "cajas": {
+              "tira": {
+                "contiene": "ninguno con errores",
+                "n": 0,
+                "fila": 900
+              },
+              "ver": {
+                "texto": "Ver",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/limites/definicion-de-limite",
+          "esperar": 12
+        },
+        {
+          "editar_texto": {
+            "buscar": "La definición dice qué",
+            "poner": "La definición precisa qué"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "editor-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 40
+        },
+        {
+          "ir": "/courses/calculo-i/2026-2027",
+          "esperar": 40
+        }
+      ],
+      "cajas": {
+        "curso": {
+          "clave": "build-stale-year"
+        },
+        "fila": {
+          "texto": "Tema 1: límites y continuidad",
+          "fila": 800
+        },
+        "pdf": {
+          "clave": "open-pdf-tema-1"
+        },
+        "pdfhoja": {
+          "clave": "open-pdf-hoja-1"
+        }
+      }
+    }
+  ]
+}

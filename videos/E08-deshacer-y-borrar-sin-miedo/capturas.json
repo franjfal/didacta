@@ -1,0 +1,187 @@
+{
+  "capturas": [
+    {
+      "nombre": "quitado",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "document-menu-parcial-1"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "quitar": {
+                "clave": "remove-document-parcial-1"
+              },
+              "fila": {
+                "texto": "Primer parcial",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "remove-document-parcial-1"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "confirmar",
+            "cajas": {
+              "confirmar": {
+                "clave": "confirm-remove-document"
+              },
+              "dialogo": {
+                "texto": "¿Quitar «Primer parcial»?",
+                "alto": 200
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-remove-document"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "pendiente",
+            "cajas": {
+              "aviso": {
+                "contiene": "Sin guardar"
+              },
+              "guardar": {
+                "clave": "documents-save"
+              },
+              "parcial": {
+                "texto": "Primer parcial",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "documents-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 4
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "Guardado en el historial",
+          "fila": 600
+        },
+        "lista": {
+          "texto": "Hoja 1: límites y continuidad",
+          "fila": 800
+        },
+        "deshacer": {
+          "clave": "saved-follow-up"
+        }
+      }
+    },
+    {
+      "nombre": "recientes",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "reloj",
+            "cajas": {
+              "reloj": {
+                "clave": "recent-changes"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "recent-changes"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "recientes-lista",
+            "cajas": {}
+          }
+        }
+      ],
+      "cajas": {
+        "dialogo": {
+          "texto": "Cambios recientes",
+          "alto": 300
+        },
+        "fila": {
+          "texto": "Deshacer",
+          "n": 0,
+          "fila": 500
+        },
+        "deshacer": {
+          "texto": "Deshacer",
+          "n": 0
+        }
+      }
+    },
+    {
+      "nombre": "asignatura",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "course-menu-calculo-i"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "Quitar la asignatura…"
+          },
+          "esperar": 20
+        }
+      ],
+      "cajas": {
+        "dialogo": {
+          "texto": "¿Quitar «Cálculo I»?",
+          "alto": 200
+        },
+        "cuenta": {
+          "contiene": "Esto se lleva"
+        },
+        "unidades": {
+          "contiene": "Las unidades no se tocan"
+        },
+        "quitar": {
+          "clave": "confirm-removal"
+        },
+        "nota": {
+          "clave": "removal-undo-note"
+        }
+      }
+    }
+  ]
+}

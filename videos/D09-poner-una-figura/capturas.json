@@ -1,0 +1,155 @@
+{
+  "capturas": [
+    {
+      "nombre": "repos",
+      "ruta": "/settings?s=repositorios",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "repo": {
+          "clave": "repo-open-profe/didacta-ejemplo",
+          "fila": 900
+        },
+        "carpeta": {
+          "clave": "repo-open-profe/didacta-ejemplo"
+        },
+        "ruta": {
+          "contiene": "/Users/Shared/Didacta/didacta-ejemplo"
+        }
+      }
+    },
+    {
+      "nombre": "pdf",
+      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+      "preparar": [
+        {
+          "copiar": {
+            "desde": "figura/bolzano.pdf",
+            "a": "content/calculo/continuidad/teorema-de-bolzano/figures/bolzano.pdf",
+            "mensaje": "La figura de Bolzano"
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "\\end{theorem}\n",
+            "poner": "\\end{theorem}\n\n\\begin{center}\n\\includegraphics[width=.42\\textwidth,alt={Una función continua que empieza negativa en a, acaba positiva en b y corta el eje en c}]{figures/bolzano}\n\\end{center}\n"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "escrita",
+            "cajas": {
+              "figura": {
+                "editor": "\\includegraphics",
+                "hasta": "{figures/bolzano}"
+              },
+              "alt": {
+                "editor": "alt={",
+                "hasta": "en c}"
+              },
+              "fichero": {
+                "editor": "figures/bolzano}"
+              },
+              "ancho": {
+                "editor": "width=.42\\textwidth"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "editor-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 110
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 30
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "slides · es"
+          },
+          "despues": 10
+        },
+        {
+          "pulsar": {
+            "contiene": "slides · es"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "pestana": {
+          "contiene": "slides · es"
+        },
+        "pdf": {
+          "contiene": "El teorema de Bolzano - slides",
+          "fila": 900
+        }
+      }
+    },
+    {
+      "nombre": "revisar",
+      "ruta": "/",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "buscar": "\\begin{commonmistake}",
+            "poner": "\\begin{center}\n\\includegraphics[width=.5\\textwidth,alt={El salto de la función de Heaviside}]{figures/salto}\n\\end{center}\n\n\\begin{commonmistake}",
+            "mensaje": "Una figura que todavía no está",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "library-review"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "figuras": {
+          "contiene": "Figuras que faltan",
+          "fila": 500
+        },
+        "salto": {
+          "contiene": "figures/salto",
+          "fila": 500
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "capturas": [
+    {
+      "nombre": "vistas",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "asignaturas",
+            "cajas": {
+              "asignatura": {
+                "texto": "Cálculo I",
+                "fila": 800
+              },
+              "curso": {
+                "texto": "2026-2027",
+                "fila": 800
+              },
+              "menu": {
+                "clave": "course-menu-calculo-i"
+              },
+              "vista": {
+                "clave": "courses-view"
+              },
+              "cabecera": {
+                "contiene": "1 asignatura"
+              },
+              "estrella": {
+                "clave": "favourite-course-calculo-i"
+              },
+              "plegar": {
+                "clave": "collapse-calculo-i"
+              },
+              "compilar": {
+                "clave": "build-year-calculo-i-2026-2027"
+              },
+              "exportar": {
+                "clave": "export-year-calculo-i-2026-2027"
+              },
+              "nueva": {
+                "clave": "new-course"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "course-menu-calculo-i"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "ocultar": {
+                "clave": "hide-course-calculo-i"
+              },
+              "menu": {
+                "clave": "course-menu-calculo-i"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "pulsar": {
+            "clave": "courses-view"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "doy": {
+          "clave": "courses-view-visible"
+        },
+        "ocultas": {
+          "clave": "courses-view-hidden"
+        },
+        "todas": {
+          "clave": "courses-view-all"
+        }
+      }
+    },
+    {
+      "nombre": "curso",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "tema": {
+          "texto": "Tema 1: límites y continuidad",
+          "fila": 800
+        },
+        "hoja": {
+          "contiene": "Hoja 1",
+          "fila": 800
+        },
+        "parcial": {
+          "contiene": "Primer parcial",
+          "fila": 800
+        },
+        "play": {
+          "clave": "build-document-tema-1"
+        },
+        "menu": {
+          "clave": "document-menu-tema-1"
+        },
+        "titulo": {
+          "texto": "Cálculo I · 2026-2027"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,174 @@
+{
+  "capturas": [
+    {
+      "nombre": "leccion",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "compilar": {
+          "clave": "compile"
+        },
+        "panel": {
+          "clave": "compile",
+          "alto": 400
+        }
+      }
+    },
+    {
+      "nombre": "otra",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "curso",
+            "cajas": {
+              "boton": {
+                "clave": "build-document-tema-1"
+              },
+              "fila": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "mantener": {
+            "clave": "build-document-tema-1"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "aqui": {
+                "clave": "build-current-language"
+              },
+              "todos": {
+                "clave": "build-all-languages"
+              },
+              "versiones": {
+                "clave": "build-every-version"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "build-current-language"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "Compilando"
+          },
+          "max": 200,
+          "despues": 12
+        },
+        {
+          "capturar": {
+            "nombre": "compilando",
+            "cajas": {
+              "cabecera": {
+                "contiene": "En marcha",
+                "fila": 700
+              },
+              "consola": {
+                "contiene": "Ver detalles",
+                "alto": 200
+              },
+              "detener": {
+                "texto": "Detener",
+                "n": 0
+              },
+              "paso": {
+                "contiene": "[notes"
+              }
+            }
+          }
+        },
+        {
+          "hasta_que": {
+            "contiene": "bien"
+          },
+          "max": 800,
+          "despues": 12
+        },
+        {
+          "capturar": {
+            "nombre": "hecho",
+            "cajas": {
+              "cabecera": {
+                "contiene": "Terminada",
+                "fila": 700
+              },
+              "resultado": {
+                "contiene": "ninguno con errores",
+                "n": 1
+              },
+              "avisos": {
+                "contiene": "Se salen de la página",
+                "fila": 700
+              },
+              "cerrar": {
+                "texto": "Cerrar"
+              },
+              "tiempo": {
+                "contiene": "Terminada en",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "build-document-tema-1"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada"
+          },
+          "max": 200,
+          "despues": 4
+        }
+      ],
+      "cajas": {
+        "cabecera": {
+          "contiene": "Terminada",
+          "fila": 700
+        },
+        "resultado": {
+          "contiene": "ninguno con errores",
+          "n": 1
+        },
+        "tiempo": {
+          "contiene": "Terminada en",
+          "n": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "capturas": [
+    {
+      "nombre": "vacia",
+      "ruta": "/",
+      "acciones": [
+        {
+          "esperar": 10
+        }
+      ],
+      "cajas": {
+        "buscador": {
+          "texto": "Buscar por título, ruta o etiqueta…"
+        },
+        "entexto": {
+          "clave": "search-in-text"
+        }
+      }
+    },
+    {
+      "nombre": "limite",
+      "ruta": "/?q=limite",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "buscador": {
+          "texto": "limite"
+        },
+        "resumen": {
+          "clave": "search-summary"
+        },
+        "primera": {
+          "texto": "Límite de una función en un punto",
+          "fila": 700
+        }
+      }
+    },
+    {
+      "nombre": "dos",
+      "ruta": "/?q=limite%20definicion",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "buscador": {
+          "texto": "limite definicion"
+        },
+        "resumen": {
+          "clave": "search-summary"
+        }
+      }
+    },
+    {
+      "nombre": "errata",
+      "ruta": "/?q=continudad",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "buscador": {
+          "texto": "continudad"
+        },
+        "resumen": {
+          "clave": "search-summary"
+        }
+      }
+    },
+    {
+      "nombre": "abierta",
+      "ruta": "/?q=bolzano&texto=1",
+      "acciones": [
+        {
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "texto",
+            "cajas": {
+              "buscador": {
+                "texto": "bolzano"
+              },
+              "entexto": {
+                "clave": "search-in-text"
+              },
+              "resumen": {
+                "clave": "search-summary"
+              },
+              "linea": {
+                "contiene": "línea 12"
+              },
+              "historia": {
+                "texto": "Una breve historia de la épsilon",
+                "fila": 700
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "contiene": "línea 12"
+          },
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "bolzano": {
+          "editor": "Bolzano demuestra",
+          "hasta": "intermedios"
+        },
+        "titulo": {
+          "texto": "Una breve historia de la épsilon"
+        }
+      }
+    }
+  ]
+}

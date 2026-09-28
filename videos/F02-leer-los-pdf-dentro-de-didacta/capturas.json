@@ -1,0 +1,177 @@
+{
+  "capturas": [
+    {
+      "nombre": "externo",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 30
+        },
+        {
+          "pulsar": {
+            "clave": "language-en"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "las páginas se mueven juntas"
+          },
+          "despues": 16
+        },
+        {
+          "pulsar": {
+            "contiene": "notes · es"
+          },
+          "esperar": 30
+        },
+        {
+          "capturar": {
+            "nombre": "lado",
+            "cajas": {
+              "juntas": {
+                "contiene": "las páginas se mueven juntas"
+              },
+              "es": {
+                "clave": "pane-external-es",
+                "fila": 700
+              },
+              "pagina": {
+                "clave": "pdf-page-field"
+              },
+              "lateral": {
+                "clave": "pdf-sidebar-toggle"
+              },
+              "lupa": {
+                "clave": "pdf-search"
+              },
+              "externo": {
+                "clave": "pane-external-es"
+              },
+              "barra": {
+                "clave": "pdf-page-field",
+                "fila": 1200
+              },
+              "ancho": {
+                "clave": "pdf-fit-width"
+              },
+              "alto": {
+                "clave": "pdf-fit-height"
+              },
+              "entera": {
+                "clave": "pdf-fit-page"
+              },
+              "zoom": {
+                "clave": "pdf-zoom-in"
+              }
+            }
+          }
+        },
+        {
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "pdf-sidebar-toggle"
+          },
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "indice",
+            "cajas": {
+              "indice": {
+                "clave": "pdf-sidebar-outline"
+              },
+              "paginas": {
+                "clave": "pdf-sidebar-pages"
+              },
+              "lista": {
+                "clave": "pdf-outline-list"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pdf-sidebar-pages"
+          },
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "miniaturas",
+            "cajas": {
+              "paginas": {
+                "clave": "pdf-sidebar-pages"
+              },
+              "lista": {
+                "clave": "pdf-thumbnails"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pdf-sidebar-toggle"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "pdf-search"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "pdf-search-field"
+            },
+            "texto": "limite"
+          }
+        },
+        {
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "buscar",
+            "cajas": {
+              "campo": {
+                "clave": "pdf-search-field"
+              },
+              "cuenta": {
+                "clave": "pdf-search-count"
+              },
+              "barra": {
+                "clave": "pdf-search-bar"
+              }
+            }
+          }
+        }
+      ],
+      "cajas": {
+        "externo": {
+          "clave": "pane-external-es"
+        },
+        "panel": {
+          "clave": "pane-external-es",
+          "fila": 700
+        }
+      }
+    }
+  ]
+}

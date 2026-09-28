@@ -1,0 +1,69 @@
+{
+  "codigo": "E8",
+  "titulo": "Deshacer y borrar sin miedo",
+  "fichero": "E08-deshacer-y-borrar-sin-miedo.mp4",
+  "duracion": 62.71,
+  "megas": 2.9,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Deshacer y borrar sin miedo"
+    },
+    {
+      "t": 7.09,
+      "titulo": "Quitar un documento"
+    },
+    {
+      "t": 24.58,
+      "titulo": "Cambios recientes"
+    },
+    {
+      "t": 37.41,
+      "titulo": "Quitar una asignatura"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás deshacer lo que acabas de hacer, y qué se lleva un borrado antes de hacerlo."
+    },
+    {
+      "t": 7.59,
+      "texto": "En los tres puntos del Primer parcial, Quitar."
+    },
+    {
+      "t": 11.25,
+      "texto": "Antes, te dice qué se va: el documento y su lista. Las lecciones no se tocan."
+    },
+    {
+      "t": 18.3,
+      "texto": "Hasta que no guardas, Descartar lo trae de vuelta. Y al guardar, el aviso trae Deshacer."
+    },
+    {
+      "t": 25.08,
+      "texto": "Si ha pasado un rato, el reloj de Asignaturas abre los cambios recientes, cada uno con su Deshacer."
+    },
+    {
+      "t": 31.86,
+      "texto": "Y se niega si alguien lo ha tocado después: no deshace el trabajo de otro."
+    },
+    {
+      "t": 37.91,
+      "texto": "Quitar una asignatura dice lo que se lleva, contado, y lo que no: las lecciones, que siguen en la biblioteca."
+    },
+    {
+      "t": 45.09,
+      "texto": "Y nada se pierde: deshacer es un cambio más, y lo que había sigue en la historia del repositorio."
+    },
+    {
+      "t": 51.92,
+      "texto": "Deshacer es un cambio más: lo deshecho sigue en el historial."
+    },
+    {
+      "t": 56.52,
+      "texto": "En el siguiente vídeo, compilar una lección o un tema."
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+# E6 · Hacer un examen o una hoja a partir de los problemas
+#
+# Montado desde este guion: el examen se crea de verdad dentro del arnés. Los
+# dos problemas que ya salieron en el Primer parcial llevan su marca, y el
+# filtro los quita.
+codigo: E6
+titulo: Hacer un examen o una hoja a partir de los problemas
+subtitulo: Montarlo de una vez, sin repetir problemas de otros exámenes
+ruta: Preparar una asignatura
+siguiente: "E7 · Elegir qué PDF salen de un tema"
+voz: narrador
+lema: ["Un examen es una lista más:", "de problemas que ya existen."]
+lema_en: "de problemas"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás montar un examen de una vez, sin repetir problemas
+          que ya salieron.
+
+  - id: nuevo
+    capitulo: Examen u hoja
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: boton
+        texto: >-
+          En el curso, Examen u hoja de problemas.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Examen, resalta: boton, lado: arriba}
+          - {en: problemas, pulsa: boton}
+      - id: tipo
+        texto: >-
+          Eliges el tipo, y el título: Examen final.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [dialogo], max: 1.4, captura: dialogo}
+          - {en: tipo, resalta: tipo, captura: dialogo, hasta: 1.4}
+          - {en: título, resalta: titulo, captura: dialogo}
+
+  - id: elegir
+    capitulo: Sin repetir
+    antes: 0.5
+    pantalla: dialogo
+    frases:
+      - id: marca
+        texto: >-
+          Abajo, los problemas del repositorio. Los que ya salieron en un
+          examen llevan la marca.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.4}
+          - {en: problemas, resalta: buscar, hasta: 2}
+          - {en: marca, resalta: [vistos, vistos2], etiqueta: "Ya salieron", color: profesor, lado: izquierda}
+      - id: quitar
+        texto: >-
+          Y «Sin los que ya salieron» los quita de la lista.
+        pasos:
+          - {al: inicio, cambia: sinvistos}
+          - {al: inicio, enfoca: [sin, cocientes], max: 1.6, captura: sinvistos}
+          - {en: Sin, resalta: sin, captura: sinvistos, hasta: 2}
+          - {en: quita, resalta: cocientes, captura: sinvistos}
+      - id: crear
+        texto: >-
+          Eliges, en el orden en que irán, y Crear el examen.
+        pasos:
+          - {al: inicio, cambia: elegido}
+          - {al: inicio, enfoca: [cocientes, crear], max: 1.4, captura: elegido}
+          - {en: Eliges, resalta: cocientes, captura: elegido, hasta: 2}
+          - {en: Crear, resalta: crear, captura: elegido}
+
+  - id: listo
+    capitulo: Listo
+    antes: 0.5
+    pantalla: creado
+    frases:
+      - id: abre
+        texto: >-
+          Se abre, con sus problemas, listo para compilar. Es una composición
+          más: una lista de problemas que ya existen.
+        pasos:
+          - {al: inicio, enfoca: [titulo, problema], max: 1.5, dy: 80}
+          - {en: problemas, resalta: problema, hasta: 2.6}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un examen es una lista más: de problemas que ya existen.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, elegir qué PDF salen de un tema.

@@ -131,7 +131,7 @@ rutas:
         titulo: Todo vive en GitHub
         minutos: 1.5
         sabras: dónde está tu material, quién lo ve y por qué no se pierde.
-        idea: la copia de seguridad es GitHub, siempre que envíes.
+        idea: "la copia de seguridad es GitHub: lo que guardas se envía solo, y sin conexión espera a que vuelva."
         mas:
           - {titulo: Repositorios de contenido, pagina: conceptos/repositorios.md}
 
@@ -176,7 +176,7 @@ rutas:
         titulo: Corregir una errata y guardarla
         minutos: 2
         sabras: editar, guardar y enviar el cambio a GitHub.
-        idea: cada guardado queda en el historial con tu nombre. Guardar no necesita conexión; enviar, sí.
+        idea: "cada guardado queda en el historial con tu nombre, y se envía solo a GitHub; sin conexión espera, y Enviar lo sube cuando vuelve."
         mas:
           - {titulo: Guardar es un commit, pagina: "app/unidad.md#guardar-es-un-commit"}
       - codigo: D3

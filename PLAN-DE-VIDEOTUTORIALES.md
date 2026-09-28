@@ -384,12 +384,12 @@ peor que sin traducir: compila sin quejarse y dice algo que ya no es cierto.
 **Parte de** Ajustes → Cuenta y repositorios.
 
 1. La copia en tu ordenador y el repositorio en GitHub; guardar es un cambio
-   con tu nombre.
+   con tu nombre, que se envía solo (sin conexión, espera).
 2. Varios repositorios, cada uno con su color: el del departamento y el tuyo,
    en una sola biblioteca.
 3. Quién entra en cada uno lo dice GitHub.
 
-**La idea:** la copia de seguridad es GitHub, siempre que envíes.
+**La idea:** la copia de seguridad es GitHub: lo que guardas, llega allí.
 
 **Más:** [Repositorios de contenido](web/docs/conceptos/repositorios.md).
 
@@ -478,11 +478,13 @@ antes que los metadatos.
 1. Cambiar una palabra; aparece el punto en la pestaña.
 2. **Guardar** (⌘S): se guarda con el mensaje que propone Didacta, y el aviso
    ofrece **Ver cambios**.
-3. La barra de arriba cuenta un cambio sin enviar; **Enviar** (⌘⇧U).
-4. **Descartar**, para lo que no se quiere guardar.
+3. De serie, guardar también envía a GitHub: la barra dice «al día».
+4. Sin conexión, la barra cuenta un cambio sin enviar; **Enviar** (⌘⇧U). Quien
+   prefiera enviar a mano lo apaga en Ajustes → Guardar y sincronizar.
+5. **Descartar**, para lo que no se quiere guardar.
 
-**La idea:** cada guardado queda en el historial con tu nombre. Guardar no
-necesita conexión; enviar, sí.
+**La idea:** cada guardado queda en el historial con tu nombre, y llega solo a
+GitHub; sin conexión, espera.
 
 **Ojo:** si la lección se da en más de un curso, una franja lo dice encima del
 texto: el cambio llega a todos (J2). Quien prefiera ver el diff y escribir el

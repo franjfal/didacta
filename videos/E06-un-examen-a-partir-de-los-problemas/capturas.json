@@ -1,0 +1,136 @@
+{
+  "capturas": [
+    {
+      "nombre": "creado",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "curso",
+            "cajas": {
+              "boton": {
+                "clave": "add-problem-set"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "add-problem-set"
+          },
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "problem-set-kind-exam"
+          },
+          "esperar": 4
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "problem-set-title"
+            },
+            "texto": "Examen final"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "tipo": {
+                "clave": "problem-set-kind-exam"
+              },
+              "titulo": {
+                "clave": "problem-set-title"
+              },
+              "buscar": {
+                "clave": "problem-set-search"
+              },
+              "vistos": {
+                "clave": "problem-set-seen-problems/calculo/continuidad/tres-raices-por-bolzano"
+              },
+              "vistos2": {
+                "clave": "problem-set-seen-problems/calculo/continuidad/discontinuidades-evitables"
+              },
+              "sin": {
+                "clave": "problem-set-unseen"
+              },
+              "dialogo": {
+                "clave": "problem-set-title",
+                "alto": 500
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "problem-set-unseen"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "sinvistos",
+            "cajas": {
+              "sin": {
+                "clave": "problem-set-unseen"
+              },
+              "cocientes": {
+                "clave": "problem-set-unit-problems/calculo/limites/limites-de-cocientes"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "problem-set-unit-problems/calculo/limites/limites-de-cocientes"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "elegido",
+            "cajas": {
+              "resumen": {
+                "clave": "problem-set-summary"
+              },
+              "crear": {
+                "clave": "problem-set-create"
+              },
+              "cocientes": {
+                "clave": "problem-set-unit-problems/calculo/limites/limites-de-cocientes"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "problem-set-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Examen final"
+          },
+          "max": 400,
+          "despues": 60
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "texto": "Examen final",
+          "n": 0
+        },
+        "problema": {
+          "texto": "Límites de cocientes",
+          "fila": 1000
+        }
+      }
+    }
+  ]
+}

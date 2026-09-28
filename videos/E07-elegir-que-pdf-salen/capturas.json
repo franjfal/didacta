@@ -1,0 +1,165 @@
+{
+  "capturas": [
+    {
+      "nombre": "toque",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "panel",
+            "cajas": {
+              "panel": {
+                "texto": "SALIDAS (5)",
+                "alto": 400
+              },
+              "cabecera": {
+                "texto": "SALIDAS (5)"
+              },
+              "elige": {
+                "contiene": "Este tema elige sus salidas"
+              },
+              "elegir": {
+                "clave": "choose-document-templates"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "choose-document-templates"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "toque": {
+                "clave": "templates-inherit"
+              },
+              "estas": {
+                "clave": "templates-pick"
+              },
+              "notes": {
+                "clave": "pick-template-notes"
+              },
+              "guardar": {
+                "clave": "templates-choose-save"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "pick-template-slides-flat"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pick-template-slides-flat"
+          },
+          "esperar": 3
+        },
+        {
+          "mostrar": {
+            "clave": "pick-template-slides-teacher"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pick-template-slides-teacher"
+          },
+          "esperar": 3
+        },
+        {
+          "mostrar": {
+            "clave": "pick-template-notes-teacher"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pick-template-notes-teacher"
+          },
+          "esperar": 5
+        },
+        {
+          "mostrar": {
+            "clave": "pick-template-slides"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "dos",
+            "cajas": {
+              "slides": {
+                "clave": "pick-template-slides"
+              },
+              "flat": {
+                "clave": "pick-template-slides-flat"
+              },
+              "profe": {
+                "clave": "pick-template-slides-teacher"
+              },
+              "guardar": {
+                "clave": "templates-choose-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "templates-choose-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Guardado:"
+          },
+          "max": 400,
+          "despues": 70
+        },
+        {
+          "capturar": {
+            "nombre": "guardado",
+            "cajas": {
+              "panel": {
+                "texto": "SALIDAS (2)",
+                "alto": 300
+              },
+              "cabecera": {
+                "texto": "SALIDAS (2)"
+              },
+              "elegir": {
+                "clave": "choose-document-templates"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "choose-document-templates"
+          },
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "templates-inherit"
+          },
+          "esperar": 6
+        }
+      ],
+      "cajas": {
+        "toque": {
+          "clave": "templates-inherit"
+        },
+        "guardar": {
+          "clave": "templates-choose-save"
+        }
+      }
+    }
+  ]
+}

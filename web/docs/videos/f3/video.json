@@ -1,0 +1,49 @@
+{
+  "codigo": "F3",
+  "titulo": "Del PDF a la línea que lo escribe",
+  "fichero": "F03-del-pdf-a-la-linea.mp4",
+  "duracion": 32.32,
+  "megas": 2.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Del PDF a la línea que lo escribe"
+    },
+    {
+      "t": 6.82,
+      "titulo": "Comando y clic"
+    },
+    {
+      "t": 14.25,
+      "titulo": "Su línea"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás ir de lo que ves mal en un PDF a la línea de la lección que lo escribe."
+    },
+    {
+      "t": 7.32,
+      "texto": "Si en la diapositiva ves algo que corregir, Comando y clic sobre esa palabra, o Control y clic."
+    },
+    {
+      "t": 14.75,
+      "texto": "Se abre la lección, en ese idioma, con el cursor en la línea que la escribe."
+    },
+    {
+      "t": 19.63,
+      "texto": "Corriges, guardas, y vuelves a compilar."
+    },
+    {
+      "t": 23.71,
+      "texto": "Lo que se ve mal se arregla donde se ve."
+    },
+    {
+      "t": 26.65,
+      "texto": "En el siguiente vídeo, cuando la compilación falla."
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+{
+  "capturas": [
+    {
+      "nombre": "hecho",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "antes",
+            "cajas": {
+              "nueva": {
+                "clave": "new-course"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "new-course"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "new-course-title"
+            },
+            "texto": "Análisis Matemático"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "nueva",
+            "cajas": {
+              "titulo": {
+                "clave": "new-course-title"
+              },
+              "id": {
+                "clave": "new-course-id"
+              },
+              "idioma": {
+                "texto": "Idioma en el que se da"
+              },
+              "copiar": {
+                "texto": "Copiar los datos de"
+              },
+              "crear": {
+                "clave": "confirm-new-course"
+              },
+              "blanco": {
+                "texto": "nada, en blanco"
+              },
+              "otra": {
+                "texto": "calculo-i"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-new-course"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "creada"
+          },
+          "max": 400,
+          "despues": 60
+        },
+        {
+          "capturar": {
+            "nombre": "creada",
+            "cajas": {
+              "asignatura": {
+                "texto": "Análisis Matemático",
+                "fila": 800
+              },
+              "lapiz": {
+                "clave": "edit-title-course-analisis-matematico"
+              },
+              "anio": {
+                "clave": "add-year-analisis-matematico"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "edit-title-course-analisis-matematico"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "datos",
+            "cajas": {
+              "idiomas": {
+                "texto": "Idiomas",
+                "fila": 300
+              },
+              "nombre": {
+                "texto": "Nombre",
+                "fila": 300
+              },
+              "titulacion": {
+                "clave": "course-degree"
+              },
+              "guardar": {
+                "clave": "course-save"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "add-year-analisis-matematico"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "new-year"
+            },
+            "texto": "2026-2027"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "curso",
+            "cajas": {
+              "anio": {
+                "clave": "new-year"
+              },
+              "vacio": {
+                "clave": "start-empty"
+              },
+              "crear": {
+                "clave": "confirm-duplicate"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-duplicate"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "creado"
+          },
+          "max": 400,
+          "despues": 60
+        }
+      ],
+      "cajas": {
+        "asignatura": {
+          "texto": "Análisis Matemático",
+          "fila": 800
+        },
+        "anio": {
+          "texto": "2026-2027",
+          "n": 0,
+          "fila": 800
+        }
+      }
+    }
+  ]
+}

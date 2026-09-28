@@ -1,0 +1,87 @@
+# E5 · Apartados, y lo que este año no se da
+#
+# Montado desde este guion, con la composición del Tema 1 dentro del arnés:
+# un apartado nuevo, «Álgebra de límites» desactivada y la nota histórica,
+# que el ejemplo trae comentada, activada otra vez.
+codigo: E5
+titulo: Apartados, y lo que este año no se da
+subtitulo: Dividir un tema, y dejar fuera una lección sin borrarla
+ruta: Preparar una asignatura
+siguiente: "E6 · Hacer un examen o una hoja a partir de los problemas"
+voz: narrador
+lema: ["Quitar desactiva, no borra:", "el año que viene, un clic."]
+lema_en: "un clic"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dividir un tema en apartados, y dejar fuera una
+          lección sin borrarla.
+
+  - id: apartado
+    capitulo: Un apartado
+    antes: 0.5
+    pantalla: editar
+    frases:
+      - id: nuevo
+        texto: >-
+          Los apartados ordenan el tema por dentro. Apartado añade uno nuevo.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: apartados, resalta: seccion, hasta: 2.4}
+          - {en: Apartado, resalta: apartado, lado: arriba}
+          - {en: nuevo, cambia: apartado}
+          - {en: nuevo, resalta: nuevo, captura: apartado}
+      - id: titulo
+        texto: >-
+          Con su título en cada idioma.
+        pasos:
+          - {al: inicio, cambia: titulo}
+          - {al: inicio, enfoca: [dialogo], max: 1.6, captura: titulo}
+          - {en: idioma, resalta: [es, en], captura: titulo}
+
+  - id: fuera
+    capitulo: Lo que no se da
+    antes: 0.5
+    pantalla: editar
+    corta: true
+    frases:
+      - id: desactivar
+        texto: >-
+          Si este año no das Álgebra de límites, no la borres: desactívala.
+        pasos:
+          - {al: inicio, enfoca: [historia, algebra], max: 1.5}
+          - {en: Álgebra, resalta: algebra, hasta: 2}
+          - {en: desactívala, pulsa: quitar}
+          - {en: desactívala, cambia: desactivada}
+          - {en: desactívala, resalta: algebra, captura: desactivada}
+      - id: gris
+        texto: >-
+          Se queda en gris, en su sitio, y no se compila.
+        pasos:
+          - {en: gris, resalta: cuenta, etiqueta: "7 de 9 activas", lado: abajo, captura: desactivada}
+      - id: volver
+        texto: >-
+          Y volver a darla es un clic: como la historia de la épsilon, que el
+          ejemplo trae desactivada.
+        pasos:
+          - {al: inicio, pulsa: activar, captura: desactivada}
+          - {en: clic, cambia: reactivada}
+          - {en: historia, resalta: historia, etiqueta: "Otra vez activa", captura: reactivada}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Quitar desactiva, no borra: el año que viene, un clic.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, hacer un examen o una hoja a partir de los
+          problemas.

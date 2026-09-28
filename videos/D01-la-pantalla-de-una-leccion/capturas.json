@@ -1,0 +1,161 @@
+{
+  "capturas": [
+    {
+      "nombre": "pdf",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "leccion",
+            "cajas": {
+              "titulo": {
+                "texto": "Límite de una función en un punto"
+              },
+              "es": {
+                "clave": "language-tab-es"
+              },
+              "va": {
+                "clave": "language-tab-va"
+              },
+              "en": {
+                "clave": "language-tab-en"
+              },
+              "compilar": {
+                "texto": "compilar"
+              },
+              "metadatos": {
+                "clave": "metadata-tab"
+              },
+              "historial": {
+                "texto": "historial"
+              },
+              "info": {
+                "clave": "info-menu"
+              },
+              "lado": {
+                "clave": "split-editors"
+              },
+              "panel": {
+                "texto": "QUÉ ES",
+                "alto": 500
+              },
+              "usos": {
+                "contiene": "SE USA EN",
+                "fila": 200
+              },
+              "tema": {
+                "texto": "tema-1",
+                "fila": 200
+              },
+              "objetivos": {
+                "texto": "OBJETIVOS",
+                "fila": 200
+              },
+              "editor": {
+                "editor": "\\begin{frame}"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "info-menu"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "info",
+            "cajas": {
+              "info": {
+                "clave": "info-menu"
+              },
+              "sitios": {
+                "contiene": "SE DA EN"
+              },
+              "congeladas": {
+                "texto": "VERSIONES CONGELADAS"
+              },
+              "duplicar": {
+                "clave": "info-duplicate"
+              },
+              "mover": {
+                "clave": "info-move"
+              },
+              "usar": {
+                "clave": "info-use"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "pulsar": {
+            "clave": "split-editors"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "lado",
+            "cajas": {
+              "lado": {
+                "clave": "split-editors"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "split-editors"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 30
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "slides · es"
+          },
+          "despues": 10
+        },
+        {
+          "pulsar": {
+            "contiene": "slides · es"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "pestanas": {
+          "contiene": "book · es",
+          "fila": 500
+        },
+        "slides": {
+          "contiene": "slides · es"
+        },
+        "notes": {
+          "contiene": "notes · es"
+        },
+        "book": {
+          "contiene": "book · es"
+        }
+      }
+    }
+  ]
+}

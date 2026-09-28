@@ -1,0 +1,73 @@
+{
+  "codigo": "E4",
+  "titulo": "Componer un tema",
+  "fichero": "E04-componer-un-tema.mp4",
+  "duracion": 55.75,
+  "megas": 4.3,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Componer un tema"
+    },
+    {
+      "t": 6.51,
+      "titulo": "Una lista"
+    },
+    {
+      "t": 16.74,
+      "titulo": "Añadir"
+    },
+    {
+      "t": 24.42,
+      "titulo": "Ordenar"
+    },
+    {
+      "t": 33.6,
+      "titulo": "Una referencia rota"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás añadir lecciones a un tema, ordenarlas, y guardarlo."
+    },
+    {
+      "t": 7.01,
+      "texto": "Un tema es una lista: cada línea apunta a una lección, y dice su estado en el idioma que se compila."
+    },
+    {
+      "t": 13.49,
+      "texto": "Para cambiarla, editar la composición."
+    },
+    {
+      "t": 17.24,
+      "texto": "Añadir unidad abre el buscador de la biblioteca, sin salir de la pantalla."
+    },
+    {
+      "t": 22.19,
+      "texto": "Se añade al final de la lista."
+    },
+    {
+      "t": 24.92,
+      "texto": "Y se ordena arrastrando: a su sitio, con los límites."
+    },
+    {
+      "t": 28.95,
+      "texto": "Guardar lo deja en el historial, y el aviso ofrece compilarlo ahora."
+    },
+    {
+      "t": 34.1,
+      "texto": "Si una línea apunta a una lección que ya no existe, no desaparece: se queda en su sitio, marcada, para que la arregles."
+    },
+    {
+      "t": 43.52,
+      "texto": "El documento no lleva materia: apunta a lecciones que viven una sola vez."
+    },
+    {
+      "t": 48.68,
+      "texto": "En el siguiente vídeo, los apartados, y lo que este año no se da."
+    }
+  ]
+}

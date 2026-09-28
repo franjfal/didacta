@@ -1,0 +1,112 @@
+# E4 · Componer un tema
+#
+# Montado desde este guion: dentro del arnés se añade «Límites de cocientes»
+# al Tema 1, se arrastra a su sitio y se guarda. La referencia rota es de
+# verdad: el year.yaml nombra una lección que no existe.
+codigo: E4
+titulo: Componer un tema
+subtitulo: Añadir lecciones a un documento, ordenarlas y guardarlo
+ruta: Preparar una asignatura
+siguiente: "E5 · Apartados, y lo que este año no se da"
+voz: narrador
+lema: ["El documento no lleva materia:", "apunta a lecciones que viven una sola vez."]
+lema_en: "apunta"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás añadir lecciones a un tema, ordenarlas, y
+          guardarlo.
+
+  - id: lista
+    capitulo: Una lista
+    antes: 0.5
+    pantalla: lectura
+    frases:
+      - id: lineas
+        texto: >-
+          Un tema es una lista: cada línea apunta a una lección, y dice su
+          estado en el idioma que se compila.
+        pasos:
+          - {al: inicio, enfoca: [lista, definicion], max: 1.5, dy: 120}
+          - {en: línea, resalta: definicion, hasta: 2.4}
+          - {en: estado, resalta: estado, etiqueta: "Su estado", lado: izquierda}
+      - id: editar
+        texto: >-
+          Para cambiarla, editar la composición.
+        pasos:
+          - {en: editar, resalta: editar, lado: izquierda}
+
+  - id: anadir
+    capitulo: Añadir
+    antes: 0.5
+    pantalla: editar
+    frases:
+      - id: buscar
+        texto: >-
+          Añadir unidad abre el buscador de la biblioteca, sin salir de la
+          pantalla.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Añadir, resalta: anadir, lado: arriba}
+          - {en: buscador, cambia: buscar}
+          - {en: buscador, enfoca: [busca, anadir], max: 1.5, captura: buscar}
+          - {en: pantalla, resalta: resultado, captura: buscar}
+      - id: final
+        texto: >-
+          Se añade al final de la lista.
+        pasos:
+          - {al: inicio, cambia: anadida}
+          - {al: inicio, reposo: true, captura: anadida}
+          - {en: final, resalta: nueva, etiqueta: "Añadida", captura: anadida}
+
+  - id: ordenar
+    capitulo: Ordenar
+    antes: 0.5
+    pantalla: anadida
+    frases:
+      - id: arrastrar
+        texto: >-
+          Y se ordena arrastrando: a su sitio, con los límites.
+        pasos:
+          - {al: inicio, enfoca: [lista, nueva], max: 1.2}
+          - {en: arrastrando, cambia: reordenada, funde: 0.6}
+          - {en: sitio, resalta: nueva, captura: reordenada}
+      - id: guardar
+        texto: >-
+          Guardar lo deja en el historial, y el aviso ofrece compilarlo ahora.
+        pasos:
+          - {al: inicio, resalta: guardar, captura: reordenada, hasta: 1.8}
+          - {en: historial, cambia: guardado}
+          - {en: historial, reposo: true, captura: guardado}
+          - {en: compilarlo, resalta: compilar, etiqueta: "Compilar ahora", lado: arriba, captura: guardado}
+
+  - id: rota
+    capitulo: Una referencia rota
+    antes: 0.5
+    pantalla: rota
+    frases:
+      - id: rota
+        texto: >-
+          Si una línea apunta a una lección que ya no existe, no desaparece: se
+          queda en su sitio, marcada, para que la arregles.
+        pasos:
+          - {al: inicio, enfoca: [rota], max: 1.6}
+          - {en: marcada, resalta: rota, etiqueta: "No está en el catálogo", color: rojo, lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El documento no lleva materia: apunta a lecciones que viven una sola
+          vez.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, los apartados, y lo que este año no se da.

@@ -1,0 +1,158 @@
+{
+  "capturas": [
+    {
+      "nombre": "reactivada",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "consejo": "Editar la composición"
+          },
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "editar",
+            "cajas": {
+              "apartado": {
+                "texto": "Apartado"
+              },
+              "seccion": {
+                "texto": "Límite de una función",
+                "fila": 900
+              },
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "historia": {
+                "texto": "Una breve historia de la épsilon",
+                "fila": 1000
+              },
+              "quitar": {
+                "consejo": "Desactivar, se queda comentada",
+                "cerca": {
+                  "texto": "Álgebra de límites"
+                }
+              },
+              "activar": {
+                "consejo": "Activar",
+                "cerca": {
+                  "texto": "Una breve historia de la épsilon"
+                }
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Apartado"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "apartado",
+            "cajas": {
+              "nuevo": {
+                "texto": "Título nuevo",
+                "fila": 900
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "consejo": "Editar el título en todos los idiomas",
+            "ultimo": true
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "titulo",
+            "cajas": {
+              "dialogo": {
+                "texto": "Título del apartado",
+                "alto": 300
+              },
+              "es": {
+                "texto": "castellano"
+              },
+              "en": {
+                "texto": "inglés"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "consejo": "Desactivar, se queda comentada",
+            "cerca": {
+              "texto": "Álgebra de límites"
+            }
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "desactivada",
+            "cajas": {
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              },
+              "cuenta": {
+                "contiene": "activas"
+              },
+              "activar": {
+                "consejo": "Activar",
+                "cerca": {
+                  "texto": "Una breve historia de la épsilon"
+                }
+              },
+              "historia": {
+                "texto": "Una breve historia de la épsilon",
+                "fila": 1000
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "consejo": "Activar",
+            "cerca": {
+              "texto": "Una breve historia de la épsilon"
+            }
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "historia": {
+          "texto": "Una breve historia de la épsilon",
+          "fila": 1000
+        },
+        "algebra": {
+          "texto": "Álgebra de límites",
+          "fila": 1000
+        },
+        "guardar": {
+          "clave": "composition-save"
+        },
+        "cuenta": {
+          "contiene": "activas"
+        }
+      }
+    }
+  ]
+}

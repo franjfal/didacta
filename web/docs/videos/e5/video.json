@@ -1,0 +1,57 @@
+{
+  "codigo": "E5",
+  "titulo": "Apartados, y lo que este año no se da",
+  "fichero": "E05-apartados-y-lo-que-no-se-da.mp4",
+  "duracion": 43.19,
+  "megas": 2.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Apartados, y lo que este año no se da"
+    },
+    {
+      "t": 6.53,
+      "titulo": "Un apartado"
+    },
+    {
+      "t": 14.49,
+      "titulo": "Lo que no se da"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dividir un tema en apartados, y dejar fuera una lección sin borrarla."
+    },
+    {
+      "t": 7.03,
+      "texto": "Los apartados ordenan el tema por dentro. Apartado añade uno nuevo."
+    },
+    {
+      "t": 12.07,
+      "texto": "Con su título en cada idioma."
+    },
+    {
+      "t": 14.99,
+      "texto": "Si este año no das Álgebra de límites, no la borres: desactívala."
+    },
+    {
+      "t": 19.96,
+      "texto": "Se queda en gris, en su sitio, y no se compila."
+    },
+    {
+      "t": 23.57,
+      "texto": "Y volver a darla es un clic: como la historia de la épsilon, que el ejemplo trae desactivada."
+    },
+    {
+      "t": 30.76,
+      "texto": "Quitar desactiva, no borra: el año que viene, un clic."
+    },
+    {
+      "t": 35.8,
+      "texto": "En el siguiente vídeo, hacer un examen o una hoja a partir de los problemas."
+    }
+  ]
+}

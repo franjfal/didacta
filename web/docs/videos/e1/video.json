@@ -1,0 +1,57 @@
+{
+  "codigo": "E1",
+  "titulo": "La pantalla de Asignaturas",
+  "fichero": "E01-la-pantalla-de-asignaturas.mp4",
+  "duracion": 46.82,
+  "megas": 2.0,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "La pantalla de Asignaturas"
+    },
+    {
+      "t": 8.02,
+      "titulo": "Tres niveles"
+    },
+    {
+      "t": 21.07,
+      "titulo": "Lo que das"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás moverte entre asignatura, curso y documento, y dejar a la vista solo lo que das."
+    },
+    {
+      "t": 8.52,
+      "texto": "Arriba, la asignatura; dentro, cada curso académico."
+    },
+    {
+      "t": 12.89,
+      "texto": "Y dentro del curso, sus documentos: el tema, la hoja y el examen, cada uno con su botón de compilar."
+    },
+    {
+      "t": 21.57,
+      "texto": "La estrella la marca, sin cambiarla de sitio, y la flecha la pliega."
+    },
+    {
+      "t": 26.19,
+      "texto": "En los tres puntos, Ocultar de esta lista."
+    },
+    {
+      "t": 29.2,
+      "texto": "Y arriba eliges qué ver: las que doy, las ocultas, o todas."
+    },
+    {
+      "t": 35.41,
+      "texto": "Ocultar no borra: sigue compilando, y sigue en la biblioteca."
+    },
+    {
+      "t": 40.05,
+      "texto": "En el siguiente vídeo, crear una asignatura y su curso académico."
+    }
+  ]
+}

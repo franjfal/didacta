@@ -1,0 +1,73 @@
+{
+  "codigo": "D9",
+  "titulo": "Poner una figura",
+  "fichero": "D09-poner-una-figura.mp4",
+  "duracion": 65.59,
+  "megas": 3.9,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Poner una figura"
+    },
+    {
+      "t": 8.43,
+      "titulo": "Dónde va"
+    },
+    {
+      "t": 19.58,
+      "titulo": "Llegar a la carpeta"
+    },
+    {
+      "t": 29.82,
+      "titulo": "Llamarla"
+    },
+    {
+      "t": 42.17,
+      "titulo": "Compilar"
+    },
+    {
+      "t": 47.13,
+      "titulo": "Las que faltan"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dónde va una imagen, cómo se llama desde la lección, y por qué lleva un texto alternativo."
+    },
+    {
+      "t": 8.93,
+      "texto": "La imagen va dentro de la lección, en su carpeta figures. Así viaja con ella: moverla, o darla en otra asignatura, no la rompe."
+    },
+    {
+      "t": 20.08,
+      "texto": "Hoy se copia a mano: en Ajustes, Cuenta y repositorios, este botón abre la carpeta del repositorio, y de ahí se baja hasta la lección."
+    },
+    {
+      "t": 30.32,
+      "texto": "En el editor, includegraphics, con el ancho que ocupa, y el nombre del fichero, sin la extensión."
+    },
+    {
+      "t": 37.1,
+      "texto": "Y alt, el texto alternativo: es lo que oye quien no la ve."
+    },
+    {
+      "t": 42.67,
+      "texto": "Al compilar, la figura sale en su sitio, debajo del teorema."
+    },
+    {
+      "t": 47.63,
+      "texto": "Y si una lección llama a una figura que no está, Revisar lo dice, con su lección y su línea."
+    },
+    {
+      "t": 54.68,
+      "texto": "La figura vive dentro de su lección: moverla no la rompe."
+    },
+    {
+      "t": 59.29,
+      "texto": "En el siguiente vídeo, rellenar los metadatos de una lección."
+    }
+  ]
+}

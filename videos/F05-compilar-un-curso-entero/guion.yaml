@@ -1,0 +1,98 @@
+# F5 · Compilar un curso entero, o solo lo desactualizado
+#
+# Montado desde este guion, con compilaciones de verdad dentro del arnés: el
+# curso de Cálculo I entero y, después de corregir una frase del Tema 1, el
+# aviso de que solo ese está viejo.
+codigo: F5
+titulo: Compilar un curso entero, o solo lo desactualizado
+subtitulo: Compilar mucho sin quedarte mirando, y rehacer solo lo que cambió
+ruta: Compilar y revisar
+siguiente: "F6 · Vista rápida"
+voz: narrador
+lema: ["Viejo es que haya cambiado lo que entró en el PDF,", "no su fecha."]
+lema_en: "no su fecha"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás compilar un curso entero sin quedarte mirando, y
+          rehacer solo lo que ha cambiado.
+
+  - id: curso
+    capitulo: El curso entero
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: boton
+        texto: >-
+          Abajo, Compilar el curso: todos sus documentos, uno detrás de otro.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Compilar, resalta: boton, lado: arriba}
+      - id: ocultar
+        texto: >-
+          La consola se puede ocultar y seguir trabajando.
+        pasos:
+          - {al: inicio, cambia: consola}
+          - {al: inicio, enfoca: [cabecera, ocultar], max: 1.2, captura: consola}
+          - {en: ocultar, resalta: ocultar, captura: consola}
+
+  - id: tira
+    capitulo: La tira de abajo
+    antes: 0.5
+    pantalla: tira
+    frases:
+      - id: tira
+        texto: >-
+          La tira de abajo dice por cuál va, con Ver y Detener. Lo que pulses
+          mientras tanto espera su turno.
+        pasos:
+          - {al: inicio, enfoca: [tira, detener], max: 1.8}
+          - {en: por cuál, resalta: tira, hasta: 1.8}
+          - {en: Ver, resalta: [ver, detener], lado: arriba}
+      - id: final
+        texto: >-
+          Al acabar, cuántos han ido bien, y cuántos con errores.
+        pasos:
+          - {al: inicio, cambia: acabado}
+          - {al: inicio, enfoca: [tira, ver], max: 1.8, captura: acabado}
+          - {en: bien, resalta: tira, captura: acabado}
+
+  - id: viejo
+    capitulo: Solo lo desactualizado
+    antes: 0.5
+    pantalla: desactualizado
+    frases:
+      - id: cambio
+        texto: >-
+          Si corriges una frase del Tema 1, su PDF se queda viejo, y los demás
+          no.
+        pasos:
+          - {al: inicio, enfoca: [fila, pdfhoja], max: 1.6}
+          - {en: viejo, resalta: pdf, etiqueta: "Viejo", color: ambar, lado: izquierda, hasta: 2}
+          - {en: demás, resalta: pdfhoja, lado: izquierda}
+      - id: compilar
+        texto: >-
+          Y Compilar lo desactualizado rehace solo ese.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: desactualizado, resalta: curso, etiqueta: "Solo el que cambió", lado: arriba}
+      - id: fecha
+        texto: >-
+          Viejo quiere decir que ha cambiado lo que entró en el PDF, no su
+          fecha: traer cambios de GitHub no lo deja todo viejo.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Viejo es que haya cambiado lo que entró en el PDF, no su fecha.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, la vista rápida.

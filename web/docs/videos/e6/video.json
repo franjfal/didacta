@@ -1,0 +1,65 @@
+{
+  "codigo": "E6",
+  "titulo": "Hacer un examen o una hoja a partir de los problemas",
+  "fichero": "E06-un-examen-a-partir-de-los-problemas.mp4",
+  "duracion": 50.03,
+  "megas": 3.0,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Hacer un examen o una hoja a partir de los problemas"
+    },
+    {
+      "t": 6.84,
+      "titulo": "Examen u hoja"
+    },
+    {
+      "t": 14.66,
+      "titulo": "Sin repetir"
+    },
+    {
+      "t": 29.18,
+      "titulo": "Listo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás montar un examen de una vez, sin repetir problemas que ya salieron."
+    },
+    {
+      "t": 7.34,
+      "texto": "En el curso, Examen u hoja de problemas."
+    },
+    {
+      "t": 10.69,
+      "texto": "Eliges el tipo, y el título: Examen final."
+    },
+    {
+      "t": 15.16,
+      "texto": "Abajo, los problemas del repositorio. Los que ya salieron en un examen llevan la marca."
+    },
+    {
+      "t": 21.0,
+      "texto": "Y «Sin los que ya salieron» los quita de la lista."
+    },
+    {
+      "t": 24.86,
+      "texto": "Eliges, en el orden en que irán, y Crear el examen."
+    },
+    {
+      "t": 29.68,
+      "texto": "Se abre, con sus problemas, listo para compilar. Es una composición más: una lista de problemas que ya existen."
+    },
+    {
+      "t": 38.93,
+      "texto": "Un examen es una lista más: de problemas que ya existen."
+    },
+    {
+      "t": 43.58,
+      "texto": "En el siguiente vídeo, elegir qué PDF salen de un tema."
+    }
+  ]
+}

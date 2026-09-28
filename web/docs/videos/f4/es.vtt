@@ -1,0 +1,44 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:06.766
+Al terminar sabrás ir directo a un error de
+compilación, sin leer la consola entera.
+
+00:00:07.616 --> 00:00:13.016
+Si algo falla, cada error dice en qué
+lección está, en qué idioma, en qué línea,
+
+00:00:13.056 --> 00:00:14.697
+y qué ha pasado.
+
+00:00:14.767 --> 00:00:16.130
+Abrir te lleva allí.
+
+00:00:16.930 --> 00:00:20.680
+Y si hace falta, Ver detalles
+enseña la consola entera,
+
+00:00:20.910 --> 00:00:23.392
+con cada línea marcada con su versión.
+
+00:00:24.192 --> 00:00:28.462
+Abrir lleva a la lección, en su
+idioma, con el cursor en la línea:
+
+00:00:29.112 --> 00:00:30.590
+aquí sobraba una c.
+
+00:00:30.660 --> 00:00:35.138
+El error se dice en la lección que hay que
+arreglar, no en el tema que la incluye.
+
+00:00:35.938 --> 00:00:38.808
+El error se dice en la
+lección que hay que arreglar,
+
+00:00:39.038 --> 00:00:41.088
+no en el documento que la incluye.
+
+00:00:41.338 --> 00:00:45.747
+En el siguiente vídeo, compilar un
+curso entero, o solo lo desactualizado.

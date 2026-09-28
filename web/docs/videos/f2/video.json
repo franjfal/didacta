@@ -1,0 +1,65 @@
+{
+  "codigo": "F2",
+  "titulo": "Leer los PDF dentro de Didacta",
+  "fichero": "F02-leer-los-pdf-dentro-de-didacta.mp4",
+  "duracion": 56.05,
+  "megas": 4.7,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Leer los PDF dentro de Didacta"
+    },
+    {
+      "t": 9.04,
+      "titulo": "Lado a lado"
+    },
+    {
+      "t": 22.03,
+      "titulo": "El lateral"
+    },
+    {
+      "t": 30.56,
+      "titulo": "Buscar"
+    },
+    {
+      "t": 38.61,
+      "titulo": "En el visor del sistema"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás comparar dos idiomas de un PDF, moverte por él y buscar dentro, sin salir de Didacta."
+    },
+    {
+      "t": 9.54,
+      "texto": "Si compilas una lección en dos idiomas, salen lado a lado, y las páginas se mueven juntas."
+    },
+    {
+      "t": 15.73,
+      "texto": "Arriba, la página, el zoom, y ajustar al ancho, al alto, o la página entera."
+    },
+    {
+      "t": 22.53,
+      "texto": "El botón de la izquierda abre el lateral: el índice, para saltar a un apartado, y las páginas, en miniatura."
+    },
+    {
+      "t": 31.06,
+      "texto": "La lupa, o Comando F, busca dentro, sin mirar tildes: límite, con o sin ella."
+    },
+    {
+      "t": 39.11,
+      "texto": "Y para proyectarlo a pantalla completa, este botón lo abre en el visor del sistema."
+    },
+    {
+      "t": 45.17,
+      "texto": "Comparar es mirar dos cosas a la vez, sin salir a otra aplicación."
+    },
+    {
+      "t": 49.67,
+      "texto": "En el siguiente vídeo, del PDF a la línea que lo escribe."
+    }
+  ]
+}

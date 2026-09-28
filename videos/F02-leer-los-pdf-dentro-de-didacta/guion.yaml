@@ -1,0 +1,98 @@
+# F2 · Leer los PDF dentro de Didacta
+#
+# Montado desde este guion, con los apuntes de «Límite de una función en un
+# punto» compilados de verdad en castellano y en inglés, lado a lado.
+codigo: F2
+titulo: Leer los PDF dentro de Didacta
+subtitulo: Comparar versiones, moverse por el documento y buscar dentro
+ruta: Compilar y revisar
+siguiente: "F3 · Del PDF a la línea que lo escribe"
+voz: narrador
+lema: ["Comparar es mirar dos cosas a la vez,", "sin salir a otra aplicación."]
+lema_en: "sin salir"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás comparar dos idiomas de un PDF, moverte por él y
+          buscar dentro, sin salir de Didacta.
+
+  - id: lado
+    capitulo: Lado a lado
+    antes: 0.5
+    pantalla: lado
+    frases:
+      - id: dos
+        texto: >-
+          Si compilas una lección en dos idiomas, salen lado a lado, y las
+          páginas se mueven juntas.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: lado a lado, resalta: juntas, etiqueta: "Las páginas se mueven juntas", lado: abajo}
+      - id: controles
+        texto: >-
+          Arriba, la página, el zoom, y ajustar al ancho, al alto, o la página
+          entera.
+        pasos:
+          - {al: inicio, enfoca: [lateral, juntas], max: 1.9}
+          - {en: página, resalta: pagina, hasta: 1.2}
+          - {en: zoom, resalta: zoom, hasta: 1.2}
+          - {en: ajustar, resalta: [ancho, alto, entera]}
+
+  - id: lateral
+    capitulo: El lateral
+    antes: 0.5
+    pantalla: indice
+    frases:
+      - id: indice
+        texto: >-
+          El botón de la izquierda abre el lateral: el índice, para saltar a un
+          apartado, y las páginas, en miniatura.
+        pasos:
+          - {al: inicio, enfoca: [indice, lista], max: 1.4, dy: -200}
+          - {en: índice, resalta: lista, hasta: 2.4}
+          - {en: páginas, cambia: miniaturas}
+          - {en: miniatura, resalta: lista, captura: miniaturas}
+
+  - id: buscar
+    capitulo: Buscar
+    antes: 0.5
+    pantalla: buscar
+    frases:
+      - id: lupa
+        texto: >-
+          La lupa, o Comando F, busca dentro, sin mirar tildes: límite, con o
+          sin ella.
+        pasos:
+          - {al: inicio, enfoca: [barra], max: 1.6, dy: 200}
+          - {en: Comando, teclas: "⌘ F"}
+          - {en: busca, resalta: campo, hasta: 2}
+          - {en: tildes, resalta: cuenta}
+
+  - id: fuera
+    capitulo: En el visor del sistema
+    antes: 0.5
+    pantalla: externo
+    frases:
+      - id: externo
+        texto: >-
+          Y para proyectarlo a pantalla completa, este botón lo abre en el
+          visor del sistema.
+        pasos:
+          - {al: inicio, enfoca: [panel], max: 1.4, dy: -200}
+          - {en: botón, resalta: externo, etiqueta: "Abrir fuera", lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Comparar es mirar dos cosas a la vez, sin salir a otra aplicación.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, del PDF a la línea que lo escribe.

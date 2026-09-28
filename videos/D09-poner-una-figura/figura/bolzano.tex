@@ -1,0 +1,20 @@
+% La figura del vídeo D9: una función continua que cruza el eje entre a y b.
+% Se compila a PDF con `pdflatex bolzano.tex`; el arnés copia el PDF a la
+% carpeta figures/ de «El teorema de Bolzano».
+\documentclass[tikz,border=6pt]{standalone}
+\begin{document}
+\begin{tikzpicture}[scale=1.4, line cap=round]
+  \draw[->, gray!70] (-0.3,0) -- (4.4,0) node[right, black] {$x$};
+  \draw[->, gray!70] (0,-1.5) -- (0,2.1) node[above, black] {$y$};
+  \draw[very thick, green!45!black, domain=0.5:3.8, samples=80]
+    plot (\x, {0.2*(\x-2)^3 + 0.25*(\x-2)});
+  \draw[dashed, gray] (0.5,0) -- (0.5,-1.05) (3.8,0) -- (3.8,1.62);
+  \fill (0.5,-1.05) circle (1.8pt) (3.8,1.62) circle (1.8pt);
+  \node[below] at (0.5,0) {$a$};
+  \node[below] at (3.8,-0.05) {$b$};
+  \fill[red!70!black] (2,0) circle (2.4pt);
+  \node[above left, red!70!black] at (2,0) {$c$};
+  \node[left] at (0.5,-1.05) {$f(a) < 0$};
+  \node[right] at (3.8,1.62) {$f(b) > 0$};
+\end{tikzpicture}
+\end{document}

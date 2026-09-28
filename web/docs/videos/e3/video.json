@@ -1,0 +1,65 @@
+{
+  "codigo": "E3",
+  "titulo": "Crear temas y documentos",
+  "fichero": "E03-crear-temas-y-documentos.mp4",
+  "duracion": 55.81,
+  "megas": 3.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Crear temas y documentos"
+    },
+    {
+      "t": 6.74,
+      "titulo": "Un tema"
+    },
+    {
+      "t": 15.96,
+      "titulo": "Un documento dentro"
+    },
+    {
+      "t": 31.46,
+      "titulo": "Un documento suelto"
+    },
+    {
+      "t": 37.56,
+      "titulo": "Guardar"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás organizar un curso en temas, y crear dentro sus documentos."
+    },
+    {
+      "t": 7.24,
+      "texto": "En el curso, Nuevo tema: un bloque del curso con todo lo suyo dentro, la teoría, los problemas, la bibliografía."
+    },
+    {
+      "t": 16.46,
+      "texto": "Ya está. Dentro, Documento en este tema: el título, y el identificador sale solo."
+    },
+    {
+      "t": 24.01,
+      "texto": "Se crea vacío, a propósito: elegir sus lecciones es el paso siguiente, y tiene su propia pantalla."
+    },
+    {
+      "t": 31.96,
+      "texto": "Y Documento suelto, para lo que no es de ningún tema: un formulario, por ejemplo."
+    },
+    {
+      "t": 38.06,
+      "texto": "Todo queda sin guardar hasta que pulsas Guardar: es un solo cambio en el curso, y se ve cuántas líneas toca."
+    },
+    {
+      "t": 45.59,
+      "texto": "El documento nace vacío: elegir sus lecciones es el paso siguiente."
+    },
+    {
+      "t": 50.73,
+      "texto": "En el siguiente vídeo, componer un tema."
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "codigo": "C2",
+  "titulo": "Buscar una lección",
+  "fichero": "C02-buscar-una-leccion.mp4",
+  "duracion": 61.73,
+  "megas": 3.9,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Buscar una lección"
+    },
+    {
+      "t": 6.87,
+      "titulo": "Buscar"
+    },
+    {
+      "t": 19.51,
+      "titulo": "Con una errata"
+    },
+    {
+      "t": 29.01,
+      "titulo": "En el texto"
+    },
+    {
+      "t": 47.01,
+      "titulo": "El atajo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar encontrarás una lección aunque no recuerdes su título, o lo escribas mal."
+    },
+    {
+      "t": 7.37,
+      "texto": "Escribe «limite», sin tilde: la lista se aplana, y encuentra «Límite», venga de donde venga."
+    },
+    {
+      "t": 15.12,
+      "texto": "Con dos palabras, estrecha: tienen que estar las dos."
+    },
+    {
+      "t": 20.01,
+      "texto": "Y si escribes «continudad», con una letra de menos, sale igual: y te avisa de que no es lo que has escrito, sino lo que se le parece."
+    },
+    {
+      "t": 29.51,
+      "texto": "Con «En el texto», busca también dentro de las lecciones: ¿dónde usé el teorema de Bolzano?"
+    },
+    {
+      "t": 36.33,
+      "texto": "Sale también la historia de la épsilon, que se llama de otra forma, con la línea que lo dice."
+    },
+    {
+      "t": 42.08,
+      "texto": "Al pulsarla, la lección se abre en ese idioma, y en esa línea."
+    },
+    {
+      "t": 47.51,
+      "texto": "Y para ir al buscador sin el ratón: Comando F, o Control F."
+    },
+    {
+      "t": 53.29,
+      "texto": "Lo encuentras aunque se llame de otra forma."
+    },
+    {
+      "t": 56.22,
+      "texto": "En el siguiente vídeo, filtrar lo que falta."
+    }
+  ]
+}

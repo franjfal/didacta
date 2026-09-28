@@ -1,0 +1,104 @@
+{
+  "capturas": [
+    {
+      "nombre": "abierta",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "buscar": "\\dfrac{x^2 - 1}{x - 1}",
+            "poner": "\\fracc{x^2 - 1}{x - 1}",
+            "mensaje": "Una errata en «Funciones continuas»",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "build-document-tema-1"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "con errores"
+          },
+          "max": 800,
+          "despues": 12
+        },
+        {
+          "capturar": {
+            "nombre": "falla",
+            "cajas": {
+              "cabecera": {
+                "contiene": "Terminada",
+                "fila": 700
+              },
+              "tarjeta": {
+                "contiene": "fracc",
+                "n": 0,
+                "fila": 700
+              },
+              "abrir": {
+                "texto": "Abrir",
+                "n": 0
+              },
+              "detalles": {
+                "texto": "Ver detalles",
+                "n": 0
+              },
+              "cuenta": {
+                "contiene": "Con errores:"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Ver detalles",
+            "n": 0
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "consola",
+            "cajas": {
+              "consola": {
+                "contiene": "=== calculo-i",
+                "n": 0,
+                "alto": 400
+              },
+              "tarjeta": {
+                "contiene": "fracc",
+                "n": 0,
+                "fila": 700
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Abrir",
+            "n": 0
+          },
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "linea": {
+          "editor": "\\fracc"
+        },
+        "titulo": {
+          "texto": "Funciones continuas",
+          "n": 0
+        }
+      }
+    }
+  ]
+}

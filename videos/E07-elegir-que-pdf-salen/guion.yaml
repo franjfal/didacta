@@ -1,0 +1,93 @@
+# E7 · Elegir qué PDF salen de un tema
+#
+# Montado desde este guion: dentro del arnés, el Tema 1 pasa de sus cinco
+# salidas a dos --diapositivas y apuntes--, y después se enseña la vuelta a
+# «lo que toque».
+codigo: E7
+titulo: Elegir qué PDF salen de un tema
+subtitulo: Decidir qué versiones se compilan de un documento
+ruta: Preparar una asignatura
+siguiente: "E8 · Deshacer y borrar sin miedo"
+voz: narrador
+lema: ["Una lista vacía no es «ninguna»:", "es «lo que toque»."]
+lema_en: "lo que toque"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás decidir qué versiones se compilan de un tema.
+
+  - id: panel
+    capitulo: Sus salidas
+    antes: 0.5
+    pantalla: panel
+    frases:
+      - id: cinco
+        texto: >-
+          A la derecha del tema, sus salidas: este elige cinco, en su fichero
+          del curso.
+        pasos:
+          - {al: inicio, enfoca: [panel], max: 1.5, dy: -80}
+          - {en: salidas, resalta: cabecera, hasta: 1.8}
+          - {en: elige, resalta: elige}
+      - id: boton
+        texto: >-
+          Para cambiarlas, Elegir salidas.
+        pasos:
+          - {en: Elegir, resalta: elegir}
+
+  - id: elegir
+    capitulo: Solo dos
+    antes: 0.5
+    pantalla: dialogo
+    frases:
+      - id: dos
+        texto: >-
+          Con «Estas», marcas las que quieres: solo las diapositivas y los
+          apuntes.
+        pasos:
+          - {al: inicio, enfoca: [toque, guardar], max: 1.4}
+          - {en: Estas, resalta: estas, hasta: 2}
+          - {en: diapositivas, cambia: dos}
+          - {en: diapositivas, resalta: slides, captura: dos, hasta: 1.6}
+          - {en: apuntes, resalta: [flat, profe], etiqueta: "Fuera", color: gris, captura: dos}
+      - id: guardado
+        texto: >-
+          Al aceptar, el tema ya solo compila esas dos.
+        pasos:
+          - {al: inicio, pulsa: guardar, captura: dos}
+          - {en: tema, cambia: guardado}
+          - {en: tema, enfoca: [panel], max: 1.6, dy: -120, captura: guardado}
+          - {en: dos, resalta: cabecera, etiqueta: "Dos salidas", lado: izquierda, captura: guardado}
+
+  - id: toque
+    capitulo: Lo que toque
+    antes: 0.5
+    pantalla: toque
+    frases:
+      - id: volver
+        texto: >-
+          Y «Lo que toque» deshace la elección: el tema vuelve a compilar lo
+          que digan los bloques de sus lecciones.
+        pasos:
+          - {al: inicio, enfoca: [toque, guardar], max: 1.4}
+          - {en: Lo que toque, resalta: toque, lado: derecha}
+      - id: vacia
+        texto: >-
+          En el fichero, eso es una lista vacía, y una lista vacía nunca quiere
+          decir ninguna.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Una lista vacía no es «ninguna»: es «lo que toque».
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, deshacer y borrar sin miedo.

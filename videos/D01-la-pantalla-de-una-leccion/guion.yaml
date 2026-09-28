@@ -1,0 +1,110 @@
+# D1 · La pantalla de una lección
+#
+# Montado desde este guion, con capturas de «Límite de una función en un
+# punto» en el repositorio de ejemplo, compilada de verdad para que salgan
+# sus PDF como pestañas.
+codigo: D1
+titulo: La pantalla de una lección
+subtitulo: Qué hay en cada pestaña, y en el panel de la derecha
+ruta: Escribir una lección
+siguiente: "D2 · Corregir una errata y guardarla"
+voz: narrador
+lema: ["El orden de las pestañas", "dice cuánto se usa cada una."]
+lema_en: "dice cuánto"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué hay en cada pestaña de una lección, y en el
+          panel de la derecha.
+
+  - id: pestanas
+    capitulo: Las pestañas
+    antes: 0.5
+    pantalla: leccion
+    frases:
+      - id: idiomas
+        texto: >-
+          Arriba, un idioma por pestaña, cada uno con el color de su estado.
+        pasos:
+          - {al: inicio, enfoca: [titulo, historial], max: 1.7, dy: 60}
+          - {en: idioma, resalta: [es, va, en], etiqueta: "Un idioma por pestaña"}
+      - id: resto
+        texto: >-
+          Después, Compilar, los metadatos y el historial: en el orden en que
+          se usan.
+        pasos:
+          - {en: Compilar, resalta: compilar, hasta: 1.2}
+          - {en: metadatos, resalta: metadatos, hasta: 1.2}
+          - {en: historial, resalta: historial}
+      - id: pdfs
+        texto: >-
+          Y cada PDF que compilas se abre como una pestaña más, al lado.
+        pasos:
+          - {en: PDF, cambia: pdf}
+          - {en: PDF, enfoca: [pestanas], max: 1.6, captura: pdf, dy: 120}
+          - {en: pestaña, resalta: [book, notes, slides], etiqueta: "Un PDF por pestaña", captura: pdf}
+
+  - id: panel
+    capitulo: El panel
+    antes: 0.5
+    pantalla: leccion
+    corta: true
+    frases:
+      - id: panel
+        texto: >-
+          A la derecha, qué es la lección, en qué documentos se usa, y lo que
+          se espera de ella.
+        pasos:
+          - {al: inicio, enfoca: [panel], max: 1.7}
+          - {en: qué es, resalta: panel, hasta: 1.6}
+          - {en: documentos, resalta: usos, etiqueta: "Dónde se usa", lado: izquierda, hasta: 2}
+          - {en: espera, resalta: objetivos, etiqueta: "Sus objetivos", lado: izquierda}
+
+  - id: info
+    capitulo: La i
+    antes: 0.5
+    pantalla: info
+    frases:
+      - id: donde
+        texto: >-
+          La i dice dónde se da, y qué versiones congeladas tiene.
+        pasos:
+          - {al: inicio, enfoca: [info, usar], max: 1.6}
+          - {en: dónde, resalta: sitios, hasta: 1.6}
+          - {en: congeladas, resalta: congeladas}
+      - id: acciones
+        texto: >-
+          Y desde aquí se duplica, se mueve, o se da también en otro tema.
+        pasos:
+          - {en: duplica, resalta: duplicar, hasta: 1}
+          - {en: mueve, resalta: mover, hasta: 1.2}
+          - {en: otro tema, resalta: usar}
+
+  - id: lado
+    capitulo: Lado a lado
+    antes: 0.5
+    pantalla: lado
+    frases:
+      - id: lado
+        texto: >-
+          Y con Lado a lado, sus idiomas, uno junto a otro: para traducir
+          mirando el original.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Lado a lado, resalta: lado, etiqueta: "Lado a lado", lado: abajo, alinear: derecha}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El orden de las pestañas dice cuánto se usa cada una.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, corregir una errata y guardarla.

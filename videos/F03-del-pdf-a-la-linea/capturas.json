@@ -1,0 +1,101 @@
+{
+  "capturas": [
+    {
+      "nombre": "pdf",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "compilar"
+          },
+          "esperar": 30
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "slides · es"
+          },
+          "despues": 10
+        },
+        {
+          "pulsar": {
+            "contiene": "slides · es"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "pestana": {
+          "contiene": "slides · es"
+        },
+        "palabra": {
+          "rect": [
+            396,
+            300,
+            48,
+            20
+          ]
+        },
+        "definicion": {
+          "rect": [
+            85,
+            260,
+            420,
+            145
+          ]
+        }
+      }
+    },
+    {
+      "nombre": "corregida",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=es&linea=23",
+      "acciones": [
+        {
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "linea",
+            "cajas": {
+              "linea": {
+                "editor": "salvo quizá",
+                "hasta": "\\keyterm{límite} $L$ en"
+              },
+              "palabra": {
+                "editor": "\\keyterm{límite}"
+              },
+              "es": {
+                "clave": "language-tab-es"
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "salvo quizá en el propio",
+            "poner": "salvo, quizá, en el propio"
+          }
+        },
+        {
+          "esperar": 6
+        }
+      ],
+      "cajas": {
+        "corregida": {
+          "editor": "salvo, quizá, en el propio"
+        },
+        "es": {
+          "clave": "language-tab-es"
+        }
+      }
+    }
+  ]
+}

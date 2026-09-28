@@ -1,0 +1,114 @@
+# C2 · Buscar una lección
+#
+# Montado desde este guion, con capturas del repositorio de ejemplo: cada
+# búsqueda es una dirección (`/?q=…`), que es como la guarda la biblioteca, y
+# la del texto busca de verdad con git dentro de la copia.
+codigo: C2
+titulo: Buscar una lección
+subtitulo: Encontrarla aunque no recuerdes el título, o lo escribas mal
+ruta: Encontrar material
+siguiente: "C3 · Filtrar lo que falta, por tipo o por bloque"
+voz: narrador
+lema: ["Lo encuentras", "aunque se llame de otra forma."]
+lema_en: "aunque"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar encontrarás una lección aunque no recuerdes su título, o
+          lo escribas mal.
+
+  - id: buscar
+    capitulo: Buscar
+    antes: 0.5
+    pantalla: vacia
+    frases:
+      - id: sin-tilde
+        texto: >-
+          Escribe «limite», sin tilde: la lista se aplana, y encuentra
+          «Límite», venga de donde venga.
+        pasos:
+          - {al: inicio, enfoca: [buscador], max: 1.6, dy: 200}
+          - {en: Escribe, resalta: buscador, hasta: 1.5}
+          - {en: aplana, cambia: limite}
+          - {en: aplana, reposo: true, captura: limite}
+          - {en: encuentra, resalta: primera, etiqueta: "Con tilde y sin ella", captura: limite}
+      - id: dos
+        texto: >-
+          Con dos palabras, estrecha: tienen que estar las dos.
+        pasos:
+          - {al: inicio, cambia: dos}
+          - {al: inicio, enfoca: [buscador, resumen], max: 1.5, captura: dos}
+          - {en: estrecha, resalta: buscador, captura: dos, hasta: 1.6}
+          - {en: las dos, resalta: resumen, etiqueta: "Menos, y mejores", captura: dos}
+
+  - id: errata
+    capitulo: Con una errata
+    antes: 0.5
+    pantalla: errata
+    frases:
+      - id: errata
+        texto: >-
+          Y si escribes «continudad», con una letra de menos, sale igual: y te
+          avisa de que no es lo que has escrito, sino lo que se le parece.
+        pasos:
+          - {al: inicio, enfoca: [buscador, resumen], max: 1.5}
+          - {en: letra, resalta: buscador, etiqueta: "Con una errata", color: ambar, hasta: 2.2}
+          - {en: avisa, resalta: resumen, etiqueta: "Se parecen a lo que buscas"}
+
+  - id: texto
+    capitulo: En el texto
+    antes: 0.5
+    pantalla: texto
+    frases:
+      - id: dentro
+        texto: >-
+          Con «En el texto», busca también dentro de las lecciones: ¿dónde usé
+          el teorema de Bolzano?
+        pasos:
+          - {al: inicio, enfoca: [buscador, entexto, linea], max: 1.4}
+          - {en: En el texto, resalta: entexto, etiqueta: "En el texto", hasta: 2.2}
+          - {en: dónde, resalta: buscador}
+      - id: otra-forma
+        texto: >-
+          Sale también la historia de la épsilon, que se llama de otra forma,
+          con la línea que lo dice.
+        pasos:
+          - {en: historia, resalta: historia, hasta: 2.4}
+          - {en: línea, resalta: linea, etiqueta: "La línea que lo dice"}
+      - id: abrir
+        texto: >-
+          Al pulsarla, la lección se abre en ese idioma, y en esa línea.
+        pasos:
+          - {al: inicio, pulsa: linea}
+          - {en: se abre, cambia: abierta}
+          - {en: se abre, enfoca: [bolzano], max: 1.8, captura: abierta}
+          - {en: esa línea, resalta: bolzano, captura: abierta}
+
+  - id: atajo
+    capitulo: El atajo
+    antes: 0.5
+    pantalla: vacia
+    frases:
+      - id: atajo
+        texto: >-
+          Y para ir al buscador sin el ratón: Comando F, o Control F.
+        pasos:
+          - {al: inicio, enfoca: [buscador], max: 1.6, dy: 200}
+          - {en: Comando, teclas: "⌘ F"}
+          - {en: Comando, resalta: buscador}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo encuentras aunque se llame de otra forma.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, filtrar lo que falta.

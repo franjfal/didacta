@@ -1,0 +1,106 @@
+# E3 · Crear temas y documentos
+#
+# Montado desde este guion: el tema, su documento y un documento suelto se
+# crean de verdad dentro del arnés, en el curso 2026-2027 de Cálculo I.
+codigo: E3
+titulo: Crear temas y documentos
+subtitulo: Organizar el curso en temas, y crear dentro sus documentos
+ruta: Preparar una asignatura
+siguiente: "E4 · Componer un tema"
+voz: narrador
+lema: ["El documento nace vacío:", "elegir sus lecciones es el paso siguiente."]
+lema_en: "elegir"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás organizar un curso en temas, y crear dentro sus
+          documentos.
+
+  - id: tema
+    capitulo: Un tema
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: nuevo
+        texto: >-
+          En el curso, Nuevo tema: un bloque del curso con todo lo suyo dentro,
+          la teoría, los problemas, la bibliografía.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: Nuevo tema, resalta: tema, lado: arriba}
+          - {en: bloque, pulsa: tema}
+          - {en: bloque, cambia: tema}
+          - {en: bloque, enfoca: [titulo, crear], max: 1.6, captura: tema}
+          - {en: bloque, resalta: titulo, captura: tema, hasta: 2.2}
+          - {en: todo lo suyo, resalta: id, captura: tema}
+
+  - id: documento
+    capitulo: Un documento dentro
+    antes: 0.5
+    pantalla: temacreado
+    frases:
+      - id: dentro
+        texto: >-
+          Ya está. Dentro, Documento en este tema: el título, y el
+          identificador sale solo.
+        pasos:
+          - {al: inicio, enfoca: [cabecera, anadir], max: 1.6, dy: 60}
+          - {en: Ya está, resalta: cabecera, hasta: 1.6}
+          - {en: Documento, resalta: anadir}
+          - {en: título, cambia: documento}
+          - {en: título, enfoca: [titulo, crear], max: 1.6, captura: documento}
+          - {en: título, resalta: titulo, captura: documento, hasta: 1.6}
+          - {en: identificador, resalta: id, captura: documento}
+      - id: vacio
+        texto: >-
+          Se crea vacío, a propósito: elegir sus lecciones es el paso
+          siguiente, y tiene su propia pantalla.
+        pasos:
+          - {al: inicio, cambia: doccreado}
+          - {al: inicio, enfoca: [cabecera, documento], max: 1.6, captura: doccreado}
+          - {en: vacío, resalta: documento, captura: doccreado}
+
+  - id: suelto
+    capitulo: Un documento suelto
+    antes: 0.5
+    pantalla: suelto
+    frases:
+      - id: suelto
+        texto: >-
+          Y Documento suelto, para lo que no es de ningún tema: un formulario,
+          por ejemplo.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.5}
+          - {en: formulario, resalta: titulo}
+
+  - id: guardar
+    capitulo: Guardar
+    antes: 0.5
+    pantalla: singuardar
+    frases:
+      - id: guardar
+        texto: >-
+          Todo queda sin guardar hasta que pulsas Guardar: es un solo cambio en
+          el curso, y se ve cuántas líneas toca.
+        pasos:
+          - {al: inicio, enfoca: [aviso, guardar], max: 1.6}
+          - {en: sin guardar, resalta: aviso, etiqueta: "Un solo cambio", lado: abajo, hasta: 2.6}
+          - {en: Guardar, resalta: guardar}
+          - {en: líneas, cambia: hecho}
+          - {en: líneas, reposo: true, captura: hecho}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El documento nace vacío: elegir sus lecciones es el paso siguiente.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, componer un tema.

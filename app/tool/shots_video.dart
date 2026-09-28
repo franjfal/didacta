@@ -503,6 +503,12 @@ void main() {
     if (what['editor'] case final String from) {
       return editorZone(tester, from, what['hasta'] as String?);
     }
+    // `rect`: a mano, en puntos de la ventana. Para lo que no tiene texto que
+    // buscar: una palabra dentro de un PDF, que es una imagen.
+    if (what['rect'] case final List r) {
+      final v = [for (final n in r) (n as num).toDouble()];
+      return Rect.fromLTWH(v[0], v[1], v[2], v[3]);
+    }
     final finder = finderFor(what);
     if (finder == null || finder.evaluate().isEmpty) return null;
     final index = (what['n'] as num?)?.toInt() ?? 0;
@@ -890,6 +896,18 @@ void main() {
       await settleReal(
         tester,
         rounds: (action['esperar'] as num?)?.toInt() ?? 6,
+      );
+    } else if (action['mantener'] case final Map what) {
+      // Mantener pulsado: el menú de compilar, por ejemplo.
+      final finder = finderFor(what.cast<String, dynamic>());
+      if (finder == null || finder.evaluate().isEmpty) {
+        stdout.writeln('    (no encuentro qué mantener: $what)');
+        return;
+      }
+      await tester.longPress(finder.first);
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 8,
       );
     } else if (action['lado_a_lado'] == true) {
       await tester.runAsync(() => session.setSplitEditors(true));

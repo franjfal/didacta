@@ -1,0 +1,61 @@
+{
+  "codigo": "E2",
+  "titulo": "Crear una asignatura y su curso académico",
+  "fichero": "E02-crear-una-asignatura.mp4",
+  "duracion": 53.99,
+  "megas": 2.7,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Crear una asignatura y su curso académico"
+    },
+    {
+      "t": 6.95,
+      "titulo": "Nueva asignatura"
+    },
+    {
+      "t": 18.7,
+      "titulo": "Sus datos"
+    },
+    {
+      "t": 27.94,
+      "titulo": "Su primer curso"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dar de alta una asignatura nueva, y su primer curso académico."
+    },
+    {
+      "t": 7.45,
+      "texto": "En Asignaturas, Nueva asignatura."
+    },
+    {
+      "t": 10.17,
+      "texto": "Pide el título, y el identificador sale solo. Después, el idioma en que se da, y si quieres copiar los datos de otra."
+    },
+    {
+      "t": 19.2,
+      "texto": "Ya está en la lista. El lápiz abre sus datos: en qué idiomas se ofrece, su nombre en cada uno, y la titulación."
+    },
+    {
+      "t": 28.44,
+      "texto": "Y Nuevo curso académico: dos mil veintiséis, dos mil veintisiete, y empezar de cero."
+    },
+    {
+      "t": 34.85,
+      "texto": "La asignatura guarda lo que no cambia de un año a otro; el curso, qué se da este año, y en qué orden."
+    },
+    {
+      "t": 42.66,
+      "texto": "La asignatura guarda lo que no cambia; el curso, lo que se da este año."
+    },
+    {
+      "t": 48.09,
+      "texto": "En el siguiente vídeo, crear temas y documentos."
+    }
+  ]
+}

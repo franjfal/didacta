@@ -1,0 +1,247 @@
+{
+  "capturas": [
+    {
+      "nombre": "hecho",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "curso",
+            "cajas": {
+              "tema": {
+                "clave": "add-theme"
+              },
+              "suelto": {
+                "clave": "add-document"
+              },
+              "examen": {
+                "clave": "add-problem-set"
+              },
+              "lista": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "add-theme"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "new-theme-title"
+            },
+            "texto": "Tema 2: derivadas"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "tema",
+            "cajas": {
+              "titulo": {
+                "clave": "new-theme-title"
+              },
+              "id": {
+                "clave": "new-theme-id"
+              },
+              "crear": {
+                "clave": "confirm-new-theme"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-new-theme"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Tema 2: derivadas"
+          },
+          "max": 400,
+          "despues": 40
+        },
+        {
+          "capturar": {
+            "nombre": "temacreado",
+            "cajas": {
+              "cabecera": {
+                "texto": "Tema 2: derivadas",
+                "fila": 800
+              },
+              "anadir": {
+                "clave": "add-document-tema-2-derivadas"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "add-document-tema-2-derivadas"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "new-document-title"
+            },
+            "texto": "Derivadas: apuntes y diapositivas"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "documento",
+            "cajas": {
+              "titulo": {
+                "clave": "new-document-title"
+              },
+              "id": {
+                "clave": "new-document-id"
+              },
+              "tipo": {
+                "clave": "kind-theory"
+              },
+              "crear": {
+                "clave": "confirm-new-document"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-new-document"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Derivadas: apuntes y diapositivas"
+          },
+          "max": 400,
+          "despues": 40
+        },
+        {
+          "capturar": {
+            "nombre": "doccreado",
+            "cajas": {
+              "cabecera": {
+                "texto": "Tema 2: derivadas",
+                "fila": 800
+              },
+              "documento": {
+                "texto": "Derivadas: apuntes y diapositivas",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "add-document"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "new-document-title"
+            },
+            "texto": "Formulario de derivadas"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "suelto",
+            "cajas": {
+              "titulo": {
+                "clave": "new-document-title"
+              },
+              "crear": {
+                "clave": "confirm-new-document"
+              },
+              "dialogo": {
+                "clave": "new-document-title",
+                "alto": 300
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-new-document"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Formulario de derivadas"
+          },
+          "max": 400,
+          "despues": 40
+        },
+        {
+          "capturar": {
+            "nombre": "singuardar",
+            "cajas": {
+              "aviso": {
+                "contiene": "Sin guardar"
+              },
+              "guardar": {
+                "clave": "documents-save"
+              },
+              "suelto": {
+                "texto": "Formulario de derivadas",
+                "fila": 800
+              },
+              "tema": {
+                "texto": "Tema 2: derivadas",
+                "fila": 800
+              },
+              "documento": {
+                "texto": "Derivadas: apuntes y diapositivas",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "documents-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "historial"
+          },
+          "max": 400,
+          "despues": 60
+        }
+      ],
+      "cajas": {
+        "suelto": {
+          "texto": "Formulario de derivadas",
+          "fila": 800
+        },
+        "tema": {
+          "texto": "Tema 2: derivadas",
+          "fila": 800
+        },
+        "documento": {
+          "texto": "Derivadas: apuntes y diapositivas",
+          "fila": 800
+        }
+      }
+    }
+  ]
+}

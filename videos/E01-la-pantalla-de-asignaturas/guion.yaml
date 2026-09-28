@@ -1,0 +1,88 @@
+# E1 · La pantalla de Asignaturas
+#
+# Montado desde este guion, con la pantalla de Asignaturas y el curso de
+# Cálculo I del repositorio de ejemplo.
+codigo: E1
+titulo: La pantalla de Asignaturas
+subtitulo: Asignatura, curso y documento, y a la vista solo lo que das
+ruta: Preparar una asignatura
+siguiente: "E2 · Crear una asignatura y su curso académico"
+voz: narrador
+lema: ["Ocultar no borra:", "sigue compilando, y sigue en la biblioteca."]
+lema_en: "sigue compilando"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás moverte entre asignatura, curso y documento, y
+          dejar a la vista solo lo que das.
+
+  - id: niveles
+    capitulo: Tres niveles
+    antes: 0.5
+    pantalla: asignaturas
+    frases:
+      - id: dos
+        texto: >-
+          Arriba, la asignatura; dentro, cada curso académico.
+        pasos:
+          - {al: inicio, enfoca: [asignatura, curso], max: 1.4, dy: 60}
+          - {en: asignatura, resalta: asignatura, hasta: 1.6}
+          - {en: curso, resalta: curso}
+      - id: documentos
+        texto: >-
+          Y dentro del curso, sus documentos: el tema, la hoja y el examen,
+          cada uno con su botón de compilar.
+        pasos:
+          - {al: inicio, cambia: curso}
+          - {al: inicio, reposo: true, captura: curso}
+          - {en: tema, resalta: tema, captura: curso, hasta: 1}
+          - {en: hoja, resalta: hoja, captura: curso, hasta: 1}
+          - {en: examen, resalta: parcial, captura: curso, hasta: 1.4}
+          - {en: compilar, resalta: play, etiqueta: "Compilar", lado: izquierda, captura: curso}
+
+  - id: vista
+    capitulo: Lo que das
+    antes: 0.5
+    pantalla: asignaturas
+    corta: true
+    frases:
+      - id: estrella
+        texto: >-
+          La estrella la marca, sin cambiarla de sitio, y la flecha la pliega.
+        pasos:
+          - {al: inicio, enfoca: [asignatura, menu], max: 1.6, dy: 60}
+          - {en: estrella, resalta: estrella, hasta: 1.8}
+          - {en: pliega, resalta: plegar}
+      - id: ocultar
+        texto: >-
+          En los tres puntos, Ocultar de esta lista.
+        pasos:
+          - {al: inicio, cambia: menu}
+          - {al: inicio, enfoca: [menu, ocultar], max: 1.8, captura: menu}
+          - {en: Ocultar, resalta: ocultar, captura: menu}
+      - id: vistas
+        texto: >-
+          Y arriba eliges qué ver: las que doy, las ocultas, o todas.
+        pasos:
+          - {al: inicio, cambia: vistas}
+          - {al: inicio, enfoca: [doy, todas], max: 1.8, captura: vistas}
+          - {en: doy, resalta: doy, captura: vistas, hasta: 1.2}
+          - {en: ocultas, resalta: ocultas, captura: vistas, hasta: 1.2}
+          - {en: todas, resalta: todas, captura: vistas}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Ocultar no borra: sigue compilando, y sigue en la biblioteca.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, crear una asignatura y su curso académico.

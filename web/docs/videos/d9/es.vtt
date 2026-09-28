@@ -1,0 +1,54 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:05.320
+Al terminar sabrás dónde va una
+imagen, cómo se llama desde la lección,
+
+00:00:05.360 --> 00:00:08.078
+y por qué lleva un texto alternativo.
+
+00:00:08.928 --> 00:00:14.698
+La imagen va dentro de la lección, en
+su carpeta figures. Así viaja con ella:
+
+00:00:15.348 --> 00:00:19.283
+moverla, o darla en otra
+asignatura, no la rompe.
+
+00:00:20.083 --> 00:00:24.473
+Hoy se copia a mano: en
+Ajustes, Cuenta y repositorios,
+
+00:00:24.523 --> 00:00:29.521
+este botón abre la carpeta del repositorio,
+y de ahí se baja hasta la lección.
+
+00:00:30.321 --> 00:00:35.341
+En el editor, includegraphics, con el
+ancho que ocupa, y el nombre del fichero,
+
+00:00:35.381 --> 00:00:37.028
+sin la extensión.
+
+00:00:37.098 --> 00:00:41.867
+Y alt, el texto alternativo:
+es lo que oye quien no la ve.
+
+00:00:42.667 --> 00:00:46.828
+Al compilar, la figura sale en
+su sitio, debajo del teorema.
+
+00:00:47.628 --> 00:00:51.718
+Y si una lección llama a una figura
+que no está, Revisar lo dice,
+
+00:00:51.908 --> 00:00:53.877
+con su lección y su línea.
+
+00:00:54.677 --> 00:00:59.038
+La figura vive dentro de su
+lección: moverla no la rompe.
+
+00:00:59.288 --> 00:01:02.993
+En el siguiente vídeo, rellenar
+los metadatos de una lección.

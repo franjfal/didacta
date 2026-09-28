@@ -1,0 +1,65 @@
+{
+  "codigo": "E7",
+  "titulo": "Elegir qué PDF salen de un tema",
+  "fichero": "E07-elegir-que-pdf-salen.mp4",
+  "duracion": 50.49,
+  "megas": 2.6,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Elegir qué PDF salen de un tema"
+    },
+    {
+      "t": 5.78,
+      "titulo": "Sus salidas"
+    },
+    {
+      "t": 15.51,
+      "titulo": "Solo dos"
+    },
+    {
+      "t": 25.77,
+      "titulo": "Lo que toque"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás decidir qué versiones se compilan de un tema."
+    },
+    {
+      "t": 6.28,
+      "texto": "A la derecha del tema, sus salidas: este elige cinco, en su fichero del curso."
+    },
+    {
+      "t": 12.51,
+      "texto": "Para cambiarlas, Elegir salidas."
+    },
+    {
+      "t": 16.01,
+      "texto": "Con «Estas», marcas las que quieres: solo las diapositivas y los apuntes."
+    },
+    {
+      "t": 21.93,
+      "texto": "Al aceptar, el tema ya solo compila esas dos."
+    },
+    {
+      "t": 26.27,
+      "texto": "Y «Lo que toque» deshace la elección: el tema vuelve a compilar lo que digan los bloques de sus lecciones."
+    },
+    {
+      "t": 33.56,
+      "texto": "En el fichero, eso es una lista vacía, y una lista vacía nunca quiere decir ninguna."
+    },
+    {
+      "t": 39.98,
+      "texto": "Una lista vacía no es «ninguna»: es «lo que toque»."
+    },
+    {
+      "t": 44.46,
+      "texto": "En el siguiente vídeo, deshacer y borrar sin miedo."
+    }
+  ]
+}
