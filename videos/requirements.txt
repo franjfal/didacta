@@ -6,3 +6,4 @@ soundfile
 pyyaml
 scipy
 librosa
+mkdocs-material==9.7.7  # la web, para fotografiar sus páginas (la misma versión que web/requirements.txt)

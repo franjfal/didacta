@@ -186,6 +186,16 @@ html, body {
   font-weight: 600; font-size: 14px; color: #6b707a;
 }
 
+/* La barra de un navegador: las flechas y la dirección, sin pestañas. */
+.ventana .barra.navegador { height: 52px; gap: 9px; padding-right: 16px; }
+.ventana .barra .flechas { margin-left: 18px; font-size: 26px; letter-spacing: 10px; color: #a3a8ae; line-height: 1; }
+.ventana .barra .direccion {
+  flex: 1; max-width: 720px; margin: 0 auto 0 12px; height: 32px; border-radius: 16px;
+  background: #ffffff; border: 1px solid #dfe2dc; display: flex; align-items: center; gap: 8px;
+  padding: 0 16px; font-size: 16px; color: #4a4f57; font-weight: 500;
+}
+.ventana .barra .direccion svg { width: 14px; height: 14px; color: #8a9097; }
+
 .ventana .contenido { position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
 .ventana .contenido img { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 

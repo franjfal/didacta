@@ -47,7 +47,7 @@ rutas:
       - codigo: A2
         titulo: Instalar Didacta
         minutos: 1.5
-        nota: "tres versiones: macOS, Windows y Linux"
+        nota: "un capítulo para cada sistema: macOS, Windows y Linux"
         sabras: instalarla y abrirla la primera vez sin desactivar ninguna protección del sistema.
         idea: el aviso del sistema es por la firma que falta, no por la aplicación; basta con dejarla abrir una vez.
         mas:

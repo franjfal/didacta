@@ -48,9 +48,12 @@ import 'package:didacta_app/state/mcp_service.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
 import 'package:didacta_app/ui/theme.dart';
+import 'package:didacta_app/ui/welcome.dart';
+import 'package:didacta_app/ui/welcome_art.dart';
 
 import '../test/fixture.dart';
-import 'generate_screenshots.dart' show loadFonts, routerFor, shotTheme;
+import 'generate_screenshots.dart'
+    show loadFonts, routerFor, shotFamily, shotTheme;
 
 /// La ventana, en puntos: la de un portátil, y la misma para todos los vídeos.
 /// Una captura a otro tamaño parece de otra aplicación.
@@ -102,6 +105,9 @@ void main() {
   setUpAll(() async {
     if (video == null) return;
     await loadFonts();
+    // Los dibujos de la bienvenida son un `CustomPainter` y no heredan la
+    // tipografía: sin esto, sus etiquetas salen como rectángulos negros.
+    welcomeArtFontFamily = shotFamily;
     useUiLanguage(UiLanguage.es);
 
     spec =
@@ -167,7 +173,13 @@ void main() {
     return session;
   }
 
-  Future<void> mount(WidgetTester tester, Session session) async {
+  /// La aplicación montada con su router o, con [welcome], la bienvenida:
+  /// lo que se ve **en lugar de** la aplicación al abrirla por primera vez.
+  Future<void> mount(
+    WidgetTester tester,
+    Session session, {
+    bool welcome = false,
+  }) async {
     tester.view.physicalSize = Size(
       window.width * density,
       window.height * density,
@@ -193,11 +205,17 @@ void main() {
               ),
             ),
           ],
-          child: MaterialApp.router(
-            debugShowCheckedModeBanner: false,
-            theme: shotTheme(DidactaPalette.light),
-            routerConfig: buildRouter(session),
-          ),
+          child: welcome
+              ? MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  theme: shotTheme(DidactaPalette.light),
+                  home: WelcomeScreen(session: session),
+                )
+              : MaterialApp.router(
+                  debugShowCheckedModeBanner: false,
+                  theme: shotTheme(DidactaPalette.light),
+                  routerConfig: buildRouter(session),
+                ),
         ),
       ),
     );
@@ -526,10 +544,13 @@ void main() {
         final name = shot['nombre'] as String;
         late Session session;
         await tester.runAsync(() async => session = await openSession());
-        await mount(tester, session);
+        final welcome = shot['bienvenida'] == true;
+        await mount(tester, session, welcome: welcome);
         await settleReal(tester, rounds: 3);
-        routerFor(tester).go(shot['ruta'] as String);
-        await settleReal(tester);
+        if (!welcome) {
+          routerFor(tester).go(shot['ruta'] as String);
+          await settleReal(tester);
+        }
 
         // Las zonas se miden antes de las acciones si se piden así: la fila que
         // se va a arrastrar, por ejemplo, está en su sitio antes de moverla.

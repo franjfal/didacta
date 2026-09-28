@@ -1,0 +1,85 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:04.850
+Al terminar este vídeo tendrás
+Didacta instalada y abierta,
+
+00:00:04.940 --> 00:00:07.873
+sin desactivar ninguna
+protección de tu ordenador.
+
+00:00:08.723 --> 00:00:14.233
+Didacta se descarga de su web, en
+Descargar: hay un instalador para macOS,
+
+00:00:14.283 --> 00:00:16.881
+otro para Windows y otro para Linux.
+
+00:00:17.781 --> 00:00:18.661
+En el Mac,
+
+00:00:18.701 --> 00:00:23.633
+abre el fichero que has bajado y arrastra
+Didacta a la carpeta Aplicaciones.
+
+00:00:23.703 --> 00:00:29.453
+La primera vez que la abras, macOS no te
+dejará. No es que haya encontrado nada:
+
+00:00:30.203 --> 00:00:33.226
+es que Didacta todavía no
+está firmada por Apple.
+
+00:00:33.296 --> 00:00:39.786
+Cierra el aviso y ve a Ajustes del
+Sistema, Privacidad y seguridad. Abajo,
+
+00:00:40.016 --> 00:00:43.097
+en Seguridad, pulsa «Abrir igualmente».
+
+00:00:43.167 --> 00:00:47.077
+Te pide tu contraseña una
+sola vez. A partir de ahí,
+
+00:00:47.227 --> 00:00:49.558
+se abre como cualquier otra aplicación.
+
+00:00:50.458 --> 00:00:56.008
+En Windows, ejecuta el instalador. Si
+te dice que ha protegido tu equipo,
+
+00:00:56.278 --> 00:01:00.598
+pulsa «Más información» y luego
+«Ejecutar de todas formas».
+
+00:01:00.668 --> 00:01:05.445
+Se instala solo para ti, así que no
+pide contraseña de administrador.
+
+00:01:05.515 --> 00:01:11.565
+Y una cosa que Windows no trae:
+Python. Descárgalo de python.org;
+
+00:01:11.915 --> 00:01:14.697
+el que viene con Windows
+solo abre la tienda.
+
+00:01:15.597 --> 00:01:21.334
+En Linux es un solo fichero. Dale
+permiso para ejecutarse, y ábrelo.
+
+00:01:21.404 --> 00:01:26.117
+Déjalo en la carpeta donde quieras
+tenerlo: es ahí donde se actualizará.
+
+00:01:27.017 --> 00:01:31.900
+En los tres sistemas, Didacta se
+actualiza sola, y siempre pregunta antes.
+
+00:01:32.700 --> 00:01:36.456
+El aviso es por la firma que
+falta, no por la aplicación.
+
+00:01:36.706 --> 00:01:40.169
+En el siguiente vídeo, entras
+con tu cuenta de GitHub.

@@ -125,7 +125,11 @@ def al_dia(sello: Path, *fuentes: Path) -> bool:
 def capturas(carpeta: Path, obra: Path, forzar: bool) -> dict:
     destino = obra / "capturas"
     sello = destino / ".hecho"
+    spec = json.loads((carpeta / "capturas.json").read_text(encoding="utf-8"))
     fuentes = (carpeta / "capturas.json", RAIZ / "app" / "lib", RAIZ / "app" / "assets" / "ejemplo", RAIZ / "app" / "tool" / "shots_video.dart")
+    if not spec.get("capturas"):
+        destino.mkdir(parents=True, exist_ok=True)
+        sello.touch()
     if forzar or not al_dia(sello, *fuentes):
         paso("Capturas de la aplicación (con el repositorio de ejemplo)")
         exe = flutter()
@@ -141,6 +145,8 @@ def capturas(carpeta: Path, obra: Path, forzar: bool) -> dict:
         sello.touch()
     else:
         paso("Capturas: al día")
+    if spec.get("web"):
+        capturas_web(carpeta, destino, forzar)
     resultado = {}
     for zonas in sorted(destino.glob("*.json")):
         datos = json.loads(zonas.read_text(encoding="utf-8"))
@@ -149,8 +155,37 @@ def capturas(carpeta: Path, obra: Path, forzar: bool) -> dict:
             "ancho": datos["ancho"],
             "alto": datos["alto"],
             "zonas": datos["zonas"],
+            "direccion": datos.get("direccion", ""),
         }
     return resultado
+
+
+def capturas_web(carpeta: Path, destino: Path, forzar: bool) -> None:
+    """Las páginas de la web de documentación que salen en el vídeo.
+
+    Se construye la web de ahora --con el bloque de descargas de la última
+    versión publicada, que es el que ve quien la visita-- y
+    `estudio/web.mjs` la fotografía con sus zonas. El bloque de descargas del
+    repositorio no se queda cambiado: se escribe para construir y se deja
+    como estaba.
+    """
+    sello = destino / ".hecho-web"
+    web = RAIZ / "web"
+    fuentes = (carpeta / "capturas.json", web / "docs", web / "mkdocs.yml", web / "overrides", web / "hooks", RAIZ / "packaging" / "web.py")
+    if not forzar and al_dia(sello, *fuentes):
+        paso("Capturas de la web: al día")
+        return
+    paso("Capturas de la web de documentación")
+    sitio = BUILD / "web"
+    trozo = web / "docs" / "_snippets" / "descargas.md"
+    antes = trozo.read_bytes()
+    try:
+        correr([sys.executable, str(RAIZ / "packaging" / "web.py"), "downloads", "--repo", "franjfal/didacta", "--out", str(trozo)])
+        correr([str(VENV / "bin" / "mkdocs"), "build", "--quiet", "-d", str(sitio)], cwd=web)
+    finally:
+        trozo.write_bytes(antes)
+    correr(["node", str(VIDEOS / "estudio" / "web.mjs"), str(sitio), str(carpeta / "capturas.json"), str(destino)])
+    sello.touch()
 
 
 def pdfs(guion: dict, carpeta: Path, obra: Path, forzar: bool) -> dict:
@@ -388,8 +423,14 @@ def hacer(codigo: str, opciones: dict) -> None:
     obra.mkdir(parents=True, exist_ok=True)
     print(f"\033[1m{guion['codigo']} · {guion['titulo']}\033[0m  ({carpeta.relative_to(RAIZ)})")
 
+    version = re.search(r"^version:\s*([\d.]+)", (RAIZ / "app" / "pubspec.yaml").read_text(encoding="utf-8"), re.M)
     datos = {
-        "video": {k: guion.get(k, "") for k in ("codigo", "titulo", "subtitulo", "ruta", "siguiente")},
+        "video": {
+            **{k: guion.get(k, "") for k in ("codigo", "titulo", "subtitulo", "ruta", "siguiente")},
+            # La versión de la aplicación que se enseña: sale en los nombres
+            # de los instaladores, por ejemplo.
+            "version": version.group(1) if version else "",
+        },
         "capturas": capturas(carpeta, obra, "capturas" in opciones["rehacer"]),
         "pdf": pdfs(guion, carpeta, obra, "pdf" in opciones["rehacer"]),
     }

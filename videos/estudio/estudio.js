@@ -270,11 +270,22 @@
     const D = window.DATOS;
     const cap = D.capturas[o.captura];
     if (!cap) throw new Error(`no hay captura «${o.captura}»`);
-    const barra = 36;
+    // Un navegador, si la captura es de una página web: la barra lleva su
+    // dirección en lugar del nombre de la aplicación.
+    const direccion = o.direccion ?? cap.direccion;
+    const barra = direccion ? 52 : 36;
     const escala = o.ancho / cap.ancho;
     const alto = cap.alto * escala + barra;
     const raiz = nodo({ clase: 'ventana', padre: o.padre, estilo: { left: `${o.x}px`, top: `${o.y}px`, width: `${o.ancho}px`, height: `${alto}px` } });
-    nodo({ clase: 'barra', padre: raiz, html: `<i></i><i></i><i></i><b>${o.titulo || 'Didacta'}</b>` });
+    if (direccion) {
+      nodo({
+        clase: 'barra navegador',
+        padre: raiz,
+        html: `<i></i><i></i><i></i><span class="flechas">‹ ›</span><span class="direccion"><svg viewBox="0 0 16 16"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2M3.5 7h9v6.5h-9z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>${direccion}</span>`,
+      });
+    } else {
+      nodo({ clase: 'barra', padre: raiz, html: `<i></i><i></i><i></i><b>${o.titulo || 'Didacta'}</b>` });
+    }
     const contenido = nodo({ clase: 'contenido', padre: raiz, estilo: { top: `${barra}px` } });
     const imagenes = {};
     function imagen(nombre) {
@@ -364,6 +375,8 @@
 
   /** Dónde está algo de una ventana en el lienzo, en el segundo t. */
   function enLienzo(v, r, t) {
+    // Sin ventana, la zona ya está en el lienzo: la de un dibujo del montaje.
+    if (!v) return { ...r, s: 1 };
     const dx = valor(v.raiz, 'x', t, 0);
     const dy = valor(v.raiz, 'y', t, 0);
     const movido = { x: r.x + dx, y: r.y + dy, w: r.w, h: r.h };

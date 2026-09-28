@@ -1,0 +1,31 @@
+{
+  "capturas": [
+    {
+      "nombre": "bienvenida",
+      "bienvenida": true,
+      "cajas": {
+        "empezar": {
+          "texto": "Empezar"
+        }
+      }
+    }
+  ],
+  "web": [
+    {
+      "nombre": "descargas",
+      "pagina": "descargas/",
+      "ancho": 1440,
+      "alto": 900,
+      "direccion": "franjfal.github.io/didacta/descargas/",
+      "cajas": {
+        "version": {"selector": ".didacta-latest"},
+        "macos": {"selector": "a.md-button[href$='.dmg']"},
+        "windows": {"selector": "a.md-button[href$='.exe']"},
+        "linux": {"selector": "a.md-button[href$='.AppImage']"},
+        "tarjeta-macos": {"selector": ".grid.cards > ul > li", "n": 0},
+        "tarjeta-windows": {"selector": ".grid.cards > ul > li", "n": 1},
+        "tarjeta-linux": {"selector": ".grid.cards > ul > li", "n": 2}
+      }
+    }
+  ]
+}

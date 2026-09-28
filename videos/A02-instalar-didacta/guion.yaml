@@ -1,0 +1,105 @@
+# A2 · Instalar Didacta
+#
+# Lo que se dice, escena a escena (ver `A01-…/guion.yaml` para cómo se lee).
+# Un vídeo para los tres sistemas, con un capítulo para cada uno: quien tiene
+# un Mac salta al suyo desde los capítulos. El plan pedía tres versiones; un
+# vídeo con capítulos se busca igual y se mantiene una vez.
+#
+# Lo del Mac es el de ahora (macOS 15 en adelante): el botón derecho → Abrir
+# de antes ya no salta el aviso. Se hace desde Ajustes del Sistema, como dice
+# la ayuda de Apple («Abrir una app para Mac de un desarrollador desconocido»).
+codigo: A2
+titulo: Instalar Didacta
+subtitulo: En macOS, Windows y Linux
+ruta: Empezar
+siguiente: "A3 · Entrar con tu cuenta de GitHub"
+voz: narrador
+
+escenas:
+  - id: apertura
+    capitulo: ""
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar este vídeo tendrás Didacta instalada y abierta, sin
+          desactivar ninguna protección de tu ordenador.
+
+  - id: descargar
+    capitulo: Descargar
+    antes: 0.5
+    frases:
+      - id: web
+        texto: >-
+          Didacta se descarga de su web, en Descargar: hay un instalador para
+          macOS, otro para Windows y otro para Linux.
+        pausa: 0.4
+
+  - id: macos
+    capitulo: macOS
+    antes: 0.6
+    frases:
+      - id: arrastrar
+        texto: >-
+          En el Mac, abre el fichero que has bajado y arrastra Didacta a la
+          carpeta Aplicaciones.
+      - id: aviso
+        texto: >-
+          La primera vez que la abras, macOS no te dejará. No es que haya
+          encontrado nada: es que Didacta todavía no está firmada por Apple.
+      - id: abrir-igualmente
+        texto: >-
+          Cierra el aviso y ve a Ajustes del Sistema, Privacidad y seguridad.
+          Abajo, en Seguridad, pulsa «Abrir igualmente».
+      - id: contrasena
+        texto: >-
+          Te pide tu contraseña una sola vez. A partir de ahí, se abre como
+          cualquier otra aplicación.
+
+  - id: windows
+    capitulo: Windows
+    antes: 0.6
+    frases:
+      - id: smartscreen
+        texto: >-
+          En Windows, ejecuta el instalador. Si te dice que ha protegido tu
+          equipo, pulsa «Más información» y luego «Ejecutar de todas formas».
+      - id: para-ti
+        texto: >-
+          Se instala solo para ti, así que no pide contraseña de
+          administrador.
+      - id: python
+        texto: >-
+          Y una cosa que Windows no trae: Python. Descárgalo de python.org;
+          el que viene con Windows solo abre la tienda.
+
+  - id: linux
+    capitulo: Linux
+    antes: 0.6
+    frases:
+      - id: appimage
+        texto: >-
+          En Linux es un solo fichero. Dale permiso para ejecutarse, y ábrelo.
+      - id: donde
+        texto: >-
+          Déjalo en la carpeta donde quieras tenerlo: es ahí donde se
+          actualizará.
+
+  - id: al-dia
+    capitulo: Siempre al día
+    antes: 0.6
+    frases:
+      - id: actualiza
+        texto: En los tres sistemas, Didacta se actualiza sola, y siempre pregunta antes.
+
+  - id: cierre
+    capitulo: ""
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: El aviso es por la firma que falta, no por la aplicación.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, entras con tu cuenta de GitHub.

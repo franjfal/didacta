@@ -1,0 +1,93 @@
+{
+  "codigo": "A2",
+  "titulo": "Instalar Didacta",
+  "fichero": "A02-instalar-didacta.mp4",
+  "duracion": 102.77,
+  "megas": 4.3,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Instalar Didacta"
+    },
+    {
+      "t": 8.22,
+      "titulo": "Descargar"
+    },
+    {
+      "t": 17.18,
+      "titulo": "macOS"
+    },
+    {
+      "t": 49.86,
+      "titulo": "Windows"
+    },
+    {
+      "t": 75.0,
+      "titulo": "Linux"
+    },
+    {
+      "t": 86.42,
+      "titulo": "Siempre al día"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar este vídeo tendrás Didacta instalada y abierta, sin desactivar ninguna protección de tu ordenador."
+    },
+    {
+      "t": 8.72,
+      "texto": "Didacta se descarga de su web, en Descargar: hay un instalador para macOS, otro para Windows y otro para Linux."
+    },
+    {
+      "t": 17.78,
+      "texto": "En el Mac, abre el fichero que has bajado y arrastra Didacta a la carpeta Aplicaciones."
+    },
+    {
+      "t": 23.7,
+      "texto": "La primera vez que la abras, macOS no te dejará. No es que haya encontrado nada: es que Didacta todavía no está firmada por Apple."
+    },
+    {
+      "t": 33.3,
+      "texto": "Cierra el aviso y ve a Ajustes del Sistema, Privacidad y seguridad. Abajo, en Seguridad, pulsa «Abrir igualmente»."
+    },
+    {
+      "t": 43.17,
+      "texto": "Te pide tu contraseña una sola vez. A partir de ahí, se abre como cualquier otra aplicación."
+    },
+    {
+      "t": 50.46,
+      "texto": "En Windows, ejecuta el instalador. Si te dice que ha protegido tu equipo, pulsa «Más información» y luego «Ejecutar de todas formas»."
+    },
+    {
+      "t": 60.67,
+      "texto": "Se instala solo para ti, así que no pide contraseña de administrador."
+    },
+    {
+      "t": 65.52,
+      "texto": "Y una cosa que Windows no trae: Python. Descárgalo de python.org; el que viene con Windows solo abre la tienda."
+    },
+    {
+      "t": 75.6,
+      "texto": "En Linux es un solo fichero. Dale permiso para ejecutarse, y ábrelo."
+    },
+    {
+      "t": 81.4,
+      "texto": "Déjalo en la carpeta donde quieras tenerlo: es ahí donde se actualizará."
+    },
+    {
+      "t": 87.02,
+      "texto": "En los tres sistemas, Didacta se actualiza sola, y siempre pregunta antes."
+    },
+    {
+      "t": 92.7,
+      "texto": "El aviso es por la firma que falta, no por la aplicación."
+    },
+    {
+      "t": 96.71,
+      "texto": "En el siguiente vídeo, entras con tu cuenta de GitHub."
+    }
+  ]
+}

@@ -160,7 +160,7 @@ composiciones, los idiomas son variantes de lo mismo y los PDF se generan.
 
 **Más:** [la portada de la web](web/docs/index.md) · sigue en A2.
 
-#### A2 · Instalar Didacta · 1,5 min · tres versiones: macOS, Windows y Linux
+#### A2 · Instalar Didacta · 1,5 min · un capítulo para cada sistema: macOS, Windows y Linux
 
 **Sabrás** instalarla y abrirla la primera vez sin desactivar ninguna
 protección del sistema.
@@ -1772,7 +1772,7 @@ Cada fase se publica entera: una ruta a medias no se puede seguir.
 
 ### Fase 1 · La primera semana
 
-18 vídeos (20 ficheros, por las tres versiones de A2), unos **40 minutos**.
+18 vídeos, unos **40 minutos**. (El A2 lleva un capítulo para cada sistema en lugar de tres ficheros.)
 Con esto, alguien que no ha visto nunca Didacta prepara, compila y reparte un
 tema.
 
