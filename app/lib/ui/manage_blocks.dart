@@ -710,12 +710,29 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
   late final Set<String> _chosen = {...widget.repos};
   bool _touchedId = false;
 
+  /// Los nombres que el bloque ya tenía de serie, si es uno de los dos de
+  /// siempre (teoría y problemas).
+  ///
+  /// Al declarar el primer bloque, los de serie dejan de valer y salen por su
+  /// id hasta declararlos; declararlos obligaba a volver a escribir «Teoría»,
+  /// y se perdían las traducciones que tenía. Ahora viene escrito, y si no se
+  /// cambia, se guarda en todos sus idiomas.
+  Map<String, String>? get _defaults =>
+      widget.fixedId == null ? null : defaultBlockTitles[widget.fixedId];
+
+  String? _prefilled;
+
   @override
   void initState() {
     super.initState();
     if (widget.fixedId != null) {
       _id.text = widget.fixedId!;
       _touchedId = true;
+      final defaults = _defaults;
+      if (defaults != null) {
+        _prefilled = defaults[widget.session.language] ?? defaults['es'] ?? '';
+        _name.text = _prefilled!;
+      }
     }
   }
 
@@ -832,7 +849,9 @@ class _NewBlockDialogState extends State<_NewBlockDialog> {
                         if (_chosen.contains(repo)) repo,
                     ],
                     id: _identifier,
-                    titles: {language: _name.text.trim()},
+                    titles: _defaults != null && _name.text.trim() == _prefilled
+                        ? _defaults!
+                        : {language: _name.text.trim()},
                   ),
                 ),
           child: Text(tr('Declarar')),

@@ -85,6 +85,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   referencia rota.** La página del curso lo contaba dos veces: una como
   «no apunta a ninguna unidad del catálogo», que no era verdad, y otra con
   su aviso de verdad, el de que llama a una lección de otro repositorio.
+- **Declarar la teoría o los problemas trae su nombre.** Declarado el
+  primer bloque propio, los dos de siempre salen por su id hasta declararlos
+  también, y al hacerlo había que volver a escribir «Teoría» y se perdían sus
+  traducciones. Ahora viene escrito, y se guarda en todos sus idiomas.
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios
   abiertos, el diálogo proponía siempre el primero, aunque las demás
   lecciones de ese tema estuvieran en otro.

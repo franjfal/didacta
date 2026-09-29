@@ -310,6 +310,55 @@ void main() {
 
       expect(find.byKey(const Key('declare-block-practicas')), findsOneWidget);
     });
+
+    // Declarado uno, los de serie salen por su id hasta declararlos también;
+    // declararlos obligaba a escribir otra vez «Teoría», y se perdían sus
+    // traducciones.
+    testWidgets('declarar uno de serie trae su nombre en todos los idiomas', (
+      tester,
+    ) async {
+      final gateway = FakeGateway(
+        files: {
+          'taxonomy.yaml':
+              'blocks:\n'
+              '  - id: practicas\n'
+              '    title:\n'
+              '      es: Prácticas\n',
+        },
+      );
+      await pumpPage(
+        tester,
+        catalogueOfBlocks(
+          blocks: [block('practicas', 'Prácticas')],
+          units: {
+            'content/analysis/normed/definition': 'theory',
+            'content/analysis/normed/lab': 'practicas',
+          },
+          repo: 'test/repo',
+        ),
+        const SettingsPage(section: 'material'),
+        size: const Size(1280, 2200),
+        gateway: gateway,
+      );
+
+      await openBlocks(tester);
+      await tester.tap(find.byKey(const Key('declare-block-theory')));
+      await settle(tester);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('block-name')))
+            .controller!
+            .text,
+        'Teoría',
+      );
+      await tester.tap(find.byKey(const Key('block-create')));
+      await settle(tester);
+
+      final written = gateway.files['taxonomy.yaml']!;
+      expect(written, contains('es: Teoría'));
+      expect(written, contains('va: Teoria'));
+      expect(written, contains('en: Theory'));
+    });
   });
 
   group('entre repositorios', () {
