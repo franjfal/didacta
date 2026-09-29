@@ -1017,6 +1017,183 @@ void main() {
     });
   });
 
+  group('dos historias separadas', () {
+    // Commits propios sin enviar y otros nuevos en GitHub: lo que pasa
+    // cuando dos personas --o una desde dos ordenadores-- guardan a la vez.
+    // `git pull --ff-only` no podía con esto, y el «Traer» del aviso de
+    // «hay cambios nuevos» no arreglaba nunca nada.
+    const theirFile = 'content/otra.tex';
+    late LocalClone other;
+
+    setUp(() async {
+      other = await cloneByPath(remote, '${root.path}/otra');
+    });
+
+    Future<void> theirs(String path, String text) async {
+      File('${other.directory}/$path')
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync(text);
+      await _git(['add', '.'], other.directory);
+      await _git(
+        _asSomeone(['commit', '-m', 'De otra persona']),
+        other.directory,
+      );
+      await _git(['push'], other.directory);
+    }
+
+    Future<void> mine(String path, String text) async {
+      final before = await clone.readFile(path);
+      await clone.commitFile(
+        path: path,
+        text: text,
+        expectedSha: before.sha,
+        message: 'Mío',
+        authorName: 'Javier Falcó',
+        authorEmail: 'javier@uv.es',
+        token: '',
+        push: false,
+      );
+    }
+
+    Future<String> git(List<String> arguments) async {
+      final result = await Process.run(
+        'git',
+        arguments,
+        workingDirectory: clone.directory,
+      );
+      return (result.stdout as String).trim();
+    }
+
+    String read(String path) =>
+        File('${clone.directory}/$path').readAsStringSync();
+
+    test('enviar dice «hay cambios nuevos», y traer lo arregla', () async {
+      await theirs(theirFile, 'Suyo.\n');
+      await mine(unitFile, 'Mío.\n');
+
+      await expectLater(
+        clone.push(token: ''),
+        throwsA(
+          isA<CloneException>().having(
+            (e) => e.kind,
+            'kind',
+            CloneFailure.behind,
+          ),
+        ),
+      );
+
+      await clone.pull(token: '', rebase: true);
+
+      // Lo mío encima de lo suyo, con su autor, y sin commit de merge.
+      expect(
+        await git(['log', '--format=%s|%an']),
+        'Mío|Javier Falcó\n'
+        'De otra persona|Semilla\n'
+        'Contenido inicial|Semilla',
+      );
+      expect(read(unitFile), 'Mío.\n');
+      expect(read(theirFile), 'Suyo.\n');
+      final status = await clone.status();
+      expect((status.ahead, status.behind), (1, 0));
+
+      await clone.push(token: '');
+      expect((await clone.status()).ahead, 0);
+    });
+
+    test('sin rebase se niega, y no toca nada', () async {
+      // Antes de guardar, o al abrir una carpeta: no son momentos de
+      // decidir cómo se juntan dos historias.
+      await theirs(theirFile, 'Suyo.\n');
+      await mine(unitFile, 'Mío.\n');
+      final head = await git(['rev-parse', 'HEAD']);
+
+      await expectLater(
+        clone.pull(token: ''),
+        throwsA(
+          isA<CloneException>().having(
+            (e) => e.kind,
+            'kind',
+            CloneFailure.diverged,
+          ),
+        ),
+      );
+      expect(await git(['rev-parse', 'HEAD']), head);
+    });
+
+    test('lo que no está en el historial se aparta y vuelve', () async {
+      await theirs(theirFile, 'Suyo.\n');
+      await mine(unitFile, 'Mío.\n');
+      File('${clone.directory}/$unitFile').writeAsStringSync('Mío, y más.\n');
+
+      await clone.pull(token: '', rebase: true);
+
+      expect(
+        await git(['log', '--format=%s']),
+        'Mío\nDe otra persona\nContenido inicial',
+      );
+      expect(read(unitFile), 'Mío, y más.\n');
+      expect((await clone.status()).dirtyPaths, [unitFile]);
+      expect(await git(['stash', 'list']), isEmpty);
+    });
+
+    test('si tocan lo mismo, lo deja todo como estaba', () async {
+      // Un fichero que las dos tienen, con un cambio suelto que no se toca.
+      await theirs(theirFile, 'Suyo.\n');
+      await clone.pull(token: '');
+      await theirs(unitFile, 'Suyo.\n');
+      await mine(unitFile, 'Mío.\n');
+      File('${clone.directory}/$theirFile').writeAsStringSync('Suelto.\n');
+      final head = await git(['rev-parse', 'HEAD']);
+
+      await expectLater(
+        clone.pull(token: '', rebase: true),
+        throwsA(
+          isA<CloneException>()
+              .having((e) => e.kind, 'kind', CloneFailure.diverged)
+              .having((e) => e.message, 'message', contains(unitFile)),
+        ),
+      );
+
+      // Ni a medias: el mismo commit, sin rebase en curso, sin marcas y con
+      // lo suelto en su sitio.
+      expect(await git(['rev-parse', 'HEAD']), head);
+      expect(
+        Directory('${clone.directory}/.git/rebase-merge').existsSync(),
+        isFalse,
+      );
+      expect(read(unitFile), 'Mío.\n');
+      expect(read(theirFile), 'Suelto.\n');
+      expect(await git(['stash', 'list']), isEmpty);
+      final status = await clone.status();
+      expect((status.ahead, status.behind), (1, 1));
+    });
+
+    test(
+      'con un cambio suelto que lo que llega también toca, ni empieza',
+      () async {
+        await theirs(theirFile, 'Suyo.\n');
+        await clone.pull(token: '');
+        await theirs(unitFile, 'Suyo.\n');
+        await mine(theirFile, 'Mío.\n');
+        File('${clone.directory}/$unitFile').writeAsStringSync('Suelto.\n');
+        final head = await git(['rev-parse', 'HEAD']);
+
+        await expectLater(
+          clone.pull(token: '', rebase: true),
+          throwsA(
+            isA<CloneException>().having(
+              (e) => e.message,
+              'message',
+              allOf(contains(unitFile), contains('Guárdalo')),
+            ),
+          ),
+        );
+        expect(await git(['rev-parse', 'HEAD']), head);
+        expect(read(unitFile), 'Suelto.\n');
+      },
+    );
+  });
+
   group('dos cosas a la vez sobre el mismo clon', () {
     test(
       'diez guardados seguidos no chocan, y cada uno es su commit',

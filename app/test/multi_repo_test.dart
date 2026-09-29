@@ -290,7 +290,8 @@ void main() {
     // Y contado, igual que el envío.
     expect(session.syncConsole.title, 'Traer de GitHub');
     expect(session.syncConsole.ok, isTrue);
-    expect(session.syncConsole.lines, contains(r'$ git pull --ff-only'));
+    expect(session.syncConsole.lines, contains(r'$ git fetch'));
+    expect(session.syncConsole.lines, contains(r'$ git merge --ff-only'));
     expect(
       session.syncConsole.lines.where(
         (line) => line.startsWith('--- ahora en'),
@@ -298,6 +299,39 @@ void main() {
       hasLength(2),
       reason: 'los dos clones se movieron, y el registro dice a dónde',
     );
+  });
+
+  test('traer junta dos historias separadas, y después se envía', () async {
+    // Lo que pasa cuando otra persona envía mientras aquí hay un commit sin
+    // enviar: el envío se rechaza --«hay cambios nuevos en GitHub»-- y traer
+    // tiene que dejarlo listo para volver a intentarlo.
+    File(
+      '${uno.directory}/content/analysis/normed/def/es.tex',
+    ).writeAsStringSync('Mío.\n');
+    await _git(['commit', '-am', 'Mío'], uno.directory);
+    final seed = '${root.path}/uno-seed';
+    File('$seed/didacta.yaml').writeAsStringSync('name: uno\n# suyo\n');
+    await _git(['commit', '-am', 'Suyo'], seed);
+    await _git(['push'], seed);
+
+    final refused = await session.pushAll('', commitPending: false);
+    expect(
+      refused['x/uno'],
+      isA<CloneException>().having((e) => e.kind, 'kind', CloneFailure.behind),
+    );
+
+    final brought = await session.pullAll();
+    expect(brought['x/uno'], isA<int>());
+    expect(session.syncConsole.ok, isTrue);
+    expect(session.syncConsole.lines, contains(r'$ git rebase @{upstream}'));
+
+    final sent = await session.pushAll('', commitPending: false);
+    expect(sent['x/uno'], isA<int>());
+    expect(
+      await uno.remoteText('content/analysis/normed/def/es.tex'),
+      'Mío.\n',
+    );
+    expect(await uno.remoteText('didacta.yaml'), 'name: uno\n# suyo\n');
   });
 
   test('desde el menú, solo lo que ya tiene commit', () async {

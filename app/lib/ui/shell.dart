@@ -788,16 +788,14 @@ class _GatewayStripState extends State<_GatewayStrip> {
 
   Future<void> _pull(Session session) async {
     setState(() => _busy = true);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       // Traer ya lo deja todo al día --índice, catálogo, lo compilado--: no
       // hace falta «actualizarlo todo» después, que lo repetía entero.
-      await session.pullAll();
-      messenger.showSnackBar(
-        SnackBar(content: Text(tr('Traído de GitHub y actualizado.'))),
-      );
-    } catch (error) {
-      showProblemIn(messenger, error);
+      //
+      // Contado por repositorio, como en el menú: `pullAll` no lanza, y
+      // esperar una excepción decía «Traído» también cuando no se había
+      // podido traer nada.
+      await pullAndTell(context, session);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -1009,6 +1009,7 @@ class FakeClone implements LocalClone {
   Future<void> pull({
     required String token,
     void Function(String line)? onProgress,
+    bool rebase = false,
   }) async {
     onProgress?.call('Already up to date.');
     pulls += 1;

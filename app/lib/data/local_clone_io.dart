@@ -366,17 +366,9 @@ class _GitClone implements LocalClone {
     try {
       // Against the remote-tracking ref, which is what the last fetch saw --
       // this must not reach the network, because Ajustes shows it on load.
-      final counts = await _text([
-        'rev-list',
-        '--left-right',
-        '--count',
-        'HEAD...@{upstream}',
-      ]);
-      final parts = counts.split(RegExp(r'\s+'));
-      if (parts.length >= 2) {
-        ahead = int.tryParse(parts[0]) ?? 0;
-        behind = int.tryParse(parts[1]) ?? 0;
-      }
+      final counts = await _divergence();
+      ahead = counts.ahead;
+      behind = counts.behind;
     } on CloneException {
       // No upstream configured. Not an error: a clone can be local-only.
     }
@@ -775,22 +767,176 @@ class _GitClone implements LocalClone {
   Future<void> pull({
     required String token,
     void Function(String line)? onProgress,
+    bool rebase = false,
   }) => _exclusive(directory, () async {
     await _discardGeneratedIndex(onProgress);
-    onProgress?.call(r'$ git pull --ff-only');
+    // Traer y juntar por separado, y no `git pull`: cómo se junta depende
+    // de lo que haya llegado, y eso solo se sabe después de traerlo.
+    onProgress?.call(r'$ git fetch');
     await _run(
-      // `--ff-only`: a merge commit made behind someone's back is not a
-      // thing an editor should produce. Diverged history is a conversation,
-      // not an automatic resolution.
+      // Solo las ramas, como en [fetch].
       //
       // `--progress` solo cuando hay quien lo lea: git se calla al escribir
       // a una tubería, y lo que se calla es justo el rato largo.
-      ['pull', '--ff-only', if (onProgress != null) '--progress'],
+      ['fetch', '--no-tags', if (onProgress != null) '--progress'],
       token: token,
       what: tr('traer los cambios del repositorio'),
       onProgress: onProgress,
     );
+    // Sin rama en GitHub a la que seguir, esto falla, como fallaba `pull`.
+    final (:ahead, :behind) = await _divergence();
+    if (behind == 0) return;
+    if (ahead > 0 && rebase) {
+      await _rebaseOntoUpstream(onProgress);
+      return;
+    }
+    onProgress?.call(r'$ git merge --ff-only');
+    await _run(
+      // `--ff-only`: a merge commit made behind someone's back is not a
+      // thing an editor should produce. Con historia propia que juntar se
+      // niega, y sin [rebase] es lo que se quiere.
+      ['merge', '--ff-only', '@{upstream}'],
+      what: tr('traer los cambios del repositorio'),
+      onProgress: onProgress,
+    );
   });
+
+  /// Cuántos commits hay aquí que no están en GitHub, y al revés.
+  ///
+  /// Contra la rama de GitHub tal como la vio el último `fetch`: no sale a
+  /// la red. Lanza si la rama no sigue a ninguna.
+  Future<({int ahead, int behind})> _divergence() async {
+    final counts = await _text([
+      'rev-list',
+      '--left-right',
+      '--count',
+      'HEAD...@{upstream}',
+    ]);
+    final parts = counts.split(RegExp(r'\s+'));
+    return (
+      ahead: int.tryParse(parts.first) ?? 0,
+      behind: parts.length >= 2 ? int.tryParse(parts[1]) ?? 0 : 0,
+    );
+  }
+
+  /// Pone los commits propios encima de los que han llegado de GitHub.
+  ///
+  /// Entero o nada. Si tocan las mismas líneas, deja el clon como estaba
+  /// --los commits, y lo que no estaba en el historial-- y lo dice: una
+  /// mezcla que nadie ha mirado es la forma de estropear un tema sin
+  /// enterarse. Juntar eso es trabajo de quien sabe qué versión es la buena.
+  Future<void> _rebaseOntoUpstream(
+    void Function(String line)? onProgress,
+  ) async {
+    // Uno a medias empezado en un terminal es trabajo de alguien: ni se
+    // empieza otro encima ni, sobre todo, se cancela al fallar este.
+    if (await _rebasing()) {
+      throw CloneException(
+        tr(
+          'Hay un rebase a medias en esta copia, empezado fuera de Didacta. '
+          'Termínalo o cancélalo en un terminal y vuelve a traer.',
+        ),
+        kind: CloneFailure.other,
+      );
+    }
+
+    // Lo que no está en el historial. `--autostash` lo aparta y lo devuelve
+    // después, y eso sale limpio siempre que lo que llega no lo toque: el
+    // fichero queda en el commit nuevo igual que estaba en el viejo. Si lo
+    // toca, devolverlo podría dejar marcas de conflicto en el árbol, así que
+    // ni se empieza. Los ficheros sin seguir cuentan igual: si llega uno con
+    // el mismo nombre, git se negaría a medio camino.
+    final loose = (await status()).dirtyPaths;
+    if (loose.isNotEmpty) {
+      final incoming = (await _run([
+        'diff',
+        '--name-only',
+        '-z',
+        'HEAD...@{upstream}',
+      ], what: tr('mirar qué llega de GitHub'))).split('\u0000').toSet();
+      final stepped = loose.where(incoming.contains).toList();
+      if (stepped.isNotEmpty) {
+        throw CloneException(
+          stepped.length == 1
+              ? tr(
+                  '{0} tiene cambios sin guardar en el historial, y lo que '
+                  'llega de GitHub también lo cambia. Guárdalo y vuelve a '
+                  'traer.',
+                  [stepped.single],
+                )
+              : tr(
+                  '{0} ficheros tienen cambios sin guardar en el historial, y '
+                  'lo que llega de GitHub también los cambia: {1}. Guárdalos '
+                  'y vuelve a traer.',
+                  [stepped.length, stepped.join(', ')],
+                ),
+          kind: CloneFailure.other,
+        );
+      }
+    }
+
+    // Quien firma los commits reescritos: el autor del último propio, que
+    // es quien está en esta máquina. Como en los commits de siempre, sin
+    // depender de que alguien haya configurado git; los autores de cada
+    // commit se quedan como estaban.
+    final who = (await _text(['log', '-1', '--format=%an%n%ae'])).split('\n');
+    onProgress?.call(r'$ git rebase @{upstream}');
+    try {
+      await _run(
+        [
+          '-c',
+          'user.name=${who.first}',
+          '-c',
+          'user.email=${who.last}',
+          'rebase',
+          '--autostash',
+          '@{upstream}',
+        ],
+        what: tr('poner tus cambios encima de los de GitHub'),
+        onProgress: onProgress,
+      );
+    } on CloneException catch (failed) {
+      // Parado a medias es que chocan. Si no llegó a empezar --otro git con
+      // el clon cogido, por ejemplo-- no hay nada que deshacer, y su fallo
+      // es el que vale.
+      if (!await _rebasing()) rethrow;
+      final clashing = (await _text([
+        'diff',
+        '--name-only',
+        '--diff-filter=U',
+      ])).split('\n').where((line) => line.isNotEmpty).toList();
+      onProgress?.call(r'$ git rebase --abort');
+      await _run(
+        ['rebase', '--abort'],
+        what: tr('dejar el repositorio como estaba'),
+        onProgress: onProgress,
+      );
+      throw CloneException(
+        clashing.isEmpty
+            ? tr(
+                'Tus cambios sin enviar y los que han llegado de GitHub tocan '
+                'lo mismo. Lo he dejado todo como estaba.',
+              )
+            : tr(
+                'Tus cambios sin enviar y los que han llegado de GitHub tocan '
+                'lo mismo en {0}. Lo he dejado todo como estaba.',
+                [clashing.join(', ')],
+              ),
+        stderr: failed.stderr,
+        kind: CloneFailure.diverged,
+      );
+    }
+  }
+
+  /// Si hay un `rebase` a medias en el clon.
+  Future<bool> _rebasing() async {
+    for (final name in ['rebase-merge', 'rebase-apply']) {
+      final path = await _text(['rev-parse', '--git-path', name]);
+      final where = Directory(path).isAbsolute ? path : '$directory/$path';
+      if (await Directory(where).exists()) return true;
+    }
+    return false;
+  }
 
   /// Deja `generated/` como está en el último commit, si tiene cambios.
   ///

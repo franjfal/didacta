@@ -4,9 +4,14 @@
 /// que escribe git, en inglés-- en un aviso que se iba a los cuatro segundos.
 /// Esto los junta en uno: [problemOf] traduce los casos que de verdad pasan
 /// (hay cambios nuevos en GitHub, la sesión ha caducado, no hay red, dos
-/// cambios chocan, la carpeta está ocupada, GitHub rechaza el envío) a qué ha
-/// pasado y qué hacer, con el botón que lo hace cuando lo hay; y lo que dijo
-/// el programa queda debajo, en «Detalles», para copiarlo o contarlo.
+/// cambios chocan, dos historias no se pueden juntar, la carpeta está
+/// ocupada, GitHub rechaza el envío) a qué ha pasado y qué hacer, con el
+/// botón que lo hace cuando lo hay; y lo que dijo el programa queda debajo,
+/// en «Detalles», para copiarlo o contarlo.
+///
+/// Los choques son dos a propósito. «Dos cambios chocan» es el editor con una
+/// copia vieja de un fichero, y se arregla recargando; dos historias que no
+/// se juntan solas se arreglan con git, y mandar a recargar no sirve de nada.
 library;
 
 import 'dart:async';
@@ -33,6 +38,9 @@ enum ProblemFix {
 
   /// Volver a entrar en GitHub.
   signIn,
+
+  /// Leer en la ayuda cómo se hace, cuando es trabajo de fuera de Didacta.
+  help,
 }
 
 /// Un fallo, traducido.
@@ -41,6 +49,7 @@ class Problem {
     required this.title,
     this.advice = '',
     this.fix,
+    this.help,
     required this.detail,
   });
 
@@ -52,12 +61,16 @@ class Problem {
 
   final ProblemFix? fix;
 
+  /// La página de la ayuda de [ProblemFix.help], desde la raíz de la web.
+  final String? help;
+
   /// Lo que dijo el programa, tal cual.
   final String detail;
 
   String? get fixLabel => switch (fix) {
     ProblemFix.pull => tr('Traer'),
     ProblemFix.signIn => tr('Volver a entrar'),
+    ProblemFix.help => tr('Cómo juntarlos'),
     null => null,
   };
 }
@@ -120,6 +133,17 @@ Problem problemOf(Object error) {
         'Vuelve a cargarlo y aplica otra vez tu cambio; lo tuyo sigue en '
         'el editor mientras tanto.',
       ),
+      detail: detail,
+    ),
+    CloneFailure.diverged => Problem(
+      title: tr('Tus cambios y los de GitHub no se pueden juntar solos'),
+      advice: tr(
+        'Tienes cambios sin enviar, y en GitHub han entrado otros que tocan '
+        'lo mismo. Didacta lo ha dejado todo como estaba --lo tuyo sigue '
+        'guardado en tu ordenador--; juntarlos es cosa de git, a mano.',
+      ),
+      fix: ProblemFix.help,
+      help: 'ayuda/problemas/#historias-separadas',
       detail: detail,
     ),
     CloneFailure.locked => Problem(
@@ -197,14 +221,19 @@ void _show(
         fix = () async {
           final result = await session.pullAll();
           final failed = result.values.where((each) => each is! int);
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                failed.isEmpty
-                    ? tr('Traído. Vuelve a intentarlo.')
-                    : tr('Tampoco se pudo traer: {0}', [failed.first]),
-              ),
-            ),
+          if (failed.isEmpty) {
+            messenger.showSnackBar(
+              SnackBar(content: Text(tr('Traído. Vuelve a intentarlo.'))),
+            );
+            return;
+          }
+          // Lo que impidió traer, contado como cualquier otro aviso y no
+          // con el texto de la excepción pegado detrás.
+          _show(
+            messenger,
+            problemOf(failed.first),
+            session: session,
+            router: router,
           );
         };
       }
@@ -212,6 +241,9 @@ void _show(
       if (router != null) {
         fix = () => router.go(Routes.settings(section: 'repositorios'));
       }
+    case ProblemFix.help:
+      final help = problem.help;
+      if (help != null) fix = () => openLink('$didactaDocs$help');
     case null:
       break;
   }

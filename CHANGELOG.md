@@ -76,6 +76,15 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   moverlo.** El menú escondía «Mover a…», pero el diálogo de «Añadir
   vinculado a…» y «Duplicar en…» lo seguía ofreciendo. Y el aviso de al
   terminar dice el tema y la asignatura por su nombre, no por su id.
+- **«Traer», en el aviso de «Hay cambios nuevos en GitHub», ya arregla el
+  envío.** Con cambios tuyos sin enviar y otros nuevos en GitHub, traer se
+  negaba siempre, y el botón del aviso no servía nunca. Ahora trae lo suyo y
+  pone lo tuyo encima, listo para volver a enviar. Si los dos tocan las
+  mismas líneas, no se junta nada a medias: lo deja todo como estaba y lo
+  dice con su propio aviso, con un botón a la ayuda que cuenta cómo
+  juntarlos. Ya no sale «Dos cambios chocan», que mandaba a recargar el
+  editor, ni el texto de git en inglés. Y pulsar arriba el número de commits
+  por traer ya no dice «Traído» cuando no se ha podido.
 
 ## 0.3.0 — 2026-09-28
 
