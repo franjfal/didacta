@@ -53,6 +53,9 @@ quitarla de la lista obligaría a sumar uno de cabeza.
 Las tres primeras abren el mismo diálogo, con la operación ya elegida — y con
 las tres a la vista, porque la diferencia entre vincular y duplicar solo
 importa **en el momento de elegir**, y ahí es donde tiene que estar escrita.
+Mover y Gestionar vinculación son de reorganizar el repositorio: con la
+interfaz Esencial no salen, ni en el menú ni en el diálogo, que ofrece
+vincular y duplicar.
 
 ![El diálogo de destino](../img/app/vinculos-destino.png)
 

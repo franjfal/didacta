@@ -731,6 +731,17 @@ void main() {
     expect(find.text('Añadir vinculado a…'), findsOneWidget);
     expect(find.text('Ver ubicaciones vinculadas (3)'), findsOneWidget);
 
+    // Y el diálogo tampoco lo ofrece: vincular y duplicar, a la vista.
+    await tester.tap(find.text('Añadir vinculado a…'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('reuse-mode-link')), findsOneWidget);
+    expect(find.byKey(const Key('reuse-mode-duplicate')), findsOneWidget);
+    expect(find.byKey(const Key('reuse-mode-move')), findsNothing);
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('document-menu-series')));
+    await tester.pumpAndSettle();
+
     // Ver dónde se da lo dice con nombres, no con ids.
     await tester.tap(find.byKey(const Key('document-places-series')));
     await tester.pumpAndSettle();

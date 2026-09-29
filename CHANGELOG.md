@@ -72,6 +72,9 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   lección en el curso de este año y en el que viene, el diálogo abría con su
   propio tema elegido, y aceptarlo la ponía dos veces. Ahora propone uno que
   no la lleva, marca los que sí y, si se elige uno de ellos, lo dice.
+- **Con la interfaz Esencial, llevar un tema a otro sitio ya no ofrece
+  moverlo.** El menú escondía «Mover a…», pero el diálogo de «Añadir
+  vinculado a…» y «Duplicar en…» lo seguía ofreciendo.
 
 ## 0.3.0 — 2026-09-28
 

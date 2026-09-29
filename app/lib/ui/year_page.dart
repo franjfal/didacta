@@ -2941,6 +2941,13 @@ class _DocumentMenu extends StatelessWidget {
       fromYear: year,
       documentId: document.id,
       mode: mode,
+      // Mover, solo en Completa, como en el menú: si no, el menú lo escondía
+      // y el diálogo lo volvía a ofrecer.
+      modes: {
+        ReuseMode.link,
+        if (session.completeInterface) ReuseMode.move,
+        ReuseMode.duplicate,
+      },
     );
     if (target == null || !context.mounted) return;
     await reuseDocument(
