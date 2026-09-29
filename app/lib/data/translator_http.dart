@@ -32,6 +32,22 @@ Translator? translatorFor(
   };
 }
 
+/// Una petición, repetida una vez si la conexión se cae antes de contestar.
+///
+/// El cliente reutiliza la conexión entre una lección y la siguiente, y
+/// mientras se guarda la anterior el servidor puede cerrarla: la petición de
+/// después sale por un socket muerto y vuelve como `ClientException:
+/// Connection closed before full header was received`, sin que el servidor
+/// la haya visto. Traducir no cambia nada al otro lado, así que repetirla es
+/// seguro. Solo ese caso: una respuesta con error se devuelve tal cual.
+Future<http.Response> sendTwice(Future<http.Response> Function() send) async {
+  try {
+    return await send();
+  } on http.ClientException {
+    return send();
+  }
+}
+
 /// El código del proveedor, o un error que dice cuál es el problema.
 ///
 /// Antes de gastar la llamada: un idioma que el proveedor no conoce vuelve
@@ -146,17 +162,19 @@ class GoogleTranslator implements Translator {
     // cinco campos estaba mal.
     final source = _codeOr(provider, from);
     final target = _codeOr(provider, to);
-    final response = await _client.post(
-      _uri(''),
-      headers: _headers,
-      body: jsonEncode({
-        'q': pieces,
-        'source': source,
-        'target': target,
-        // HTML y no `text`: es lo que hace que respete las etiquetas con las
-        // que viajan las fórmulas y los `\label`.
-        'format': 'html',
-      }),
+    final response = await sendTwice(
+      () => _client.post(
+        _uri(''),
+        headers: _headers,
+        body: jsonEncode({
+          'q': pieces,
+          'source': source,
+          'target': target,
+          // HTML y no `text`: es lo que hace que respete las etiquetas con las
+          // que viajan las fórmulas y los `\label`.
+          'format': 'html',
+        }),
+      ),
     );
     if (response.statusCode != 200) {
       throw TranslationException(
@@ -236,15 +254,17 @@ class AzureTranslator implements Translator {
     if (pieces.isEmpty) return const [];
     final source = _codeOr(provider, from);
     final target = _codeOr(provider, to);
-    final response = await _client.post(
-      Uri.parse(
-        '$_base/translate?api-version=3.0&from=$source&to=$target'
-        '&textType=html',
+    final response = await sendTwice(
+      () => _client.post(
+        Uri.parse(
+          '$_base/translate?api-version=3.0&from=$source&to=$target'
+          '&textType=html',
+        ),
+        headers: _headers,
+        body: jsonEncode([
+          for (final piece in pieces) {'Text': piece},
+        ]),
       ),
-      headers: _headers,
-      body: jsonEncode([
-        for (final piece in pieces) {'Text': piece},
-      ]),
     );
     if (response.statusCode != 200) {
       throw TranslationException(
@@ -418,18 +438,20 @@ class ApertiumTranslator implements Translator {
 
     final out = <String>[];
     for (final batch in batches) {
-      final response = await _client
-          .post(
-            _uri('/translate'),
-            body: {
-              'q': batch.join(separator),
-              'langpair': pair,
-              'markUnknown': 'no',
-              // HTML: es lo que hace que respete las etiquetas.
-              'format': 'html',
-            },
-          )
-          .timeout(const Duration(seconds: 60));
+      final response = await sendTwice(
+        () => _client
+            .post(
+              _uri('/translate'),
+              body: {
+                'q': batch.join(separator),
+                'langpair': pair,
+                'markUnknown': 'no',
+                // HTML: es lo que hace que respete las etiquetas.
+                'format': 'html',
+              },
+            )
+            .timeout(const Duration(seconds: 60)),
+      );
       if (response.statusCode != 200) {
         throw TranslationException(
           _explain(response.statusCode, response.body),

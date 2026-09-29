@@ -23,7 +23,14 @@ import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/translation_settings.dart';
 
 /// Un Apertium de mentira que «traduce» a mayúsculas y apunta lo pedido.
-MockClient apertium(List<http.Request> asked) => MockClient((request) async {
+MockClient apertium(List<http.Request> asked) =>
+    MockClient((request) async => answer(asked, request));
+
+/// Lo que contesta [apertium] a [request].
+Future<http.Response> answer(
+  List<http.Request> asked,
+  http.Request request,
+) async {
   asked.add(request);
   if (request.url.path.endsWith('/listPairs')) {
     return http.Response(
@@ -46,7 +53,7 @@ MockClient apertium(List<http.Request> asked) => MockClient((request) async {
     200,
     headers: {'content-type': 'application/json; charset=utf-8'},
   );
-});
+}
 
 void main() {
   const on = Credentials(key: 'on');
@@ -69,6 +76,50 @@ void main() {
     expect(asked, hasLength(1));
     expect(asked.single.bodyFields['langpair'], 'spa|cat_valencia');
     expect(asked.single.bodyFields['format'], 'html');
+  });
+
+  test('si la conexión se cae antes de contestar, se repite una vez', () async {
+    // El cliente reutiliza la conexión entre lecciones, y el servidor puede
+    // haberla cerrado mientras se guardaba la anterior: en una tanda de
+    // verdad, una de cada tres volvía así.
+    final asked = <http.Request>[];
+    var dropped = 0;
+    final flaky = MockClient((request) async {
+      if (dropped == 0) {
+        dropped += 1;
+        throw http.ClientException(
+          'Connection closed before full header was received',
+          request.url,
+        );
+      }
+      return answer(asked, request);
+    });
+    final translator = translatorFor(
+      TranslationProvider.apertium,
+      on,
+      client: flaky,
+    )!;
+    final out = await translator.translate(['uno'], from: 'es', to: 'va');
+    expect(out, ['UNO']);
+    expect(dropped, 1);
+  });
+
+  test('una respuesta con error no se repite', () async {
+    var calls = 0;
+    final failing = MockClient((request) async {
+      calls += 1;
+      return http.Response('mal', 500);
+    });
+    final translator = translatorFor(
+      TranslationProvider.apertium,
+      on,
+      client: failing,
+    )!;
+    await expectLater(
+      translator.translate(['uno'], from: 'es', to: 'va'),
+      throwsA(isA<TranslationException>()),
+    );
+    expect(calls, 1);
   });
 
   test('un texto largo va en varias peticiones', () async {

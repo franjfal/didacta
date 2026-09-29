@@ -49,6 +49,7 @@ import 'package:didacta_app/data/toolchain.dart';
 import 'package:didacta_app/data/translation_secrets.dart';
 import 'package:didacta_app/l10n/tr.dart';
 import 'package:didacta_app/model/toolchain.dart';
+import 'package:didacta_app/model/translation.dart';
 import 'package:didacta_app/model/workspace.dart';
 import 'package:didacta_app/router.dart';
 import 'package:didacta_app/state/appearance.dart';
@@ -1016,6 +1017,17 @@ void main() {
         // `"completa": true`: con la interfaz Completa.
         if (shot['completa'] == true) {
           await tester.runAsync(() => session.setCompleteInterface(true));
+        }
+        // `"claves": {"google": "…"}`: una clave de prueba ya guardada, para
+        // enseñar la pantalla como la ve quien ya la puso. No se manda a
+        // ninguna parte: sin `"red"`, la prueba no sale a internet.
+        for (final entry in ((shot['claves'] as Map?) ?? const {}).entries) {
+          await tester.runAsync(
+            () => secrets.write(
+              TranslationProvider.values.byName(entry.key as String),
+              Credentials(key: entry.value as String, region: 'westeurope'),
+            ),
+          );
         }
         // `"red": true`: con internet de verdad (Apertium, que es público y
         // gratuito). Las pruebas lo cortan de salida.
