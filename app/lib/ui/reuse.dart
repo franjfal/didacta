@@ -454,15 +454,25 @@ class LessonTarget {
 /// Tres niveles y en este orden --asignatura, curso, tema-- porque es el
 /// orden en que se piensa: «esto lo quiero también en Matemáticas, en el que
 /// viene, en el tema de series».
+///
+/// [usedBy] son los temas que ya la llevan: el diálogo no los propone de
+/// salida, y si se elige uno lo dice.
 Future<LessonTarget?> askLessonTarget(
   BuildContext context, {
   required Session session,
   required String title,
   String fromCourse = '',
+  Iterable<UnitUsage> usedBy = const [],
 }) => showDialog<LessonTarget>(
   context: context,
-  builder: (context) =>
-      _LessonTargetDialog(session: session, title: title, from: fromCourse),
+  builder: (context) => _LessonTargetDialog(
+    session: session,
+    title: title,
+    from: fromCourse,
+    already: {
+      for (final use in usedBy) '${use.course}|${use.year}|${use.document}',
+    },
+  ),
 );
 
 class _LessonTargetDialog extends StatefulWidget {
@@ -470,11 +480,15 @@ class _LessonTargetDialog extends StatefulWidget {
     required this.session,
     required this.title,
     required this.from,
+    this.already = const {},
   });
 
   final Session session;
   final String title;
   final String from;
+
+  /// Dónde está ya, como `curso|año|tema`.
+  final Set<String> already;
 
   @override
   State<_LessonTargetDialog> createState() => _LessonTargetDialogState();
@@ -493,18 +507,37 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
   void initState() {
     super.initState();
     _year = _firstUseful;
-    _document = _documents.firstOrNull?.id;
+    _document = _firstFree;
   }
 
-  /// El curso más reciente **que tenga temas**, o el más reciente.
+  /// Si el tema [document] del curso elegido ya lleva la lección.
+  bool _has(String document, {String? year}) =>
+      widget.already.contains('$_course|${year ?? _year}|$document');
+
+  /// El primer tema que todavía no la lleva, o el primero.
+  ///
+  /// Proponer uno donde ya está era proponer que saliera dos veces: al
+  /// darla en el curso que viene, el primer tema era justo el suyo.
+  String? get _firstFree =>
+      (_documents.where((document) => !_has(document.id)).firstOrNull ??
+              _documents.firstOrNull)
+          ?.id;
+
+  /// El curso más reciente **con algún tema que no la lleve**; si no hay,
+  /// el más reciente con temas, o el más reciente.
   ///
   /// Preferir uno con temas y no el último a secas: el año que viene suele
   /// estar recién creado y vacío, y abrir el diálogo en un curso donde no se
   /// puede elegir nada obliga a cambiarlo antes de empezar.
   String? get _firstUseful {
     final course = widget.session.courseById(_course);
+    List<Document> documentsOf(String year) =>
+        course?.years[year]?.documents ?? const [];
     for (final year in _years) {
-      if ((course?.years[year]?.documents ?? const []).isNotEmpty) return year;
+      if (documentsOf(year).any((d) => !_has(d.id, year: year))) return year;
+    }
+    for (final year in _years) {
+      if (documentsOf(year).isNotEmpty) return year;
     }
     return _years.firstOrNull;
   }
@@ -567,7 +600,7 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                 onChanged: (value) => setState(() {
                   _course = value ?? _course;
                   _year = _firstUseful;
-                  _document = _documents.firstOrNull?.id;
+                  _document = _firstFree;
                 }),
               ),
               const SizedBox(height: Space.medium),
@@ -584,7 +617,7 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                       selected: _year == year,
                       onSelected: (_) => setState(() {
                         _year = year;
-                        _document = _documents.firstOrNull?.id;
+                        _document = _firstFree;
                       }),
                     ),
                 ],
@@ -602,18 +635,26 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                   key: const Key('lesson-document'),
                   initialValue: _document,
                   isDense: true,
+                  // Un título largo, con «(ya la lleva)» detrás, se corta
+                  // en vez de salirse del diálogo.
+                  isExpanded: true,
                   items: [
                     for (final document in documents)
                       DropdownMenuItem(
                         value: document.id,
                         child: Text(
-                          document.isLinked
+                          _has(document.id)
+                              ? tr('{0}  (ya la lleva)', [
+                                  document.title(session.language),
+                                ])
+                              : document.isLinked
                               ? tr(
                                   '{0}  '
                                   '(vinculado)',
                                   [document.title(session.language)],
                                 )
                               : document.title(session.language),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
@@ -645,6 +686,18 @@ class _LessonTargetDialogState extends State<_LessonTargetDialog> {
                   ),
                 ),
               ),
+              if (_document case final chosen?
+                  when _has(chosen) && !_duplicate) ...[
+                const SizedBox(height: Space.small),
+                Note(
+                  key: const Key('lesson-already-there'),
+                  tr(
+                    'Ese tema ya la lleva: añadida otra vez, saldría dos '
+                    'veces.',
+                  ),
+                  tone: context.palette.teacher,
+                ),
+              ],
               if (_documentIsLinked && !_duplicate) ...[
                 const SizedBox(height: Space.small),
                 Note(

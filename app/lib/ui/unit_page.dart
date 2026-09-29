@@ -3697,6 +3697,7 @@ Future<void> _useUnit(BuildContext context, Session session, Unit unit) async {
     session: session,
     title: tr('Dar «{0}» en otro tema', [unit.title(session.language)]),
     fromCourse: unit.usedBy.firstOrNull?.course ?? '',
+    usedBy: unit.usedBy,
   );
   if (target == null || !context.mounted) return;
 

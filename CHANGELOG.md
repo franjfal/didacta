@@ -68,6 +68,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   la anterior, y guardar habría escrito ese texto en la nueva. Pasaba igual
   con cualquier enlace directo de una lección a otra, de un documento a otro
   o de un curso a otro.
+- **«Darla en otro tema» ya no propone el tema donde ya está.** Con la
+  lección en el curso de este año y en el que viene, el diálogo abría con su
+  propio tema elegido, y aceptarlo la ponía dos veces. Ahora propone uno que
+  no la lleva, marca los que sí y, si se elige uno de ellos, lo dice.
 
 ## 0.3.0 — 2026-09-28
 

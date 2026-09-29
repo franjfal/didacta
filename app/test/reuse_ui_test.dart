@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/ui/reuse.dart';
 import 'package:didacta_app/ui/theme.dart';
@@ -456,7 +457,10 @@ void main() {
   });
 
   group('dar una lección en otro tema', () {
-    Future<LessonTarget?> open(WidgetTester tester) async {
+    Future<LessonTarget?> open(
+      WidgetTester tester, {
+      List<UnitUsage> usedBy = const [],
+    }) async {
       tester.view.physicalSize = const Size(1200, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -476,6 +480,7 @@ void main() {
                       session: session,
                       title: 'Dar «Espacios normados» en otro tema',
                       fromCourse: 'am-iii',
+                      usedBy: usedBy,
                     );
                   },
                   child: const Text('abrir'),
@@ -562,6 +567,32 @@ void main() {
       expect(answer?.year, '2025-2026');
       expect(answer?.document, 'tema-1');
       expect(answer?.duplicate, isFalse);
+    });
+
+    // Al darla en el curso que viene, el primer tema era justo el suyo: el
+    // diálogo proponía añadirla donde ya estaba.
+    testWidgets('no propone un tema que ya la lleva, y avisa si se elige', (
+      tester,
+    ) async {
+      await open(
+        tester,
+        usedBy: const [
+          UnitUsage(course: 'am-iii', year: '2025-2026', document: 'tema-1'),
+        ],
+      );
+      expect(find.textContaining('Hoja'), findsOneWidget);
+      expect(find.byKey(const Key('lesson-already-there')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('lesson-document')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('(ya la lleva)').last);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('lesson-already-there')), findsOneWidget);
+
+      // Como copia, no es la misma lección dos veces: no hay nada que decir.
+      await tester.tap(find.byKey(const Key('lesson-duplicate')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('lesson-already-there')), findsNothing);
     });
 
     testWidgets('un curso sin temas lo dice en vez de dejar elegir', (
