@@ -1,0 +1,126 @@
+{
+  "capturas": [
+    {
+      "nombre": "extras",
+      "ruta": "/",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/teorema-de-bolzano/es.tex",
+            "buscar": "tienen signos opuestos,",
+            "poner": "tienen signos opuestos (ver la definición~\\ref{def:continua}), \\lgem",
+            "mensaje": "Una referencia y una orden de otro idioma",
+            "enviar": true
+          }
+        },
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "buscar": "\\begin{commonmistake}",
+            "poner": "\\begin{center}\n\\includegraphics[width=.5\\textwidth,alt={El salto de la función de Heaviside}]{figures/salto}\n\\end{center}\n\n\\begin{commonmistake}",
+            "mensaje": "Una figura que todavía no está",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "biblioteca",
+            "cajas": {
+              "revisar": {
+                "clave": "library-review"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "library-review"
+          },
+          "esperar": 30
+        },
+        {
+          "capturar": {
+            "nombre": "informe",
+            "cajas": {
+              "dialogo": {
+                "texto": "Revisar el repositorio",
+                "alto": 400
+              },
+              "resumen": {
+                "clave": "review-summary"
+              },
+              "figura": {
+                "contiene": "no está la figura",
+                "fila": 600
+              },
+              "babel": {
+                "contiene": "solo existe en catalán",
+                "fila": 600
+              },
+              "etiquetas": {
+                "clave": "review-group-labels",
+                "fila": 600
+              },
+              "ref": {
+                "contiene": "no tiene destino en Tema 1: límites y continuidad",
+                "fila": 600
+              },
+              "abrir": {
+                "texto": "Abrir",
+                "n": 0
+              },
+              "extras": {
+                "clave": "review-with-formulas",
+                "fila": 900
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "review-with-formulas"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "review-with-unused"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "sinusar": {
+          "contiene": "no la usa ningún documento",
+          "fila": 600
+        },
+        "grupo": {
+          "clave": "review-group-unused",
+          "fila": 600
+        },
+        "extras": {
+          "clave": "review-with-formulas",
+          "fila": 900
+        },
+        "formulas": {
+          "clave": "review-with-formulas"
+        },
+        "unused": {
+          "clave": "review-with-unused"
+        },
+        "ortografia": {
+          "clave": "review-with-spelling"
+        },
+        "dialogo": {
+          "texto": "Revisar el repositorio",
+          "alto": 400
+        }
+      }
+    }
+  ]
+}

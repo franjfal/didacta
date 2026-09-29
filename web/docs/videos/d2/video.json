@@ -1,0 +1,81 @@
+{
+  "codigo": "D2",
+  "titulo": "Corregir una errata y guardarla",
+  "fichero": "D02-corregir-una-errata.mp4",
+  "duracion": 68.06,
+  "megas": 6.9,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Corregir una errata y guardarla"
+    },
+    {
+      "t": 6.46,
+      "titulo": "Corregir"
+    },
+    {
+      "t": 14.61,
+      "titulo": "Guardar"
+    },
+    {
+      "t": 30.62,
+      "titulo": "Sin conexión"
+    },
+    {
+      "t": 48.45,
+      "titulo": "Descartar"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás corregir una lección, guardar el cambio y enviarlo a GitHub."
+    },
+    {
+      "t": 6.96,
+      "texto": "Aquí hay una errata. La corriges como en cualquier editor."
+    },
+    {
+      "t": 10.67,
+      "texto": "La pestaña se marca con un punto: hay algo sin guardar."
+    },
+    {
+      "t": 15.11,
+      "texto": "Guardar, o Comando S, lo deja en el historial con tu nombre y un mensaje que propone Didacta."
+    },
+    {
+      "t": 21.33,
+      "texto": "Y el aviso te deja ver qué ha cambiado."
+    },
+    {
+      "t": 24.04,
+      "texto": "Además, se envía a GitHub en cuanto se guarda: la barra de abajo dice «al día»."
+    },
+    {
+      "t": 31.12,
+      "texto": "Si no hay conexión, el cambio se queda en tu ordenador, y la barra lo cuenta: un cambio sin enviar."
+    },
+    {
+      "t": 38.17,
+      "texto": "Enviar, o Comando Mayúsculas U, lo sube cuando vuelve la conexión."
+    },
+    {
+      "t": 43.04,
+      "texto": "Y si prefieres enviar tú, se apaga en Ajustes, Guardar y sincronizar."
+    },
+    {
+      "t": 48.95,
+      "texto": "Y lo que no quieras guardar, Descartar lo deja como estaba, después de preguntarte."
+    },
+    {
+      "t": 54.95,
+      "texto": "Guardar deja el cambio con tu nombre; y en GitHub, en cuanto hay conexión."
+    },
+    {
+      "t": 60.52,
+      "texto": "En el siguiente vídeo, escribir para las diapositivas, los apuntes o tu copia."
+    }
+  ]
+}

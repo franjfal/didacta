@@ -1,0 +1,88 @@
+# G3 · Traducir con el original al lado
+#
+# Montado desde este guion: la versión inglesa de «El teorema de Bolzano» se
+# escribe de verdad dentro del arnés (`texto/en.tex`, con las mismas
+# fórmulas que el original), al lado del castellano, y se guarda.
+codigo: G3
+titulo: Traducir con el original al lado
+subtitulo: Traducir una lección sin estropear el original
+ruta: Traducir
+siguiente: "G4 · Revisar y aprobar traducciones"
+voz: narrador
+lema: ["El original se ve,", "y no se puede guardar por error."]
+lema_en: "y no se puede"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás traducir una lección con el original delante, sin
+          estropearlo.
+
+  - id: vacia
+    capitulo: Un idioma que no existe
+    antes: 0.5
+    pantalla: vacia
+    frases:
+      - id: roja
+        texto: >-
+          La pestaña de un idioma que la lección no tiene sale en rojo, y
+          arranca vacía.
+        pasos:
+          - {al: inicio, enfoca: [en, aviso], max: 1.4}
+          - {en: rojo, resalta: en, hasta: 2}
+          - {en: vacía, resalta: aviso}
+      - id: boton
+        texto: >-
+          Para traducir mirando el original, marca Lado a lado.
+        pasos:
+          - {en: Lado a lado, resalta: lado, lado: abajo, alinear: derecha}
+
+  - id: lado
+    capitulo: Lado a lado
+    antes: 0.5
+    pantalla: lado
+    frases:
+      - id: dos
+        texto: >-
+          A la izquierda escribes tu traducción; a la derecha, el original, con
+          su candado: se lee, y no se puede guardar por error.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: izquierda, resalta: guardar, hasta: 2.2}
+          - {en: derecha, resalta: candado, etiqueta: "Solo lectura", lado: abajo, alinear: derecha}
+      - id: formulas
+        texto: >-
+          Las fórmulas se copian tal cual: son las mismas en todos los
+          idiomas.
+        pasos:
+          - {al: inicio, enfoca: [teorema_en, teorema_es], max: 1.7}
+          - {en: fórmulas, resalta: [teorema_en, teorema_es]}
+
+  - id: guardar
+    capitulo: Guardar
+    antes: 0.5
+    pantalla: guardada
+    frases:
+      - id: guardada
+        texto: >-
+          Al guardar, la lección ya existe en inglés, y ya se puede compilar en
+          inglés.
+        pasos:
+          - {al: inicio, enfoca: [en, estado], max: 1.6, dy: 60}
+          - {en: existe, resalta: en, hasta: 2}
+          - {en: compilar, resalta: estado, etiqueta: "Traducida", color: azul, lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El original se ve, y no se puede guardar por error.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, revisar y aprobar traducciones.

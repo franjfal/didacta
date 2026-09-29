@@ -1,0 +1,61 @@
+{
+  "codigo": "G3",
+  "titulo": "Traducir con el original al lado",
+  "fichero": "G03-traducir-con-el-original-al-lado.mp4",
+  "duracion": 46.1,
+  "megas": 3.8,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Traducir con el original al lado"
+    },
+    {
+      "t": 6.57,
+      "titulo": "Un idioma que no existe"
+    },
+    {
+      "t": 15.84,
+      "titulo": "Lado a lado"
+    },
+    {
+      "t": 30.41,
+      "titulo": "Guardar"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás traducir una lección con el original delante, sin estropearlo."
+    },
+    {
+      "t": 7.07,
+      "texto": "La pestaña de un idioma que la lección no tiene sale en rojo, y arranca vacía."
+    },
+    {
+      "t": 11.99,
+      "texto": "Para traducir mirando el original, marca Lado a lado."
+    },
+    {
+      "t": 16.34,
+      "texto": "A la izquierda escribes tu traducción; a la derecha, el original, con su candado: se lee, y no se puede guardar por error."
+    },
+    {
+      "t": 25.33,
+      "texto": "Las fórmulas se copian tal cual: son las mismas en todos los idiomas."
+    },
+    {
+      "t": 30.91,
+      "texto": "Al guardar, la lección ya existe en inglés, y ya se puede compilar en inglés."
+    },
+    {
+      "t": 36.56,
+      "texto": "El original se ve, y no se puede guardar por error."
+    },
+    {
+      "t": 40.08,
+      "texto": "En el siguiente vídeo, revisar y aprobar traducciones."
+    }
+  ]
+}

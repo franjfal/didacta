@@ -1,0 +1,106 @@
+# B5 · Todo vive en GitHub
+#
+# Montado desde este guion. La copia del ejemplo está en una carpeta de nombre
+# neutro (ver `motor_neutro` en hacer.py), porque Ajustes enseña su ruta.
+codigo: B5
+titulo: Todo vive en GitHub
+subtitulo: Dónde está tu material, quién lo ve y por qué no se pierde
+ruta: Cómo piensa Didacta
+siguiente: "C1 · Recorrer la biblioteca"
+voz: narrador
+lema: ["La copia de seguridad es GitHub:", "lo que guardas, llega allí."]
+lema_en: "llega allí"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dónde está tu material, quién lo ve, y por qué no
+          se pierde.
+
+  - id: dos-sitios
+    capitulo: Dos sitios
+    antes: 0.5
+    grafico:
+      tipo: comparar
+      titulo: Tu material, en dos sitios
+      izquierda: {titulo: En GitHub, texto: "El repositorio: lo que se comparte, y la copia de seguridad.", icono: github, color: verde, en: GitHub}
+      derecha: {titulo: En tu ordenador, texto: "Una copia, donde escribes y compilas. Funciona sin conexión.", icono: ordenador, color: azul, en: ordenador}
+    frases:
+      - id: dos
+        texto: >-
+          Tu material está en dos sitios: en un repositorio de GitHub, y en una
+          copia en tu ordenador, que es donde trabajas.
+
+  - id: guardar
+    capitulo: Guardar y enviar
+    antes: 0.5
+    pantalla: estado
+    frases:
+      - id: nombre
+        texto: >-
+          Cada vez que guardas, queda un cambio con tu nombre, y se envía solo
+          a GitHub.
+        pasos:
+          - {en: guardas, enfoca: [texto], max: 2.4, dy: -140}
+          - {en: cambio, resalta: texto, etiqueta: "Un cambio, sin enviar todavía", color: ambar, lado: arriba, hasta: 2.6}
+          - {en: envía, enfoca: [enviar], max: 1.9}
+          - {en: envía, resalta: enviar, etiqueta: "Enviar", lado: abajo, alinear: derecha}
+      - id: hasta-enviar
+        texto: >-
+          Sin conexión, se queda en tu ordenador, y la barra lo cuenta hasta
+          que se envía.
+        pasos:
+          - {en: Sin conexión, rotulo: "Sin enviar, solo en tu ordenador", color: ambar}
+
+  - id: ajustes
+    capitulo: Tus repositorios
+    antes: 0.5
+    pantalla: repos
+    frases:
+      - id: cuenta
+        texto: >-
+          En Ajustes, Cuenta y repositorios, ves con qué cuenta has entrado, y
+          qué repositorios tienes abiertos.
+        pasos:
+          - {en: Ajustes, enfoca: [cuenta, repo, anadir], max: 1.6}
+          - {en: cuenta, resalta: cuenta, etiqueta: "Tu cuenta de GitHub", hasta: 2.2}
+          - {en: repositorios, resalta: repo, etiqueta: "Abierto, con su color", hasta: 2.6}
+      - id: donde
+        texto: Y dónde está la copia de cada uno en tu ordenador.
+        pasos:
+          - {en: copia, resalta: ruta, etiqueta: "Tu copia", lado: abajo}
+      - id: varios
+        texto: >-
+          Puedes abrir varios a la vez: el del departamento y el tuyo, en una
+          sola biblioteca.
+        pasos:
+          - {en: varios, resalta: anadir, etiqueta: "Añadir otro", lado: abajo}
+
+  - id: quien
+    capitulo: Quién entra
+    antes: 0.5
+    grafico:
+      tipo: frase
+      uno: "Quién lee y quién escribe"
+      dos: "lo decide GitHub."
+      dos_en: GitHub
+    frases:
+      - id: github
+        texto: >-
+          Y quién puede leer o escribir cada repositorio lo decide GitHub, no
+          Didacta: se comparte lo que se quiere compartir.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La copia de seguridad es GitHub: lo que guardas, llega allí.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, recorres la biblioteca.

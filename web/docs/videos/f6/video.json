@@ -1,0 +1,61 @@
+{
+  "codigo": "F6",
+  "titulo": "Vista rápida",
+  "fichero": "F06-vista-rapida.mp4",
+  "duracion": 44.74,
+  "megas": 2.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Vista rápida"
+    },
+    {
+      "t": 5.3,
+      "titulo": "Encenderla"
+    },
+    {
+      "t": 18.0,
+      "titulo": "En el tema"
+    },
+    {
+      "t": 27.59,
+      "titulo": "El PDF lo dice"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás ver cómo queda un cambio en la mitad de tiempo."
+    },
+    {
+      "t": 5.8,
+      "texto": "En Ajustes, Herramientas, enciende Vista rápida."
+    },
+    {
+      "t": 9.74,
+      "texto": "Compila en una sola pasada: tarda la mitad, y a cambio el índice y las referencias pueden quedarse de la vez anterior."
+    },
+    {
+      "t": 18.5,
+      "texto": "En la pestaña Compilar de un tema, el botón ahora dice Vista rápida."
+    },
+    {
+      "t": 23.32,
+      "texto": "Y al lado, Compilar entero, para lo que vas a repartir."
+    },
+    {
+      "t": 28.09,
+      "texto": "El PDF lo dice arriba, para que no lo confundas con uno compilado entero."
+    },
+    {
+      "t": 33.75,
+      "texto": "Para mirar, la mitad de tiempo; para repartir, entero."
+    },
+    {
+      "t": 38.41,
+      "texto": "En el siguiente vídeo, revisar todo el material de una vez."
+    }
+  ]
+}

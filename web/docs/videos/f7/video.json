@@ -1,0 +1,69 @@
+{
+  "codigo": "F7",
+  "titulo": "Revisar todo el material de una vez",
+  "fichero": "F07-revisar-todo-el-material.mp4",
+  "duracion": 63.4,
+  "megas": 3.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Revisar todo el material de una vez"
+    },
+    {
+      "t": 6.93,
+      "titulo": "Revisar"
+    },
+    {
+      "t": 11.63,
+      "titulo": "Lo que mira siempre"
+    },
+    {
+      "t": 32.71,
+      "titulo": "Lo que se pide"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás encontrar lo que está mal en tu material antes de que lo encuentre un alumno."
+    },
+    {
+      "t": 7.43,
+      "texto": "En la biblioteca, arriba a la derecha, Revisar."
+    },
+    {
+      "t": 12.13,
+      "texto": "Mira siempre lo mismo: figuras que faltan, órdenes de otro idioma, referencias que saldrían como dos interrogaciones."
+    },
+    {
+      "t": 20.3,
+      "texto": "Y también las diapositivas que se salen, los entornos que no define nadie, y las traducciones desactualizadas."
+    },
+    {
+      "t": 27.07,
+      "texto": "Cada cosa con su lección, su idioma y su línea, y Abrir te lleva allí."
+    },
+    {
+      "t": 33.21,
+      "texto": "Arriba se piden más: fórmulas distintas entre idiomas, lecciones sin usar, coma y punto mezclados, u ortografía."
+    },
+    {
+      "t": 41.59,
+      "texto": "Con lecciones sin usar, sale la nota histórica: ningún documento la da."
+    },
+    {
+      "t": 46.55,
+      "texto": "La ortografía pide el diccionario instalado, y la palabra buena que no conoce se apunta una vez, y deja de salir."
+    },
+    {
+      "t": 54.49,
+      "texto": "Busca lo que compila, o casi, y está mal."
+    },
+    {
+      "t": 58.12,
+      "texto": "En el siguiente vídeo, apuntes accesibles."
+    }
+  ]
+}

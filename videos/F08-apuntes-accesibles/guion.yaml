@@ -1,0 +1,95 @@
+# F8 · Apuntes accesibles
+#
+# Montado desde este guion, con el ajuste de verdad, una figura sin texto
+# alternativo puesta por el arnés en «Funciones continuas», el diálogo de
+# exportar y lo que dice Revisar.
+codigo: F8
+titulo: Apuntes accesibles
+subtitulo: Para quien lee con un lector de pantalla, o necesita el texto grande
+ruta: Compilar y revisar
+siguiente: "G1 · El idioma que miras, y con cuáles trabajas"
+voz: narrador
+lema: ["Todo sale del mismo origen,", "y con las mismas reglas."]
+lema_en: "con las mismas"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás sacar los apuntes para quien lee con un lector de
+          pantalla, o necesita el texto más grande.
+
+  - id: ajuste
+    capitulo: PDF accesibles
+    antes: 0.5
+    pantalla: ajuste
+    frases:
+      - id: encender
+        texto: >-
+          En Ajustes, Herramientas, PDF accesibles: los apuntes, las hojas y
+          los exámenes salen etiquetados, con su estructura y su idioma.
+        pasos:
+          - {al: inicio, enfoca: [titulo, interruptor], max: 1.8}
+          - {en: accesibles, resalta: interruptor, hasta: 2.2}
+          - {en: etiquetados, resalta: accesible}
+      - id: tarda
+        texto: >-
+          A cambio, tardan el doble en compilar.
+
+  - id: alt
+    capitulo: El texto alternativo
+    antes: 0.5
+    pantalla: alt
+    frases:
+      - id: alt
+        texto: >-
+          Cada figura lleva su texto alternativo, alt: lo que oye quien no la
+          ve.
+        pasos:
+          - {al: inicio, enfoca: [figura], max: 1.8, dy: -60}
+          - {en: alt, resalta: alt, etiqueta: "Lo que oye quien no la ve", lado: arriba}
+
+  - id: html
+    capitulo: En HTML
+    antes: 0.5
+    pantalla: exportar
+    frases:
+      - id: exportar
+        texto: >-
+          Y al exportar un curso, También: los apuntes en HTML, que se leen en
+          el navegador, se agrandan, y se escuchan.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.3}
+          - {en: También, resalta: html, etiqueta: "Los apuntes en HTML", lado: arriba}
+      - id: reglas
+        texto: >-
+          Sale del mismo origen y con las mismas reglas: el HTML del alumno no
+          enseña una solución por ser HTML.
+
+  - id: revisar
+    capitulo: Lo que no puede leer
+    antes: 0.5
+    pantalla: revisar
+    frases:
+      - id: aviso
+        texto: >-
+          Y Revisar dice lo que el PDF accesible no puede leer: aquí, una
+          figura sin texto alternativo.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.3}
+          - {en: Revisar, resalta: extra, hasta: 2.4}
+          - {en: figura, resalta: sinalt, color: ambar, lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Todo sale del mismo origen, y con las mismas reglas.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, el idioma que miras, y con cuáles trabajas.

@@ -1,0 +1,121 @@
+{
+  "capturas": [
+    {
+      "nombre": "pdf",
+      "ruta": "/settings?s=herramientas",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "mostrar": {
+            "clave": "quick-build"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "ajustes",
+            "cajas": {
+              "vista": {
+                "clave": "quick-build",
+                "fila": 500
+              },
+              "interruptor": {
+                "clave": "quick-build"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "quick-build"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "encendida",
+            "cajas": {
+              "vista": {
+                "clave": "quick-build",
+                "fila": 500
+              },
+              "interruptor": {
+                "clave": "quick-build"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/courses/calculo-i/2026-2027/tema-1",
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "texto": "Compilar",
+            "n": 0
+          },
+          "esperar": 40
+        },
+        {
+          "capturar": {
+            "nombre": "panel",
+            "cajas": {
+              "rapida": {
+                "clave": "compile"
+              },
+              "entero": {
+                "clave": "compile-full"
+              },
+              "fila": {
+                "clave": "compile",
+                "fila": 900
+              },
+              "nota": {
+                "contiene": "Una sola pasada"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada"
+          },
+          "max": 800,
+          "despues": 6
+        },
+        {
+          "pulsar": {
+            "contiene": "slides · es"
+          },
+          "esperar": 30
+        },
+        {
+          "hasta_que": {
+            "clave": "pane-quick-es"
+          },
+          "max": 400,
+          "despues": 8
+        }
+      ],
+      "cajas": {
+        "marca": {
+          "clave": "pane-quick-es"
+        },
+        "pestana": {
+          "contiene": "slides · es"
+        },
+        "barra": {
+          "clave": "pane-external-es",
+          "fila": 700
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "codigo": "F8",
+  "titulo": "Apuntes accesibles",
+  "fichero": "F08-apuntes-accesibles.mp4",
+  "duracion": 64.21,
+  "megas": 4.0,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Apuntes accesibles"
+    },
+    {
+      "t": 8.1,
+      "titulo": "PDF accesibles"
+    },
+    {
+      "t": 21.35,
+      "titulo": "El texto alternativo"
+    },
+    {
+      "t": 27.44,
+      "titulo": "En HTML"
+    },
+    {
+      "t": 45.09,
+      "titulo": "Lo que no puede leer"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás sacar los apuntes para quien lee con un lector de pantalla, o necesita el texto más grande."
+    },
+    {
+      "t": 8.6,
+      "texto": "En Ajustes, Herramientas, PDF accesibles: los apuntes, las hojas y los exámenes salen etiquetados, con su estructura y su idioma."
+    },
+    {
+      "t": 18.14,
+      "texto": "A cambio, tardan el doble en compilar."
+    },
+    {
+      "t": 21.85,
+      "texto": "Cada figura lleva su texto alternativo, alt: lo que oye quien no la ve."
+    },
+    {
+      "t": 27.94,
+      "texto": "Y al exportar un curso, También: los apuntes en HTML, que se leen en el navegador, se agrandan, y se escuchan."
+    },
+    {
+      "t": 36.39,
+      "texto": "Sale del mismo origen y con las mismas reglas: el HTML del alumno no enseña una solución por ser HTML."
+    },
+    {
+      "t": 45.59,
+      "texto": "Y Revisar dice lo que el PDF accesible no puede leer: aquí, una figura sin texto alternativo."
+    },
+    {
+      "t": 53.56,
+      "texto": "Todo sale del mismo origen, y con las mismas reglas."
+    },
+    {
+      "t": 57.45,
+      "texto": "En el siguiente vídeo, el idioma que miras, y con cuáles trabajas."
+    }
+  ]
+}

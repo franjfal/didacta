@@ -851,7 +851,11 @@ void main() {
         stdout.writeln('    (no encuentro «$wanted» en el editor)');
         return;
       }
-      final put = what['poner'] as String;
+      // `poner_de`: el texto, de un fichero del vídeo (una traducción entera
+      // no cabe bien en una línea de capturas.json).
+      final put = what['poner_de'] is String
+          ? File('$engine/videos/$video/${what['poner_de']}').readAsStringSync()
+          : what['poner'] as String;
       final caret = at + ((what['cursor'] as num?)?.toInt() ?? put.length);
       // Con el foco dentro, como quien escribe: la lista de `\begin{` solo
       // se abre en un editor enfocado.
@@ -993,6 +997,13 @@ void main() {
         // `"idioma": "en"`: el contenido, mirado en ese idioma desde el
         // principio, sin enseñar cómo se cambia (eso ya lo cuenta otro vídeo).
         if (shot['idioma'] case final String code) session.language = code;
+        // `"sin_idiomas": ["va"]`: fuera de «con los que trabajas», para que
+        // no salgan donde el vídeo no los cuenta (el valenciano, sobre todo).
+        for (final code in (shot['sin_idiomas'] as List?) ?? const []) {
+          await tester.runAsync(
+            () => session.setLanguageEnabled(code as String, false),
+          );
+        }
         // `"completa": true`: con la interfaz Completa.
         if (shot['completa'] == true) {
           await tester.runAsync(() => session.setCompleteInterface(true));

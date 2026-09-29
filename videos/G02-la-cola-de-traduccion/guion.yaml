@@ -1,0 +1,92 @@
+# G2 · La cola de traducción
+#
+# Montado desde este guion, con la cola del repositorio de ejemplo en inglés.
+# La desactualizada es de verdad: el arnés le pone al inglés de «Límite de
+# una función en un punto» la huella de un original que ya no es el de ahora.
+codigo: G2
+titulo: La cola de traducción
+subtitulo: Por dónde empezar a traducir, y cuándo parar
+ruta: Traducir
+siguiente: "G3 · Traducir con el original al lado"
+voz: narrador
+lema: ["Traducir lo que más se usa", "compra más documentos."]
+lema_en: "compra"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás por dónde empezar a traducir, y cuándo puedes
+          parar.
+
+  - id: primero
+    capitulo: Lo viejo, primero
+    antes: 0.5
+    pantalla: cola
+    frases:
+      - id: cola
+        texto: >-
+          En Traducción, eliges el idioma y el trabajo: desactualizadas, sin
+          traducir, o sin revisar.
+        pasos:
+          - {al: inicio, enfoca: [idioma, trabajo], max: 1.8, dy: 80}
+          - {en: idioma, resalta: idioma, hasta: 1.6}
+          - {en: trabajo, resalta: trabajo}
+      - id: viejas
+        texto: >-
+          Las desactualizadas van primero: dicen algo que ya no es cierto, y
+          compilan sin queja.
+        pasos:
+          - {al: inicio, enfoca: [aviso, fila], max: 1.4}
+          - {en: desactualizadas, resalta: fila, hasta: 2.2}
+          - {en: cierto, resalta: aviso, color: rojo}
+
+  - id: orden
+    capitulo: Lo que más se usa
+    antes: 0.5
+    pantalla: sin
+    frases:
+      - id: usos
+        texto: >-
+          Lo que falta se ordena por cuántos documentos usan cada lección:
+          arriba, las que usan dos.
+        pasos:
+          - {al: inicio, enfoca: [lista], max: 1.3, dy: -120}
+          - {en: documentos, resalta: usos2, etiqueta: "La usan dos documentos", lado: derecha, hasta: 2.4}
+          - {en: dos, resalta: [dos, dos2]}
+      - id: parar
+        texto: >-
+          Y al final, la que no usa nadie: cuando solo queda eso, puedes parar.
+        pasos:
+          - {en: nadie, resalta: nadie, etiqueta: "No la usa nadie", color: gris, lado: abajo}
+
+  - id: abrir
+    capitulo: Abrirla
+    antes: 0.5
+    pantalla: sin
+    corta: true
+    frases:
+      - id: abre
+        texto: >-
+          Cada fila abre la lección ya en el idioma que falta, lista para
+          escribir.
+        pasos:
+          - {al: inicio, enfoca: [funciones], max: 1.6}
+          - {en: fila, pulsa: funciones}
+          - {en: idioma, cambia: abierta}
+          - {en: idioma, enfoca: [titulo, aviso], max: 1.3, captura: abierta}
+          - {en: idioma, resalta: en, etiqueta: "En inglés", lado: abajo, captura: abierta}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Traducir lo que más se usa compra más documentos.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, traducir con el original al lado.

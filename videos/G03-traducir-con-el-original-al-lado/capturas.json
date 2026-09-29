@@ -1,0 +1,119 @@
+{
+  "capturas": [
+    {
+      "nombre": "guardada",
+      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano?lang=en",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "vacia",
+            "cajas": {
+              "en": {
+                "clave": "language-tab-en"
+              },
+              "aviso": {
+                "contiene": "No existe la versión",
+                "alto": 60
+              },
+              "lado": {
+                "clave": "split-editors"
+              },
+              "titulo": {
+                "texto": "El teorema de Bolzano",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "",
+            "poner_de": "texto/en.tex",
+            "cursor": 0
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "split-editors"
+          },
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "lado",
+            "cajas": {
+              "candado": {
+                "texto": "solo lectura"
+              },
+              "lado": {
+                "clave": "split-editors"
+              },
+              "en": {
+                "clave": "language-tab-en"
+              },
+              "teorema_en": {
+                "rect": [
+                  80,
+                  262,
+                  200,
+                  48
+                ]
+              },
+              "guardar": {
+                "clave": "editor-save",
+                "n": 0
+              },
+              "teorema_es": {
+                "rect": [
+                  330,
+                  232,
+                  200,
+                  48
+                ]
+              },
+              "panel_es": {
+                "texto": "solo lectura",
+                "alto": 600
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "editor-save",
+            "n": 0
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 60
+        }
+      ],
+      "cajas": {
+        "en": {
+          "clave": "language-tab-en"
+        },
+        "estado": {
+          "texto": "en TR",
+          "n": 0
+        },
+        "lado": {
+          "clave": "split-editors"
+        }
+      },
+      "sin_idiomas": [
+        "va"
+      ]
+    }
+  ]
+}

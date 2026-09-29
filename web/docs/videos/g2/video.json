@@ -1,0 +1,61 @@
+{
+  "codigo": "G2",
+  "titulo": "La cola de traducción",
+  "fichero": "G02-la-cola-de-traduccion.mp4",
+  "duracion": 47.7,
+  "megas": 2.8,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "La cola de traducción"
+    },
+    {
+      "t": 5.95,
+      "titulo": "Lo viejo, primero"
+    },
+    {
+      "t": 20.14,
+      "titulo": "Lo que más se usa"
+    },
+    {
+      "t": 32.52,
+      "titulo": "Abrirla"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás por dónde empezar a traducir, y cuándo puedes parar."
+    },
+    {
+      "t": 6.45,
+      "texto": "En Traducción, eliges el idioma y el trabajo: desactualizadas, sin traducir, o sin revisar."
+    },
+    {
+      "t": 13.52,
+      "texto": "Las desactualizadas van primero: dicen algo que ya no es cierto, y compilan sin queja."
+    },
+    {
+      "t": 20.64,
+      "texto": "Lo que falta se ordena por cuántos documentos usan cada lección: arriba, las que usan dos."
+    },
+    {
+      "t": 26.64,
+      "texto": "Y al final, la que no usa nadie: cuando solo queda eso, puedes parar."
+    },
+    {
+      "t": 33.02,
+      "texto": "Cada fila abre la lección ya en el idioma que falta, lista para escribir."
+    },
+    {
+      "t": 38.73,
+      "texto": "Traducir lo que más se usa compra más documentos."
+    },
+    {
+      "t": 41.9,
+      "texto": "En el siguiente vídeo, traducir con el original al lado."
+    }
+  ]
+}

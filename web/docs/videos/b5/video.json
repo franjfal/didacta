@@ -1,0 +1,73 @@
+{
+  "codigo": "B5",
+  "titulo": "Todo vive en GitHub",
+  "fichero": "B05-todo-vive-en-github.mp4",
+  "duracion": 60.77,
+  "megas": 2.5,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Todo vive en GitHub"
+    },
+    {
+      "t": 6.55,
+      "titulo": "Dos sitios"
+    },
+    {
+      "t": 14.51,
+      "titulo": "Guardar y enviar"
+    },
+    {
+      "t": 25.8,
+      "titulo": "Tus repositorios"
+    },
+    {
+      "t": 41.84,
+      "titulo": "Quién entra"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dónde está tu material, quién lo ve, y por qué no se pierde."
+    },
+    {
+      "t": 7.05,
+      "texto": "Tu material está en dos sitios: en un repositorio de GitHub, y en una copia en tu ordenador, que es donde trabajas."
+    },
+    {
+      "t": 15.01,
+      "texto": "Cada vez que guardas, queda un cambio con tu nombre, y se envía solo a GitHub."
+    },
+    {
+      "t": 20.11,
+      "texto": "Sin conexión, se queda en tu ordenador, y la barra lo cuenta hasta que se envía."
+    },
+    {
+      "t": 26.3,
+      "texto": "En Ajustes, Cuenta y repositorios, ves con qué cuenta has entrado, y qué repositorios tienes abiertos."
+    },
+    {
+      "t": 32.98,
+      "texto": "Y dónde está la copia de cada uno en tu ordenador."
+    },
+    {
+      "t": 36.01,
+      "texto": "Puedes abrir varios a la vez: el del departamento y el tuyo, en una sola biblioteca."
+    },
+    {
+      "t": 42.34,
+      "texto": "Y quién puede leer o escribir cada repositorio lo decide GitHub, no Didacta: se comparte lo que se quiere compartir."
+    },
+    {
+      "t": 50.57,
+      "texto": "La copia de seguridad es GitHub: lo que guardas, llega allí."
+    },
+    {
+      "t": 55.31,
+      "texto": "En el siguiente vídeo, recorres la biblioteca."
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+# F6 · Vista rápida
+#
+# Montado desde este guion: la vista rápida se enciende de verdad en Ajustes,
+# y el Tema 1 se compila con ella dentro del arnés.
+codigo: F6
+titulo: Vista rápida
+subtitulo: Ver cómo queda un cambio en la mitad de tiempo
+ruta: Compilar y revisar
+siguiente: "F7 · Revisar todo el material de una vez"
+voz: narrador
+lema: ["Para mirar, la mitad de tiempo;", "para repartir, entero."]
+lema_en: "para repartir"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás ver cómo queda un cambio en la mitad de tiempo.
+
+  - id: ajuste
+    capitulo: Encenderla
+    antes: 0.5
+    pantalla: ajustes
+    frases:
+      - id: encender
+        texto: >-
+          En Ajustes, Herramientas, enciende Vista rápida.
+        pasos:
+          - {al: inicio, enfoca: [vista], max: 1.6}
+          - {en: enciende, cambia: encendida}
+          - {en: enciende, resalta: interruptor, captura: encendida}
+      - id: pasada
+        texto: >-
+          Compila en una sola pasada: tarda la mitad, y a cambio el índice y
+          las referencias pueden quedarse de la vez anterior.
+
+  - id: tema
+    capitulo: En el tema
+    antes: 0.5
+    pantalla: panel
+    frases:
+      - id: boton
+        texto: >-
+          En la pestaña Compilar de un tema, el botón ahora dice Vista rápida.
+        pasos:
+          - {al: inicio, enfoca: [fila], max: 1.6}
+          - {en: Vista rápida, resalta: rapida, lado: abajo}
+      - id: entero
+        texto: >-
+          Y al lado, Compilar entero, para lo que vas a repartir.
+        pasos:
+          - {en: entero, resalta: entero, lado: abajo}
+
+  - id: marca
+    capitulo: El PDF lo dice
+    antes: 0.5
+    pantalla: pdf
+    frases:
+      - id: marca
+        texto: >-
+          El PDF lo dice arriba, para que no lo confundas con uno compilado
+          entero.
+        pasos:
+          - {al: inicio, enfoca: [barra], max: 1.6, dy: 200}
+          - {en: arriba, resalta: marca, etiqueta: "Vista rápida", lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Para mirar, la mitad de tiempo; para repartir, entero.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, revisar todo el material de una vez.

@@ -1,0 +1,208 @@
+{
+  "capturas": [
+    {
+      "nombre": "sinva",
+      "ruta": "/?en=calculo/limites",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "castellano",
+            "cajas": {
+              "idioma": {
+                "clave": "language-picker"
+              },
+              "tarjeta": {
+                "texto": "Límite de una función en un punto",
+                "alto": 60
+              },
+              "limites": {
+                "texto": "Límites",
+                "n": 1,
+                "fila": 150
+              },
+              "selector": {
+                "rect": [
+                  1308,
+                  62,
+                  122,
+                  30
+                ]
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "language-picker"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "idioma": {
+                "clave": "language-picker"
+              },
+              "en": {
+                "clave": "pick-language-en"
+              },
+              "va": {
+                "clave": "pick-language-va"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pick-language-en"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "ingles",
+            "cajas": {
+              "idioma": {
+                "clave": "language-picker"
+              },
+              "tarjeta": {
+                "texto": "The limit of a function at a point",
+                "alto": 60
+              },
+              "cabecera": {
+                "contiene": "unidades",
+                "n": 0
+              },
+              "selector": {
+                "rect": [
+                  1308,
+                  62,
+                  122,
+                  30
+                ]
+              },
+              "estados": {
+                "texto": "en TR",
+                "n": 1
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "language-picker"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "pick-language-es"
+          },
+          "esperar": 8
+        },
+        {
+          "ir": "/settings?s=idiomas",
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "trabajas",
+            "cajas": {
+              "titulo": {
+                "texto": "Con los que trabajas"
+              },
+              "es": {
+                "clave": "use-language-es"
+              },
+              "va": {
+                "clave": "use-language-va"
+              },
+              "en": {
+                "clave": "use-language-en"
+              },
+              "quitar": {
+                "consejo": "Quitar Valencià",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "consejo": "Quitar Valencià",
+            "n": 0
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "confirmar",
+            "cajas": {
+              "dialogo": {
+                "contiene": "¿Dejar de trabajar con",
+                "alto": 200
+              },
+              "explica": {
+                "contiene": "no cambia ningún fichero"
+              },
+              "quitar": {
+                "clave": "remove-language-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "remove-language-confirm"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "quitado",
+            "cajas": {
+              "titulo": {
+                "texto": "Con los que trabajas"
+              },
+              "es": {
+                "clave": "use-language-es"
+              },
+              "en": {
+                "clave": "use-language-en"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/?en=calculo/limites",
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "selector": {
+          "rect": [
+            1344,
+            62,
+            86,
+            30
+          ]
+        },
+        "tarjeta": {
+          "texto": "Límite de una función en un punto",
+          "alto": 60
+        },
+        "va": {
+          "texto": "va TR",
+          "n": 1
+        },
+        "idioma": {
+          "clave": "language-picker"
+        }
+      }
+    }
+  ]
+}

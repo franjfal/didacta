@@ -1,0 +1,131 @@
+{
+  "capturas": [
+    {
+      "nombre": "abierta",
+      "ruta": "/translations",
+      "idioma": "en",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/unit.yaml",
+            "buscar": "  en: {status: translated}",
+            "poner": "  en: {status: translated, source_hash: antes-del-cambio}",
+            "mensaje": "Cambiar una frase del original",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "cola",
+            "cajas": {
+              "idioma": {
+                "texto": "Idioma:"
+              },
+              "trabajo": {
+                "contiene": "Desactualizadas",
+                "n": 0
+              },
+              "aviso": {
+                "contiene": "Su original ha cambiado",
+                "fila": 1200
+              },
+              "fila": {
+                "texto": "Límite de una función en un punto",
+                "fila": 1000
+              },
+              "usos": {
+                "rect": [
+                  110,
+                  226,
+                  30,
+                  24
+                ]
+              },
+              "estado": {
+                "texto": "desactualizada"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "contiene": "Sin traducir",
+            "n": 0
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "sin",
+            "cajas": {
+              "pestana": {
+                "contiene": "Sin traducir",
+                "n": 0
+              },
+              "dos": {
+                "texto": "Discontinuidades evitables",
+                "fila": 1000
+              },
+              "dos2": {
+                "texto": "Tres raíces con el teorema de Bolzano",
+                "fila": 1000
+              },
+              "nadie": {
+                "texto": "Una breve historia de la épsilon",
+                "fila": 1000
+              },
+              "funciones": {
+                "texto": "Funciones continuas",
+                "fila": 1000
+              },
+              "lista": {
+                "texto": "Discontinuidades evitables",
+                "alto": 300
+              },
+              "usos2": {
+                "rect": [
+                  108,
+                  164,
+                  34,
+                  22
+                ]
+              },
+              "usosnadie": {
+                "rect": [
+                  108,
+                  488,
+                  34,
+                  22
+                ]
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Funciones continuas"
+          },
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "en": {
+          "clave": "language-tab-en"
+        },
+        "titulo": {
+          "texto": "Continuous functions",
+          "n": 0
+        },
+        "aviso": {
+          "contiene": "No existe la versión",
+          "alto": 60
+        }
+      }
+    }
+  ]
+}

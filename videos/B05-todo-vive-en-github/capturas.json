@@ -1,0 +1,59 @@
+{
+  "capturas": [
+    {
+      "nombre": "repos",
+      "ruta": "/settings?s=repositorios",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "cuenta": {
+          "contiene": "(profe)",
+          "fila": 900
+        },
+        "repo": {
+          "clave": "repo-open-profe/didacta-ejemplo",
+          "fila": 900
+        },
+        "ruta": {
+          "contiene": "/Users/Shared/Didacta/didacta-ejemplo"
+        },
+        "anadir": {
+          "clave": "add-repository"
+        }
+      }
+    },
+    {
+      "nombre": "estado",
+      "ruta": "/courses",
+      "preparar": [
+        {
+          "sin_enviar": 1
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "estado": {
+          "clave": "sync-state"
+        },
+        "enviar": {
+          "clave": "sync-push"
+        },
+        "texto": {
+          "rect": [
+            92,
+            869,
+            210,
+            22
+          ]
+        }
+      }
+    }
+  ]
+}

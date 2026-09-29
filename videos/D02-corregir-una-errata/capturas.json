@@ -1,0 +1,221 @@
+{
+  "capturas": [
+    {
+      "nombre": "algithub",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/limite-por-definicion/es.tex",
+            "buscar": "buscamos",
+            "poner": "buscamso",
+            "mensaje": "Un límite por la definición",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "errata",
+            "cajas": {
+              "errata": {
+                "editor": "buscamso"
+              },
+              "es": {
+                "clave": "language-tab-es"
+              },
+              "titulo": {
+                "texto": "Límites por la definición"
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "buscamso",
+            "poner": "buscamos"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "editada",
+            "cajas": {
+              "corregida": {
+                "editor": "buscamos"
+              },
+              "es": {
+                "clave": "language-tab-es"
+              },
+              "guardar": {
+                "clave": "editor-save"
+              },
+              "descartar": {
+                "texto": "Descartar"
+              },
+              "singuardar": {
+                "texto": "sin guardar"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "editor-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Ver cambios"
+          },
+          "max": 400,
+          "despues": 2
+        },
+        {
+          "capturar": {
+            "nombre": "guardada",
+            "cajas": {
+              "es": {
+                "clave": "language-tab-es"
+              },
+              "aviso": {
+                "contiene": "Guardado en el historial",
+                "fila": 300
+              },
+              "cambios": {
+                "texto": "Ver cambios"
+              }
+            }
+          }
+        },
+        {
+          "esperar": 60
+        }
+      ],
+      "cajas": {
+        "texto": {
+          "rect": [
+            92,
+            869,
+            210,
+            22
+          ]
+        },
+        "estado": {
+          "clave": "sync-state"
+        }
+      }
+    },
+    {
+      "nombre": "enviada",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "preparar": [
+        {
+          "sin_enviar": 1
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "sinenviar",
+            "cajas": {
+              "texto": {
+                "rect": [
+                  92,
+                  869,
+                  210,
+                  22
+                ]
+              },
+              "enviar": {
+                "clave": "sync-push"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "sync-push"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "al día"
+          },
+          "max": 400,
+          "despues": 30
+        }
+      ],
+      "cajas": {
+        "texto": {
+          "rect": [
+            92,
+            869,
+            210,
+            22
+          ]
+        },
+        "enviar": {
+          "clave": "sync-push"
+        }
+      }
+    },
+    {
+      "nombre": "ajuste",
+      "ruta": "/settings?s=guardar",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "envio": {
+          "clave": "push-on-commit",
+          "fila": 500
+        },
+        "interruptor": {
+          "clave": "push-on-commit"
+        }
+      }
+    },
+    {
+      "nombre": "descartar",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "Probemos que",
+            "poner": "Veamos que"
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Descartar"
+          },
+          "esperar": 8
+        }
+      ],
+      "cajas": {
+        "dialogo": {
+          "texto": "¿Descartar los cambios?",
+          "alto": 150
+        },
+        "confirmar": {
+          "texto": "Descartar",
+          "n": 1
+        }
+      }
+    }
+  ]
+}

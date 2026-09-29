@@ -1,0 +1,61 @@
+{
+  "codigo": "G1",
+  "titulo": "El idioma que miras, y con cuáles trabajas",
+  "fichero": "G01-el-idioma-que-miras.mp4",
+  "duracion": 53.85,
+  "megas": 4.0,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "El idioma que miras, y con cuáles trabajas"
+    },
+    {
+      "t": 7.51,
+      "titulo": "El idioma que miras"
+    },
+    {
+      "t": 21.8,
+      "titulo": "Con cuáles trabajas"
+    },
+    {
+      "t": 34.66,
+      "titulo": "Lo que ya lo usa"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás cambiar el idioma en que ves el material, y quitarte de delante los que no usas."
+    },
+    {
+      "t": 8.01,
+      "texto": "Arriba, el idioma en que miras el material. Manda en toda la aplicación."
+    },
+    {
+      "t": 15.7,
+      "texto": "En inglés, los títulos salen en inglés, y cada fila dice cómo está su versión inglesa."
+    },
+    {
+      "t": 22.3,
+      "texto": "En Ajustes, Idiomas, eliges con cuáles trabajas. Si no das clase en valenciano, lo quitas."
+    },
+    {
+      "t": 29.51,
+      "texto": "Es solo para ti: deja de ofrecértelo, y no cambia ningún fichero."
+    },
+    {
+      "t": 35.16,
+      "texto": "Arriba ya no se ofrece. Pero sigue saliendo donde algo ya lo usa: el estado de cada lección en valenciano."
+    },
+    {
+      "t": 43.58,
+      "texto": "Con qué idiomas trabajas es cosa tuya: no cambia ningún fichero."
+    },
+    {
+      "t": 48.22,
+      "texto": "En el siguiente vídeo, la cola de traducción."
+    }
+  ]
+}

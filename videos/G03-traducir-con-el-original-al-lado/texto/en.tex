@@ -1,0 +1,73 @@
+% Lesson: Bolzano's theorem (English).
+
+\begin{frame}
+\didactatitle{Bolzano's theorem}
+
+\begin{theorem}[Bolzano]
+If $f$ is continuous on $[a, b]$ and $f(a)$ and $f(b)$ have opposite signs,
+there is $c \in (a, b)$ such that $f(c) = 0$.
+\end{theorem}
+
+\bymedium{%
+  A continuous function that starts below the axis and ends above it has
+  to cross it.
+}{%
+  A continuous function that starts below the axis and ends above it has
+  to cross it. What the theorem adds to the intuition is that this does not
+  depend on the picture, but on the real line having no gaps: the
+  completeness axiom.
+}
+
+\begin{notesonly}
+\begin{proof}
+Suppose $f(a) < 0 < f(b)$; the other case reduces to this one by replacing $f$
+with $-f$. The set $A = \{x \in [a, b] : f(x) < 0\}$ contains $a$ and is
+bounded by $b$, so it has a supremum $c \in [a, b]$. We show that $f(c) = 0$.
+
+If $f(c) \neq 0$, taking $\varepsilon = |f(c)|$ in the definition of
+continuity there would be a $\delta > 0$ such that $f(x)$ has the same sign as
+$f(c)$ for every $x \in [a, b]$ with $|x - c| < \delta$. If $f(c) < 0$,
+then $c < b$ and there would be points of $A$ greater than $c$. If $f(c) > 0$,
+then $c > a$ and no point of $(c - \delta, c]$ would be in $A$, so
+$c - \delta$ would be an upper bound of $A$ smaller than $c$. Both contradict
+$c$ being the supremum.
+
+Therefore $f(c) = 0$, and $c \neq a, b$ because neither $f(a)$ nor $f(b)$ vanish.
+\end{proof}
+\end{notesonly}
+
+\begin{teaching}[To discuss]
+What goes wrong if $f$ is not continuous? (The jump $H(x) - \tfrac12$ on $[-1, 1]$.)
+And if only
+the rationals existed? ($x^2 - 2$ on $[0, 2]$ changes sign and has no
+rational root.)
+\end{teaching}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Intermediate values}
+
+\begin{corollary}[Intermediate values]
+If $f$ is continuous on $[a, b]$, it takes every value between
+$f(a)$ and $f(b)$.
+\end{corollary}
+
+\onlynotes{%
+  If $k$ lies strictly between $f(a)$ and $f(b)$, it is enough to apply
+  Bolzano's theorem to $g(x) = f(x) - k$, which is continuous and changes sign
+  on $[a, b]$.
+}
+
+\dpause
+
+\begin{example}
+The equation $x^3 + x - 1 = 0$ has a solution in $(0, 1)$: the polynomial is
+continuous, and it is $-1$ at $0$ and $1$ at $1$.
+\onlynotes{%
+  Repeating the argument on the half of the interval where the sign changes,
+  and then on the half of that half, gives the \keyterm{bisection
+  method}: each step halves the length of the interval containing
+  the root.
+}
+\end{example}
+\end{frame}

@@ -1,0 +1,169 @@
+{
+  "capturas": [
+    {
+      "nombre": "revisar",
+      "ruta": "/settings?s=herramientas",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "buscar": "\\begin{commonmistake}",
+            "poner": "\\begin{center}\n\\includegraphics[width=.5\\textwidth]{figures/salto}\n\\end{center}\n\n\\begin{commonmistake}",
+            "mensaje": "Una figura sin texto alternativo",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "mostrar": {
+            "clave": "accessible-pdf"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "accessible-pdf"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "ajuste",
+            "cajas": {
+              "accesible": {
+                "contiene": "etiquetados: con su estructura"
+              },
+              "titulo": {
+                "texto": "PDF accesibles"
+              },
+              "interruptor": {
+                "clave": "accessible-pdf"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/continuidad/funcion-continua",
+          "esperar": 12
+        },
+        {
+          "editar_texto": {
+            "buscar": "[width=.5\\textwidth]",
+            "poner": "[width=.5\\textwidth,alt={El salto de la función de Heaviside en el origen}]"
+          }
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "alt",
+            "cajas": {
+              "figura": {
+                "editor": "\\includegraphics",
+                "hasta": "{figures/salto}"
+              },
+              "alt": {
+                "editor": "alt={",
+                "hasta": "origen}"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Descartar"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "texto": "Descartar",
+            "ultimo": true
+          },
+          "esperar": 8
+        },
+        {
+          "ir": "/courses",
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "export-year-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        },
+        {
+          "mostrar": {
+            "clave": "export-html"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-html"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "exportar",
+            "cajas": {
+              "html": {
+                "clave": "export-html"
+              },
+              "tambien": {
+                "texto": "También:"
+              },
+              "dialogo": {
+                "texto": "Exportar Cálculo I · 2026-2027",
+                "alto": 500
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "ir": "/",
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "library-review"
+          },
+          "esperar": 20
+        },
+        {
+          "pulsar": {
+            "clave": "review-with-accessible"
+          },
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "extra": {
+          "clave": "review-with-accessible"
+        },
+        "grupo": {
+          "clave": "review-group-accessible",
+          "fila": 600
+        },
+        "sinalt": {
+          "contiene": "texto alternativo",
+          "fila": 600
+        },
+        "dialogo": {
+          "texto": "Revisar el repositorio",
+          "alto": 400
+        }
+      }
+    }
+  ]
+}

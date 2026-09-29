@@ -1,0 +1,135 @@
+# D2 · Corregir una errata y guardarla
+#
+# De serie, guardar también envía a GitHub («Y se envía a GitHub», en Ajustes
+# → Guardar y sincronizar). El caso sin conexión se enseña con un cambio sin
+# enviar puesto por el arnés (`"sin_enviar"`).
+#
+# Montado desde este guion. La errata es de verdad: el arnés la escribe y la
+# envía antes de abrir la lección («buscamso», en `"preparar"`), y dentro se
+# corrige, se guarda y se envía al remoto de mentira, que es un repositorio
+# git como cualquier otro.
+codigo: D2
+titulo: Corregir una errata y guardarla
+subtitulo: Editar, guardar y enviar el cambio a GitHub
+ruta: Escribir una lección
+siguiente: "D3 · Escribir para diapositivas, apuntes o profesor"
+voz: narrador
+lema: ["Guardar deja el cambio con tu nombre;", "y en GitHub, en cuanto hay conexión."]
+lema_en: "y en GitHub"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás corregir una lección, guardar el cambio y enviarlo
+          a GitHub.
+
+  - id: corregir
+    capitulo: Corregir
+    antes: 0.5
+    pantalla: errata
+    frases:
+      - id: errata
+        texto: >-
+          Aquí hay una errata. La corriges como en cualquier editor.
+        pasos:
+          - {al: inicio, enfoca: [errata], max: 2}
+          - {en: errata, resalta: errata, etiqueta: "La errata", color: ambar, hasta: 1.2}
+          - {en: corriges, cambia: editada}
+          - {en: corriges, resalta: corregida, captura: editada}
+      - id: punto
+        texto: >-
+          La pestaña se marca con un punto: hay algo sin guardar.
+        pasos:
+          - {al: inicio, enfoca: [es, guardar], max: 1.7, captura: editada}
+          - {en: punto, resalta: es, etiqueta: "Sin guardar", captura: editada}
+
+  - id: guardar
+    capitulo: Guardar
+    antes: 0.5
+    pantalla: editada
+    frases:
+      - id: guardar
+        texto: >-
+          Guardar, o Comando S, lo deja en el historial con tu nombre y un
+          mensaje que propone Didacta.
+        pasos:
+          - {al: inicio, enfoca: [es, guardar], max: 1.7}
+          - {en: Guardar, pulsa: guardar}
+          - {en: Comando, teclas: "⌘ S"}
+          - {en: historial, cambia: guardada}
+          - {en: historial, reposo: true, captura: guardada}
+      - id: ver
+        texto: >-
+          Y el aviso te deja ver qué ha cambiado.
+        pasos:
+          - {en: ver, resalta: cambios, etiqueta: "Ver cambios", lado: arriba, captura: guardada}
+      - id: github
+        texto: >-
+          Además, se envía a GitHub en cuanto se guarda: la barra de abajo
+          dice «al día».
+        pasos:
+          - {al: inicio, cambia: algithub}
+          - {al: inicio, enfoca: [texto], max: 2.4, dy: -140, captura: algithub}
+          - {en: al día, resalta: texto, etiqueta: "Ya está en GitHub", lado: arriba, captura: algithub}
+
+  - id: enviar
+    capitulo: Sin conexión
+    antes: 0.5
+    pantalla: sinenviar
+    frases:
+      - id: sin-enviar
+        texto: >-
+          Si no hay conexión, el cambio se queda en tu ordenador, y la barra lo
+          cuenta: un cambio sin enviar.
+        pasos:
+          - {al: inicio, enfoca: [texto], max: 2.4, dy: -140}
+          - {en: cuenta, resalta: texto, etiqueta: "Sin enviar", color: ambar, lado: arriba}
+      - id: enviar
+        texto: >-
+          Enviar, o Comando Mayúsculas U, lo sube cuando vuelve la conexión.
+        pasos:
+          - {al: inicio, enfoca: [enviar], max: 2}
+          - {en: Enviar, pulsa: enviar}
+          - {en: Comando, teclas: "⌘ ⇧ U"}
+          - {en: sube, cambia: enviada}
+          - {en: conexión, enfoca: [texto], max: 2.4, dy: -140, captura: enviada}
+          - {en: conexión, resalta: texto, etiqueta: "Al día", lado: arriba, captura: enviada}
+      - id: ajuste
+        texto: >-
+          Y si prefieres enviar tú, se apaga en Ajustes, Guardar y
+          sincronizar.
+        pasos:
+          - {al: inicio, cambia: ajuste}
+          - {al: inicio, enfoca: [envio], max: 1.8, captura: ajuste}
+          - {en: prefieres, resalta: interruptor, etiqueta: "Y se envía a GitHub", lado: izquierda, captura: ajuste}
+
+  - id: descartar
+    capitulo: Descartar
+    antes: 0.5
+    pantalla: descartar
+    frases:
+      - id: descartar
+        texto: >-
+          Y lo que no quieras guardar, Descartar lo deja como estaba, después
+          de preguntarte.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.7}
+          - {en: preguntarte, resalta: confirmar}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Guardar deja el cambio con tu nombre; y en GitHub, en cuanto hay
+          conexión.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, escribir para las diapositivas, los apuntes o
+          tu copia.
