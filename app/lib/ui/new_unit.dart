@@ -62,6 +62,7 @@ Future<String?> createUnitFrom(
       topic: topic ?? '',
       kind: kind,
       repos: writable,
+      preferredRepo: repoWithMost(session, writable, category, topic),
       askCategory: askCategory,
     ),
   );
@@ -85,6 +86,28 @@ Future<String?> createUnitFrom(
   return created;
 }
 
+/// El repositorio que ya tiene más lecciones de [category] (y de [topic],
+/// si lo hay), de entre [repos]: donde va lo nuevo de ese tema.
+///
+/// Proponer el primero de la lista era proponer el del ejemplo para una
+/// lección de álgebra que vive, con todas las demás, en el del departamento.
+String? repoWithMost(
+  Session session,
+  List<String> repos,
+  String category,
+  String? topic,
+) {
+  final counts = <String, int>{};
+  for (final unit in session.catalogue.units) {
+    if (unit.category != category) continue;
+    if (topic != null && topic.isNotEmpty && unit.topic != topic) continue;
+    if (!repos.contains(unit.repo)) continue;
+    counts[unit.repo] = (counts[unit.repo] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return null;
+  return counts.entries.reduce((a, b) => b.value > a.value ? b : a).key;
+}
+
 class NewUnitDialog extends StatefulWidget {
   const NewUnitDialog({
     super.key,
@@ -93,6 +116,7 @@ class NewUnitDialog extends StatefulWidget {
     required this.topic,
     required this.kind,
     required this.repos,
+    this.preferredRepo,
     this.askCategory = false,
   });
 
@@ -103,6 +127,9 @@ class NewUnitDialog extends StatefulWidget {
 
   /// Los repositorios donde se puede escribir. Con más de uno, se pregunta.
   final List<String> repos;
+
+  /// El que viene elegido: el de las lecciones de al lado, si lo hay.
+  final String? preferredRepo;
 
   /// Si se deja cambiar la categoría aunque venga dada: desde una
   /// composición es una suposición, desde la biblioteca es la que se mira.
@@ -121,7 +148,9 @@ class _NewUnitDialogState extends State<NewUnitDialog> {
     text: widget.topic,
   );
   late String _kind = widget.kind;
-  late String? _repo = widget.repos.firstOrNull;
+  late String? _repo = widget.repos.contains(widget.preferredRepo)
+      ? widget.preferredRepo
+      : widget.repos.firstOrNull;
 
   @override
   void dispose() {

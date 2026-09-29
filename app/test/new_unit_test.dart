@@ -59,6 +59,41 @@ Future<NewUnitRequest?> Function() openDialog(
 }
 
 void main() {
+  // Proponía siempre el primero de la lista: una lección de álgebra, en el
+  // repositorio del ejemplo, aunque todas las de álgebra estuvieran en el
+  // del departamento.
+  test('propone el repositorio que ya tiene las lecciones del tema', () async {
+    final catalogue = Catalogue.merge([
+      catalogueWith([
+        unitJson(path: 'content/analysis/normed/definition'),
+      ], repo: 'profe/mio'),
+      catalogueWith([
+        unitJson(
+          path: 'content/algebra/matrices/rank',
+          category: 'algebra',
+          topic: 'matrices',
+        ),
+        unitJson(
+          path: 'content/algebra/matrices/det',
+          category: 'algebra',
+          topic: 'matrices',
+        ),
+      ], repo: 'dep/comun'),
+    ]);
+    final session = FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogue,
+    );
+    await session.primeForTest(catalogue);
+    const both = ['profe/mio', 'dep/comun'];
+    expect(repoWithMost(session, both, 'algebra', 'matrices'), 'dep/comun');
+    expect(repoWithMost(session, both, 'analysis', null), 'profe/mio');
+    // Una categoría que no tiene nadie: lo decide la lista.
+    expect(repoWithMost(session, both, 'geometria', null), isNull);
+    // Y solo entre los que se pueden escribir.
+    expect(repoWithMost(session, ['profe/mio'], 'algebra', null), isNull);
+  });
+
   testWidgets('del título sale el nombre de la carpeta, y se dice dónde va', (
     tester,
   ) async {
