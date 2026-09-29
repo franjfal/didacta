@@ -91,6 +91,21 @@ void main() {
     );
   });
 
+  test('y no la confunde con el título en ese idioma', () {
+    // El título va antes y tiene su línea por idioma: tomarla por la del
+    // estado dejaba sin huella a casi todas las lecciones.
+    expect(
+      declaredSourceHash(
+        'title:\n  es: Límite\n  va: Límit\n\n'
+            'reference: es\n'
+            'languages:\n  es: {status: source}\n'
+            '  va: {status: reviewed, source_hash: sha256:ef}\n',
+        'va',
+      ),
+      'sha256:ef',
+    );
+  });
+
   test('encuentra en el historial la versión que se revisó', () async {
     final session = await sessionWith(hash: contentHash(before));
     final unit = session.catalogue.units.single;

@@ -1895,11 +1895,23 @@ class Session extends ChangeNotifier {
 
 /// La huella del original que declara [language] en un `unit.yaml`, escrita
 /// en línea (`va: {status: reviewed, source_hash: sha256:…}`) o en bloque.
+///
+/// Solo dentro de `languages:`: el título también tiene una línea por idioma
+/// (`title:` / `  va: …`), va antes, y se la tomaba por la del estado --así
+/// que «Ver qué ha cambiado» no encontraba nunca la huella--.
 String? declaredSourceHash(String yaml, String language) {
   final lines = yaml.split('\n');
   final head = RegExp('^(\\s+)${RegExp.escape(language)}:\\s*(.*)\$');
+  var inLanguages = false;
   for (var i = 0; i < lines.length; i += 1) {
-    final match = head.firstMatch(lines[i]);
+    final line = lines[i];
+    if (line.trim().isEmpty || line.trimLeft().startsWith('#')) continue;
+    if (!line.startsWith(' ')) {
+      inLanguages = RegExp(r'^languages:\s*$').hasMatch(line);
+      continue;
+    }
+    if (!inLanguages) continue;
+    final match = head.firstMatch(line);
     if (match == null) continue;
     final rest = match.group(2)!;
     final inline = RegExp(r'source_hash:\s*([^,}\s]+)').firstMatch(rest);

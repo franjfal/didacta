@@ -51,6 +51,9 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   Ver cambios», «Deshacer» y los demás se quedaban puestos hasta pulsarlos y
   tapaban la barra de abajo, la que dice si hay cambios sin enviar. Ahora
   duran sus segundos, como antes.
+- **«Ver qué ha cambiado» en una traducción desactualizada funciona.** Se
+  confundía la línea del título en ese idioma con la de su estado, y decía
+  siempre que no se sabía desde cuándo había cambiado el original.
 - **La cola de traducción abre en el idioma que falta.** Pulsar una lección
   en Traducción la abría en la pestaña de siempre, y había que buscar la del
   idioma que se venía a traducir.

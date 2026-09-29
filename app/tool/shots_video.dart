@@ -186,6 +186,8 @@ void main() {
 
   tearDownAll(() async {
     if (video == null) return;
+    // `DIDACTA_VIDEO_CONSERVAR=1`: el repositorio se queda, para mirarlo.
+    if (Platform.environment['DIDACTA_VIDEO_CONSERVAR'] == '1') return;
     if (neutral == null) {
       if (await root.exists()) await root.delete(recursive: true);
       return;
