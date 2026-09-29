@@ -2423,6 +2423,9 @@ class _ApproveButton extends StatelessWidget {
 Future<void> _approve(BuildContext context, _LanguageEditor editor) async {
   final session = sessionOf(context);
   final messenger = ScaffoldMessenger.of(context);
+  // El router, antes de esperar: al quedar revisada, este botón deja de
+  // existir, y su `context` con él.
+  final router = GoRouter.of(context);
   final language = editor.language;
   final title = editor.unit.title(editor.unit.reference);
   // La siguiente, antes de aprobar: después esta ya no está en la lista, y
@@ -2467,8 +2470,7 @@ Future<void> _approve(BuildContext context, _LanguageEditor editor) async {
   // acaba de guardar lo corregido: sin esperar a ese repintado, salir
   // preguntaba por unos cambios que ya estaban guardados.
   await WidgetsBinding.instance.endOfFrame;
-  if (!context.mounted) return;
-  goTo(context, Routes.unit(next.path, language: language));
+  router.go(Routes.unit(next.path, language: language));
 }
 
 Future<void> _saveEditor(BuildContext context, _LanguageEditor editor) async {

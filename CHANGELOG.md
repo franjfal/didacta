@@ -56,7 +56,11 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   idioma que se venía a traducir.
 - **«Aprobar y siguiente» ya no pregunta por lo que acaba de guardar.** Con
   algo corregido, guardaba y marcaba revisada, pero al pasar a la siguiente
-  salía «Hay cambios sin guardar».
+  salía «Hay cambios sin guardar». Y al pasar a la siguiente se abre con su
+  texto: de una lección a otra, la pantalla se reutilizaba con el editor de
+  la anterior, y guardar habría escrito ese texto en la nueva. Pasaba igual
+  con cualquier enlace directo de una lección a otra, de un documento a otro
+  o de un curso a otro.
 
 ## 0.3.0 — 2026-09-28
 

@@ -86,7 +86,14 @@ GoRouter buildRouter(Session session) {
             path: '/unit/:path(.*)',
             onExit: (context, state) => _leaving(context, state, session),
             pageBuilder: (context, state) => NoTransitionPage(
+              // Con clave por lección: sin ella, ir de una a otra --«Aprobar y
+              // siguiente», un enlace-- reutilizaba la pantalla con los
+              // editores de la anterior, y guardar escribía su texto en la
+              // nueva. El `pageKey` de go_router es por ruta, no por
+              // dirección. Otro idioma u otra línea de la misma sí la
+              // conservan: lo lleva `didUpdateWidget`.
               child: UnitPage(
+                key: ValueKey('unit:${state.pathParameters['path']}'),
                 unitPath: state.pathParameters['path'] ?? '',
                 language: state.uri.queryParameters['lang'],
                 line: int.tryParse(state.uri.queryParameters['linea'] ?? ''),
@@ -102,7 +109,12 @@ GoRouter buildRouter(Session session) {
             path: '/courses/:course/:year',
             onExit: (context, state) => _leaving(context, state, session),
             pageBuilder: (context, state) => NoTransitionPage(
+              // Por lo mismo que la lección: cada curso, su pantalla.
               child: YearPage(
+                key: ValueKey(
+                  'year:${state.pathParameters['course']}/'
+                  '${state.pathParameters['year']}',
+                ),
                 courseId: state.pathParameters['course']!,
                 year: state.pathParameters['year']!,
               ),
@@ -113,6 +125,11 @@ GoRouter buildRouter(Session session) {
             onExit: (context, state) => _leaving(context, state, session),
             pageBuilder: (context, state) => NoTransitionPage(
               child: DocumentPage(
+                key: ValueKey(
+                  'document:${state.pathParameters['course']}/'
+                  '${state.pathParameters['year']}/'
+                  '${state.pathParameters['document']}',
+                ),
                 courseId: state.pathParameters['course']!,
                 year: state.pathParameters['year']!,
                 documentId: state.pathParameters['document']!,
