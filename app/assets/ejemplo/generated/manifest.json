@@ -149,7 +149,7 @@
       "documentClass": "article",
       "family": "handout",
       "id": "handout",
-      "label": "Handout",
+      "label": "Guía",
       "labels": {
         "en": "Handout",
         "va": "Guia"
@@ -169,7 +169,7 @@
       "documentClass": "article",
       "family": "handout",
       "id": "handout-answers",
-      "label": "Handout (con resultados)",
+      "label": "Guía (con resultados)",
       "labels": {
         "en": "Handout (with answers)",
         "va": "Guia (amb resultats)"
@@ -189,7 +189,7 @@
       "documentClass": "article",
       "family": "handout",
       "id": "handout-teacher",
-      "label": "Handout (profesor)",
+      "label": "Guía (profesor)",
       "labels": {
         "en": "Handout (teacher)",
         "va": "Guia (professor)"

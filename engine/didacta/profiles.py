@@ -214,7 +214,10 @@ class Profile:
         elif self.id == "book":
             base = "Libro"
         elif self.layout == "compact":
-            base = "Handout"
+            # «Guía», como al exportar --ver [label_in]--: la lista de
+            # plantillas decía «Handout» en castellano, y el fichero que se
+            # repartía, «Guía».
+            base = "Guía"
         else:
             base = "Apuntes"
 

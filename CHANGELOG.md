@@ -89,6 +89,8 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   primer bloque propio, los dos de siempre salen por su id hasta declararlos
   también, y al hacerlo había que volver a escribir «Teoría» y se perdían sus
   traducciones. Ahora viene escrito, y se guarda en todos sus idiomas.
+- **La plantilla compacta se llama «Guía» en todas partes.** La lista de
+  plantillas decía «Handout», y el fichero que se exportaba, «Guía».
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios
   abiertos, el diálogo proponía siempre el primero, aunque las demás
   lecciones de ese tema estuvieran en otro.

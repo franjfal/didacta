@@ -142,6 +142,12 @@ class ProfileRegistryTests(unittest.TestCase):
             if profile.is_teacher:
                 self.assertIn("profesor", profile.label, profile.id)
 
+    def test_the_label_in_spanish_is_the_one_exported(self):
+        # La lista de plantillas y el fichero repartido dicen lo mismo: la
+        # compacta se llamaba «Handout» en la lista y «Guía» al exportar.
+        for profile in self.profiles.values():
+            self.assertEqual(profile.label, profile.label_in("es"), profile.id)
+
     def test_pretex_is_the_whole_interface_to_latex(self):
         pretex = self.profiles["slides"].pretex("va", "../../")
         self.assertIn(r"\def\DidactaProfile{slides}", pretex)
