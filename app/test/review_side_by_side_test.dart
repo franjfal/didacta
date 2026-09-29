@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/state/session.dart';
+import 'package:didacta_app/ui/unsaved_dialog.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/unit_page.dart';
 
@@ -56,6 +57,7 @@ final String longText = [
 Future<(FakeSession, FakeGateway, GoRouter)> open(
   WidgetTester tester, {
   bool split = false,
+  bool guard = false,
 }) async {
   tester.view.physicalSize = const Size(1600, 900);
   tester.view.devicePixelRatio = 1;
@@ -78,6 +80,14 @@ Future<(FakeSession, FakeGateway, GoRouter)> open(
     routes: [
       GoRoute(
         path: '/unit/:rest(.*)',
+        // Como el de la aplicación, con `guard`: preguntar al salir si hay
+        // algo sin guardar.
+        onExit: guard
+            ? (context, state) => confirmLeaving(
+                context,
+                session.unsaved.whatAt(state.uri.path),
+              )
+            : null,
         builder: (_, state) => Scaffold(
           body: UnitPage(
             key: ValueKey(state.uri.toString()),
@@ -132,6 +142,26 @@ void main() {
     final yaml = gateway.files['$unitPath/unit.yaml']!;
     expect(yaml, contains('va: {status: reviewed, source_hash: sha256:'));
     expect(gateway.files['$unitPath/va.tex'], 'Corregida.\n');
+    expect(
+      router.routeInformationProvider.value.uri.toString(),
+      contains(next.path),
+    );
+  });
+
+  testWidgets('y al irse a la siguiente no pregunta por lo que ya guardó', (
+    tester,
+  ) async {
+    // La marca de «sin guardar» se apunta al repintar; aprobar navegaba
+    // antes, y salir preguntaba por unos cambios que acababa de guardar.
+    final (session, _, router) = await open(tester, guard: true);
+    final next = session.nextToReview('va', after: unitPath)!;
+
+    await tester.enterText(find.byType(TextField).first, 'Corregida.\n');
+    await settle(tester);
+    await tester.tap(find.byKey(const Key('approve-next')));
+    await settle(tester);
+
+    expect(find.text('Hay cambios sin guardar'), findsNothing);
     expect(
       router.routeInformationProvider.value.uri.toString(),
       contains(next.path),

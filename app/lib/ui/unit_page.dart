@@ -2463,6 +2463,11 @@ Future<void> _approve(BuildContext context, _LanguageEditor editor) async {
       ),
     ),
   );
+  // Lo que dice si hay algo sin guardar se apunta al repintar, y aprobar
+  // acaba de guardar lo corregido: sin esperar a ese repintado, salir
+  // preguntaba por unos cambios que ya estaban guardados.
+  await WidgetsBinding.instance.endOfFrame;
+  if (!context.mounted) return;
   goTo(context, Routes.unit(next.path, language: language));
 }
 

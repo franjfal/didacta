@@ -54,6 +54,9 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 - **La cola de traducción abre en el idioma que falta.** Pulsar una lección
   en Traducción la abría en la pestaña de siempre, y había que buscar la del
   idioma que se venía a traducir.
+- **«Aprobar y siguiente» ya no pregunta por lo que acaba de guardar.** Con
+  algo corregido, guardaba y marcaba revisada, pero al pasar a la siguiente
+  salía «Hay cambios sin guardar».
 
 ## 0.3.0 — 2026-09-28
 
