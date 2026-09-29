@@ -98,6 +98,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   es por donde se gestionan, solo salía cuando ya había alguno. Ahora, con
   la interfaz Completa, sale también sin ninguno, y la paleta ofrece
   «Gestionar los grados».
+- **Una lección nueva nace con identidad propia.** Creada desde la
+  aplicación, desde `didacta new unit` o desde un asistente, llevaba un id
+  sacado de su carpeta, que no cuenta como estable: la comprobación del
+  repositorio avisaba de ella en cuanto existía.
 - **El registro del servidor MCP sigue el tamaño del texto.** Con el texto
   grande en Apariencia, las líneas del registro y los argumentos de cada
   herramienta se quedaban pequeñas.

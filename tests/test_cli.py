@@ -822,6 +822,36 @@ class StaleDocumentTests(unittest.TestCase):
         self.assertTrue(self.stale())
 
 
+class NewUnitTests(unittest.TestCase):
+    """`new unit`: una lección nueva nace con identidad estable."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        self.cli = load_cli()
+        self.root = tempfile.mkdtemp(prefix="didacta-new-unit-")
+        self.addCleanup(shutil.rmtree, self.root, True)
+        with open(os.path.join(self.root, "didacta.yaml"), "w",
+                  encoding="utf-8") as handle:
+            handle.write("name: Prueba\nlanguages: [es, va]\n"
+                         "default_language: es\nbuild_dir: .build\n")
+
+    def test_nace_con_un_id_estable(self):
+        # Llevaba `a.b.c`, sacado de la ruta, que no es un id: `check`
+        # avisaba en cuanto se creaba y mover la carpeta lo dejaba mintiendo.
+        from didacta import identity as identity_mod
+
+        self.assertEqual(
+            self.cli.main(["--root", self.root, "new", "unit", "a/b/c"]), 0)
+        with open(os.path.join(self.root, "content", "a", "b", "c",
+                               "unit.yaml"), encoding="utf-8") as handle:
+            ids = [line.split(":", 1)[1].strip()
+                   for line in handle if line.startswith("id:")]
+        self.assertEqual(len(ids), 1)
+        self.assertTrue(identity_mod.is_id(ids[0]), ids[0])
+
+
 class DuplicateUnitTests(unittest.TestCase):
     """`new unit --from`: una lección que empieza siendo una copia de otra.
 

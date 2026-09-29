@@ -1579,8 +1579,11 @@ def cmd_new_unit(args):
     with open(os.path.join(directory, "unit.yaml"), "w", encoding="utf-8") as handle:
         handle.write(UNIT_META_TEMPLATE.format(
             title=title,
-            identifier=".".join(parts) if area == repo_mod.CONTENT
-                       else "problems." + ".".join(parts),
+            # Un id nuevo, como los que pone `didacta ids`: sin él la lección
+            # nacía sin identidad estable y `check` avisaba en cuanto se
+            # creaba. Derivado de la ruta daba `calculo.limites.x`, que no es
+            # un id: mover la carpeta lo dejaba mintiendo.
+            identifier=identity_mod.new_id("u"),
             kind=args.kind,
             block=block,
             language=language,

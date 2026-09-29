@@ -34,6 +34,7 @@ import os
 import time
 
 from . import build as build_mod
+from . import identity as identity_mod
 from . import repo as repo_mod
 from . import yamlio
 
@@ -514,6 +515,7 @@ def tool_write_unit(workspace, arguments):
 #: para que compile y para que se encuentre.
 NEW_UNIT_YAML = """\
 # %(title)s
+id: %(identifier)s
 kind: %(kind)s
 block: %(block)s
 title:
@@ -574,6 +576,8 @@ def tool_create_unit(workspace, arguments):
         if code != language
     )
     meta = NEW_UNIT_YAML % {
+        # Con identidad desde que nace, como `didacta new unit`.
+        "identifier": identity_mod.new_id("u"),
         "title": title,
         "kind": arguments.get("kind") or "theory",
         "block": arguments.get("block") or _default_block(repository, area),

@@ -242,6 +242,18 @@ class Writing(Harness):
         found = self.call("search_units", query="una-nueva")["units"]
         self.assertEqual(len(found), 1)
 
+    def test_a_new_unit_is_born_with_a_stable_id(self):
+        # Sin id, `check` avisaba de ella en cuanto se creaba.
+        from didacta import identity as identity_mod
+
+        out = self.call("create_unit", path="pruebas/con-id",
+                        title="Con id", text="Texto.")
+        with open(os.path.join(self.root, out["path"], "unit.yaml")) as handle:
+            ids = [line.split(":", 1)[1].strip()
+                   for line in handle if line.startswith("id:")]
+        self.assertEqual(len(ids), 1)
+        self.assertTrue(identity_mod.is_id(ids[0]), ids[0])
+
     def test_a_new_unit_marks_the_other_languages_as_pending(self):
         # Comentados, que es como el repositorio cuenta lo que falta. Un
         # título vacío sería un título, y saldría en el PDF.
