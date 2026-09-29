@@ -367,6 +367,20 @@ Future<bool> reuseDocument(
   required ReuseTarget target,
   String? repo,
 }) async {
+  // Con nombres, no con ids: «tema-1 se da también en matematicas-i» es lo
+  // que dice el fichero, no lo que ve quien lo ha hecho.
+  final what =
+      session
+          .courseById(course)
+          ?.years[year]
+          ?.documents
+          .where((each) => each.id == document)
+          .firstOrNull
+          ?.title(session.language) ??
+      document;
+  final where =
+      session.courseById(target.course)?.title(session.language) ??
+      target.course;
   final ok = await runAdmin(
     context,
     session,
@@ -406,11 +420,11 @@ Future<bool> reuseDocument(
       ReuseMode.link => tr(
         '«{0}» se da también en {1} {2}. Es el '
         'mismo tema: lo que se edite se ve desde los dos.',
-        [document, target.course, target.year],
+        [what, where, target.year],
       ),
       ReuseMode.move => tr('«{0}» está ahora en {1} {2}.', [
-        document,
-        target.course,
+        what,
+        where,
         target.year,
       ]),
       ReuseMode.duplicate =>
@@ -418,12 +432,12 @@ Future<bool> reuseDocument(
             ? tr(
                 '«{0}» duplicado en {1} {2}, con '
                 'sus propias lecciones.',
-                [document, target.course, target.year],
+                [what, where, target.year],
               )
             : tr(
                 '«{0}» duplicado en {1} {2}. Son '
                 'dos temas; las lecciones siguen siendo las mismas.',
-                [document, target.course, target.year],
+                [what, where, target.year],
               ),
     },
     repo: repo,

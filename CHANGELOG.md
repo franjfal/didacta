@@ -74,7 +74,8 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   no la lleva, marca los que sí y, si se elige uno de ellos, lo dice.
 - **Con la interfaz Esencial, llevar un tema a otro sitio ya no ofrece
   moverlo.** El menú escondía «Mover a…», pero el diálogo de «Añadir
-  vinculado a…» y «Duplicar en…» lo seguía ofreciendo.
+  vinculado a…» y «Duplicar en…» lo seguía ofreciendo. Y el aviso de al
+  terminar dice el tema y la asignatura por su nombre, no por su id.
 
 ## 0.3.0 — 2026-09-28
 
