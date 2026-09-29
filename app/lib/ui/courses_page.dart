@@ -120,6 +120,13 @@ class _CoursesPageState extends State<CoursesPage> {
           icon: Icons.add,
           run: () => _createCourse(session),
         ),
+      if (session.admin() != null)
+        PaletteCommand(
+          title: tr('Gestionar los grados'),
+          keywords: tr('titulaciones grado agrupar'),
+          icon: Icons.school_outlined,
+          run: () => _manageDegrees(session),
+        ),
       if (session.canSearchText)
         PaletteCommand(
           title: tr('Cambios recientes'),
@@ -230,8 +237,12 @@ class _CoursesPageState extends State<CoursesPage> {
               ),
           ],
         ),
+        // Con la interfaz Completa, también sin ninguno: la tira es la única
+        // puerta a crear el primero, y escondida hasta que hubiera uno no se
+        // podía crear ninguno.
         if (degrees.isNotEmpty ||
-            session.catalogue.undeclaredDegrees.isNotEmpty)
+            session.catalogue.undeclaredDegrees.isNotEmpty ||
+            (session.completeInterface && session.admin() != null))
           _DegreeStrip(
             session: session,
             onManage: () => _manageDegrees(session),

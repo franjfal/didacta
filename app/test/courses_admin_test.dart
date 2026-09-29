@@ -510,6 +510,32 @@ void main() {
     });
   });
 
+  // Sin ningún grado, la tira no salía, y era la única puerta a crear el
+  // primero: desde la aplicación no se podía crear ninguno.
+  group('el primer grado', () {
+    testWidgets('con la interfaz Completa se puede crear', (tester) async {
+      final harness = await pump(tester, const CoursesPage());
+      // Con la Esencial, no: los grados son de quien organiza el material.
+      expect(find.byKey(const Key('manage-degrees')), findsNothing);
+
+      await tester.runAsync(() => harness.session.setCompleteInterface(true));
+      await tester.pumpWidget(
+        ChangeNotifierProvider<Session>.value(
+          value: harness.session,
+          child: MaterialApp(
+            theme: didactaTheme(),
+            home: const Scaffold(body: CoursesPage(key: ValueKey('otra'))),
+          ),
+        ),
+      );
+      await settle(tester);
+      expect(find.text('Ningún grado declarado todavía.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('manage-degrees')));
+      await settle(tester);
+      expect(find.byType(AlertDialog), findsOneWidget);
+    });
+  });
+
   group('una asignatura nueva', () {
     testWidgets('el identificador se deduce del título', (tester) async {
       await pump(tester, const CoursesPage());

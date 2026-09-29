@@ -94,6 +94,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   duplicar o retocar la primera se escribía solo esa, y todo lo que usaba
   las de serie dejaba de compilarse. Ahora la primera se escribe con las de
   serie, y el diálogo lo dice: las que no quieras, se apagan.
+- **El primer grado se puede crear.** La tira de grados de Asignaturas, que
+  es por donde se gestionan, solo salía cuando ya había alguno. Ahora, con
+  la interfaz Completa, sale también sin ninguno, y la paleta ofrece
+  «Gestionar los grados».
 - **La plantilla compacta se llama «Guía» en todas partes.** La lista de
   plantillas decía «Handout», y el fichero que se exportaba, «Guía».
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios
