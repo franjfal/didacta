@@ -1204,21 +1204,56 @@ class CatalogueEditor {
   }) async {
     const where = 'templates.yaml';
     final current = await _readTemplateFile(repo, where);
-    final templates =
-        TemplatesFile(current.isEmpty ? emptyTemplatesYaml : current)..add(
-          id: id,
-          titles: titles,
-          documentClass: documentClass,
-          classOptions: classOptions,
-          axes: axes,
-          languages: session.catalogueOrNull?.languagesOf(repo) ?? const ['es'],
+    final catalogue = session.catalogueOrNull;
+    final languages = catalogue?.languagesOf(repo) ?? const <String>['es'];
+    final templates = TemplatesFile(
+      current.isEmpty ? emptyTemplatesYaml : current,
+    );
+    // La primera que se declara, con las de serie. En cuanto hay alguna
+    // declarada valen solo las declaradas --es lo que deja elegir cuáles se
+    // ofrecen--, así que escribir solo la nueva dejaba sin compilar todo lo
+    // que usaba las de serie, sin decir nada. Se escriben también, tal como
+    // son, y la que no se quiera se apaga.
+    void addNew() => templates.add(
+      id: id,
+      titles: titles,
+      documentClass: documentClass,
+      classOptions: classOptions,
+      axes: axes,
+      languages: languages,
+    );
+    final first = catalogue != null && catalogue.templates.isEmpty;
+    if (first) {
+      for (final profile in catalogue.profiles) {
+        // La que se está editando, en su sitio: el orden es el que se
+        // ofrece.
+        if (profile.id == id) {
+          addNew();
+          continue;
+        }
+        if (templates.ids.contains(profile.id)) continue;
+        templates.add(
+          id: profile.id,
+          titles: {
+            if (profile.label.isNotEmpty) 'es': profile.label,
+            ...profile.labels,
+          },
+          documentClass: profile.documentClass,
+          classOptions: profile.classOptions,
+          axes: profile.axes,
+          languages: languages,
         );
+      }
+    }
+    if (!templates.ids.contains(id)) addNew();
 
     await _writeTemplateFile(
       repo,
       where,
       templates.text,
-      tr('Declarar la plantilla {0}', [id]),
+      first && catalogue.profiles.isNotEmpty
+          ? tr('Declarar la plantilla {0}, con las de serie', [id])
+          : tr('Declarar la plantilla {0}', [id]),
     );
     // El preámbulo va aparte y solo si lo hay: una plantilla sin cabecera
     // propia se comporta exactamente como la salida de serie, que es el punto

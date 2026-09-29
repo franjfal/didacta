@@ -942,6 +942,20 @@ class _TemplateDialogState extends State<_TemplateDialog> {
                   tone: context.palette.teacher,
                 ),
               ),
+            // La primera: con ella se escriben las de serie, porque en cuanto
+            // hay alguna declarada valen solo las declaradas.
+            if (!_editing && widget.session.catalogue.templates.isEmpty)
+              Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Note(
+                  key: const Key('template-first'),
+                  tr(
+                    'Es la primera plantilla que se declara: con ella se '
+                    'escriben también las que trae Didacta, para que todo se '
+                    'siga compilando igual. Las que no quieras, se apagan.',
+                  ),
+                ),
+              ),
             SectionLabel(tr('Nombre')),
             for (final code in _languages)
               Padding(

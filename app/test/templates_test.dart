@@ -555,6 +555,7 @@ documents:
       List<Map<String, dynamic>> templates = const [],
       List<Map<String, dynamic>> blocks = const [],
       List<Map<String, dynamic>> units = const [],
+      List<Map<String, dynamic>> profiles = const [],
     }) async {
       final gateway = FakeGateway(files: {...files});
       final catalogue = repoWith(
@@ -562,6 +563,7 @@ documents:
         templates: templates,
         blocks: blocks,
         units: units,
+        profiles: profiles,
       );
       final session = FakeSession(
         gatewayOverride: gateway,
@@ -591,6 +593,77 @@ documents:
       // El fichero se crea con sus comentarios, que son la única explicación
       // de por qué apagar una no es borrarla.
       expect(gateway.files['templates.yaml'], contains('active: false'));
+    });
+
+    // En cuanto hay una declarada valen solo las declaradas. Escribir solo
+    // la nueva dejaba sin compilar todo lo que usaba las de serie.
+    test('la primera que se declara lleva consigo las de serie', () async {
+      final shipped = [
+        {
+          'id': 'slides',
+          'label': 'Diapositivas',
+          'labels': {'va': 'Diapositives', 'en': 'Slides'},
+          'family': 'slides',
+          'documentClass': 'beamer',
+          'axes': {'medium': 'slides'},
+        },
+        {
+          'id': 'notes',
+          'label': 'Apuntes',
+          'family': 'notes',
+          'documentClass': 'article',
+          'classOptions': '11pt',
+        },
+      ];
+      final (session, gateway) = await sessionWith(profiles: shipped);
+      await session.declareTemplate(
+        repo: session.workspace.repos.first.id,
+        id: 'bolsillo',
+        titles: {'es': 'Apuntes de bolsillo'},
+        documentClass: 'article',
+        classOptions: '10pt,a5paper',
+      );
+      final file = TemplatesFile(gateway.files['templates.yaml']!);
+      expect(file.ids, ['slides', 'notes', 'bolsillo']);
+      expect(file.fieldOf('notes', 'class-options'), anyOf('11pt', isNull));
+      expect(gateway.files['templates.yaml'], contains('va: Diapositives'));
+
+      // Editar una de serie la deja en su sitio, no al final.
+      final (again, written) = await sessionWith(profiles: shipped);
+      await again.declareTemplate(
+        repo: again.workspace.repos.first.id,
+        id: 'slides',
+        titles: {'es': 'Mis diapositivas'},
+        documentClass: 'beamer',
+      );
+      expect(TemplatesFile(written.files['templates.yaml']!).ids, [
+        'slides',
+        'notes',
+      ]);
+    });
+
+    test('las siguientes ya no las vuelven a escribir', () async {
+      final (session, gateway) = await sessionWith(
+        files: {'templates.yaml': templatesYaml},
+        templates: [templateJson('slides'), templateJson('notes')],
+        profiles: [
+          {
+            'id': 'book',
+            'label': 'Libro',
+            'family': 'book',
+            'documentClass': 'book',
+          },
+        ],
+      );
+      await session.declareTemplate(
+        repo: session.workspace.repos.first.id,
+        id: 'bolsillo',
+        titles: {'es': 'Apuntes de bolsillo'},
+        documentClass: 'article',
+      );
+      final ids = TemplatesFile(gateway.files['templates.yaml']!).ids;
+      expect(ids, contains('bolsillo'));
+      expect(ids, isNot(contains('book')));
     });
 
     test('apagar una escribe en el repositorio que la declara', () async {

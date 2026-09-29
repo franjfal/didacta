@@ -89,6 +89,11 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   primer bloque propio, los dos de siempre salen por su id hasta declararlos
   también, y al hacerlo había que volver a escribir «Teoría» y se perdían sus
   traducciones. Ahora viene escrito, y se guarda en todos sus idiomas.
+- **Crear tu primera plantilla ya no deja sin compilar lo demás.** En cuanto
+  un repositorio declara alguna plantilla, valen solo las declaradas; al
+  duplicar o retocar la primera se escribía solo esa, y todo lo que usaba
+  las de serie dejaba de compilarse. Ahora la primera se escribe con las de
+  serie, y el diálogo lo dice: las que no quieras, se apagan.
 - **La plantilla compacta se llama «Guía» en todas partes.** La lista de
   plantillas decía «Handout», y el fichero que se exportaba, «Guía».
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios
