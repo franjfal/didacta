@@ -104,7 +104,8 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   repositorio avisaba de ella en cuanto existía.
 - **El registro del servidor MCP sigue el tamaño del texto.** Con el texto
   grande en Apariencia, las líneas del registro y los argumentos de cada
-  herramienta se quedaban pequeñas.
+  herramienta se quedaban pequeñas. Y cada arranque sale una vez: decía
+  «Servidor en marcha» tres veces seguidas.
 - **La plantilla compacta se llama «Guía» en todas partes.** La lista de
   plantillas decía «Handout», y el fichero que se exportaba, «Guía».
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios

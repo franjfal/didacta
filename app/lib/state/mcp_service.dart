@@ -167,6 +167,10 @@ class McpService extends ChangeNotifier {
   void _onLine(String line) {
     final event = McpEvent.parse(line);
     if (event == null) return;
+    // Que ha arrancado ya lo apunta [start], con la dirección. El motor lo
+    // dice además dos veces --al estar listo y al escuchar--, y el registro
+    // enseñaba «Servidor en marcha» tres veces por un solo arranque.
+    if (event.kind == McpEventKind.started) return;
     _note(event);
     notifyListeners();
   }

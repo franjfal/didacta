@@ -592,6 +592,25 @@ void main() {
       expect(row.textSpan, isNotNull);
     });
 
+    // El motor dice que está listo y que escucha, y el servicio apunta el
+    // arranque con su dirección: salían tres «Servidor en marcha».
+    test('un arranque se apunta una vez', () async {
+      final session = StubSession();
+      final service = McpService(
+        openRunner: () => FakeRunner(session: session),
+      );
+      addTearDown(service.dispose);
+      await service.start(repositories: unRepo);
+      session.lines
+        ..add(line({'event': 'ready', 'transport': 'http'}))
+        ..add(line({'event': 'listening', 'port': 41234}));
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        service.activity.where((e) => e.kind == McpEventKind.started),
+        hasLength(1),
+      );
+    });
+
     testWidgets('sin nada todavía, lo dice en vez de dejar un hueco', (
       tester,
     ) async {
