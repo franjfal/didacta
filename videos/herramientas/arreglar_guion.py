@@ -5,7 +5,7 @@
 Un `texto: …` con «: » en medio es, para YAML, una clave dentro de otra, y
 el guion no se lee. Esto lo reescribe como bloque, sin tocar lo demás, y
 comprueba que después se lee. De paso entrecomilla los iconos que YAML
-tomaría por un sí o un no (`icono: no` es `false`).
+tomaría por un sí o un no (`icono: no` es `false`, y `resalta: on`, `true`).
 """
 
 import re
@@ -18,7 +18,7 @@ def arreglar(ruta: str) -> int:
     lineas = open(ruta, encoding="utf-8").read().split("\n")
     salida, cambios = [], 0
     for linea in lineas:
-        linea, n = re.subn(r"\b(icono|marca): (no|yes|on|off|si)\b(?!\")", r'\1: "\2"', linea)
+        linea, n = re.subn(r"\b(icono|marca|resalta|enfoca|pulsa|apunta): (no|yes|on|off|si)\b(?!\")", r'\1: "\2"', linea)
         cambios += n
         m = re.match(r"^(\s*)(- )?(texto|lema_texto): (?![>|'\"])(.*: .*)$", linea)
         if m:

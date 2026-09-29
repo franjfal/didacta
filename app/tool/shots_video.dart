@@ -32,6 +32,9 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+// El de la plataforma, que es el que se sustituye; viene con file_selector.
+// ignore: depend_on_referenced_packages
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -152,7 +155,11 @@ void main() {
     if (neutral != null) {
       root = Directory(neutral)..createSync(recursive: true);
       work = '${root.path}/$repoName';
-      for (final old in [work, '${root.path}/.remotos']) {
+      for (final old in [
+        work,
+        '${root.path}/.remotos',
+        '${root.path}/Reparto',
+      ]) {
         if (Directory(old).existsSync()) {
           Directory(old).deleteSync(recursive: true);
         }
@@ -161,6 +168,7 @@ void main() {
       root = Directory.systemTemp.createTempSync('didacta-video-');
       work = '${root.path}/$owner/$repoName';
     }
+    FileSelectorPlatform.instance = VideoFolderPicker('${root.path}/Reparto');
     await run('cp', ['-R', '$engine/app/assets/ejemplo', work], root.path);
     remote = '${root.path}/.remotos/$owner/$repoName.git';
     Directory('${root.path}/.remotos/$owner').createSync(recursive: true);
@@ -196,7 +204,11 @@ void main() {
     }
     // En la carpeta neutra hay más cosas --el enlace al motor--: solo se
     // borra lo que ha puesto esta ejecución.
-    for (final mine in [work, '${root.path}/.remotos']) {
+    for (final mine in [
+      work,
+      '${root.path}/.remotos',
+      '${root.path}/Reparto',
+    ]) {
       if (Directory(mine).existsSync()) {
         Directory(mine).deleteSync(recursive: true);
       }
@@ -1133,4 +1145,21 @@ class _Missing implements Toolchain {
     InstallPlan plan, {
     void Function(String line)? onOutput,
   }) async {}
+}
+
+/// El diálogo de elegir carpeta, contestado: la de reparto del vídeo, en la
+/// carpeta neutra (`/Users/Shared/Didacta/Reparto`) y no en la de quien graba.
+class VideoFolderPicker extends FileSelectorPlatform {
+  VideoFolderPicker(this.folder);
+
+  final String folder;
+
+  @override
+  Future<String?> getDirectoryPath({
+    String? initialDirectory,
+    String? confirmButtonText,
+  }) async {
+    Directory(folder).createSync(recursive: true);
+    return folder;
+  }
 }

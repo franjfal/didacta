@@ -1,0 +1,134 @@
+# G6 · El valenciano con Apertium, y el glosario
+#
+# El único vídeo que va de valenciano. Montado desde este guion, con Apertium
+# de verdad: el arnés deja salir a internet en estas capturas
+# (`"red": true`), el glosario se escribe y se guarda, y «El teorema de
+# Bolzano» se traduce al valenciano con su servidor público. Lo que sale es lo
+# que ha devuelto: el aviso del glosario y el «Bozen» también.
+codigo: G6
+titulo: El valenciano con Apertium, y el glosario
+subtitulo: Un valenciano con su variante, y que respete tus términos
+ruta: Traducir
+siguiente: "G7 · Añadir o quitar un idioma"
+voz: narrador
+lema: ["El glosario avisa, no sustituye:", "lo que se firma, se lee."]
+lema_en: "lo que se firma"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás traducir al valenciano con Apertium, y hacer que
+          respete tus términos.
+
+  - id: apertium
+    capitulo: Apertium
+    antes: 0.5
+    pantalla: apagado
+    frases:
+      - id: variante
+        texto: >-
+          En Ajustes, Traducción automática, Apertium traduce el valenciano con
+          su variante: «seua», «duració». Es gratuito, y no pide clave.
+        pasos:
+          - {al: inicio, enfoca: [apertium], max: 1.6}
+          - {en: variante, resalta: texto, hasta: 3}
+          - {en: gratuito, resalta: interruptor, lado: izquierda}
+      - id: encender
+        texto: >-
+          Se enciende, y Probar dice si responde.
+        pasos:
+          - {al: inicio, cambia: encendido}
+          - {al: inicio, enfoca: [apertium, resultado], max: 1.6, captura: encendido}
+          - {en: enciende, resalta: interruptor, captura: encendido, hasta: 1.4}
+          - {en: responde, resalta: resultado, captura: encendido}
+
+  - id: glosario
+    capitulo: El glosario
+    antes: 0.5
+    pantalla: glosario-lleno
+    frases:
+      - id: terminos
+        texto: >-
+          El glosario guarda tus términos: supremo es suprem, y cota superior
+          es fita superior.
+        pasos:
+          - {al: inicio, enfoca: [fila0, guardar], max: 1.4}
+          - {en: supremo, resalta: fila0, hasta: 1.8}
+          - {en: cota, resalta: fila1}
+      - id: repo
+        texto: >-
+          Se guarda en el repositorio: lo comparte todo el que traduce en él.
+        pasos:
+          - {al: inicio, cambia: glosario}
+          - {al: inicio, enfoca: [resumen], max: 2, captura: glosario}
+          - {en: repositorio, resalta: resumen, captura: glosario}
+
+  - id: traducir
+    capitulo: Traducir
+    antes: 0.5
+    pantalla: vacia
+    frases:
+      - id: boton
+        texto: >-
+          En la pestaña Valencià de una lección que no lo tiene, Traducirla con
+          la máquina.
+        pasos:
+          - {al: inicio, enfoca: [va, boton], max: 1.6, dy: 40}
+          - {en: Valencià, resalta: va, hasta: 1.8}
+          - {en: Traducirla, resalta: boton}
+      - id: gratis
+        texto: >-
+          Antes de mandar nada, dice cuánto texto es. Con Apertium, gratis.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [dialogo], max: 1.6, captura: dialogo}
+          - {en: cuánto, resalta: estimacion, captura: dialogo, hasta: 2.4}
+          - {en: gratis, resalta: ir, captura: dialogo}
+
+  - id: aviso
+    capitulo: El aviso
+    antes: 0.5
+    pantalla: resumen
+    frases:
+      - id: borrador
+        texto: >-
+          Queda guardada como borrador. Y lo que no ha salido como dice el
+          glosario, se avisa: cota superior tendría que ser fita superior.
+        pasos:
+          - {al: inicio, enfoca: [resumen], max: 1.4}
+          - {en: borrador, resalta: cuenta, hasta: 2.4}
+          - {en: glosario, resalta: aviso, color: ambar, lado: abajo}
+      - id: sustituir
+        texto: >-
+          Avisa, y no lo cambia solo: una palabra sustituida puede no concordar
+          con el resto de la frase.
+
+  - id: leer
+    capitulo: Leerla
+    antes: 0.5
+    pantalla: traducida
+    frases:
+      - id: bozen
+        texto: >-
+          Y lo que el glosario no sabe, solo lo ve quien la lee: aquí la
+          máquina ha llamado a Bolzano por el nombre alemán de su ciudad,
+          Bozen.
+        pasos:
+          - {al: inicio, enfoca: [bozen, teorema], max: 2}
+          - {en: lee, resalta: estado, hasta: 1.8}
+          - {en: Bozen, resalta: bozen, etiqueta: "Bozen", color: rojo, lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El glosario avisa, no sustituye: lo que se firma, se lee.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, añadir o quitar un idioma.

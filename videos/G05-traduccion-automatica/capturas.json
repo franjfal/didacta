@@ -1,0 +1,219 @@
+{
+  "capturas": [
+    {
+      "nombre": "ajustes",
+      "ruta": "/settings?s=traduccion",
+      "claves": {
+        "google": "clave-de-prueba-0000"
+      },
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "google": {
+          "clave": "translation-google",
+          "alto": 60
+        },
+        "guardada": {
+          "clave": "translation-google-stored"
+        },
+        "probar": {
+          "clave": "translation-google-test"
+        },
+        "llavero": {
+          "contiene": "Se guardan en el llavero",
+          "alto": 40
+        }
+      }
+    },
+    {
+      "nombre": "tanda",
+      "ruta": "/translations",
+      "idioma": "en",
+      "red": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "contiene": "Sin traducir",
+            "n": 0
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "pick-content/calculo/continuidad/funcion-continua"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "pick-content/calculo/limites/algebra-de-limites"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "pick-content/calculo/limites/historia-del-epsilon"
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "marcadas",
+            "cajas": {
+              "traducir": {
+                "clave": "translate-picked"
+              },
+              "cuenta": {
+                "contiene": "lecciones marcadas"
+              },
+              "f1": {
+                "clave": "pick-content/calculo/continuidad/funcion-continua"
+              },
+              "f2": {
+                "clave": "pick-content/calculo/limites/algebra-de-limites"
+              },
+              "f3": {
+                "clave": "pick-content/calculo/limites/historia-del-epsilon"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "translate-picked"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "caracteres que mandar"
+          },
+          "max": 600,
+          "despues": 4
+        },
+        {
+          "capturar": {
+            "nombre": "estimacion",
+            "cajas": {
+              "proveedor": {
+                "clave": "translate-provider"
+              },
+              "estimacion": {
+                "clave": "translate-estimate"
+              },
+              "ir": {
+                "clave": "translate-go"
+              },
+              "idiomas": {
+                "contiene": "English · 3"
+              },
+              "protege": {
+                "contiene": "Las fórmulas y las claves"
+              },
+              "dialogo": {
+                "clave": "translate-go",
+                "alto": 300
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "translate-provider"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "texto": "Apertium",
+            "ultimo": true
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "gratis con Apertium"
+          },
+          "max": 600,
+          "despues": 4
+        },
+        {
+          "capturar": {
+            "nombre": "apertium",
+            "cajas": {
+              "proveedor": {
+                "clave": "translate-provider"
+              },
+              "estimacion": {
+                "clave": "translate-estimate"
+              },
+              "ir": {
+                "clave": "translate-go"
+              },
+              "dialogo": {
+                "clave": "translate-go",
+                "alto": 300
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "translate-go"
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "progreso",
+            "cajas": {
+              "progreso": {
+                "clave": "translate-progress"
+              },
+              "detener": {
+                "clave": "translate-stop"
+              },
+              "dialogo": {
+                "clave": "translate-stop",
+                "alto": 300
+              }
+            }
+          }
+        },
+        {
+          "hasta_que": {
+            "clave": "translate-summary"
+          },
+          "max": 1600,
+          "despues": 10
+        }
+      ],
+      "cajas": {
+        "resumen": {
+          "clave": "translate-summary"
+        },
+        "lista": {
+          "texto": "Para revisar y aprobar",
+          "alto": 150
+        },
+        "dialogo": {
+          "clave": "translate-summary",
+          "alto": 400
+        },
+        "cuenta": {
+          "contiene": "traducidos y guardados como borrador"
+        }
+      },
+      "claves": {
+        "google": "clave-de-prueba-0000",
+        "apertium": "on"
+      }
+    }
+  ]
+}

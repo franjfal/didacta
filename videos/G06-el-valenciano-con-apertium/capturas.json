@@ -1,0 +1,277 @@
+{
+  "capturas": [
+    {
+      "nombre": "glosario",
+      "ruta": "/settings?s=traduccion",
+      "red": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "mostrar": {
+            "clave": "translation-apertium"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "apagado",
+            "cajas": {
+              "apertium": {
+                "clave": "translation-apertium",
+                "alto": 60
+              },
+              "interruptor": {
+                "clave": "translation-apertium-on"
+              },
+              "texto": {
+                "contiene": "con la variante valenciana"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "translation-apertium-on"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "translation-apertium-save"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "translation-apertium-test"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "translation-apertium-result"
+          },
+          "max": 200,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "encendido",
+            "cajas": {
+              "apertium": {
+                "clave": "translation-apertium",
+                "alto": 60
+              },
+              "interruptor": {
+                "clave": "translation-apertium-on"
+              },
+              "resultado": {
+                "clave": "translation-apertium-result"
+              },
+              "texto": {
+                "contiene": "con la variante valenciana"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "open-glossary"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "open-glossary"
+          },
+          "esperar": 10
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "glossary-0-es"
+            },
+            "texto": "supremo"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "glossary-0-va"
+            },
+            "texto": "suprem"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "glossary-add"
+          },
+          "esperar": 4
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "glossary-1-es"
+            },
+            "texto": "cota superior"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "glossary-1-va"
+            },
+            "texto": "fita superior"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "glosario-lleno",
+            "cajas": {
+              "fila0": {
+                "clave": "glossary-0-es",
+                "fila": 450
+              },
+              "fila1": {
+                "clave": "glossary-1-es",
+                "fila": 450
+              },
+              "guardar": {
+                "clave": "glossary-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "glossary-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "2 término(s), en"
+          },
+          "max": 300,
+          "despues": 8
+        }
+      ],
+      "cajas": {
+        "resumen": {
+          "clave": "glossary-summary"
+        },
+        "apertium": {
+          "clave": "translation-apertium",
+          "alto": 60
+        }
+      }
+    },
+    {
+      "nombre": "traducida",
+      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano?lang=va",
+      "red": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "vacia",
+            "cajas": {
+              "va": {
+                "clave": "language-tab-va"
+              },
+              "boton": {
+                "clave": "translate-this-language"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "translate-this-language"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "estimacion": {
+                "clave": "translate-estimate"
+              },
+              "ir": {
+                "clave": "translate-go"
+              },
+              "dialogo": {
+                "clave": "translate-go",
+                "alto": 200
+              },
+              "va": {
+                "contiene": "Valencià · 1"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "translate-go"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "translate-summary"
+          },
+          "max": 800,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "resumen",
+            "cajas": {
+              "resumen": {
+                "clave": "translate-summary"
+              },
+              "aviso": {
+                "contiene": "«cota superior» tendría"
+              },
+              "cuenta": {
+                "contiene": "caracteres mandados"
+              },
+              "avisos": {
+                "texto": "Para mirar",
+                "alto": 80
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Abrir"
+          },
+          "esperar": 10
+        },
+        {
+          "esperar": 30
+        }
+      ],
+      "cajas": {
+        "va": {
+          "clave": "language-tab-va"
+        },
+        "estado": {
+          "texto": "sin revisar",
+          "n": 0
+        },
+        "bozen": {
+          "editor": "El teorema de Bozen"
+        },
+        "teorema": {
+          "editor": "\\begin{theorem}[Bozen]",
+          "hasta": "\\end{theorem}"
+        }
+      }
+    }
+  ]
+}

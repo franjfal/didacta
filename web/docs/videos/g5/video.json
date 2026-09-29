@@ -1,0 +1,89 @@
+{
+  "codigo": "G5",
+  "titulo": "Traducción automática",
+  "fichero": "G05-traduccion-automatica.mp4",
+  "duracion": 83.28,
+  "megas": 4.4,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Traducción automática"
+    },
+    {
+      "t": 8.88,
+      "titulo": "La clave"
+    },
+    {
+      "t": 22.6,
+      "titulo": "Varias a la vez"
+    },
+    {
+      "t": 32.3,
+      "titulo": "Lo que cuesta"
+    },
+    {
+      "t": 50.14,
+      "titulo": "La tanda"
+    },
+    {
+      "t": 63.37,
+      "titulo": "Con cuidado"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás pedir a la máquina un primer borrador de varias lecciones, sin que se rompa el LaTeX, y sabiendo lo que cuesta."
+    },
+    {
+      "t": 9.38,
+      "texto": "En Ajustes, Traducción automática, se pone la clave de Google o de Azure. Se guarda en el llavero del sistema, y no se vuelve a enseñar."
+    },
+    {
+      "t": 18.99,
+      "texto": "Probar dice si funciona, sin traducir nada."
+    },
+    {
+      "t": 23.1,
+      "texto": "En Traducción, marcas las lecciones que quieres, y Traducir."
+    },
+    {
+      "t": 27.66,
+      "texto": "De salida, solo lo que no tiene texto, y en el idioma que miras."
+    },
+    {
+      "t": 32.8,
+      "texto": "Antes de mandar nada, dice cuántos caracteres son, y cuánto costaría con Google: unos céntimos."
+    },
+    {
+      "t": 39.63,
+      "texto": "Con Apertium, que también traduce al inglés, gratis."
+    },
+    {
+      "t": 43.37,
+      "texto": "Y lo que no se traduce, se protege: las órdenes, los entornos y las fórmulas viajan tal cual."
+    },
+    {
+      "t": 50.64,
+      "texto": "Mientras traduce, Detener la para: lo hecho hasta ahí se guarda."
+    },
+    {
+      "t": 55.33,
+      "texto": "Al terminar, las tres quedan como borrador, en un solo cambio, cada una con su título, y una lista para revisarlas."
+    },
+    {
+      "t": 63.87,
+      "texto": "Ojo con una opción: rehacer también las que ya tienen texto se lleva por delante lo que corregiste a mano."
+    },
+    {
+      "t": 71.83,
+      "texto": "La máquina hace el borrador; lo que se firma, hay que leerlo."
+    },
+    {
+      "t": 76.36,
+      "texto": "En el siguiente vídeo, el valenciano con Apertium, y el glosario."
+    }
+  ]
+}

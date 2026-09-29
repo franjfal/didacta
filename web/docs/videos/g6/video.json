@@ -1,0 +1,85 @@
+{
+  "codigo": "G6",
+  "titulo": "El valenciano con Apertium, y el glosario",
+  "fichero": "G06-el-valenciano-con-apertium.mp4",
+  "duracion": 83.04,
+  "megas": 5.3,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "El valenciano con Apertium, y el glosario"
+    },
+    {
+      "t": 7.0,
+      "titulo": "Apertium"
+    },
+    {
+      "t": 21.08,
+      "titulo": "El glosario"
+    },
+    {
+      "t": 33.78,
+      "titulo": "Traducir"
+    },
+    {
+      "t": 45.44,
+      "titulo": "El aviso"
+    },
+    {
+      "t": 61.71,
+      "titulo": "Leerla"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás traducir al valenciano con Apertium, y hacer que respete tus términos."
+    },
+    {
+      "t": 7.5,
+      "texto": "En Ajustes, Traducción automática, Apertium traduce el valenciano con su variante: «seua», «duració». Es gratuito, y no pide clave."
+    },
+    {
+      "t": 17.7,
+      "texto": "Se enciende, y Probar dice si responde."
+    },
+    {
+      "t": 21.58,
+      "texto": "El glosario guarda tus términos: supremo es suprem, y cota superior es fita superior."
+    },
+    {
+      "t": 28.54,
+      "texto": "Se guarda en el repositorio: lo comparte todo el que traduce en él."
+    },
+    {
+      "t": 34.28,
+      "texto": "En la pestaña Valencià de una lección que no lo tiene, Traducirla con la máquina."
+    },
+    {
+      "t": 39.14,
+      "texto": "Antes de mandar nada, dice cuánto texto es. Con Apertium, gratis."
+    },
+    {
+      "t": 45.94,
+      "texto": "Queda guardada como borrador. Y lo que no ha salido como dice el glosario, se avisa: cota superior tendría que ser fita superior."
+    },
+    {
+      "t": 54.38,
+      "texto": "Avisa, y no lo cambia solo: una palabra sustituida puede no concordar con el resto de la frase."
+    },
+    {
+      "t": 62.21,
+      "texto": "Y lo que el glosario no sabe, solo lo ve quien la lee: aquí la máquina ha llamado a Bolzano por el nombre alemán de su ciudad, Bozen."
+    },
+    {
+      "t": 71.52,
+      "texto": "El glosario avisa, no sustituye: lo que se firma, se lee."
+    },
+    {
+      "t": 77.02,
+      "texto": "En el siguiente vídeo, añadir o quitar un idioma."
+    }
+  ]
+}

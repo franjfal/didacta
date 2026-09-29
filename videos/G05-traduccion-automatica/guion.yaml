@@ -1,0 +1,136 @@
+# G5 · Traducción automática
+#
+# Montado desde este guion. La clave de Google que se ve guardada es de
+# prueba y no sale a ninguna parte (`"claves"` en capturas.json); la tanda sí
+# es de verdad: tres lecciones al inglés con Apertium, que es público y
+# gratuito, dentro del arnés (`"red": true`).
+codigo: G5
+titulo: Traducción automática
+subtitulo: Un primer borrador, sin romper el LaTeX ni llevarte un susto con la factura
+ruta: Traducir
+siguiente: "G6 · El valenciano con Apertium, y el glosario"
+voz: narrador
+lema: ["La máquina hace el borrador;", "lo que se firma, hay que leerlo."]
+lema_en: "lo que se firma"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás pedir a la máquina un primer borrador de varias
+          lecciones, sin que se rompa el LaTeX, y sabiendo lo que cuesta.
+
+  - id: clave
+    capitulo: La clave
+    antes: 0.5
+    pantalla: ajustes
+    frases:
+      - id: llavero
+        texto: >-
+          En Ajustes, Traducción automática, se pone la clave de Google o de
+          Azure. Se guarda en el llavero del sistema, y no se vuelve a enseñar.
+        pasos:
+          - {al: inicio, enfoca: [llavero, google], max: 1.5}
+          - {en: llavero, resalta: llavero, hasta: 2.4}
+          - {en: enseñar, resalta: guardada, etiqueta: "Guardada", lado: abajo, alinear: derecha}
+      - id: probar
+        texto: >-
+          Probar dice si funciona, sin traducir nada.
+        pasos:
+          - {en: Probar, resalta: probar, lado: abajo}
+
+  - id: tanda
+    capitulo: Varias a la vez
+    antes: 0.5
+    pantalla: marcadas
+    frases:
+      - id: marcar
+        texto: >-
+          En Traducción, marcas las lecciones que quieres, y Traducir.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: marcas, resalta: [f1, f2, f3], hasta: 2.2}
+          - {en: Traducir, resalta: traducir, lado: abajo, alinear: derecha}
+      - id: salida
+        texto: >-
+          De salida, solo lo que no tiene texto, y en el idioma que miras.
+        pasos:
+          - {al: inicio, cambia: estimacion}
+          - {al: inicio, enfoca: [dialogo], max: 1.5, captura: estimacion}
+          - {en: idioma, resalta: idiomas, captura: estimacion}
+
+  - id: coste
+    capitulo: Lo que cuesta
+    antes: 0.5
+    pantalla: estimacion
+    frases:
+      - id: antes
+        texto: >-
+          Antes de mandar nada, dice cuántos caracteres son, y cuánto costaría
+          con Google: unos céntimos.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.5}
+          - {en: caracteres, resalta: estimacion, lado: abajo}
+      - id: apertium
+        texto: >-
+          Con Apertium, que también traduce al inglés, gratis.
+        pasos:
+          - {al: inicio, cambia: apertium}
+          - {al: inicio, enfoca: [dialogo], max: 1.5, captura: apertium}
+          - {en: Apertium, resalta: proveedor, captura: apertium, hasta: 1.8}
+          - {en: gratis, resalta: estimacion, lado: abajo, captura: apertium}
+      - id: protege
+        texto: >-
+          Y lo que no se traduce, se protege: las órdenes, los entornos y las
+          fórmulas viajan tal cual.
+        pasos:
+          - {en: protege, resalta: protege, captura: apertium}
+
+  - id: traducir
+    capitulo: La tanda
+    antes: 0.5
+    pantalla: progreso
+    frases:
+      - id: detener
+        texto: >-
+          Mientras traduce, Detener la para: lo hecho hasta ahí se guarda.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.5}
+          - {en: Detener, resalta: detener, lado: arriba}
+      - id: borrador
+        texto: >-
+          Al terminar, las tres quedan como borrador, en un solo cambio, cada
+          una con su título, y una lista para revisarlas.
+        pasos:
+          - {al: inicio, cambia: tanda}
+          - {al: inicio, enfoca: [dialogo], max: 1.5, captura: tanda}
+          - {en: borrador, resalta: cuenta, captura: tanda, hasta: 2.6}
+          - {en: revisarlas, resalta: lista, captura: tanda}
+
+  - id: ojo
+    capitulo: Con cuidado
+    antes: 0.5
+    grafico:
+      tipo: frase
+      uno: "Rehacer las que ya tienen texto"
+      dos: "se lleva por delante lo corregido a mano."
+      dos_en: corregido a mano
+    frases:
+      - id: rehacer
+        texto: >-
+          Ojo con una opción: rehacer también las que ya tienen texto se lleva
+          por delante lo que corregiste a mano.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La máquina hace el borrador; lo que se firma, hay que leerlo.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, el valenciano con Apertium, y el glosario.
