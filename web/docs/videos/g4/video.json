@@ -1,0 +1,65 @@
+{
+  "codigo": "G4",
+  "titulo": "Revisar y aprobar traducciones",
+  "fichero": "G04-revisar-y-aprobar.mp4",
+  "duracion": 56.66,
+  "megas": 5.5,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Revisar y aprobar traducciones"
+    },
+    {
+      "t": 7.58,
+      "titulo": "Sin revisar"
+    },
+    {
+      "t": 18.33,
+      "titulo": "Aprobar y siguiente"
+    },
+    {
+      "t": 30.54,
+      "titulo": "Cuando cambia el original"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás revisar traducciones una detrás de otra, y ponerlas al día cuando cambia el original."
+    },
+    {
+      "t": 8.09,
+      "texto": "Una traducción sin revisar. Abajo, un aviso: una fórmula no coincide con el original."
+    },
+    {
+      "t": 15.38,
+      "texto": "Aquí sobraba: la corriges."
+    },
+    {
+      "t": 18.83,
+      "texto": "Y Aprobar y siguiente: guarda lo corregido, la marca como revisada, y abre la siguiente sin revisar."
+    },
+    {
+      "t": 25.79,
+      "texto": "Revisar treinta es leer treinta, y pulsar treinta veces."
+    },
+    {
+      "t": 31.04,
+      "texto": "Si después alguien cambia el original, la traducción revisada pasa a desactualizada, y lo dice arriba."
+    },
+    {
+      "t": 37.53,
+      "texto": "Ver qué ha cambiado enseña la diferencia entre el original que se revisó, y el de ahora: aquí, una frase nueva."
+    },
+    {
+      "t": 45.64,
+      "texto": "Revisar treinta traducciones es leer treinta, y pulsar treinta veces."
+    },
+    {
+      "t": 50.88,
+      "texto": "En el siguiente vídeo, la traducción automática."
+    }
+  ]
+}

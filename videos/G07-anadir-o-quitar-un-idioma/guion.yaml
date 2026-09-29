@@ -1,0 +1,111 @@
+# G7 · Añadir o quitar un idioma
+#
+# Montado desde este guion. El arnés deja Cálculo I sin el inglés (en su
+# course.yaml) y dentro se le vuelve a poner, así que se ve de verdad cómo el
+# inglés del repositorio pasa a tener candado.
+codigo: G7
+titulo: Añadir o quitar un idioma
+subtitulo: En qué orden se añade, y por qué a veces no deja quitarlo
+ruta: Traducir
+siguiente: "H1 · Exportar un curso para el aula virtual"
+voz: narrador
+lema: ["Cada lista de idiomas", "vive dentro de la anterior."]
+lema_en: "vive dentro"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás en qué orden se añade un idioma, y por qué a veces
+          no deja quitarlo.
+
+  - id: listas
+    capitulo: Cuatro listas
+    antes: 0.5
+    grafico:
+      tipo: arbol
+      titulo: Cada una, dentro de la anterior
+      lineas:
+        - {texto: "Didacta", nota: "sabe imprimir diez idiomas", en: Didacta}
+        - {texto: "el repositorio", nivel: 1, nota: "traduce a algunos de ellos", en: repositorio}
+        - {texto: "la asignatura", nivel: 2, nota: "se da en algunos de esos", en: asignatura}
+        - {texto: "tú", nivel: 3, nota: "trabajas con los que quieras", en: trabajas}
+    frases:
+      - id: cuatro
+        texto: >-
+          Hay cuatro listas de idiomas: los que Didacta sabe imprimir, a los que
+          traduce el repositorio, en los que se da la asignatura, y con los que
+          trabajas tú.
+      - id: dentro
+        texto: >-
+          Cada una vive dentro de la anterior: una asignatura no se puede dar
+          en un idioma que su repositorio no mantiene.
+
+  - id: repositorio
+    capitulo: Primero, el repositorio
+    antes: 0.5
+    pantalla: antes
+    frases:
+      - id: aqui
+        texto: >-
+          En Ajustes, Idiomas, cada repositorio dice a cuáles traduce. Otro
+          idioma se añade aquí.
+        pasos:
+          - {al: inicio, enfoca: [repo, anadir], max: 1.7, dy: 40}
+          - {en: traduce, resalta: [es, va, en], hasta: 2.4}
+          - {en: aquí, resalta: elegir}
+          - {en: aquí, cambia: desplegable}
+          - {en: aquí, resalta: opciones, captura: desplegable}
+      - id: libre
+        texto: >-
+          El inglés se puede quitar: ninguna asignatura se da en él.
+        pasos:
+          - {al: inicio, enfoca: [repo, anadir], max: 1.7, dy: 40}
+          - {en: quitar, resalta: en, etiqueta: "Se puede quitar", lado: abajo}
+
+  - id: asignatura
+    capitulo: Después, la asignatura
+    antes: 0.5
+    pantalla: ficha
+    frases:
+      - id: ficha
+        texto: >-
+          Después, en la ficha de la asignatura, se marca el inglés. Solo
+          ofrece los del repositorio.
+        pasos:
+          - {al: inicio, enfoca: [idiomas, en], max: 1.8}
+          - {en: marca, cambia: ficha-en}
+          - {en: marca, resalta: en, captura: ficha-en}
+
+  - id: candado
+    capitulo: El candado
+    antes: 0.5
+    pantalla: candado
+    frases:
+      - id: candado
+        texto: >-
+          Y ahora el inglés del repositorio lleva candado: una asignatura se da
+          en él.
+        pasos:
+          - {al: inicio, enfoca: [lista], max: 1.6, dy: 60}
+          - {en: candado, resalta: en, hasta: 2}
+          - {en: asignatura, resalta: consejo, lado: abajo}
+      - id: orden
+        texto: >-
+          Para quitarlo, al revés: primero de la ficha de la asignatura, y
+          después del repositorio.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Cada lista de idiomas vive dentro de la anterior.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, exportar un curso para el aula virtual.

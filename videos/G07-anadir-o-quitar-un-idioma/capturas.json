@@ -1,0 +1,182 @@
+{
+  "capturas": [
+    {
+      "nombre": "candado",
+      "ruta": "/settings?s=idiomas",
+      "sin_idiomas": [
+        "va"
+      ],
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "courses/calculo-i/course.yaml",
+            "buscar": "languages: [es, va, en]",
+            "poner": "languages: [es, va]",
+            "mensaje": "Cálculo I, sin inglés",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "antes",
+            "cajas": {
+              "repo": {
+                "texto": "A los que traduce cada repositorio",
+                "n": 0
+              },
+              "es": {
+                "clave": "repo-profe/didacta-ejemplo-language-es"
+              },
+              "va": {
+                "clave": "repo-profe/didacta-ejemplo-language-va"
+              },
+              "elegir": {
+                "clave": "repo-profe/didacta-ejemplo-language-choice"
+              },
+              "anadir": {
+                "clave": "repo-profe/didacta-ejemplo-language-add"
+              },
+              "lista": {
+                "clave": "repo-profe/didacta-ejemplo-language-es",
+                "fila": 900
+              },
+              "en": {
+                "clave": "repo-profe/didacta-ejemplo-language-en"
+              },
+              "quitar": {
+                "consejo": "Quitar English",
+                "n": 1
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "repo-profe/didacta-ejemplo-language-choice"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "desplegable",
+            "cajas": {
+              "elegir": {
+                "clave": "repo-profe/didacta-ejemplo-language-choice"
+              },
+              "opciones": {
+                "rect": [
+                  858,
+                  386,
+                  192,
+                  352
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 4
+        },
+        {
+          "ir": "/courses",
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "edit-title-course-calculo-i"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "ficha",
+            "cajas": {
+              "idiomas": {
+                "texto": "Idiomas",
+                "fila": 300
+              },
+              "en": {
+                "clave": "course-language-en"
+              },
+              "guardar": {
+                "clave": "course-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "course-language-en"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "ficha-en",
+            "cajas": {
+              "en": {
+                "clave": "course-language-en"
+              },
+              "guardar": {
+                "clave": "course-save"
+              },
+              "idiomas": {
+                "texto": "Idiomas",
+                "fila": 300
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "course-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Guardado"
+          },
+          "max": 400,
+          "despues": 40
+        },
+        {
+          "ir": "/settings?s=idiomas",
+          "esperar": 14
+        },
+        {
+          "apuntar": {
+            "clave": "repo-profe/didacta-ejemplo-language-en"
+          },
+          "esperar": 20
+        }
+      ],
+      "cajas": {
+        "en": {
+          "clave": "repo-profe/didacta-ejemplo-language-en"
+        },
+        "es": {
+          "clave": "repo-profe/didacta-ejemplo-language-es"
+        },
+        "va": {
+          "clave": "repo-profe/didacta-ejemplo-language-va"
+        },
+        "lista": {
+          "clave": "repo-profe/didacta-ejemplo-language-es",
+          "fila": 900
+        },
+        "consejo": {
+          "contiene": "Se dan en English"
+        }
+      }
+    }
+  ]
+}

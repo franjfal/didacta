@@ -46,6 +46,7 @@ import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/data/toolchain.dart';
+import 'package:didacta_app/data/translation_secrets.dart';
 import 'package:didacta_app/l10n/tr.dart';
 import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/model/workspace.dart';
@@ -271,6 +272,8 @@ void main() {
 
   /// La sesión de una captura. `sin_sesion`: sin haber entrado en GitHub;
   /// `sin_repositorios`: sin ningún repositorio abierto, como la primera vez.
+  final secrets = MemoryTranslationSecrets();
+
   Future<Session> openSession([Map<String, dynamic> shot = const {}]) async {
     final source = CatalogueSource.inClone(work, repo: repoId)!;
     final session = VideoSession(
@@ -284,6 +287,10 @@ void main() {
           : StubStore(),
       // Con el Client ID de la aplicación, como la de verdad: sin él, la
       // bienvenida pide uno, que es lo que no ve nunca quien la instala.
+      // En memoria, y la misma para todas las capturas del vídeo: el llavero
+      // del sistema no existe dentro de una prueba, y lo que se enciende en
+      // una captura se tiene que ver en la siguiente.
+      translationSecrets: secrets,
       preferences: MemoryPreferences(
         engine: shownEngine,
         clientId: didactaAppClientId.isEmpty
@@ -1010,6 +1017,9 @@ void main() {
         if (shot['completa'] == true) {
           await tester.runAsync(() => session.setCompleteInterface(true));
         }
+        // `"red": true`: con internet de verdad (Apertium, que es público y
+        // gratuito). Las pruebas lo cortan de salida.
+        if (shot['red'] == true) HttpOverrides.global = null;
         final welcome = shot['bienvenida'] == true;
         await mount(tester, session, welcome: welcome);
         await settleReal(tester, rounds: 3);
@@ -1066,6 +1076,7 @@ class VideoSession extends LocalSession {
     required super.catalogueSource,
     required super.tokenStore,
     super.preferences,
+    super.translationSecrets,
     this.missing = const {},
   });
 

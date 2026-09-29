@@ -1,0 +1,174 @@
+{
+  "capturas": [
+    {
+      "nombre": "siguiente",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=en",
+      "sin_idiomas": [
+        "va"
+      ],
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/unit.yaml",
+            "buscar": "  en: {status: translated}",
+            "poner": "  en: {status: draft}",
+            "mensaje": "La traducción inglesa, sin revisar",
+            "enviar": true
+          }
+        },
+        {
+          "editar": {
+            "fichero": "problems/calculo/limites/limites-de-cocientes/unit.yaml",
+            "buscar": "  en: {status: translated}",
+            "poner": "  en: {status: draft}",
+            "mensaje": "Otra, sin revisar",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "borrador",
+            "cajas": {
+              "en": {
+                "clave": "language-tab-en"
+              },
+              "aprobar": {
+                "clave": "approve-next",
+                "n": 0
+              },
+              "estado": {
+                "clave": "status-en"
+              },
+              "aviso": {
+                "clave": "tex-warnings"
+              },
+              "linea": {
+                "clave": "tex-warning-0"
+              },
+              "frase": {
+                "editor": "nor even on $f$ being defined there."
+              }
+            }
+          }
+        },
+        {
+          "editar_texto": {
+            "buscar": "nor even on $f$ being defined there.",
+            "poner": "nor even on it being defined there."
+          }
+        },
+        {
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "corregida",
+            "cajas": {
+              "aprobar": {
+                "clave": "approve-next",
+                "n": 0
+              },
+              "frase": {
+                "editor": "nor even on it being defined there."
+              },
+              "en": {
+                "clave": "language-tab-en"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "approve-next",
+            "n": 0
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Limits of quotients"
+          },
+          "max": 400,
+          "despues": 20
+        }
+      ],
+      "cajas": {
+        "en": {
+          "clave": "language-tab-en"
+        },
+        "aprobar": {
+          "clave": "approve-next",
+          "n": 0
+        },
+        "titulo": {
+          "texto": "Límites de cocientes",
+          "n": 0
+        },
+        "estado": {
+          "texto": "sin revisar",
+          "n": 0
+        }
+      }
+    },
+    {
+      "nombre": "diferencia",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=en",
+      "sin_idiomas": [
+        "va"
+      ],
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/es.tex",
+            "buscar": "salvo quizá en el propio $a$.",
+            "poner": "salvo quizá en el propio $a$, donde puede no estarlo.",
+            "mensaje": "Precisar la definición de límite",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "vieja",
+            "cajas": {
+              "franja": {
+                "clave": "outdated-strip"
+              },
+              "ver": {
+                "clave": "show-original-changes"
+              },
+              "en": {
+                "clave": "language-tab-en"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "show-original-changes"
+          },
+          "esperar": 16
+        }
+      ],
+      "cajas": {
+        "dialogo": {
+          "contiene": "Qué ha cambiado en el original",
+          "alto": 300
+        },
+        "cambio": {
+          "contiene": "donde puede no estarlo",
+          "n": 0
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "codigo": "G7",
+  "titulo": "Añadir o quitar un idioma",
+  "fichero": "G07-anadir-o-quitar-un-idioma.mp4",
+  "duracion": 68.12,
+  "megas": 3.4,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Añadir o quitar un idioma"
+    },
+    {
+      "t": 7.24,
+      "titulo": "Cuatro listas"
+    },
+    {
+      "t": 25.17,
+      "titulo": "Primero, el repositorio"
+    },
+    {
+      "t": 37.86,
+      "titulo": "Después, la asignatura"
+    },
+    {
+      "t": 45.36,
+      "titulo": "El candado"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás en qué orden se añade un idioma, y por qué a veces no deja quitarlo."
+    },
+    {
+      "t": 7.74,
+      "texto": "Hay cuatro listas de idiomas: los que Didacta sabe imprimir, a los que traduce el repositorio, en los que se da la asignatura, y con los que trabajas tú."
+    },
+    {
+      "t": 17.74,
+      "texto": "Cada una vive dentro de la anterior: una asignatura no se puede dar en un idioma que su repositorio no mantiene."
+    },
+    {
+      "t": 25.67,
+      "texto": "En Ajustes, Idiomas, cada repositorio dice a cuáles traduce. Otro idioma se añade aquí."
+    },
+    {
+      "t": 33.27,
+      "texto": "El inglés se puede quitar: ninguna asignatura se da en él."
+    },
+    {
+      "t": 38.36,
+      "texto": "Después, en la ficha de la asignatura, se marca el inglés. Solo ofrece los del repositorio."
+    },
+    {
+      "t": 45.86,
+      "texto": "Y ahora el inglés del repositorio lleva candado: una asignatura se da en él."
+    },
+    {
+      "t": 51.11,
+      "texto": "Para quitarlo, al revés: primero de la ficha de la asignatura, y después del repositorio."
+    },
+    {
+      "t": 58.21,
+      "texto": "Cada lista de idiomas vive dentro de la anterior."
+    },
+    {
+      "t": 61.6,
+      "texto": "En el siguiente vídeo, exportar un curso para el aula virtual."
+    }
+  ]
+}

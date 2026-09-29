@@ -1,0 +1,99 @@
+# G4 · Revisar y aprobar traducciones
+#
+# Montado desde este guion, con dos traducciones inglesas puestas «sin
+# revisar» por el arnés. La fórmula que no coincide es de verdad: la versión
+# inglesa del ejemplo tenía una $f$ que el original no tiene. La
+# desactualizada también: se cambia una frase del castellano después de
+# aprobar, y la diferencia sale del historial.
+codigo: G4
+titulo: Revisar y aprobar traducciones
+subtitulo: Revisarlas seguidas, y ponerlas al día cuando cambia el original
+ruta: Traducir
+siguiente: "G5 · Traducción automática"
+voz: narrador
+lema: ["Revisar treinta traducciones", "es leer treinta, y pulsar treinta veces."]
+lema_en: "es leer"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás revisar traducciones una detrás de otra, y ponerlas
+          al día cuando cambia el original.
+
+  - id: borrador
+    capitulo: Sin revisar
+    antes: 0.5
+    pantalla: borrador
+    frases:
+      - id: aviso
+        texto: >-
+          Una traducción sin revisar. Abajo, un aviso: una fórmula no coincide
+          con el original.
+        pasos:
+          - {al: inicio, enfoca: [estado, aprobar], max: 2, dx: -200, dy: 60}
+          - {en: sin revisar, resalta: estado, hasta: 2}
+          - {en: Abajo, enfoca: [aviso, frase], max: 1.6}
+          - {en: fórmula, resalta: linea, etiqueta: "Esta fórmula no está en el original", color: ambar, lado: arriba}
+      - id: corregir
+        texto: >-
+          Aquí sobraba: la corriges.
+        pasos:
+          - {en: sobraba, resalta: frase, color: ambar, hasta: 1.4}
+          - {en: corriges, cambia: corregida}
+          - {en: corriges, resalta: frase, captura: corregida}
+
+  - id: aprobar
+    capitulo: Aprobar y siguiente
+    antes: 0.5
+    pantalla: corregida
+    frases:
+      - id: boton
+        texto: >-
+          Y Aprobar y siguiente: guarda lo corregido, la marca como revisada, y
+          abre la siguiente sin revisar.
+        pasos:
+          - {al: inicio, enfoca: [aprobar], max: 2.2, dx: -150, dy: 80}
+          - {en: Aprobar, pulsa: aprobar}
+          - {en: siguiente sin revisar, cambia: siguiente}
+          - {en: siguiente sin revisar, reposo: true, captura: siguiente}
+          - {en: siguiente sin revisar, resalta: titulo, captura: siguiente}
+      - id: treinta
+        texto: >-
+          Revisar treinta es leer treinta, y pulsar treinta veces.
+
+  - id: vieja
+    capitulo: Cuando cambia el original
+    antes: 0.5
+    pantalla: vieja
+    frases:
+      - id: franja
+        texto: >-
+          Si después alguien cambia el original, la traducción revisada pasa a
+          desactualizada, y lo dice arriba.
+        pasos:
+          - {al: inicio, enfoca: [franja], max: 1.6}
+          - {en: desactualizada, resalta: franja, color: rojo}
+      - id: ver
+        texto: >-
+          Ver qué ha cambiado enseña la diferencia entre el original que se
+          revisó, y el de ahora: aquí, una frase nueva.
+        pasos:
+          - {en: Ver, resalta: ver, lado: abajo, alinear: derecha, hasta: 1.8}
+          - {en: diferencia, cambia: diferencia}
+          - {en: diferencia, enfoca: [dialogo], max: 1.4, captura: diferencia}
+          - {en: frase nueva, resalta: cambio, etiqueta: "Lo que cambió", lado: abajo, captura: diferencia}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Revisar treinta traducciones es leer treinta, y pulsar treinta veces.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, la traducción automática.
