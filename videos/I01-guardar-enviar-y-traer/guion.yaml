@@ -1,0 +1,109 @@
+# I1 · Guardar, enviar y traer
+#
+# Montado desde este guion. Los cambios de la barra son de verdad: el arnés
+# deja uno guardado sin enviar y otro que alguien envió a GitHub desde otra
+# copia (`"preparar"` en capturas.json).
+codigo: I1
+titulo: Guardar, enviar y traer
+subtitulo: Dónde está tu trabajo en cada momento, y cómo llega a GitHub
+ruta: No perder nada
+siguiente: "I2 · Ver cómo estaba un fichero, y recuperarlo"
+voz: narrador
+lema: ["Lo que no se envía está solo en tu ordenador;", "la copia de seguridad es GitHub."]
+lema_en: "la copia de seguridad"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dónde está tu trabajo en cada momento, y cómo
+          llega a GitHub.
+
+  - id: tres
+    capitulo: Tres momentos
+    antes: 0.5
+    grafico:
+      tipo: pasos
+      titulo: Del editor a GitHub
+      lineas:
+        - {texto: "Escribes: sin guardar, solo en el editor", en: Escribes}
+        - {texto: "Guardas: un cambio con tu nombre, en tu ordenador", en: Guardas}
+        - {texto: "Envías: el cambio llega a GitHub", en: Envías}
+    frases:
+      - id: tres
+        texto: >-
+          Tu trabajo pasa por tres momentos. Escribes, y está en el editor.
+          Guardas, y queda un cambio con tu nombre, en tu ordenador. Envías, y
+          llega a GitHub.
+
+  - id: guardar
+    capitulo: Sin guardar
+    antes: 0.5
+    pantalla: editada
+    frases:
+      - id: punto
+        texto: >-
+          Lo que no has guardado lo dice la pestaña, con su punto, y encima del
+          texto.
+        pasos:
+          - {al: inicio, enfoca: [es, guardar], max: 1.7, dy: 60}
+          - {en: pestaña, resalta: es, hasta: 1.8}
+          - {en: encima, resalta: singuardar, lado: abajo}
+
+  - id: barra
+    capitulo: La barra
+    antes: 0.5
+    pantalla: barra
+    frases:
+      - id: abajo
+        texto: >-
+          Abajo, lo que falta por enviar, y lo que hay nuevo en GitHub que aún
+          no has traído.
+        pasos:
+          - {al: inicio, enfoca: [texto], max: 2.4, dy: -140}
+          - {en: enviar, resalta: texto, lado: arriba, hasta: 2.8}
+          - {en: GitHub, enfoca: [nuevo], max: 2.2, dx: -200, dy: -140}
+          - {en: GitHub, resalta: nuevo, lado: arriba, alinear: derecha}
+      - id: botones
+        texto: >-
+          Arriba, traer y enviar: Comando Mayúsculas P trae, y Comando
+          Mayúsculas U envía.
+        pasos:
+          - {al: inicio, enfoca: [traer, enviar], max: 2.4, dx: -200, dy: 140}
+          - {en: trae, resalta: traer, lado: abajo, alinear: derecha, hasta: 2.2}
+          - {en: envía, resalta: enviar, lado: abajo, alinear: derecha}
+      - id: sinred
+        texto: >-
+          Sin conexión se guarda igual; lo guardado se envía cuando vuelve.
+
+  - id: ajustes
+    capitulo: Los interruptores
+    antes: 0.5
+    pantalla: ajustes
+    frases:
+      - id: tres
+        texto: >-
+          En Ajustes, Guardar y sincronizar: guardar lo deja en el historial,
+          revisar los cambios antes de guardar, y enviar a GitHub en cuanto se
+          guarda, que viene encendido.
+        pasos:
+          - {al: inicio, enfoca: [historial, enviar], max: 1.6}
+          - {en: historial, resalta: historial, hasta: 2}
+          - {en: revisar, resalta: revisar, hasta: 2}
+          - {en: enviar, resalta: enviar}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo que no se envía está solo en tu ordenador; la copia de seguridad es
+          GitHub.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, ver cómo estaba un fichero, y recuperarlo.

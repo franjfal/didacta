@@ -1162,4 +1162,14 @@ class VideoFolderPicker extends FileSelectorPlatform {
     Directory(folder).createSync(recursive: true);
     return folder;
   }
+
+  /// «Guardar una copia»: en la misma carpeta, con el nombre que propone.
+  @override
+  Future<FileSaveLocation?> getSaveLocation({
+    List<XTypeGroup>? acceptedTypeGroups,
+    SaveDialogOptions options = const SaveDialogOptions(),
+  }) async {
+    Directory(folder).createSync(recursive: true);
+    return FileSaveLocation('$folder/${options.suggestedName ?? 'copia.pdf'}');
+  }
 }

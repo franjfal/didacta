@@ -1,0 +1,98 @@
+# I2 · Ver cómo estaba un fichero, y recuperarlo
+#
+# Montado desde este guion. El historial es de verdad: el arnés guarda dos
+# cambios en «Límite de una función en un punto» antes de abrirla, y dentro se
+# recupera la versión del principio.
+codigo: I2
+titulo: Ver cómo estaba un fichero, y recuperarlo
+subtitulo: Mirar cualquier versión anterior, y traer de vuelta lo que se quitó
+ruta: No perder nada
+siguiente: "I3 · Congelar un curso"
+voz: narrador
+lema: ["Recuperar no deshace meses de un clic:", "trae una versión al editor, y decides."]
+lema_en: "trae una versión"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás mirar cualquier versión anterior de una lección, y
+          traer de vuelta lo que se quitó.
+
+  - id: historial
+    capitulo: El historial
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: lista
+        texto: >-
+          En la pestaña historial, a la izquierda, cada cambio que se ha
+          guardado, con su mensaje, quién y cuándo.
+        pasos:
+          - {al: inicio, enfoca: [lista], max: 1.5, dx: 300, dy: -150}
+          - {en: cambio, resalta: [ultimo, anterior], lado: derecha}
+      - id: version
+        texto: >-
+          Al elegir uno, el fichero entero, con lo que se quitó en rojo, lo que
+          se puso en verde, y las palabras que cambiaron.
+        pasos:
+          - {al: inicio, cambia: version}
+          - {al: inicio, enfoca: [quitado, puesto], max: 1.6, captura: version}
+          - {en: rojo, resalta: quitado, color: rojo, captura: version, hasta: 1.8}
+          - {en: verde, resalta: puesto, captura: version}
+
+  - id: ahora
+    capitulo: Comparar con ahora
+    antes: 0.5
+    pantalla: version
+    frases:
+      - id: ahora
+        texto: >-
+          Comparar con ahora enseña todo lo que ha cambiado desde aquella
+          versión hasta hoy.
+        pasos:
+          - {al: inicio, enfoca: [titulo, comparar], max: 1.8, dx: 200, dy: 100}
+          - {en: Comparar, resalta: comparar, lado: abajo}
+          - {en: hoy, cambia: ahora}
+          - {en: hoy, reposo: true, captura: ahora}
+      - id: copiar
+        texto: >-
+          Y se puede copiar de ahí lo que haga falta, tres líneas, sin tocar
+          nada más.
+
+  - id: recuperar
+    capitulo: Recuperar una versión
+    antes: 0.5
+    pantalla: confirmar
+    frases:
+      - id: boton
+        texto: >-
+          Recuperar esta versión la lleva al editor.
+        pasos:
+          - {al: inicio, enfoca: [dialogo], max: 1.8}
+          - {en: editor, resalta: confirmar, lado: abajo}
+      - id: sin-guardar
+        texto: >-
+          Queda como un cambio sin guardar: Guardar la deja así, y Descartar
+          vuelve atrás.
+        pasos:
+          - {al: inicio, cambia: recuperada}
+          - {al: inicio, enfoca: [es, guardar], max: 1.7, dy: 60, captura: recuperada}
+          - {en: sin guardar, resalta: es, captura: recuperada, hasta: 1.6}
+          - {en: Guardar, resalta: guardar, captura: recuperada, hasta: 1.4}
+          - {en: Descartar, resalta: descartar, captura: recuperada}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Recuperar no deshace meses de un clic: trae una versión al editor, y
+          decides.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, congelar un curso.

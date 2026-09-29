@@ -1,0 +1,65 @@
+{
+  "codigo": "I2",
+  "titulo": "Ver cómo estaba un fichero, y recuperarlo",
+  "fichero": "I02-ver-como-estaba-un-fichero.mp4",
+  "duracion": 54.73,
+  "megas": 5.7,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Ver cómo estaba un fichero, y recuperarlo"
+    },
+    {
+      "t": 7.29,
+      "titulo": "El historial"
+    },
+    {
+      "t": 22.63,
+      "titulo": "Comparar con ahora"
+    },
+    {
+      "t": 33.56,
+      "titulo": "Recuperar una versión"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás mirar cualquier versión anterior de una lección, y traer de vuelta lo que se quitó."
+    },
+    {
+      "t": 7.79,
+      "texto": "En la pestaña historial, a la izquierda, cada cambio que se ha guardado, con su mensaje, quién y cuándo."
+    },
+    {
+      "t": 14.89,
+      "texto": "Al elegir uno, el fichero entero, con lo que se quitó en rojo, lo que se puso en verde, y las palabras que cambiaron."
+    },
+    {
+      "t": 23.13,
+      "texto": "Comparar con ahora enseña todo lo que ha cambiado desde aquella versión hasta hoy."
+    },
+    {
+      "t": 28.3,
+      "texto": "Y se puede copiar de ahí lo que haga falta, tres líneas, sin tocar nada más."
+    },
+    {
+      "t": 34.06,
+      "texto": "Recuperar esta versión la lleva al editor."
+    },
+    {
+      "t": 36.87,
+      "texto": "Queda como un cambio sin guardar: Guardar la deja así, y Descartar vuelve atrás."
+    },
+    {
+      "t": 43.78,
+      "texto": "Recuperar no deshace meses de un clic: trae una versión al editor, y decides."
+    },
+    {
+      "t": 49.77,
+      "texto": "En el siguiente vídeo, congelar un curso."
+    }
+  ]
+}

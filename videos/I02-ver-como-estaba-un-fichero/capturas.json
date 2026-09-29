@@ -1,0 +1,167 @@
+{
+  "capturas": [
+    {
+      "nombre": "recuperada",
+      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=es",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/es.tex",
+            "buscar": "salvo quizá en el propio $a$.",
+            "poner": "salvo quizá en $a$.",
+            "mensaje": "Acortar la definición de límite",
+            "enviar": true
+          }
+        },
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/es.tex",
+            "buscar": "La definición dice qué",
+            "poner": "La definición precisa qué",
+            "mensaje": "Una palabra más precisa en la intuición",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "texto": "historial"
+          },
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "lista",
+            "cajas": {
+              "lista": {
+                "contiene": "Una palabra más precisa",
+                "n": 0,
+                "alto": 300
+              },
+              "ultimo": {
+                "contiene": "Una palabra más precisa",
+                "n": 0,
+                "fila": 250
+              },
+              "anterior": {
+                "contiene": "Acortar la definición",
+                "n": 0,
+                "fila": 250
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "contiene": "Acortar la definición",
+            "n": 0
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "version",
+            "cajas": {
+              "titulo": {
+                "contiene": "Versión del",
+                "n": 0
+              },
+              "comparar": {
+                "clave": "compare-with-now"
+              },
+              "recuperar": {
+                "clave": "recover-version"
+              },
+              "info": {
+                "clave": "commit-info"
+              },
+              "quitado": {
+                "contiene": "salvo quizá en el propio",
+                "n": 0
+              },
+              "puesto": {
+                "contiene": "salvo quizá en $a$",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "compare-with-now"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "ahora",
+            "cajas": {
+              "comparar": {
+                "clave": "compare-with-now"
+              },
+              "titulo": {
+                "contiene": "Versión del",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "contiene": "El repositorio de ejemplo",
+            "n": 0
+          },
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "recover-version"
+          },
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "confirmar",
+            "cajas": {
+              "confirmar": {
+                "clave": "confirm-recover"
+              },
+              "dialogo": {
+                "contiene": "¿Recuperar la versión",
+                "alto": 200
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-recover"
+          },
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "es": {
+          "clave": "language-tab-es"
+        },
+        "guardar": {
+          "clave": "editor-save"
+        },
+        "descartar": {
+          "texto": "Descartar"
+        },
+        "frase": {
+          "editor": "salvo quizá en el propio"
+        },
+        "aviso": {
+          "contiene": "está en el editor, sin guardar",
+          "fila": 400
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "codigo": "I1",
+  "titulo": "Guardar, enviar y traer",
+  "fichero": "I01-guardar-enviar-y-traer.mp4",
+  "duracion": 68.41,
+  "megas": 3.3,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Guardar, enviar y traer"
+    },
+    {
+      "t": 6.71,
+      "titulo": "Tres momentos"
+    },
+    {
+      "t": 18.86,
+      "titulo": "Sin guardar"
+    },
+    {
+      "t": 24.46,
+      "titulo": "La barra"
+    },
+    {
+      "t": 42.97,
+      "titulo": "Los interruptores"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dónde está tu trabajo en cada momento, y cómo llega a GitHub."
+    },
+    {
+      "t": 7.21,
+      "texto": "Tu trabajo pasa por tres momentos. Escribes, y está en el editor. Guardas, y queda un cambio con tu nombre, en tu ordenador. Envías, y llega a GitHub."
+    },
+    {
+      "t": 19.36,
+      "texto": "Lo que no has guardado lo dice la pestaña, con su punto, y encima del texto."
+    },
+    {
+      "t": 24.96,
+      "texto": "Abajo, lo que falta por enviar, y lo que hay nuevo en GitHub que aún no has traído."
+    },
+    {
+      "t": 30.89,
+      "texto": "Arriba, traer y enviar: Comando Mayúsculas P trae, y Comando Mayúsculas U envía."
+    },
+    {
+      "t": 38.01,
+      "texto": "Sin conexión se guarda igual; lo guardado se envía cuando vuelve."
+    },
+    {
+      "t": 43.47,
+      "texto": "En Ajustes, Guardar y sincronizar: guardar lo deja en el historial, revisar los cambios antes de guardar, y enviar a GitHub en cuanto se guarda, que viene encendido."
+    },
+    {
+      "t": 55.62,
+      "texto": "Lo que no se envía está solo en tu ordenador; la copia de seguridad es GitHub."
+    },
+    {
+      "t": 61.82,
+      "texto": "En el siguiente vídeo, ver cómo estaba un fichero, y recuperarlo."
+    }
+  ]
+}

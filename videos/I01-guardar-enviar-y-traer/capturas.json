@@ -1,0 +1,102 @@
+{
+  "capturas": [
+    {
+      "nombre": "editada",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion?lang=es",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "editar_texto": {
+            "buscar": "Probemos que",
+            "poner": "Comprobemos que"
+          }
+        },
+        {
+          "esperar": 6
+        }
+      ],
+      "cajas": {
+        "es": {
+          "clave": "language-tab-es"
+        },
+        "guardar": {
+          "clave": "editor-save"
+        },
+        "frase": {
+          "editor": "Comprobemos que"
+        },
+        "singuardar": {
+          "texto": "sin guardar"
+        }
+      }
+    },
+    {
+      "nombre": "barra",
+      "ruta": "/courses",
+      "preparar": [
+        {
+          "en_github": 1
+        },
+        {
+          "sin_enviar": 1
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 14
+        }
+      ],
+      "cajas": {
+        "traer": {
+          "clave": "sync-pull"
+        },
+        "enviar": {
+          "clave": "sync-push"
+        },
+        "estado": {
+          "clave": "sync-state"
+        },
+        "texto": {
+          "rect": [
+            92,
+            869,
+            290,
+            22
+          ]
+        },
+        "nuevo": {
+          "contiene": "1 en GitHub"
+        }
+      }
+    },
+    {
+      "nombre": "ajustes",
+      "ruta": "/settings?s=guardar",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "historial": {
+          "clave": "commit-on-save",
+          "fila": 500
+        },
+        "revisar": {
+          "clave": "review-before-save",
+          "fila": 500
+        },
+        "enviar": {
+          "clave": "push-on-commit",
+          "fila": 500
+        },
+        "bloque": {
+          "texto": "AL GUARDAR",
+          "n": 0
+        }
+      }
+    }
+  ]
+}
