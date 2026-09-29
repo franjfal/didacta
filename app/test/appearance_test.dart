@@ -236,6 +236,22 @@ void main() {
       expect(scaleOf(tester), 1);
     });
 
+    // Tenía un ancho fijo de 56 puntos, y con el texto grande «135 %» se
+    // partía en dos líneas.
+    testWidgets('el tanto por ciento cabe en una línea con el texto grande', (
+      tester,
+    ) async {
+      await pumpApp(tester, scale: 1.5);
+      routerOf(tester).go('/settings?s=apariencia');
+      await settle(tester);
+      expect(find.text('150 %'), findsOneWidget);
+      final line = 15 * 1.5;
+      expect(
+        tester.getSize(find.byKey(const Key('text-scale'))).height,
+        lessThan(line * 1.5),
+      );
+    });
+
     testWidgets(
       'con el teclado, fuera del Mac',
       (tester) async {

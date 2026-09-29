@@ -718,12 +718,15 @@ class _TextSize extends StatelessWidget {
                         : () => unawaited(appearance.smallerText()),
                     icon: const Icon(Icons.text_decrease),
                   ),
-                  SizedBox(
-                    width: 56,
+                  // Con un ancho mínimo y no fijo: con el texto al 135 %,
+                  // «135 %» no cabía en 56 puntos y se partía en dos líneas.
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 56),
                     child: Text(
                       '${(scale * 100).round()} %',
                       key: const Key('text-scale'),
                       textAlign: TextAlign.center,
+                      softWrap: false,
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,

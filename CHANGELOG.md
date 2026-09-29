@@ -76,6 +76,8 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   moverlo.** El menú escondía «Mover a…», pero el diálogo de «Añadir
   vinculado a…» y «Duplicar en…» lo seguía ofreciendo. Y el aviso de al
   terminar dice el tema y la asignatura por su nombre, no por su id.
+- **El tamaño del texto se lee entero con el texto grande.** En Ajustes →
+  Apariencia, a partir del 135 % el tanto por ciento se partía en dos líneas.
 
 ## 0.3.0 — 2026-09-28
 
