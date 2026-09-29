@@ -1,0 +1,80 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:05.300
+Al terminar sabrás hacer que GitHub
+compruebe y compile el material cada vez que
+
+00:00:05.340 --> 00:00:06.590
+envías.
+
+00:00:07.061 --> 00:00:12.744
+En Ajustes, Cuenta y repositorios, el icono
+de la nube al lado de cada repositorio.
+
+00:00:12.814 --> 00:00:16.114
+Cada vez que envíes, GitHub
+compilará todo el material,
+
+00:00:16.154 --> 00:00:20.127
+y dejará los PDF para
+descargar durante treinta días.
+
+00:00:20.197 --> 00:00:22.267
+Gasta minutos de GitHub Actions:
+
+00:00:22.797 --> 00:00:26.403
+los repositorios privados tienen
+unos dos mil al mes sin pagar.
+
+00:00:26.473 --> 00:00:31.663
+Añadir lo deja como un cambio más, en
+el historial. Y para dejar de compilar,
+
+00:00:31.773 --> 00:00:33.244
+se borra ese fichero.
+
+00:00:33.944 --> 00:00:39.934
+En la pestaña Actions de GitHub, primero
+comprueba lo que no va a compilar. Después,
+
+00:00:40.184 --> 00:00:46.358
+los PDF, en dos paquetes: los PDF para
+repartir, y los PDF del profesor.
+
+00:00:46.428 --> 00:00:48.978
+Separados con la misma
+regla que al exportar:
+
+00:00:49.308 --> 00:00:52.410
+descargar el primero no
+puede traer una solución.
+
+00:00:53.110 --> 00:00:55.660
+Y la web del curso: en el terminal,
+
+00:00:55.910 --> 00:00:59.520
+didacta site deja en la
+carpeta site lo que se reparte,
+
+00:00:59.690 --> 00:01:02.754
+con una página que lo enseña
+por idioma y por tema.
+
+00:01:02.824 --> 00:01:07.424
+El ejemplo trae un workflow que la publica
+en GitHub Pages cada vez que esa carpeta
+
+00:01:07.464 --> 00:01:08.794
+cambia y se sube.
+
+00:01:09.504 --> 00:01:13.777
+Nada se compila allí: los
+PDF salen de tu ordenador.
+
+00:01:14.577 --> 00:01:20.335
+Los dos paquetes van separados: descargar
+el primero no trae una solución.
+
+00:01:20.585 --> 00:01:24.472
+En el siguiente vídeo, un
+asistente de IA sobre tu material.

@@ -1,0 +1,69 @@
+{
+  "codigo": "L4",
+  "titulo": "Plantillas: tus propias salidas",
+  "fichero": "L04-plantillas.mp4",
+  "duracion": 83.54,
+  "megas": 4.1,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Plantillas: tus propias salidas"
+    },
+    {
+      "t": 8.62,
+      "titulo": "Las plantillas"
+    },
+    {
+      "t": 29.64,
+      "titulo": "Apuntes de bolsillo"
+    },
+    {
+      "t": 54.31,
+      "titulo": "La cabecera"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás crear una salida propia, unos apuntes en A5, o retocar una de las que trae Didacta."
+    },
+    {
+      "t": 9.12,
+      "texto": "Una plantilla es una salida: qué PDF sale de una lección. En Ajustes, Bloques y plantillas, las que trae Didacta."
+    },
+    {
+      "t": 19.31,
+      "texto": "Editar aquí una de ellas la escribe en tu repositorio, con el mismo nombre, y desde ahí manda la tuya. Duplicar hace otra a partir de ella."
+    },
+    {
+      "t": 30.14,
+      "texto": "Duplicar Apuntes: un nombre, Apuntes de bolsillo. Y como es la primera que se declara, se escriben también las de serie, para que todo se siga compilando igual."
+    },
+    {
+      "t": 40.67,
+      "texto": "Su identificador, y las opciones de la clase: diez puntos y papel A5. Los ejes, los de Apuntes."
+    },
+    {
+      "t": 49.41,
+      "texto": "Declarar, y ya está en la lista, en el repositorio del ejemplo."
+    },
+    {
+      "t": 54.81,
+      "texto": "Cabecera: el LaTeX que se lee al final del preámbulo de Didacta. Aquí, un interlineado más apretado, para que quepa en A5."
+    },
+    {
+      "t": 64.38,
+      "texto": "Y apagar una no la borra: sigue declarada, con su cabecera, para el día que vuelva a hacer falta."
+    },
+    {
+      "t": 71.94,
+      "texto": "La cabecera va al final del preámbulo: puede redefinir lo que Didacta acaba de definir."
+    },
+    {
+      "t": 77.95,
+      "texto": "En el siguiente vídeo, tus propios snippets."
+    }
+  ]
+}

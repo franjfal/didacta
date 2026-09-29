@@ -1,0 +1,89 @@
+{
+  "capturas": [
+    {
+      "nombre": "_ci",
+      "ruta": "/settings?s=repositorios",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "apuntar": {
+            "clave": "repo-ci-add-profe/didacta-ejemplo"
+          },
+          "esperar": 30
+        },
+        {
+          "capturar": {
+            "nombre": "icono",
+            "cajas": {
+              "nube": {
+                "clave": "repo-ci-add-profe/didacta-ejemplo"
+              },
+              "fila": {
+                "texto": "profe/didacta-ejemplo",
+                "fila": 900
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "repo-ci-add-profe/didacta-ejemplo"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "titulo": {
+                "texto": "Compilar en GitHub en cada cambio"
+              },
+              "cada": {
+                "contiene": "Cada vez que envíes cambios"
+              },
+              "paquetes": {
+                "contiene": "En dos paquetes separados"
+              },
+              "minutos": {
+                "contiene": "Gasta minutos de GitHub Actions"
+              },
+              "anadir": {
+                "clave": "material-ci-add"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "material-ci-add"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Compilará en GitHub"
+          },
+          "max": 600,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "anadido",
+            "cajas": {
+              "aviso": {
+                "contiene": "Compilará en GitHub",
+                "ajustado": true
+              },
+              "nube": {
+                "clave": "repo-ci-open-profe/didacta-ejemplo"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

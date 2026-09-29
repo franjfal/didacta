@@ -1,0 +1,61 @@
+{
+  "codigo": "L6",
+  "titulo": "Titulaciones",
+  "fichero": "L06-titulaciones.mp4",
+  "duracion": 58.53,
+  "megas": 2.7,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Titulaciones"
+    },
+    {
+      "t": 4.9,
+      "titulo": "Declarar un grado"
+    },
+    {
+      "t": 28.17,
+      "titulo": "Cada asignatura, en su grado"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás agrupar las asignaturas por grado."
+    },
+    {
+      "t": 5.4,
+      "texto": "En Asignaturas, con la interfaz Completa, la tira de los grados: todavía ninguno."
+    },
+    {
+      "t": 11.36,
+      "texto": "Nuevo grado: su nombre, su identificador, que es lo que escriben las asignaturas, y la institución."
+    },
+    {
+      "t": 18.68,
+      "texto": "Aquí, dos: el de Matemáticas y el de Física. Un grado lo declara un repositorio, y las asignaturas de cualquier otro lo nombran."
+    },
+    {
+      "t": 28.67,
+      "texto": "En el lápiz de cada asignatura, su titulación: Cálculo I, del Grado en Matemáticas; Matemáticas I, del de Física."
+    },
+    {
+      "t": 37.49,
+      "texto": "Con más de uno, arriba sale el filtro: ver solo las asignaturas de un grado."
+    },
+    {
+      "t": 42.82,
+      "texto": "Y el de Matemáticas deja solo Cálculo I."
+    },
+    {
+      "t": 46.55,
+      "texto": "Un grado agrupa asignaturas; sin él, se ven igual, sueltas."
+    },
+    {
+      "t": 51.42,
+      "texto": "En el siguiente vídeo, compilar en GitHub, y publicar la web del curso."
+    }
+  ]
+}

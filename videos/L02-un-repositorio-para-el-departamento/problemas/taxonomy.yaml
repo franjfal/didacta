@@ -1,0 +1,12 @@
+categories:
+  - id: calculo
+    title:
+      es: Cálculo
+      va: Càlcul
+      en: Calculus
+    topics:
+      - id: limites
+        title:
+          es: Límites
+          va: Límits
+          en: Limits

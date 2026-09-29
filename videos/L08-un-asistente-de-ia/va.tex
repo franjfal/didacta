@@ -1,0 +1,75 @@
+% Lliçó: el teorema de Bolzano (valencià).
+%
+% Teorema, demostració, corol·lari i exemple. La demostració va en
+% `notesonly`: en les diapositives s'enuncia i en els apunts es demostra.
+
+\begin{frame}
+\didactatitle{El teorema de Bolzano}
+
+\begin{theorem}[Bolzano]
+Si $f$ és contínua en $[a, b]$ i $f(a)$ i $f(b)$ tenen signes oposats,
+existeix $c \in (a, b)$ tal que $f(c) = 0$.
+\end{theorem}
+
+\bymedium{%
+  Una funció contínua que comença per davall de l'eix i acaba per damunt
+  l'ha de travessar.
+}{%
+  Una funció contínua que comença per davall de l'eix i acaba per damunt
+  l'ha de travessar. El que el teorema afig a la intuïció és que això no
+  depén del dibuix, sinó que la recta real no té forats: l'axioma del
+  suprem.
+}
+
+\begin{notesonly}
+\begin{proof}
+Suposem $f(a) < 0 < f(b)$; l'altre cas es redueix a aquest canviant $f$ per
+$-f$. El conjunt $A = \{x \in [a, b] : f(x) < 0\}$ conté $a$ i està fitat
+per $b$, així que té suprem $c \in [a, b]$. Vegem que $f(c) = 0$.
+
+Si fóra $f(c) \neq 0$, prenent $\varepsilon = |f(c)|$ en la definició de
+continuïtat hi hauria un $\delta > 0$ tal que $f(x)$ té el mateix signe que
+$f(c)$ per a tot $x \in [a, b]$ amb $|x - c| < \delta$. Si $f(c) < 0$,
+aleshores $c < b$ i hi hauria punts de $A$ més grans que $c$. Si $f(c) > 0$,
+aleshores $c > a$ i cap punt de $(c - \delta, c]$ no estaria en $A$, així que
+$c - \delta$ seria una fita superior de $A$ menor que $c$. Les dues coses
+contradiuen que $c$ siga el suprem.
+
+Per tant $f(c) = 0$, i $c \neq a, b$ perquè ni $f(a)$ ni $f(b)$ s'anul·len.
+\end{proof}
+\end{notesonly}
+
+\begin{teaching}[Per a discutir]
+Què falla si $f$ no és contínua? (El salt $H(x) - \tfrac12$ en $[-1, 1]$.)
+I si només existiren els racionals? ($x^2 - 2$ en $[0, 2]$ canvia de signe i
+no té cap arrel racional.)
+\end{teaching}
+\end{frame}
+
+\begin{frame}
+\didactatitle{Valors intermedis}
+
+\begin{corollary}[Valors intermedis]
+Si $f$ és contínua en $[a, b]$, pren tots els valors compresos entre
+$f(a)$ i $f(b)$.
+\end{corollary}
+
+\onlynotes{%
+  Si $k$ està estrictament entre $f(a)$ i $f(b)$, n'hi ha prou d'aplicar el
+  teorema de Bolzano a $g(x) = f(x) - k$, que és contínua i canvia de signe en
+  $[a, b]$.
+}
+
+\dpause
+
+\begin{example}
+L'equació $x^3 + x - 1 = 0$ té una solució en $(0, 1)$: el polinomi és
+continu, val $-1$ en $0$ i $1$ en $1$.
+\onlynotes{%
+  Repetint l'argument en la meitat de l'interval on canvia el signe, i
+  després en la meitat d'eixa meitat, s'obté el \keyterm{mètode de
+  bisecció}: cada pas divideix per dos la longitud de l'interval en què està
+  l'arrel.
+}
+\end{example}
+\end{frame}

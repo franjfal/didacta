@@ -1,0 +1,73 @@
+{
+  "codigo": "L8",
+  "titulo": "Un asistente de IA sobre tu material",
+  "fichero": "L08-un-asistente-de-ia.mp4",
+  "duracion": 79.12,
+  "megas": 5.4,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Un asistente de IA sobre tu material"
+    },
+    {
+      "t": 8.54,
+      "titulo": "Encenderlo"
+    },
+    {
+      "t": 26.76,
+      "titulo": "Conectar un cliente"
+    },
+    {
+      "t": 34.68,
+      "titulo": "Lo que hace, a la vista"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás conectar Claude, u otro cliente MCP, a tu material, y ver lo que hace."
+    },
+    {
+      "t": 9.04,
+      "texto": "En Ajustes, Servidor MCP: deja que un asistente de IA trabaje sobre tu material."
+    },
+    {
+      "t": 15.88,
+      "texto": "Sin marcar nada, solo lee. Dejarle escribir se decide repositorio a repositorio, antes de encenderlo."
+    },
+    {
+      "t": 23.68,
+      "texto": "Encendido, escucha solo en esta máquina."
+    },
+    {
+      "t": 27.26,
+      "texto": "En su página, la configuración para pegar en el cliente, con la dirección y un token que cambia cada vez que se enciende."
+    },
+    {
+      "t": 35.18,
+      "texto": "Si le preguntas qué lecciones del Tema 1 faltan en valenciano, el registro enseña lo que consulta: las asignaturas, el curso, y qué falta por traducir."
+    },
+    {
+      "t": 46.19,
+      "texto": "Y si escribe la traducción, sale marcado: escribe."
+    },
+    {
+      "t": 50.52,
+      "texto": "Lo que escribe no es un commit: queda en tu ordenador, como un cambio sin guardar, igual que si lo hubieras escrito tú."
+    },
+    {
+      "t": 58.16,
+      "texto": "Se mira qué ha cambiado, y se guarda, o se descarta, desde Didacta. Nada llega a GitHub sin que alguien lo haya mirado."
+    },
+    {
+      "t": 68.1,
+      "texto": "Leer es inocuo; escribir se concede repositorio a repositorio."
+    },
+    {
+      "t": 73.15,
+      "texto": "En el siguiente vídeo, Didacta desde el terminal."
+    }
+  ]
+}

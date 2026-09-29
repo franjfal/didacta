@@ -1,0 +1,114 @@
+# L8 · Un asistente de IA sobre tu material
+#
+# Montado desde este guion. El servidor MCP es el de verdad, el del motor,
+# encendido dentro del arnés sobre la copia del ejemplo. Las llamadas también
+# son de verdad, pero no las hace un modelo: las hace el arnés, como las haría
+# un cliente conectado (`"mcp_llamar"`); por eso el vídeo no enseña la
+# conversación, sino el registro. La traducción que escribe está en `va.tex`,
+# junto a este guion.
+codigo: L8
+titulo: Un asistente de IA sobre tu material
+subtitulo: Conectar Claude u otro cliente MCP, y ver lo que hace
+ruta: Para quien mantiene el repositorio
+siguiente: "L9 · Didacta desde el terminal"
+voz: narrador
+lema: ["Leer es inocuo;", "escribir se concede repositorio a repositorio."]
+lema_en: "repositorio a repositorio"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás conectar Claude, u otro cliente MCP, a tu
+          material, y ver lo que hace.
+
+  - id: encender
+    capitulo: Encenderlo
+    antes: 0.5
+    pantalla: apagado
+    frases:
+      - id: que
+        texto: >-
+          En Ajustes, Servidor MCP: deja que un asistente de IA trabaje sobre
+          tu material.
+        pasos:
+          - {al: inicio, enfoca: [interruptor, escribir], max: 1.6}
+          - {en: asistente, resalta: interruptor, lado: abajo}
+      - id: escribir
+        texto: >-
+          Sin marcar nada, solo lee. Dejarle escribir se decide repositorio a
+          repositorio, antes de encenderlo.
+        pasos:
+          - {al: inicio, resalta: donde, lado: abajo, hasta: 2}
+          - {en: escribir, cambia: escribible}
+          - {en: escribir, resalta: escribir, lado: abajo, captura: escribible}
+      - id: encendido
+        texto: >-
+          Encendido, escucha solo en esta máquina.
+        pasos:
+          - {al: inicio, cambia: encendido}
+          - {al: inicio, enfoca: [interruptor, abrir], max: 1.8, captura: encendido}
+          - {en: escucha, resalta: estado, lado: abajo, captura: encendido}
+
+  - id: conectar
+    capitulo: Conectar un cliente
+    antes: 0.5
+    pantalla: pagina
+    frases:
+      - id: copiar
+        texto: >-
+          En su página, la configuración para pegar en el cliente, con la
+          dirección y un token que cambia cada vez que se enciende.
+        pasos:
+          - {al: inicio, enfoca: [url, config], max: 1.4, dx: -500, dy: 250}
+          - {en: configuración, resalta: config, lado: izquierda}
+
+  - id: registro
+    capitulo: Lo que hace, a la vista
+    antes: 0.5
+    pantalla: registro
+    frases:
+      - id: pregunta
+        texto: >-
+          Si le preguntas qué lecciones del Tema 1 faltan en valenciano, el
+          registro enseña lo que consulta: las asignaturas, el curso, y qué
+          falta por traducir.
+        pasos:
+          - {al: inicio, enfoca: [registro], max: 1.7, dx: 450, dy: 90}
+      - id: escribe
+        texto: >-
+          Y si escribe la traducción, sale marcado: escribe.
+        pasos:
+          - {al: inicio, cambia: escrito}
+          - {al: inicio, enfoca: [registro], max: 1.7, dx: 450, dy: 90, captura: escrito}
+          - {en: marcado, enfoca: [escribe], max: 1.7, dx: -500, dy: 60, captura: escrito}
+          - {en: marcado, resalta: escribe, lado: izquierda, captura: escrito}
+      - id: pendiente
+        texto: >-
+          Lo que escribe no es un commit: queda en tu ordenador, como un cambio
+          sin guardar, igual que si lo hubieras escrito tú.
+        pasos:
+          - {al: inicio, cambia: leccion}
+          - {al: inicio, reposo: true, captura: leccion}
+          - {en: commit, resalta: va, lado: abajo, captura: leccion, hasta: 2}
+          - {en: guardar, enfoca: [estado], max: 2.2, dy: -150, captura: leccion}
+          - {en: guardar, resalta: estado, lado: arriba, captura: leccion}
+      - id: mirar
+        texto: >-
+          Se mira qué ha cambiado, y se guarda, o se descarta, desde Didacta.
+          Nada llega a GitHub sin que alguien lo haya mirado.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Leer es inocuo; escribir se concede repositorio a repositorio.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, Didacta desde el terminal.

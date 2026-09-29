@@ -1,0 +1,51 @@
+{
+  "capturas": [
+    {
+      "nombre": "_copiar",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 14
+        },
+        {
+          "apuntar": {
+            "consejo": "Copiar el comando para compilarlo"
+          },
+          "esperar": 30
+        },
+        {
+          "capturar": {
+            "nombre": "boton",
+            "cajas": {
+              "boton": {
+                "consejo": "Copiar el comando para compilarlo"
+              },
+              "titulo": {
+                "texto": "Tema 1: límites y continuidad",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "consejo": "Copiar el comando para compilarlo"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "copiado",
+            "cajas": {
+              "aviso": {
+                "contiene": "Copiado: didacta build",
+                "ajustado": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "codigo": "L9",
+  "titulo": "Didacta desde el terminal",
+  "fichero": "L09-didacta-desde-el-terminal.mp4",
+  "duracion": 74.25,
+  "megas": 3.0,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Didacta desde el terminal"
+    },
+    {
+      "t": 6.69,
+      "titulo": "Mirar"
+    },
+    {
+      "t": 23.7,
+      "titulo": "Compilar"
+    },
+    {
+      "t": 37.47,
+      "titulo": "Repartir y crear"
+    },
+    {
+      "t": 51.11,
+      "titulo": "Desde la aplicación"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás hacer desde el terminal lo mismo que desde la ventana, y en lote."
+    },
+    {
+      "t": 7.09,
+      "texto": "En la carpeta del repositorio, didacta status dice qué hay: las lecciones, los cursos, los idiomas."
+    },
+    {
+      "t": 14.52,
+      "texto": "didacta units, con missing va, las que faltan en valenciano."
+    },
+    {
+      "t": 18.71,
+      "texto": "Y didacta check comprueba el repositorio entero, como la aplicación."
+    },
+    {
+      "t": 24.1,
+      "texto": "didacta build compila un documento: aquí, el Tema 1, en diapositivas, en valenciano."
+    },
+    {
+      "t": 31.47,
+      "texto": "Con all, todo el repositorio; y con list, dice antes qué va a compilar."
+    },
+    {
+      "t": 37.87,
+      "texto": "didacta export reparte como la aplicación: lo del profesor se queda fuera, salvo que se pida."
+    },
+    {
+      "t": 44.26,
+      "texto": "didacta new unit crea una lección, y new year, el curso que viene, con las mismas lecciones."
+    },
+    {
+      "t": 51.61,
+      "texto": "Y en la aplicación, con la interfaz Completa, cada documento copia su orden para compilarlo."
+    },
+    {
+      "t": 57.62,
+      "texto": "Didacta build tema 1, listo para pegar."
+    },
+    {
+      "t": 61.9,
+      "texto": "La aplicación y el terminal usan el mismo motor: lo que se hace en uno se ve en el otro."
+    },
+    {
+      "t": 68.93,
+      "texto": "Y con este, ya has visto todo Didacta."
+    }
+  ]
+}

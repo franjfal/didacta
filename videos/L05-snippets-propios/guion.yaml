@@ -1,0 +1,112 @@
+# L5 · Snippets propios
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés, con la
+# interfaz Completa: se crea «Resumen», una caja de teorema verde, y la vista
+# previa la compila de verdad en apuntes y en diapositivas; después se retoca
+# el rótulo de «Definición», que es de Didacta, y su menú ofrece volver al
+# original.
+codigo: L5
+titulo: Snippets propios
+subtitulo: Una caja tuya, en la barra del editor
+ruta: Para quien mantiene el repositorio
+siguiente: "L6 · Titulaciones"
+voz: narrador
+lema: ["Una definición va al preámbulo de todo el repositorio:", "por eso se prueba antes de guardar."]
+lema_en: "se prueba antes de guardar"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás crear una caja propia, un Resumen, y ofrecerla en
+          la barra del editor.
+
+  - id: lista
+    capitulo: La lista
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: que
+        texto: >-
+          En Ajustes, Snippets de LaTeX: lo que la barra del editor escribe
+          alrededor de lo que marcas. Se buscan, se ordenan arrastrando, y
+          cada uno dice en qué repositorios se ofrece.
+        pasos:
+          - {al: inicio, enfoca: [filtro, nuevo], max: 1.8, dy: 200}
+          - {en: buscan, resalta: filtro, lado: abajo, hasta: 1.6}
+          - {en: repositorios, resalta: lista, lado: arriba}
+
+  - id: nuevo
+    capitulo: Una caja propia
+    antes: 0.5
+    pantalla: vista
+    frases:
+      - id: caja
+        texto: >-
+          Nuevo snippet: el rótulo, Resumen, y el entorno que escribe. Como
+          caja de teorema, con su título y su color.
+        pasos:
+          - {al: inicio, enfoca: [tipo, color], max: 1.8}
+          - {en: caja, resalta: tipo, lado: abajo, hasta: 2}
+          - {en: título, resalta: titulo, lado: abajo, hasta: 1.4}
+          - {en: color, resalta: color, lado: abajo}
+      - id: vista
+        texto: >-
+          La vista previa compila de verdad: así queda en los apuntes.
+        pasos:
+          - {al: inicio, enfoca: [estado, compilar], max: 1.6, dy: 250, captura: vista}
+          - {en: apuntes, resalta: perfil, lado: abajo, captura: vista}
+      - id: diapositivas
+        texto: >-
+          Y en las diapositivas, o en la copia del profesor. Se prueba antes de
+          guardar, porque va al preámbulo de todo el repositorio.
+        pasos:
+          - {al: inicio, cambia: perfiles}
+          - {al: inicio, resalta: diapositivas, lado: izquierda, captura: perfiles, hasta: 1.6}
+          - {en: diapositivas, cambia: vista-diapositivas}
+          - {en: diapositivas, enfoca: [perfil], max: 1.6, dx: -500, dy: 250, captura: vista-diapositivas}
+      - id: guardado
+        texto: >-
+          Guardado, sale al final de la lista, como propio, en el repositorio
+          marcado.
+        pasos:
+          - {al: inicio, cambia: guardado}
+          - {al: inicio, enfoca: [fila], max: 1.6, captura: guardado}
+          - {en: propio, resalta: fila, captura: guardado, hasta: 2}
+          - {en: marcado, resalta: casilla, lado: arriba, captura: guardado}
+
+  - id: retocar
+    capitulo: Retocar uno de Didacta
+    antes: 0.5
+    pantalla: retoque
+    frases:
+      - id: editar
+        texto: >-
+          Uno de Didacta también se retoca: lo que cambies se guarda como un
+          retoque en tu repositorio.
+        pasos:
+          - {al: inicio, enfoca: [rotulo], max: 1.8, dy: 150}
+          - {en: retoca, resalta: rotulo, lado: abajo}
+      - id: volver
+        texto: >-
+          Y el menú ofrece Volver al de Didacta, cuando quieras.
+        pasos:
+          - {al: inicio, cambia: volver}
+          - {al: inicio, enfoca: [fila, volver], max: 1.8, dx: 200, captura: volver}
+          - {en: Volver, resalta: volver, lado: izquierda, captura: volver}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Una definición va al preámbulo de todo el repositorio: por eso se
+          prueba antes de guardar.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, las titulaciones.

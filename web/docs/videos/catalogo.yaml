@@ -624,7 +624,7 @@ rutas:
         minutos: 1.5
         marca: Completa
         sabras: agrupar las asignaturas por grado.
-        idea: 
+        idea: "un grado agrupa asignaturas; sin él, se ven igual, sueltas."
         mas:
           - {titulo: Las titulaciones, pagina: "app/asignaturas.md#las-titulaciones"}
       - codigo: L7

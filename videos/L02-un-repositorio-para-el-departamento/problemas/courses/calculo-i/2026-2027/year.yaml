@@ -1,0 +1,22 @@
+# Cálculo I -- curso 2026-2027, la parte de problemas.
+course: calculo-i
+year: 2026-2027
+
+group:
+  es: Grupo A
+  va: Grup A
+  en: Group A
+
+language: es
+
+documents:
+  - id: hoja-2
+    kind: problems
+    title:
+      es: "Hoja 2: más límites"
+      va: "Full 2: més límits"
+      en: "Problem sheet 2: more limits"
+    templates: [problems, problems-answers, problems-teacher]
+    structure:
+      - unit: calculo/limites/definicion-de-limite
+      - problem: calculo/limites/limite-de-una-raiz

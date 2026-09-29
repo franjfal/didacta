@@ -1,0 +1,320 @@
+{
+  "capturas": [
+    {
+      "nombre": "_grados",
+      "ruta": "/courses",
+      "completa": true,
+      "preparar": [
+        {
+          "copiar": {
+            "desde": "asignatura/course.yaml",
+            "a": "courses/matematicas-i/course.yaml",
+            "mensaje": "Matemáticas I"
+          }
+        },
+        {
+          "copiar": {
+            "desde": "asignatura/year.yaml",
+            "a": "courses/matematicas-i/2026-2027/year.yaml",
+            "mensaje": "Matemáticas I, 2026-2027"
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "asignaturas",
+            "cajas": {
+              "grados": {
+                "clave": "manage-degrees"
+              },
+              "calculo": {
+                "texto": "Cálculo I",
+                "n": 0
+              },
+              "mates": {
+                "texto": "Matemáticas I",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "manage-degrees"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "new-degree"
+          },
+          "esperar": 6
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "degree-name"
+            },
+            "texto": "Grado en Matemáticas"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "degree-institution"
+            },
+            "texto": "Universidad de ejemplo"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "nuevo",
+            "cajas": {
+              "nombre": {
+                "clave": "degree-name"
+              },
+              "id": {
+                "clave": "degree-id"
+              },
+              "institucion": {
+                "clave": "degree-institution"
+              },
+              "donde": {
+                "contiene": "En qué repositorios"
+              },
+              "crear": {
+                "clave": "degree-create"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "degree-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "degree-grado-en-matematicas"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "declarado",
+            "cajas": {
+              "fila": {
+                "clave": "degree-grado-en-matematicas"
+              },
+              "casilla": {
+                "clave": "degree-grado-en-matematicas",
+                "alto": 10
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "new-degree"
+          },
+          "esperar": 6
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "degree-name"
+            },
+            "texto": "Grado en Física"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "degree-institution"
+            },
+            "texto": "Universidad de ejemplo"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "degree-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "degree-grado-en-fisica"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "dos",
+            "cajas": {
+              "mates": {
+                "clave": "degree-grado-en-matematicas"
+              },
+              "fisica": {
+                "clave": "degree-grado-en-fisica"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "edit-title-course-calculo-i"
+          },
+          "esperar": 6
+        },
+        {
+          "mostrar": {
+            "clave": "course-degree"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "course-degree"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "degree-option-grado-en-matematicas",
+            "ultimo": true
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "asignar",
+            "cajas": {
+              "grado": {
+                "clave": "course-degree"
+              },
+              "guardar": {
+                "clave": "course-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "course-save"
+          },
+          "esperar": 4
+        },
+        {
+          "esperar": 80
+        },
+        {
+          "pulsar": {
+            "clave": "edit-title-course-matematicas-i"
+          },
+          "esperar": 6
+        },
+        {
+          "mostrar": {
+            "clave": "course-degree"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "course-degree"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "degree-option-grado-en-fisica",
+            "ultimo": true
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "course-save"
+          },
+          "esperar": 4
+        },
+        {
+          "esperar": 80
+        },
+        {
+          "capturar": {
+            "nombre": "agrupadas",
+            "cajas": {
+              "filtro": {
+                "clave": "degree-filter"
+              },
+              "calculo": {
+                "texto": "Cálculo I",
+                "n": 0
+              },
+              "mates": {
+                "texto": "Matemáticas I",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "degree-filter"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "filtro",
+            "cajas": {
+              "todas": {
+                "clave": "degree-filter-all"
+              },
+              "grado": {
+                "clave": "degree-filter-grado-en-matematicas"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "degree-filter-grado-en-matematicas"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "filtrado",
+            "cajas": {
+              "filtro": {
+                "clave": "degree-filter"
+              },
+              "calculo": {
+                "texto": "Cálculo I",
+                "n": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+# L9 · Didacta desde el terminal
+#
+# Montado desde este guion. Las órdenes son las de verdad y su salida
+# también: se ejecutaron sobre una copia del repositorio de ejemplo y se
+# copiaron aquí tal cual, con la ruta acortada a ~/Didacta. La salida de
+# algunas está en inglés porque así la escribe hoy el programa. La captura
+# del final es de la aplicación, con la interfaz Completa.
+codigo: L9
+titulo: Didacta desde el terminal
+subtitulo: Lo mismo que desde la ventana, y en lote
+ruta: Para quien mantiene el repositorio
+voz: narrador
+lema: ["La aplicación y el terminal usan el mismo motor:", "lo que se hace en uno se ve en el otro."]
+lema_en: "se ve en el otro"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás hacer desde el terminal lo mismo que desde la
+          ventana, y en lote.
+
+  - id: mirar
+    capitulo: Mirar
+    antes: 0.4
+    grafico:
+      tipo: terminal
+      lineas:
+        - {cmd: "didacta status", en: status}
+        - {out: "Ejemplo de Didacta\n~/Didacta/didacta-ejemplo\n\n  units          9\n                 6 theory, 3 problems\n  courses        1\n  documents      3\n  profiles       15\n  languages      es, va, en"}
+        - {cmd: "didacta units --missing va", en: faltan}
+        - {out: "  kind     es     va     en     unit\n  theory   src    --     --     content/calculo/continuidad/teorema-de-bolzano\n  problem  src    --     --     problems/calculo/continuidad/tres-raices-por-bolzano\n\n  2 unit(s)"}
+        - {cmd: "didacta check", en: check}
+        - {out: "repository is consistent", color: verde}
+    frases:
+      - id: status
+        texto: >-
+          En la carpeta del repositorio, didacta status dice qué hay: las
+          lecciones, los cursos, los idiomas.
+      - id: faltan
+        texto: >-
+          didacta units, con missing va, las que faltan en valenciano.
+      - id: check
+        texto: >-
+          Y didacta check comprueba el repositorio entero, como la aplicación.
+
+  - id: compilar
+    capitulo: Compilar
+    antes: 0.4
+    grafico:
+      tipo: terminal
+      lineas:
+        - {cmd: "didacta build tema-1 -p slides -l va", en: build}
+        - {out: "building 1 output(s)\n\n  ok    calculo-i@2026-2027/tema-1     slides               va   16 pp   6.5s\n\n1 succeeded, 0 failed"}
+        - {cmd: "didacta build --all --list", en: lista}
+        - {out: "10 output(s) would be built\n  calculo-i@2026-2027/tema-1 slides               es\n  calculo-i@2026-2027/tema-1 slides-flat          es\n  calculo-i@2026-2027/tema-1 notes                es\n  calculo-i@2026-2027/tema-1 slides-teacher       es\n  calculo-i@2026-2027/tema-1 notes-teacher        es\n  calculo-i@2026-2027/hoja-1 problems             es\n  calculo-i@2026-2027/hoja-1 problems-answers     es\n  calculo-i@2026-2027/hoja-1 problems-teacher     es\n  calculo-i@2026-2027/parcial-1 exam                 es\n  calculo-i@2026-2027/parcial-1 exam-marking         es"}
+    frases:
+      - id: build
+        texto: >-
+          didacta build compila un documento: aquí, el Tema 1, en
+          diapositivas, en valenciano.
+      - id: lista
+        texto: >-
+          Con all, todo el repositorio; y con list, dice antes qué va a
+          compilar.
+
+  - id: repartir
+    capitulo: Repartir y crear
+    antes: 0.4
+    grafico:
+      tipo: terminal
+      lineas:
+        - {cmd: "didacta export calculo-i@2026-2027 -l es --to ../Reparto", en: export}
+        - {out: "exportados 6 fichero(s) a ~/Didacta/Reparto\n  Sin tema/Tema 1 límites y continuidad - Diapositivas.pdf\n  Sin tema/Tema 1 límites y continuidad - Apuntes.pdf\n  Sin tema/Primer parcial - Examen.pdf\n  …\n\n4 con más de lo que se ha pedido repartir, fuera (--reveal-up-to para llevárselas)"}
+        - {cmd: "didacta new unit calculo/limites/limites-laterales --title \"Límites laterales\"", en: new}
+        - {out: "created content/calculo/limites/limites-laterales\n  es.tex\n  unit.yaml"}
+        - {cmd: "didacta new year calculo-i 2027-2028", en: year}
+        - {out: "created calculo-i/2027-2028 from 2026-2027\n\n  Structure only: every unit is still referenced, not copied."}
+    frases:
+      - id: export
+        texto: >-
+          didacta export reparte como la aplicación: lo del profesor se queda
+          fuera, salvo que se pida.
+      - id: new
+        texto: >-
+          didacta new unit crea una lección, y new year, el curso que viene,
+          con las mismas lecciones.
+
+  - id: copiar
+    capitulo: Desde la aplicación
+    antes: 0.5
+    pantalla: boton
+    frases:
+      - id: boton
+        texto: >-
+          Y en la aplicación, con la interfaz Completa, cada documento copia
+          su orden para compilarlo.
+        pasos:
+          - {al: inicio, enfoca: [boton], max: 2.4, dx: -400, dy: 150}
+          - {en: copia, resalta: boton, lado: abajo, alinear: derecha}
+      - id: copiado
+        texto: >-
+          Didacta build tema 1, listo para pegar.
+        pasos:
+          - {al: inicio, cambia: copiado}
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: copiado}
+          - {al: inicio, resalta: aviso, lado: arriba, captura: copiado}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La aplicación y el terminal usan el mismo motor: lo que se hace en
+          uno se ve en el otro.
+        pausa: 0.5
+      - id: fin
+        texto: >-
+          Y con este, ya has visto todo Didacta.

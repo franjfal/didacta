@@ -1,0 +1,95 @@
+# L6 · Titulaciones
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés, con la
+# interfaz Completa: el arnés pone una segunda asignatura, Matemáticas I, en
+# el repositorio del ejemplo; dentro se declaran el Grado en Matemáticas y el
+# Grado en Física, se le pone a cada asignatura el suyo y se filtra por uno.
+codigo: L6
+titulo: Titulaciones
+subtitulo: Agrupar las asignaturas por grado
+ruta: Para quien mantiene el repositorio
+siguiente: "L7 · Compilar en GitHub y publicar la web del curso"
+voz: narrador
+lema: ["Un grado agrupa asignaturas;", "sin él, se ven igual, sueltas."]
+lema_en: "sueltas"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás agrupar las asignaturas por grado.
+
+  - id: crear
+    capitulo: Declarar un grado
+    antes: 0.5
+    pantalla: asignaturas
+    frases:
+      - id: tira
+        texto: >-
+          En Asignaturas, con la interfaz Completa, la tira de los grados:
+          todavía ninguno.
+        pasos:
+          - {al: inicio, enfoca: [grados], max: 2.2, dx: -450, dy: 150}
+          - {en: grados, resalta: grados, lado: abajo, alinear: derecha}
+      - id: nuevo
+        texto: >-
+          Nuevo grado: su nombre, su identificador, que es lo que escriben las
+          asignaturas, y la institución.
+        pasos:
+          - {al: inicio, cambia: nuevo}
+          - {al: inicio, enfoca: [nombre, crear], max: 1.8, captura: nuevo}
+          - {en: nombre, resalta: nombre, captura: nuevo, hasta: 1.4}
+          - {en: identificador, resalta: id, captura: nuevo, hasta: 2.4}
+          - {en: institución, resalta: institucion, captura: nuevo}
+      - id: dos
+        texto: >-
+          Aquí, dos: el de Matemáticas y el de Física. Un grado lo declara un
+          repositorio, y las asignaturas de cualquier otro lo nombran.
+        pasos:
+          - {al: inicio, cambia: dos}
+          - {al: inicio, enfoca: [fisica, mates], max: 1.8, captura: dos}
+          - {en: dos, resalta: [fisica, mates], captura: dos}
+
+  - id: asignar
+    capitulo: Cada asignatura, en su grado
+    antes: 0.5
+    pantalla: asignar
+    frases:
+      - id: lapiz
+        texto: >-
+          En el lápiz de cada asignatura, su titulación: Cálculo I, del Grado
+          en Matemáticas; Matemáticas I, del de Física.
+        pasos:
+          - {al: inicio, enfoca: [grado, guardar], max: 1.6}
+          - {en: titulación, resalta: grado, lado: abajo}
+      - id: filtro
+        texto: >-
+          Con más de uno, arriba sale el filtro: ver solo las asignaturas de un
+          grado.
+        pasos:
+          - {al: inicio, cambia: filtro}
+          - {al: inicio, enfoca: [todas, grado], max: 2, dx: -250, captura: filtro}
+          - {en: solo, resalta: grado, lado: izquierda, captura: filtro}
+      - id: filtrado
+        texto: >-
+          Y el de Matemáticas deja solo Cálculo I.
+        pasos:
+          - {al: inicio, cambia: filtrado}
+          - {al: inicio, enfoca: [filtro, calculo], max: 1.6, captura: filtrado}
+          - {en: Cálculo, resalta: calculo, captura: filtrado}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un grado agrupa asignaturas; sin él, se ven igual, sueltas.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, compilar en GitHub, y publicar la web del
+          curso.

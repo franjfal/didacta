@@ -1,0 +1,63 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:06.339
+Al terminar sabrás hacer desde el terminal
+lo mismo que desde la ventana, y en lote.
+
+00:00:07.089 --> 00:00:12.139
+En la carpeta del repositorio, didacta
+status dice qué hay: las lecciones,
+
+00:00:12.389 --> 00:00:14.447
+los cursos, los idiomas.
+
+00:00:14.517 --> 00:00:18.643
+didacta units, con missing va,
+las que faltan en valenciano.
+
+00:00:18.713 --> 00:00:23.402
+Y didacta check comprueba el
+repositorio entero, como la aplicación.
+
+00:00:24.102 --> 00:00:31.396
+didacta build compila un documento: aquí,
+el Tema 1, en diapositivas, en valenciano.
+
+00:00:31.466 --> 00:00:37.171
+Con all, todo el repositorio; y con
+list, dice antes qué va a compilar.
+
+00:00:37.871 --> 00:00:42.721
+didacta export reparte como la aplicación:
+lo del profesor se queda fuera,
+
+00:00:42.891 --> 00:00:44.194
+salvo que se pida.
+
+00:00:44.264 --> 00:00:48.804
+didacta new unit crea una lección,
+y new year, el curso que viene,
+
+00:00:48.844 --> 00:00:50.811
+con las mismas lecciones.
+
+00:00:51.611 --> 00:00:54.561
+Y en la aplicación, con
+la interfaz Completa,
+
+00:00:54.771 --> 00:00:57.554
+cada documento copia su
+orden para compilarlo.
+
+00:00:57.624 --> 00:01:01.099
+Didacta build tema 1, listo para pegar.
+
+00:01:01.899 --> 00:01:05.089
+La aplicación y el terminal
+usan el mismo motor:
+
+00:01:05.819 --> 00:01:08.681
+lo que se hace en uno se ve en el otro.
+
+00:01:08.931 --> 00:01:11.655
+Y con este, ya has visto todo Didacta.

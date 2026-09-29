@@ -1,0 +1,140 @@
+{
+  "repos_extra": [
+    {
+      "desde": "problemas",
+      "dueno": "departamento",
+      "nombre": "problemas-calculo"
+    }
+  ],
+  "capturas": [
+    {
+      "nombre": "curso",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "tema": {
+          "texto": "Tema 1: límites y continuidad"
+        },
+        "hoja2": {
+          "texto": "Hoja 2: más límites"
+        },
+        "chips": {
+          "texto": "problemas-calculo",
+          "n": 0
+        }
+      }
+    },
+    {
+      "nombre": "_entre",
+      "ruta": "/between",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "entre",
+            "cajas": {
+              "titulo": {
+                "texto": "Entre repositorios"
+              },
+              "metadatos": {
+                "texto": "METADATOS QUE NO COINCIDEN"
+              },
+              "equipo": {
+                "contiene": "Equipo de Cálculo"
+              },
+              "tu": {
+                "contiene": "«Tu nombre»"
+              },
+              "usar": {
+                "texto": "Usar este",
+                "n": 0
+              },
+              "bloque": {
+                "texto": "LECCIONES SIN BLOQUE"
+              },
+              "llaman": {
+                "texto": "DOCUMENTOS QUE LLAMAN FUERA"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "texto": "DOCUMENTOS QUE LLAMAN FUERA"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "entre-abajo",
+            "cajas": {
+              "bloque": {
+                "texto": "LECCIONES SIN BLOQUE"
+              },
+              "llaman": {
+                "texto": "DOCUMENTOS QUE LLAMAN FUERA"
+              },
+              "practicas": {
+                "contiene": "practicas",
+                "n": 0
+              },
+              "hoja": {
+                "contiene": "hoja-2",
+                "n": 0
+              },
+              "snippets": {
+                "texto": "SNIPPETS QUE NO COINCIDEN"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nombre": "_igualar",
+      "ruta": "/between",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "texto": "Usar este",
+            "n": 0
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Igualado en"
+          },
+          "max": 600,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "igualado",
+            "cajas": {
+              "aviso": {
+                "contiene": "Igualado en",
+                "ajustado": true
+              },
+              "metadatos": {
+                "texto": "METADATOS QUE NO COINCIDEN"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

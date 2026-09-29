@@ -1,0 +1,69 @@
+{
+  "codigo": "L5",
+  "titulo": "Snippets propios",
+  "fichero": "L05-snippets-propios.mp4",
+  "duracion": 72.11,
+  "megas": 4.8,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Snippets propios"
+    },
+    {
+      "t": 7.68,
+      "titulo": "La lista"
+    },
+    {
+      "t": 20.49,
+      "titulo": "Una caja propia"
+    },
+    {
+      "t": 48.49,
+      "titulo": "Retocar uno de Didacta"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás crear una caja propia, un Resumen, y ofrecerla en la barra del editor."
+    },
+    {
+      "t": 8.18,
+      "texto": "En Ajustes, Snippets de LaTeX: lo que la barra del editor escribe alrededor de lo que marcas. Se buscan, se ordenan arrastrando, y cada uno dice en qué repositorios se ofrece."
+    },
+    {
+      "t": 20.99,
+      "texto": "Nuevo snippet: el rótulo, Resumen, y el entorno que escribe. Como caja de teorema, con su título y su color."
+    },
+    {
+      "t": 30.32,
+      "texto": "La vista previa compila de verdad: así queda en los apuntes."
+    },
+    {
+      "t": 34.88,
+      "texto": "Y en las diapositivas, o en la copia del profesor. Se prueba antes de guardar, porque va al preámbulo de todo el repositorio."
+    },
+    {
+      "t": 42.92,
+      "texto": "Guardado, sale al final de la lista, como propio, en el repositorio marcado."
+    },
+    {
+      "t": 48.99,
+      "texto": "Uno de Didacta también se retoca: lo que cambies se guarda como un retoque en tu repositorio."
+    },
+    {
+      "t": 55.38,
+      "texto": "Y el menú ofrece Volver al de Didacta, cuando quieras."
+    },
+    {
+      "t": 60.15,
+      "texto": "Una definición va al preámbulo de todo el repositorio: por eso se prueba antes de guardar."
+    },
+    {
+      "t": 66.89,
+      "texto": "En el siguiente vídeo, las titulaciones."
+    }
+  ]
+}

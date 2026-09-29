@@ -271,6 +271,9 @@ void main() {
     }
   });
 
+  /// El servidor MCP de la captura que se está haciendo.
+  McpService? mcp;
+
   /// Los borradores, compartidos entre capturas: lo que deja escrito `borrador` en
   /// `preparar` es lo que encuentra la lección al abrirse.
   final drafts = MemoryDraftStore();
@@ -442,6 +445,7 @@ void main() {
     Session session, {
     bool welcome = false,
     UpdateService? updates,
+    bool useMcp = false,
   }) async {
     tester.view.physicalSize = Size(
       window.width * density,
@@ -477,9 +481,15 @@ void main() {
               ChangeNotifierProvider<Appearance>.value(value: appearance),
               ChangeNotifierProvider<TourController>.value(value: tour),
               ChangeNotifierProvider<McpService>.value(
-                value: McpService(
-                  openRunner: () =>
-                      const UnavailableRunner('Sin servidor en un vídeo.'),
+                value: mcp = McpService(
+                  // `"mcp": true`: el servidor de verdad, el del motor, sobre
+                  // la copia del ejemplo. Si no, ninguno.
+                  openRunner: () => useMcp
+                      ? McpRunner.forHost(
+                          enginePath: engine,
+                          texPath: session.texPath,
+                        )
+                      : const UnavailableRunner('Sin servidor en un vídeo.'),
                 ),
               ),
             ],
@@ -1136,6 +1146,38 @@ void main() {
         zones(tester, (what['cajas'] as Map?)?.cast<String, dynamic>()),
       );
       stdout.writeln('  $name.png');
+    } else if (action['mcp_llamar'] case final Map call) {
+      // Lo que haría un cliente conectado: una llamada de verdad al servidor
+      // encendido, que queda en su registro como cualquier otra.
+      // `{"herramienta": "translation_status", "argumentos": {...}}`.
+      final server = mcp;
+      if (server?.url == null) {
+        stdout.writeln('    (el servidor MCP no está encendido)');
+        return;
+      }
+      await tester.runAsync(() async {
+        final response = await http.post(
+          Uri.parse(server!.url!),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${server.token}',
+          },
+          body: jsonEncode({
+            'jsonrpc': '2.0',
+            'id': 7,
+            'method': 'tools/call',
+            'params': {
+              'name': call['herramienta'],
+              'arguments': call['argumentos'] ?? const {},
+            },
+          }),
+        );
+        stdout.writeln(
+          '    mcp ${call['herramienta']}: ${response.statusCode} '
+          '${utf8.decode(response.bodyBytes).characters.take(160)}',
+        );
+      });
+      await settleReal(tester, rounds: 20);
     } else if (action['esperar'] case final num rounds) {
       await settleReal(tester, rounds: rounds.toInt());
     } else if (action['escribir'] case final Map what) {
@@ -1242,7 +1284,13 @@ void main() {
           updates = videoUpdates(engine, next);
           await tester.runAsync(() => updates!.checkForUpdates(silent: true));
         }
-        await mount(tester, session, welcome: welcome, updates: updates);
+        await mount(
+          tester,
+          session,
+          welcome: welcome,
+          updates: updates,
+          useMcp: shot['mcp'] == true,
+        );
         await settleReal(tester, rounds: 3);
         if (!welcome) {
           routerFor(tester).go(shot['ruta'] as String);
@@ -1392,6 +1440,12 @@ class VideoSession extends LocalSession {
   });
 
   final Set<ToolId> missing;
+
+  /// Lo que contestaría GitHub a una sesión con permiso para los workflows:
+  /// sin red no contesta nadie, y el botón de compilar en GitHub se quedaba
+  /// esperando.
+  @override
+  Future<bool?> canPushWorkflows() async => true;
 
   @override
   Toolchain toolchain() {

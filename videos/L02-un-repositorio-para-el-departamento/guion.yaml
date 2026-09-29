@@ -1,0 +1,114 @@
+# L2 · Un repositorio para el departamento
+#
+# Montado desde este guion. Además del ejemplo, el arnés abre un segundo
+# repositorio con su historial y su remoto, «departamento/problemas-calculo»
+# (carpeta `problemas/` de este vídeo): declara también Cálculo I, con otro
+# profesor; su Hoja 2 llama a una lección del ejemplo; y un problema suyo es
+# de un bloque, «practicas», que no declara nadie. «Usar este» se pulsa de
+# verdad.
+codigo: L2
+titulo: Un repositorio para el departamento
+subtitulo: Repartir el material entre repositorios, y comprobar que cuadra
+ruta: Para quien mantiene el repositorio
+siguiente: "L3 · Bloques: teoría, problemas y prácticas"
+voz: narrador
+lema: ["Un documento y sus lecciones,", "en el mismo repositorio."]
+lema_en: "en el mismo repositorio"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás repartir el material de un departamento entre
+          repositorios, y comprobar que cuadra.
+
+  - id: reparto
+    capitulo: El reparto
+    antes: 0.4
+    grafico:
+      tipo: puntos
+      titulo: Un reparto que funciona
+      por_fila: 3
+      ancho: 460
+      alto_fila: 250
+      items:
+        - {titulo: "Problemas comunes", texto: "La colección del departamento, que usan todos.", icono: hoja, color: verde, en: colección}
+        - {titulo: "Tus apuntes", texto: "Lo que escribe cada uno, en el suyo.", icono: apuntes, color: azul, en: apuntes}
+        - {titulo: "La asignatura", texto: "Repartida: la teoría en uno, los problemas en otro.", icono: curso, color: ambar, en: asignatura}
+    frases:
+      - id: tipico
+        texto: >-
+          Un reparto que funciona: una colección común de problemas, los
+          apuntes de cada uno, y una asignatura repartida entre los dos.
+      - id: github
+        texto: >-
+          Quién entra en cada uno, y quién escribe, se decide en GitHub, no en
+          Didacta.
+
+  - id: juntos
+    capitulo: La asignatura, junta
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: curso
+        texto: >-
+          Abiertos los dos, Cálculo I se ve entero: los temas del tuyo, y la
+          Hoja 2, del de problemas.
+        pasos:
+          - {al: inicio, enfoca: [tema, hoja2], max: 1.9, dx: 250}
+          - {en: temas, resalta: tema, hasta: 1.6}
+          - {en: Hoja, resalta: hoja2}
+
+  - id: entre
+    capitulo: Entre repos
+    antes: 0.5
+    pantalla: entre
+    frases:
+      - id: pantalla
+        texto: >-
+          Y Entre repos dice dónde no cuadran.
+        pasos:
+          - {al: inicio, enfoca: [titulo], max: 2.2, dx: 450, dy: 120}
+          - {en: cuadran, resalta: titulo, lado: abajo}
+      - id: metadatos
+        texto: >-
+          Los dos declaran Cálculo I, y no dicen lo mismo: el profesor es otro.
+          Con Usar este, se iguala en los dos.
+        pasos:
+          - {al: inicio, enfoca: [tu, equipo], max: 2, dx: 350}
+          - {en: profesor, resalta: [tu, equipo], hasta: 2.4}
+          - {en: Usar, enfoca: [usar], max: 2, dx: -350}
+          - {en: Usar, resalta: usar, lado: abajo, alinear: derecha}
+          - {en: iguala, cambia: igualado}
+          - {en: iguala, enfoca: [aviso], max: 2, dy: -120, captura: igualado}
+          - {en: iguala, resalta: aviso, lado: arriba, captura: igualado}
+      - id: bloque
+        texto: >-
+          Una lección de un bloque, prácticas, que no declara ninguno de los
+          abiertos: o falta su repositorio, o hay que declararlo.
+        pasos:
+          - {al: inicio, cambia: entre-abajo}
+          - {al: inicio, enfoca: [bloque, practicas], max: 1.8, captura: entre-abajo}
+          - {en: prácticas, resalta: practicas, captura: entre-abajo}
+      - id: fuera
+        texto: >-
+          Y un documento que llama a una lección del otro repositorio. Compila
+          aquí, con los dos abiertos; en casa de quien solo tenga uno, no.
+        pasos:
+          - {al: inicio, enfoca: [llaman, hoja], max: 1.8, captura: entre-abajo}
+          - {en: documento, resalta: hoja, captura: entre-abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un documento y sus lecciones, en el mismo repositorio.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, los bloques: teoría, problemas y prácticas.

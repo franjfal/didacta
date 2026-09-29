@@ -1,0 +1,73 @@
+{
+  "codigo": "L7",
+  "titulo": "Compilar en GitHub y publicar la web del curso",
+  "fichero": "L07-compilar-en-github.mp4",
+  "duracion": 87.07,
+  "megas": 3.7,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Compilar en GitHub y publicar la web del curso"
+    },
+    {
+      "t": 6.56,
+      "titulo": "El icono de la nube"
+    },
+    {
+      "t": 33.54,
+      "titulo": "Dos paquetes"
+    },
+    {
+      "t": 52.71,
+      "titulo": "La web del curso"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás hacer que GitHub compruebe y compile el material cada vez que envías."
+    },
+    {
+      "t": 7.06,
+      "texto": "En Ajustes, Cuenta y repositorios, el icono de la nube al lado de cada repositorio."
+    },
+    {
+      "t": 12.81,
+      "texto": "Cada vez que envíes, GitHub compilará todo el material, y dejará los PDF para descargar durante treinta días."
+    },
+    {
+      "t": 20.2,
+      "texto": "Gasta minutos de GitHub Actions: los repositorios privados tienen unos dos mil al mes sin pagar."
+    },
+    {
+      "t": 26.47,
+      "texto": "Añadir lo deja como un cambio más, en el historial. Y para dejar de compilar, se borra ese fichero."
+    },
+    {
+      "t": 33.94,
+      "texto": "En la pestaña Actions de GitHub, primero comprueba lo que no va a compilar. Después, los PDF, en dos paquetes: los PDF para repartir, y los PDF del profesor."
+    },
+    {
+      "t": 46.43,
+      "texto": "Separados con la misma regla que al exportar: descargar el primero no puede traer una solución."
+    },
+    {
+      "t": 53.11,
+      "texto": "Y la web del curso: en el terminal, didacta site deja en la carpeta site lo que se reparte, con una página que lo enseña por idioma y por tema."
+    },
+    {
+      "t": 62.82,
+      "texto": "El ejemplo trae un workflow que la publica en GitHub Pages cada vez que esa carpeta cambia y se sube. Nada se compila allí: los PDF salen de tu ordenador."
+    },
+    {
+      "t": 74.58,
+      "texto": "Los dos paquetes van separados: descargar el primero no trae una solución."
+    },
+    {
+      "t": 80.58,
+      "texto": "En el siguiente vídeo, un asistente de IA sobre tu material."
+    }
+  ]
+}

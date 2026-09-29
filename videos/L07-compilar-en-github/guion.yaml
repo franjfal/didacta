@@ -1,0 +1,116 @@
+# L7 · Compilar en GitHub y publicar la web del curso
+#
+# Montado desde este guion. El icono de la nube y su diálogo son de verdad
+# dentro del arnés: se añade el workflow como un cambio más (la pregunta de si
+# la sesión puede subir workflows la contesta el arnés, porque dentro de una
+# prueba no hay GitHub). Lo de GitHub se cuenta con un esquema, y la orden
+# `didacta site` es la de verdad sobre una copia del ejemplo, con su salida;
+# la ruta, acortada.
+codigo: L7
+titulo: Compilar en GitHub y publicar la web del curso
+subtitulo: Que GitHub compruebe y compile el material cada vez que envías
+ruta: Para quien mantiene el repositorio
+siguiente: "L8 · Un asistente de IA sobre tu material"
+voz: narrador
+lema: ["Los dos paquetes van separados:", "descargar el primero no trae una solución."]
+lema_en: "no trae una solución"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás hacer que GitHub compruebe y compile el material
+          cada vez que envías.
+
+  - id: nube
+    capitulo: El icono de la nube
+    antes: 0.5
+    pantalla: icono
+    frases:
+      - id: icono
+        texto: >-
+          En Ajustes, Cuenta y repositorios, el icono de la nube al lado de
+          cada repositorio.
+        pasos:
+          - {al: inicio, enfoca: [nube], max: 2.4, dx: -150}
+          - {en: nube, resalta: nube, lado: abajo}
+      - id: dialogo
+        texto: >-
+          Cada vez que envíes, GitHub compilará todo el material, y dejará los
+          PDF para descargar durante treinta días.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [titulo, anadir], max: 1.7, captura: dialogo}
+          - {en: GitHub, resalta: cada, captura: dialogo}
+      - id: minutos
+        texto: >-
+          Gasta minutos de GitHub Actions: los repositorios privados tienen unos
+          dos mil al mes sin pagar.
+        pasos:
+          - {en: minutos, resalta: minutos, captura: dialogo}
+      - id: anadir
+        texto: >-
+          Añadir lo deja como un cambio más, en el historial. Y para dejar de
+          compilar, se borra ese fichero.
+        pasos:
+          - {al: inicio, pulsa: anadir, captura: dialogo}
+          - {en: cambio, cambia: anadido}
+          - {en: cambio, enfoca: [aviso], max: 2, dy: -120, captura: anadido}
+          - {en: cambio, resalta: aviso, lado: arriba, captura: anadido}
+
+  - id: paquetes
+    capitulo: Dos paquetes
+    antes: 0.4
+    grafico:
+      tipo: comparar
+      titulo: En la pestaña Actions de GitHub
+      izquierda: {titulo: PDF para repartir, texto: "Como mucho, con los resultados. Lo que puede ver un estudiante.", icono: carpeta, color: verde, en: repartir}
+      derecha: {titulo: PDF del profesor, texto: "Las soluciones, las notas y los exámenes con su corrección.", icono: profesor, color: profesor, en: profesor}
+    frases:
+      - id: comprueba
+        texto: >-
+          En la pestaña Actions de GitHub, primero comprueba lo que no va a
+          compilar. Después, los PDF, en dos paquetes: los PDF para repartir, y
+          los PDF del profesor.
+      - id: regla
+        texto: >-
+          Separados con la misma regla que al exportar: descargar el primero
+          no puede traer una solución.
+
+  - id: web
+    capitulo: La web del curso
+    antes: 0.4
+    grafico:
+      tipo: terminal
+      titulo: La web del curso
+      lineas:
+        - {cmd: "didacta site calculo-i@2026-2027 -l es", en: didacta}
+        - {out: "web del curso ~/Didacta/didacta-ejemplo/site/index.html: 6 PDF"}
+        - {cmd: "git add site && git commit -m 'La web del curso' && git push", en: sube}
+    frases:
+      - id: site
+        texto: >-
+          Y la web del curso: en el terminal, didacta site deja en la carpeta
+          site lo que se reparte, con una página que lo enseña por idioma y
+          por tema.
+      - id: pages
+        texto: >-
+          El ejemplo trae un workflow que la publica en GitHub Pages cada vez
+          que esa carpeta cambia y se sube. Nada se compila allí: los PDF
+          salen de tu ordenador.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Los dos paquetes van separados: descargar el primero no trae una
+          solución.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, un asistente de IA sobre tu material.

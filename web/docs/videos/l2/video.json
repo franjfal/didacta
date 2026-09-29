@@ -1,0 +1,69 @@
+{
+  "codigo": "L2",
+  "titulo": "Un repositorio para el departamento",
+  "fichero": "L02-un-repositorio-para-el-departamento.mp4",
+  "duracion": 73.32,
+  "megas": 5.2,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Un repositorio para el departamento"
+    },
+    {
+      "t": 7.95,
+      "titulo": "El reparto"
+    },
+    {
+      "t": 23.46,
+      "titulo": "La asignatura, junta"
+    },
+    {
+      "t": 31.72,
+      "titulo": "Entre repos"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás repartir el material de un departamento entre repositorios, y comprobar que cuadra."
+    },
+    {
+      "t": 8.35,
+      "texto": "Un reparto que funciona: una colección común de problemas, los apuntes de cada uno, y una asignatura repartida entre los dos."
+    },
+    {
+      "t": 17.29,
+      "texto": "Quién entra en cada uno, y quién escribe, se decide en GitHub, no en Didacta."
+    },
+    {
+      "t": 23.96,
+      "texto": "Abiertos los dos, Cálculo I se ve entero: los temas del tuyo, y la Hoja 2, del de problemas."
+    },
+    {
+      "t": 32.22,
+      "texto": "Y Entre repos dice dónde no cuadran."
+    },
+    {
+      "t": 35.16,
+      "texto": "Los dos declaran Cálculo I, y no dicen lo mismo: el profesor es otro. Con Usar este, se iguala en los dos."
+    },
+    {
+      "t": 43.78,
+      "texto": "Una lección de un bloque, prácticas, que no declara ninguno de los abiertos: o falta su repositorio, o hay que declararlo."
+    },
+    {
+      "t": 51.53,
+      "texto": "Y un documento que llama a una lección del otro repositorio. Compila aquí, con los dos abiertos; en casa de quien solo tenga uno, no."
+    },
+    {
+      "t": 61.96,
+      "texto": "Un documento y sus lecciones, en el mismo repositorio."
+    },
+    {
+      "t": 65.75,
+      "texto": "En el siguiente vídeo, los bloques: teoría, problemas y prácticas."
+    }
+  ]
+}

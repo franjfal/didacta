@@ -517,6 +517,70 @@
         });
       }
 
+      if (tipo === 'terminal') {
+        // Un terminal: cada `cmd` se escribe letra a letra y su salida
+        // (`out`, una o varias líneas) aparece debajo. Lo que no cabe sube.
+        const ancho = gr.ancho || 1560;
+        // Cuántas filas va a haber: la ventana se ajusta a ellas, y con pocas
+        // la letra crece. Una ventana enorme con tres líneas pequeñas arriba
+        // no se lee.
+        const filas = (gr.lineas || []).reduce(
+          (n, l) => n + (l.cmd !== undefined ? 1 : String(l.out ?? '').split('\n').length),
+          0,
+        );
+        const tam = gr.tam || (filas <= 8 ? 32 : 26);
+        const lh = Math.round(tam * 1.55);
+        const x = (W - ancho) / 2;
+        const libre = H - arriba - 100;
+        const alto = Math.min(libre, 110 + Math.max(filas, 4) * lh);
+        const y = arriba + 10 + Math.max(0, (libre - alto) / 2 - 20);
+        const cabe = Math.floor((alto - 110) / lh);
+        const win = nodo({ padre: g, clase: 'abs', estilo: { left: `${x}px`, top: `${y}px`, width: `${ancho}px`, height: `${alto}px`, borderRadius: '18px', background: '#1d2127', boxShadow: '0 30px 70px -20px rgba(28,31,38,.55)', overflow: 'hidden' } });
+        nodo({ padre: win, html: `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#ff5f57;margin-right:9px"></span><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#febc2e;margin-right:9px"></span><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#28c840"></span><span class="mono" style="margin-left:22px;font-size:19px;color:#8b93a1">${gr.carpeta || 'didacta-ejemplo'}</span>`, estilo: { padding: '18px 22px', borderBottom: '1px solid #2c323b' } });
+        const vista = nodo({ padre: win, estilo: { position: 'absolute', left: '34px', right: '34px', top: '78px', bottom: '24px', overflow: 'hidden' } });
+        const dentro = nodo({ padre: vista, estilo: { position: 'absolute', left: 0, right: 0, top: 0 } });
+        let t = e.ini + 0.6;
+        let fila = 0;
+        const subidas = [[0, { y: 0 }]];
+        const pon = (tAparece) => {
+          if (fila >= cabe) subidas.push([tAparece, { y: -(fila - cabe + 1) * lh }, 'sale']);
+          fila += 1;
+        };
+        for (const l of gr.lineas || []) {
+          if (l.cmd !== undefined) {
+            // Nunca antes que la línea de antes: las filas se reparten en
+            // orden, y una orden que se escribe antes que la de encima deja
+            // un hueco que se rellena después.
+            t = Math.max(tDe(escena, l, t + 0.5), t + 0.3);
+            const el = nodo({ padre: dentro, clase: 'mono', estilo: { position: 'absolute', left: 0, top: `${fila * lh}px`, fontSize: `${tam}px`, lineHeight: `${lh}px`, color: '#e6e9ee', whiteSpace: 'pre' } });
+            const cmd = l.cmd;
+            const t0 = t;
+            const dura = Math.min(1.2, 0.045 * cmd.length + 0.2);
+            anim(el, [[t0 - 0.01, { o: 0 }], [t0, { o: 1 }]]);
+            tarea((tt) => {
+              const n = tt < t0 ? 0 : Math.min(cmd.length, Math.floor(((tt - t0) / dura) * cmd.length));
+              const cursor = tt >= t0 && tt < t0 + dura + 0.4 ? '▍' : '';
+              el.innerHTML = `<span style="color:#6fce6f">$</span> ${cmd.slice(0, n)}<span style="color:#6fce6f">${cursor}</span>`;
+            });
+            pon(t0);
+            t = t0 + dura + 0.25;
+          } else {
+            const salida = String(l.out ?? '').split('\n');
+            if (l.en) t = Math.max(tDe(escena, l, t), t);
+            salida.forEach((texto, k) => {
+              const el = nodo({ padre: dentro, clase: 'mono', estilo: { position: 'absolute', left: 0, top: `${fila * lh}px`, fontSize: `${tam}px`, lineHeight: `${lh}px`, color: l.color ? color(l.color) : '#aeb6c2', whiteSpace: 'pre', fontWeight: l.fuerte ? 700 : 400 } });
+              el.textContent = texto;
+              const tk = t + 0.04 * k;
+              anim(el, [[tk - 0.01, { o: 0 }], [tk + 0.12, { o: 1 }]]);
+              pon(tk);
+            });
+            t += 0.04 * salida.length + 0.1;
+          }
+        }
+        anim(dentro, subidas);
+        entra(win, e.ini + 0.2, { dy: 40, curva: 'sale4' });
+      }
+
       visible(g, e.ini, e.fin + 0.05, 0.3, 0.4);
       if (extra[escena.id]) extra[escena.id]({ E, G, D, g, escena });
     }

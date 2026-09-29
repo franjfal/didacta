@@ -1,0 +1,221 @@
+{
+  "capturas": [
+    {
+      "nombre": "_mcp",
+      "ruta": "/settings?s=mcp",
+      "completa": true,
+      "mcp": true,
+      "red": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "apagado",
+            "cajas": {
+              "interruptor": {
+                "clave": "mcp-switch"
+              },
+              "escribir": {
+                "clave": "mcp-writable-profe/didacta-ejemplo"
+              },
+              "donde": {
+                "texto": "Dónde puede escribir"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "mcp-writable-profe/didacta-ejemplo"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "escribible",
+            "cajas": {
+              "escribir": {
+                "clave": "mcp-writable-profe/didacta-ejemplo"
+              },
+              "donde": {
+                "texto": "Dónde puede escribir"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "mcp-switch"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "mcp-open"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "encendido",
+            "cajas": {
+              "interruptor": {
+                "clave": "mcp-switch"
+              },
+              "estado": {
+                "contiene": "127.0.0.1"
+              },
+              "abrir": {
+                "clave": "mcp-open"
+              },
+              "escribir": {
+                "clave": "mcp-writable-profe/didacta-ejemplo"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/mcp",
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "pagina",
+            "cajas": {
+              "url": {
+                "clave": "mcp-copy-url"
+              },
+              "config": {
+                "clave": "mcp-copy-config"
+              }
+            }
+          }
+        },
+        {
+          "mcp_llamar": {
+            "herramienta": "list_courses",
+            "argumentos": {}
+          }
+        },
+        {
+          "mcp_llamar": {
+            "herramienta": "read_course",
+            "argumentos": {
+              "course": "calculo-i",
+              "year": "2026-2027"
+            }
+          }
+        },
+        {
+          "mcp_llamar": {
+            "herramienta": "translation_status",
+            "argumentos": {
+              "language": "va"
+            }
+          }
+        },
+        {
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "registro",
+            "cajas": {
+              "url": {
+                "clave": "mcp-copy-url"
+              },
+              "registro": {
+                "texto": "QUÉ ESTÁ HACIENDO",
+                "ajustado": true
+              }
+            }
+          }
+        },
+        {
+          "mcp_llamar": {
+            "herramienta": "write_unit",
+            "argumentos": {
+              "path": "content/calculo/continuidad/teorema-de-bolzano",
+              "language": "va",
+              "text": "% Lliçó: el teorema de Bolzano (valencià).\n%\n% Teorema, demostració, corol·lari i exemple. La demostració va en\n% `notesonly`: en les diapositives s'enuncia i en els apunts es demostra.\n\n\\begin{frame}\n\\didactatitle{El teorema de Bolzano}\n\n\\begin{theorem}[Bolzano]\nSi $f$ és contínua en $[a, b]$ i $f(a)$ i $f(b)$ tenen signes oposats,\nexisteix $c \\in (a, b)$ tal que $f(c) = 0$.\n\\end{theorem}\n\n\\bymedium{%\n  Una funció contínua que comença per davall de l'eix i acaba per damunt\n  l'ha de travessar.\n}{%\n  Una funció contínua que comença per davall de l'eix i acaba per damunt\n  l'ha de travessar. El que el teorema afig a la intuïció és que això no\n  depén del dibuix, sinó que la recta real no té forats: l'axioma del\n  suprem.\n}\n\n\\begin{notesonly}\n\\begin{proof}\nSuposem $f(a) < 0 < f(b)$; l'altre cas es redueix a aquest canviant $f$ per\n$-f$. El conjunt $A = \\{x \\in [a, b] : f(x) < 0\\}$ conté $a$ i està fitat\nper $b$, així que té suprem $c \\in [a, b]$. Vegem que $f(c) = 0$.\n\nSi fóra $f(c) \\neq 0$, prenent $\\varepsilon = |f(c)|$ en la definició de\ncontinuïtat hi hauria un $\\delta > 0$ tal que $f(x)$ té el mateix signe que\n$f(c)$ per a tot $x \\in [a, b]$ amb $|x - c| < \\delta$. Si $f(c) < 0$,\naleshores $c < b$ i hi hauria punts de $A$ més grans que $c$. Si $f(c) > 0$,\naleshores $c > a$ i cap punt de $(c - \\delta, c]$ no estaria en $A$, així que\n$c - \\delta$ seria una fita superior de $A$ menor que $c$. Les dues coses\ncontradiuen que $c$ siga el suprem.\n\nPer tant $f(c) = 0$, i $c \\neq a, b$ perquè ni $f(a)$ ni $f(b)$ s'anul·len.\n\\end{proof}\n\\end{notesonly}\n\n\\begin{teaching}[Per a discutir]\nQuè falla si $f$ no és contínua? (El salt $H(x) - \\tfrac12$ en $[-1, 1]$.)\nI si només existiren els racionals? ($x^2 - 2$ en $[0, 2]$ canvia de signe i\nno té cap arrel racional.)\n\\end{teaching}\n\\end{frame}\n\n\\begin{frame}\n\\didactatitle{Valors intermedis}\n\n\\begin{corollary}[Valors intermedis]\nSi $f$ és contínua en $[a, b]$, pren tots els valors compresos entre\n$f(a)$ i $f(b)$.\n\\end{corollary}\n\n\\onlynotes{%\n  Si $k$ està estrictament entre $f(a)$ i $f(b)$, n'hi ha prou d'aplicar el\n  teorema de Bolzano a $g(x) = f(x) - k$, que és contínua i canvia de signe en\n  $[a, b]$.\n}\n\n\\dpause\n\n\\begin{example}\nL'equació $x^3 + x - 1 = 0$ té una solució en $(0, 1)$: el polinomi és\ncontinu, val $-1$ en $0$ i $1$ en $1$.\n\\onlynotes{%\n  Repetint l'argument en la meitat de l'interval on canvia el signe, i\n  després en la meitat d'eixa meitat, s'obté el \\keyterm{mètode de\n  bisecció}: cada pas divideix per dos la longitud de l'interval en què està\n  l'arrel.\n}\n\\end{example}\n\\end{frame}\n"
+            }
+          }
+        },
+        {
+          "esperar": 80
+        },
+        {
+          "capturar": {
+            "nombre": "escrito",
+            "cajas": {
+              "url": {
+                "clave": "mcp-copy-url"
+              },
+              "registro": {
+                "texto": "QUÉ ESTÁ HACIENDO",
+                "ajustado": true
+              },
+              "escribe": {
+                "texto": "escribe"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "refresh-everything"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "sin guardar"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "esperar": 60
+        },
+        {
+          "capturar": {
+            "nombre": "barra",
+            "cajas": {
+              "estado": {
+                "contiene": "sin guardar",
+                "ajustado": true
+              },
+              "actualizar": {
+                "clave": "refresh-everything"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/continuidad/teorema-de-bolzano?lang=va",
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "leccion",
+            "cajas": {
+              "va": {
+                "clave": "language-tab-va"
+              },
+              "texto": {
+                "editor": "El teorema de Bolzano"
+              },
+              "estado": {
+                "contiene": "sin guardar",
+                "ajustado": true
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+# L4 · Plantillas: tus propias salidas
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés, con la
+# interfaz Completa: se duplica «Apuntes» como «Apuntes de bolsillo»
+# (`10pt,a5paper`), que es la primera plantilla que declara el repositorio del
+# ejemplo, y se le escribe una cabecera, que no llega a guardarse.
+codigo: L4
+titulo: "Plantillas: tus propias salidas"
+subtitulo: Crear una salida propia, o retocar una de las que trae Didacta
+ruta: Para quien mantiene el repositorio
+siguiente: "L5 · Snippets propios"
+voz: narrador
+lema: ["La cabecera va al final del preámbulo:", "puede redefinir lo que Didacta acaba de definir."]
+lema_en: "puede redefinir"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás crear una salida propia, unos apuntes en A5, o
+          retocar una de las que trae Didacta.
+
+  - id: lista
+    capitulo: Las plantillas
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: que
+        texto: >-
+          Una plantilla es una salida: qué PDF sale de una lección. En Ajustes,
+          Bloques y plantillas, las que trae Didacta.
+        pasos:
+          - {al: inicio, enfoca: [apuntes], max: 1.8}
+          - {en: trae, resalta: apuntes}
+      - id: editar
+        texto: >-
+          Editar aquí una de ellas la escribe en tu repositorio, con el mismo
+          nombre, y desde ahí manda la tuya. Duplicar hace otra a partir de
+          ella.
+        pasos:
+          - {al: inicio, enfoca: [editar, duplicar], max: 2.2, dx: -300}
+          - {en: Editar, resalta: editar, lado: abajo, hasta: 3}
+          - {en: Duplicar, resalta: duplicar, lado: abajo}
+
+  - id: bolsillo
+    capitulo: Apuntes de bolsillo
+    antes: 0.5
+    pantalla: duplicar
+    frases:
+      - id: nombre
+        texto: >-
+          Duplicar Apuntes: un nombre, Apuntes de bolsillo. Y como es la
+          primera que se declara, se escriben también las de serie, para que
+          todo se siga compilando igual.
+        pasos:
+          - {al: inicio, enfoca: [titulo], max: 1.8, dy: 100}
+          - {en: nombre, resalta: titulo, lado: abajo, hasta: 3}
+      - id: opciones
+        texto: >-
+          Su identificador, y las opciones de la clase: diez puntos y papel
+          A5. Los ejes, los de Apuntes.
+        pasos:
+          - {al: inicio, cambia: opciones}
+          - {al: inicio, enfoca: [id, opciones], max: 1.8, captura: opciones}
+          - {en: identificador, resalta: id, captura: opciones, hasta: 1.8}
+          - {en: opciones, resalta: opciones, captura: opciones}
+      - id: declarar
+        texto: >-
+          Declarar, y ya está en la lista, en el repositorio del ejemplo.
+        pasos:
+          - {al: inicio, pulsa: guardar, captura: opciones}
+          - {en: lista, cambia: creada}
+          - {en: lista, enfoca: [fila], max: 1.8, captura: creada}
+          - {en: repositorio, resalta: fila, captura: creada}
+
+  - id: cabecera
+    capitulo: La cabecera
+    antes: 0.5
+    pantalla: cabecera
+    frases:
+      - id: final
+        texto: >-
+          Cabecera: el LaTeX que se lee al final del preámbulo de Didacta. Aquí,
+          un interlineado más apretado, para que quepa en A5.
+        pasos:
+          - {al: inicio, enfoca: [texto], max: 1.6}
+          - {en: interlineado, resalta: texto}
+      - id: apagar
+        texto: >-
+          Y apagar una no la borra: sigue declarada, con su cabecera, para el
+          día que vuelva a hacer falta.
+        pasos:
+          - {al: inicio, cambia: creada}
+          - {al: inicio, enfoca: [activa, cabecera], max: 2, captura: creada}
+          - {en: apagar, resalta: activa, lado: derecha, captura: creada}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          La cabecera va al final del preámbulo: puede redefinir lo que Didacta
+          acaba de definir.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, tus propios snippets.

@@ -1,0 +1,307 @@
+{
+  "capturas": [
+    {
+      "nombre": "_snippets",
+      "ruta": "/settings?s=snippets",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "lista",
+            "cajas": {
+              "lista": {
+                "clave": "snippet-list"
+              },
+              "filtro": {
+                "clave": "snippet-filter"
+              },
+              "nuevo": {
+                "clave": "new-snippet"
+              },
+              "fila": {
+                "clave": "snippet-row-definition"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "new-snippet"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "snippet-label"
+            },
+            "texto": "Resumen"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "snippet-environment"
+            },
+            "texto": "resumen"
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "snippet-definition-kind"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "texto": "Caja de teorema"
+          },
+          "esperar": 4
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "snippet-box-title"
+            },
+            "texto": "Resumen"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-colour-didactaProp"
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "caja",
+            "cajas": {
+              "tipo": {
+                "clave": "snippet-definition-kind"
+              },
+              "titulo": {
+                "clave": "snippet-box-title"
+              },
+              "color": {
+                "clave": "snippet-colour-didactaProp"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-compile"
+          },
+          "esperar": 6
+        },
+        {
+          "esperar": 200
+        },
+        {
+          "capturar": {
+            "nombre": "vista",
+            "cajas": {
+              "estado": {
+                "clave": "snippet-preview-status"
+              },
+              "perfil": {
+                "clave": "snippet-preview-profile"
+              },
+              "compilar": {
+                "clave": "snippet-compile"
+              },
+              "guardar": {
+                "clave": "save-snippet"
+              },
+              "tipo": {
+                "clave": "snippet-definition-kind"
+              },
+              "titulo": {
+                "clave": "snippet-box-title"
+              },
+              "color": {
+                "clave": "snippet-colour-didactaProp"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-preview-profile"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "perfiles",
+            "cajas": {
+              "perfil": {
+                "clave": "snippet-preview-profile"
+              },
+              "diapositivas": {
+                "texto": "Diapositivas",
+                "ultimo": true
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Diapositivas",
+            "ultimo": true
+          },
+          "esperar": 6
+        },
+        {
+          "esperar": 200
+        },
+        {
+          "capturar": {
+            "nombre": "vista-diapositivas",
+            "cajas": {
+              "perfil": {
+                "clave": "snippet-preview-profile"
+              },
+              "estado": {
+                "clave": "snippet-preview-status"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "save-snippet"
+          },
+          "esperar": 6
+        },
+        {
+          "esperar": 60
+        },
+        {
+          "mostrar": {
+            "clave": "snippet-row-resumen"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "guardado",
+            "cajas": {
+              "fila": {
+                "clave": "snippet-row-resumen"
+              },
+              "casilla": {
+                "clave": "snippet-resumen-in-profe/didacta-ejemplo"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nombre": "_retocar",
+      "ruta": "/settings?s=snippets",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 14
+        },
+        {
+          "mostrar": {
+            "clave": "snippet-row-definition"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-menu-definition"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "editar": {
+                "texto": "Editar…"
+              },
+              "duplicar": {
+                "texto": "Duplicar como uno propio…"
+              },
+              "fila": {
+                "clave": "snippet-row-definition"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Editar…"
+          },
+          "esperar": 8
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "snippet-label"
+            },
+            "texto": "Definición formal"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "retoque",
+            "cajas": {
+              "rotulo": {
+                "clave": "snippet-label"
+              },
+              "guardar": {
+                "clave": "save-snippet"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "save-snippet"
+          },
+          "esperar": 6
+        },
+        {
+          "esperar": 60
+        },
+        {
+          "mostrar": {
+            "clave": "snippet-row-definition"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "snippet-menu-definition"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "volver",
+            "cajas": {
+              "volver": {
+                "texto": "Volver al de Didacta"
+              },
+              "fila": {
+                "clave": "snippet-row-definition"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
