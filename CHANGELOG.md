@@ -98,6 +98,9 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   es por donde se gestionan, solo salía cuando ya había alguno. Ahora, con
   la interfaz Completa, sale también sin ninguno, y la paleta ofrece
   «Gestionar los grados».
+- **El registro del servidor MCP sigue el tamaño del texto.** Con el texto
+  grande en Apariencia, las líneas del registro y los argumentos de cada
+  herramienta se quedaban pequeñas.
 - **La plantilla compacta se llama «Guía» en todas partes.** La lista de
   plantillas decía «Handout», y el fichero que se exportaba, «Guía».
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios

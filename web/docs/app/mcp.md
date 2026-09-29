@@ -84,8 +84,10 @@ Es lo que hace la diferencia entre delegar y perder el control. Un servidor que
 escribe en los ficheros de alguien sin que se pueda ver qué toca no es una
 herramienta en la que haya motivo para confiar.
 
-Y todo lo que escriba pasa por donde pasa lo demás: **es un commit**, con su
-autor y su mensaje, y se puede mirar en el historial y deshacer.
+Y lo que escribe **no es un commit**: queda en tu ordenador como un cambio
+sin guardar, igual que si lo hubieras escrito tú. La barra de abajo lo cuenta,
+se mira qué ha cambiado, y se guarda --o se descarta-- desde Didacta. Nada de
+lo que haga el asistente llega a GitHub sin que alguien lo haya mirado.
 
 ## Cómo se conecta un cliente
 

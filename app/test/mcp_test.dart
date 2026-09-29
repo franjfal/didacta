@@ -543,13 +543,9 @@ void main() {
       await settle(tester);
 
       expect(find.textContaining('Lo que hace read_unit'), findsOneWidget);
-      // `findRichText` porque la ficha de un argumento es un `RichText` --el
-      // nombre en monoespaciada y la explicación en gris, en la misma línea--
-      // y los buscadores de texto solo miran los `Text` por defecto.
-      expect(
-        find.textContaining('obligatorio', findRichText: true),
-        findsWidgets,
-      );
+      // El nombre en monoespaciada y la explicación en gris, en la misma
+      // línea: un `Text.rich`.
+      expect(find.textContaining('obligatorio'), findsWidgets);
     });
 
     testWidgets('las llamadas van apareciendo', (tester) async {
@@ -571,6 +567,29 @@ void main() {
       expect(find.text('write_unit', findRichText: true), findsWidgets);
       expect(find.text('8 ms'), findsOneWidget);
       expect(find.text('escribe'), findsWidgets);
+    });
+
+    // Eran `RichText`, que no hereda el estilo del tema ni sigue el tamaño
+    // del texto de Apariencia: con el texto al 150 %, el registro se quedaba
+    // pequeño.
+    testWidgets('el registro sigue el tamaño del texto', (tester) async {
+      final session = StubSession();
+      await show(tester, session: session);
+      session.lines.add(
+        line({'event': 'call', 'tool': 'read_unit', 'ok': true, 'ms': 3}),
+      );
+      await Future<void>.microtask(() {});
+      await settle(tester);
+      final row = tester.widget<Text>(
+        find
+            .byWidgetPredicate(
+              (w) =>
+                  w is Text &&
+                  (w.textSpan?.toPlainText() ?? '').contains('read_unit'),
+            )
+            .first,
+      );
+      expect(row.textSpan, isNotNull);
     });
 
     testWidgets('sin nada todavía, lo dice en vez de dejar un hueco', (

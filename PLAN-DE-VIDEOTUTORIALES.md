@@ -1493,7 +1493,8 @@ descargar el primero no puede traer una solución.
 3. Copiar la configuración y pegarla en el cliente.
 4. Preguntarle «¿qué lecciones del Tema 1 faltan en valenciano?» y mirar el
    registro en vivo.
-5. Lo que escribe es un cambio guardado, en el historial.
+5. Lo que escribe queda como un cambio sin guardar: se mira y se guarda desde
+   Didacta.
 
 **La idea:** dos interruptores: leer es inocuo; escribir se concede repositorio
 a repositorio.

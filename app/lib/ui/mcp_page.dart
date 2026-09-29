@@ -302,8 +302,10 @@ class _EventRow extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: RichText(
-              text: TextSpan(
+            // `Text.rich` y no `RichText`: este no hereda el estilo del tema
+            // ni sigue el tamaño del texto de Apariencia.
+            child: Text.rich(
+              TextSpan(
                 style: TextStyle(fontSize: 12.5, color: context.palette.ink),
                 children: [
                   TextSpan(
@@ -489,8 +491,8 @@ class _ToolTile extends StatelessWidget {
           for (final argument in tool.arguments)
             Padding(
               padding: const EdgeInsets.only(bottom: 3),
-              child: RichText(
-                text: TextSpan(
+              child: Text.rich(
+                TextSpan(
                   style: TextStyle(fontSize: 12, color: context.palette.ink),
                   children: [
                     TextSpan(
