@@ -105,12 +105,17 @@ class MergedCatalogueSource extends CatalogueSource {
       available: merged.available,
       byRepo: merged.byRepo,
       degrees: merged.degrees,
+      blocks: merged.blocks,
+      templates: merged.templates,
       defaultLanguage: merged.defaultLanguage,
       contentHash: merged.contentHash,
       units: merged.units,
       courses: merged.courses,
       profiles: merged.profiles,
       errors: [...merged.errors, ...failures],
+      shared: merged.shared,
+      snippets: merged.snippets,
+      taxonomyTitles: merged.taxonomyTitles,
     );
   }
 }

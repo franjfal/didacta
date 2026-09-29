@@ -54,6 +54,30 @@ LibraryTree treeFixture() => LibraryTree.of([
 ]);
 
 void main() {
+  group('los nombres', () {
+    test('los de la taxonomía, y sin ella la carpeta legible', () {
+      final tree = LibraryTree.of(
+        [
+          unit(path: 'content/algebra/matrices/rank'),
+          unit(path: 'content/analysis/normed/definition'),
+        ],
+        titleOf: (key) => const {
+          'algebra': 'Álgebra',
+          'algebra/matrices': 'Matrices y determinantes',
+        }[key],
+      );
+      final algebra = tree.categories.firstWhere(
+        (node) => node.category == 'algebra',
+      );
+      expect(algebra.label, 'Álgebra');
+      expect(algebra.topic('matrices')!.label, 'Matrices y determinantes');
+      final analysis = tree.categories.firstWhere(
+        (node) => node.category == 'analysis',
+      );
+      expect(analysis.label, humaniseSlug('analysis'));
+    });
+  });
+
   group('la forma', () {
     test('agrupa por categoría y tema, sin partir por bloque', () {
       // El área NO es un nivel: `analysis` tiene teoría y problemas y es una

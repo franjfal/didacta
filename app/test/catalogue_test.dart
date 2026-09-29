@@ -53,9 +53,11 @@ Map<String, dynamic> unitJson({
 Catalogue catalogueOf(
   List<Map<String, dynamic>> units, {
   List<Map<String, dynamic>> courses = const [],
+  Map<String, dynamic>? taxonomy,
 }) {
   return Catalogue.fromIndex(
     manifest: {
+      'taxonomy': ?taxonomy,
       'schemaVersion': supportedSchemaVersion,
       'name': 'Test',
       'languages': ['es', 'va', 'en'],
@@ -73,6 +75,43 @@ Catalogue catalogueOf(
 }
 
 void main() {
+  // La biblioteca los inventaba a partir de la carpeta: `algebra` daba
+  // «Algebra», y en valenciano seguía diciendo «Cálculo».
+  group('los nombres de la taxonomía', () {
+    final taxonomy = {
+      'categories': [
+        {
+          'id': 'algebra',
+          'title': {'es': 'Álgebra', 'va': 'Àlgebra'},
+          'topics': [
+            {
+              'id': 'matrices',
+              'title': {'es': 'Matrices', 'va': 'Matrius'},
+            },
+          ],
+        },
+      ],
+    };
+
+    test('se leen por categoría y por tema, en cada idioma', () {
+      final catalogue = catalogueOf(const [], taxonomy: taxonomy);
+      expect(catalogue.taxonomyTitle('algebra', 'es'), 'Álgebra');
+      expect(catalogue.taxonomyTitle('algebra', 'va'), 'Àlgebra');
+      expect(catalogue.taxonomyTitle('algebra/matrices', 'va'), 'Matrius');
+      // Sin traducción, el del idioma de siempre.
+      expect(catalogue.taxonomyTitle('algebra', 'en'), 'Álgebra');
+      expect(catalogue.taxonomyTitle('calculo', 'es'), isNull);
+    });
+
+    test('al juntar repositorios, cada uno trae los suyos', () {
+      final merged = Catalogue.merge([
+        catalogueOf(const []),
+        catalogueOf(const [], taxonomy: taxonomy),
+      ]);
+      expect(merged.taxonomyTitle('algebra', 'es'), 'Álgebra');
+    });
+  });
+
   group('schema version', () {
     test('a version this app does not know is refused, not guessed at', () {
       // A field that silently changed meaning is worse than a file that fails

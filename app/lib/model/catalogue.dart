@@ -1808,6 +1808,7 @@ class Catalogue {
     required this.errors,
     this.shared = const [],
     this.snippets = const {},
+    this.taxonomyTitles = const {},
   });
 
   /// Builds from the three index files.
@@ -1875,6 +1876,7 @@ class Catalogue {
         for (final item in (courses['degrees'] as List?) ?? const [])
           Degree.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
       ],
+      taxonomyTitles: _taxonomyTitles(manifest['taxonomy']),
       // Dentro de la taxonomía, que es donde se declaran: un bloque clasifica
       // una lección, igual que la categoría y el tema. Vacío en un índice de
       // antes de que se declararan, y entonces valen los dos de siempre --ver
@@ -1939,6 +1941,22 @@ class Catalogue {
   /// qué dice cada uno. La biblioteca junta y compara --ver
   /// [CatalogueSnippets]--.
   final Map<String, List<SnippetDeclaration>?> snippets;
+
+  /// Los nombres de las categorías y de sus temas, como los escribe
+  /// `taxonomy.yaml`: por `categoría` y por `categoría/tema`, en cada idioma.
+  ///
+  /// La biblioteca los inventaba a partir de la carpeta --`algebra` daba
+  /// «Algebra»-- con una tabla de tildes que solo conocía las palabras de un
+  /// repositorio, y no los traducía nunca.
+  final Map<String, Map<String, String>> taxonomyTitles;
+
+  /// El nombre de una categoría (`calculo`) o de un tema (`calculo/limites`)
+  /// en [language], si la taxonomía lo da.
+  String? taxonomyTitle(String key, String language) {
+    final titles = taxonomyTitles[key];
+    if (titles == null || titles.isEmpty) return null;
+    return titles[language] ?? titles[defaultLanguage] ?? titles.values.first;
+  }
 
   /// A los que este repositorio traduce.
   final List<String> languages;
@@ -2215,7 +2233,37 @@ class Catalogue {
       shared: _mergedShared(parts),
       errors: [for (final part in parts) ...part.errors, ...conflicts],
       snippets: {for (final part in parts) ...part.snippets},
+      // La primera que lo nombre: dos repositorios con la misma categoría
+      // suelen llamarla igual, y si no, manda el orden, como en lo demás.
+      taxonomyTitles: {
+        for (final part in parts.reversed) ...part.taxonomyTitles,
+      },
     );
+  }
+
+  /// Los nombres de `taxonomy.categories` del manifiesto, por clave.
+  static Map<String, Map<String, String>> _taxonomyTitles(Object? taxonomy) {
+    Map<String, String> titleOf(Object? value) => {
+      for (final entry in ((value as Map?) ?? const {}).entries)
+        if (entry.value is String && (entry.value as String).isNotEmpty)
+          '${entry.key}': entry.value as String,
+    };
+    final found = <String, Map<String, String>>{};
+    for (final raw
+        in ((taxonomy as Map?)?['categories'] as List?) ?? const []) {
+      if (raw is! Map || raw['id'] is! String) continue;
+      final category = raw['id'] as String;
+      final title = titleOf(raw['title']);
+      if (title.isNotEmpty) found[category] = title;
+      for (final topic in (raw['topics'] as List?) ?? const []) {
+        if (topic is! Map || topic['id'] is! String) continue;
+        final topicTitle = titleOf(topic['title']);
+        if (topicTitle.isNotEmpty) {
+          found['$category/${topic['id']}'] = topicTitle;
+        }
+      }
+    }
+    return found;
   }
 
   static List<SharedDocument> _mergedShared(List<Catalogue> parts) {

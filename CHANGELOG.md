@@ -78,6 +78,12 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
   terminar dice el tema y la asignatura por su nombre, no por su id.
 - **El tamaño del texto se lee entero con el texto grande.** En Ajustes →
   Apariencia, a partir del 135 % el tanto por ciento se partía en dos líneas.
+- **La biblioteca llama a las categorías y a los temas por su nombre.** Los
+  sacaba de la carpeta --«algebra» salía como «Algebra»-- y no los traducía.
+  Ahora usa los de `taxonomy.yaml`, en el idioma que miras.
+- **Una lección nueva va, de salida, al repositorio de su tema.** Con varios
+  abiertos, el diálogo proponía siempre el primero, aunque las demás
+  lecciones de ese tema estuvieran en otro.
 
 ## 0.3.0 — 2026-09-28
 

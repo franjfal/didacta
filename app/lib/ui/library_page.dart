@@ -278,7 +278,10 @@ class _LibraryPageState extends State<LibraryPage> {
       browse.language,
     ].join('|');
     if (_treeFor != catalogue || _treeKey != key) {
-      _tree = LibraryTree.of(catalogue.units.where(browse.matches));
+      _tree = LibraryTree.of(
+        catalogue.units.where(browse.matches),
+        titleOf: (key) => catalogue.taxonomyTitle(key, browse.language),
+      );
       _treeFor = catalogue;
       _treeKey = key;
     }
@@ -1575,7 +1578,11 @@ class _ActiveFilters extends StatelessWidget {
         ),
       if (filter.category != null)
         _Chip(
-          label: humaniseSlug(filter.category!),
+          label:
+              sessionOf(
+                context,
+              ).catalogue.taxonomyTitle(filter.category!, filter.language) ??
+              humaniseSlug(filter.category!),
           onRemove: () => onFilter(filter.copyWith(clearCategory: true)),
         ),
       if (filter.tag != null)

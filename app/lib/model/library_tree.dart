@@ -120,6 +120,7 @@ class TopicNode {
     required this.category,
     required this.topic,
     required this.units,
+    this.title,
   });
 
   final String category;
@@ -147,9 +148,12 @@ class TopicNode {
   TranslationProgress progressIn(String language) =>
       TranslationProgress.of(units, language);
 
-  /// A readable name. Topics are slugs on disk; this is the best that can be
-  /// done without the author writing one, and it is better than `normed-spaces`.
-  String get label => humaniseSlug(topic);
+  /// Su nombre en `taxonomy.yaml`, si lo tiene.
+  final String? title;
+
+  /// A readable name: the one the taxonomy gives, or, without one, the slug
+  /// made readable, which is better than `normed-spaces`.
+  String get label => title ?? humaniseSlug(topic);
 }
 
 /// One category: a group of topics, and the level worth showing first.
@@ -158,6 +162,7 @@ class CategoryNode {
     required this.category,
     required this.topics,
     required this.units,
+    this.title,
   });
 
   final String category;
@@ -172,7 +177,10 @@ class CategoryNode {
 
   int get count => units.length;
 
-  String get label => humaniseSlug(category);
+  /// Su nombre en `taxonomy.yaml`, si lo tiene.
+  final String? title;
+
+  String get label => title ?? humaniseSlug(category);
 
   TranslationProgress progressIn(String language) =>
       TranslationProgress.of(units, language);
@@ -241,8 +249,12 @@ class LibraryTree {
   const LibraryTree({required this.categories, required this.byPath});
 
   /// Builds the tree from [units], which the caller has already filtered by
-  /// area if it wants to.
-  factory LibraryTree.of(Iterable<Unit> units) {
+  /// area if it wants to. [titleOf] da el nombre de una categoría o de un
+  /// tema (`calculo`, `calculo/limites`) --ver [Catalogue.taxonomyTitle]--.
+  factory LibraryTree.of(
+    Iterable<Unit> units, {
+    String? Function(String key)? titleOf,
+  }) {
     final grouped = <String, Map<String, List<Unit>>>{};
     final byPath = <String, Unit>{};
 
@@ -262,14 +274,24 @@ class LibraryTree {
         final sorted = [...topic.value]
           ..sort((a, b) => a.path.compareTo(b.path));
         topics.add(
-          TopicNode(category: entry.key, topic: topic.key, units: sorted),
+          TopicNode(
+            category: entry.key,
+            topic: topic.key,
+            units: sorted,
+            title: titleOf?.call('${entry.key}/${topic.key}'),
+          ),
         );
         categoryUnits.addAll(sorted);
       }
       topics.sort(_bySizeThenName((node) => (node.count, node.topic)));
       categoryUnits.sort((a, b) => a.path.compareTo(b.path));
       nodes.add(
-        CategoryNode(category: entry.key, topics: topics, units: categoryUnits),
+        CategoryNode(
+          category: entry.key,
+          topics: topics,
+          units: categoryUnits,
+          title: titleOf?.call(entry.key),
+        ),
       );
     }
     nodes.sort(_bySizeThenName((node) => (node.count, node.category)));
