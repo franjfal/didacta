@@ -1,0 +1,159 @@
+{
+  "capturas": [
+    {
+      "nombre": "_ayuda",
+      "ruta": "/settings?s=ayuda",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "ayuda",
+            "cajas": {
+              "presentacion": {
+                "texto": "Volver a ver la presentación"
+              },
+              "recorrido": {
+                "texto": "Ver el recorrido guiado"
+              },
+              "atajos": {
+                "contiene": "Atajos de teclado"
+              },
+              "docs": {
+                "texto": "La documentación"
+              },
+              "informe": {
+                "texto": "Copiar informe de diagnóstico"
+              },
+              "explica": {
+                "contiene": "Si algo falla, el informe"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Copiar informe de diagnóstico"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "copiado",
+            "cajas": {
+              "aviso": {
+                "contiene": "Informe copiado",
+                "ajustado": true
+              },
+              "incidencia": {
+                "texto": "Abrir una incidencia"
+              }
+            }
+          }
+        },
+        {
+          "esperar": 120
+        },
+        {
+          "ir": "/settings?s=empezar",
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "empezar",
+            "cajas": {
+              "explica": {
+                "contiene": "Deja Didacta en este ordenador"
+              },
+              "boton": {
+                "clave": "start-over"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "start-over"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "empezar-dialogo",
+            "cajas": {
+              "titulo": {
+                "texto": "Restablecer Didacta"
+              },
+              "borra": {
+                "texto": "Se borra de este ordenador:"
+              },
+              "github": {
+                "texto": "En GitHub no se toca nada."
+              },
+              "carpetas": {
+                "clave": "start-over-folders"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cancelar"
+          },
+          "esperar": 4
+        }
+      ]
+    },
+    {
+      "nombre": "_actualizar",
+      "ruta": "/courses",
+      "actualizacion": "0.4.0",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "franja",
+            "cajas": {
+              "franja": {
+                "contiene": "Hay una versión nueva de Didacta (",
+                "ajustado": true
+              },
+              "ver": {
+                "clave": "open-update-dialog"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/settings?s=actualizaciones",
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "actualizaciones",
+            "cajas": {
+              "instalada": {
+                "texto": "Versión instalada"
+              },
+              "nueva": {
+                "contiene": "Hay una versión nueva de Didacta:"
+              },
+              "buscar": {
+                "clave": "check-for-updates"
+              },
+              "actualizar": {
+                "clave": "install-update"
+              },
+              "prueba": {
+                "clave": "update-tests"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

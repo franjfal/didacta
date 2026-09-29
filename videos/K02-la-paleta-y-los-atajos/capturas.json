@@ -1,0 +1,258 @@
+{
+  "capturas": [
+    {
+      "nombre": "_paleta",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "tecla": "meta+k"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "vacia",
+            "cajas": {
+              "campo": {
+                "clave": "palette-field"
+              },
+              "aqui": {
+                "texto": "En esta pantalla"
+              },
+              "primero": {
+                "clave": "palette-item-0"
+              },
+              "segundo": {
+                "clave": "palette-item-1"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "palette-field"
+            },
+            "texto": "bolzano"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "bolzano",
+            "cajas": {
+              "campo": {
+                "clave": "palette-field"
+              },
+              "primero": {
+                "clave": "palette-item-0"
+              },
+              "segundo": {
+                "clave": "palette-item-1"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "palette-field"
+            },
+            "texto": "cálculo 2026"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "curso",
+            "cajas": {
+              "campo": {
+                "clave": "palette-field"
+              },
+              "primero": {
+                "clave": "palette-item-0"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "palette-field"
+            },
+            "texto": "ajustes snippets"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "ajustes",
+            "cajas": {
+              "campo": {
+                "clave": "palette-field"
+              },
+              "primero": {
+                "clave": "palette-item-0"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "palette-field"
+            },
+            "texto": "texto"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "atajos",
+            "cajas": {
+              "campo": {
+                "clave": "palette-field"
+              },
+              "grande": {
+                "texto": "Texto más grande"
+              },
+              "atajo": {
+                "texto": "⌘+"
+              }
+            }
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "palette-field"
+            },
+            "texto": "atajos"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "orden-atajos",
+            "cajas": {
+              "campo": {
+                "clave": "palette-field"
+              },
+              "primero": {
+                "clave": "palette-item-0"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "enter"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "lista",
+            "cajas": {
+              "hoja": {
+                "clave": "shortcuts-sheet"
+              },
+              "uno": {
+                "texto": "Ir a Asignaturas"
+              },
+              "atras": {
+                "texto": "Atrás"
+              },
+              "barra": {
+                "texto": "Ver estos atajos"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 4
+        },
+        {
+          "ir": "/",
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "biblioteca",
+            "cajas": {
+              "rail": {
+                "texto": "Biblioteca",
+                "alto": 56
+              }
+            }
+          }
+        },
+        {
+          "ir": "/courses",
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "asignaturas",
+            "cajas": {
+              "rail": {
+                "texto": "Asignaturas",
+                "alto": 56
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/limites/limite-por-definicion",
+          "esperar": 12
+        },
+        {
+          "tecla": "tab"
+        },
+        {
+          "tecla": "tab"
+        },
+        {
+          "tecla": "tab"
+        },
+        {
+          "tecla": "tab"
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "teclado",
+            "cajas": {
+              "foco": {
+                "clave": "info-menu"
+              },
+              "titulo": {
+                "texto": "Límites por la definición",
+                "n": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

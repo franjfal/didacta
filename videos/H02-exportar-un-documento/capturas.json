@@ -1,0 +1,191 @@
+{
+  "capturas": [
+    {
+      "nombre": "incluidas",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "build-document-tema-1"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada en"
+          },
+          "max": 1600,
+          "despues": 4
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "document-menu-tema-1"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "menu": {
+                "clave": "document-menu-tema-1"
+              },
+              "exportar": {
+                "clave": "export-document-tema-1"
+              },
+              "fila": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-document-tema-1"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Exportar igualmente"
+          },
+          "max": 600,
+          "despues": 4
+        },
+        {
+          "pulsar": {
+            "texto": "Exportar igualmente"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "texto": "Incluirlas"
+          },
+          "max": 600,
+          "despues": 2
+        },
+        {
+          "capturar": {
+            "nombre": "aviso",
+            "cajas": {
+              "aviso": {
+                "contiene": "con soluciones o del profesor",
+                "ajustado": true
+              },
+              "incluir": {
+                "texto": "Incluirlas"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Incluirlas"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "exportados a"
+          },
+          "max": 600,
+          "despues": 2
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "exportados a",
+          "ajustado": true
+        }
+      }
+    },
+    {
+      "nombre": "copia",
+      "ruta": "/courses/calculo-i/2026-2027/tema-1",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "texto": "Compilar",
+            "n": 0
+          },
+          "esperar": 40
+        },
+        {
+          "pulsar": {
+            "clave": "compile"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada en"
+          },
+          "max": 1600,
+          "despues": 4
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "contiene": "notes · es"
+          },
+          "esperar": 24
+        },
+        {
+          "capturar": {
+            "nombre": "pdf",
+            "cajas": {
+              "guardar": {
+                "clave": "pane-save-es"
+              },
+              "barra": {
+                "clave": "pane-save-es",
+                "fila": 900
+              },
+              "pestana": {
+                "contiene": "notes · es"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "pane-save-es"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Guardado en"
+          },
+          "max": 400,
+          "despues": 2
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "Guardado en",
+          "ajustado": true
+        }
+      }
+    }
+  ]
+}

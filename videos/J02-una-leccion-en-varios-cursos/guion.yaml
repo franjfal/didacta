@@ -1,0 +1,120 @@
+# J2 · Una lección en varios cursos: cambiarla en todos o solo en uno
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés: se crea
+# 2027-2028 copiando 2026-2027, y la lección «Límites por la definición»
+# queda en los dos. Se abre «Darla en otro tema» y se cancela, y se separa
+# de verdad la de 2027-2028.
+codigo: J2
+titulo: "Una lección en varios cursos: cambiarla en todos o solo en uno"
+subtitulo: Qué pasa al tocar una lección que se da en varios sitios
+ruta: El curso que viene y el temario compartido
+siguiente: "J3 · Dar un tema en otra asignatura sin copiarlo"
+voz: narrador
+lema: ["Una lección compartida se corrige una vez;", "se separa cuando dejan de ir juntas."]
+lema_en: "se separa"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué pasa al tocar una lección que se da en varios
+          cursos, y cómo separarla.
+
+  - id: franja
+    capitulo: En todos
+    antes: 0.5
+    pantalla: franja
+    frases:
+      - id: dice
+        texto: >-
+          Esta lección se da en dos cursos, y lo dice encima del texto: lo que
+          guardes aquí cambia en los dos.
+        pasos:
+          - {al: inicio, enfoca: [cursos], max: 1.8}
+          - {en: dice, resalta: cursos, lado: abajo}
+      - id: bueno
+        texto: >-
+          Casi siempre es lo que quieres: una errata se corrige una vez, en
+          los dos a la vez.
+        pasos:
+          - {al: inicio, enfoca: [usos_antes, usos], max: 2}
+          - {en: errata, resalta: [usos_antes, usos], lado: izquierda}
+
+  - id: separar
+    capitulo: Solo en uno
+    antes: 0.5
+    pantalla: franja
+    frases:
+      - id: boton
+        texto: >-
+          Si en uno tiene que ir distinta, Separar una copia.
+        pasos:
+          - {al: inicio, enfoca: [separar], max: 1.8, dx: -250}
+          - {en: Separar, pulsa: separar}
+      - id: grupos
+        texto: >-
+          Cada curso va a un grupo. El A se queda con la lección; el B recibe
+          una copia, con su texto, sus figuras y su ficha.
+        pasos:
+          - {al: inicio, cambia: separar}
+          - {al: inicio, enfoca: [explica, dividir], max: 1.5, captura: separar}
+          - {en: grupo, resalta: [antes, despues], captura: separar, hasta: 1.8}
+          - {en: queda, resalta: grupoa, lado: abajo, captura: separar, hasta: 2}
+          - {en: copia, resalta: grupob, lado: abajo, captura: separar, hasta: 1.6}
+          - {en: texto, resalta: nota, lado: arriba, captura: separar}
+      - id: dividir
+        texto: >-
+          Con Dividir, cada una sigue por su lado: la franja ya no sale, y la
+          lección se da solo en 2026-2027.
+        pasos:
+          - {al: inicio, pulsa: dividir, captura: separar}
+          - {en: cada, cambia: separada}
+          - {en: cada, enfoca: [aviso], max: 2, dy: -120, captura: separada}
+          - {en: lado, resalta: aviso, lado: arriba, captura: separada, hasta: 2.4}
+          - {en: solo, enfoca: [usos_antes], max: 2, captura: separada}
+          - {en: solo, resalta: usos_antes, lado: izquierda, captura: separada}
+
+  - id: otro
+    capitulo: En otro tema
+    antes: 0.5
+    pantalla: info
+    frases:
+      - id: menu
+        texto: >-
+          Y al revés, para darla también en otro sitio: en la i, Darla en otro
+          tema.
+        pasos:
+          - {al: inicio, enfoca: [usar], max: 1.8, dx: -200}
+          - {en: Darla, resalta: usar, lado: izquierda}
+      - id: dialogo
+        texto: >-
+          Asignatura, curso y tema. Y de salida entra vinculada: la misma
+          lección, que se sigue corrigiendo una vez.
+        pasos:
+          - {al: inicio, cambia: otro}
+          - {al: inicio, enfoca: [titulo, anadir], max: 1.6, captura: otro}
+          - {en: tema, resalta: tema, captura: otro, hasta: 1.6}
+          - {en: vinculada, resalta: anadir, lado: abajo, alinear: derecha, captura: otro}
+      - id: copia
+        texto: >-
+          Llevar una copia independiente, si desde el principio van a ser dos.
+        pasos:
+          - {al: inicio, cambia: otro-copia}
+          - {al: inicio, resalta: copia, captura: otro-copia, hasta: 3}
+          - {en: dos, resalta: anadir, lado: abajo, alinear: derecha, captura: otro-copia}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Una lección compartida se corrige una vez; se separa cuando dejan de
+          ir juntas.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, dar un tema en otra asignatura, sin copiarlo.

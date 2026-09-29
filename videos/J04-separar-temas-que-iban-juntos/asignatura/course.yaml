@@ -1,0 +1,27 @@
+# Otra asignatura del mismo repositorio, para darle el Tema 1 de Cálculo I.
+id: matematicas-i
+
+title:
+  es: Matemáticas I
+  va: Matemàtiques I
+  en: Mathematics I
+
+code: "20001"
+
+degree:
+  es: Grado en Física
+  va: Grau en Física
+  en: BSc in Physics
+
+institution: Universidad de ejemplo
+
+department:
+  es: Departamento de Matemáticas
+  va: Departament de Matemàtiques
+  en: Department of Mathematics
+
+teacher: Tu nombre
+
+language: es
+
+languages: [es, va, en]

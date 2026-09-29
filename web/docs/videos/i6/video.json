@@ -1,0 +1,61 @@
+{
+  "codigo": "I6",
+  "titulo": "Recuperar lo escrito tras un cierre inesperado",
+  "fichero": "I06-recuperar-lo-escrito.mp4",
+  "duracion": 57.25,
+  "megas": 4.8,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Recuperar lo escrito tras un cierre inesperado"
+    },
+    {
+      "t": 5.64,
+      "titulo": "Al salir"
+    },
+    {
+      "t": 26.64,
+      "titulo": "Recuperarlo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás que lo que escribes sin guardar no se pierde."
+    },
+    {
+      "t": 6.14,
+      "texto": "Aquí hay una frase nueva, todavía sin guardar."
+    },
+    {
+      "t": 9.48,
+      "texto": "Si te vas a otra pantalla, Didacta pregunta antes. Y lo marcado es Seguir editando: un Intro por reflejo no tira un párrafo."
+    },
+    {
+      "t": 19.7,
+      "texto": "¿Y si Didacta se cierra de golpe? Se cuelga, se va la luz, se acaba la batería."
+    },
+    {
+      "t": 27.14,
+      "texto": "Mientras escribes, lo va copiando fuera del repositorio. Al volver a abrir la lección, lo dice: hay texto sin guardar, de hace unos minutos."
+    },
+    {
+      "t": 37.29,
+      "texto": "Recuperarlo lo vuelve a poner en el editor; Descartarlo lo tira."
+    },
+    {
+      "t": 42.05,
+      "texto": "Vuelve como un cambio sin guardar: queda guardarlo."
+    },
+    {
+      "t": 46.64,
+      "texto": "Lo escrito se va copiando mientras escribes: un cierre de golpe no se lo lleva."
+    },
+    {
+      "t": 51.78,
+      "texto": "En el siguiente vídeo, preparar el curso que viene."
+    }
+  ]
+}

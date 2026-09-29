@@ -44,13 +44,19 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 
+import 'package:didacta_app/data/app_info.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
+import 'package:didacta_app/data/draft_store.dart';
 import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/data/preferences.dart';
+import 'package:didacta_app/data/release_channel.dart';
 import 'package:didacta_app/data/toolchain.dart';
 import 'package:didacta_app/data/translation_secrets.dart';
+import 'package:didacta_app/data/update_installer.dart';
 import 'package:didacta_app/l10n/tr.dart';
+import 'package:didacta_app/model/app_version.dart';
+import 'package:didacta_app/model/update_manifest.dart';
 import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/model/translation.dart';
 import 'package:didacta_app/model/workspace.dart';
@@ -62,6 +68,7 @@ import 'package:didacta_app/state/update_service.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/sign_in.dart';
 import 'package:didacta_app/ui/tour.dart';
+import 'package:didacta_app/ui/update_section.dart';
 import 'package:didacta_app/ui/welcome.dart';
 import 'package:didacta_app/ui/welcome_art.dart';
 
@@ -115,6 +122,10 @@ void main() {
   final neutral = Platform.environment['DIDACTA_RAIZ_VIDEO'];
   late String out;
   late Map<String, dynamic> spec;
+
+  /// Los repositorios de más: `"repos_extra"` en `capturas.json`, cada uno
+  /// `{"desde": "carpeta del vídeo", "dueno": "...", "nombre": "..."}`.
+  final extras = <ContentRepo>[];
 
   Future<void> run(String exe, List<String> args, String where) async {
     final result = await Process.run(exe, args, workingDirectory: where);
@@ -192,6 +203,50 @@ void main() {
     ], work);
     await run('git', ['remote', 'add', 'origin', remote], work);
     await run('git', ['push', '-u', 'origin', 'main'], work);
+
+    // Otros repositorios, abiertos a la vez que el ejemplo: el material del
+    // departamento al lado del tuyo. Cada uno con su historial y su remoto,
+    // que se llama como él para que la sesión lo reconozca.
+    for (final raw in (spec['repos_extra'] as List?) ?? const []) {
+      final extra = (raw as Map).cast<String, dynamic>();
+      final owner = extra['dueno'] as String;
+      final name = extra['nombre'] as String;
+      final directory = neutral != null
+          ? '${root.path}/$name'
+          : '${root.path}/$owner/$name';
+      final bare = '${root.path}/.remotos/$owner/$name.git';
+      if (Directory(directory).existsSync()) {
+        Directory(directory).deleteSync(recursive: true);
+      }
+      Directory(directory).parent.createSync(recursive: true);
+      Directory('${root.path}/.remotos/$owner').createSync(recursive: true);
+      await run('cp', [
+        '-R',
+        '$engine/videos/$video/${extra['desde']}',
+        directory,
+      ], root.path);
+      await run('git', [
+        'init',
+        '--bare',
+        '--initial-branch=main',
+        bare,
+      ], root.path);
+      await run('$engine/cli/didacta', ['index'], directory);
+      await run('git', ['init', '--initial-branch=main'], directory);
+      await run('git', ['add', '.'], directory);
+      await run('git', [
+        '-c',
+        'user.name=Didacta',
+        '-c',
+        'user.email=didacta@example.org',
+        'commit',
+        '-m',
+        'El material común',
+      ], directory);
+      await run('git', ['remote', 'add', 'origin', bare], directory);
+      await run('git', ['push', '-u', 'origin', 'main'], directory);
+      extras.add(ContentRepo(owner: owner, name: name, directory: directory));
+    }
   });
 
   tearDownAll(() async {
@@ -208,12 +263,17 @@ void main() {
       work,
       '${root.path}/.remotos',
       '${root.path}/Reparto',
+      for (final extra in extras) extra.directory,
     ]) {
       if (Directory(mine).existsSync()) {
         Directory(mine).deleteSync(recursive: true);
       }
     }
   });
+
+  /// Los borradores, compartidos entre capturas: lo que deja escrito `borrador` en
+  /// `preparar` es lo que encuentra la lección al abrirse.
+  final drafts = MemoryDraftStore();
 
   /// Deja el repositorio como lo pide la captura antes de abrirlo:
   /// `"preparar": [{"en_github": 1}, {"sin_enviar": 2}]` son cambios que otra
@@ -271,9 +331,39 @@ void main() {
         final to = File('$work/${copy['a']}');
         to.parent.createSync(recursive: true);
         from.copySync(to.path);
+        // Y el índice al día: una asignatura nueva no sale hasta que está
+        // en él.
+        await run('$engine/cli/didacta', ['index'], work);
         await run('git', ['add', '-A'], work);
         await commit(work, (copy['mensaje'] as String?) ?? 'Una figura');
         await run('git', ['push', '-q', 'origin', 'main'], work);
+      }
+      if (step['borrador'] case final Map draft) {
+        // Lo que quedó escrito y sin guardar cuando Didacta se cerró de
+        // golpe: `{"fichero": "...", "buscar": "...", "poner": "...",
+        // "hace_min": 3}`. Sobre la versión de ahora del fichero, como el
+        // que deja el editor mientras se escribe.
+        final path = draft['fichero'] as String;
+        final text = File('$work/$path').readAsStringSync();
+        final wanted = draft['buscar'] as String;
+        if (!text.contains(wanted)) {
+          stdout.writeln('    (no encuentro «$wanted» en $path)');
+        }
+        final sha = await Process.run('git', [
+          'hash-object',
+          '--',
+          path,
+        ], workingDirectory: work);
+        await drafts.write(
+          '$repoId|$path',
+          Draft(
+            text: text.replaceFirst(wanted, draft['poner'] as String),
+            base: (sha.stdout as String).trim(),
+            when: DateTime.now().subtract(
+              Duration(minutes: (draft['hace_min'] as num?)?.toInt() ?? 0),
+            ),
+          ),
+        );
       }
       if (step['sin_enviar'] case final num n) {
         for (var i = 0; i < n; i += 1) {
@@ -288,7 +378,13 @@ void main() {
   final secrets = MemoryTranslationSecrets();
 
   Future<Session> openSession([Map<String, dynamic> shot = const {}]) async {
-    final source = CatalogueSource.inClone(work, repo: repoId)!;
+    final source = extras.isEmpty
+        ? CatalogueSource.inClone(work, repo: repoId)!
+        : CatalogueSource.merged([
+            CatalogueSource.inClone(work, repo: repoId)!,
+            for (final extra in extras)
+              CatalogueSource.inClone(extra.directory, repo: extra.id)!,
+          ]);
     final session = VideoSession(
       missing: {
         for (final name in (shot['falta'] as List?) ?? const [])
@@ -304,6 +400,7 @@ void main() {
       // del sistema no existe dentro de una prueba, y lo que se enciende en
       // una captura se tiene que ver en la siguiente.
       translationSecrets: secrets,
+      drafts: drafts,
       preferences: MemoryPreferences(
         engine: shownEngine,
         clientId: didactaAppClientId.isEmpty
@@ -312,8 +409,18 @@ void main() {
       ),
     );
     session.repositories.workspace = Workspace([
-      if (shot['sin_repositorios'] != true)
-        ContentRepo(owner: owner, name: repoName, directory: work),
+      // Cada uno con su color, como los deja la aplicación al añadirlos: el
+      // cero es transparente, y la etiqueta de arriba salía vacía.
+      if (shot['sin_repositorios'] != true) ...[
+        ContentRepo(
+          owner: owner,
+          name: repoName,
+          directory: work,
+          colour: repoColours[0],
+        ),
+        for (final (i, extra) in extras.indexed)
+          extra.copyWith(colour: repoColours[(i + 1) % repoColours.length]),
+      ],
     ]);
     await session.findEngine();
     // Marcado para tests, y esto es una herramienta: el mismo uso que en
@@ -334,6 +441,7 @@ void main() {
     WidgetTester tester,
     Session session, {
     bool welcome = false,
+    UpdateService? updates,
   }) async {
     tester.view.physicalSize = Size(
       window.width * density,
@@ -364,7 +472,7 @@ void main() {
             providers: [
               ChangeNotifierProvider<Session>.value(value: session),
               ChangeNotifierProvider<UpdateService>.value(
-                value: offlineUpdates(),
+                value: updates ?? offlineUpdates(),
               ),
               ChangeNotifierProvider<Appearance>.value(value: appearance),
               ChangeNotifierProvider<TourController>.value(value: tour),
@@ -391,12 +499,62 @@ void main() {
                             : DidactaPalette.light,
                       ),
                       routerConfig: router,
-                      builder: (context, child) => Stack(
-                        children: [
-                          child ?? const SizedBox.shrink(),
-                          TourOverlay(controller: tour),
-                        ],
-                      ),
+                      builder: (context, child) {
+                        // Como `main.dart`: el idioma de la interfaz, antes
+                        // de pintar nada, y si cambia todo se vuelve a
+                        // construir; y el tamaño del texto de Apariencia.
+                        final language = appearance.uiLanguage;
+                        if (language != uiLanguage) {
+                          useUiLanguage(language);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            void mark(Element element) {
+                              element.markNeedsBuild();
+                              element.visitChildren(mark);
+                            }
+
+                            if (context.mounted) {
+                              (context as Element).visitChildren(mark);
+                            }
+                          });
+                        }
+                        final media = MediaQuery.of(context);
+                        final scale = appearance.textScale;
+                        return MediaQuery(
+                          data: scale == 1
+                              ? media
+                              : media.copyWith(
+                                  textScaler: TextScaler.linear(scale),
+                                ),
+                          // Con el fondo opaco de `main.dart`: la franja de
+                          // arriba es un tinte, y sobre nada salía negra.
+                          child: ColoredBox(
+                            color: context.palette.surface,
+                            child: Stack(
+                              children: [
+                                // Como `main.dart`: la franja de la versión
+                                // nueva, encima de todas las pantallas. Sin
+                                // versión nueva no ocupa nada.
+                                Column(
+                                  children: [
+                                    UpdateBanner(
+                                      dialogContext: () =>
+                                          router
+                                              .routerDelegate
+                                              .navigatorKey
+                                              .currentContext ??
+                                          context,
+                                    ),
+                                    Expanded(
+                                      child: child ?? const SizedBox.shrink(),
+                                    ),
+                                  ],
+                                ),
+                                TourOverlay(controller: tour),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
           ),
@@ -538,6 +696,22 @@ void main() {
     if (index >= elements.length) return null;
     final element = elements[index];
     var rect = tester.getRect(find.byElementPredicate((e) => e == element));
+    // `ajustado`: lo que ocupan las letras, no la caja del texto --el de un
+    // aviso ocupa todo el ancho de la ventana aunque diga una línea--.
+    if (what['ajustado'] == true && element.renderObject is RenderParagraph) {
+      final paragraph = element.renderObject! as RenderParagraph;
+      final length = paragraph.text.toPlainText().length;
+      final boxes = paragraph.getBoxesForSelection(
+        TextSelection(baseOffset: 0, extentOffset: length),
+      );
+      if (boxes.isNotEmpty) {
+        var glyphs = boxes.first.toRect();
+        for (final box in boxes.skip(1)) {
+          glyphs = glyphs.expandToInclude(box.toRect());
+        }
+        rect = glyphs.shift(paragraph.localToGlobal(Offset.zero));
+      }
+    }
     // `fila`: la zona crece hasta lo primero que la contiene con al menos ese
     // ancho (la fila entera de una lista); `alto`, con al menos ese alto (la
     // tarjeta entera de un título).
@@ -734,6 +908,17 @@ void main() {
     'enter' => LogicalKeyboardKey.enter,
     'tab' => LogicalKeyboardKey.tab,
     'slash' || '/' => LogicalKeyboardKey.slash,
+    'space' => LogicalKeyboardKey.space,
+    '[' => LogicalKeyboardKey.bracketLeft,
+    ']' => LogicalKeyboardKey.bracketRight,
+    // Las cifras, para ⌘1, ⌘2 y ⌘3.
+    final digit
+        when digit.length == 1 &&
+            digit.codeUnitAt(0) >= 0x30 &&
+            digit.codeUnitAt(0) <= 0x39 =>
+      LogicalKeyboardKey(
+        LogicalKeyboardKey.digit0.keyId + digit.codeUnitAt(0) - 0x30,
+      ),
     _ => LogicalKeyboardKey(
       LogicalKeyboardKey.keyA.keyId + name.codeUnitAt(0) - 'a'.codeUnitAt(0),
     ),
@@ -1014,6 +1199,11 @@ void main() {
         final shot = (raw as Map).cast<String, dynamic>();
         final name = shot['nombre'] as String;
         late Session session;
+        // La pantalla de la captura anterior, fuera antes de preparar: al
+        // cerrarse, una lección borra su borrador, y se llevaba el que
+        // `"borrador"` acababa de dejar para esta.
+        await tester.pumpWidget(const SizedBox.shrink());
+        await settleReal(tester, rounds: 2);
         await tester.runAsync(() => prepare(shot));
         await tester.runAsync(() async => session = await openSession(shot));
         // `"idioma": "en"`: el contenido, mirado en ese idioma desde el
@@ -1045,7 +1235,14 @@ void main() {
         // gratuito). Las pruebas lo cortan de salida.
         if (shot['red'] == true) HttpOverrides.global = null;
         final welcome = shot['bienvenida'] == true;
-        await mount(tester, session, welcome: welcome);
+        // `"actualizacion": "0.4.0"`: la versión instalada es la de
+        // `pubspec.yaml`, y un GitHub de mentira ofrece esa. Sin red.
+        UpdateService? updates;
+        if (shot['actualizacion'] case final String next) {
+          updates = videoUpdates(engine, next);
+          await tester.runAsync(() => updates!.checkForUpdates(silent: true));
+        }
+        await mount(tester, session, welcome: welcome, updates: updates);
         await settleReal(tester, rounds: 3);
         if (!welcome) {
           routerFor(tester).go(shot['ruta'] as String);
@@ -1095,12 +1292,102 @@ void main() {
 /// La sesión de los vídeos: la de las pruebas, con la opción de fingir que
 /// falta alguna herramienta (`"falta": ["latex"]` en la captura). Lo demás
 /// es lo de esta máquina, con sus rutas de verdad.
+/// Las actualizaciones de un vídeo: la versión de `pubspec.yaml` instalada y
+/// [next] publicada en un GitHub de mentira.
+UpdateService videoUpdates(String engine, String next) {
+  final pubspec = File('$engine/app/pubspec.yaml').readAsStringSync();
+  final match = RegExp(
+    r'^version:\s*([0-9.]+)\+(\d+)',
+    multiLine: true,
+  ).firstMatch(pubspec)!;
+  final manifest = jsonEncode({
+    'version': next,
+    'build': int.parse(match.group(2)!) + 1,
+    'tag': 'v$next',
+    'publishedAt': '2026-10-01T10:00:00Z',
+    'releaseNotes': '- Lo nuevo',
+    'assets': [
+      {
+        'platform': 'macos',
+        'architecture': 'universal',
+        'kind': 'update',
+        'name': 'Didacta-$next-macos-universal.zip',
+        'size': 12,
+        'sha256':
+            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        'assetId': 77,
+      },
+    ],
+  });
+  final client = MockClient((request) async {
+    if (request.url.path.endsWith('releases/latest')) {
+      return http.Response(
+        jsonEncode({
+          'tag_name': 'v$next',
+          'draft': false,
+          'assets': [
+            {'name': 'latest.json', 'id': 5},
+            {'name': 'Didacta-$next-macos-universal.zip', 'id': 77},
+          ],
+        }),
+        200,
+      );
+    }
+    if (request.url.path.endsWith('assets/5')) {
+      return http.Response(manifest, 200);
+    }
+    return http.Response('{"message":"Not Found"}', 404);
+  });
+  return UpdateService(
+    info: AppInfo(
+      version: AppVersion.parse(match.group(1)!),
+      build: int.parse(match.group(2)!),
+      packageName: 'io.github.franjfal.didacta',
+      platform: UpdatePlatform.macos,
+      architecture: 'universal',
+    ),
+    preferences: MemoryPreferences(),
+    openChannel: () =>
+        ReleaseChannel(owner: 'franjfal', repo: 'didacta', client: client),
+    installer: _VideoInstaller(),
+  );
+}
+
+/// Un instalador que dice que puede y no toca nada: en un vídeo no se
+/// instala, se enseña que se puede.
+class _VideoInstaller implements UpdateInstaller {
+  @override
+  bool get supported => true;
+
+  @override
+  String? get unsupportedReason => null;
+
+  @override
+  Future<DownloadedUpdate> download({
+    required ReleaseChannel channel,
+    required UpdateAsset asset,
+    required UpdateManifest manifest,
+    void Function(DownloadProgress)? onProgress,
+    Future<void>? cancelled,
+  }) => throw UnsupportedError('en un vídeo no se descarga');
+
+  @override
+  Future<void> stage(DownloadedUpdate update) async {}
+
+  @override
+  Never applyAndExit() => throw UnsupportedError('en un vídeo no se instala');
+
+  @override
+  Future<void> discard(DownloadedUpdate update) async {}
+}
+
 class VideoSession extends LocalSession {
   VideoSession({
     required super.catalogueSource,
     required super.tokenStore,
     super.preferences,
     super.translationSecrets,
+    super.drafts,
     this.missing = const {},
   });
 

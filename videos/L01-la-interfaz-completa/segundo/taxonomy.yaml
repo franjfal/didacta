@@ -1,0 +1,12 @@
+categories:
+  - id: algebra
+    title:
+      es: Álgebra
+      va: Àlgebra
+      en: Algebra
+    topics:
+      - id: matrices
+        title:
+          es: Matrices
+          va: Matrius
+          en: Matrices

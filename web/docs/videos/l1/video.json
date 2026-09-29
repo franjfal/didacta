@@ -1,0 +1,69 @@
+{
+  "codigo": "L1",
+  "titulo": "La interfaz Completa",
+  "fichero": "L01-la-interfaz-completa.mp4",
+  "duracion": 73.54,
+  "megas": 5.2,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "La interfaz Completa"
+    },
+    {
+      "t": 6.14,
+      "titulo": "El interruptor"
+    },
+    {
+      "t": 21.94,
+      "titulo": "En el editor"
+    },
+    {
+      "t": 46.66,
+      "titulo": "Y en el resto"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué aparece al encender la interfaz Completa, y dónde."
+    },
+    {
+      "t": 6.64,
+      "texto": "Está en Ajustes, Apariencia, Interfaz: Esencial, que es la de salida, o Completa."
+    },
+    {
+      "t": 13.71,
+      "texto": "Completa es para quien mantiene el repositorio del departamento. En Ajustes aparecen Bloques y plantillas, y el servidor MCP."
+    },
+    {
+      "t": 22.44,
+      "texto": "En el editor, con la Esencial, la barra tiene lo de corregir una errata: guardar y el estado."
+    },
+    {
+      "t": 29.35,
+      "texto": "Con la Completa, además, la ruta del fichero, el contador y ordenar al guardar, que sangra el LaTeX cada vez que guardas."
+    },
+    {
+      "t": 37.7,
+      "texto": "Copiar la referencia de la lección, para una composición; y la ficha, en bruto: el unit.yaml tal cual."
+    },
+    {
+      "t": 47.16,
+      "texto": "En el menú de un tema, Mover a, y Gestionar vinculación cuando está vinculado."
+    },
+    {
+      "t": 52.54,
+      "texto": "Y con más de un repositorio, Entre repos, siempre en la columna de la izquierda: dónde no cuadran entre ellos."
+    },
+    {
+      "t": 60.64,
+      "texto": "Un solo interruptor: lo que se elige es qué clase de uso se hace, no cada botón."
+    },
+    {
+      "t": 67.28,
+      "texto": "En el siguiente vídeo, un repositorio para el departamento."
+    }
+  ]
+}

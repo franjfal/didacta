@@ -1,0 +1,151 @@
+# J1 · Preparar el curso que viene
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés: se crea
+# 2027-2028 copiando 2026-2027 con «Congelar tal como quedó» marcado, y la
+# lección que se abre después dice que ya se da en los dos cursos. La otra
+# puerta se enseña desde una versión congelada hecha antes («Antes del primer
+# parcial», la de I3), con el diálogo abierto y cancelado.
+codigo: J1
+titulo: Preparar el curso que viene
+subtitulo: Empezar 2027-2028 a partir de 2026-2027, sin copiar material
+ruta: El curso que viene y el temario compartido
+siguiente: "J2 · Una lección en varios cursos"
+voz: narrador
+lema: ["Lo que corrijas este año lo hereda el que viene;", "y el que acaba sigue como se dio."]
+lema_en: "como se dio"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás empezar el curso que viene a partir de este, sin
+          copiar material.
+
+  - id: nuevo
+    capitulo: Nuevo curso académico
+    antes: 0.5
+    pantalla: boton
+    frases:
+      - id: boton
+        texto: >-
+          En la asignatura, Nuevo curso académico.
+        pasos:
+          - {al: inicio, enfoca: [fila, nuevo], max: 1.6}
+          - {en: Nuevo, pulsa: nuevo}
+      - id: propone
+        texto: >-
+          Propone el año siguiente, y copiar lo de 2026-2027: qué documentos
+          lleva, y en qué orden.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [ano, congelar], max: 1.8, captura: dialogo}
+          - {en: siguiente, resalta: ano, captura: dialogo, hasta: 2.4}
+          - {en: copiar, resalta: desde, lado: abajo, captura: dialogo}
+      - id: cero
+        texto: >-
+          Si lo quieres componer desde cero, también se puede.
+        pasos:
+          - {en: cero, resalta: cero, lado: abajo, captura: dialogo}
+      - id: congelar
+        texto: >-
+          Y viene marcado Congelar 2026-2027 tal como quedó: para volver a
+          verlo y compilarlo como se dio, pase lo que pase después.
+        pasos:
+          - {en: Congelar, resalta: congelar, lado: abajo, captura: dialogo}
+      - id: crear
+        texto: >-
+          Con Crear, 2027-2028 aparece encima, con sus tres documentos.
+        pasos:
+          - {al: inicio, pulsa: crear, captura: dialogo}
+          - {en: aparece, cambia: creado}
+          - {en: aparece, enfoca: [nuevo, viejo], max: 1.6, captura: creado}
+          - {en: aparece, resalta: nuevo, captura: creado}
+      - id: aviso
+        texto: >-
+          Y el aviso lo cuenta: copiado de 2026-2027, y 2026-2027 congelado.
+        pasos:
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: creado}
+          - {en: cuenta, resalta: aviso, lado: arriba, captura: creado}
+
+  - id: mismas
+    capitulo: Las mismas lecciones
+    antes: 0.5
+    pantalla: curso
+    frases:
+      - id: curso
+        texto: >-
+          Dentro, los mismos temas y documentos, que ya puedes retocar para el
+          curso nuevo.
+        pasos:
+          - {al: inicio, enfoca: [titulo, parcial], max: 1.5}
+          - {en: temas, resalta: tema, hasta: 1.6}
+          - {en: documentos, resalta: [hoja, parcial]}
+      - id: leccion
+        texto: >-
+          Pero las lecciones no se copian: son las mismas. Cada una lo dice:
+          se da en dos cursos, y lo que guardes cambia en los dos.
+        pasos:
+          - {al: inicio, cambia: leccion}
+          - {al: inicio, enfoca: [cursos], max: 1.8, captura: leccion}
+          - {en: dice, resalta: cursos, lado: abajo, captura: leccion}
+      - id: hereda
+        texto: >-
+          Así, la errata que corrijas este año ya está corregida en el que
+          viene.
+        pasos:
+          - {al: inicio, enfoca: [usos_antes, usos], max: 2, captura: leccion}
+          - {en: errata, resalta: usos_antes, lado: izquierda, captura: leccion, hasta: 2.2}
+          - {en: viene, resalta: usos, lado: izquierda, captura: leccion}
+
+  - id: congelado
+    capitulo: Tal como quedó
+    antes: 0.5
+    pantalla: versiones
+    frases:
+      - id: versiones
+        texto: >-
+          Y el curso que acaba queda en sus versiones congeladas, como Tal
+          como quedó: su PDF sigue saliendo como se dio.
+        pasos:
+          - {al: inicio, enfoca: [quedo, parcial], max: 1.6}
+          - {en: Tal, resalta: quedo, hasta: 2.6}
+          - {en: PDF, resalta: descripcion, lado: abajo}
+
+  - id: puerta
+    capitulo: La otra puerta
+    antes: 0.5
+    pantalla: puerta
+    frases:
+      - id: menu
+        texto: >-
+          La otra puerta: desde cualquier versión congelada, Crear un curso
+          desde aquí.
+        pasos:
+          - {al: inicio, enfoca: [version, desde], max: 1.6}
+          - {en: congelada, resalta: version, hasta: 1.6}
+          - {en: Crear, resalta: desde, lado: izquierda}
+      - id: desde
+        texto: >-
+          Copia qué temas llevaba el curso en aquel momento, y en qué orden.
+          Las lecciones, las de ahora.
+        pasos:
+          - {al: inicio, cambia: desde}
+          - {al: inicio, enfoca: [titulo, crear], max: 1.6, captura: desde}
+          - {en: temas, resalta: nota, lado: abajo, captura: desde}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo que corrijas este año lo hereda el que viene; y el que acaba sigue
+          como se dio.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, una lección en varios cursos: cambiarla en
+          todos, o solo en uno.

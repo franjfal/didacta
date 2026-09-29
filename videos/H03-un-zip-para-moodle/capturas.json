@@ -1,0 +1,94 @@
+{
+  "capturas": [
+    {
+      "nombre": "hecho",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "export-year-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        },
+        {
+          "mostrar": {
+            "clave": "export-zip"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-zip"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "export-html"
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "zip": {
+                "clave": "export-zip"
+              },
+              "html": {
+                "clave": "export-html"
+              },
+              "tambien": {
+                "texto": "También:"
+              },
+              "ir": {
+                "clave": "export-confirm"
+              },
+              "dialogo": {
+                "clave": "export-confirm",
+                "alto": 700
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-confirm"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada en"
+          },
+          "max": 2400,
+          "despues": 4
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar"
+          },
+          "esperar": 2
+        },
+        {
+          "hasta_que": {
+            "contiene": "exportados a"
+          },
+          "max": 900,
+          "despues": 2
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "exportados a",
+          "ajustado": true
+        },
+        "zipaviso": {
+          "contiene": "todo junto"
+        }
+      }
+    }
+  ]
+}

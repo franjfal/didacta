@@ -1,0 +1,318 @@
+{
+  "capturas": [
+    {
+      "nombre": "_dialogo",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "apuntar": {
+            "clave": "add-year-calculo-i"
+          },
+          "esperar": 1
+        },
+        {
+          "capturar": {
+            "nombre": "boton",
+            "cajas": {
+              "nuevo": {
+                "clave": "add-year-calculo-i"
+              },
+              "fila": {
+                "texto": "2026-2027",
+                "fila": 1200
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "add-year-calculo-i"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "ano": {
+                "clave": "new-year"
+              },
+              "explica": {
+                "contiene": "Las unidades no se copian nunca"
+              },
+              "desde": {
+                "clave": "copy-from-2026-2027"
+              },
+              "cero": {
+                "clave": "start-empty"
+              },
+              "congelar": {
+                "clave": "freeze-source-year"
+              },
+              "crear": {
+                "clave": "confirm-duplicate"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cancelar"
+          },
+          "esperar": 4
+        }
+      ]
+    },
+    {
+      "nombre": "_puerta",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "freeze-year-calculo-i-2026-2027"
+          },
+          "esperar": 10
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "freeze-name"
+            },
+            "texto": "Antes del primer parcial"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "freeze-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Congelada «"
+          },
+          "max": 900,
+          "despues": 30
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "freezes-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "consejo": "Qué hacer con esta versión"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "puerta",
+            "cajas": {
+              "desde": {
+                "texto": "Crear un curso desde aquí…"
+              },
+              "version": {
+                "texto": "Antes del primer parcial"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Crear un curso desde aquí…"
+          },
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "desde",
+            "cajas": {
+              "titulo": {
+                "contiene": "Crear un curso desde «"
+              },
+              "asignatura": {
+                "clave": "from-freeze-course"
+              },
+              "ano": {
+                "clave": "from-freeze-year"
+              },
+              "nota": {
+                "contiene": "Se copia la composición"
+              },
+              "crear": {
+                "clave": "from-freeze-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cancelar"
+          },
+          "esperar": 4
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 4
+        }
+      ]
+    },
+    {
+      "nombre": "_creado",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "add-year-calculo-i"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-duplicate"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "creado, copiado de"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "creado",
+            "cajas": {
+              "aviso": {
+                "contiene": "creado, copiado de",
+                "ajustado": true
+              },
+              "nuevo": {
+                "texto": "2027-2028",
+                "fila": 1200
+              },
+              "viejo": {
+                "texto": "2026-2027",
+                "fila": 1200
+              }
+            }
+          }
+        },
+        {
+          "esperar": 30
+        }
+      ]
+    },
+    {
+      "nombre": "curso",
+      "ruta": "/courses/calculo-i/2027-2028",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "titulo": {
+          "contiene": "2027-2028",
+          "n": 0
+        },
+        "tema": {
+          "texto": "Tema 1: límites y continuidad",
+          "fila": 1000
+        },
+        "hoja": {
+          "texto": "Hoja 1: límites y continuidad",
+          "fila": 1000
+        },
+        "parcial": {
+          "texto": "Primer parcial",
+          "fila": 1000
+        }
+      }
+    },
+    {
+      "nombre": "leccion",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "franja": {
+          "clave": "shared-lesson-strip"
+        },
+        "cursos": {
+          "contiene": "Se da en 2 cursos",
+          "ajustado": true
+        },
+        "usos": {
+          "contiene": "Cálculo I · 2027-2028"
+        },
+        "usos_antes": {
+          "contiene": "Cálculo I · 2026-2027"
+        }
+      }
+    },
+    {
+      "nombre": "versiones",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "freezes-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "quedo": {
+          "texto": "Tal como quedó",
+          "fila": 600
+        },
+        "descripcion": {
+          "contiene": "Al crear el curso 2027-2028"
+        },
+        "parcial": {
+          "texto": "Antes del primer parcial",
+          "fila": 600
+        }
+      }
+    }
+  ]
+}

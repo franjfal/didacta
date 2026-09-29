@@ -1,0 +1,202 @@
+{
+  "capturas": [
+    {
+      "nombre": "_apariencia",
+      "ruta": "/settings?s=apariencia",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "claro",
+            "cajas": {
+              "sistema": {
+                "clave": "appearance-system"
+              },
+              "claro": {
+                "clave": "appearance-light"
+              },
+              "oscuro": {
+                "clave": "appearance-dark"
+              },
+              "luna": {
+                "clave": "appearance-toggle"
+              },
+              "nota": {
+                "contiene": "Los PDF no cambian: un PDF se imprime"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "appearance-dark"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "oscuro",
+            "cajas": {
+              "sistema": {
+                "clave": "appearance-system"
+              },
+              "oscuro": {
+                "clave": "appearance-dark"
+              },
+              "luna": {
+                "clave": "appearance-toggle"
+              },
+              "nota": {
+                "contiene": "Los PDF no cambian: un PDF se imprime"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/limites/limite-por-definicion",
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "oscuro-leccion",
+            "cajas": {
+              "titulo": {
+                "texto": "Límites por la definición",
+                "n": 0
+              },
+              "luna": {
+                "clave": "appearance-toggle"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/settings?s=apariencia",
+          "esperar": 10
+        },
+        {
+          "pulsar": {
+            "clave": "appearance-light"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "text-bigger"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "text-bigger"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "text-bigger"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "grande",
+            "cajas": {
+              "tamano": {
+                "clave": "text-scale"
+              },
+              "menos": {
+                "clave": "text-smaller"
+              },
+              "mas": {
+                "clave": "text-bigger"
+              },
+              "normal": {
+                "clave": "text-normal"
+              },
+              "atajos": {
+                "contiene": "lo deja como estaba"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "text-normal"
+          },
+          "esperar": 6
+        },
+        {
+          "mostrar": {
+            "clave": "interface-mode"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "idioma",
+            "cajas": {
+              "idioma": {
+                "clave": "ui-language"
+              },
+              "explica": {
+                "contiene": "No cambia el idioma del material"
+              },
+              "interfaz": {
+                "clave": "interface-mode"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "English"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "ingles",
+            "cajas": {
+              "idioma": {
+                "clave": "ui-language"
+              },
+              "interfaz": {
+                "clave": "interface-mode"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/courses/calculo-i/2026-2027",
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "ingles-curso",
+            "cajas": {
+              "tema": {
+                "texto": "Tema 1: límites y continuidad"
+              },
+              "compilar": {
+                "texto": "Build the course in Castellano"
+              },
+              "material": {
+                "clave": "language-picker"
+              },
+              "titulo": {
+                "contiene": "Cálculo I ·",
+                "n": 0
+              },
+              "migas": {
+                "texto": "Subjects"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

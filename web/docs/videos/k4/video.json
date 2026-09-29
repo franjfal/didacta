@@ -1,0 +1,73 @@
+{
+  "codigo": "K4",
+  "titulo": "Pedir ayuda y tener Didacta al día",
+  "fichero": "K04-pedir-ayuda-y-tener-didacta-al-dia.mp4",
+  "duracion": 76.34,
+  "megas": 3.9,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Pedir ayuda y tener Didacta al día"
+    },
+    {
+      "t": 6.19,
+      "titulo": "La ayuda"
+    },
+    {
+      "t": 27.62,
+      "titulo": "Al día"
+    },
+    {
+      "t": 50.34,
+      "titulo": "Empezar de cero"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué hacer cuando algo no va, y cómo se actualiza Didacta."
+    },
+    {
+      "t": 6.69,
+      "texto": "En Ajustes, Ayuda: la presentación, el recorrido guiado, los atajos y la documentación."
+    },
+    {
+      "t": 13.53,
+      "texto": "Si algo falla, Copiar informe de diagnóstico: lo que ha pasado por dentro, sin tus claves."
+    },
+    {
+      "t": 20.23,
+      "texto": "Y el aviso ofrece abrir una incidencia con él. Pero lleva nombres de ficheros: míralo antes de enviarlo."
+    },
+    {
+      "t": 28.12,
+      "texto": "Cuando hay una versión nueva, una franja arriba lo dice. Se puede dejar para luego: la versión sigue en Ajustes."
+    },
+    {
+      "t": 36.33,
+      "texto": "En Ajustes, Actualizaciones: la versión que tienes, la nueva, y Buscar actualizaciones, para mirar ahora."
+    },
+    {
+      "t": 44.23,
+      "texto": "Y las versiones de prueba, apagadas de salida, para quien quiera probar lo nuevo antes que nadie."
+    },
+    {
+      "t": 50.84,
+      "texto": "Y Empezar de cero, en rojo, deja Didacta como recién instalada."
+    },
+    {
+      "t": 55.67,
+      "texto": "Antes dice qué se lleva: la sesión, los ajustes y la lista de repositorios. En GitHub no se toca nada."
+    },
+    {
+      "t": 64.9,
+      "texto": "Actualizar nunca te deja sin aplicación: la anterior se aparta hasta que la nueva arranca."
+    },
+    {
+      "t": 71.08,
+      "texto": "En el siguiente vídeo, la interfaz Completa."
+    }
+  ]
+}

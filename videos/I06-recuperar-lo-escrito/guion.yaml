@@ -1,0 +1,103 @@
+# I6 · Recuperar lo escrito tras un cierre inesperado
+#
+# Montado desde este guion. La pregunta al salir es de verdad: se escribe en
+# la lección y se pulsa Biblioteca. El borrador de la segunda parte lo deja
+# el arnés en el almacén de borradores (`"borrador"` en `"preparar"`), que es
+# lo que habría dejado el editor si Didacta se hubiera cerrado de golpe: no
+# se puede forzar el cierre dentro de una prueba.
+codigo: I6
+titulo: Recuperar lo escrito tras un cierre inesperado
+subtitulo: Lo que escribes sin guardar no se pierde
+ruta: No perder nada
+siguiente: "J1 · Preparar el curso que viene"
+voz: narrador
+lema: ["Lo escrito se va copiando mientras escribes:", "un cierre de golpe no se lo lleva."]
+lema_en: "no se lo lleva"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás que lo que escribes sin guardar no se pierde.
+
+  - id: salir
+    capitulo: Al salir
+    antes: 0.5
+    pantalla: escrito
+    frases:
+      - id: escrito
+        texto: >-
+          Aquí hay una frase nueva, todavía sin guardar.
+        pasos:
+          - {al: inicio, enfoca: [cambio], max: 2}
+          - {en: frase, resalta: cambio, etiqueta: "Sin guardar", color: ambar}
+      - id: pregunta
+        texto: >-
+          Si te vas a otra pantalla, Didacta pregunta antes. Y lo marcado es
+          Seguir editando: un Intro por reflejo no tira un párrafo.
+        pasos:
+          - {al: inicio, cambia: rail}
+          - {al: inicio, reposo: true, captura: rail}
+          - {en: pantalla, pulsa: biblioteca, captura: rail}
+          - {en: pregunta, cambia: pregunta}
+          - {en: pregunta, enfoca: [titulo, salir], max: 1.8, captura: pregunta}
+          - {en: marcado, resalta: seguir, lado: abajo, captura: pregunta, hasta: 3}
+          - {en: Intro, teclas: "↩", captura: pregunta}
+
+  - id: cierre-de-golpe
+    antes: 0.4
+    grafico:
+      tipo: frase
+      uno: "¿Y si Didacta"
+      dos: "se cierra de golpe?"
+      dos_en: de golpe
+    frases:
+      - id: golpe
+        texto: >-
+          ¿Y si Didacta se cierra de golpe? Se cuelga, se va la luz, se acaba
+          la batería.
+
+  - id: recuperar
+    capitulo: Recuperarlo
+    antes: 0.5
+    pantalla: recuperar
+    frases:
+      - id: copia
+        texto: >-
+          Mientras escribes, lo va copiando fuera del repositorio. Al volver a
+          abrir la lección, lo dice: hay texto sin guardar, de hace unos
+          minutos.
+        pasos:
+          - {al: inicio, enfoca: [texto], max: 2}
+          - {en: dice, resalta: texto, lado: abajo}
+      - id: botones
+        texto: >-
+          Recuperarlo lo vuelve a poner en el editor; Descartarlo lo tira.
+        pasos:
+          - {al: inicio, enfoca: [descartar, recuperar], max: 2, dx: -250}
+          - {en: Recuperarlo, pulsa: recuperar}
+          - {en: editor, cambia: recuperado}
+          - {en: editor, enfoca: [cambio], max: 2, captura: recuperado}
+          - {en: Descartarlo, resalta: cambio, captura: recuperado}
+      - id: guardar
+        texto: >-
+          Vuelve como un cambio sin guardar: queda guardarlo.
+        pasos:
+          - {al: inicio, enfoca: [guardar], max: 2, dx: -300, captura: recuperado}
+          - {en: guardarlo, resalta: guardar, lado: abajo, alinear: derecha, captura: recuperado}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo escrito se va copiando mientras escribes: un cierre de golpe no se
+          lo lleva.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, preparar el curso que viene.

@@ -1,0 +1,313 @@
+{
+  "capturas": [
+    {
+      "nombre": "_bloques",
+      "ruta": "/settings?s=material",
+      "completa": true,
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "material",
+            "cajas": {
+              "gestionar": {
+                "clave": "open-blocks"
+              },
+              "titulo": {
+                "texto": "BLOQUES"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "open-blocks"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "titulo": {
+                "texto": "Bloques"
+              },
+              "nuevo": {
+                "clave": "new-block"
+              },
+              "sin": {
+                "contiene": "Nombrados y sin declarar"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "new-block"
+          },
+          "esperar": 6
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "block-name"
+            },
+            "texto": "Prácticas de ordenador"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "block-id"
+            },
+            "texto": "practicas"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "nuevo",
+            "cajas": {
+              "nombre": {
+                "clave": "block-name"
+              },
+              "id": {
+                "clave": "block-id"
+              },
+              "repos": {
+                "contiene": "En qué repositorios se declara"
+              },
+              "declarar": {
+                "clave": "block-create"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "block-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "rename-block-practicas"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "declarado",
+            "cajas": {
+              "fila": {
+                "clave": "block-practicas"
+              },
+              "nombres": {
+                "clave": "rename-block-practicas"
+              },
+              "plantillas": {
+                "clave": "block-templates-practicas"
+              },
+              "quitar": {
+                "clave": "remove-block-practicas"
+              },
+              "declarado": {
+                "texto": "Declarado en"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "rename-block-practicas"
+          },
+          "esperar": 6
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "block-title-va"
+            },
+            "texto": "Pràctiques d'ordinador"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "block-title-en"
+            },
+            "texto": "Computer labs"
+          }
+        },
+        {
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "nombres",
+            "cajas": {
+              "es": {
+                "clave": "block-title-es"
+              },
+              "va": {
+                "clave": "block-title-va"
+              },
+              "en": {
+                "clave": "block-title-en"
+              },
+              "aceptar": {
+                "clave": "block-titles-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "block-titles-save"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Nombre cambiado"
+          },
+          "max": 900,
+          "despues": 20
+        },
+        {
+          "capturar": {
+            "nombre": "por-su-id",
+            "cajas": {
+              "sin": {
+                "contiene": "Nombrados y sin declarar"
+              },
+              "teoria": {
+                "clave": "declare-block-theory"
+              },
+              "problemas": {
+                "clave": "declare-block-problems"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "declare-block-theory"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "block-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "rename-block-theory"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "pulsar": {
+            "clave": "declare-block-problems"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "block-create"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "rename-block-problems"
+          },
+          "max": 900,
+          "despues": 10
+        },
+        {
+          "capturar": {
+            "nombre": "tres",
+            "cajas": {
+              "practicas": {
+                "clave": "block-practicas"
+              },
+              "teoria": {
+                "clave": "block-theory"
+              },
+              "problemas": {
+                "clave": "block-problems"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "block-templates-practicas"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "plantillas",
+            "cajas": {
+              "titulo": {
+                "contiene": "Plantillas de «"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "remove-block-practicas"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "quitar",
+            "cajas": {
+              "titulo": {
+                "contiene": "Quitar «"
+              },
+              "que": {
+                "texto": "Qué se hace con ellas"
+              },
+              "nada": {
+                "clave": "move-to-nowhere"
+              },
+              "quitar": {
+                "clave": "block-remove"
+              }
+            }
+          }
+        }
+      ],
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "problems/calculo/continuidad/tres-raices-por-bolzano/unit.yaml",
+            "buscar": "block: problems",
+            "poner": "block: practicas",
+            "mensaje": "Un problema para las prácticas",
+            "enviar": true
+          }
+        }
+      ]
+    }
+  ]
+}

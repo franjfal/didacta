@@ -1,0 +1,77 @@
+{
+  "codigo": "H1",
+  "titulo": "Exportar un curso para el aula virtual",
+  "fichero": "H01-exportar-un-curso.mp4",
+  "duracion": 71.36,
+  "megas": 4.7,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Exportar un curso para el aula virtual"
+    },
+    {
+      "t": 7.6,
+      "titulo": "Qué se exporta"
+    },
+    {
+      "t": 23.92,
+      "titulo": "Lo que no está al día"
+    },
+    {
+      "t": 31.17,
+      "titulo": "Revisar antes de repartir"
+    },
+    {
+      "t": 43.27,
+      "titulo": "La carpeta"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás sacar los PDF de un curso a una carpeta, sin repartir soluciones por error."
+    },
+    {
+      "t": 8.1,
+      "texto": "En la fila del curso, Exportar."
+    },
+    {
+      "t": 10.79,
+      "texto": "Pregunta los idiomas y los documentos, todo marcado. Y de salida, solo lo que puede ver un estudiante."
+    },
+    {
+      "t": 17.73,
+      "texto": "Las resoluciones completas, y las copias del profesor, en rojo, hay que pedirlas."
+    },
+    {
+      "t": 24.42,
+      "texto": "Si algo no está compilado o se ha quedado viejo, lo dice, y ofrece compilar antes solo eso."
+    },
+    {
+      "t": 31.67,
+      "texto": "Antes de copiar nada, revisa lo que se va a exportar: aquí, una referencia que saldría como dos interrogaciones."
+    },
+    {
+      "t": 39.65,
+      "texto": "Puedes arreglarlo antes, o exportar igualmente."
+    },
+    {
+      "t": 43.77,
+      "texto": "Al acabar, cuántos ficheros ha copiado, y cuántos se ha guardado de copiar: los que llevan soluciones o son del profesor."
+    },
+    {
+      "t": 52.27,
+      "texto": "En la carpeta, una por tema, y una por idioma si exportas varios. Y cada PDF, con un nombre que se lee."
+    },
+    {
+      "t": 60.67,
+      "texto": "De salida no sale nada que no pueda ver un estudiante."
+    },
+    {
+      "t": 63.98,
+      "texto": "En el siguiente vídeo, exportar un documento, o el PDF que estás mirando."
+    }
+  ]
+}

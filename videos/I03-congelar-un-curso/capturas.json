@@ -1,0 +1,118 @@
+{
+  "capturas": [
+    {
+      "nombre": "lista",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "congelar": {
+                "clave": "freeze-year-calculo-i-2026-2027"
+              },
+              "ver": {
+                "clave": "freezes-calculo-i-2026-2027"
+              },
+              "menu": {
+                "clave": "year-menu-calculo-i-2026-2027"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "freeze-year-calculo-i-2026-2027"
+          },
+          "esperar": 10
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "freeze-name"
+            },
+            "texto": "Antes del primer parcial"
+          }
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "freeze-description"
+            },
+            "texto": "Como se repartió el Tema 1."
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "nombre": {
+                "clave": "freeze-name"
+              },
+              "descripcion": {
+                "clave": "freeze-description"
+              },
+              "congelar": {
+                "clave": "freeze-confirm"
+              },
+              "dialogo": {
+                "clave": "freeze-confirm",
+                "alto": 400
+              },
+              "apunta": {
+                "contiene": "Apuntará a"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "freeze-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Congelada «"
+          },
+          "max": 900,
+          "despues": 30
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "freezes-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "fila": {
+          "contiene": "Antes del primer parcial",
+          "n": 0,
+          "fila": 500
+        },
+        "nueva": {
+          "clave": "freeze-new"
+        },
+        "explica": {
+          "contiene": "Cada una es un momento del historial"
+        }
+      }
+    }
+  ]
+}

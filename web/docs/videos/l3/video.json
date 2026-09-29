@@ -1,0 +1,73 @@
+{
+  "codigo": "L3",
+  "titulo": "Bloques: teoría, problemas y prácticas",
+  "fichero": "L03-bloques.mp4",
+  "duracion": 73.4,
+  "megas": 4.3,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Bloques: teoría, problemas y prácticas"
+    },
+    {
+      "t": 7.02,
+      "titulo": "Un bloque nuevo"
+    },
+    {
+      "t": 31.14,
+      "titulo": "La teoría y los problemas"
+    },
+    {
+      "t": 44.01,
+      "titulo": "Con qué se compila"
+    },
+    {
+      "t": 51.04,
+      "titulo": "Quitar uno"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dividir una asignatura en partes, y decidir con qué se compila cada una."
+    },
+    {
+      "t": 7.52,
+      "texto": "Un bloque es una parte de la asignatura: la teoría, los problemas, las prácticas. En Ajustes, Bloques y plantillas. Aquí, una lección ya dice que es de prácticas, y nadie lo ha declarado."
+    },
+    {
+      "t": 21.84,
+      "texto": "Nuevo bloque: su nombre, y su identificador, que es lo que escribe cada lección."
+    },
+    {
+      "t": 27.36,
+      "texto": "Y el nombre, en cada idioma: el lápiz."
+    },
+    {
+      "t": 31.64,
+      "texto": "Ojo: con el primero declarado, la teoría y los problemas también hay que declararlos; si no, salen por su id."
+    },
+    {
+      "t": 39.33,
+      "texto": "Declarar, al lado de cada uno, y ya traen su nombre de siempre."
+    },
+    {
+      "t": 44.51,
+      "texto": "El segundo botón decide con qué plantillas se compila lo de ese bloque: lo que toque, o las que elijas."
+    },
+    {
+      "t": 51.54,
+      "texto": "Y quitar uno pregunta qué se hace con sus lecciones: moverlas a otro bloque, o dejarlas sin bloque declarado, que salen en Entre repos."
+    },
+    {
+      "t": 61.68,
+      "texto": "Renombrar un bloque es cambiar una línea: no se mueve ningún fichero."
+    },
+    {
+      "t": 66.74,
+      "texto": "En el siguiente vídeo, las plantillas: tus propias salidas."
+    }
+  ]
+}

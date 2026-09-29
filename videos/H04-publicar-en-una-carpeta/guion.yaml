@@ -1,0 +1,89 @@
+# H4 · Publicar en una carpeta de OneDrive o Drive
+#
+# Montado desde este guion: la carpeta de reparto se elige y el curso se
+# publica de verdad dentro del arnés. La carpeta es una carpeta cualquiera
+# (/Users/Shared/Didacta/Reparto); lo que la sincroniza en la vida real es el
+# programa de OneDrive, Drive o Nextcloud, y eso ya no es cosa de Didacta.
+codigo: H4
+titulo: Publicar en una carpeta de OneDrive o Drive
+subtitulo: Repartir sin elegir carpeta cada vez
+ruta: Repartir
+siguiente: "I1 · Guardar, enviar y traer"
+voz: narrador
+lema: ["Publicas en tu carpeta;", "la sincronización hace el resto."]
+lema_en: "la sincronización"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás repartir tus cursos sin elegir carpeta cada vez.
+
+  - id: carpeta
+    capitulo: La carpeta de reparto
+    antes: 0.5
+    pantalla: sin
+    frases:
+      - id: elegir
+        texto: >-
+          En Ajustes, Guardar y sincronizar, la carpeta de reparto: una carpeta
+          que sincroniza OneDrive, Drive o Nextcloud, y que ven tus
+          estudiantes.
+        pasos:
+          - {al: inicio, enfoca: [explica, elegir], max: 1.6}
+          - {en: carpeta de reparto, resalta: explica, hasta: 3.4}
+          - {en: estudiantes, resalta: elegir, lado: abajo}
+      - id: elegida
+        texto: >-
+          Se elige una vez, y se queda.
+        pasos:
+          - {al: inicio, cambia: con}
+          - {al: inicio, enfoca: [ruta, dejar], max: 1.8, captura: con}
+          - {en: una vez, resalta: ruta, captura: con}
+      - id: repos
+        texto: >-
+          La carpeta de reparto sí puede estar en OneDrive. Los repositorios,
+          no: dos programas sincronizando la misma carpeta la estropean.
+
+  - id: publicar
+    capitulo: Publicar
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: menu
+        texto: >-
+          Después, en los tres puntos del curso, Publicar en la carpeta de
+          reparto.
+        pasos:
+          - {al: inicio, enfoca: [menu, publicar], max: 1.6, dx: 300}
+          - {en: Publicar, resalta: publicar, lado: izquierda}
+      - id: dialogo
+        texto: >-
+          Es el mismo diálogo de exportar, sin preguntar dónde: cada curso va a
+          su carpeta, con su nombre.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [intro], max: 1.8, dy: 120, captura: dialogo}
+          - {en: su carpeta, resalta: intro, captura: dialogo}
+      - id: hecho
+        texto: >-
+          Y el programa de sincronización hace el resto.
+        pasos:
+          - {al: inicio, cambia: publicado}
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: publicado}
+          - {en: resto, resalta: aviso, lado: arriba, captura: publicado}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Publicas en tu carpeta; la sincronización hace el resto.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, no perder nada: guardar, enviar y traer.

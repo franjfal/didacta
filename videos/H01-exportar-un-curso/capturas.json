@@ -1,0 +1,172 @@
+{
+  "capturas": [
+    {
+      "nombre": "hecho",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "fila",
+            "cajas": {
+              "exportar": {
+                "clave": "export-year-calculo-i-2026-2027"
+              },
+              "fila": {
+                "texto": "2026-2027",
+                "n": 0,
+                "fila": 800
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-year-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "intro": {
+                "clave": "export-intro"
+              },
+              "es": {
+                "clave": "export-language-es"
+              },
+              "tema": {
+                "clave": "export-theme-loose"
+              },
+              "soluciones": {
+                "clave": "export-solutions"
+              },
+              "profesor": {
+                "clave": "export-teacher"
+              },
+              "viejo": {
+                "clave": "export-stale"
+              },
+              "solo": {
+                "clave": "export-rebuild-stale"
+              },
+              "todo": {
+                "clave": "export-rebuild"
+              },
+              "zip": {
+                "clave": "export-zip"
+              },
+              "html": {
+                "clave": "export-html"
+              },
+              "ir": {
+                "clave": "export-confirm"
+              },
+              "dialogo": {
+                "clave": "export-confirm",
+                "alto": 700
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-confirm"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "texto": "Exportar igualmente"
+          },
+          "max": 600,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "revision",
+            "cajas": {
+              "igualmente": {
+                "texto": "Exportar igualmente"
+              },
+              "ref": {
+                "contiene": "no tiene destino",
+                "n": 0,
+                "fila": 600
+              },
+              "dialogo": {
+                "texto": "Exportar igualmente",
+                "alto": 500
+              },
+              "cancelar": {
+                "texto": "Cancelar",
+                "ultimo": true
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Exportar igualmente"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada en"
+          },
+          "max": 2400,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "compila",
+            "cajas": {
+              "cabecera": {
+                "contiene": "Terminada en",
+                "fila": 700
+              },
+              "resultado": {
+                "contiene": "ninguno con errores",
+                "n": 1
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar"
+          },
+          "esperar": 2
+        },
+        {
+          "hasta_que": {
+            "contiene": "exportados a"
+          },
+          "max": 600,
+          "despues": 2
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "exportados a",
+          "ajustado": true
+        }
+      },
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/teorema-de-bolzano/es.tex",
+            "buscar": "tienen signos opuestos,",
+            "poner": "tienen signos opuestos (ver la definición~\\ref{def:continua}),",
+            "mensaje": "Una referencia que no lleva a ninguna parte",
+            "enviar": true
+          }
+        }
+      ]
+    }
+  ]
+}

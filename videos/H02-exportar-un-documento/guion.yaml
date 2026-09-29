@@ -1,0 +1,84 @@
+# H2 · Exportar un documento o el PDF que miras
+#
+# Montado desde este guion: el Tema 1 se compila y se exporta de verdad
+# dentro del arnés, y la copia del PDF se guarda en la carpeta de reparto del
+# vídeo.
+codigo: H2
+titulo: Exportar un documento o el PDF que miras
+subtitulo: Llevarte solo un tema, o solo el PDF abierto
+ruta: Repartir
+siguiente: "H3 · Un .zip para Moodle, y los apuntes en HTML"
+voz: narrador
+lema: ["Las copias del profesor", "no salen de un clic."]
+lema_en: "no salen"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás llevarte solo un documento, o solo el PDF que estás
+          mirando.
+
+  - id: documento
+    capitulo: Un documento
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: menu
+        texto: >-
+          En los tres puntos del documento, Exportar a una carpeta. Solo
+          pregunta dónde.
+        pasos:
+          - {al: inicio, enfoca: [exportar], max: 1.8, dx: -300}
+          - {en: Exportar, resalta: exportar, lado: izquierda}
+      - id: fuera
+        texto: >-
+          Saca lo que hay compilado para los estudiantes. Las copias del
+          profesor no salen de un clic: el aviso lo dice, y ofrece incluirlas.
+        pasos:
+          - {al: inicio, cambia: aviso}
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: aviso}
+          - {en: estudiantes, resalta: aviso, lado: arriba, captura: aviso, hasta: 3.2}
+          - {en: incluirlas, enfoca: [incluir], max: 2, dx: -300, dy: -120, captura: aviso}
+          - {en: incluirlas, resalta: incluir, lado: arriba, alinear: derecha, captura: aviso}
+      - id: incluidas
+        texto: >-
+          Si las incluyes, se añaden a la misma carpeta.
+        pasos:
+          - {al: inicio, cambia: incluidas}
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: incluidas}
+          - {en: misma carpeta, resalta: aviso, captura: incluidas}
+
+  - id: pdf
+    capitulo: El PDF que miras
+    antes: 0.5
+    pantalla: pdf
+    frases:
+      - id: copia
+        texto: >-
+          Y si solo quieres el PDF que estás mirando, Guardar una copia.
+        pasos:
+          - {al: inicio, enfoca: [guardar], max: 2, dx: -300, dy: 150}
+          - {en: Guardar, resalta: guardar, lado: abajo, alinear: derecha}
+      - id: guardado
+        texto: >-
+          Con un nombre que dice qué es: el tema, la versión y el idioma.
+        pasos:
+          - {al: inicio, cambia: copia}
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: copia}
+          - {en: nombre, resalta: aviso, lado: arriba, captura: copia}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Las copias del profesor no salen de un clic.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, un .zip para Moodle, y los apuntes en HTML.

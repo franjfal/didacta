@@ -342,7 +342,7 @@
   }
 
   /** Una cámara sobre un grupo: acercarse a un rectángulo del escenario. */
-  function camara(grupo) {
+  function camara(grupo, limites = null) {
     grupo.style.transformOrigin = '0 0';
     let estado = { x: 0, y: 0, s: 1 };
     anim(grupo, [[0, { ...estado }]]);
@@ -364,6 +364,18 @@
         // Lo que no cabe acercándose se ve mejor en la vista de siempre: alejar
         // la cámara encoge la ventana y la deja cortada por un lado.
         const nuevo = s <= 1 ? { x: 0, y: 0, s: 1 } : { x: W / 2 - cx * s, y: H / 2 - cy * s, s };
+        // De cerca, la ventana llena el cuadro: lo que está en un borde se ve
+        // pegado a ese borde, no con medio cuadro de fondo al lado. Y si con
+        // este acercamiento todavía cabe, se queda entera dentro.
+        if (s > 1 && limites) {
+          const dentro = (t, ini, largo, lienzo) => {
+            const a = -ini * s;
+            const b = lienzo - (ini + largo) * s;
+            return Math.min(Math.max(a, b), Math.max(Math.min(a, b), t));
+          };
+          nuevo.x = dentro(nuevo.x, limites.x, limites.w, W);
+          nuevo.y = dentro(nuevo.y, limites.y, limites.h, H);
+        }
         anim(grupo, [
           [t0, { ...estado }],
           [t1, nuevo, o.curva || 'muysuave'],

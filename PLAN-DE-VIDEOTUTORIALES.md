@@ -1228,11 +1228,13 @@ encima, que se revisa como cualquier otro.
 
 **Parte de** Asignaturas → Cálculo I.
 
-1. **Duplicar** 2026-2027 en 2027-2028, con **Congelar 2026-2027 tal como
-   quedó** marcado.
-2. Se copian los temas y los documentos; las lecciones son las mismas.
-3. Si hay documentos vinculados, el diálogo avisa de que se comparten.
-4. La otra puerta: crear el curso desde una versión congelada.
+1. **Nuevo curso académico**: propone 2027-2028 copiando 2026-2027 (o desde
+   cero), con **Congelar 2026-2027 tal como quedó** marcado.
+2. Se copian los temas y los documentos; las lecciones son las mismas, y
+   cada una lo dice: «Se da en 2 cursos».
+3. El curso que acaba, en sus versiones congeladas como «Tal como quedó».
+4. La otra puerta: **Crear un curso desde aquí…**, desde una versión
+   congelada.
 
 **La idea:** lo que corrijas este año lo hereda el que viene, y el PDF del año
 pasado sigue como se dio.

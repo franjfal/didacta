@@ -1,0 +1,61 @@
+{
+  "codigo": "I3",
+  "titulo": "Congelar un curso",
+  "fichero": "I03-congelar-un-curso.mp4",
+  "duracion": 51.33,
+  "megas": 2.0,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Congelar un curso"
+    },
+    {
+      "t": 7.6,
+      "titulo": "Congelar"
+    },
+    {
+      "t": 19.71,
+      "titulo": "Las versiones congeladas"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás guardar cómo estaba un curso en un momento: antes del primer parcial, por ejemplo."
+    },
+    {
+      "t": 8.1,
+      "texto": "En los tres puntos del curso, Crear versión congelada."
+    },
+    {
+      "t": 11.9,
+      "texto": "Un nombre, y si quieres una descripción."
+    },
+    {
+      "t": 14.7,
+      "texto": "Apunta al momento de ahora: lo que esté sin guardar, no entra."
+    },
+    {
+      "t": 20.21,
+      "texto": "En Ver versiones congeladas, cada una con su nombre, su descripción y cuándo se hizo."
+    },
+    {
+      "t": 26.4,
+      "texto": "No es una copia: es un nombre puesto a un momento del historial. No ocupa, y quitarla no borra nada."
+    },
+    {
+      "t": 34.24,
+      "texto": "Y tampoco es una copia de seguridad: eso es enviar a GitHub."
+    },
+    {
+      "t": 39.52,
+      "texto": "Una versión congelada es un nombre puesto a un momento del historial."
+    },
+    {
+      "t": 44.02,
+      "texto": "En el siguiente vídeo, mirar, comparar y restaurar una versión congelada."
+    }
+  ]
+}

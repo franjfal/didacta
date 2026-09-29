@@ -1,0 +1,17 @@
+kind: theory
+block: theory
+title:
+  es: El producto de matrices
+  va: El producte de matrius
+  en: Matrix multiplication
+category: algebra
+topic: matrices
+tags: [matriz, producto]
+reference: es
+languages:
+  es: {status: source}
+prerequisites: []
+objectives:
+  - Multiplicar dos matrices de tamaños compatibles
+duration_minutes: 15
+difficulty: introductory

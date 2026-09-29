@@ -1,0 +1,100 @@
+# H3 · Un .zip para Moodle, y los apuntes en HTML
+#
+# Montado desde este guion: el curso se exporta de verdad con el .zip y el
+# HTML dentro del arnés, y el gráfico enseña lo que lleva el .zip que ha
+# salido. Moodle no sale: se cuenta, porque cada universidad lo tiene a su
+# manera.
+codigo: H3
+titulo: Un .zip para Moodle, y los apuntes en HTML
+subtitulo: Subir un curso entero al aula virtual en un solo fichero
+ruta: Repartir
+siguiente: "H4 · Publicar en una carpeta de OneDrive o Drive"
+voz: narrador
+lema: ["Se sube un fichero", "en lugar de cuarenta."]
+lema_en: "en lugar"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás subir un curso entero al aula virtual, en un solo
+          fichero.
+
+  - id: zip
+    capitulo: Un .zip con todo
+    antes: 0.5
+    pantalla: dialogo
+    frases:
+      - id: marcar
+        texto: >-
+          Al exportar el curso, abajo, También: un .zip con todo.
+        pasos:
+          - {al: inicio, enfoca: [tambien, html], max: 2}
+          - {en: También, resalta: tambien, hasta: 1.4}
+          - {en: zip, resalta: zip, lado: arriba}
+      - id: html
+        texto: >-
+          Y los apuntes en HTML, que se leen en el navegador, se agrandan y se
+          escuchan, entran en el mismo .zip.
+        pasos:
+          - {en: HTML, resalta: html, lado: arriba}
+
+  - id: dentro
+    capitulo: Lo que lleva
+    antes: 0.5
+    grafico:
+      tipo: arbol
+      titulo: Cálculo I 2026-2027.zip
+      x: 300
+      lineas:
+        - {texto: "Sin tema/", en: carpetas}
+        - {texto: "Tema 1 límites y continuidad - Apuntes.pdf", nivel: 1, en: carpetas}
+        - {texto: "Tema 1 límites y continuidad - Apuntes.html", nivel: 1, en: HTML}
+        - {texto: "Tema 1 límites y continuidad - Diapositivas.pdf", nivel: 1, en: carpetas}
+        - {texto: "Hoja 1 límites y continuidad - Hoja de problemas.pdf", nivel: 1, en: carpetas}
+        - {texto: "Primer parcial - Examen.pdf", nivel: 1, en: carpetas}
+    frases:
+      - id: carpetas
+        texto: >-
+          Sale dentro de la carpeta, con los temas en sus carpetas, y el HTML
+          junto a cada PDF.
+
+  - id: hecho
+    antes: 0.4
+    pantalla: hecho
+    frases:
+      - id: junto
+        texto: >-
+          Y el aviso del final lo dice: todo junto, en un .zip.
+        pasos:
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120}
+          - {en: todo junto, resalta: aviso, lado: arriba}
+
+  - id: moodle
+    capitulo: En Moodle
+    antes: 0.5
+    grafico:
+      tipo: flujo
+      origen: {ante: "Un fichero", titulo: "El .zip", sub: "Cálculo I 2026-2027.zip"}
+      destinos:
+        - {titulo: "Un recurso Carpeta", icono: moodle, color: ambar, en: Carpeta}
+        - {titulo: "Descomprimido, con sus carpetas", icono: carpeta, color: verde, en: descomprime}
+    frases:
+      - id: carpeta
+        texto: >-
+          En Moodle, se sube a un recurso Carpeta, que lo descomprime: se sube
+          un fichero, en lugar de cuarenta.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Se sube un fichero en lugar de cuarenta.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, publicar en una carpeta de OneDrive o Drive.

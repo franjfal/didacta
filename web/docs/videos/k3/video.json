@@ -1,0 +1,73 @@
+{
+  "codigo": "K3",
+  "titulo": "Trabajar con varios repositorios",
+  "fichero": "K03-varios-repositorios.mp4",
+  "duracion": 72.44,
+  "megas": 4.3,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Trabajar con varios repositorios"
+    },
+    {
+      "t": 6.56,
+      "titulo": "Añadir otro"
+    },
+    {
+      "t": 19.08,
+      "titulo": "Juntos"
+    },
+    {
+      "t": 39.67,
+      "titulo": "Quitar uno"
+    },
+    {
+      "t": 49.14,
+      "titulo": "Lo que viaja contigo"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás tener abierto el material del departamento y el tuyo, a la vez."
+    },
+    {
+      "t": 7.06,
+      "texto": "En Ajustes, Cuenta y repositorios: el tuyo, y el del departamento, cada uno con su color."
+    },
+    {
+      "t": 14.13,
+      "texto": "Otro se añade desde GitHub, o desde una carpeta que ya tengas clonada."
+    },
+    {
+      "t": 19.58,
+      "texto": "Arriba, los dos, con su color. Pulsar uno lo oculta, o lo vuelve a enseñar: así ves lo que ve quien no lo tiene."
+    },
+    {
+      "t": 28.83,
+      "texto": "La biblioteca los junta: Cálculo, del tuyo, y Álgebra, del departamento."
+    },
+    {
+      "t": 34.65,
+      "texto": "Una lección nueva pregunta en cuál, y propone el del tema en el que estás."
+    },
+    {
+      "t": 40.17,
+      "texto": "Quitar uno: de la lista, y su carpeta se queda en el disco; o también a la Papelera, de donde se recupera mientras no la vacíes."
+    },
+    {
+      "t": 49.64,
+      "texto": "Y lo que decides sobre el material, qué temas tienes plegados, puede viajar contigo: se guarda en el repositorio que elijas, y en casa lo encuentras igual."
+    },
+    {
+      "t": 60.3,
+      "texto": "No hay un repositorio activo: se ven todos juntos, y cada cambio va al suyo."
+    },
+    {
+      "t": 65.97,
+      "texto": "En el siguiente vídeo, pedir ayuda, y tener Didacta al día."
+    }
+  ]
+}

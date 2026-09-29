@@ -1,0 +1,216 @@
+{
+  "capturas": [
+    {
+      "nombre": "_todo",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "add-year-calculo-i"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "confirm-duplicate"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "creado, copiado de"
+          },
+          "max": 900,
+          "despues": 30
+        },
+        {
+          "ir": "/unit/content/calculo/limites/limite-por-definicion",
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "franja",
+            "cajas": {
+              "franja": {
+                "clave": "shared-lesson-strip"
+              },
+              "cursos": {
+                "contiene": "Se da en 2 cursos",
+                "ajustado": true
+              },
+              "separar": {
+                "clave": "shared-lesson-split"
+              },
+              "usos": {
+                "contiene": "Cálculo I · 2027-2028"
+              },
+              "usos_antes": {
+                "contiene": "Cálculo I · 2026-2027"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "info-menu"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "info",
+            "cajas": {
+              "usar": {
+                "clave": "info-use"
+              },
+              "gestionar": {
+                "clave": "info-split"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "info-use"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "otro",
+            "cajas": {
+              "titulo": {
+                "contiene": "otro tema",
+                "n": 0
+              },
+              "anos": {
+                "texto": "2027-2028"
+              },
+              "tema": {
+                "clave": "lesson-document"
+              },
+              "copia": {
+                "clave": "lesson-duplicate"
+              },
+              "anadir": {
+                "clave": "lesson-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "lesson-duplicate"
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "otro-copia",
+            "cajas": {
+              "copia": {
+                "clave": "lesson-duplicate"
+              },
+              "anadir": {
+                "clave": "lesson-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cancelar"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "clave": "shared-lesson-split"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "B",
+            "cerca": {
+              "contiene": "2027-2028 · tema-1"
+            }
+          },
+          "esperar": 3
+        },
+        {
+          "capturar": {
+            "nombre": "separar",
+            "cajas": {
+              "explica": {
+                "contiene": "Reparte cada una"
+              },
+              "antes": {
+                "contiene": "2026-2027 · tema-1",
+                "n": 0
+              },
+              "despues": {
+                "contiene": "2027-2028 · tema-1",
+                "n": 0
+              },
+              "b": {
+                "texto": "B",
+                "cerca": {
+                  "contiene": "2027-2028 · tema-1"
+                }
+              },
+              "grupoa": {
+                "contiene": "conserva la identidad"
+              },
+              "grupob": {
+                "contiene": "Grupo B:"
+              },
+              "nota": {
+                "contiene": "Cada grupo que se separe"
+              },
+              "dividir": {
+                "clave": "split-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "split-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Vinculación dividida"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "separada",
+            "cajas": {
+              "aviso": {
+                "contiene": "Vinculación dividida",
+                "ajustado": true
+              },
+              "usos_antes": {
+                "contiene": "Cálculo I · 2026-2027"
+              },
+              "editor": {
+                "editor": "\\didactatitle"
+              }
+            }
+          }
+        },
+        {
+          "esperar": 30
+        }
+      ]
+    }
+  ]
+}

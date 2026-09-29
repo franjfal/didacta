@@ -1,0 +1,116 @@
+# I4 · Mirar, comparar y restaurar una versión congelada
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés: se congela el
+# curso, después se quita «Álgebra de límites» del Tema 1 y se acorta una
+# frase de la definición, y lo que se ve al abrir la versión congelada es lo
+# de antes de esos dos cambios.
+codigo: I4
+titulo: Mirar, comparar y restaurar una versión congelada
+subtitulo: Volver a ver un curso como estaba, y recuperar lo que haga falta
+ruta: No perder nada
+siguiente: "I5 · Cuando sale un aviso al guardar o sincronizar"
+voz: narrador
+lema: ["Restaurar no reescribe la historia:", "deja un cambio encima, que se revisa."]
+lema_en: "deja un cambio"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás volver a ver un curso como estaba, compararlo con
+          el de hoy, y recuperar lo que haga falta.
+
+  - id: comparar
+    capitulo: Comparar
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: menu
+        texto: >-
+          En las versiones congeladas, los tres puntos de una: abrirla,
+          compararla, o restaurarla.
+        pasos:
+          - {al: inicio, enfoca: [abrir, restaurar], max: 1.8}
+          - {en: abrirla, resalta: abrir, hasta: 1}
+          - {en: compararla, resalta: comparar, hasta: 1.2}
+          - {en: restaurarla, resalta: restaurar}
+      - id: lista
+        texto: >-
+          Comparar con la versión actual lista lo que ha cambiado desde
+          entonces: una lección, y los temas del curso.
+        pasos:
+          - {al: inicio, cambia: comparacion}
+          - {al: inicio, enfoca: [leccion, composicion], max: 2, captura: comparacion}
+          - {en: lección, resalta: leccion, captura: comparacion, hasta: 1.8}
+          - {en: temas, resalta: composicion, captura: comparacion}
+
+  - id: abrir
+    capitulo: Abrirla
+    antes: 0.5
+    pantalla: abierta
+    frases:
+      - id: banda
+        texto: >-
+          Al abrirla, una banda arriba lo avisa: toda la aplicación enseña aquel
+          día, y de solo lectura.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: banda, resalta: banda, lado: abajo, hasta: 1.6}
+          - {en: aquel, enfoca: [banda], max: 2}
+      - id: tema
+        texto: >-
+          El Tema 1 todavía lleva Álgebra de límites, que hoy ya no da.
+        pasos:
+          - {al: inicio, cambia: tema}
+          - {al: inicio, enfoca: [algebra], max: 1.6, captura: tema}
+          - {en: Álgebra, resalta: algebra, captura: tema}
+      - id: pdf
+        texto: >-
+          Y compilar ahí da el PDF que se repartió entonces.
+
+  - id: restaurar
+    capitulo: Restaurar
+    antes: 0.5
+    pantalla: info
+    frases:
+      - id: leccion
+        texto: >-
+          En una lección, la frase de antes. La i ofrece restaurarla.
+        pasos:
+          - {al: inicio, enfoca: [vieja], max: 2}
+          - {en: frase, resalta: vieja, hasta: 2}
+          - {en: restaurarla, enfoca: [info, restaurar], max: 1.8}
+          - {en: restaurarla, resalta: restaurar, lado: izquierda}
+      - id: dice
+        texto: >-
+          Antes de hacer nada, dice qué ficheros cambiará. Y lo que hace es
+          dejar un cambio pendiente, encima, que se revisa como cualquier otro.
+        pasos:
+          - {al: inicio, cambia: restaurar}
+          - {al: inicio, enfoca: [dialogo], max: 1.4, captura: restaurar}
+          - {en: ficheros, resalta: fichero, captura: restaurar, hasta: 2.2}
+          - {en: pendiente, resalta: explica, captura: restaurar}
+      - id: volver
+        texto: >-
+          Y Volver a la versión actual deja la aplicación como estaba.
+        pasos:
+          - {al: inicio, cambia: abierta}
+          - {al: inicio, enfoca: [puedo, volver], max: 1.8, dy: 150, captura: abierta}
+          - {en: Volver, resalta: volver, lado: abajo, alinear: derecha, captura: abierta}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Restaurar no reescribe la historia: deja un cambio encima, que se
+          revisa.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, qué hacer cuando sale un aviso al guardar o al
+          sincronizar.

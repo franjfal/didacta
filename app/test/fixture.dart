@@ -1399,6 +1399,7 @@ class LocalSession extends Session {
     required super.tokenStore,
     super.preferences,
     super.translationSecrets,
+    super.drafts,
     FileManager? files,
     this.who = testUser,
   }) : super(

@@ -1,0 +1,182 @@
+{
+  "repos_extra": [
+    {
+      "desde": "segundo",
+      "dueno": "departamento",
+      "nombre": "algebra-comun"
+    }
+  ],
+  "capturas": [
+    {
+      "nombre": "repos",
+      "ruta": "/settings?s=repositorios",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "ejemplo": {
+          "texto": "profe/didacta-ejemplo",
+          "fila": 900
+        },
+        "comun": {
+          "texto": "departamento/algebra-comun",
+          "fila": 900
+        },
+        "anadir": {
+          "clave": "add-repository"
+        },
+        "carpeta": {
+          "clave": "add-repository-folder"
+        },
+        "quitar": {
+          "clave": "repo-remove-departamento/algebra-comun"
+        },
+        "chip1": {
+          "clave": "repo-filter-profe/didacta-ejemplo"
+        },
+        "chip2": {
+          "clave": "repo-filter-departamento/algebra-comun"
+        }
+      }
+    },
+    {
+      "nombre": "_biblioteca",
+      "ruta": "/",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "biblioteca",
+            "cajas": {
+              "calculo": {
+                "texto": "Cálculo",
+                "n": 0
+              },
+              "algebra": {
+                "texto": "Álgebra",
+                "n": 0
+              }
+            }
+          }
+        },
+        {
+          "ir": "/?en=algebra/matrices",
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "matrices",
+            "cajas": {
+              "producto": {
+                "texto": "El producto de matrices",
+                "fila": 800
+              },
+              "determinante": {
+                "texto": "El determinante de una matriz cuadrada",
+                "fila": 800
+              },
+              "nueva": {
+                "clave": "library-new-unit"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "library-new-unit"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "nueva",
+            "cajas": {
+              "titulo": {
+                "texto": "Nueva lección"
+              },
+              "repo": {
+                "clave": "new-unit-repo"
+              },
+              "crear": {
+                "clave": "new-unit-create"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cancelar"
+          },
+          "esperar": 4
+        }
+      ]
+    },
+    {
+      "nombre": "_quitar",
+      "ruta": "/settings?s=repositorios",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "repo-remove-departamento/algebra-comun"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "quitar",
+            "cajas": {
+              "lista": {
+                "clave": "remove-keep-folder"
+              },
+              "papelera": {
+                "clave": "remove-trash-folder"
+              },
+              "explica": {
+                "contiene": "Puedes dejarla en el disco"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Cancelar"
+          },
+          "esperar": 4
+        },
+        {
+          "ir": "/settings?s=guardar",
+          "esperar": 10
+        },
+        {
+          "mostrar": {
+            "texto": "departamento/algebra-comun"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "preferencias",
+            "cajas": {
+              "explica": {
+                "contiene": "Lo que decides sobre el material"
+              },
+              "solo": {
+                "texto": "Solo en este ordenador"
+              },
+              "comun": {
+                "texto": "departamento/algebra-comun"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

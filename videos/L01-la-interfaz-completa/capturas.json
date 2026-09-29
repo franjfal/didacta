@@ -1,0 +1,150 @@
+{
+  "repos_extra": [
+    {
+      "desde": "segundo",
+      "dueno": "departamento",
+      "nombre": "algebra-comun"
+    }
+  ],
+  "capturas": [
+    {
+      "nombre": "esencial",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "acciones": [
+        {
+          "esperar": 12
+        }
+      ],
+      "cajas": {
+        "barra": {
+          "clave": "editor-save",
+          "fila": 1000
+        },
+        "rail": {
+          "texto": "Ajustes",
+          "alto": 56
+        }
+      }
+    },
+    {
+      "nombre": "_completa",
+      "ruta": "/settings?s=apariencia",
+      "acciones": [
+        {
+          "esperar": 10
+        },
+        {
+          "mostrar": {
+            "clave": "interface-mode"
+          },
+          "esperar": 3
+        },
+        {
+          "pulsar": {
+            "clave": "interface-complete"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "interruptor",
+            "cajas": {
+              "interfaz": {
+                "clave": "interface-mode"
+              },
+              "explica": {
+                "contiene": "Todo a la vista"
+              },
+              "bloques": {
+                "texto": "Bloques y plantillas"
+              },
+              "mcp": {
+                "texto": "Servidor MCP"
+              },
+              "entre": {
+                "texto": "Entre repos"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/limites/limite-por-definicion",
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "completa",
+            "cajas": {
+              "barra": {
+                "clave": "editor-save",
+                "fila": 1000
+              },
+              "ordenar": {
+                "texto": "ordenar al guardar"
+              },
+              "ruta": {
+                "contiene": "/es.tex",
+                "n": 0
+              },
+              "copiar": {
+                "consejo": "Copiar la referencia para una composición"
+              },
+              "entre": {
+                "texto": "Entre repos"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "metadatos"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "metadata-raw"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "fichero",
+            "cajas": {
+              "boton": {
+                "clave": "metadata-raw"
+              },
+              "yaml": {
+                "editor": "kind: example"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/courses/calculo-i/2026-2027",
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "document-menu-tema-1"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "mover": {
+                "clave": "document-move-tema-1"
+              },
+              "fila": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 1000
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

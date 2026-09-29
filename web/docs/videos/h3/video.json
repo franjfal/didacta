@@ -1,0 +1,61 @@
+{
+  "codigo": "H3",
+  "titulo": "Un .zip para Moodle, y los apuntes en HTML",
+  "fichero": "H03-un-zip-para-moodle.mp4",
+  "duracion": 50.63,
+  "megas": 2.3,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Un .zip para Moodle, y los apuntes en HTML"
+    },
+    {
+      "t": 6.56,
+      "titulo": "Un .zip con todo"
+    },
+    {
+      "t": 19.98,
+      "titulo": "Lo que lleva"
+    },
+    {
+      "t": 32.7,
+      "titulo": "En Moodle"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás subir un curso entero al aula virtual, en un solo fichero."
+    },
+    {
+      "t": 7.06,
+      "texto": "Al exportar el curso, abajo, También: un .zip con todo."
+    },
+    {
+      "t": 11.99,
+      "texto": "Y los apuntes en HTML, que se leen en el navegador, se agrandan y se escuchan, entran en el mismo .zip."
+    },
+    {
+      "t": 20.48,
+      "texto": "Sale dentro de la carpeta, con los temas en sus carpetas, y el HTML junto a cada PDF."
+    },
+    {
+      "t": 27.8,
+      "texto": "Y el aviso del final lo dice: todo junto, en un .zip."
+    },
+    {
+      "t": 33.2,
+      "texto": "En Moodle, se sube a un recurso Carpeta, que lo descomprime: se sube un fichero, en lugar de cuarenta."
+    },
+    {
+      "t": 41.37,
+      "texto": "Se sube un fichero en lugar de cuarenta."
+    },
+    {
+      "t": 44.06,
+      "texto": "En el siguiente vídeo, publicar en una carpeta de OneDrive o Drive."
+    }
+  ]
+}

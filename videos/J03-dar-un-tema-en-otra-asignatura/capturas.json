@@ -1,0 +1,228 @@
+{
+  "capturas": [
+    {
+      "nombre": "_vincular",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "preparar": [
+        {
+          "copiar": {
+            "desde": "asignatura/course.yaml",
+            "a": "courses/matematicas-i/course.yaml",
+            "mensaje": "Matemáticas I"
+          }
+        },
+        {
+          "copiar": {
+            "desde": "asignatura/year.yaml",
+            "a": "courses/matematicas-i/2026-2027/year.yaml",
+            "mensaje": "Matemáticas I, 2026-2027"
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "document-menu-tema-1"
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "fila": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 1000
+              },
+              "vincular": {
+                "clave": "document-link-tema-1"
+              },
+              "duplicar": {
+                "clave": "document-duplicate-tema-1"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "document-link-tema-1"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "titulo": {
+                "contiene": "Añadir vinculado: «"
+              },
+              "vincular": {
+                "clave": "reuse-mode-link"
+              },
+              "duplicar": {
+                "clave": "reuse-mode-duplicate"
+              },
+              "asignatura": {
+                "clave": "reuse-course"
+              },
+              "confirmar": {
+                "clave": "reuse-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "reuse-course"
+          },
+          "esperar": 4
+        },
+        {
+          "pulsar": {
+            "texto": "Matemáticas I",
+            "ultimo": true
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "destino",
+            "cajas": {
+              "asignatura": {
+                "clave": "reuse-course"
+              },
+              "ano": {
+                "clave": "reuse-year-2026-2027"
+              },
+              "nombre": {
+                "clave": "reuse-as"
+              },
+              "confirmar": {
+                "clave": "reuse-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "reuse-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "se da también en"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "vinculado",
+            "cajas": {
+              "aviso": {
+                "contiene": "se da también en",
+                "ajustado": true
+              },
+              "fila": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 1000
+              },
+              "eslabon": {
+                "consejo": "Este tema se utiliza en 2 ubicaciones. Lo que se edite aquí se ve en todas."
+              }
+            }
+          }
+        },
+        {
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "eslabon",
+            "cajas": {
+              "fila": {
+                "texto": "Tema 1: límites y continuidad",
+                "fila": 1000
+              },
+              "eslabon": {
+                "consejo": "Este tema se utiliza en 2 ubicaciones. Lo que se edite aquí se ve en todas."
+              },
+              "titulo": {
+                "texto": "Tema 1: límites y continuidad"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "consejo": "Este tema se utiliza en 2 ubicaciones. Lo que se edite aquí se ve en todas."
+          },
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "ubicaciones",
+            "cajas": {
+              "aqui": {
+                "contiene": "Cálculo I · 2026-2027 · tema-1"
+              },
+              "otra": {
+                "contiene": "Matemáticas I · 2026-2027 · tema-1"
+              },
+              "explica": {
+                "contiene": "Es el mismo tema en todas"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "contiene": "Matemáticas I · 2026-2027 · tema-1"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "alli",
+            "cajas": {
+              "titulo": {
+                "texto": "Tema 1: límites y continuidad",
+                "n": 0
+              },
+              "migas": {
+                "texto": "Matemáticas I"
+              },
+              "editar": {
+                "clave": "toggle-composition-editor"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "toggle-composition-editor"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "composicion",
+            "cajas": {
+              "nota": {
+                "contiene": "Este tema se da en 2 cursos"
+              },
+              "titulo": {
+                "texto": "Tema 1: límites y continuidad",
+                "n": 0
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

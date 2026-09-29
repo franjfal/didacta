@@ -1,0 +1,77 @@
+{
+  "codigo": "K1",
+  "titulo": "Claro u oscuro, tamaño del texto e idioma de Didacta",
+  "fichero": "K01-claro-oscuro-texto-e-idioma.mp4",
+  "duracion": 81.12,
+  "megas": 8.0,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Claro u oscuro, tamaño del texto e idioma de Didacta"
+    },
+    {
+      "t": 6.53,
+      "titulo": "Claro u oscuro"
+    },
+    {
+      "t": 26.11,
+      "titulo": "El tamaño del texto"
+    },
+    {
+      "t": 41.57,
+      "titulo": "El idioma de Didacta"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás ajustar Didacta al proyector, a la noche, o a tu idioma."
+    },
+    {
+      "t": 7.03,
+      "texto": "En Ajustes, Apariencia: como el sistema, claro, u oscuro."
+    },
+    {
+      "t": 12.8,
+      "texto": "Oscuro, para la noche, en toda la aplicación."
+    },
+    {
+      "t": 16.42,
+      "texto": "También se cambia con el sol y la luna, abajo a la izquierda. Y los PDF no cambian: se compilan siempre en claro, que se imprimen."
+    },
+    {
+      "t": 26.61,
+      "texto": "El tamaño del texto, del ochenta y cinco al ciento cincuenta por ciento: para el proyector del aula, o una pantalla pequeña."
+    },
+    {
+      "t": 34.89,
+      "texto": "Desde cualquier pantalla, Comando más y Comando menos; y Comando cero lo deja como estaba."
+    },
+    {
+      "t": 42.07,
+      "texto": "El idioma de Didacta: el del sistema, castellano, valenciano o inglés."
+    },
+    {
+      "t": 47.84,
+      "texto": "En inglés, los menús, los botones y los avisos."
+    },
+    {
+      "t": 51.94,
+      "texto": "Pero el material sigue en su idioma: el tema, en castellano, porque eso se elige arriba, en cada pantalla."
+    },
+    {
+      "t": 59.75,
+      "texto": "Y debajo, la interfaz: Esencial o Completa. Completa tiene su propio vídeo."
+    },
+    {
+      "t": 67.78,
+      "texto": "El idioma de Didacta no es el del material; y los PDF salen siempre en claro."
+    },
+    {
+      "t": 73.8,
+      "texto": "En el siguiente vídeo, ir más rápido: la paleta y los atajos."
+    }
+  ]
+}

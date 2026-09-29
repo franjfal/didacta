@@ -1,0 +1,120 @@
+# K3 · Trabajar con varios repositorios
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés: además del
+# ejemplo, el arnés abre un segundo repositorio con su historial y su remoto
+# --«departamento/algebra-comun», dos lecciones de matrices que están en la
+# carpeta `segundo/` de este vídeo (`"repos_extra"` en capturas.json)--. El
+# diálogo de quitarlo se abre y se cancela.
+codigo: K3
+titulo: Trabajar con varios repositorios
+subtitulo: El material del departamento y el tuyo, a la vez
+ruta: A tu manera
+siguiente: "K4 · Pedir ayuda y tener Didacta al día"
+voz: narrador
+lema: ["No hay un repositorio activo:", "se ven todos juntos, y cada cambio va al suyo."]
+lema_en: "cada cambio va al suyo"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás tener abierto el material del departamento y el
+          tuyo, a la vez.
+
+  - id: anadir
+    capitulo: Añadir otro
+    antes: 0.5
+    pantalla: repos
+    frases:
+      - id: lista
+        texto: >-
+          En Ajustes, Cuenta y repositorios: el tuyo, y el del departamento,
+          cada uno con su color.
+        pasos:
+          - {al: inicio, enfoca: [ejemplo], max: 1.6}
+          - {en: tuyo, resalta: ejemplo, hasta: 3}
+      - id: como
+        texto: >-
+          Otro se añade desde GitHub, o desde una carpeta que ya tengas
+          clonada.
+        pasos:
+          - {en: GitHub, resalta: anadir, lado: abajo, hasta: 1.8}
+          - {en: carpeta, resalta: carpeta, lado: abajo}
+
+  - id: juntos
+    capitulo: Juntos
+    antes: 0.5
+    pantalla: repos
+    frases:
+      - id: arriba
+        texto: >-
+          Arriba, los dos, con su color. Pulsar uno lo oculta, o lo vuelve a
+          enseñar: así ves lo que ve quien no lo tiene.
+        pasos:
+          - {al: inicio, enfoca: [chip1, chip2], max: 2.4, dx: 200, dy: 120}
+          - {en: color, resalta: [chip1, chip2], lado: abajo}
+      - id: biblioteca
+        texto: >-
+          La biblioteca los junta: Cálculo, del tuyo, y Álgebra, del
+          departamento.
+        pasos:
+          - {al: inicio, cambia: biblioteca}
+          - {al: inicio, enfoca: [calculo, algebra], max: 2, dx: 250, captura: biblioteca}
+          - {en: Cálculo, resalta: calculo, lado: derecha, captura: biblioteca, hasta: 1.6}
+          - {en: Álgebra, resalta: algebra, lado: derecha, captura: biblioteca}
+      - id: nueva
+        texto: >-
+          Una lección nueva pregunta en cuál, y propone el del tema en el que
+          estás.
+        pasos:
+          - {al: inicio, cambia: matrices}
+          - {al: inicio, enfoca: [nueva], max: 2, dx: -250, captura: matrices}
+          - {al: inicio, pulsa: nueva, captura: matrices}
+          - {en: pregunta, cambia: nueva}
+          - {en: pregunta, enfoca: [titulo, crear], max: 1.7, captura: nueva}
+          - {en: propone, resalta: repo, lado: abajo, captura: nueva}
+
+  - id: quitar
+    capitulo: Quitar uno
+    antes: 0.5
+    pantalla: quitar
+    frases:
+      - id: quitar
+        texto: >-
+          Quitar uno: de la lista, y su carpeta se queda en el disco; o
+          también a la Papelera, de donde se recupera mientras no la vacíes.
+        pasos:
+          - {al: inicio, enfoca: [explica, papelera], max: 1.7}
+          - {en: lista, resalta: lista, lado: abajo, hasta: 2.6}
+          - {en: Papelera, resalta: papelera, lado: abajo}
+
+  - id: viajan
+    capitulo: Lo que viaja contigo
+    antes: 0.5
+    pantalla: preferencias
+    frases:
+      - id: preferencias
+        texto: >-
+          Y lo que decides sobre el material, qué temas tienes plegados, puede
+          viajar contigo: se guarda en el repositorio que elijas, y en casa lo
+          encuentras igual.
+        pasos:
+          - {al: inicio, enfoca: [explica, comun], max: 1.7}
+          - {en: decides, resalta: explica, lado: abajo, hasta: 3.4}
+          - {en: repositorio, resalta: comun, lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          No hay un repositorio activo: se ven todos juntos, y cada cambio va
+          al suyo.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, pedir ayuda, y tener Didacta al día.

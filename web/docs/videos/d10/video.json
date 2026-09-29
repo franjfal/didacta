@@ -1,0 +1,69 @@
+{
+  "codigo": "D10",
+  "titulo": "Rellenar los metadatos de una lección",
+  "fichero": "D10-rellenar-los-metadatos.mp4",
+  "duracion": 62.92,
+  "megas": 4.3,
+  "fecha": "2026-09-28",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Rellenar los metadatos de una lección"
+    },
+    {
+      "t": 8.82,
+      "titulo": "Un formulario"
+    },
+    {
+      "t": 20.39,
+      "titulo": "Con una errata"
+    },
+    {
+      "t": 35.4,
+      "titulo": "Prerrequisitos y salidas"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás cambiar el título, la clasificación, los prerrequisitos, y en qué versiones sale una lección."
+    },
+    {
+      "t": 9.32,
+      "texto": "Los metadatos son un formulario, no un fichero que escribir: el título, en cada idioma."
+    },
+    {
+      "t": 15.38,
+      "texto": "La categoría, el tema y las etiquetas te sugieren lo que ya existe."
+    },
+    {
+      "t": 20.89,
+      "texto": "Si escribes una que no existe, te avisa: es una categoría nueva, que ninguna otra lección usa."
+    },
+    {
+      "t": 27.98,
+      "texto": "Y cambiar un campo cambia solo esa línea del fichero: lo demás, con sus comentarios, sigue ahí."
+    },
+    {
+      "t": 35.9,
+      "texto": "Más abajo, los prerrequisitos, que se buscan por su título, y los objetivos."
+    },
+    {
+      "t": 41.26,
+      "texto": "Y en qué versiones sale. Lo normal es no elegir: sale lo que diga su bloque."
+    },
+    {
+      "t": 47.32,
+      "texto": "Elegir aquí es apartar esta lección de algunas: de las diapositivas, por ejemplo."
+    },
+    {
+      "t": 53.72,
+      "texto": "Cambiar un campo cambia solo esa línea del fichero."
+    },
+    {
+      "t": 57.25,
+      "texto": "En el siguiente vídeo, crear una lección nueva."
+    }
+  ]
+}

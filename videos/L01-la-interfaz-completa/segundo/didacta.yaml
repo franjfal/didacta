@@ -1,0 +1,5 @@
+# El material común del departamento: lo que comparten varias asignaturas.
+name: Álgebra común del departamento
+languages: [es, va, en]
+default_language: es
+build_dir: .didacta-build

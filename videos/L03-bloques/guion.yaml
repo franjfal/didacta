@@ -1,0 +1,120 @@
+# L3 · Bloques: teoría, problemas y prácticas
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés, con la
+# interfaz Completa: un problema del ejemplo pasa antes al bloque
+# «practicas» (`"preparar"`), que no declara nadie; dentro se declara
+# «Prácticas de ordenador» con ese id, se le ponen los nombres en valenciano
+# y en inglés, se declaran también la teoría y los problemas, y se abre el
+# diálogo de quitarlo, que no se confirma.
+codigo: L3
+titulo: "Bloques: teoría, problemas y prácticas"
+subtitulo: Dividir una asignatura en partes, y decidir con qué se compila cada una
+ruta: Para quien mantiene el repositorio
+siguiente: "L4 · Plantillas: tus propias salidas"
+voz: narrador
+lema: ["Renombrar un bloque es cambiar una línea:", "no se mueve ningún fichero."]
+lema_en: "ningún fichero"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dividir una asignatura en partes, y decidir con
+          qué se compila cada una.
+
+  - id: declarar
+    capitulo: Un bloque nuevo
+    antes: 0.5
+    pantalla: dialogo
+    frases:
+      - id: que
+        texto: >-
+          Un bloque es una parte de la asignatura: la teoría, los problemas,
+          las prácticas. En Ajustes, Bloques y plantillas. Aquí, una lección
+          ya dice que es de prácticas, y nadie lo ha declarado.
+        pasos:
+          - {al: inicio, enfoca: [titulo, sin], max: 1.8}
+          - {en: prácticas, resalta: titulo, lado: abajo, hasta: 3}
+          - {en: declarado, resalta: sin, lado: abajo}
+      - id: nuevo
+        texto: >-
+          Nuevo bloque: su nombre, y su identificador, que es lo que escribe
+          cada lección.
+        pasos:
+          - {al: inicio, cambia: nuevo}
+          - {al: inicio, enfoca: [nombre, declarar], max: 1.8, captura: nuevo}
+          - {en: nombre, resalta: nombre, captura: nuevo, hasta: 1.6}
+          - {en: identificador, resalta: id, captura: nuevo, hasta: 2.2}
+          - {en: lección, pulsa: declarar, captura: nuevo}
+      - id: idiomas
+        texto: >-
+          Y el nombre, en cada idioma: el lápiz.
+        pasos:
+          - {al: inicio, cambia: declarado}
+          - {al: inicio, enfoca: [fila], max: 1.8, captura: declarado}
+          - {en: lápiz, resalta: nombres, lado: abajo, alinear: derecha, captura: declarado, hasta: 1.2}
+          - {en: lápiz, cambia: nombres}
+          - {en: lápiz, enfoca: [es, en], max: 1.6, captura: nombres}
+          - {en: lápiz, resalta: [va, en], captura: nombres}
+
+  - id: serie
+    capitulo: La teoría y los problemas
+    antes: 0.5
+    pantalla: por-su-id
+    frases:
+      - id: id
+        texto: >-
+          Ojo: con el primero declarado, la teoría y los problemas también hay
+          que declararlos; si no, salen por su id.
+        pasos:
+          - {al: inicio, enfoca: [sin, teoria], max: 1.8}
+          - {en: id, resalta: [teoria, problemas], lado: izquierda}
+      - id: tres
+        texto: >-
+          Declarar, al lado de cada uno, y ya traen su nombre de siempre.
+        pasos:
+          - {al: inicio, cambia: tres}
+          - {al: inicio, enfoca: [practicas, problemas], max: 1.8, captura: tres}
+          - {en: nombre, resalta: [teoria, problemas], captura: tres}
+
+  - id: plantillas
+    capitulo: Con qué se compila
+    antes: 0.5
+    pantalla: plantillas
+    frases:
+      - id: cual
+        texto: >-
+          El segundo botón decide con qué plantillas se compila lo de ese
+          bloque: lo que toque, o las que elijas.
+        pasos:
+          - {al: inicio, enfoca: [titulo], max: 1.8, dy: 150}
+          - {en: plantillas, resalta: titulo, lado: abajo}
+
+  - id: quitar
+    capitulo: Quitar uno
+    antes: 0.5
+    pantalla: quitar
+    frases:
+      - id: quitar
+        texto: >-
+          Y quitar uno pregunta qué se hace con sus lecciones: moverlas a otro
+          bloque, o dejarlas sin bloque declarado, que salen en Entre repos.
+        pasos:
+          - {al: inicio, enfoca: [titulo, quitar], max: 1.8}
+          - {en: moverlas, resalta: que, lado: abajo, hasta: 2.2}
+          - {en: dejarlas, resalta: nada, lado: abajo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Renombrar un bloque es cambiar una línea: no se mueve ningún fichero.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, las plantillas: tus propias salidas.

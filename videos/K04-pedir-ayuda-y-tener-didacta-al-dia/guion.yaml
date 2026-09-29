@@ -1,0 +1,123 @@
+# K4 · Pedir ayuda y tener Didacta al día
+#
+# Montado desde este guion. Ajustes → Ayuda y Empezar de cero son de verdad
+# dentro del arnés (el diálogo de restablecer se abre y se cancela). La
+# versión nueva la ofrece un GitHub de mentira (`"actualizacion": "0.4.0"`):
+# la instalada es la de `pubspec.yaml`, y no se descarga ni se instala nada.
+codigo: K4
+titulo: Pedir ayuda y tener Didacta al día
+subtitulo: Qué hacer cuando algo no va, y cómo se actualiza
+ruta: A tu manera
+siguiente: "L1 · La interfaz Completa"
+voz: narrador
+lema: ["Actualizar nunca te deja sin aplicación:", "la anterior se aparta hasta que la nueva arranca."]
+lema_en: "la anterior se aparta"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué hacer cuando algo no va, y cómo se actualiza
+          Didacta.
+
+  - id: ayuda
+    capitulo: La ayuda
+    antes: 0.5
+    pantalla: ayuda
+    frases:
+      - id: botones
+        texto: >-
+          En Ajustes, Ayuda: la presentación, el recorrido guiado, los atajos y
+          la documentación.
+        pasos:
+          - {al: inicio, enfoca: [presentacion, docs], max: 1.8}
+          - {en: presentación, resalta: presentacion, lado: abajo, hasta: 1.2}
+          - {en: recorrido, resalta: recorrido, lado: abajo, hasta: 1.2}
+          - {en: atajos, resalta: atajos, lado: abajo, hasta: 1.2}
+          - {en: documentación, resalta: docs, lado: abajo}
+      - id: informe
+        texto: >-
+          Si algo falla, Copiar informe de diagnóstico: lo que ha pasado por
+          dentro, sin tus claves.
+        pasos:
+          - {al: inicio, enfoca: [explica, informe], max: 1.8}
+          - {en: Copiar, pulsa: informe}
+          - {en: dentro, resalta: explica, lado: abajo}
+      - id: incidencia
+        texto: >-
+          Y el aviso ofrece abrir una incidencia con él. Pero lleva nombres de
+          ficheros: míralo antes de enviarlo.
+        pasos:
+          - {al: inicio, cambia: copiado}
+          - {al: inicio, enfoca: [incidencia], max: 2, dx: -350, dy: -120, captura: copiado}
+          - {en: incidencia, resalta: incidencia, lado: arriba, alinear: derecha, captura: copiado, hasta: 2}
+          - {en: ficheros, enfoca: [aviso], max: 2, dy: -120, captura: copiado}
+          - {en: ficheros, resalta: aviso, lado: arriba, captura: copiado}
+
+  - id: actualizar
+    capitulo: Al día
+    antes: 0.5
+    pantalla: franja
+    frases:
+      - id: franja
+        texto: >-
+          Cuando hay una versión nueva, una franja arriba lo dice. Se puede
+          dejar para luego: la versión sigue en Ajustes.
+        pasos:
+          - {al: inicio, enfoca: [franja], max: 2, dy: 150}
+          - {en: franja, resalta: franja, lado: abajo, hasta: 2.4}
+          - {en: luego, enfoca: [ver], max: 2, dx: -300, dy: 150}
+          - {en: luego, resalta: ver, lado: abajo, alinear: derecha}
+      - id: ajustes
+        texto: >-
+          En Ajustes, Actualizaciones: la versión que tienes, la nueva, y
+          Buscar actualizaciones, para mirar ahora.
+        pasos:
+          - {al: inicio, cambia: actualizaciones}
+          - {al: inicio, enfoca: [instalada, prueba], max: 1.8, captura: actualizaciones}
+          - {en: tienes, resalta: instalada, captura: actualizaciones, hasta: 1.4}
+          - {en: nueva, resalta: [nueva, actualizar], captura: actualizaciones, hasta: 1.8}
+          - {en: Buscar, resalta: buscar, lado: abajo, captura: actualizaciones}
+      - id: prueba
+        texto: >-
+          Y las versiones de prueba, apagadas de salida, para quien quiera
+          probar lo nuevo antes que nadie.
+        pasos:
+          - {en: prueba, resalta: prueba, lado: abajo, captura: actualizaciones}
+
+  - id: cero
+    capitulo: Empezar de cero
+    antes: 0.5
+    pantalla: empezar
+    frases:
+      - id: rojo
+        texto: >-
+          Y Empezar de cero, en rojo, deja Didacta como recién instalada.
+        pasos:
+          - {al: inicio, enfoca: [explica, boton], max: 1.8}
+          - {en: rojo, resalta: boton, lado: abajo}
+      - id: lleva
+        texto: >-
+          Antes dice qué se lleva: la sesión, los ajustes y la lista de
+          repositorios. En GitHub no se toca nada.
+        pasos:
+          - {al: inicio, cambia: empezar-dialogo}
+          - {al: inicio, enfoca: [titulo, carpetas], max: 1.8, captura: empezar-dialogo}
+          - {en: sesión, resalta: borra, lado: abajo, captura: empezar-dialogo, hasta: 3}
+          - {en: GitHub, resalta: github, lado: abajo, captura: empezar-dialogo}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Actualizar nunca te deja sin aplicación: la anterior se aparta hasta
+          que la nueva arranca.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, la interfaz Completa.

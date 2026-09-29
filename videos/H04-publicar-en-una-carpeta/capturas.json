@@ -1,0 +1,142 @@
+{
+  "capturas": [
+    {
+      "nombre": "publicado",
+      "ruta": "/settings?s=guardar",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "mostrar": {
+            "clave": "publish-folder-choose"
+          }
+        },
+        {
+          "capturar": {
+            "nombre": "sin",
+            "cajas": {
+              "ruta": {
+                "clave": "publish-folder-path"
+              },
+              "elegir": {
+                "clave": "publish-folder-choose"
+              },
+              "bloque": {
+                "clave": "publish-folder-path",
+                "alto": 160
+              },
+              "explica": {
+                "contiene": "Una carpeta que sincroniza"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "publish-folder-choose"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "con",
+            "cajas": {
+              "ruta": {
+                "clave": "publish-folder-path"
+              },
+              "cambiar": {
+                "clave": "publish-folder-choose"
+              },
+              "dejar": {
+                "clave": "publish-folder-clear"
+              },
+              "bloque": {
+                "clave": "publish-folder-path",
+                "alto": 160
+              }
+            }
+          }
+        },
+        {
+          "ir": "/courses",
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "publicar": {
+                "clave": "publish-year-calculo-i-2026-2027"
+              },
+              "menu": {
+                "clave": "year-menu-calculo-i-2026-2027"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "publish-year-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "dialogo",
+            "cajas": {
+              "ir": {
+                "clave": "export-confirm"
+              },
+              "dialogo": {
+                "clave": "export-confirm",
+                "alto": 700
+              },
+              "intro": {
+                "contiene": "A la carpeta de reparto"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "export-confirm"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "Terminada en"
+          },
+          "max": 2400,
+          "despues": 4
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar"
+          },
+          "esperar": 2
+        },
+        {
+          "hasta_que": {
+            "contiene": "exportados a"
+          },
+          "max": 900,
+          "despues": 2
+        }
+      ],
+      "cajas": {
+        "aviso": {
+          "contiene": "exportados a",
+          "ajustado": true
+        }
+      }
+    }
+  ]
+}

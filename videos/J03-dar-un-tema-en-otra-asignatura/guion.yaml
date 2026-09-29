@@ -1,0 +1,141 @@
+# J3 · Dar un tema en otra asignatura sin copiarlo
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés, salvo la
+# segunda asignatura: Matemáticas I, del Grado en Física, la pone el arnés en
+# el mismo repositorio (`"copiar"` en `"preparar"`), vacía. Dentro se le añade
+# vinculado el Tema 1 de Cálculo I, se abren sus ubicaciones y se entra en el
+# de Matemáticas I.
+codigo: J3
+titulo: Dar un tema en otra asignatura sin copiarlo
+subtitulo: Vincular, duplicar, y saber en cuántos sitios está
+ruta: El curso que viene y el temario compartido
+siguiente: "J4 · Separar temas que iban juntos"
+voz: narrador
+lema: ["Vincular no copia:", "es el mismo tema en varios sitios."]
+lema_en: "el mismo tema"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás dar un tema en otra asignatura sin copiarlo, y
+          saber en cuántos sitios está.
+
+  - id: dialogo
+    capitulo: Vincular o duplicar
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: menu
+        texto: >-
+          En los tres puntos del tema, Añadir vinculado a, y Duplicar en.
+        pasos:
+          - {al: inicio, enfoca: [vincular, duplicar], max: 1.8, dx: -300}
+          - {en: Añadir, resalta: vincular, lado: izquierda, hasta: 1.8}
+          - {en: Duplicar, resalta: duplicar, lado: izquierda}
+      - id: dos
+        texto: >-
+          Los dos abren el mismo diálogo, con las dos a la vista: la
+          diferencia importa justo al elegir.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [titulo, duplicar], max: 1.6, captura: dialogo}
+          - {en: vista, resalta: [vincular, duplicar], captura: dialogo}
+      - id: diferencia
+        texto: >-
+          Vinculado es el mismo tema en los dos sitios. Duplicado, una copia
+          que ya va por su lado.
+        pasos:
+          - {en: Vinculado, resalta: vincular, captura: dialogo, hasta: 2.4}
+          - {en: Duplicado, resalta: duplicar, captura: dialogo}
+      - id: destino
+        texto: >-
+          La asignatura viene elegida, la de siempre. Aquí, otra: Matemáticas
+          I, del Grado en Física.
+        pasos:
+          - {al: inicio, enfoca: [asignatura], max: 1.8, captura: dialogo}
+          - {en: elegida, resalta: asignatura, captura: dialogo, hasta: 2}
+          - {en: otra, cambia: destino}
+          - {en: otra, enfoca: [asignatura, confirmar], max: 1.6, captura: destino}
+          - {en: Matemáticas, resalta: asignatura, captura: destino}
+      - id: anadir
+        texto: >-
+          Y Añadir vinculado.
+        pasos:
+          - {al: inicio, pulsa: confirmar, captura: destino}
+          - {en: vinculado, cambia: vinculado}
+          - {en: vinculado, reposo: true, captura: vinculado}
+      - id: aviso
+        texto: >-
+          El aviso lo dice: es el mismo tema, y lo que se edite se ve desde
+          los dos.
+        pasos:
+          - {al: inicio, enfoca: [aviso], max: 2, dy: -120, captura: vinculado}
+          - {en: dice, resalta: aviso, lado: arriba, captura: vinculado}
+
+  - id: donde
+    capitulo: En cuántos sitios
+    antes: 0.5
+    pantalla: eslabon
+    frases:
+      - id: eslabon
+        texto: >-
+          Al lado del título, un eslabón con el número de sitios donde se da.
+        pasos:
+          - {al: inicio, enfoca: [titulo, eslabon], max: 2.2, dx: 200}
+          - {en: eslabón, resalta: eslabon, lado: abajo}
+      - id: lista
+        texto: >-
+          Pulsarlo los lista, y cada uno lleva a su sitio.
+        pasos:
+          - {al: inicio, pulsa: eslabon}
+          - {en: lista, cambia: ubicaciones}
+          - {en: lista, enfoca: [aqui, explica], max: 1.8, captura: ubicaciones}
+          - {en: cada, resalta: otra, captura: ubicaciones}
+      - id: alli
+        texto: >-
+          Este es el de Matemáticas I: el mismo Tema 1, con las mismas
+          lecciones.
+        pasos:
+          - {al: inicio, pulsa: otra, captura: ubicaciones}
+          - {en: Este, cambia: alli}
+          - {en: Este, enfoca: [migas, titulo], max: 1.8, dx: 300, captura: alli}
+          - {en: Matemáticas, resalta: migas, lado: abajo, captura: alli, hasta: 1.8}
+          - {en: mismo, resalta: titulo, lado: abajo, captura: alli}
+      - id: nota
+        texto: >-
+          Y al editar la composición, lo recuerda antes de tocar nada: lo que
+          ordenes, añadas o quites aquí se ve en los dos.
+        pasos:
+          - {al: inicio, pulsa: editar, captura: alli}
+          - {en: editar, cambia: composicion}
+          - {en: editar, enfoca: [nota], max: 1.6, captura: composicion}
+          - {en: recuerda, resalta: nota, lado: abajo, captura: composicion}
+
+  - id: ojo
+    antes: 0.4
+    grafico:
+      tipo: frase
+      uno: "Solo dentro del mismo repositorio:"
+      dos: "las lecciones tienen que estar a mano."
+      dos_en: a mano
+    frases:
+      - id: repositorio
+        texto: >-
+          Un aviso: solo dentro del mismo repositorio, porque las lecciones del
+          tema tienen que estar al alcance de la otra asignatura.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Vincular no copia: es el mismo tema en varios sitios.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, separar temas que iban juntos.

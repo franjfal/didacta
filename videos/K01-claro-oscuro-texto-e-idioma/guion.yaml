@@ -1,0 +1,132 @@
+# K1 · Claro u oscuro, tamaño del texto e idioma de Didacta
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés: Ajustes →
+# Apariencia, el modo oscuro puesto (y una lección vista así), el texto al
+# 135 % y la interfaz en inglés, con el material en castellano.
+codigo: K1
+titulo: Claro u oscuro, tamaño del texto e idioma de Didacta
+subtitulo: Ajustar la aplicación al proyector, a la noche o a tu idioma
+ruta: A tu manera
+siguiente: "K2 · Ir más rápido: la paleta y los atajos"
+voz: narrador
+lema: ["El idioma de Didacta no es el del material;", "y los PDF salen siempre en claro."]
+lema_en: "siempre en claro"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás ajustar Didacta al proyector, a la noche, o a tu
+          idioma.
+
+  - id: modo
+    capitulo: Claro u oscuro
+    antes: 0.5
+    pantalla: claro
+    frases:
+      - id: tres
+        texto: >-
+          En Ajustes, Apariencia: como el sistema, claro, u oscuro.
+        pasos:
+          - {al: inicio, enfoca: [sistema, oscuro], max: 1.8}
+          - {en: sistema, resalta: sistema, hasta: 1.2}
+          - {en: claro, resalta: claro, hasta: 1}
+          - {en: oscuro, resalta: oscuro}
+      - id: oscuro
+        texto: >-
+          Oscuro, para la noche, en toda la aplicación.
+        pasos:
+          - {al: inicio, cambia: oscuro}
+          - {al: inicio, resalta: oscuro, captura: oscuro, hasta: 1.4}
+          - {en: toda, cambia: oscuro-leccion}
+          - {en: toda, reposo: true, captura: oscuro-leccion}
+      - id: luna
+        texto: >-
+          También se cambia con el sol y la luna, abajo a la izquierda. Y los
+          PDF no cambian: se compilan siempre en claro, que se imprimen.
+        pasos:
+          - {al: inicio, enfoca: [luna], max: 2.2, dx: 300, dy: -150, captura: oscuro-leccion}
+          - {al: inicio, resalta: luna, lado: derecha, captura: oscuro-leccion, hasta: 2.6}
+          - {en: PDF, cambia: oscuro}
+          - {en: PDF, enfoca: [nota], max: 1.8, captura: oscuro}
+          - {en: PDF, resalta: nota, lado: abajo, captura: oscuro}
+
+  - id: tamano
+    capitulo: El tamaño del texto
+    antes: 0.5
+    pantalla: grande
+    frases:
+      - id: grande
+        texto: >-
+          El tamaño del texto, del ochenta y cinco al ciento cincuenta por
+          ciento: para el proyector del aula, o una pantalla pequeña.
+        pasos:
+          - {al: inicio, enfoca: [menos, normal], max: 2}
+          - {en: tamaño, resalta: tamano, hasta: 2}
+          - {en: proyector, reposo: true}
+      - id: atajos
+        texto: >-
+          Desde cualquier pantalla, Comando más y Comando menos; y Comando
+          cero lo deja como estaba.
+        pasos:
+          - {al: inicio, enfoca: [menos, normal], max: 2}
+          - {en: más, teclas: "⌘ +"}
+          - {en: más, resalta: mas, hasta: 1.2}
+          - {en: menos, teclas: "⌘ −"}
+          - {en: menos, resalta: menos, hasta: 1.2}
+          - {en: cero, teclas: "⌘ 0"}
+          - {en: cero, resalta: normal}
+
+  - id: idioma
+    capitulo: El idioma de Didacta
+    antes: 0.5
+    pantalla: idioma
+    frases:
+      - id: tres
+        texto: >-
+          El idioma de Didacta: el del sistema, castellano, valenciano o
+          inglés.
+        pasos:
+          - {al: inicio, enfoca: [idioma, explica], max: 1.8}
+          - {en: idioma, resalta: idioma, lado: abajo}
+      - id: ingles
+        texto: >-
+          En inglés, los menús, los botones y los avisos.
+        pasos:
+          - {al: inicio, cambia: ingles}
+          - {al: inicio, enfoca: [idioma, interfaz], max: 1.8, captura: ingles}
+          - {en: inglés, resalta: idioma, lado: abajo, captura: ingles}
+      - id: material
+        texto: >-
+          Pero el material sigue en su idioma: el tema, en castellano, porque
+          eso se elige arriba, en cada pantalla.
+        pasos:
+          - {al: inicio, cambia: ingles-curso}
+          - {al: inicio, enfoca: [migas, tema], max: 2, dx: 250, captura: ingles-curso}
+          - {en: tema, resalta: tema, lado: abajo, captura: ingles-curso, hasta: 2.4}
+          - {en: arriba, enfoca: [material], max: 2.2, dx: -300, dy: 150, captura: ingles-curso}
+          - {en: arriba, resalta: material, lado: abajo, alinear: derecha, captura: ingles-curso}
+      - id: interfaz
+        texto: >-
+          Y debajo, la interfaz: Esencial o Completa. Completa tiene su propio
+          vídeo.
+        pasos:
+          - {al: inicio, cambia: idioma}
+          - {al: inicio, enfoca: [interfaz], max: 2, dx: 200, captura: idioma}
+          - {en: Esencial, resalta: interfaz, lado: abajo, captura: idioma}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El idioma de Didacta no es el del material; y los PDF salen siempre
+          en claro.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, ir más rápido: la paleta y los atajos.

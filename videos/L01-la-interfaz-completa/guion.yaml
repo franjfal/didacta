@@ -1,0 +1,112 @@
+# L1 · La interfaz Completa
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés: la misma
+# lección con la interfaz Esencial y con la Completa, que se enciende en
+# Ajustes → Apariencia. Además del ejemplo hay abierto un segundo repositorio
+# (`"repos_extra"`, el de K3), porque «Entre repos» solo sale con más de uno.
+codigo: L1
+titulo: La interfaz Completa
+subtitulo: Qué aparece al encenderla, y dónde
+ruta: Para quien mantiene el repositorio
+siguiente: "L2 · Un repositorio para el departamento"
+voz: narrador
+lema: ["Un solo interruptor:", "lo que se elige es qué clase de uso se hace."]
+lema_en: "qué clase de uso"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué aparece al encender la interfaz Completa, y
+          dónde.
+
+  - id: interruptor
+    capitulo: El interruptor
+    antes: 0.5
+    pantalla: interruptor
+    frases:
+      - id: donde
+        texto: >-
+          Está en Ajustes, Apariencia, Interfaz: Esencial, que es la de salida,
+          o Completa.
+        pasos:
+          - {al: inicio, enfoca: [interfaz, explica], max: 1.8}
+          - {en: Interfaz, resalta: interfaz, lado: abajo}
+      - id: para
+        texto: >-
+          Completa es para quien mantiene el repositorio del departamento. En
+          Ajustes aparecen Bloques y plantillas, y el servidor MCP.
+        pasos:
+          - {en: mantiene, resalta: explica, lado: arriba, hasta: 3}
+          - {en: Ajustes, enfoca: [bloques, mcp], max: 2, dx: 200}
+          - {en: Bloques, resalta: bloques, lado: derecha, hasta: 1.6}
+          - {en: MCP, resalta: mcp, lado: derecha}
+
+  - id: editor
+    capitulo: En el editor
+    antes: 0.5
+    pantalla: esencial
+    frases:
+      - id: esencial
+        texto: >-
+          En el editor, con la Esencial, la barra tiene lo de corregir una
+          errata: guardar y el estado.
+        pasos:
+          - {al: inicio, enfoca: [barra], max: 1.6}
+          - {en: barra, resalta: barra, lado: abajo}
+      - id: completa
+        texto: >-
+          Con la Completa, además, la ruta del fichero, el contador y ordenar
+          al guardar, que sangra el LaTeX cada vez que guardas.
+        pasos:
+          - {al: inicio, cambia: completa}
+          - {al: inicio, enfoca: [ruta, ordenar], max: 2, captura: completa}
+          - {en: ruta, resalta: ruta, lado: abajo, captura: completa, hasta: 1.8}
+          - {en: ordenar, resalta: ordenar, lado: abajo, captura: completa}
+      - id: mas
+        texto: >-
+          Copiar la referencia de la lección, para una composición; y la ficha,
+          en bruto: el unit.yaml tal cual.
+        pasos:
+          - {al: inicio, enfoca: [copiar], max: 2.2, dx: -300, dy: 150, captura: completa}
+          - {en: referencia, resalta: copiar, lado: abajo, alinear: derecha, captura: completa, hasta: 2.2}
+          - {en: bruto, cambia: fichero}
+          - {en: bruto, enfoca: [boton, yaml], max: 1.5, captura: fichero}
+          - {en: bruto, resalta: boton, lado: abajo, alinear: derecha, captura: fichero}
+
+  - id: resto
+    capitulo: Y en el resto
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: mover
+        texto: >-
+          En el menú de un tema, Mover a, y Gestionar vinculación cuando está
+          vinculado.
+        pasos:
+          - {al: inicio, enfoca: [mover], max: 2, dx: -300}
+          - {en: Mover, resalta: mover, lado: izquierda}
+      - id: entre
+        texto: >-
+          Y con más de un repositorio, Entre repos, siempre en la columna de
+          la izquierda: dónde no cuadran entre ellos.
+        pasos:
+          - {al: inicio, cambia: completa}
+          - {al: inicio, enfoca: [entre], max: 2.4, dx: 300, captura: completa}
+          - {en: Entre, resalta: entre, lado: derecha, captura: completa}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Un solo interruptor: lo que se elige es qué clase de uso se hace, no
+          cada botón.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, un repositorio para el departamento.

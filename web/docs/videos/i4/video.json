@@ -1,0 +1,73 @@
+{
+  "codigo": "I4",
+  "titulo": "Mirar, comparar y restaurar una versión congelada",
+  "fichero": "I04-una-version-congelada.mp4",
+  "duracion": 70.27,
+  "megas": 5.1,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Mirar, comparar y restaurar una versión congelada"
+    },
+    {
+      "t": 8.04,
+      "titulo": "Comparar"
+    },
+    {
+      "t": 22.9,
+      "titulo": "Abrirla"
+    },
+    {
+      "t": 37.93,
+      "titulo": "Restaurar"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás volver a ver un curso como estaba, compararlo con el de hoy, y recuperar lo que haga falta."
+    },
+    {
+      "t": 8.54,
+      "texto": "En las versiones congeladas, los tres puntos de una: abrirla, compararla, o restaurarla."
+    },
+    {
+      "t": 15.38,
+      "texto": "Comparar con la versión actual lista lo que ha cambiado desde entonces: una lección, y los temas del curso."
+    },
+    {
+      "t": 23.4,
+      "texto": "Al abrirla, una banda arriba lo avisa: toda la aplicación enseña aquel día, y de solo lectura."
+    },
+    {
+      "t": 30.07,
+      "texto": "El Tema 1 todavía lleva Álgebra de límites, que hoy ya no da."
+    },
+    {
+      "t": 34.03,
+      "texto": "Y compilar ahí da el PDF que se repartió entonces."
+    },
+    {
+      "t": 38.43,
+      "texto": "En una lección, la frase de antes. La i ofrece restaurarla."
+    },
+    {
+      "t": 43.59,
+      "texto": "Antes de hacer nada, dice qué ficheros cambiará. Y lo que hace es dejar un cambio pendiente, encima, que se revisa como cualquier otro."
+    },
+    {
+      "t": 52.95,
+      "texto": "Y Volver a la versión actual deja la aplicación como estaba."
+    },
+    {
+      "t": 57.48,
+      "texto": "Restaurar no reescribe la historia: deja un cambio encima, que se revisa."
+    },
+    {
+      "t": 63.2,
+      "texto": "En el siguiente vídeo, qué hacer cuando sale un aviso al guardar o al sincronizar."
+    }
+  ]
+}

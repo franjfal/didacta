@@ -1,0 +1,73 @@
+{
+  "codigo": "J2",
+  "titulo": "Una lección en varios cursos: cambiarla en todos o solo en uno",
+  "fichero": "J02-una-leccion-en-varios-cursos.mp4",
+  "duracion": 75.25,
+  "megas": 6.0,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Una lección en varios cursos: cambiarla en todos o solo en uno"
+    },
+    {
+      "t": 6.99,
+      "titulo": "En todos"
+    },
+    {
+      "t": 20.62,
+      "titulo": "Solo en uno"
+    },
+    {
+      "t": 42.09,
+      "titulo": "En otro tema"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué pasa al tocar una lección que se da en varios cursos, y cómo separarla."
+    },
+    {
+      "t": 7.49,
+      "texto": "Esta lección se da en dos cursos, y lo dice encima del texto: lo que guardes aquí cambia en los dos."
+    },
+    {
+      "t": 14.25,
+      "texto": "Casi siempre es lo que quieres: una errata se corrige una vez, en los dos a la vez."
+    },
+    {
+      "t": 21.12,
+      "texto": "Si en uno tiene que ir distinta, Separar una copia."
+    },
+    {
+      "t": 24.58,
+      "texto": "Cada curso va a un grupo. El A se queda con la lección; el B recibe una copia, con su texto, sus figuras y su ficha."
+    },
+    {
+      "t": 33.38,
+      "texto": "Con Dividir, cada una sigue por su lado: la franja ya no sale, y la lección se da solo en 2026-2027."
+    },
+    {
+      "t": 42.59,
+      "texto": "Y al revés, para darla también en otro sitio: en la i, Darla en otro tema."
+    },
+    {
+      "t": 48.79,
+      "texto": "Asignatura, curso y tema. Y de salida entra vinculada: la misma lección, que se sigue corrigiendo una vez."
+    },
+    {
+      "t": 57.51,
+      "texto": "Llevar una copia independiente, si desde el principio van a ser dos."
+    },
+    {
+      "t": 62.42,
+      "texto": "Una lección compartida se corrige una vez; se separa cuando dejan de ir juntas."
+    },
+    {
+      "t": 68.25,
+      "texto": "En el siguiente vídeo, dar un tema en otra asignatura, sin copiarlo."
+    }
+  ]
+}

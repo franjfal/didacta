@@ -1,0 +1,73 @@
+{
+  "codigo": "J4",
+  "titulo": "Separar temas que iban juntos",
+  "fichero": "J04-separar-temas-que-iban-juntos.mp4",
+  "duracion": 87.63,
+  "megas": 4.0,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Separar temas que iban juntos"
+    },
+    {
+      "t": 6.66,
+      "titulo": "Una ubicación"
+    },
+    {
+      "t": 26.03,
+      "titulo": "Repartir en grupos"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás separar un tema vinculado cuando las asignaturas dejan de darlo igual."
+    },
+    {
+      "t": 7.16,
+      "texto": "Este Tema 1 se da en tres sitios: los dos cursos de Cálculo I, y Matemáticas I, en Física."
+    },
+    {
+      "t": 14.4,
+      "texto": "Si solo este tiene que ir por su lado, Crear copia independiente."
+    },
+    {
+      "t": 18.81,
+      "texto": "Esta ubicación se queda con una copia del tema tal como está, y los demás siguen igual, juntos."
+    },
+    {
+      "t": 26.53,
+      "texto": "Para repartir varias a la vez, con la interfaz Completa, Gestionar vinculación."
+    },
+    {
+      "t": 31.82,
+      "texto": "Cada ubicación, a su grupo: los dos cursos de Cálculo I en el A, y Matemáticas I en el B."
+    },
+    {
+      "t": 39.22,
+      "texto": "Antes de confirmar, dice qué va a quedar: el A se queda con el tema, y el B, con una copia."
+    },
+    {
+      "t": 46.69,
+      "texto": "Y Duplicar también las lecciones viene apagado a propósito: separar dos temas casi nunca es separar sus lecciones. Así, una errata se sigue corrigiendo una vez."
+    },
+    {
+      "t": 57.65,
+      "texto": "Con Dividir, Matemáticas I tiene su propio tema, sin eslabón. Y Cálculo I sigue con el suyo, compartido entre sus dos cursos."
+    },
+    {
+      "t": 67.49,
+      "texto": "Y se hace entera o no se hace: todo en un solo cambio, sin ubicaciones a medias."
+    },
+    {
+      "t": 74.41,
+      "texto": "Dentro de cada grupo siguen juntos; entre grupos, cada uno por su lado."
+    },
+    {
+      "t": 79.7,
+      "texto": "En el siguiente vídeo, claro u oscuro, el tamaño del texto, y el idioma de Didacta."
+    }
+  ]
+}

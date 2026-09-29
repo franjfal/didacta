@@ -1,0 +1,57 @@
+{
+  "codigo": "H2",
+  "titulo": "Exportar un documento o el PDF que miras",
+  "fichero": "H02-exportar-un-documento.mp4",
+  "duracion": 47.27,
+  "megas": 2.2,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Exportar un documento o el PDF que miras"
+    },
+    {
+      "t": 6.55,
+      "titulo": "Un documento"
+    },
+    {
+      "t": 26.0,
+      "titulo": "El PDF que miras"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás llevarte solo un documento, o solo el PDF que estás mirando."
+    },
+    {
+      "t": 7.05,
+      "texto": "En los tres puntos del documento, Exportar a una carpeta. Solo pregunta dónde."
+    },
+    {
+      "t": 12.73,
+      "texto": "Saca lo que hay compilado para los estudiantes. Las copias del profesor no salen de un clic: el aviso lo dice, y ofrece incluirlas."
+    },
+    {
+      "t": 22.35,
+      "texto": "Si las incluyes, se añaden a la misma carpeta."
+    },
+    {
+      "t": 26.5,
+      "texto": "Y si solo quieres el PDF que estás mirando, Guardar una copia."
+    },
+    {
+      "t": 30.91,
+      "texto": "Con un nombre que dice qué es: el tema, la versión y el idioma."
+    },
+    {
+      "t": 36.84,
+      "texto": "Las copias del profesor no salen de un clic."
+    },
+    {
+      "t": 39.8,
+      "texto": "En el siguiente vídeo, un .zip para Moodle, y los apuntes en HTML."
+    }
+  ]
+}

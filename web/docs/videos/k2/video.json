@@ -1,0 +1,73 @@
+{
+  "codigo": "K2",
+  "titulo": "Ir más rápido: la paleta y los atajos",
+  "fichero": "K02-la-paleta-y-los-atajos.mp4",
+  "duracion": 69.7,
+  "megas": 4.8,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Ir más rápido: la paleta y los atajos"
+    },
+    {
+      "t": 6.75,
+      "titulo": "La paleta"
+    },
+    {
+      "t": 29.1,
+      "titulo": "Los atajos"
+    },
+    {
+      "t": 50.24,
+      "titulo": "Sin ratón"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás ir a cualquier sitio, y hacer casi cualquier cosa, escribiendo."
+    },
+    {
+      "t": 7.25,
+      "texto": "Desde cualquier pantalla, Comando K abre la paleta. Arriba, lo que se puede hacer en la pantalla en la que estás."
+    },
+    {
+      "t": 15.44,
+      "texto": "Escribe bolzano, y están la lección y el problema."
+    },
+    {
+      "t": 19.07,
+      "texto": "Cálculo 2026, y el curso, con sus documentos."
+    },
+    {
+      "t": 23.89,
+      "texto": "Ajustes snippets, y la sección de Ajustes. Intro, y allí."
+    },
+    {
+      "t": 29.6,
+      "texto": "Cada orden con atajo lo dice a la derecha: texto más grande, Comando más."
+    },
+    {
+      "t": 35.21,
+      "texto": "Y Comando barra, o Ver los atajos de teclado, los lista todos."
+    },
+    {
+      "t": 39.45,
+      "texto": "Comando uno, Asignaturas; Comando dos, la biblioteca; Comando tres, Traducción. Y Comando corchete, atrás y adelante."
+    },
+    {
+      "t": 50.74,
+      "texto": "Y sin ratón: el tabulador va de botón en botón, marcando dónde está; Intro o Espacio lo pulsan."
+    },
+    {
+      "t": 58.59,
+      "texto": "Cada orden dice su atajo a la derecha: se aprende sin estudiarlo."
+    },
+    {
+      "t": 63.32,
+      "texto": "En el siguiente vídeo, trabajar con varios repositorios a la vez."
+    }
+  ]
+}

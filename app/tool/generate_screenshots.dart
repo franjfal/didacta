@@ -203,6 +203,17 @@ Future<void> loadFonts() async {
     await _register(family, found.isEmpty ? roboto.take(1).toList() : found);
   }
 
+  // Los símbolos de las teclas --⌘, ⇧, ⌥--, que Roboto no tiene: sin esto,
+  // cada atajo sale con un cuadrado tachado delante. De reserva, en el tema.
+  const symbols = [
+    '/System/Library/Fonts/Apple Symbols.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+  ];
+  final symbolFont = symbols.where((path) => File(path).existsSync()).take(1);
+  if (symbolFont.isNotEmpty) {
+    await _register(shotSymbolFamily, symbolFont.toList());
+  }
+
   // Los iconos. Sin esto, cada icono de la interfaz es un cuadrado vacío, que
   // en una captura de una aplicación con un carril de iconos es la mitad de
   // lo que se está enseñando.
@@ -295,6 +306,9 @@ Future<void> capture(WidgetTester tester, String name) async {
 /// que la captura usa la que está garantizada en cualquier máquina.
 const String shotFamily = 'Roboto';
 
+/// La de reserva para lo que Roboto no tiene: los símbolos de las teclas.
+const String shotSymbolFamily = 'DidactaSymbols';
+
 /// El tema de las capturas: el de la aplicación, con la familia puesta.
 ///
 /// Hay que ponerla a mano en los temas de los componentes y no basta con
@@ -306,8 +320,10 @@ const String shotFamily = 'Roboto';
 /// rectángulos negros mientras el resto se leía perfectamente.
 ThemeData shotTheme([DidactaPalette palette = DidactaPalette.light]) {
   final base = didactaTheme(palette);
-  TextStyle? family(TextStyle? style) =>
-      style?.copyWith(fontFamily: shotFamily);
+  TextStyle? family(TextStyle? style) => style?.copyWith(
+    fontFamily: shotFamily,
+    fontFamilyFallback: const [shotSymbolFamily],
+  );
   WidgetStateProperty<TextStyle?>? property(
     WidgetStateProperty<TextStyle?>? value,
   ) => value == null
@@ -317,8 +333,14 @@ ThemeData shotTheme([DidactaPalette palette = DidactaPalette.light]) {
       style?.copyWith(textStyle: property(style.textStyle));
 
   return base.copyWith(
-    textTheme: base.textTheme.apply(fontFamily: shotFamily),
-    primaryTextTheme: base.primaryTextTheme.apply(fontFamily: shotFamily),
+    textTheme: base.textTheme.apply(
+      fontFamily: shotFamily,
+      fontFamilyFallback: const [shotSymbolFamily],
+    ),
+    primaryTextTheme: base.primaryTextTheme.apply(
+      fontFamily: shotFamily,
+      fontFamilyFallback: const [shotSymbolFamily],
+    ),
     navigationRailTheme: base.navigationRailTheme.copyWith(
       selectedLabelTextStyle: family(
         base.navigationRailTheme.selectedLabelTextStyle,

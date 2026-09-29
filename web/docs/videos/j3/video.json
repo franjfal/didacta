@@ -1,0 +1,81 @@
+{
+  "codigo": "J3",
+  "titulo": "Dar un tema en otra asignatura sin copiarlo",
+  "fichero": "J03-dar-un-tema-en-otra-asignatura.mp4",
+  "duracion": 83.51,
+  "megas": 5.0,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Dar un tema en otra asignatura sin copiarlo"
+    },
+    {
+      "t": 6.98,
+      "titulo": "Vincular o duplicar"
+    },
+    {
+      "t": 41.84,
+      "titulo": "En cuántos sitios"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás dar un tema en otra asignatura sin copiarlo, y saber en cuántos sitios está."
+    },
+    {
+      "t": 7.48,
+      "texto": "En los tres puntos del tema, Añadir vinculado a, y Duplicar en."
+    },
+    {
+      "t": 12.15,
+      "texto": "Los dos abren el mismo diálogo, con las dos a la vista: la diferencia importa justo al elegir."
+    },
+    {
+      "t": 18.91,
+      "texto": "Vinculado es el mismo tema en los dos sitios. Duplicado, una copia que ya va por su lado."
+    },
+    {
+      "t": 25.43,
+      "texto": "La asignatura viene elegida, la de siempre. Aquí, otra: Matemáticas I, del Grado en Física."
+    },
+    {
+      "t": 34.13,
+      "texto": "Y Añadir vinculado."
+    },
+    {
+      "t": 35.77,
+      "texto": "El aviso lo dice: es el mismo tema, y lo que se edite se ve desde los dos."
+    },
+    {
+      "t": 42.34,
+      "texto": "Al lado del título, un eslabón con el número de sitios donde se da."
+    },
+    {
+      "t": 46.82,
+      "texto": "Pulsarlo los lista, y cada uno lleva a su sitio."
+    },
+    {
+      "t": 50.3,
+      "texto": "Este es el de Matemáticas I: el mismo Tema 1, con las mismas lecciones."
+    },
+    {
+      "t": 55.75,
+      "texto": "Y al editar la composición, lo recuerda antes de tocar nada: lo que ordenes, añadas o quites aquí se ve en los dos."
+    },
+    {
+      "t": 65.07,
+      "texto": "Un aviso: solo dentro del mismo repositorio, porque las lecciones del tema tienen que estar al alcance de la otra asignatura."
+    },
+    {
+      "t": 73.39,
+      "texto": "Vincular no copia: es el mismo tema en varios sitios."
+    },
+    {
+      "t": 77.69,
+      "texto": "En el siguiente vídeo, separar temas que iban juntos."
+    }
+  ]
+}

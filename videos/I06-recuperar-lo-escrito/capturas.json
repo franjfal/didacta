@@ -1,0 +1,153 @@
+{
+  "capturas": [
+    {
+      "nombre": "_escrito",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "editar_texto": {
+            "buscar": "El método es siempre el mismo:",
+            "poner": "El método es siempre el mismo, y la primera vez conviene hacerlo despacio:"
+          }
+        },
+        {
+          "esperar": 2
+        },
+        {
+          "capturar": {
+            "nombre": "escrito",
+            "cajas": {
+              "cambio": {
+                "editor": "y la primera vez conviene hacerlo despacio"
+              },
+              "es": {
+                "clave": "language-tab-es"
+              },
+              "guardar": {
+                "clave": "editor-save"
+              }
+            }
+          }
+        },
+        {
+          "apuntar": {
+            "texto": "Biblioteca"
+          },
+          "esperar": 1
+        },
+        {
+          "capturar": {
+            "nombre": "rail",
+            "cajas": {
+              "biblioteca": {
+                "texto": "Biblioteca",
+                "alto": 56
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Biblioteca"
+          },
+          "esperar": 2
+        },
+        {
+          "capturar": {
+            "nombre": "pregunta",
+            "cajas": {
+              "titulo": {
+                "texto": "Hay cambios sin guardar"
+              },
+              "lista": {
+                "contiene": "» en es"
+              },
+              "explica": {
+                "contiene": "Si sales ahora"
+              },
+              "seguir": {
+                "clave": "unsaved-stay"
+              },
+              "salir": {
+                "clave": "unsaved-leave"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "unsaved-stay"
+          },
+          "esperar": 2
+        }
+      ]
+    },
+    {
+      "nombre": "_recuperar",
+      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "preparar": [
+        {
+          "borrador": {
+            "fichero": "content/calculo/limites/limite-por-definicion/es.tex",
+            "buscar": "El método es siempre el mismo:",
+            "poner": "El método es siempre el mismo, y la primera vez conviene hacerlo despacio:",
+            "hace_min": 4
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "recuperar",
+            "cajas": {
+              "aviso": {
+                "clave": "recovered-draft"
+              },
+              "texto": {
+                "contiene": "Hay texto sin guardar",
+                "ajustado": true
+              },
+              "recuperar": {
+                "clave": "recovered-restore"
+              },
+              "descartar": {
+                "clave": "recovered-forget"
+              },
+              "antes": {
+                "editor": "El método es siempre el mismo:"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "recovered-restore"
+          },
+          "esperar": 2
+        },
+        {
+          "capturar": {
+            "nombre": "recuperado",
+            "cajas": {
+              "cambio": {
+                "editor": "y la primera vez conviene hacerlo despacio"
+              },
+              "es": {
+                "clave": "language-tab-es"
+              },
+              "guardar": {
+                "clave": "editor-save"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -267,7 +267,7 @@
       const x = conf.x ?? (W - ancho) / 2;
       const y = conf.y ?? Math.max(40, (H - alto) / 2);
       const g = capa();
-      const cam = E.camara(g);
+      const cam = E.camara(g, { x, y, w: ancho, h: alto });
       const v = E.ventana({ captura: nombre, x, y, ancho, padre: g, camara: cam });
       anim(v.raiz, [
         [primera.ini, { o: 0, y: 50, s: 0.97 }],

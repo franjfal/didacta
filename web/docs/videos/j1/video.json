@@ -1,0 +1,93 @@
+{
+  "codigo": "J1",
+  "titulo": "Preparar el curso que viene",
+  "fichero": "J01-preparar-el-curso-que-viene.mp4",
+  "duracion": 102.44,
+  "megas": 5.3,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Preparar el curso que viene"
+    },
+    {
+      "t": 6.46,
+      "titulo": "Nuevo curso académico"
+    },
+    {
+      "t": 45.07,
+      "titulo": "Las mismas lecciones"
+    },
+    {
+      "t": 65.65,
+      "titulo": "Tal como quedó"
+    },
+    {
+      "t": 75.0,
+      "titulo": "La otra puerta"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás empezar el curso que viene a partir de este, sin copiar material."
+    },
+    {
+      "t": 6.96,
+      "texto": "En la asignatura, Nuevo curso académico."
+    },
+    {
+      "t": 10.02,
+      "texto": "Propone el año siguiente, y copiar lo de 2026-2027: qué documentos lleva, y en qué orden."
+    },
+    {
+      "t": 17.87,
+      "texto": "Si lo quieres componer desde cero, también se puede."
+    },
+    {
+      "t": 21.32,
+      "texto": "Y viene marcado Congelar 2026-2027 tal como quedó: para volver a verlo y compilarlo como se dio, pase lo que pase después."
+    },
+    {
+      "t": 31.16,
+      "texto": "Con Crear, 2027-2028 aparece encima, con sus tres documentos."
+    },
+    {
+      "t": 37.16,
+      "texto": "Y el aviso lo cuenta: copiado de 2026-2027, y 2026-2027 congelado."
+    },
+    {
+      "t": 45.57,
+      "texto": "Dentro, los mismos temas y documentos, que ya puedes retocar para el curso nuevo."
+    },
+    {
+      "t": 51.12,
+      "texto": "Pero las lecciones no se copian: son las mismas. Cada una lo dice: se da en dos cursos, y lo que guardes cambia en los dos."
+    },
+    {
+      "t": 60.71,
+      "texto": "Así, la errata que corrijas este año ya está corregida en el que viene."
+    },
+    {
+      "t": 66.15,
+      "texto": "Y el curso que acaba queda en sus versiones congeladas, como Tal como quedó: su PDF sigue saliendo como se dio."
+    },
+    {
+      "t": 75.5,
+      "texto": "La otra puerta: desde cualquier versión congelada, Crear un curso desde aquí."
+    },
+    {
+      "t": 80.74,
+      "texto": "Copia qué temas llevaba el curso en aquel momento, y en qué orden. Las lecciones, las de ahora."
+    },
+    {
+      "t": 87.98,
+      "texto": "Lo que corrijas este año lo hereda el que viene; y el que acaba sigue como se dio."
+    },
+    {
+      "t": 93.5,
+      "texto": "En el siguiente vídeo, una lección en varios cursos: cambiarla en todos, o solo en uno."
+    }
+  ]
+}

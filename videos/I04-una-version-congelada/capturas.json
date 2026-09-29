@@ -1,0 +1,257 @@
+{
+  "capturas": [
+    {
+      "nombre": "creada",
+      "ruta": "/courses",
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "freeze-year-calculo-i-2026-2027"
+          },
+          "esperar": 10
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "freeze-name"
+            },
+            "texto": "Antes del primer parcial"
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "freeze-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Congelada «"
+          },
+          "max": 900,
+          "despues": 30
+        }
+      ],
+      "cajas": {}
+    },
+    {
+      "nombre": "vuelta",
+      "ruta": "/courses",
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "courses/calculo-i/2026-2027/year.yaml",
+            "buscar": "      - unit: calculo/limites/algebra-de-limites\n",
+            "poner": "",
+            "mensaje": "Quitar «Álgebra de límites» del Tema 1",
+            "enviar": true
+          }
+        },
+        {
+          "editar": {
+            "fichero": "content/calculo/limites/definicion-de-limite/es.tex",
+            "buscar": "salvo quizá en el propio $a$.",
+            "poner": "salvo quizá en $a$.",
+            "mensaje": "Acortar la definición de límite",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "year-menu-calculo-i-2026-2027"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "clave": "freezes-calculo-i-2026-2027"
+          },
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "consejo": "Qué hacer con esta versión"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "menu",
+            "cajas": {
+              "abrir": {
+                "texto": "Abrir",
+                "ultimo": true
+              },
+              "comparar": {
+                "texto": "Comparar con la versión actual"
+              },
+              "restaurar": {
+                "texto": "Restaurar…"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "texto": "Comparar con la versión actual"
+          },
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "comparacion",
+            "cajas": {
+              "leccion": {
+                "texto": "definicion-de-limite"
+              },
+              "composicion": {
+                "texto": "calculo-i · 2026-2027",
+                "n": 0
+              },
+              "dialogo": {
+                "contiene": "frente a la versión actual",
+                "alto": 400
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "consejo": "Qué hacer con esta versión"
+          },
+          "esperar": 8
+        },
+        {
+          "pulsar": {
+            "texto": "Abrir",
+            "ultimo": true
+          },
+          "esperar": 20
+        },
+        {
+          "capturar": {
+            "nombre": "abierta",
+            "cajas": {
+              "banda": {
+                "contiene": "Estás viendo",
+                "n": 0,
+                "ajustado": true
+              },
+              "volver": {
+                "clave": "leave-freeze"
+              },
+              "puedo": {
+                "texto": "Qué puedo hacer"
+              }
+            }
+          }
+        },
+        {
+          "ir": "/courses/calculo-i/2026-2027/tema-1",
+          "esperar": 16
+        },
+        {
+          "capturar": {
+            "nombre": "tema",
+            "cajas": {
+              "banda": {
+                "clave": "leave-freeze",
+                "fila": 1200,
+                "ajustado": true
+              },
+              "algebra": {
+                "texto": "Álgebra de límites",
+                "fila": 1000
+              }
+            }
+          }
+        },
+        {
+          "ir": "/unit/content/calculo/limites/definicion-de-limite?lang=es",
+          "esperar": 14
+        },
+        {
+          "pulsar": {
+            "clave": "info-menu"
+          },
+          "esperar": 8
+        },
+        {
+          "capturar": {
+            "nombre": "info",
+            "cajas": {
+              "restaurar": {
+                "clave": "info-restore"
+              },
+              "info": {
+                "clave": "info-menu"
+              },
+              "vieja": {
+                "editor": "salvo quizá en el propio"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "info-restore"
+          },
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "restaurar",
+            "cajas": {
+              "confirmar": {
+                "clave": "confirm-restore"
+              },
+              "dialogo": {
+                "clave": "confirm-restore",
+                "alto": 400
+              },
+              "fichero": {
+                "contiene": "definicion-de-limite/es.tex"
+              },
+              "explica": {
+                "contiene": "Restaurar trae el contenido"
+              }
+            }
+          }
+        },
+        {
+          "tecla": "escape"
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "leave-freeze"
+          },
+          "esperar": 16
+        }
+      ],
+      "cajas": {}
+    }
+  ]
+}

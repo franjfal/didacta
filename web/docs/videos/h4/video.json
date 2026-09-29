@@ -1,0 +1,61 @@
+{
+  "codigo": "H4",
+  "titulo": "Publicar en una carpeta de OneDrive o Drive",
+  "fichero": "H04-publicar-en-una-carpeta.mp4",
+  "duracion": 56.67,
+  "megas": 3.2,
+  "fecha": "2026-09-29",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Publicar en una carpeta de OneDrive o Drive"
+    },
+    {
+      "t": 6.08,
+      "titulo": "La carpeta de reparto"
+    },
+    {
+      "t": 28.57,
+      "titulo": "Publicar"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás repartir tus cursos sin elegir carpeta cada vez."
+    },
+    {
+      "t": 6.58,
+      "texto": "En Ajustes, Guardar y sincronizar, la carpeta de reparto: una carpeta que sincroniza OneDrive, Drive o Nextcloud, y que ven tus estudiantes."
+    },
+    {
+      "t": 17.14,
+      "texto": "Se elige una vez, y se queda."
+    },
+    {
+      "t": 19.61,
+      "texto": "La carpeta de reparto sí puede estar en OneDrive. Los repositorios, no: dos programas sincronizando la misma carpeta la estropean."
+    },
+    {
+      "t": 29.07,
+      "texto": "Después, en los tres puntos del curso, Publicar en la carpeta de reparto."
+    },
+    {
+      "t": 33.88,
+      "texto": "Es el mismo diálogo de exportar, sin preguntar dónde: cada curso va a su carpeta, con su nombre."
+    },
+    {
+      "t": 40.68,
+      "texto": "Y el programa de sincronización hace el resto."
+    },
+    {
+      "t": 44.58,
+      "texto": "Publicas en tu carpeta; la sincronización hace el resto."
+    },
+    {
+      "t": 49.34,
+      "texto": "En el siguiente vídeo, no perder nada: guardar, enviar y traer."
+    }
+  ]
+}

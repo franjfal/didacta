@@ -1,0 +1,82 @@
+# I3 · Congelar un curso
+#
+# Montado desde este guion: la versión «Antes del primer parcial» se crea de
+# verdad dentro del arnés.
+codigo: I3
+titulo: Congelar un curso
+subtitulo: Guardar cómo estaba un curso en un momento, con nombre
+ruta: No perder nada
+siguiente: "I4 · Mirar, comparar y restaurar una versión congelada"
+voz: narrador
+lema: ["Una versión congelada es un nombre", "puesto a un momento del historial."]
+lema_en: "puesto a un momento"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás guardar cómo estaba un curso en un momento: antes
+          del primer parcial, por ejemplo.
+
+  - id: congelar
+    capitulo: Congelar
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: menu
+        texto: >-
+          En los tres puntos del curso, Crear versión congelada.
+        pasos:
+          - {al: inicio, enfoca: [menu, ver], max: 1.8, dx: 250}
+          - {en: Crear, resalta: congelar, lado: izquierda}
+      - id: nombre
+        texto: >-
+          Un nombre, y si quieres una descripción.
+        pasos:
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [nombre, congelar], max: 1.6, captura: dialogo}
+          - {en: nombre, resalta: nombre, captura: dialogo, hasta: 1.4}
+          - {en: descripción, resalta: descripcion, captura: dialogo}
+      - id: ahora
+        texto: >-
+          Apunta al momento de ahora: lo que esté sin guardar, no entra.
+        pasos:
+          - {en: Apunta, resalta: apunta, captura: dialogo}
+
+  - id: lista
+    capitulo: Las versiones congeladas
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: ver
+        texto: >-
+          En Ver versiones congeladas, cada una con su nombre, su descripción y
+          cuándo se hizo.
+        pasos:
+          - {al: inicio, enfoca: [explica, fila], max: 1.6}
+          - {en: nombre, resalta: fila, lado: abajo}
+      - id: ocupa
+        texto: >-
+          No es una copia: es un nombre puesto a un momento del historial. No
+          ocupa, y quitarla no borra nada.
+        pasos:
+          - {en: copia, resalta: explica}
+      - id: enviar
+        texto: >-
+          Y tampoco es una copia de seguridad: eso es enviar a GitHub.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Una versión congelada es un nombre puesto a un momento del historial.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, mirar, comparar y restaurar una versión
+          congelada.
