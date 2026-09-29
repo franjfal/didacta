@@ -102,6 +102,19 @@ void main() {
       expect(found.reference, 'a/b/c');
     });
 
+    test('y un cruce no cuenta como referencia rota', () {
+      // La del repositorio de al lado existe: lo suyo es el aviso del cruce.
+      // Contarla también como rota lo decía dos veces, y la primera mal.
+      final catalogue = withA(
+        documentRepo: 'x/problemas',
+        references: const ['a/b/c', 'a/b/nada'],
+        units: [unit('content/a/b/c', repo: 'x/teoria')],
+      );
+      final year = catalogue.courses.single.years['2026-2027']!;
+      expect(catalogue.brokenReferencesIn(year), 1);
+      expect(catalogue.crossRepoUses, hasLength(1));
+    });
+
     test('una referencia rota no cuenta como cruce', () {
       // Son dos problemas distintos y se arreglan de forma distinta: una
       // apunta a algo que no existe en ninguna parte, y la otra a algo que

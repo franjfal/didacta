@@ -75,7 +75,7 @@ class YearPage extends StatelessWidget {
       0,
       (sum, document) => sum + document.unitRefs.length,
     );
-    final broken = _brokenCount(entry, session);
+    final broken = session.catalogue.brokenReferencesIn(entry);
     final crossing = [
       for (final use in session.catalogue.crossRepoUses)
         if (use.course == courseId && use.year == year) use,
@@ -211,22 +211,6 @@ class YearPage extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  int _brokenCount(CourseYear entry, Session session) {
-    var broken = 0;
-    for (final document in entry.documents) {
-      for (final reference in document.unitRefs) {
-        // En **su** repositorio. Resolverla contra el montón haría que una
-        // unidad del de al lado pareciera estar en su sitio, que es justo lo
-        // que rompe la compilación de quien solo tenga uno.
-        if (session.catalogue.unitByReference(reference, repo: document.repo) ==
-            null) {
-          broken += 1;
-        }
-      }
-    }
-    return broken;
   }
 
   /// Quita este curso académico, y vuelve a la asignatura.

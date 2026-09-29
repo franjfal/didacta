@@ -81,6 +81,10 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 - **La biblioteca llama a las categorías y a los temas por su nombre.** Los
   sacaba de la carpeta --«algebra» salía como «Algebra»-- y no los traducía.
   Ahora usa los de `taxonomy.yaml`, en el idioma que miras.
+- **Un documento que llama a otro repositorio ya no sale también como
+  referencia rota.** La página del curso lo contaba dos veces: una como
+  «no apunta a ninguna unidad del catálogo», que no era verdad, y otra con
+  su aviso de verdad, el de que llama a una lección de otro repositorio.
 - **Una lección nueva va, de salida, al repositorio de su tema.** Con varios
   abiertos, el diálogo proponía siempre el primero, aunque las demás
   lecciones de ese tema estuvieran en otro.

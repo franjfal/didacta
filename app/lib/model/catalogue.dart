@@ -2863,6 +2863,26 @@ class Catalogue {
   /// El motor no puede verlo --`didacta check` mira un repositorio y desde
   /// allí la unidad simplemente no existe-- así que lo ve quien tiene los dos
   /// delante, que es esto.
+  /// Cuántas referencias de [entry] no llevan a ninguna unidad de ningún
+  /// repositorio abierto.
+  ///
+  /// Las que llevan a una del repositorio de al lado no cuentan: eso es un
+  /// cruce --ver [crossRepoUses]--, que tiene su propio aviso y otro arreglo.
+  /// Contarlas aquí también decía dos veces lo mismo, y la primera con un
+  /// «no apunta a ninguna unidad» que no era verdad.
+  int brokenReferencesIn(CourseYear entry) {
+    var broken = 0;
+    for (final document in entry.documents) {
+      for (final reference in document.unitRefs) {
+        if (unitByReference(reference, repo: document.repo) == null &&
+            unitByReference(reference) == null) {
+          broken += 1;
+        }
+      }
+    }
+    return broken;
+  }
+
   List<CrossRepoUse> get crossRepoUses =>
       _crossRepo[this] ??= List.unmodifiable(_findCrossRepoUses());
 
