@@ -18,5 +18,5 @@
 # Las dos valen para UNA publicación: al publicar, el workflow las vuelve a
 # dejar en minor y false. Así una grande no se queda puesta y la siguiente no
 # salta otra vez.
-bump: major
+bump: minor
 prerelease: false
