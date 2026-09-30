@@ -16,12 +16,12 @@
           "status": "missing"
         },
         "es": {
-          "bytes": 1986,
+          "bytes": 2045,
           "exists": true,
           "status": "source"
         },
         "va": {
-          "bytes": 2020,
+          "bytes": 2080,
           "exists": true,
           "status": "translated"
         }
@@ -292,12 +292,12 @@
           "status": "missing"
         },
         "es": {
-          "bytes": 1493,
+          "bytes": 1486,
           "exists": true,
           "status": "source"
         },
         "va": {
-          "bytes": 1378,
+          "bytes": 1371,
           "exists": true,
           "status": "translated"
         }
