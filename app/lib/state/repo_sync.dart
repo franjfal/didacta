@@ -327,7 +327,7 @@ class RepoSync extends ChangeNotifier {
   /// sincronización, que es donde se trae y se envía a propósito.
   ///
   /// Quién decide si un fichero suelto sin guardar estorba es **git**, con
-  /// `pull --ff-only`, y no una comprobación propia: un `generated/` recién
+  /// `merge --ff-only`, y no una comprobación propia: un `generated/` recién
   /// regenerado deja el clon sucio casi siempre, y negarse a avanzar por eso
   /// habría convertido la garantía en un aviso permanente que nadie lee. Si
   /// lo que viene pisa algo sin guardar, git se niega y su mensaje es el
@@ -404,7 +404,14 @@ class RepoSync extends ChangeNotifier {
       try {
         final clone = session.cloneAt(repo.directory);
         final before = await clone.status();
-        await clone.pull(token: token, onProgress: session.syncConsole.add);
+        // Con `rebase`: esto es traer a propósito, y es el sitio donde se
+        // juntan dos historias. Lo propio sin enviar queda encima de lo que
+        // llega, listo para enviar; si choca, no se toca nada.
+        await clone.pull(
+          token: token,
+          onProgress: session.syncConsole.add,
+          rebase: true,
+        );
         final after = await clone.status();
         _cloneStatus[repo.id] = after;
         result[repo.id] = before.head == after.head ? 0 : (before.behind);

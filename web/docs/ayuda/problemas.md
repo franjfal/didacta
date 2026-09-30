@@ -167,22 +167,23 @@ repositorio: solo tiene lo que Didacta vuelve a generar.
 
 ### «Hay cambios nuevos en GitHub»
 
-Alguien --o tú, desde otro ordenador-- ha enviado algo desde la última vez.
-El aviso trae **Traer**: trae sus cambios, y entonces se vuelve a intentar.
-Lo tuyo no se pierde.
+Alguien --o tú, desde otro ordenador-- ha enviado algo desde la última vez, y
+GitHub no acepta lo tuyo hasta que lo suyo esté aquí. El aviso trae
+**Traer**: trae sus cambios y pone los tuyos **encima**, como si los hubieras
+hecho después. Entonces vuelve a enviar. Lo tuyo no se pierde.
 
-### «Dos cambios chocan»
+Traer desde la [barra de sincronización](../app/index.md#la-barra-de-sincronizacion),
+o con ++cmd+shift+p++ (++ctrl+shift+p++), hace lo mismo.
 
-El mismo fichero ha cambiado **en otro sitio** desde que lo abriste: otra
-ventana, el asistente del [servidor MCP](../app/mcp.md), otro programa que lo
-editó en el disco. Lo que has escrito sigue en el editor. Cópialo, vuelve a
-cargar el fichero y aplica otra vez tu cambio.
+### «Tus cambios y los de GitHub no se pueden juntar solos» {#historias-separadas}
 
-Si pasa **al traer**, es que tú y otra persona habéis guardado cambios
-distintos a la vez, y los dos historiales se han separado. Didacta no los
-mezcla por su cuenta --una mezcla que nadie ha mirado es la forma de estropear
-un tema sin enterarse--: lo dice y no toca nada. Juntarlos es trabajo de git,
-en un terminal, en la carpeta del repositorio:
+Tienes cambios guardados en el historial que todavía no has enviado, y en
+GitHub han entrado otros que tocan **las mismas líneas**. Traer pone lo tuyo
+encima de lo suyo cuando se puede; cuando no, Didacta no elige por ti --una
+mezcla que nadie ha mirado es la forma de estropear un tema sin enterarse--:
+lo deja todo como estaba y lo dice. Lo tuyo sigue guardado en tu ordenador.
+
+Juntarlos es trabajo de git, en un terminal, en la carpeta del repositorio:
 
 ```bash
 git pull --rebase
@@ -191,7 +192,19 @@ git pull --rebase
 Si git dice que hay un conflicto en un fichero, ábrelo: las dos versiones
 están entre las marcas `<<<<<<<` y `>>>>>>>`. Deja la buena, borra las marcas y
 termina con `git add <fichero>` y `git rebase --continue`. Después, en Didacta,
-**Actualizar** (++cmd+r++ o ++ctrl+r++).
+**Actualizar** (++cmd+r++ o ++ctrl+r++) y **Enviar**.
+
+Si git se niega porque hay cambios sin guardar, guárdalos antes en Didacta.
+
+### «Dos cambios chocan»
+
+El mismo fichero ha cambiado **en otro sitio** desde que lo abriste: otra
+ventana, el asistente del [servidor MCP](../app/mcp.md), otro programa que lo
+editó en el disco. Lo que has escrito sigue en el editor. Cópialo, vuelve a
+cargar el fichero y aplica otra vez tu cambio.
+
+Si pasa **al traer**, es que tienes un fichero sin guardar en el historial y
+lo que llega de GitHub también lo cambia. Guárdalo y vuelve a traer.
 
 ### «GitHub no acepta tu sesión»
 

@@ -28,6 +28,14 @@ void main() {
         CloneFailure.conflict,
     'error: Your local changes to the following files would be overwritten by merge:':
         CloneFailure.conflict,
+    // Lo que dice un `--ff-only` con commits propios y ajenos: dos historias,
+    // no un fichero que choca. Contado como choque mandaba a recargar el
+    // editor, que no arregla nada.
+    'hint: You have divergent branches and need to specify how to reconcile them.\n'
+            'fatal: Not possible to fast-forward, aborting.':
+        CloneFailure.diverged,
+    "hint: Diverging branches can't be fast-forwarded, you need to either:":
+        CloneFailure.diverged,
     ' ! [remote rejected] main -> main (protected branch hook declined)':
         CloneFailure.rejected,
     'fatal: not a git repository': CloneFailure.other,

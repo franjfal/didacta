@@ -150,6 +150,15 @@ enum CloneFailure {
   /// Dos cambios chocan en el mismo sitio.
   conflict,
 
+  /// Hay commits propios sin enviar y otros nuevos en GitHub, y no se han
+  /// juntado: un rebase que chocaba y se ha deshecho, o un `--ff-only` que
+  /// se niega.
+  ///
+  /// Aparte de [conflict] porque lo que hay que hacer es otra cosa. Aquel es
+  /// el editor con una copia vieja, y se arregla recargando; este son dos
+  /// historias, y se juntan con git, a mano.
+  diverged,
+
   /// Otro proceso tiene el repositorio cogido: un `index.lock`.
   locked,
 
@@ -200,14 +209,22 @@ CloneFailure classifyGit(String said) {
   ])) {
     return CloneFailure.rejected;
   }
+  // Antes que los choques: lo que dice un `--ff-only` ante dos historias no
+  // es un fichero que choca, y contarlo como tal mandaba a recargar el
+  // editor, que no arregla nada.
+  if (has([
+    'not possible to fast-forward',
+    'divergent branches',
+    'diverging branches',
+  ])) {
+    return CloneFailure.diverged;
+  }
   if (has([
     'conflict (',
     'automatic merge failed',
     'would be overwritten by merge',
     'unmerged files',
     'needs merge',
-    'not possible to fast-forward',
-    'divergent branches',
   ])) {
     return CloneFailure.conflict;
   }
@@ -612,9 +629,21 @@ build_dir: .didacta-build
   /// `push` de setecientos ficheros son minutos de silencio absoluto. Lo que
   /// tiene que decir --cuántos objetos lleva contados, comprimidos y
   /// subidos-- es exactamente lo que distingue esperar de estar colgado.
+  ///
+  /// Sin [rebase], solo avanza: si hay commits propios sin enviar y también
+  /// nuevos en GitHub, se niega ([CloneFailure.diverged]) y no toca nada. Es
+  /// lo que hace falta antes de guardar o al abrir una carpeta, que no son
+  /// momentos de decidir cómo se juntan dos historias.
+  ///
+  /// Con [rebase], que es traer a propósito --la barra, el menú, el botón de
+  /// un aviso--, pone los commits propios **encima** de los de GitHub, como
+  /// `git pull --rebase`: sin commit de merge, y listos para enviar. Si
+  /// tocan las mismas líneas deja el clon como estaba y lanza
+  /// [CloneFailure.diverged]. Nada se junta a medias.
   Future<void> pull({
     required String token,
     void Function(String line)? onProgress,
+    bool rebase = false,
   });
 
   Future<void> push({
