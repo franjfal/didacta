@@ -42,6 +42,12 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## Próxima
 
+- **Didacta 1.0.** La web tiene ya casi toda la galería de videotutoriales:
+  76 vídeos cortos, con subtítulos y capítulos, que recorren Didacta de
+  principio a fin --empezar, escribir una lección, preparar una asignatura,
+  compilar, traducir, repartir, no perder nada, el curso que viene, a tu
+  manera y lo de quien mantiene el repositorio--. Grabarlos pantalla a
+  pantalla ha servido además para encontrar y arreglar lo que sigue.
 - **Las plantillas de serie dicen lo que son.** En Ajustes → Bloques y
   plantillas, la lista decía «solo los enunciados» también de las copias del
   profesor, y al editar una de las que trae Didacta el editor salía con los
