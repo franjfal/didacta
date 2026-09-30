@@ -1,0 +1,77 @@
+{
+  "codigo": "I5",
+  "titulo": "Cuando sale un aviso al guardar o sincronizar",
+  "fichero": "I05-avisos-al-guardar-o-sincronizar.mp4",
+  "duracion": 77.42,
+  "megas": 2.7,
+  "fecha": "2026-09-30",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Cuando sale un aviso al guardar o sincronizar"
+    },
+    {
+      "t": 6.87,
+      "titulo": "Cambios nuevos en GitHub"
+    },
+    {
+      "t": 29.29,
+      "titulo": "Sin red"
+    },
+    {
+      "t": 45.76,
+      "titulo": "Otros avisos"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás qué hacer con cada aviso al guardar o sincronizar, sin saber git."
+    },
+    {
+      "t": 7.37,
+      "texto": "Aquí hay un cambio tuyo sin enviar, y otro nuevo en GitHub, enviado desde otro ordenador."
+    },
+    {
+      "t": 13.76,
+      "texto": "Al enviar, el aviso lo dice: hay cambios nuevos en GitHub. Trae primero los suyos; lo tuyo no se pierde."
+    },
+    {
+      "t": 21.99,
+      "texto": "Traer, en el mismo aviso, trae lo de GitHub y pone lo tuyo encima."
+    },
+    {
+      "t": 27.04,
+      "texto": "Y ahora el envío sale."
+    },
+    {
+      "t": 29.79,
+      "texto": "Sin red: no se llega a GitHub. Lo guardado está a salvo en tu ordenador, y se enviará cuando vuelva."
+    },
+    {
+      "t": 36.91,
+      "texto": "Detalles enseña lo que dijo el programa. Copiar lo lleva al portapapeles, y Contar el problema abre una incidencia con él."
+    },
+    {
+      "t": 46.16,
+      "texto": "Otros: si GitHub no acepta tu sesión, el aviso trae Volver a entrar."
+    },
+    {
+      "t": 51.64,
+      "texto": "Si tus cambios y los de GitHub no se pueden juntar solos, no se junta nada a medias, y el aviso lleva a la ayuda para juntarlos."
+    },
+    {
+      "t": 59.95,
+      "texto": "Y si dos cambios chocan en el editor, tu texto sigue ahí mientras vuelves a cargar el fichero."
+    },
+    {
+      "t": 66.36,
+      "texto": "El aviso dice qué ha pasado y qué hacer; y lo guardado no se pierde."
+    },
+    {
+      "t": 70.95,
+      "texto": "En el siguiente vídeo, recuperar lo escrito tras un cierre inesperado."
+    }
+  ]
+}

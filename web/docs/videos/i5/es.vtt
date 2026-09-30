@@ -1,0 +1,68 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:06.521
+Al terminar sabrás qué hacer con cada aviso
+al guardar o sincronizar, sin saber git.
+
+00:00:07.371 --> 00:00:11.301
+Aquí hay un cambio tuyo sin
+enviar, y otro nuevo en GitHub,
+
+00:00:11.651 --> 00:00:13.694
+enviado desde otro ordenador.
+
+00:00:13.764 --> 00:00:20.174
+Al enviar, el aviso lo dice: hay cambios
+nuevos en GitHub. Trae primero los suyos;
+
+00:00:20.344 --> 00:00:21.922
+lo tuyo no se pierde.
+
+00:00:21.992 --> 00:00:26.971
+Traer, en el mismo aviso, trae lo
+de GitHub y pone lo tuyo encima.
+
+00:00:27.041 --> 00:00:28.991
+Y ahora el envío sale.
+
+00:00:29.791 --> 00:00:34.611
+Sin red: no se llega a GitHub. Lo
+guardado está a salvo en tu ordenador,
+
+00:00:34.651 --> 00:00:36.840
+y se enviará cuando vuelva.
+
+00:00:36.910 --> 00:00:41.770
+Detalles enseña lo que dijo el programa.
+Copiar lo lleva al portapapeles,
+
+00:00:41.810 --> 00:00:45.463
+y Contar el problema abre
+una incidencia con él.
+
+00:00:46.163 --> 00:00:51.569
+Otros: si GitHub no acepta tu sesión,
+el aviso trae Volver a entrar.
+
+00:00:51.639 --> 00:00:57.169
+Si tus cambios y los de GitHub no se pueden
+juntar solos, no se junta nada a medias,
+
+00:00:57.299 --> 00:00:59.875
+y el aviso lleva a la
+ayuda para juntarlos.
+
+00:00:59.945 --> 00:01:02.175
+Y si dos cambios chocan en el editor,
+
+00:01:02.485 --> 00:01:05.564
+tu texto sigue ahí mientras
+vuelves a cargar el fichero.
+
+00:01:06.364 --> 00:01:10.703
+El aviso dice qué ha pasado y qué
+hacer; y lo guardado no se pierde.
+
+00:01:10.953 --> 00:01:14.818
+En el siguiente vídeo, recuperar lo
+escrito tras un cierre inesperado.

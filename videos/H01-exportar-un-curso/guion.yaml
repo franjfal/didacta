@@ -91,7 +91,7 @@ escenas:
     antes: 0.5
     pantalla: hecho
     frases:
-      - id: aviso
+      - id: aviso-2
         texto: >-
           Al acabar, cuántos ficheros ha copiado, y cuántos se ha guardado de
           copiar: los que llevan soluciones o son del profesor.

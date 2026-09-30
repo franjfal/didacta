@@ -444,6 +444,12 @@ def hacer(codigo: str, opciones: dict) -> None:
 
     carpeta = carpeta_de(codigo)
     guion = yaml.safe_load((carpeta / "guion.yaml").read_text(encoding="utf-8"))
+    # Los tiempos de cada paso se buscan por el id de su frase: dos frases con
+    # el mismo id hacían que los pasos de la primera ocurrieran en la segunda.
+    ids = [f["id"] for e in guion.get("escenas", []) for f in e.get("frases", [])]
+    repetidos = sorted({i for i in ids if ids.count(i) > 1})
+    if repetidos:
+        raise SystemExit(f"Frases con el mismo id en el guion: {', '.join(repetidos)}")
     obra = BUILD / carpeta.name
     obra.mkdir(parents=True, exist_ok=True)
     print(f"\033[1m{guion['codigo']} · {guion['titulo']}\033[0m  ({carpeta.relative_to(RAIZ)})")

@@ -35,7 +35,7 @@ escenas:
           - {en: Comando, teclas: "⌘ F"}
           - {en: escribes, resalta: busca, hasta: 1.6}
           - {en: pintan, resalta: primera, etiqueta: "Todas pintadas", lado: derecha}
-      - id: siguiente
+      - id: siguiente-2
         texto: >-
           Arriba dice cuál es la que miras, y con Intro, o la flecha, vas a la
           siguiente.

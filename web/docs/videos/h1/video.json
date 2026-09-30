@@ -2,9 +2,9 @@
   "codigo": "H1",
   "titulo": "Exportar un curso para el aula virtual",
   "fichero": "H01-exportar-un-curso.mp4",
-  "duracion": 71.36,
-  "megas": 4.7,
-  "fecha": "2026-09-29",
+  "duracion": 71.09,
+  "megas": 3.8,
+  "fecha": "2026-09-30",
   "version": "0.3.0",
   "capitulos": [
     {
@@ -24,7 +24,7 @@
       "titulo": "Revisar antes de repartir"
     },
     {
-      "t": 43.27,
+      "t": 43.01,
       "titulo": "La carpeta"
     }
   ],
@@ -54,23 +54,23 @@
       "texto": "Antes de copiar nada, revisa lo que se va a exportar: aquí, una referencia que saldría como dos interrogaciones."
     },
     {
-      "t": 39.65,
+      "t": 39.38,
       "texto": "Puedes arreglarlo antes, o exportar igualmente."
     },
     {
-      "t": 43.77,
+      "t": 43.51,
       "texto": "Al acabar, cuántos ficheros ha copiado, y cuántos se ha guardado de copiar: los que llevan soluciones o son del profesor."
     },
     {
-      "t": 52.27,
+      "t": 52.01,
       "texto": "En la carpeta, una por tema, y una por idioma si exportas varios. Y cada PDF, con un nombre que se lee."
     },
     {
-      "t": 60.67,
+      "t": 60.4,
       "texto": "De salida no sale nada que no pueda ver un estudiante."
     },
     {
-      "t": 63.98,
+      "t": 63.71,
       "texto": "En el siguiente vídeo, exportar un documento, o el PDF que estás mirando."
     }
   ]

@@ -72,7 +72,7 @@ escenas:
     antes: 0.5
     pantalla: sinva
     frases:
-      - id: arriba
+      - id: arriba-2
         texto: >-
           Arriba ya no se ofrece. Pero sigue saliendo donde algo ya lo usa: el
           estado de cada lección en valenciano.

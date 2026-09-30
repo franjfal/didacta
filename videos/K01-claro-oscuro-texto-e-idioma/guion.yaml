@@ -85,7 +85,7 @@ escenas:
     antes: 0.5
     pantalla: idioma
     frases:
-      - id: tres
+      - id: tres-2
         texto: >-
           El idioma de Didacta: el del sistema, castellano, valenciano o
           inglés.

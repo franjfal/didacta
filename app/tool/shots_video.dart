@@ -42,6 +42,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/app_info.dart';
@@ -368,6 +369,16 @@ void main() {
           ),
         );
       }
+      if (step['remoto_sin_red'] == true) {
+        // Sin red: el remoto pasa a un servidor que no existe, y git contesta
+        // lo que contesta sin conexión («Could not resolve host»).
+        await run('git', [
+          'remote',
+          'set-url',
+          'origin',
+          'https://github.invalid/profe/didacta-ejemplo.git',
+        ], work);
+      }
       if (step['sin_enviar'] case final num n) {
         for (var i = 0; i < n; i += 1) {
           await commit(work, 'Corregir una errata');
@@ -480,6 +491,9 @@ void main() {
               ),
               ChangeNotifierProvider<Appearance>.value(value: appearance),
               ChangeNotifierProvider<TourController>.value(value: tour),
+              // Como `main.dart`: los avisos buscan el router para abrir sus
+              // diálogos y para «Volver a entrar».
+              Provider<GoRouter>.value(value: router),
               ChangeNotifierProvider<McpService>.value(
                 value: mcp = McpService(
                   // `"mcp": true`: el servidor de verdad, el del motor, sobre

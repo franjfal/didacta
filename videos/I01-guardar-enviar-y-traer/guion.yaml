@@ -84,7 +84,7 @@ escenas:
     antes: 0.5
     pantalla: ajustes
     frases:
-      - id: tres
+      - id: tres-2
         texto: >-
           En Ajustes, Guardar y sincronizar: guardar lo deja en el historial,
           revisar los cambios antes de guardar, y enviar a GitHub en cuanto se

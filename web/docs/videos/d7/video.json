@@ -2,9 +2,9 @@
   "codigo": "D7",
   "titulo": "Buscar y reemplazar en una lección",
   "fichero": "D07-buscar-y-reemplazar.mp4",
-  "duracion": 42.34,
-  "megas": 4.0,
-  "fecha": "2026-09-28",
+  "duracion": 44.93,
+  "megas": 4.1,
+  "fecha": "2026-09-30",
   "version": "0.3.0",
   "capitulos": [
     {
@@ -16,11 +16,11 @@
       "titulo": "Buscar"
     },
     {
-      "t": 16.39,
+      "t": 18.99,
       "titulo": "Mayúsculas y expresiones"
     },
     {
-      "t": 22.55,
+      "t": 25.14,
       "titulo": "Reemplazar"
     }
   ],
@@ -38,23 +38,23 @@
       "texto": "Arriba dice cuál es la que miras, y con Intro, o la flecha, vas a la siguiente."
     },
     {
-      "t": 16.89,
+      "t": 19.49,
       "texto": "Aa distingue mayúsculas, y el punto y la estrella buscan con una expresión regular."
     },
     {
-      "t": 23.05,
+      "t": 25.64,
       "texto": "Con la interfaz completa, Reemplazar pide por qué."
     },
     {
-      "t": 26.59,
+      "t": 29.18,
       "texto": "Y Todas lo cambia en toda la lección, en un solo cambio, que se deshace de una vez."
     },
     {
-      "t": 32.74,
+      "t": 35.33,
       "texto": "Reemplazar todas es un solo cambio, y se deshace de una vez."
     },
     {
-      "t": 37.03,
+      "t": 39.62,
       "texto": "En el siguiente vídeo, escribir un problema."
     }
   ]

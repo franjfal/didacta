@@ -1,0 +1,125 @@
+# I5 · Cuando sale un aviso al guardar o sincronizar
+#
+# Montado desde este guion. Los avisos son de verdad dentro del arnés: un
+# cambio de «otra máquina» ya enviado al remoto y otro propio sin enviar
+# (`"preparar"`), así que enviar se rechaza, «Traer» lo arregla y el segundo
+# envío sale. El «sin red» se provoca apuntando el remoto a un servidor que no
+# existe (`"remoto_sin_red"`), que es lo que contesta git sin conexión. La
+# sesión caducada y los cambios que no se pueden juntar no se pueden provocar
+# aquí: van en un esquema, con los textos de la aplicación.
+codigo: I5
+titulo: Cuando sale un aviso al guardar o sincronizar
+subtitulo: Qué hacer con cada aviso, sin saber git
+ruta: No perder nada
+siguiente: "I6 · Recuperar lo escrito tras un cierre inesperado"
+voz: narrador
+lema: ["El aviso dice qué ha pasado y qué hacer;", "y lo guardado no se pierde."]
+lema_en: "no se pierde"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás qué hacer con cada aviso al guardar o sincronizar,
+          sin saber git.
+
+  - id: detras
+    capitulo: Cambios nuevos en GitHub
+    antes: 0.5
+    pantalla: barra
+    frases:
+      - id: barra
+        texto: >-
+          Aquí hay un cambio tuyo sin enviar, y otro nuevo en GitHub, enviado
+          desde otro ordenador.
+        pasos:
+          - {al: inicio, enfoca: [estado], max: 2.4, dy: -150}
+          - {en: cambio, resalta: estado, lado: arriba}
+      - id: aviso
+        texto: >-
+          Al enviar, el aviso lo dice: hay cambios nuevos en GitHub. Trae
+          primero los suyos; lo tuyo no se pierde.
+        pasos:
+          - {al: inicio, cambia: detras}
+          - {al: inicio, enfoca: [titulo], max: 2, dx: 300, dy: -120, captura: detras}
+          - {en: aviso, resalta: titulo, lado: arriba, captura: detras}
+      - id: traer
+        texto: >-
+          Traer, en el mismo aviso, trae lo de GitHub y pone lo tuyo encima.
+        pasos:
+          - {al: inicio, enfoca: [traer], max: 2.2, dx: -400, dy: -120, captura: detras}
+          - {en: Traer, pulsa: traer, captura: detras}
+          - {en: encima, cambia: traido}
+          - {en: encima, enfoca: [aviso], max: 2, dy: -120, captura: traido}
+          - {en: encima, resalta: aviso, lado: arriba, captura: traido}
+      - id: enviado
+        texto: >-
+          Y ahora el envío sale.
+        pasos:
+          - {al: inicio, cambia: enviado}
+          - {al: inicio, resalta: aviso, lado: arriba, captura: enviado}
+
+  - id: sinred
+    capitulo: Sin red
+    antes: 0.5
+    pantalla: sinred
+    frases:
+      - id: sin-red
+        texto: >-
+          Sin red: no se llega a GitHub. Lo guardado está a salvo en tu
+          ordenador, y se enviará cuando vuelva.
+        pasos:
+          - {al: inicio, enfoca: [titulo], max: 2, dx: 300, dy: -120}
+          - {en: red, resalta: titulo, lado: arriba}
+      - id: ver-detalles
+        texto: >-
+          Detalles enseña lo que dijo el programa. Copiar lo lleva al
+          portapapeles, y Contar el problema abre una incidencia con él.
+        pasos:
+          - {al: inicio, cambia: detalles}
+          - {al: inicio, enfoca: [dijo, contar], max: 1.8, captura: detalles}
+          - {en: programa, resalta: dijo, captura: detalles, hasta: 2}
+          - {en: Copiar, resalta: copiar, lado: abajo, captura: detalles, hasta: 1.6}
+          - {en: Contar, resalta: contar, lado: abajo, captura: detalles}
+
+  - id: otros
+    capitulo: Otros avisos
+    antes: 0.4
+    grafico:
+      tipo: puntos
+      titulo: Otros avisos
+      por_fila: 3
+      ancho: 460
+      alto_fila: 300
+      items:
+        - {titulo: "GitHub no acepta tu sesión", texto: "Ha caducado, o no tienes permiso. Volver a entrar.", icono: candado, color: ambar, en: sesión}
+        - {titulo: "Tus cambios y los de GitHub no se pueden juntar solos", texto: "Tocan lo mismo. No se junta nada a medias: todo queda como estaba.", icono: aviso, color: rojo, en: juntar}
+        - {titulo: "Dos cambios chocan", texto: "El fichero cambió mientras lo editabas. Tu texto sigue en el editor.", icono: lapiz, color: ambar, en: chocan}
+    frases:
+      - id: sesion
+        texto: >-
+          Otros: si GitHub no acepta tu sesión, el aviso trae Volver a entrar.
+      - id: juntar
+        texto: >-
+          Si tus cambios y los de GitHub no se pueden juntar solos, no se junta
+          nada a medias, y el aviso lleva a la ayuda para juntarlos.
+      - id: chocan
+        texto: >-
+          Y si dos cambios chocan en el editor, tu texto sigue ahí mientras
+          vuelves a cargar el fichero.
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          El aviso dice qué ha pasado y qué hacer; y lo guardado no se pierde.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, recuperar lo escrito tras un cierre
+          inesperado.

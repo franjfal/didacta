@@ -1,0 +1,232 @@
+{
+  "capturas": [
+    {
+      "nombre": "_detras",
+      "ruta": "/courses",
+      "preparar": [
+        {
+          "en_github": 1
+        },
+        {
+          "sin_enviar": 1
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "barra",
+            "cajas": {
+              "enviar": {
+                "clave": "sync-push"
+              },
+              "traer": {
+                "clave": "sync-pull"
+              },
+              "estado": {
+                "contiene": "sin enviar",
+                "ajustado": true
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "sync-push"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "push-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "problem"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar",
+            "ultimo": true
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "detras",
+            "cajas": {
+              "aviso": {
+                "clave": "problem"
+              },
+              "titulo": {
+                "texto": "Hay cambios nuevos en GitHub",
+                "ajustado": true
+              },
+              "traer": {
+                "clave": "problem-fix"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "problem-fix"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Traído"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "traido",
+            "cajas": {
+              "aviso": {
+                "contiene": "Traído",
+                "ajustado": true
+              }
+            }
+          }
+        },
+        {
+          "esperar": 120
+        },
+        {
+          "pulsar": {
+            "clave": "sync-push"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "push-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "contiene": "Enviado a GitHub"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "capturar": {
+            "nombre": "enviado",
+            "cajas": {
+              "aviso": {
+                "contiene": "Enviado a GitHub",
+                "ajustado": true
+              },
+              "estado": {
+                "clave": "sync-state"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nombre": "_sinred",
+      "ruta": "/courses",
+      "preparar": [
+        {
+          "sin_enviar": 1
+        },
+        {
+          "remoto_sin_red": true
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "sync-push"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "push-confirm"
+          },
+          "esperar": 4
+        },
+        {
+          "hasta_que": {
+            "clave": "problem"
+          },
+          "max": 900,
+          "despues": 6
+        },
+        {
+          "pulsar": {
+            "texto": "Cerrar",
+            "ultimo": true
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "sinred",
+            "cajas": {
+              "aviso": {
+                "clave": "problem"
+              },
+              "titulo": {
+                "texto": "No se llega a GitHub",
+                "ajustado": true
+              },
+              "detalles": {
+                "clave": "problem-details"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "problem-details"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
+            "clave": "problem-said"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "detalles",
+            "cajas": {
+              "dialogo": {
+                "clave": "problem-dialog"
+              },
+              "dijo": {
+                "clave": "problem-said"
+              },
+              "copiar": {
+                "clave": "problem-copy"
+              },
+              "contar": {
+                "clave": "problem-report"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
