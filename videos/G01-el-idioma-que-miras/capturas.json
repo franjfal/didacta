@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "sinva",
-      "ruta": "/?en=calculo/limites",
+      "ruta": "/?en=calculo/limites/concepto-de-limite",
       "acciones": [
         {
           "esperar": 10
@@ -178,7 +178,7 @@
           }
         },
         {
-          "ir": "/?en=calculo/limites",
+          "ir": "/?en=calculo/limites/concepto-de-limite",
           "esperar": 12
         }
       ],

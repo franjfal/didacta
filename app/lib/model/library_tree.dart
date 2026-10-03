@@ -114,12 +114,56 @@ List<TagCount> tagCounts(Iterable<Unit> units) {
   return [for (final entry in entries) TagCount(entry.key, entry.value)];
 }
 
-/// One topic: the leaf group, holding units.
+/// Un subtema: el tercer nivel, y el único que tiene lecciones dentro.
+///
+/// Lo que antes era la etiqueta de cada lección. Era el nivel que de verdad
+/// se usaba para encontrar algo --`principio-de-cavalieri` dentro de la
+/// integración-- y se pintaba como una fila de fichas encima de la lista,
+/// porque una lección podía llevar varias etiquetas. Un subtema es uno solo
+/// por lección, así que es una columna y los números de cada nivel suman lo
+/// que hay debajo.
+class SubtopicNode {
+  const SubtopicNode({
+    required this.category,
+    required this.topic,
+    required this.subtopic,
+    required this.units,
+    this.title,
+  });
+
+  final String category;
+  final String topic;
+  final String subtopic;
+
+  /// En orden de ruta.
+  final List<Unit> units;
+
+  int get count => units.length;
+
+  Set<String> get kinds => {for (final unit in units) unit.kind};
+
+  /// Su clave en la taxonomía: `categoría/tema/subtema`.
+  String get key => '$category/$topic/$subtopic';
+
+  TranslationProgress progressIn(String language) =>
+      TranslationProgress.of(units, language);
+
+  /// Su nombre en `taxonomy.yaml`, si lo tiene.
+  final String? title;
+
+  /// Sin subtema --una lección de antes de que existieran-- se dice, en vez
+  /// de enseñar una fila sin nombre.
+  String get label =>
+      title ?? (subtopic.isEmpty ? tr('Sin subtema') : humaniseSlug(subtopic));
+}
+
+/// One topic: a group of subtopics.
 class TopicNode {
   const TopicNode({
     required this.category,
     required this.topic,
     required this.units,
+    this.subtopics = const [],
     this.title,
   });
 
@@ -130,7 +174,14 @@ class TopicNode {
   /// be the useful default.
   final List<Unit> units;
 
+  /// En el orden en que los declara la taxonomía, que es el de la
+  /// asignatura; los que no declara nadie, detrás.
+  final List<SubtopicNode> subtopics;
+
   int get count => units.length;
+
+  /// Su clave en la taxonomía: `categoría/tema`.
+  String get key => '$category/$topic';
 
   /// The kinds present, so a topic can show at a glance that it is theory
   /// plus a problem sheet.
@@ -139,11 +190,6 @@ class TopicNode {
   /// The areas present. Now that the area is not a level of the tree, this
   /// is how a group says it holds both theory and exercises.
   Set<String> get blocks => {for (final unit in units) unit.block};
-
-  /// Las etiquetas de sus unidades. Es el nivel de navegación que hay dentro
-  /// de un tema: la categoría dice de qué asignatura es esto, el tema de qué
-  /// va, y la etiqueta por qué sección de la práctica anda.
-  List<TagCount> get tags => tagCounts(units);
 
   TranslationProgress progressIn(String language) =>
       TranslationProgress.of(units, language);
@@ -154,6 +200,13 @@ class TopicNode {
   /// A readable name: the one the taxonomy gives, or, without one, the slug
   /// made readable, which is better than `normed-spaces`.
   String get label => title ?? humaniseSlug(topic);
+
+  SubtopicNode? subtopic(String name) {
+    for (final node in subtopics) {
+      if (node.subtopic == name) return node;
+    }
+    return null;
+  }
 }
 
 /// One category: a group of topics, and the level worth showing first.
@@ -167,9 +220,8 @@ class CategoryNode {
 
   final String category;
 
-  /// Ordered by size, largest first. Fifty-one categories in alphabetical
-  /// order buries the ones being taught; ordering by how much is in them puts
-  /// the working material at the top.
+  /// En el orden en que los declara la taxonomía, que es el orden en que se
+  /// dan; los que no declara nadie, detrás, de mayor a menor.
   final List<TopicNode> topics;
 
   /// Every unit in the category, across its topics.
@@ -197,10 +249,6 @@ class CategoryNode {
   /// How many units are exercises, so a category can say it comes with
   /// problem sheets without opening it.
   int get problems => units.where((unit) => unit.isProblem).length;
-
-  /// Las etiquetas de toda la categoría, para cuando todavía no se ha entrado
-  /// en ningún tema.
-  List<TagCount> get tags => tagCounts(units);
 
   TopicNode? topic(String name) {
     for (final node in topics) {
@@ -249,21 +297,50 @@ class LibraryTree {
   const LibraryTree({required this.categories, required this.byPath});
 
   /// Builds the tree from [units], which the caller has already filtered by
-  /// area if it wants to. [titleOf] da el nombre de una categoría o de un
-  /// tema (`calculo`, `calculo/limites`) --ver [Catalogue.taxonomyTitle]--.
+  /// area if it wants to. [titleOf] da el nombre de una categoría, un tema o
+  /// un subtema (`calculo`, `calculo/limites`, `calculo/limites/concepto`)
+  /// --ver [Catalogue.taxonomyTitle]--. [declared] dice lo que declara la
+  /// taxonomía dentro de una clave, en orden --[Catalogue.declaredChildren]--,
+  /// y [showEmpty] cuáles de esos se enseñan aunque no tengan nada.
   factory LibraryTree.of(
     Iterable<Unit> units, {
     String? Function(String key)? titleOf,
+    List<String> Function(String parent)? declared,
+    bool Function(String key)? showEmpty,
   }) {
-    final grouped = <String, Map<String, List<Unit>>>{};
+    final grouped = <String, Map<String, Map<String, List<Unit>>>>{};
     final byPath = <String, Unit>{};
 
     for (final unit in units) {
       byPath[unit.path] = unit;
       grouped
           .putIfAbsent(unit.category, () => {})
-          .putIfAbsent(unit.topic, () => [])
+          .putIfAbsent(unit.topic, () => {})
+          .putIfAbsent(unit.subtopic, () => [])
           .add(unit);
+    }
+
+    // Lo declarado y vacío también tiene su sitio, si quien llama lo quiere:
+    // un tema o un subtema recién creados tienen que verse para poder llevar
+    // lecciones a ellos. Solo los que están vacíos de verdad --[showEmpty]--,
+    // no los que vacía un filtro: con el bloque de problemas puesto, un
+    // subtema que solo tiene teoría no es un sitio vacío, es otro sitio.
+    if (declared != null && showEmpty != null) {
+      for (final category in declared('')) {
+        if (showEmpty(category)) grouped.putIfAbsent(category, () => {});
+        if (!grouped.containsKey(category)) continue;
+        for (final topic in declared(category)) {
+          final key = '$category/$topic';
+          if (showEmpty(key)) grouped[category]!.putIfAbsent(topic, () => {});
+          final subs = grouped[category]![topic];
+          if (subs == null) continue;
+          for (final subtopic in declared(key)) {
+            if (showEmpty('$key/$subtopic')) {
+              subs.putIfAbsent(subtopic, () => []);
+            }
+          }
+        }
+      }
     }
 
     final nodes = <CategoryNode>[];
@@ -271,19 +348,47 @@ class LibraryTree {
       final topics = <TopicNode>[];
       final categoryUnits = <Unit>[];
       for (final topic in entry.value.entries) {
-        final sorted = [...topic.value]
-          ..sort((a, b) => a.path.compareTo(b.path));
+        final topicKey = '${entry.key}/${topic.key}';
+        final subtopics = <SubtopicNode>[];
+        final topicUnits = <Unit>[];
+        for (final subtopic in topic.value.entries) {
+          final sorted = [...subtopic.value]
+            ..sort((a, b) => a.path.compareTo(b.path));
+          subtopics.add(
+            SubtopicNode(
+              category: entry.key,
+              topic: topic.key,
+              subtopic: subtopic.key,
+              units: sorted,
+              title: subtopic.key.isEmpty
+                  ? null
+                  : titleOf?.call('$topicKey/${subtopic.key}'),
+            ),
+          );
+          topicUnits.addAll(sorted);
+        }
+        _order(
+          subtopics,
+          declared?.call(topicKey),
+          (node) => (node.count, node.subtopic),
+        );
+        topicUnits.sort((a, b) => a.path.compareTo(b.path));
         topics.add(
           TopicNode(
             category: entry.key,
             topic: topic.key,
-            units: sorted,
-            title: titleOf?.call('${entry.key}/${topic.key}'),
+            units: topicUnits,
+            subtopics: subtopics,
+            title: titleOf?.call(topicKey),
           ),
         );
-        categoryUnits.addAll(sorted);
+        categoryUnits.addAll(topicUnits);
       }
-      topics.sort(_bySizeThenName((node) => (node.count, node.topic)));
+      _order(
+        topics,
+        declared?.call(entry.key),
+        (node) => (node.count, node.topic),
+      );
       categoryUnits.sort((a, b) => a.path.compareTo(b.path));
       nodes.add(
         CategoryNode(
@@ -294,9 +399,33 @@ class LibraryTree {
         ),
       );
     }
-    nodes.sort(_bySizeThenName((node) => (node.count, node.category)));
+    _order(nodes, declared?.call(''), (node) => (node.count, node.category));
 
     return LibraryTree(categories: nodes, byPath: byPath);
+  }
+
+  /// Lo declarado, en el orden de la declaración, que es el de la
+  /// asignatura: la recta real antes que las sucesiones, aunque las
+  /// sucesiones tengan más. Lo que no declara nadie va detrás, de mayor a
+  /// menor, que es lo que se hacía con todo antes de que hubiera orden.
+  static void _order<T>(
+    List<T> nodes,
+    List<String>? declared,
+    (int, String) Function(T) key,
+  ) {
+    final position = {
+      for (final (index, id) in (declared ?? const <String>[]).indexed)
+        id: index,
+    };
+    final bySize = _bySizeThenName(key);
+    nodes.sort((a, b) {
+      final left = position[key(a).$2];
+      final right = position[key(b).$2];
+      if (left != null && right != null) return left.compareTo(right);
+      if (left != null) return -1;
+      if (right != null) return 1;
+      return bySize(a, b);
+    });
   }
 
   /// Largest first, then alphabetically so the order is stable rather than
@@ -309,9 +438,9 @@ class LibraryTree {
         return bySize != 0 ? bySize : left.$2.compareTo(right.$2);
       };
 
-  /// Ordered by size, largest first. Fifty-one categories in alphabetical
-  /// order buries the ones being taught; ordering by how much is in them puts
-  /// the working material at the top.
+  /// En el orden de la taxonomía; sin ella, de mayor a menor. Fifty-one
+  /// categories in alphabetical order buries the ones being taught; ordering
+  /// by how much is in them puts the working material at the top.
   final List<CategoryNode> categories;
 
   /// Every unit by path, so a selection survives a catalogue reload without
@@ -344,6 +473,9 @@ class LibraryTree {
 
   TopicNode? topic(String category, String name) =>
       this.category(category)?.topic(name);
+
+  SubtopicNode? subtopic(String category, String topic, String name) =>
+      this.topic(category, topic)?.subtopic(name);
 }
 
 /// A slug as something worth reading.

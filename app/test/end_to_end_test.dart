@@ -524,44 +524,51 @@ void main() {
     expect(said, isNot(contains('$source/')));
   });
 
-  test('mover una lección reescribe lo que la usa, en un commit', () async {
-    // `convergencia` está en la composición de Series. Al moverla, Series la
-    // sigue encontrando, y el commit lleva la carpeta y la composición
-    // juntas: separados, el primero dejaría el repositorio roto.
-    final session = await openSession();
-    const before = 'content/analisis/series/convergencia';
-    const after = 'content/analisis/sucesiones/convergencia-de-series';
-    final id = session.unitByPath(before, repo: 'test/repo')!.id;
+  test(
+    'mover una lección: la composición la nombra por su id, en un commit',
+    () async {
+      // `convergencia` está en la composición de Series, por su ruta, como se
+      // escribía antes. Al moverla, Series pasa a nombrarla por su id estable
+      // --que no cambiará en la próxima-- y el commit lleva la carpeta y la
+      // composición juntas: separados, el primero dejaría el repositorio roto.
+      final session = await openSession();
+      const before = 'content/analisis/series/convergencia';
+      const after = 'content/analisis/sucesiones/teoria/convergencia-de-series';
 
-    await session
-        .admin(repo: 'test/repo')!
-        .moveUnit(
-          unit: before,
-          to: 'analisis/sucesiones/convergencia-de-series',
-          title: 'convergencia',
-        );
-    await session.reloadCatalogue();
+      await session
+          .admin(repo: 'test/repo')!
+          .moveUnit(
+            unit: before,
+            to: 'analisis/sucesiones/teoria/convergencia-de-series',
+            title: 'convergencia',
+          );
+      await session.reloadCatalogue();
 
-    expect(session.unitByPath(before, repo: 'test/repo'), isNull);
-    final moved = session.unitByPath(after, repo: 'test/repo');
-    expect(moved, isNotNull);
-    expect(moved!.id, id);
-    expect(
-      File('$work/courses/analisis/2025-2026/year.yaml').readAsStringSync(),
-      contains('- unit: analisis/sucesiones/convergencia-de-series'),
-    );
-    expect(
-      File('$work/courses/analisis/2025-2026/series.tex').readAsStringSync(),
-      contains('analisis/sucesiones/convergencia-de-series'),
-    );
+      expect(session.unitByPath(before, repo: 'test/repo'), isNull);
+      final moved = session.unitByPath(after, repo: 'test/repo');
+      expect(moved, isNotNull);
+      expect(moved!.id, startsWith('u-'));
+      expect(
+        (moved.category, moved.topic, moved.subtopic),
+        ('analisis', 'sucesiones', 'teoria'),
+      );
+      expect(
+        File('$work/courses/analisis/2025-2026/year.yaml').readAsStringSync(),
+        contains('- unit: ${moved.id}'),
+      );
+      expect(
+        File('$work/courses/analisis/2025-2026/series.tex').readAsStringSync(),
+        contains('\\DidactaUnit{${moved.id}}'),
+      );
 
-    final status = await git(['status', '--porcelain']);
-    expect(status, isEmpty, reason: 'todo va en el commit');
-    final log = await git(['log', '-1', '--pretty=%s', '--name-status']);
-    expect(log, contains('Mover la lección «convergencia»'));
-    expect(log, contains('courses/analisis/2025-2026/year.yaml'));
-    expect(log, contains('$after/es.tex'));
-  });
+      final status = await git(['status', '--porcelain']);
+      expect(status, isEmpty, reason: 'todo va en el commit');
+      final log = await git(['log', '-1', '--pretty=%s', '--name-status']);
+      expect(log, contains('Mover la lección «convergencia»'));
+      expect(log, contains('courses/analisis/2025-2026/year.yaml'));
+      expect(log, contains('$after/es.tex'));
+    },
+  );
 
   test('guardar una composición lleva el índice en el mismo commit', () async {
     // Lo que hace el editor de composición al pulsar Guardar: `save` y

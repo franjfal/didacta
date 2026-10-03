@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "leccion",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "acciones": [
         {
           "esperar": 8
@@ -13,7 +13,7 @@
           "texto": "Límite de una función en un punto"
         },
         "ruta": {
-          "texto": "content/calculo/limites/definicion-de-limite"
+          "texto": "content/calculo/limites/concepto-de-limite/definicion-de-limite"
         },
         "castellano": {
           "texto": "Castellano",
@@ -62,7 +62,7 @@
     },
     {
       "nombre": "problema",
-      "ruta": "/unit/problems/calculo/continuidad/discontinuidades-evitables",
+      "ruta": "/unit/problems/calculo/continuidad/funciones-continuas/discontinuidades-evitables",
       "acciones": [
         {
           "esperar": 8

@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "campos",
-      "ruta": "/unit/problems/calculo/continuidad/tres-raices-por-bolzano",
+      "ruta": "/unit/problems/calculo/continuidad/bolzano/tres-raices-por-bolzano",
       "acciones": [{"esperar": 10}],
       "cajas": {
         "titulo": {"texto": "Tres raíces con el teorema de Bolzano", "n": 0},
@@ -15,7 +15,7 @@
     },
     {
       "nombre": "latex",
-      "ruta": "/unit/problems/calculo/continuidad/tres-raices-por-bolzano",
+      "ruta": "/unit/problems/calculo/continuidad/bolzano/tres-raices-por-bolzano",
       "acciones": [
         {"esperar": 8},
         {"pulsar": {"texto": "LaTeX", "n": 0}, "esperar": 10}

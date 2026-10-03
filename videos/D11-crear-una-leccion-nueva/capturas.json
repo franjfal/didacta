@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "creada",
-      "ruta": "/?en=calculo/continuidad",
+      "ruta": "/?en=calculo/continuidad/funciones-continuas",
       "acciones": [
         {
           "esperar": 10
@@ -15,7 +15,7 @@
                 "clave": "library-new-unit"
               },
               "continuidad": {
-                "texto": "Continuidad",
+                "texto": "Funciones continuas",
                 "n": 1,
                 "fila": 150
               }
@@ -43,8 +43,14 @@
               "titulo": {
                 "clave": "new-unit-title"
               },
-              "tema": {
-                "clave": "new-unit-topic"
+              "sitio": {
+                "clave": "new-unit-place"
+              },
+              "subtema": {
+                "clave": "place-funciones-continuas"
+              },
+              "nuevo_subtema": {
+                "clave": "place-add-subtema"
               },
               "tipo": {
                 "clave": "new-unit-kind"

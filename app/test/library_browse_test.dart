@@ -27,12 +27,13 @@ Future<void> settle(WidgetTester tester) async {
 Future<void> pumpLibrary(
   WidgetTester tester, {
   Size size = const Size(1400, 1000),
+  List<Map<String, dynamic>>? units,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  final catalogue = catalogueWith(defaultUnits());
+  final catalogue = catalogueWith(units ?? defaultUnits());
   final session = FakeSession(
     gatewayOverride: FakeGateway(),
     catalogue: catalogue,
@@ -209,90 +210,117 @@ void main() {
 
     await tester.tap(find.text('Normed'));
     await settle(tester);
+    // Los subtemas; sin ninguno declarado, el suyo es «Sin subtema».
+    await tester.tap(find.text('Sin subtema'));
+    await settle(tester);
     expect(find.text('Espacios normados'), findsWidgets);
   });
 
-  group('las etiquetas, encima de la lista', () {
-    // El nivel que faltaba: categoría, tema, etiqueta, ficheros. Apareció al
-    // colapsar los seis temas de la práctica en uno --«la recta real»--, que
-    // dejó el segundo nivel del árbol sin nada dentro.
+  group('los subtemas, en su columna', () {
+    // El tercer nivel: categoría, tema, subtema, lecciones. Antes eran
+    // etiquetas en fichas encima de la lista; ahora cada lección está en uno
+    // solo, que es también su carpeta, y es una columna como las otras.
+    List<Map<String, dynamic>> units() => [
+      unitJson(
+        path: 'content/analysis/normed/conceptos/definition',
+        subtopic: 'conceptos',
+      ),
+      unitJson(
+        path: 'content/analysis/normed/conceptos/banach',
+        subtopic: 'conceptos',
+        title: const {'es': 'Espacios de Banach'},
+      ),
+      unitJson(
+        path: 'problems/analysis/normed/ejercicios/exercises',
+        area: 'problems',
+        kind: 'problem',
+        subtopic: 'ejercicios',
+        title: const {'es': 'Ejercicios de normas'},
+      ),
+      unitJson(
+        path: 'content/algebra/matrices/rango/rank',
+        category: 'algebra',
+        topic: 'matrices',
+        subtopic: 'rango',
+        title: const {'es': 'El rango'},
+      ),
+    ];
 
     Future<void> entrarEnElTema(WidgetTester tester) async {
-      await pumpLibrary(tester);
+      await pumpLibrary(tester, units: units());
       await tester.tap(find.text('Analysis').first);
       await settle(tester);
       await tester.tap(find.text('Normed').first);
       await settle(tester);
     }
 
-    testWidgets('salen con su cuenta, y de mayor a menor', (tester) async {
+    testWidgets('salen en una columna, con su cuenta', (tester) async {
       await entrarEnElTema(tester);
-
-      expect(find.text('Etiquetas'), findsOneWidget);
-      // Dos unidades llevan `norma` y `banach`; una, `ejercicios`.
-      expect(find.text('Norma · 2'), findsOneWidget);
-      expect(find.text('Banach · 2'), findsOneWidget);
-      expect(find.text('Ejercicios · 1'), findsOneWidget);
+      expect(find.text('2 SUBTEMAS'), findsOneWidget);
+      expect(find.byKey(const Key('subtopic-conceptos')), findsOneWidget);
+      expect(find.byKey(const Key('subtopic-ejercicios')), findsOneWidget);
+      // Sin elegir ninguno no hay lista, como en el Finder: la derecha dice
+      // que falta el subtema.
+      expect(find.text('Ejercicios de normas'), findsNothing);
+      expect(find.byKey(const Key('library-choose-subtopic')), findsOneWidget);
     });
 
-    testWidgets('elegir una deja solo sus ficheros', (tester) async {
+    testWidgets('elegir uno deja solo sus lecciones', (tester) async {
       await entrarEnElTema(tester);
-      expect(find.text('Ejercicios de normas'), findsWidgets);
-
-      await tester.tap(find.byKey(const Key('tag-norma')));
+      await tester.tap(find.byKey(const Key('subtopic-conceptos')));
       await settle(tester);
 
-      // Las dos que la llevan se quedan; la que no, se va.
       expect(find.text('Espacios normados'), findsWidgets);
       expect(find.text('Espacios de Banach'), findsWidgets);
       expect(find.text('Ejercicios de normas'), findsNothing);
-      // Y la cuenta del grupo dice lo que se está viendo, no lo que había.
       expect(find.text('2 unidades'), findsOneWidget);
     });
 
-    testWidgets('volver a pulsarla la quita', (tester) async {
-      // Es el gesto que todo el mundo intenta; sin él hace falta buscar una
-      // equis en alguna parte.
-      await entrarEnElTema(tester);
-      await tester.tap(find.byKey(const Key('tag-norma')));
-      await settle(tester);
-      expect(find.text('Ejercicios de normas'), findsNothing);
-
-      await tester.tap(find.byKey(const Key('tag-norma')));
-      await settle(tester);
-      expect(find.text('Ejercicios de normas'), findsWidgets);
-    });
-
-    testWidgets('la etiqueta es un nivel más de las migas de pan', (
+    testWidgets('el subtema es un nivel más de las migas de pan', (
       tester,
     ) async {
       await entrarEnElTema(tester);
-      await tester.tap(find.byKey(const Key('tag-norma')));
+      await tester.tap(find.byKey(const Key('subtopic-conceptos')));
       await settle(tester);
 
-      // Categoría, tema y etiqueta, y el tema vuelve a ser pulsable para
-      // salir de la etiqueta sin salir del tema.
-      expect(find.byKey(const Key('crumb-tag')), findsOneWidget);
+      // Y el tema vuelve a ser pulsable para salir del subtema sin salir del
+      // tema.
+      expect(find.byKey(const Key('crumb-subtopic')), findsOneWidget);
       await tester.tap(find.byKey(const Key('crumb-topic')));
       await settle(tester);
-      expect(find.text('Ejercicios de normas'), findsWidgets);
+      expect(find.text('Espacios de Banach'), findsNothing);
+      expect(find.byKey(const Key('library-choose-subtopic')), findsOneWidget);
     });
 
-    testWidgets('cambiar de tema empieza sin etiqueta', (tester) async {
-      // Las etiquetas de un tema no son las del anterior, y arrastrar la
-      // elegida daría una lista vacía sin decir por qué.
+    testWidgets('cambiar de tema empieza sin subtema', (tester) async {
       await entrarEnElTema(tester);
-      await tester.tap(find.byKey(const Key('tag-norma')));
+      await tester.tap(find.byKey(const Key('subtopic-conceptos')));
       await settle(tester);
 
-      await tester.tap(find.text('Biblioteca').first);
+      await tester.tap(find.text('Algebra').first);
       await settle(tester);
+      await tester.tap(find.text('Matrices').first);
+      await settle(tester);
+      expect(find.byKey(const Key('subtopic-rango')), findsOneWidget);
+      expect(find.text('El rango'), findsNothing);
+      await tester.tap(find.byKey(const Key('subtopic-rango')));
+      await settle(tester);
+      expect(find.text('El rango'), findsWidgets);
+    });
+
+    testWidgets('en una ventana mediana, las columnas de la izquierda se van', (
+      tester,
+    ) async {
+      // Como el Finder: con un tema elegido no caben las cuatro, y las
+      // categorías dejan sitio; las migas de pan dicen dónde se está.
+      await pumpLibrary(tester, units: units(), size: const Size(900, 900));
       await tester.tap(find.text('Analysis').first);
       await settle(tester);
       await tester.tap(find.text('Normed').first);
       await settle(tester);
-
-      expect(find.text('Ejercicios de normas'), findsWidgets);
+      expect(find.text('2 CATEGORÍAS'), findsNothing);
+      expect(find.text('2 SUBTEMAS'), findsOneWidget);
+      expect(find.byKey(const Key('crumb-category')), findsOneWidget);
     });
   });
 }
@@ -308,6 +336,12 @@ void testWidegtsBajar() {
     expect(find.text('Normed'), findsWidgets);
 
     await tester.tap(find.text('Normed').first);
+    await settle(tester);
+    // Con el tema elegido todavía no hay lista: falta el subtema.
+    expect(find.text('Espacios de Banach'), findsNothing);
+    expect(find.byKey(const Key('library-choose-subtopic')), findsOneWidget);
+    // Sin subtemas declarados, el suyo es «Sin subtema».
+    await tester.tap(find.text('Sin subtema'));
     await settle(tester);
     // Y sus unidades, con la teoría y sus ejercicios juntos.
     expect(find.text('Espacios normados'), findsWidgets);
@@ -357,6 +391,8 @@ void testWidegtsBajar() {
       await tester.tap(find.text('Analysis').first);
       await settle(tester);
       await tester.tap(find.text('Normed').first);
+      await settle(tester);
+      await tester.tap(find.text('Sin subtema'));
       await settle(tester);
 
       double top(String title) => tester.getTopLeft(find.text(title).last).dy;

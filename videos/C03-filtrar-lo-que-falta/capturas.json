@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "menu",
-      "ruta": "/?en=calculo/limites",
+      "ruta": "/?en=calculo/limites/concepto-de-limite",
       "idioma": "en",
       "acciones": [
         {
@@ -29,7 +29,8 @@
                 "fila": 150
               },
               "lecciones": {
-                "texto": "5 unidades",
+                "texto": "3 unidades",
+                "n": 0,
                 "alto": 380
               },
               "idioma": {
@@ -61,7 +62,7 @@
     },
     {
       "nombre": "falta",
-      "ruta": "/?en=calculo/limites&estado=falta",
+      "ruta": "/?en=calculo/limites/concepto-de-limite&estado=falta",
       "idioma": "en",
       "acciones": [
         {
@@ -98,7 +99,7 @@
     },
     {
       "nombre": "tipo",
-      "ruta": "/?en=calculo/limites&estado=falta",
+      "ruta": "/?en=calculo/limites/concepto-de-limite&estado=falta",
       "idioma": "en",
       "acciones": [
         {
@@ -123,7 +124,7 @@
     },
     {
       "nombre": "bloque",
-      "ruta": "/?en=calculo&bloque=problems",
+      "ruta": "/?en=calculo/limites/calculo-de-limites&bloque=problems",
       "idioma": "en",
       "acciones": [
         {
@@ -139,16 +140,12 @@
         "problemas": {
           "contiene": "Proble",
           "n": 0
-        },
-        "etiquetas": {
-          "texto": "Etiquetas",
-          "fila": 500
         }
       }
     },
     {
       "nombre": "orden",
-      "ruta": "/?en=calculo/limites",
+      "ruta": "/?en=calculo/limites/concepto-de-limite",
       "idioma": "en",
       "acciones": [
         {

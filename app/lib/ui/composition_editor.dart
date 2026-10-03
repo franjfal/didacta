@@ -20,7 +20,7 @@ import 'package:go_router/go_router.dart';
 import '../data/content_gateway.dart';
 import '../model/catalogue.dart';
 import '../model/composition_file.dart';
-import '../model/path_tree.dart';
+import '../model/library_tree.dart';
 import '../model/line_diff.dart';
 import '../model/library_filter.dart';
 import '../router.dart';
@@ -30,6 +30,7 @@ import 'save_review.dart';
 import 'document_links.dart';
 import 'heading_title.dart';
 import 'new_unit.dart';
+import 'place_browser.dart';
 import 'save_shortcut.dart';
 import 'theme.dart';
 import '../l10n/tr.dart';
@@ -959,12 +960,16 @@ class _Reference extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 2),
+            // Su sitio en la biblioteca; lo escrito --el id-- solo cuando no
+            // se encuentra, que es cuando sirve para saber qué falta.
             Text(
-              entry.value,
+              unit == null
+                  ? entry.value
+                  : unitPlace(session.catalogue, unit!, session.language),
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 11,
-                fontFamily: 'monospace',
+                fontFamily: unit == null ? 'monospace' : null,
                 color: context.palette.muted,
               ),
             ),
@@ -1126,20 +1131,19 @@ Future<List<Unit>> pickUnits(
   return chosen ?? const [];
 }
 
-/// Picking a unit to add: the library, filtered by typing.
-/// Elegir unidades para un documento: por carpetas o buscando.
+/// Elegir unidades para un documento: por las columnas de la biblioteca o
+/// buscando.
 ///
 /// Dos formas porque son dos preguntas distintas. El buscador responde a «sé
-/// cómo se llama»; el árbol, a «sé dónde la dejé», que es lo que pasa cuando
-/// se prepara un tema y se quiere ver **qué hay** en una carpeta antes de
-/// elegir. Sin árbol, la única manera de ver lo que tiene `analysis/normed`
-/// era acertar con la palabra.
+/// cómo se llama»; las columnas, a «sé dónde la dejé», que es lo que pasa
+/// cuando se prepara un tema y se quiere ver **qué hay** en un subtema antes
+/// de elegir.
 ///
-/// Empieza todo cerrado y con las áreas del disco arriba --`content/` y
-/// `problems/`-- porque es la estructura que alguien tiene en la cabeza. En
-/// cuanto se escribe algo, el árbol deja sitio a los resultados, y al borrar
-/// vuelve; es lo mismo que hace la biblioteca, así que no hay un modo nuevo
-/// que aprender.
+/// Las columnas son las de la biblioteca --categoría, tema, subtema-- y no las
+/// carpetas del disco, porque es la misma organización y es la que alguien
+/// tiene en la cabeza: lo que ve al explorar es lo que encuentra al componer.
+/// En cuanto se escribe algo, las columnas dejan sitio a los resultados, y al
+/// borrar vuelven.
 ///
 /// Y se eligen **varias**: preparar un tema es añadir cinco lecciones
 /// seguidas, y hacerlo de una en una son cinco veces abrir el diálogo,
@@ -1173,8 +1177,8 @@ class UnitPicker extends StatefulWidget {
 class _UnitPickerState extends State<UnitPicker> {
   final TextEditingController _query = TextEditingController();
 
-  /// Las carpetas abiertas. Vacío es todo cerrado, que es como empieza.
-  final Set<String> _open = {};
+  /// El sitio que se mira en las columnas: de cero a tres niveles.
+  late Place _place = _likelyPlace;
 
   /// Lo elegido, por ruta y en el orden en que se fue eligiendo: es el orden
   /// en que se van a añadir, y alfabetizarlo por detrás sería decidir por
@@ -1187,8 +1191,6 @@ class _UnitPickerState extends State<UnitPicker> {
       if (unit.repo == widget.repo) unit,
   ];
 
-  late final PathNode _tree = buildPathTree(_units);
-
   @override
   void dispose() {
     _query.dispose();
@@ -1197,27 +1199,44 @@ class _UnitPickerState extends State<UnitPicker> {
 
   bool _isChosen(Unit unit) => _chosen.any((u) => u.path == unit.path);
 
-  /// La categoría que más sale en lo que ya lleva el documento: es la que
-  /// casi siempre tiene la lección que falta.
-  String get _likelyCategory {
+  /// Las que ya están en el documento, por su carpeta: lo escrito puede ser
+  /// el id o, en lo de antes, la ruta, y las dos nombran la misma lección.
+  late final Set<String> _present = {
+    for (final reference in widget.already)
+      ?widget.session.catalogue
+          .unitByReference(reference, repo: widget.repo)
+          ?.path,
+  };
+
+  /// El tema que más sale en lo que ya lleva el documento: es el que casi
+  /// siempre tiene la lección que falta, y donde se abren las columnas.
+  Place get _likelyPlace {
     final counts = <String, int>{};
     for (final reference in widget.already) {
-      final category = reference.split('/').first;
-      if (category.isEmpty) continue;
-      counts[category] = (counts[category] ?? 0) + 1;
+      final unit = widget.session.catalogue.unitByReference(
+        reference,
+        repo: widget.repo,
+      );
+      if (unit == null || unit.topic.isEmpty) continue;
+      final key = '${unit.category}/${unit.topic}';
+      counts[key] = (counts[key] ?? 0) + 1;
     }
-    if (counts.isEmpty) return '';
-    return counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    if (counts.isEmpty) return const [];
+    return counts.entries
+        .reduce((a, b) => a.value >= b.value ? a : b)
+        .key
+        .split('/');
   }
 
   Future<void> _createAndAdd() async {
     final created = await createUnitFrom(
       context,
       widget.session,
-      category: _likelyCategory,
+      category: _place.isNotEmpty ? _place[0] : '',
+      topic: _place.length > 1 ? _place[1] : null,
+      subtopic: _place.length > 2 ? _place[2] : null,
       open: false,
       onlyIn: widget.repo,
-      askCategory: true,
     );
     if (created == null || !mounted) return;
     final unit = widget.session.unitByPath(created, repo: widget.repo);
@@ -1251,8 +1270,8 @@ class _UnitPickerState extends State<UnitPicker> {
     return AlertDialog(
       title: Text(tr('Añadir unidades')),
       content: SizedBox(
-        width: 620,
-        height: 520,
+        width: 760,
+        height: 600,
         child: Column(
           children: [
             TextField(
@@ -1279,14 +1298,24 @@ class _UnitPickerState extends State<UnitPicker> {
               alignment: Alignment.centerLeft,
               child: Text(
                 searching
-                    ? tr('{0} de {1}', [matches.length, _tree.count])
-                    : tr('Carpetas del repositorio · {0} unidades', [
-                        _tree.count,
+                    ? tr('{0} de {1}', [matches.length, _units.length])
+                    : tr('La biblioteca de este repositorio · {0} unidades', [
+                        _units.length,
                       ]),
                 style: TextStyle(fontSize: 11.5, color: context.palette.muted),
               ),
             ),
             const SizedBox(height: 4),
+            if (!searching) ...[
+              PlaceBrowser(
+                key: const Key('picker-places'),
+                session: widget.session,
+                place: _place,
+                onChanged: (next) => setState(() => _place = next),
+                height: 220,
+              ),
+              const SizedBox(height: 8),
+            ],
             Expanded(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -1298,7 +1327,7 @@ class _UnitPickerState extends State<UnitPicker> {
                   borderRadius: BorderRadius.circular(Radii.control),
                   child: searching
                       ? _results(matches, language)
-                      : _folders(language),
+                      : _inPlace(language),
                 ),
               ),
             ),
@@ -1394,94 +1423,88 @@ class _UnitPickerState extends State<UnitPicker> {
     );
   }
 
-  /// El árbol, aplanado a la lista de lo que está abierto.
-  ///
-  /// Aplanado y no anidado a propósito: con dos mil unidades, construir
-  /// widgets de todo el árbol para enseñar tres carpetas abiertas es trabajo
-  /// tirado, y un `ListView.builder` sobre una lista plana solo construye lo
-  /// que se ve.
-  Widget _folders(String language) {
+  /// Las lecciones del sitio elegido en las columnas, de este repositorio,
+  /// agrupadas por el nivel de debajo: por tema en una categoría, por subtema
+  /// en un tema, y solas en un subtema.
+  Widget _inPlace(String language) {
+    if (_place.isEmpty) {
+      return Center(
+        child: Text(
+          tr(
+            'Elige una categoría, un tema y un subtema para ver sus lecciones.',
+          ),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 13, color: context.palette.muted),
+        ),
+      );
+    }
+    final tree = placeTree(widget.session.catalogue, language);
+    final prefix = '${placeKey(_place)}/';
+    final inside = [
+      for (final unit in _units)
+        if ('${unit.place}/'.startsWith(prefix)) unit,
+    ];
     final rows = <Widget>[];
-
-    void walk(PathNode node, int depth) {
-      for (final child in node.children) {
-        final open = _open.contains(child.path);
-        rows.add(_folderRow(child, depth, open));
-        if (open) walk(child, depth + 1);
+    if (_place.length == 3) {
+      for (final unit in LibraryFilter(language: language).apply(inside)) {
+        rows.add(_unitRow(unit, language, indent: 0));
       }
-      if (_open.contains(node.path) || depth == 0) {
-        for (final unit in node.units(language)) {
-          rows.add(_unitRow(unit, language, indent: depth));
+    } else {
+      // Por el nivel de debajo, en el orden de las columnas.
+      final category = tree.category(_place[0]);
+      final groups = _place.length == 1
+          ? [
+              for (final topic in category?.topics ?? const <TopicNode>[])
+                (topic.topic, topic.label),
+            ]
+          : [
+              // Con el «Sin subtema» de las que no tienen ninguno, que si no
+              // se quedarían sin sitio donde verlas.
+              for (final subtopic
+                  in category?.topic(_place[1])?.subtopics ??
+                      const <SubtopicNode>[])
+                (subtopic.subtopic, subtopic.label),
+            ];
+      final level = _place.length;
+      for (final (id, label) in groups) {
+        final members = LibraryFilter(language: language).apply([
+          for (final unit in inside)
+            if ((unit.place.split('/').length > level
+                    ? unit.place.split('/')[level]
+                    : '') ==
+                id)
+              unit,
+        ]);
+        if (members.isEmpty) continue;
+        rows.add(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        );
+        for (final unit in members) {
+          rows.add(_unitRow(unit, language, indent: 0));
         }
       }
     }
-
-    walk(_tree, 0);
+    if (rows.isEmpty) {
+      return Center(
+        child: Text(
+          tr('Aquí no hay lecciones de este repositorio.'),
+          style: TextStyle(fontSize: 13, color: context.palette.muted),
+        ),
+      );
+    }
     return ListView.builder(
       padding: EdgeInsets.zero,
       itemCount: rows.length,
       itemBuilder: (context, index) => rows[index],
-    );
-  }
-
-  Widget _folderRow(PathNode node, int depth, bool open) {
-    // Cuántas de las de dentro están ya elegidas: al cerrar una carpeta hay
-    // que seguir viendo que algo se eligió ahí, o se pierde la cuenta.
-    final inside = node.everything('es');
-    final chosen = inside.where(_isChosen).length;
-
-    return Hoverable(
-      key: Key('folder-${node.path}'),
-      onTap: () => setState(() {
-        if (!_open.remove(node.path)) _open.add(node.path);
-      }),
-      builder: (context, hovering) => Container(
-        color: hovering ? context.palette.hover : null,
-        padding: EdgeInsets.fromLTRB(8.0 + depth * 16, 7, 10, 7),
-        child: Row(
-          children: [
-            Icon(
-              open ? Icons.keyboard_arrow_down : Icons.chevron_right,
-              size: 17,
-              color: context.palette.muted,
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              open ? Icons.folder_open : Icons.folder,
-              size: 15,
-              color: context.palette.accentDark.withValues(alpha: 0.75),
-            ),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                node.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (chosen > 0)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: Text(
-                  tr('{0} elegidas', [chosen]),
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: context.palette.accentDark,
-                  ),
-                ),
-              ),
-            Text(
-              '${node.count}',
-              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1493,7 +1516,7 @@ class _UnitPickerState extends State<UnitPicker> {
   }) {
     // Las que ya están se enseñan, no se esconden: saber que una unidad ya
     // está en el documento es la respuesta a «por qué no la encuentro».
-    final present = widget.already.contains(unit.reference_);
+    final present = _present.contains(unit.path);
     final chosen = _isChosen(unit);
 
     return Hoverable(

@@ -21,6 +21,7 @@ import '../model/library_filter.dart';
 import '../model/library_tree.dart' show humaniseSlug;
 import '../model/slug.dart';
 import '../state/session.dart';
+import 'place_browser.dart' show unitPlace;
 import 'theme.dart';
 import '../l10n/tr.dart';
 
@@ -141,18 +142,25 @@ class _ProblemSetDialogState extends State<ProblemSetDialog> {
       unit: examsWith(unit, widget.course, _language),
   };
 
-  static String _folderOf(Unit unit) {
-    final reference = unit.reference_;
-    final cut = reference.lastIndexOf('/');
-    return cut < 0 ? '' : reference.substring(0, cut);
-  }
+  /// Su sitio en la biblioteca: `categoría/tema/subtema`.
+  static String _folderOf(Unit unit) => unit.place;
 
   late final List<String> _folders = {
     for (final unit in _problems) _folderOf(unit),
   }.where((folder) => folder.isNotEmpty).toList()..sort();
 
-  static String _folderLabel(String folder) =>
-      folder.split('/').map(humaniseSlug).join(' › ');
+  /// «Álgebra › Matrices › Rango», con los nombres de la taxonomía.
+  String _folderLabel(String folder) {
+    final parts = folder.split('/');
+    return [
+      for (var depth = 1; depth <= parts.length; depth += 1)
+        widget.session.catalogue.taxonomyTitle(
+              parts.sublist(0, depth).join('/'),
+              _language,
+            ) ??
+            humaniseSlug(parts[depth - 1]),
+    ].join(' › ');
+  }
 
   /// De qué repositorio es lo elegido: el primero manda.
   String? get _repo => _chosen.isEmpty ? null : _chosen.first.repo;
@@ -478,7 +486,7 @@ class _ProblemSetDialogState extends State<ProblemSetDialog> {
                   'De otro repositorio: un documento y sus problemas viven en '
                   'el mismo.',
                 )
-              : unit.reference_,
+              : unitPlace(widget.session.catalogue, unit, _language),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(fontSize: 11, color: context.palette.muted),

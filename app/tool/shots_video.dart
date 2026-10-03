@@ -35,7 +35,8 @@ import 'dart:ui' as ui;
 // El de la plataforma, que es el que se sustituye; viene con file_selector.
 // ignore: depend_on_referenced_packages
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
-import 'package:flutter/gestures.dart' show PointerDeviceKind;
+import 'package:flutter/gestures.dart'
+    show PointerDeviceKind, kSecondaryMouseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -143,10 +144,24 @@ void main() {
     // El visor de PDF pide una carpeta temporal a `path_provider`, que en una
     // prueba no existe: la de esta ejecución, como en los tests del visor.
     final cache = Directory.systemTemp.createTempSync('didacta-pdfrx-');
+    // Los datos del programa --la carpeta de plantillas--, en la carpeta
+    // neutra si la hay: su ruta sale en Ajustes, y una de `/var/folders`
+    // con el nombre de quien graba no es lo que ve nadie. Vacía en cada
+    // ejecución: lo que guardó un vídeo no puede salir en el siguiente.
+    final support = neutral == null
+        ? cache
+        : (Directory('$neutral/Soporte')..createSync(recursive: true));
+    if (neutral != null) {
+      for (final old in support.listSync()) {
+        old.deleteSync(recursive: true);
+      }
+    }
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('plugins.flutter.io/path_provider'),
-          (call) async => cache.path,
+          (call) async => call.method == 'getApplicationSupportDirectory'
+              ? support.path
+              : cache.path,
         );
     // Los dibujos de la bienvenida son un `CustomPainter` y no heredan la
     // tipografía: sin esto, sus etiquetas salen como rectángulos negros.
@@ -443,6 +458,10 @@ void main() {
     // ignore: invalid_use_of_visible_for_testing_member
     await session.primeForTest(await source.load());
     await session.setCloneAuthor(name: 'Profe de Prueba', email: 'profe@uv.es');
+    // La carpeta de plantillas del programa, como la abre la aplicación al
+    // cargar el catálogo: sin ella no sale la casilla «programa» de cada
+    // plantilla. Va a la carpeta que da `path_provider` en el arnés.
+    await session.loadStoredTemplates();
     // Los ajustes no se leen de las preferencias en una sesión así: el Client
     // ID de la aplicación, dicho a mano.
     await session.setGithubClientId(didactaAppClientId);
@@ -994,7 +1013,16 @@ void main() {
       final index = what['ultimo'] == true
           ? finder.evaluate().length - 1
           : (what['n'] as num?)?.toInt() ?? 0;
-      await tester.tap(finder.at(index));
+      // `"secundario": true`: con el botón derecho, para un menú contextual.
+      if (what['secundario'] == true) {
+        await tester.tap(
+          finder.at(index),
+          buttons: kSecondaryMouseButton,
+          kind: PointerDeviceKind.mouse,
+        );
+      } else {
+        await tester.tap(finder.at(index));
+      }
       await settleReal(
         tester,
         rounds: (action['esperar'] as num?)?.toInt() ?? 10,
@@ -1149,6 +1177,49 @@ void main() {
       await settleReal(tester, rounds: 12);
     } else if (action['arrastrar'] case final Map drag) {
       await dragFrames(tester, drag.cast<String, dynamic>(), shot);
+    } else if (action['soltar'] case final Map drag) {
+      // Llevar algo hasta otra zona y soltarlo, como en el Finder: una
+      // lección hasta un subtema. `{"desde": {...}, "hasta": {...},
+      // "capturar": "nombre"}`, donde `capturar` es la foto de justo antes de
+      // soltar, con lo que se arrastra encima y el destino iluminado.
+      final from = finderFor((drag['desde'] as Map).cast<String, dynamic>());
+      final to = finderFor((drag['hasta'] as Map).cast<String, dynamic>());
+      if (from == null ||
+          from.evaluate().isEmpty ||
+          to == null ||
+          to.evaluate().isEmpty) {
+        stdout.writeln('    (no encuentro qué soltar o dónde: $drag)');
+        return;
+      }
+      final start = tester.getCenter(
+        from.at(((drag['desde'] as Map)['n'] as num?)?.toInt() ?? 0),
+      );
+      final end = tester.getCenter(to.first);
+      const step = Duration(milliseconds: 33);
+      final gesture = await tester.startGesture(
+        start,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pump(step);
+      const moves = 20;
+      for (var i = 1; i <= moves; i += 1) {
+        await gesture.moveTo(Offset.lerp(start, end, i / moves)!);
+        await tester.pump(step);
+      }
+      await tester.pump(const Duration(milliseconds: 200));
+      if (drag['capturar'] case final String name) {
+        await capture(tester, '$out/$name.png');
+        writeZones(
+          '$out/$name.json',
+          zones(tester, (drag['cajas'] as Map?)?.cast<String, dynamic>()),
+        );
+        stdout.writeln('  $name.png');
+      }
+      await gesture.up();
+      await settleReal(
+        tester,
+        rounds: (action['esperar'] as num?)?.toInt() ?? 10,
+      );
     } else if (action['desplazar_editor'] case final Map what) {
       await scrollEditor(tester, what.cast<String, dynamic>(), shot);
     } else if (action['capturar'] case final Map what) {

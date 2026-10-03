@@ -160,6 +160,13 @@ class Workspace {
     return Workspace([...rest, repo]);
   }
 
+  /// El mismo repositorio en otra carpeta, sin moverlo de su sitio en la
+  /// lista: el primero es el que se mira cuando hace falta solo uno.
+  Workspace relocated(String id, String directory) => Workspace([
+    for (final repo in repos)
+      if (repo.id == id) repo.copyWith(directory: directory) else repo,
+  ]);
+
   Workspace without(String id) => Workspace([
     for (final repo in repos)
       if (repo.id != id) repo,

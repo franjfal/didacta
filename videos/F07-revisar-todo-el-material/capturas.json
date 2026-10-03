@@ -6,7 +6,7 @@
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/continuidad/teorema-de-bolzano/es.tex",
+            "fichero": "content/calculo/continuidad/bolzano/teorema-de-bolzano/es.tex",
             "buscar": "tienen signos opuestos,",
             "poner": "tienen signos opuestos (ver la definición~\\ref{def:continua}), \\lgem",
             "mensaje": "Una referencia y una orden de otro idioma",
@@ -15,7 +15,7 @@
         },
         {
           "editar": {
-            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "fichero": "content/calculo/continuidad/funciones-continuas/funcion-continua/es.tex",
             "buscar": "\\begin{commonmistake}",
             "poner": "\\begin{center}\n\\includegraphics[width=.5\\textwidth,alt={El salto de la función de Heaviside}]{figures/salto}\n\\end{center}\n\n\\begin{commonmistake}",
             "mensaje": "Una figura que todavía no está",

@@ -316,6 +316,17 @@
               const c = puntero(t);
               c.ir(t - (p.viaje ?? 0.9), t, { zona: p.apunta, captura: p.captura, ax: p.ax, ay: p.ay });
             }
+            // Arrastrar algo hasta otra zona, como en el Finder: el puntero va
+            // a [desde], lo coge (la misma onda que un clic) y lo lleva hasta
+            // [hasta] en `dura` segundos. Lo de después lo enseña la captura
+            // que ponga el `cambia` del paso siguiente.
+            if (p.arrastra) {
+              const [de, a] = lista(p.arrastra);
+              const c = puntero(t);
+              c.ir(t - (p.viaje ?? 0.9), t - 0.05, { zona: de, captura: p.captura });
+              c.clic(t);
+              c.ir(t + 0.15, t + (p.dura ?? 1.3), { zona: a, captura: p.captura, ax: p.ax, ay: p.ay });
+            }
             if (p.resalta) {
               for (const z of lista(p.resalta)) {
                 E.resaltar(v, zonaDe(z, p), {

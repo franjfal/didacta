@@ -176,7 +176,7 @@
     },
     {
       "nombre": "leccion-dos",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "acciones": [
         {
           "esperar": 8

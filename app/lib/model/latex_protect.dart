@@ -53,6 +53,7 @@ const Set<String> prosaCommands = {
   'caption',
   'footnote',
   'didactatitle',
+  'slidetitle',
   'keyterm',
   'hl',
   'onlynotes',

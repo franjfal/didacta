@@ -10,10 +10,11 @@
 /// traducir, y la pantalla de traducciones los cuenta. Un idioma sin nombre se
 /// escribe comentado, nunca como cadena vacía.
 ///
-/// **Solo los bloques.** `taxonomy.yaml` declara también las categorías y sus
-/// temas, y este escritor no los toca: entra por la clave `blocks:` y sale por
-/// ella. Las categorías se editan en el fichero, que es donde están sus
-/// comentarios.
+/// Los bloques se editan enteros --nombre, plantillas, quitar--. De las
+/// categorías, los temas y los subtemas solo se **añade** ([declarePlace]),
+/// que es lo que hace falta para crearlos desde las columnas de la biblioteca:
+/// renombrarlos o quitarlos se sigue haciendo en el fichero, que es donde
+/// están sus comentarios.
 ///
 /// Solo el lado de escribir. Leer la taxonomía ya lo hace el motor al indexar,
 /// y tener dos lectores del mismo fichero es tener dos respuestas distintas a
@@ -258,6 +259,173 @@ class TaxonomyFile {
       final at = _lines.indexWhere((line) => _keyAt(line, 0) == 'blocks');
       if (at >= 0) _lines[at] = 'blocks: []';
     }
+  }
+
+  // -- categorías, temas y subtemas -----------------------------------------
+
+  /// Si declara este sitio de la biblioteca: `calculo`, `calculo/limites` o
+  /// `calculo/limites/concepto`.
+  bool declares(String key) {
+    final parts = key.split('/');
+    var region = _region('categories', 0, 0, _lines.length);
+    for (final (depth, id) in parts.indexed) {
+      if (region == null) return false;
+      final item = _item(region, id);
+      if (item == null) return false;
+      if (depth + 1 == parts.length) return true;
+      region = _region(
+        depth == 0 ? 'topics' : 'subtopics',
+        item.$3 + 2,
+        item.$1 + 1,
+        item.$2,
+      );
+    }
+    return false;
+  }
+
+  /// Declara un sitio de la biblioteca, y lo que le falte por encima.
+  ///
+  /// [titles] lleva el nombre por idioma de cada nivel, por su clave:
+  /// `{'calculo': {...}, 'calculo/limites': {...}, 'calculo/limites/x': {...}}`.
+  /// Lo que ya está declarado no se toca --ni su nombre--, así que llamarlo
+  /// dos veces es lo mismo que una. Lo nuevo va al final de su lista, que es
+  /// el orden en que se enseña; reordenar es cosa del fichero.
+  ///
+  /// Devuelve si ha cambiado algo.
+  bool declarePlace(
+    String key, {
+    required Map<String, Map<String, String>> titles,
+    required List<String> languages,
+  }) {
+    final parts = key.split('/');
+    if (parts.isEmpty || parts.length > 3 || parts.any((p) => p.isEmpty)) {
+      throw TaxonomyException(
+        tr('`{0}` no es un sitio de la biblioteca', [key]),
+      );
+    }
+    var changed = false;
+    // Dónde se busca cada nivel: la clave de su lista, su sangría y el tramo
+    // de líneas de su padre.
+    var listKey = 'categories';
+    var keyIndent = 0;
+    var from = 0;
+    var to = _lines.length;
+    for (final (depth, id) in parts.indexed) {
+      final here = parts.sublist(0, depth + 1).join('/');
+      var region = _region(listKey, keyIndent, from, to);
+      if (region == null) {
+        _insertList(listKey, keyIndent, from, to);
+        changed = true;
+        to += 1;
+        region = _region(listKey, keyIndent, from, to)!;
+      }
+      var item = _item(region, id);
+      if (item == null) {
+        final named = titles[here] ?? const <String, String>{};
+        final kept = <String, String>{
+          for (final entry in named.entries)
+            if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
+        };
+        if (kept.isEmpty) {
+          throw TaxonomyException(
+            tr('`{0}` necesita un nombre en algún idioma', [here]),
+          );
+        }
+        final pad = ' ' * (keyIndent + 2);
+        final written = <String>[
+          '$pad- id: $id',
+          '$pad  title:',
+          for (final entry in kept.entries)
+            '$pad    ${entry.key}: ${_quote(entry.value)}',
+          for (final code in languages)
+            if (!kept.containsKey(code)) '$pad    # TODO: $code',
+        ];
+        _lines.insertAll(region.$2, written);
+        changed = true;
+        item = _item(
+          _region(listKey, keyIndent, from, to + written.length)!,
+          id,
+        )!;
+      }
+      listKey = depth == 0 ? 'topics' : 'subtopics';
+      keyIndent = item.$3 + 2;
+      from = item.$1 + 1;
+      to = item.$2;
+    }
+    return changed;
+  }
+
+  /// La lista `key:` a esa sangría dentro de [from, to): la línea de la clave
+  /// y la línea siguiente a su último contenido (donde se añade). Null si no
+  /// está.
+  (int, int)? _region(String key, int indent, int from, int to) {
+    for (var i = from; i < to && i < _lines.length; i += 1) {
+      if (_keyAt(_lines[i], indent) != key) continue;
+      var last = i;
+      for (var j = i + 1; j < to && j < _lines.length; j += 1) {
+        final line = _lines[j];
+        final trimmed = line.trim();
+        if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+        if (_indentOf(line) <= indent) break;
+        last = j;
+      }
+      return (i, last + 1);
+    }
+    return null;
+  }
+
+  /// El elemento `- id: [id]` de una lista: su primera línea, la siguiente a
+  /// la última suya y su sangría.
+  (int, int, int)? _item((int, int) region, String id) {
+    int? itemIndent;
+    for (var i = region.$1 + 1; i < region.$2; i += 1) {
+      final line = _lines[i];
+      final trimmed = line.trimLeft();
+      if (trimmed.isEmpty || trimmed.startsWith('#')) continue;
+      if (!trimmed.startsWith('- ')) continue;
+      final indent = _indentOf(line);
+      itemIndent ??= indent;
+      if (indent != itemIndent) continue;
+      final match = _itemId.firstMatch(trimmed);
+      if (match == null) continue;
+      if (_unquote(_beforeComment(match.group(1)!).trim()) != id) continue;
+      var last = i;
+      for (var j = i + 1; j < region.$2; j += 1) {
+        final next = _lines[j];
+        final t = next.trim();
+        if (t.isEmpty || t.startsWith('#')) continue;
+        if (_indentOf(next) <= indent) break;
+        last = j;
+      }
+      return (i, last + 1, indent);
+    }
+    return null;
+  }
+
+  /// Escribe `key:` al final del tramo [from, to), detrás de su último
+  /// contenido. `categories: []` se queda como lista vacía hasta que se le
+  /// añade algo.
+  void _insertList(String key, int indent, int from, int to) {
+    // `categories: []` --o `topics: []`-- ya es la lista: se le quitan los
+    // corchetes y se escribe debajo.
+    for (var i = from; i < to && i < _lines.length; i += 1) {
+      if (_keyAt(_lines[i], indent) == key && _lines[i].contains('[')) {
+        _lines[i] = _lines[i].substring(0, _lines[i].indexOf(':') + 1);
+        return;
+      }
+    }
+    var at = to;
+    while (at > from && _lines[at - 1].trim().isEmpty) {
+      at -= 1;
+    }
+    if (indent == 0) {
+      // Una clave de arriba: con una línea en blanco delante, como las demás.
+      if (at > 0 && _lines[at - 1].trim().isNotEmpty) {
+        _lines.insert(at, '');
+        at += 1;
+      }
+    }
+    _lines.insert(at, '${' ' * indent}$key:');
   }
 
   // -- leer la estructura ---------------------------------------------------

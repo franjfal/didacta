@@ -610,6 +610,81 @@ class CatalogueEditor {
     await _reindexAfterTaxonomy(repo);
   }
 
+  // -- categorías, temas y subtemas ---------------------------------------
+
+  /// Declara un sitio de la biblioteca --una categoría, un tema o un
+  /// subtema-- en **todos** los repositorios abiertos en los que se puede
+  /// escribir, con lo que le falte por encima.
+  ///
+  /// En todos y no en uno: la teoría y los problemas de una asignatura viven
+  /// en dos, y los dos tienen que enseñar las mismas columnas. Si un subtema
+  /// nuevo se declarara solo en el de teoría, los problemas que se lleven a
+  /// él saldrían en uno con nombre y en otro con el id. Un commit en cada uno,
+  /// porque son historiales distintos.
+  ///
+  /// [titles] es el nombre por idioma del sitio nuevo. Los de los niveles de
+  /// encima, si a algún repositorio le faltan, se copian de lo que ya
+  /// declara el otro.
+  ///
+  /// Devuelve en cuántos repositorios se escribió.
+  Future<int> declarePlace({
+    required String key,
+    required Map<String, String> titles,
+  }) async {
+    final catalogue = session.catalogueOrNull;
+    final parts = key.split('/');
+    final named = <String, Map<String, String>>{
+      for (var depth = 1; depth < parts.length; depth += 1)
+        parts.sublist(0, depth).join('/'):
+            catalogue?.taxonomyTitles[parts.sublist(0, depth).join('/')] ??
+            {'es': parts[depth - 1]},
+      key: titles,
+    };
+
+    const where = 'taxonomy.yaml';
+    final written = <String>[];
+    for (final repo in session.workspace.repos) {
+      if (!session.canWriteIn(repo.id)) continue;
+      final gateway = session.gatewayFor(repo.id);
+      if (!gateway.canWrite) continue;
+
+      String text;
+      var sha = '';
+      try {
+        final file = await gateway.read(where);
+        text = file.text;
+        sha = file.sha;
+      } on ContentException catch (error) {
+        if (error.kind != ContentFailure.missing) rethrow;
+        text = emptyTaxonomyYaml;
+      }
+      final taxonomy = TaxonomyFile(text);
+      final changed = taxonomy.declarePlace(
+        key,
+        titles: named,
+        languages: catalogue?.languagesOf(repo.id) ?? const ['es'],
+      );
+      if (!changed) continue;
+
+      await gateway.save(
+        path: where,
+        text: taxonomy.text,
+        sha: sha,
+        message: switch (parts.length) {
+          1 => tr('Declarar la categoría {0}', [key]),
+          2 => tr('Declarar el tema {0}', [key]),
+          _ => tr('Declarar el subtema {0}', [key]),
+        },
+      );
+      written.add(repo.id);
+    }
+    for (final repo in written) {
+      await _reindexAfterTaxonomy(repo, reload: false);
+    }
+    if (written.isNotEmpty) await session.reloadCatalogue();
+    return written.length;
+  }
+
   /// Deja de declarar un bloque en un repositorio.
   ///
   /// Solo la declaración de ese repositorio: las lecciones que lo nombran
@@ -996,11 +1071,13 @@ class CatalogueEditor {
   /// Compila el snippet tal como está en la pantalla, sin guardarlo.
   ///
   /// En [repo] --o en el primero que haya-- porque el motor necesita un
-  /// repositorio donde dejar el PDF, y con su idioma de trabajo. Null si aquí
-  /// no se puede compilar: en la web, o sin motor.
+  /// repositorio donde dejar el PDF. En [language], o en el de trabajo: una
+  /// caja con el título traducido se mira idioma a idioma. Null si aquí no
+  /// se puede compilar: en la web, o sin motor.
   Future<SnippetPreview?> previewSnippet(
     LatexSnippet snippet, {
     String profile = 'notes',
+    String? language,
     String? repo,
     void Function(String line)? onOutput,
   }) async {
@@ -1017,7 +1094,7 @@ class CatalogueEditor {
         '-p',
         profile,
         '-l',
-        session.language,
+        language ?? session.language,
         '--json',
       ],
       allowFailure: true,
@@ -1189,10 +1266,11 @@ class CatalogueEditor {
 
   /// Declara una plantilla en un repositorio.
   ///
-  /// En **uno**: una plantilla es un fichero con su preámbulo, y declararla
-  /// en dos es tener dos versiones de la misma salida que pueden discrepar.
-  /// Los demás repositorios la usan sin declararla, que es lo que permite que
-  /// el bloque de teoría se compile con una plantilla del de problemas.
+  /// Uno basta para usarla en todos: los demás repositorios la nombran sin
+  /// declararla, que es lo que permite que el bloque de teoría se compile con
+  /// una plantilla del de problemas. Tenerla **también** en otro --para que
+  /// viaje con ese material, o para que no dependa de tener el primero
+  /// abierto-- es [addTemplateTo], que la copia tal como está.
   Future<void> declareTemplate({
     required String repo,
     required String id,
@@ -1201,6 +1279,7 @@ class CatalogueEditor {
     String classOptions = '',
     Map<String, String> axes = const {},
     String preamble = '',
+    bool active = true,
   }) async {
     const where = 'templates.yaml';
     final current = await _readTemplateFile(repo, where);
@@ -1246,6 +1325,7 @@ class CatalogueEditor {
       }
     }
     if (!templates.ids.contains(id)) addNew();
+    if (!active) templates.setActive(id, false);
 
     await _writeTemplateFile(
       repo,
@@ -1262,6 +1342,121 @@ class CatalogueEditor {
       await setTemplatePreamble(repo: repo, id: id, text: preamble);
     }
     await _afterTemplates(repo);
+  }
+
+  /// Declara también en [repo] una plantilla que ya está en otro sitio.
+  ///
+  /// Copiada entera --nombre, clase, ejes, si está encendida y su cabecera--
+  /// para que los dos digan lo mismo desde el primer día. A partir de ahí
+  /// cada edición se escribe en todos los que la declaran, y si alguna vez
+  /// discrepan lo dice «Entre repositorios».
+  ///
+  /// Con una de las que trae Didacta es lo mismo que editarla aquí: se
+  /// escribe con su id y desde entonces manda la del repositorio.
+  Future<void> addTemplateTo({required String repo, required String id}) async {
+    final template = session.catalogueOrNull?.templateNamed(id);
+    if (template == null) {
+      throw ArgumentError(tr('no hay ninguna plantilla {0}', [id]));
+    }
+    if (template.sources.containsKey(repo)) return;
+
+    // La cabecera del primero que la tenga: es un fichero aparte, y sin ella
+    // la copia compilaría distinto que el original.
+    var preamble = '';
+    if (template.hasPreamble) {
+      for (final from in template.sources.keys) {
+        preamble = await templatePreamble(repo: from, id: id);
+        if (preamble.trim().isNotEmpty) break;
+      }
+    }
+    await declareTemplate(
+      repo: repo,
+      id: id,
+      titles: template.titles,
+      documentClass: template.documentClass,
+      classOptions: template.classOptions,
+      axes: template.axes,
+      preamble: preamble,
+      active: template.active,
+    );
+  }
+
+  /// Deja de declarar una plantilla en [repo], y solo ahí.
+  ///
+  /// Los demás que la declaran siguen igual, así que lo que la nombra se
+  /// sigue compilando. Su cabecera se queda en el repositorio, por lo mismo
+  /// que en [removeTemplate].
+  Future<void> removeTemplateFrom({
+    required String repo,
+    required String id,
+  }) async {
+    const where = 'templates.yaml';
+    final current = await _readTemplateFile(repo, where);
+    if (current.isEmpty) return;
+    final templates = TemplatesFile(current);
+    if (!templates.ids.contains(id)) return;
+    templates.remove(id);
+    await _writeTemplateFile(
+      repo,
+      where,
+      templates.text,
+      tr('Quitar la plantilla {0}', [id]),
+    );
+    await _afterTemplates(repo);
+  }
+
+  /// Compila [unit] con una plantilla tal como está en la pantalla, sin
+  /// guardarla.
+  ///
+  /// Con su mismo id, así que si ya existe se ve la versión editada y no la
+  /// guardada. En el repositorio de la lección, que es donde el motor la
+  /// encuentra. Null si aquí no se puede compilar: en la web, o sin motor.
+  Future<SnippetPreview?> previewTemplate({
+    required Unit unit,
+    required String id,
+    required String documentClass,
+    String classOptions = '',
+    Map<String, String> axes = const {},
+    String preamble = '',
+    void Function(String line)? onOutput,
+  }) async {
+    final compiler = session.liveCompiler(repo: unit.repo);
+    if (compiler == null) return null;
+    final language = unit.statuses.containsKey(session.language)
+        ? session.language
+        : null;
+    final out = await compiler.run(
+      [
+        'template-preview',
+        unit.path,
+        if (id.trim().isNotEmpty) ...['--id', id.trim()],
+        '--class',
+        documentClass,
+        if (classOptions.trim().isNotEmpty) ...['--options', classOptions],
+        for (final entry in axes.entries) ...[
+          '--axis',
+          '${entry.key}=${entry.value}',
+        ],
+        if (preamble.trim().isNotEmpty) ...['--preamble-text', preamble],
+        if (language != null) ...['-l', language],
+        '--json',
+      ],
+      allowFailure: true,
+      onOutput: onOutput,
+    );
+    try {
+      return SnippetPreview.fromJson(
+        (jsonDecode(out) as Map).cast<String, dynamic>(),
+      );
+    } on FormatException {
+      return SnippetPreview(
+        ok: false,
+        engineFailed: true,
+        errors: [
+          out.trim().isEmpty ? tr('El motor no ha contestado.') : out.trim(),
+        ],
+      );
+    }
   }
 
   /// Cambia el nombre de una plantilla, en todos los idiomas a la vez.
@@ -1368,6 +1563,26 @@ class CatalogueEditor {
   /// error, es la que se comporta como la salida de serie.
   Future<String> templatePreamble({required String repo, required String id}) =>
       _readTemplateFile(repo, 'templates/$id.tex');
+
+  /// Escribe el preámbulo de una plantilla en todos los sitios que la
+  /// declaran y se pueden escribir.
+  ///
+  /// Como el nombre o los ejes: la misma plantilla en dos repositorios con
+  /// dos cabeceras es dos PDF distintos con el mismo nombre. Devuelve en
+  /// cuántos se escribió.
+  Future<int> setTemplatePreambleEverywhere({
+    required String id,
+    required String text,
+  }) async {
+    final template = session.catalogueOrNull?.templateNamed(id);
+    var written = 0;
+    for (final repo in template?.sources.keys ?? const <String>[]) {
+      if (repo != programTemplates && !session.canWriteIn(repo)) continue;
+      await setTemplatePreamble(repo: repo, id: id, text: text);
+      written += 1;
+    }
+    return written;
+  }
 
   /// Escribe el preámbulo de una plantilla.
   ///

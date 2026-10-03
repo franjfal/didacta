@@ -23,8 +23,30 @@ categories:
           es: Límites
           va: Límits
           en: Limits
+        subtopics:
+          - id: concepto-de-limite
+            title:
+              es: El concepto de límite
+              va: El concepte de límit
+              en: The idea of a limit
+          - id: calculo-de-limites
+            title:
+              es: Cálculo de límites
+              va: Càlcul de límits
+              en: Computing limits
       - id: continuidad
         title:
           es: Continuidad
           va: Continuïtat
           en: Continuity
+        subtopics:
+          - id: funciones-continuas
+            title:
+              es: Funciones continuas
+              va: Funcions contínues
+              en: Continuous functions
+          - id: bolzano
+            title:
+              es: El teorema de Bolzano
+              va: El teorema de Bolzano
+              en: "Bolzano's theorem"

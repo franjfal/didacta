@@ -132,6 +132,12 @@ class RepoCase(unittest.TestCase):
         self.assertEqual(errors, [], "el repositorio no se lee limpio")
         return courses
 
+    def uid(self, path):
+        """El id de la lección de content/[path], que es como la nombra lo
+        que se escribe en una composición."""
+        units, _ = repo_mod.scan_units(self.root, self.settings)
+        return reuse.find_unit(self.root, units, path).id
+
     def document(self, course, year, document):
         return next(
             item for item in self.courses()[course].years[year].documents
@@ -525,9 +531,11 @@ class UnitSplitTests(RepoCase):
         reuse.split_unit(self.root, self.settings, "a/b/c",
                          [["mat@2026-2027/otro#0", "doble@2026-2027/otro#0"]])
         self.assertEqual(
-            self.document("mat", "2026-2027", "otro").unit_refs, ["a/b/c-2"])
+            self.document("mat", "2026-2027", "otro").unit_refs,
+            [self.uid("a/b/c-2")])
         self.assertEqual(
-            self.document("doble", "2026-2027", "otro").unit_refs, ["a/b/c-2"])
+            self.document("doble", "2026-2027", "otro").unit_refs,
+            [self.uid("a/b/c-2")])
         self.assertEqual(
             self.document("am-i", "2025-2026", "series").unit_refs, ["a/b/c"])
 
@@ -765,7 +773,7 @@ class UseUnitTests(RepoCase):
                        "am-i@2025-2026/series")
         self.assertEqual(
             self.document("am-i", "2025-2026", "series").unit_refs,
-            ["a/b/c", "a/b/e"])
+            ["a/b/c", self.uid("a/b/e")])
 
     def test_the_comments_around_it_survive(self):
         reuse.use_unit(self.root, self.settings, "a/b/e",
@@ -797,7 +805,7 @@ class UseUnitTests(RepoCase):
                        "am-i@2025-2026/series", duplicate=True)
         self.assertEqual(
             self.document("am-i", "2025-2026", "series").unit_refs,
-            ["a/b/c", "a/b/e-2"])
+            ["a/b/c", self.uid("a/b/e-2")])
         units, _ = repo_mod.scan_units(self.root, self.settings)
         original = reuse.find_unit(self.root, units, "a/b/e")
         copy = reuse.find_unit(self.root, units, "a/b/e-2")
@@ -811,7 +819,7 @@ class UseUnitTests(RepoCase):
                        "mat@2026-2027/suelto")
         self.assertEqual(
             self.document("mat", "2026-2027", "suelto").unit_refs,
-            ["a/b/e", "a/b/c"])
+            ["a/b/e", self.uid("a/b/c")])
 
     def test_adding_it_to_a_linked_topic_reaches_every_course(self):
         """Es lo que quiere decir estar vinculado, y se dice al hacerlo."""
@@ -820,7 +828,7 @@ class UseUnitTests(RepoCase):
                               "mat@2026-2027/series")
         self.assertEqual(
             self.document("am-i", "2025-2026", "series").unit_refs,
-            ["a/b/c", "a/b/e"])
+            ["a/b/c", self.uid("a/b/e")])
         self.assertTrue(any("vinculado" in note for note in plan.notes))
 
     def test_a_topic_without_a_composition_gets_one(self):
@@ -836,7 +844,8 @@ class UseUnitTests(RepoCase):
         reuse.use_unit(self.root, self.settings, "a/b/c",
                        "mat@2026-2027/vacio")
         self.assertEqual(
-            self.document("mat", "2026-2027", "vacio").unit_refs, ["a/b/c"])
+            self.document("mat", "2026-2027", "vacio").unit_refs,
+            [self.uid("a/b/c")])
 
     def test_a_topic_that_is_not_there_is_refused(self):
         with self.assertRaises(reuse.ReuseError):
@@ -870,10 +879,16 @@ class MoveUnitTests(RepoCase):
         self.assertEqual(self.read("content/a/z/c/es.tex"), "el texto de a/b/c\n")
         self.assertEqual(self.read("content/a/z/c/figures/f.pdf"), "pdf")
 
+    def stable(self, relpath="content/a/b/c"):
+        """El id estable que recibe una lección que no tenía ninguno."""
+        return identity_mod.derived_id(identity_mod.UNIT, relpath)
+
     def test_las_composiciones_la_siguen_encontrando(self):
         self.move()
+        # Por su id, que es lo que sobrevive a la próxima vez que se mueva.
         self.assertEqual(
-            self.document("am-i", "2025-2026", "series").unit_refs, ["a/z/c"])
+            self.document("am-i", "2025-2026", "series").unit_refs,
+            [self.stable()])
         # Los comentarios del `year.yaml` siguen donde estaban.
         text = self.read("courses/am-i/2025-2026/year.yaml")
         self.assertIn("      # TODO: va\n", text)
@@ -884,14 +899,22 @@ class MoveUnitTests(RepoCase):
         self.move()
         for course, year in (("am-i", "2025-2026"), ("mat", "2026-2027")):
             self.assertEqual(
-                self.document(course, year, "series").unit_refs, ["a/z/c"])
+                self.document(course, year, "series").unit_refs,
+                [self.stable()])
 
-    def test_el_id_no_cambia_aunque_saliera_de_la_ruta(self):
-        before = reuse.find_unit(self.root, self.units(), "a/b/c").id
+    def test_sin_id_estable_recibe_uno_al_moverla(self):
         self.move()
         after = reuse.find_unit(self.root, self.units(), "a/z/c")
-        self.assertEqual(after.id, before)
-        self.assertIn("id: %s" % before, self.read("content/a/z/c/unit.yaml"))
+        self.assertEqual(after.id, self.stable())
+        self.assertIn("id: %s" % self.stable(),
+                      self.read("content/a/z/c/unit.yaml"))
+
+    def test_el_id_estable_no_cambia(self):
+        self.write("content/a/b/c/unit.yaml",
+                   "id: u-123456789abc\nkind: theory\ntitle:\n  es: C\n")
+        self.move()
+        after = reuse.find_unit(self.root, self.units(), "a/z/c")
+        self.assertEqual(after.id, "u-123456789abc")
 
     def test_lo_que_la_nombra_por_id_no_se_toca(self):
         self.write("content/a/b/c/unit.yaml",
@@ -899,10 +922,11 @@ class MoveUnitTests(RepoCase):
         text = self.read("courses/am-i/2025-2026/year.yaml").replace(
             "- unit: a/b/c", "- unit: u-123456789abc")
         self.write("courses/am-i/2025-2026/year.yaml", text)
-        self.move()
-        self.assertEqual(
-            self.document("am-i", "2025-2026", "series").unit_refs,
-            ["u-123456789abc"])
+        before = self.read("courses/am-i/2025-2026/year.yaml")
+        plan = self.move()
+        self.assertEqual(self.read("courses/am-i/2025-2026/year.yaml"), before)
+        self.assertNotIn(os.path.join(self.root, "courses/am-i/2025-2026/year.yaml"),
+                         plan.touched)
 
     def test_los_prerrequisitos_de_las_demas(self):
         self.write("content/a/b/d/unit.yaml",
@@ -912,21 +936,23 @@ class MoveUnitTests(RepoCase):
                    "kind: theory\ntitle:\n  es: e\n"
                    "prerequisites:\n  - a/b/c\n  - a/b/d\ntags: []\n")
         self.move()
-        self.assertIn("prerequisites: [a/b/e, a/z/c]",
+        self.assertIn("prerequisites: [a/b/e, %s]" % self.stable(),
                       self.read("content/a/b/d/unit.yaml"))
-        self.assertIn("prerequisites:\n  - a/z/c\n  - a/b/d\ntags: []",
+        self.assertIn("prerequisites:\n  - %s\n  - a/b/d\ntags: []"
+                      % self.stable(),
                       self.read("content/a/b/e/unit.yaml"))
 
-    def test_la_categoria_y_el_tema_siguen_a_la_carpeta_si_la_seguian(self):
+    def test_su_sitio_en_la_biblioteca_sigue_a_la_carpeta(self):
         self.write("content/a/b/c/unit.yaml",
                    "kind: theory\ntitle:\n  es: C\ncategory: a\n"
-                   "topic: otro-tema\n")
-        self.move(to="x/y/c")
-        text = self.read("content/x/y/c/unit.yaml")
+                   "topic: b\ntags: []\n")
+        self.move(to="x/y/s/c")
+        text = self.read("content/x/y/s/c/unit.yaml")
         self.assertIn("category: x\n", text)
-        # El tema no era el de la carpeta: es una clasificación que alguien
-        # puso a propósito, y mover no la deshace.
-        self.assertIn("topic: otro-tema\n", text)
+        self.assertIn("topic: y\nsubtopic: s\n", text)
+        unit = reuse.find_unit(self.root, self.units(), "x/y/s/c")
+        self.assertEqual((unit.category, unit.topic, unit.subtopic),
+                         ("x", "y", "s"))
 
     def test_las_carpetas_vacias_se_van(self):
         self.move(reference="a/b/c", to="a/z/c")

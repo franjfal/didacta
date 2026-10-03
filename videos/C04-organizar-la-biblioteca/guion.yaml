@@ -1,0 +1,124 @@
+# C4 · Organizar la biblioteca
+#
+# Montado desde este guion, con capturas del repositorio de ejemplo: se crea un
+# subtema en Continuidad, se arrastra a él el problema de las discontinuidades
+# y se ve que el parcial, que lo usa, no hay que tocarlo. Todo de verdad: el
+# arnés escribe taxonomy.yaml, el motor mueve la carpeta y git guarda el cambio.
+codigo: C4
+titulo: Organizar la biblioteca
+subtitulo: Crear temas y subtemas, y llevar lecciones de uno a otro
+ruta: Encontrar material
+siguiente: "D1 · La pantalla de una lección"
+voz: narrador
+lema: ["Lo que ves en las columnas", "es lo que hay en tu carpeta."]
+lema_en: "en tu carpeta"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás crear temas y subtemas desde la propia biblioteca,
+          y llevar una lección de un sitio a otro.
+
+  - id: crear
+    capitulo: Crear lo que falta
+    antes: 0.5
+    pantalla: antes
+    frases:
+      - id: pie
+        texto: >-
+          Al pie de cada columna se crea lo que falte: una categoría, un tema o
+          un subtema.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: categoría, resalta: nueva_categoria, hasta: 1}
+          - {en: tema, resalta: nuevo_tema, hasta: 1}
+          - {en: subtema, resalta: nuevo_subtema}
+      - id: nombre
+        texto: >-
+          Pide el nombre en cada idioma. Del primero sale el identificador, que
+          es también el nombre de la carpeta.
+        pasos:
+          - {al: inicio, pulsa: nuevo_subtema}
+          - {al: inicio, cambia: dialogo}
+          - {al: inicio, enfoca: [es, id], max: 1.6, captura: dialogo}
+          - {en: idioma, resalta: [es, en], captura: dialogo, hasta: 1.6}
+          - {en: identificador, resalta: id, etiqueta: "También es su carpeta", lado: abajo, captura: dialogo}
+      - id: todos
+        texto: >-
+          Y se declara en todos los repositorios abiertos, para que la teoría y
+          los problemas enseñen las mismas columnas.
+        pasos:
+          - {al: inicio, resalta: nota, captura: dialogo}
+      - id: vacio
+        texto: >-
+          El subtema nuevo sale enseguida, vacío, listo para llevarle
+          lecciones.
+        pasos:
+          - {al: inicio, cambia: creado}
+          - {al: inicio, reposo: true, captura: creado}
+          - {en: vacío, resalta: nuevo, etiqueta: "Vacío", lado: derecha, captura: creado}
+
+  - id: mover
+    capitulo: Arrastrar una lección
+    antes: 0.5
+    pantalla: creado
+    frases:
+      - id: arrastra
+        texto: >-
+          Para llevar una lección a otro sitio, arrástrala hasta la fila de su
+          subtema.
+        pasos:
+          - {al: inicio, enfoca: [tarjeta, nuevo], max: 1.3}
+          - {en: arrástrala, arrastra: [tarjeta, nuevo], dura: 1.4}
+          - {en: subtema, cambia: soltando, funde: 0.2}
+          - {en: subtema, resalta: nuevo, captura: soltando}
+      - id: carpeta
+        texto: >-
+          La carpeta se mueve con ella, con sus idiomas y sus figuras.
+        pasos:
+          - {al: inicio, cambia: movida}
+          - {al: inicio, reposo: true, captura: movida}
+          - {en: carpeta, resalta: leccion, captura: movida}
+
+  - id: nada
+    capitulo: Nada que reescribir
+    antes: 0.5
+    pantalla: parcial
+    frases:
+      - id: parcial
+        texto: >-
+          Y lo que la usa no hay que tocarlo: el parcial la sigue encontrando,
+          porque la nombra por su id, que no cambia al moverla.
+        pasos:
+          - {al: inicio, reposo: true}
+          - {en: parcial, resalta: fila, etiqueta: "Sigue en el parcial", lado: abajo}
+
+  - id: menu
+    capitulo: Con el botón derecho
+    antes: 0.5
+    pantalla: menu
+    frases:
+      - id: derecho
+        texto: >-
+          Lo mismo, sin arrastrar: el botón derecho sobre la lección, Mover a,
+          y el sitio se elige en las mismas columnas.
+        pasos:
+          - {al: inicio, enfoca: [menu], max: 1.6}
+          - {en: Mover, resalta: mover, hasta: 1.6}
+          - {en: columnas, cambia: dialogo_mover}
+          - {en: columnas, reposo: true, captura: dialogo_mover}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Lo que ves en las columnas es lo que hay en tu carpeta.
+        pausa: 0.5
+      - id: siguiente
+        texto: En el siguiente vídeo, la pantalla de una lección.

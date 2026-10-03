@@ -22,7 +22,7 @@ import 'package:didacta_app/ui/theme.dart';
 import 'fixture.dart';
 import 'pdf_search_test.dart' show wait;
 
-const lesson = 'content/calculo/limites/algebra-de-limites';
+const lesson = 'content/calculo/limites/calculo-de-limites/algebra-de-limites';
 
 String? engineRoot() {
   var directory = Directory.current;

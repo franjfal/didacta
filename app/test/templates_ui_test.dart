@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
+import 'package:didacta_app/data/content_gateway.dart';
 import 'package:didacta_app/data/mcp_process.dart';
 import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/model/catalogue.dart';
@@ -171,17 +172,59 @@ Future<void> pump(
   await settle(tester);
 }
 
-/// Baja hasta el botón de las plantillas en Ajustes y lo pulsa.
-Future<void> openTemplates(WidgetTester tester) async {
-  final button = find.byKey(const Key('open-templates'));
-  final list = find.byType(Scrollable).first;
-  for (var i = 0; i < 40 && button.evaluate().isEmpty; i += 1) {
-    await tester.drag(list, const Offset(0, -300));
-    await tester.pump();
-  }
-  await tester.ensureVisible(button);
+/// Una sesión con una pasarela por repositorio, para ver que se escribe en
+/// los dos.
+class TwoRepoSession extends FakeSession {
+  TwoRepoSession({
+    required this.gateways,
+    required super.catalogue,
+    required super.gatewayOverride,
+  });
+
+  final Map<String, ContentGateway> gateways;
+
+  @override
+  ContentGateway gatewayFor(String? repo) =>
+      gateways[repo] ?? super.gatewayFor(repo);
+}
+
+/// Dos repositorios abiertos, `test/repo` y `test/repo1`, que declaran las
+/// plantillas que se les diga.
+Future<(TwoRepoSession, FakeGateway, FakeGateway)> twoRepos({
+  List<Map<String, dynamic>> first = const [],
+  List<Map<String, dynamic>> second = const [],
+  Map<String, String> firstFiles = const {},
+  Map<String, String> secondFiles = const {},
+}) async {
+  final one = FakeGateway(files: {...firstFiles});
+  final two = FakeGateway(files: {...secondFiles});
+  final catalogue = Catalogue.merge([
+    catalogueOf(templates: first, repo: 'test/repo'),
+    catalogueOf(templates: second, repo: 'test/repo1'),
+  ]);
+  final session = TwoRepoSession(
+    gateways: {'test/repo': one, 'test/repo1': two},
+    gatewayOverride: one,
+    catalogue: catalogue,
+  );
+  await session.primeForTest(catalogue);
+  await session.useClonesForTest(['/tmp/didacta-0', '/tmp/didacta-1']);
+  return (session, one, two);
+}
+
+/// Abre la sección de plantillas de Ajustes.
+Future<void> openTemplates(WidgetTester tester, Session session) =>
+    pump(tester, session, const SettingsPage(section: 'plantillas'));
+
+/// Pulsa algo que puede estar más abajo de lo que se ve.
+Future<void> tapDown(WidgetTester tester, Finder target) async {
+  // Sin foco: un campo con el cursor vuelve a desplazar la lista hasta él en
+  // cuanto se repinta, y lo de abajo se queda fuera.
+  FocusManager.instance.primaryFocus?.unfocus();
   await settle(tester);
-  await tester.tap(button);
+  await tester.ensureVisible(target);
+  await settle(tester);
+  await tester.tap(target);
   await settle(tester);
 }
 
@@ -196,8 +239,7 @@ void main() {
           ],
         ),
       );
-      await pump(tester, session, const SettingsPage(section: 'material'));
-      await openTemplates(tester);
+      await openTemplates(tester, session);
 
       expect(find.byKey(const Key('template-slides')), findsOneWidget);
       expect(find.byKey(const Key('template-notes')), findsOneWidget);
@@ -210,8 +252,7 @@ void main() {
       // Un repositorio recién abierto: se compila con las de serie, y la
       // pantalla tiene que poder enseñarlas para poder editarlas.
       final (session, _) = await sessionWith(catalogue: catalogueOf());
-      await pump(tester, session, const SettingsPage(section: 'material'));
-      await openTemplates(tester);
+      await openTemplates(tester, session);
 
       expect(find.byKey(const Key('template-book')), findsOneWidget);
       expect(find.text('viene con Didacta'), findsOneWidget);
@@ -232,8 +273,7 @@ void main() {
         ),
         files: {'templates.yaml': templatesYaml},
       );
-      await pump(tester, session, const SettingsPage(section: 'material'));
-      await openTemplates(tester);
+      await openTemplates(tester, session);
 
       await tester.tap(find.byKey(const Key('template-active-slides')));
       await settle(tester);
@@ -253,16 +293,18 @@ void main() {
         ),
         files: {'templates.yaml': templatesYaml},
       );
-      await pump(tester, session, const SettingsPage(section: 'material'));
-      await openTemplates(tester);
+      await openTemplates(tester, session);
 
-      await tester.tap(find.byKey(const Key('template-preamble-notes')));
-      await settle(tester);
+      await tapDown(tester, find.byKey(const Key('template-edit-notes')));
       await tester.enterText(
-        find.byKey(const Key('template-preamble-text')),
+        find.descendant(
+          of: find.byKey(const Key('template-preamble-text')),
+          matching: find.byType(EditableText),
+        ),
         '\\geometry{margin=3cm}',
       );
-      await tester.tap(find.byKey(const Key('template-preamble-save')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('template-save')));
       await settle(tester);
 
       expect(gateway.files['templates/notes.tex'], contains('margin=3cm'));
@@ -274,11 +316,9 @@ void main() {
       // La única forma de que nadie se encuentre su material compilando
       // distinto sin saber por qué.
       final (session, gateway) = await sessionWith(catalogue: catalogueOf());
-      await pump(tester, session, const SettingsPage(section: 'material'));
-      await openTemplates(tester);
+      await openTemplates(tester, session);
 
-      await tester.tap(find.byKey(const Key('template-edit-book')));
-      await settle(tester);
+      await tapDown(tester, find.byKey(const Key('template-edit-book')));
 
       expect(
         find.textContaining('se escribe en tu repositorio con el mismo id'),
@@ -293,6 +333,197 @@ void main() {
       await tester.tap(find.byKey(const Key('template-save')));
       await settle(tester);
       expect(TemplatesFile(gateway.files['templates.yaml']!).ids, ['book']);
+    });
+  });
+
+  test('la carpeta del programa se apunta como una fuente más', () {
+    // Si el repositorio declara el mismo id gana el repositorio, pero la
+    // casilla del programa tiene que salir marcada: el fichero está ahí.
+    final catalogue = catalogueOf(templates: [templateJson('notes')]);
+    final stored = OutputTemplate.fromJson(
+      templateJson('notes', documentClass: 'book'),
+    ).declaredBy(Session.programTemplates);
+    final merged = catalogue.withTemplates([stored]).templates.single;
+    expect(merged.sources.keys, ['test/repo', Session.programTemplates]);
+    expect(merged.documentClass, 'article');
+  });
+
+  group('su sección de Ajustes', () {
+    test('va justo antes de los snippets, también en la interfaz sencilla', () {
+      // Era un botón dentro de «Bloques y plantillas», que solo sale con la
+      // interfaz completa: quien buscaba dónde se edita lo que sale de
+      // compilar no lo encontraba.
+      final session = FakeSession(
+        gatewayOverride: FakeGateway(),
+        catalogue: catalogueOf(),
+        preferencesOverride: MemoryPreferences(),
+      );
+      final ids = [for (final s in settingsSections(session)) s.id];
+      expect(ids, contains('plantillas'));
+      expect(ids.indexOf('plantillas') + 1, ids.indexOf('snippets'));
+    });
+
+    testWidgets('marcar otro repositorio la copia allí, con su cabecera', (
+      tester,
+    ) async {
+      final (session, one, two) = await twoRepos(
+        first: [templateJson('slides', title: 'Diapositivas')],
+        firstFiles: {
+          'templates.yaml': templatesYaml,
+          'templates/slides.tex': '\\usepackage{lmodern}\n',
+        },
+      );
+      // La cabecera la dice el índice; aquí basta con que el fichero esté.
+      final withPreamble = Catalogue.merge([
+        catalogueOf(
+          templates: [
+            {
+              ...templateJson('slides', title: 'Diapositivas'),
+              'hasPreamble': true,
+            },
+          ],
+          repo: 'test/repo',
+        ),
+        catalogueOf(repo: 'test/repo1'),
+      ]);
+      await session.primeForTest(withPreamble);
+      await openTemplates(tester, session);
+
+      await tapDown(
+        tester,
+        find.byKey(const Key('template-slides-in-test/repo1')),
+      );
+
+      final copied = TemplatesFile(two.files['templates.yaml']!);
+      expect(copied.ids, contains('slides'));
+      expect(copied.fieldOf('slides', 'class'), 'article');
+      expect(two.files['templates/slides.tex'], contains('lmodern'));
+      // Y el primero sigue igual.
+      expect(TemplatesFile(one.files['templates.yaml']!).ids, [
+        'slides',
+        'notes',
+      ]);
+    });
+
+    testWidgets('desmarcar uno la quita solo de ahí', (tester) async {
+      final (session, one, two) = await twoRepos(
+        first: [templateJson('slides')],
+        second: [templateJson('slides')],
+        firstFiles: {'templates.yaml': templatesYaml},
+        secondFiles: {'templates.yaml': templatesYaml},
+      );
+      await openTemplates(tester, session);
+
+      await tapDown(
+        tester,
+        find.byKey(const Key('template-slides-in-test/repo1')),
+      );
+
+      expect(TemplatesFile(two.files['templates.yaml']!).ids, ['notes']);
+      expect(TemplatesFile(one.files['templates.yaml']!).ids, [
+        'slides',
+        'notes',
+      ]);
+    });
+
+    testWidgets('la cabecera se guarda en todos los que la declaran', (
+      tester,
+    ) async {
+      // Dos cabeceras para la misma plantilla son dos PDF distintos con el
+      // mismo nombre.
+      final (session, one, two) = await twoRepos(
+        first: [templateJson('notes')],
+        second: [templateJson('notes')],
+        firstFiles: {'templates.yaml': templatesYaml},
+        secondFiles: {'templates.yaml': templatesYaml},
+      );
+      await openTemplates(tester, session);
+      await tapDown(tester, find.byKey(const Key('template-edit-notes')));
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('template-preamble-text')),
+          matching: find.byType(EditableText),
+        ),
+        '\\geometry{margin=3cm}',
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('template-save')));
+      await settle(tester);
+
+      expect(one.files['templates/notes.tex'], contains('margin=3cm'));
+      expect(two.files['templates/notes.tex'], contains('margin=3cm'));
+    });
+  });
+
+  group('el editor', () {
+    testWidgets('dice qué se compila con ella', (tester) async {
+      final (session, _) = await sessionWith(
+        catalogue: catalogueOf(
+          templates: [templateJson('slides', title: 'Diapositivas')],
+          blocks: [
+            blockJson('theory', templates: ['slides']),
+          ],
+        ),
+        files: {'templates.yaml': templatesYaml},
+      );
+      await openTemplates(tester, session);
+      expect(find.textContaining('la usa 1 cosa'), findsOneWidget);
+
+      await tapDown(tester, find.byKey(const Key('template-edit-slides')));
+      expect(find.byKey(const Key('template-editor')), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('template-uses')),
+          matching: find.textContaining('Teoría'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('avisa de beamer sin notheorems', (tester) async {
+      // Sin esa opción beamer trae sus propios teoremas, chocan con los de
+      // Didacta y no compila nada: pasó al escribir la primera plantilla de
+      // diapositivas a mano.
+      final (session, _) = await sessionWith(
+        catalogue: catalogueOf(templates: [templateJson('slides')]),
+        files: {'templates.yaml': templatesYaml},
+      );
+      await openTemplates(tester, session);
+      await tapDown(tester, find.byKey(const Key('new-template')));
+      expect(find.byKey(const Key('template-notheorems')), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('template-class')), 'beamer');
+      await settle(tester);
+      expect(find.byKey(const Key('template-notheorems')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('template-options')),
+        '10pt,notheorems',
+      );
+      await settle(tester);
+      expect(find.byKey(const Key('template-notheorems')), findsNothing);
+    });
+
+    testWidgets('una nueva se declara en los repositorios marcados', (
+      tester,
+    ) async {
+      final (session, one, two) = await twoRepos(
+        first: [templateJson('slides')],
+        firstFiles: {'templates.yaml': templatesYaml},
+      );
+      await openTemplates(tester, session);
+      await tapDown(tester, find.byKey(const Key('new-template')));
+
+      await tester.enterText(find.byKey(const Key('template-id')), 'a5');
+      await tapDown(
+        tester,
+        find.byKey(const Key('template-editor-in-test/repo1')),
+      );
+      await tester.tap(find.byKey(const Key('template-save')));
+      await settle(tester);
+
+      expect(TemplatesFile(one.files['templates.yaml']!).ids, contains('a5'));
+      expect(TemplatesFile(two.files['templates.yaml']!).ids, contains('a5'));
     });
   });
 

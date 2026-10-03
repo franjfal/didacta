@@ -1027,10 +1027,17 @@ class MoveUnitCliTests(unittest.TestCase):
         self.assertEqual(
             self.cli.main(["--root", self.root, "move", "--unit", "a/b/c",
                            "--to", "a/nuevo/c"]), 0)
-        self.assertIn("- unit: a/nuevo/c",
+        from didacta import identity as identity_mod
+
+        # La composición la nombra ahora por su id estable, que es lo que
+        # sobrevive a moverla otra vez; dónde está se lo dice el motor a LaTeX.
+        identifier = identity_mod.derived_id(identity_mod.UNIT, "content/a/b/c")
+        self.assertIn("id: %s" % identifier,
+                      self.read("content/a/nuevo/c/unit.yaml"))
+        self.assertIn("- unit: %s" % identifier,
                       self.read("courses/m/2025-2026/year.yaml"))
         master = self.read("courses/m/2025-2026/t1.tex")
-        self.assertIn("a/nuevo/c", master)
+        self.assertIn("\\DidactaUnit{%s}" % identifier, master)
         self.assertNotIn("{a/b/c}", master)
 
     def test_sin_from_ni_unit(self):

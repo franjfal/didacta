@@ -10,3 +10,9 @@ categories:
           es: Matrices
           va: Matrius
           en: Matrices
+        subtopics:
+          - id: operaciones
+            title:
+              es: Operaciones con matrices
+              va: Operacions amb matrius
+              en: Matrix operations

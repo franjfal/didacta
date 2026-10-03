@@ -209,7 +209,7 @@ def _latexmk():
 class RealBuildTests(unittest.TestCase):
     """Con el repositorio de ejemplo y LaTeX de verdad."""
 
-    UNIT = "calculo/limites/algebra-de-limites"
+    UNIT = "calculo/limites/calculo-de-limites/algebra-de-limites"
 
     def setUp(self):
         self.work = tempfile.mkdtemp(prefix="didacta-overfull-real-")

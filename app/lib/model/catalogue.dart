@@ -158,6 +158,7 @@ class Unit {
     required this.kind,
     required this.category,
     required this.topic,
+    this.subtopic = '',
     required this.tags,
     required this.titles,
     required this.reference,
@@ -188,6 +189,7 @@ class Unit {
       kind: json['kind'] as String? ?? 'theory',
       category: json['category'] as String? ?? '',
       topic: json['topic'] as String? ?? '',
+      subtopic: json['subtopic'] as String? ?? '',
       tags: _stringList(json['tags']),
       titles: _stringMap(json['title']),
       reference: json['reference'] as String? ?? 'es',
@@ -250,6 +252,19 @@ class Unit {
   final String kind;
   final String category;
   final String topic;
+
+  /// El tercer nivel de la biblioteca, dentro del [topic]: donde vive la
+  /// lección. Es también su carpeta --`content/<categoría>/<tema>/<subtema>/`--
+  /// y cambiarlo es moverla.
+  final String subtopic;
+
+  /// Dónde está en la biblioteca, como clave de [Catalogue.taxonomyTitle]:
+  /// `categoría/tema/subtema`.
+  String get place =>
+      [category, topic, subtopic].where((part) => part.isNotEmpty).join('/');
+
+  /// Etiquetas libres, para buscar. Ya no son un nivel de la biblioteca: eso
+  /// es el [subtopic].
   final List<String> tags;
   final Map<String, String> titles;
 
@@ -271,12 +286,17 @@ class Unit {
   final int? durationMinutes;
   final String? difficulty;
 
-  /// The reference used by a composition: the path without its area.
+  /// Lo que escribe una composición para nombrarla: su **id**.
   ///
-  /// `content/analysis/normed-spaces/definition` is written
-  /// `analysis/normed-spaces/definition` in a `year.yaml`, because the LaTeX
-  /// side appends the tree itself.
-  String get reference_ =>
+  /// Antes era la ruta sin el árbol (`analysis/normed-spaces/definition`), y
+  /// por eso mover una lección obligaba a reescribir todo lo que la usaba. El
+  /// id no cambia al moverla; dónde está se lo dice el motor a LaTeX al
+  /// compilar.
+  String get reference_ => id.isNotEmpty ? id : pathReference;
+
+  /// La ruta sin el árbol, que es como se nombraba antes y lo que se
+  /// reconoce todavía al leer.
+  String get pathReference =>
       path.contains('/') ? path.substring(path.indexOf('/') + 1) : path;
 
   bool get isProblem => block == 'problems';
@@ -341,6 +361,7 @@ class Unit {
       kind,
       category,
       topic,
+      subtopic,
     ].join(' ').toLowerCase(),
   );
 
@@ -1809,6 +1830,7 @@ class Catalogue {
     this.shared = const [],
     this.snippets = const {},
     this.taxonomyTitles = const {},
+    this.taxonomyDeclared = const {},
   });
 
   /// Builds from the three index files.
@@ -1877,6 +1899,9 @@ class Catalogue {
           Degree.fromJson((item as Map).cast<String, dynamic>(), repo: repo),
       ],
       taxonomyTitles: _taxonomyTitles(manifest['taxonomy']),
+      taxonomyDeclared: {
+        for (final key in _taxonomyKeys(manifest['taxonomy'])) key: {repo},
+      },
       // Dentro de la taxonomía, que es donde se declaran: un bloque clasifica
       // una lección, igual que la categoría y el tema. Vacío en un índice de
       // antes de que se declararan, y entonces valen los dos de siempre --ver
@@ -1950,8 +1975,29 @@ class Catalogue {
   /// repositorio, y no los traducía nunca.
   final Map<String, Map<String, String>> taxonomyTitles;
 
-  /// El nombre de una categoría (`calculo`) o de un tema (`calculo/limites`)
-  /// en [language], si la taxonomía lo da.
+  /// Lo que declara `taxonomy.yaml` --categorías, temas y subtemas--, por
+  /// clave (`calculo`, `calculo/limites`, `calculo/limites/concepto`), en el
+  /// orden en que se declara, y con los repositorios que lo declaran.
+  ///
+  /// El orden es el de la asignatura: los temas se escriben en el orden en que
+  /// se dan, y es el que enseñan las columnas. Y se guardan los vacíos, que es
+  /// la diferencia con sacar el árbol de las lecciones: un subtema recién
+  /// creado tiene que salir en su columna antes de que nadie mueva nada a él.
+  final Map<String, Set<String>> taxonomyDeclared;
+
+  /// Lo declarado dentro de [parent] (`''` para las categorías), en orden.
+  List<String> declaredChildren(String parent) {
+    final depth = parent.isEmpty ? 0 : parent.split('/').length;
+    final prefix = parent.isEmpty ? '' : '$parent/';
+    return [
+      for (final key in taxonomyDeclared.keys)
+        if (key.startsWith(prefix) && key.split('/').length == depth + 1)
+          key.substring(prefix.length),
+    ];
+  }
+
+  /// El nombre de una categoría (`calculo`), un tema (`calculo/limites`) o un
+  /// subtema (`calculo/limites/concepto`) en [language], si la taxonomía lo da.
   String? taxonomyTitle(String key, String language) {
     final titles = taxonomyTitles[key];
     if (titles == null || titles.isEmpty) return null;
@@ -2238,7 +2284,41 @@ class Catalogue {
       taxonomyTitles: {
         for (final part in parts.reversed) ...part.taxonomyTitles,
       },
+      taxonomyDeclared: _mergedDeclared(parts),
     );
+  }
+
+  /// Lo declarado por todos, en el orden del primero que lo declare.
+  static Map<String, Set<String>> _mergedDeclared(List<Catalogue> parts) {
+    final merged = <String, Set<String>>{};
+    for (final part in parts) {
+      for (final entry in part.taxonomyDeclared.entries) {
+        (merged[entry.key] ??= <String>{}).addAll(entry.value);
+      }
+    }
+    return merged;
+  }
+
+  /// Las claves de `taxonomy.categories` del manifiesto, en orden: cada
+  /// categoría, y detrás de ella sus temas, cada uno seguido de sus subtemas.
+  static List<String> _taxonomyKeys(Object? taxonomy) {
+    final keys = <String>[];
+    for (final raw
+        in ((taxonomy as Map?)?['categories'] as List?) ?? const []) {
+      if (raw is! Map || raw['id'] is! String) continue;
+      final category = raw['id'] as String;
+      keys.add(category);
+      for (final topic in (raw['topics'] as List?) ?? const []) {
+        if (topic is! Map || topic['id'] is! String) continue;
+        final topicKey = '$category/${topic['id']}';
+        keys.add(topicKey);
+        for (final leaf in (topic['subtopics'] as List?) ?? const []) {
+          if (leaf is! Map || leaf['id'] is! String) continue;
+          keys.add('$topicKey/${leaf['id']}');
+        }
+      }
+    }
+    return keys;
   }
 
   /// Los nombres de `taxonomy.categories` del manifiesto, por clave.
@@ -2260,6 +2340,13 @@ class Catalogue {
         final topicTitle = titleOf(topic['title']);
         if (topicTitle.isNotEmpty) {
           found['$category/${topic['id']}'] = topicTitle;
+        }
+        for (final leaf in (topic['subtopics'] as List?) ?? const []) {
+          if (leaf is! Map || leaf['id'] is! String) continue;
+          final leafTitle = titleOf(leaf['title']);
+          if (leafTitle.isNotEmpty) {
+            found['$category/${topic['id']}/${leaf['id']}'] = leafTitle;
+          }
         }
       }
     }
@@ -2302,14 +2389,19 @@ class Catalogue {
   /// declare el mismo id gana -- lo compartido manda sobre lo personal, que
   /// es lo que evita que la copia de alguien cambie en silencio lo que sale
   /// para todos.
+  ///
+  /// Pero **no se esconde** que la carpeta del programa también la tiene: se
+  /// apunta como una fuente más. Si no, la casilla del programa en la fila
+  /// de esa plantilla saldría vacía con el fichero ahí, y marcarla intentaría
+  /// declarar lo que ya está declarado.
   Catalogue withTemplates(List<OutputTemplate> extra) {
     if (extra.isEmpty) return this;
+    final byId = {for (final template in extra) template.id: template};
     final known = {for (final template in templates) template.id};
     final added = [
       for (final template in extra)
         if (!known.contains(template.id)) template,
     ];
-    if (added.isEmpty) return this;
     return Catalogue(
       name: name,
       languages: languages,
@@ -2317,7 +2409,13 @@ class Catalogue {
       byRepo: byRepo,
       degrees: degrees,
       blocks: blocks,
-      templates: [...templates, ...added],
+      templates: [
+        for (final template in templates)
+          byId[template.id] == null
+              ? template
+              : template.mergedWith(byId[template.id]!),
+        ...added,
+      ],
       defaultLanguage: defaultLanguage,
       contentHash: contentHash,
       units: units,
@@ -2325,6 +2423,9 @@ class Catalogue {
       profiles: profiles,
       shared: shared,
       errors: errors,
+      snippets: snippets,
+      taxonomyTitles: taxonomyTitles,
+      taxonomyDeclared: taxonomyDeclared,
     );
   }
 
@@ -2401,6 +2502,20 @@ class Catalogue {
             item,
       ],
       errors: errors,
+      snippets: {
+        for (final entry in snippets.entries)
+          if (!hidden.contains(entry.key)) entry.key: entry.value,
+      },
+      taxonomyTitles: taxonomyTitles,
+      // Lo que solo declaraba el apagado se va con él, como sus lecciones.
+      taxonomyDeclared: {
+        for (final entry in taxonomyDeclared.entries)
+          if (entry.value.any((repo) => !hidden.contains(repo)))
+            entry.key: {
+              for (final repo in entry.value)
+                if (!hidden.contains(repo)) repo,
+            },
+      },
     );
   }
 
@@ -2917,6 +3032,13 @@ class Catalogue {
 
   Unit? unitByReference(String reference, {String? repo}) {
     final trimmed = reference.replaceAll(RegExp(r'^/+|/+$'), '');
+    // Por id, que es como se nombran ahora; la ruta, para lo escrito antes.
+    final index = _unitIndex[this] ??= _indexUnits(units);
+    final byId =
+        index[repo == null || repo.isEmpty
+            ? '\u0001$trimmed'
+            : '$repo\u0001$trimmed'];
+    if (byId != null) return byId;
     for (final area in const ['content', 'problems']) {
       final found = unitByPath('$area/$trimmed', repo: repo);
       if (found != null) return found;
@@ -2941,6 +3063,10 @@ Map<String, Unit> _indexUnits(List<Unit> units) {
   for (final unit in units) {
     index.putIfAbsent('${unit.repo}\u0000${unit.path}', () => unit);
     index.putIfAbsent('\u0000${unit.path}', () => unit);
+    if (unit.id.isNotEmpty) {
+      index.putIfAbsent('${unit.repo}\u0001${unit.id}', () => unit);
+      index.putIfAbsent('\u0001${unit.id}', () => unit);
+    }
   }
   return index;
 }

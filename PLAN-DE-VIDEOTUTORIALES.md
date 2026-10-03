@@ -10,7 +10,7 @@ un curso para verlo de principio a fin: es una biblioteca en la que cada vídeo
 contesta una pregunta concreta, con tres puertas de entrada para encontrar el
 que hace falta en menos de un minuto.
 
-**Las cifras.** 77 vídeos en 12 rutas, de uno a tres minutos, unas dos horas y
+**Las cifras.** 78 vídeos en 12 rutas, de uno a tres minutos, unas dos horas y
 media en total. Nadie los ve todos: la ruta del primer día son **quince
 minutos**, y cada perfil tiene la suya, de treinta y cinco minutos a dos
 horas.
@@ -110,7 +110,7 @@ La ruta **A** es de todos, y la **K** (ajustes) se consulta cuando hace falta.
 |---|---|:---:|:---:|---|
 | **A · Empezar** | ¿Cómo lo instalo y tengo mi primer PDF? | 7 | 15 | [Empezar](web/docs/empezar/index.md) |
 | **B · Cómo piensa Didacta** | ¿Por qué funciona así? | 5 | 10 | [Cómo funciona](web/docs/conceptos/index.md) |
-| **C · Encontrar material** | ¿Dónde está lo que escribí? | 3 | 6 | [La biblioteca](web/docs/app/biblioteca.md) |
+| **C · Encontrar material** | ¿Dónde está lo que escribí? | 4 | 7,5 | [La biblioteca](web/docs/app/biblioteca.md) |
 | **D · Escribir una lección** | ¿Cómo edito, y qué pongo dentro? | 12 | 22 | [La unidad](web/docs/app/unidad.md) · [Escribir](web/docs/escribir/index.md) |
 | **E · Preparar una asignatura** | ¿Cómo monto un tema, una hoja, un examen? | 8 | 14 | [Asignaturas](web/docs/app/asignaturas.md) · [Composición](web/docs/app/composicion.md) |
 | **F · Compilar y revisar** | ¿Cómo saco los PDF, y qué hago si fallan? | 8 | 16 | [Compilar](web/docs/app/compilar.md) |
@@ -119,8 +119,8 @@ La ruta **A** es de todos, y la **K** (ajustes) se consulta cuando hace falta.
 | **I · No perder nada** | ¿Dónde está mi trabajo, y cómo vuelvo atrás? | 6 | 13 | [Historial](web/docs/app/historial.md) · [Congelaciones](web/docs/app/congelaciones.md) |
 | **J · El curso que viene y el temario compartido** | ¿Cómo reutilizo sin copiar? | 4 | 10 | [Temario compartido](web/docs/app/vinculos.md) |
 | **K · A tu manera** | ¿Cómo la ajusto a mí? | 4 | 7 | [Ajustes](web/docs/app/ajustes.md) |
-| **L · Para quien mantiene el repositorio** | ¿Cómo organizo el material de todos? | 9 | 23 | [Ajustes · Completa](web/docs/app/ajustes.md#interfaz) |
-| | | **77** | **~157** | |
+| **L · Para quien mantiene el repositorio** | ¿Cómo organizo el material de todos? | 10 | 25,5 | [Ajustes · Completa](web/docs/app/ajustes.md#interfaz) |
+| | | **78** | **~160** | |
 
 El orden de las rutas es el de la primera semana: instalar, entender, buscar,
 tocar, montar, compilar, traducir y repartir; lo de proteger el trabajo y
@@ -330,7 +330,7 @@ llega al alumno y quién decide qué versiones salen.
 4. Los ejes de una versión --medio, detalle, audiencia, soluciones, pausas--,
    en el editor de la plantilla.
 5. Las de serie no son fijas: se retocan, se apagan o se crean otras
-   (Ajustes → Bloques y plantillas).
+   (Ajustes → Plantillas de compilación).
 6. No todo sale en todo: el tema elige sus cinco, o se queda con las de sus
    bloques.
 
@@ -402,8 +402,9 @@ fila.
 
 **Parte de** Biblioteca → Explorar.
 
-1. Las columnas: categoría, tema, lecciones, con cuánto hay y cuánto está
-   traducido.
+1. Las columnas, como las del Finder: categoría, tema, subtema y lecciones,
+   con cuánto hay y cuánto está traducido. Cada lección vive en un subtema, que
+   es también su carpeta.
 2. Una fila: el título en el idioma que se mira; en cursiva y gris si no
    existe en ese idioma; el estado de cada idioma.
 3. Ojear el PDF de una lección encima de la lista, sin entrar.
@@ -448,6 +449,25 @@ se llame de otra forma.
 **La idea:** los filtros recortan también el árbol, no solo la búsqueda.
 
 **Más:** [Los filtros](web/docs/app/biblioteca.md#los-filtros).
+
+
+#### C4 · Organizar la biblioteca · 1,5 min
+
+**Sabrás** crear temas y subtemas desde las columnas, y llevar una lección de
+un sitio a otro.
+
+**Parte de** Biblioteca → Cálculo → Continuidad.
+
+1. Al pie de cada columna, **Nueva categoría…**, **Nuevo tema…**, **Nuevo
+   subtema…**: el nombre en cada idioma, y del primero el identificador, que es
+   también la carpeta. Se declara en todos los repositorios abiertos.
+2. Arrastrar una lección hasta la fila de un subtema: la carpeta va con ella.
+3. El parcial que la usa no se toca: la nombra por su id.
+4. Lo mismo con el botón derecho, **Mover a…**.
+
+**La idea:** lo que ves en las columnas es lo que hay en tu carpeta.
+
+**Más:** [Mover una lección](web/docs/app/biblioteca.md#mover).
 
 ### D · Escribir una lección
 
@@ -632,15 +652,17 @@ comentarios y los `TODO` que había siguen ahí.
 
 **Parte de** Biblioteca → Cálculo → Continuidad.
 
-1. **Nueva lección en…** Continuidad: el título, el tema y el tipo.
+1. **Nueva lección en…** Funciones continuas: el título, el sitio --en las
+   mismas columnas, abiertas donde se estaba; un subtema que falta se crea
+   desde ahí-- y el tipo.
 2. Antes de crearla, enseña dónde va a quedar; el tipo decide si va a
    `content/` o a `problems/`.
 3. Se abre vacía, en el idioma de referencia.
 4. La otra puerta: **Crear una nueva…** al añadir lecciones a un tema, que la
    deja ya puesta.
 
-**La idea:** el nombre de la carpeta es la dirección con la que la llaman los
-documentos.
+**La idea:** cada lección nace en su sitio --categoría, tema y subtema--, que
+es también su carpeta.
 
 **Más:** [Crear una lección](web/docs/app/biblioteca.md#crear-una-leccion).
 
@@ -651,8 +673,9 @@ documentos.
 **Parte de** la **ⓘ** de «Límites de cocientes».
 
 1. **Duplicar…**: otro título, y desde ese momento son dos lecciones.
-2. **Mover o renombrar…**: antes de confirmar dice cuántos documentos toca y
-   de qué cursos, y los reescribe en el mismo cambio.
+2. **Mover o renombrar…**: a otro subtema, en las mismas columnas, y con otro
+   nombre de carpeta si se quiere. Lo que la usa no se toca: la nombra por su
+   id.
 3. La diferencia con **Darla en otro tema…**, que es la misma lección en dos
    sitios (J2).
 
@@ -1376,7 +1399,7 @@ departamento; un profesor que da sus clases no la necesita.
 1. En el editor: la ruta, **ordenar al guardar**, reemplazar, más formato.
 2. Copiar la referencia y el `unit.yaml` en bruto; las búsquedas guardadas.
 3. **Mover a…** y **Gestionar vinculación…**; **Entre repos**, siempre.
-4. En Ajustes: **Bloques y plantillas**, **Servidor MCP**, poner los ids.
+4. En Ajustes: **Bloques y catálogo**, **Servidor MCP**, poner los ids.
 
 **La idea:** un solo interruptor, porque lo que se elige es qué clase de uso se
 hace, no cada botón.
@@ -1405,7 +1428,7 @@ compila en tu máquina y no en la de quien solo tiene uno.
 **Sabrás** dividir una asignatura en partes y decidir con qué se compila cada
 una.
 
-**Parte de** Ajustes → Bloques y plantillas.
+**Parte de** Ajustes → Bloques y catálogo.
 
 1. Añadir «Prácticas de ordenador», con su nombre en cada idioma.
 2. En qué repositorios se declara.
@@ -1419,21 +1442,49 @@ fichero.
 
 #### L4 · Plantillas: tus propias salidas · 3 min · Completa
 
-**Sabrás** crear una salida propia --unos apuntes en A5-- o retocar una de las
-quince.
+**Sabrás** crear una salida propia --unos apuntes en A5-- y verla compilada
+antes de guardarla.
 
-**Parte de** Ajustes → Bloques y plantillas.
+**Parte de** Ajustes → Plantillas de compilación, su propia sección, justo
+antes de los snippets.
 
-1. Duplicar **Apuntes** → «Apuntes de bolsillo», `10pt,a5paper`.
-2. **Cabecera**: el LaTeX que se lee al final del preámbulo.
-3. Dónde se guarda: en un repositorio, o en el programa (y **Copiar a una
-   carpeta**).
-4. Apagar no es borrar. Editar una de serie la escribe en tu repositorio.
+1. La lista: qué produce cada una y en qué repositorios está; las de serie no
+   están en ninguno.
+2. Duplicar **Apuntes** → «Apuntes de bolsillo», `10pt,a5paper`: el editor,
+   con una lección compilada al lado con lo que hay en la pantalla.
+3. **Su cabecera**: el LaTeX que se lee al final del preámbulo --márgenes y
+   otro color--, y se ve antes de guardar.
+4. La primera que se declara escribe también las de serie. Apagar no es
+   borrar.
 
 **La idea:** la cabecera va al final del preámbulo de Didacta, así que puede
 redefinir lo que Didacta acaba de definir.
 
 **Más:** [Plantillas](web/docs/app/ajustes.md#plantillas) · [Las plantillas](web/docs/conceptos/perfiles.md#las-plantillas-tus-propias-salidas).
+
+#### L10 · Una plantilla en varios repositorios · 2,5 min · Completa
+
+Va detrás del L4 aunque se numere L10: de L5 a L9 ya tenían su dirección en
+la web.
+
+**Sabrás** tener la misma plantilla en varios repositorios, ver qué se compila
+con ella y guardar las tuyas en el programa.
+
+**Parte de** dos repositorios abiertos: el del ejemplo, que declara «Hoja del
+departamento», y el de problemas, cuya Hoja 2 se compila con ella.
+
+1. Por qué en dos: quien solo tenga el de problemas no podría compilar su hoja.
+2. Una casilla por repositorio: marcar otro la copia allí, con su cabecera;
+   desmarcar la quita solo de ahí.
+3. El editor: las mismas casillas, **dónde se usa** y la vista previa con una
+   lección de esa hoja.
+4. Guardar escribe en todos; si discrepan, lo avisa **Entre repos**.
+5. La carpeta del programa, y **Copiar a una carpeta**.
+
+**La idea:** con un repositorio basta para usarla; en dos, viaja con los dos
+materiales.
+
+**Más:** [La lista](web/docs/app/ajustes.md#plantillas-lista) · [La carpeta del programa](web/docs/app/ajustes.md#carpeta-del-programa).
 
 #### L5 · Snippets propios · 3 min · Completa
 
@@ -1641,6 +1692,7 @@ quien la hace.
 | organizar el material de varias personas | L2 |
 | añadir «Prácticas» a la teoría y los problemas | L3 |
 | unos apuntes con otro formato o con el membrete del departamento | L4 |
+| la misma plantilla en el repositorio de la teoría y en el de problemas | L10 |
 | una caja propia en la barra del editor | L5 |
 | que GitHub compile solo | L7 |
 | usar un asistente de IA con el material | L8 |

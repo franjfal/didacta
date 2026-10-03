@@ -6,7 +6,7 @@
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "fichero": "content/calculo/continuidad/funciones-continuas/funcion-continua/es.tex",
             "buscar": "\\dfrac{x^2 - 1}{x - 1}",
             "poner": "\\fracc{x^2 - 1}{x - 1}",
             "mensaje": "Una errata en «Funciones continuas»",

@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "leccion",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "acciones": [
         {
           "esperar": 8
@@ -30,11 +30,11 @@
     },
     {
       "nombre": "desactualizada",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/limites/definicion-de-limite/unit.yaml",
+            "fichero": "content/calculo/limites/concepto-de-limite/definicion-de-limite/unit.yaml",
             "buscar": "  en: {status: translated}",
             "poner": "  en: {status: translated, source_hash: antes-del-cambio}",
             "mensaje": "Cambiar una frase del original",

@@ -18,5 +18,5 @@ documents:
       en: "Problem sheet 2: more limits"
     templates: [problems, problems-answers, problems-teacher]
     structure:
-      - unit: calculo/limites/definicion-de-limite
-      - problem: calculo/limites/limite-de-una-raiz
+      - unit: u-240b481e5d63
+      - problem: u-d74ed55e993b

@@ -6,7 +6,7 @@
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/continuidad/funcion-continua/es.tex",
+            "fichero": "content/calculo/continuidad/funciones-continuas/funcion-continua/es.tex",
             "buscar": "\\begin{commonmistake}",
             "poner": "\\begin{center}\n\\includegraphics[width=.5\\textwidth]{figures/salto}\n\\end{center}\n\n\\begin{commonmistake}",
             "mensaje": "Una figura sin texto alternativo",
@@ -46,7 +46,7 @@
           }
         },
         {
-          "ir": "/unit/content/calculo/continuidad/funcion-continua",
+          "ir": "/unit/content/calculo/continuidad/funciones-continuas/funcion-continua",
           "esperar": 12
         },
         {

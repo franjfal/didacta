@@ -2,14 +2,14 @@
   "capturas": [
     {
       "nombre": "siguiente",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=en",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite?lang=en",
       "sin_idiomas": [
         "va"
       ],
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/limites/definicion-de-limite/unit.yaml",
+            "fichero": "content/calculo/limites/concepto-de-limite/definicion-de-limite/unit.yaml",
             "buscar": "  en: {status: translated}",
             "poner": "  en: {status: draft}",
             "mensaje": "La traducción inglesa, sin revisar",
@@ -18,7 +18,7 @@
         },
         {
           "editar": {
-            "fichero": "problems/calculo/limites/limites-de-cocientes/unit.yaml",
+            "fichero": "problems/calculo/limites/calculo-de-limites/limites-de-cocientes/unit.yaml",
             "buscar": "  en: {status: translated}",
             "poner": "  en: {status: draft}",
             "mensaje": "Otra, sin revisar",
@@ -117,14 +117,14 @@
     },
     {
       "nombre": "diferencia",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=en",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite?lang=en",
       "sin_idiomas": [
         "va"
       ],
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/limites/definicion-de-limite/es.tex",
+            "fichero": "content/calculo/limites/concepto-de-limite/definicion-de-limite/es.tex",
             "buscar": "salvo quizá en el propio $a$.",
             "poner": "salvo quizá en el propio $a$, donde puede no estarlo.",
             "mensaje": "Precisar la definición de límite",

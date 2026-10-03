@@ -1,14 +1,17 @@
 # L4 · Plantillas: tus propias salidas
 #
 # Montado desde este guion. Todo es de verdad dentro del arnés, con la
-# interfaz Completa: se duplica «Apuntes» como «Apuntes de bolsillo»
-# (`10pt,a5paper`), que es la primera plantilla que declara el repositorio del
-# ejemplo, y se le escribe una cabecera, que no llega a guardarse.
+# interfaz Completa: en Ajustes → Plantillas de compilación se duplica
+# «Apuntes» como «Apuntes de bolsillo» (`10pt,a5paper`), que es la primera
+# plantilla que declara el repositorio del ejemplo; el editor compila una
+# lección del ejemplo con lo que hay en la pantalla, se le escribe una
+# cabecera --márgenes estrechos y otro color para las definiciones-- y se
+# guarda. La vista previa es la del motor de verdad (`template-preview`).
 codigo: L4
 titulo: "Plantillas: tus propias salidas"
-subtitulo: Crear una salida propia, o retocar una de las que trae Didacta
+subtitulo: Crear una salida propia, y verla compilada antes de guardarla
 ruta: Para quien mantiene el repositorio
-siguiente: "L5 · Snippets propios"
+siguiente: "L10 · Una plantilla en varios repositorios"
 voz: narrador
 lema: ["La cabecera va al final del preámbulo:", "puede redefinir lo que Didacta acaba de definir."]
 lema_en: "puede redefinir"
@@ -20,61 +23,66 @@ escenas:
     frases:
       - id: presentacion
         texto: >-
-          Al terminar sabrás crear una salida propia, unos apuntes en A5, o
-          retocar una de las que trae Didacta.
+          Al terminar sabrás crear una salida propia, unos apuntes en A5, y
+          verla compilada antes de guardarla.
 
-  - id: lista
-    capitulo: Las plantillas
+  - id: seccion
+    capitulo: Su sección
     antes: 0.5
-    pantalla: lista
+    pantalla: seccion
     frases:
-      - id: que
+      - id: donde
         texto: >-
-          Una plantilla es una salida: qué PDF sale de una lección. En Ajustes,
-          Bloques y plantillas, las que trae Didacta.
+          Las plantillas tienen su sección en Ajustes, justo antes de los
+          snippets. Una plantilla es una salida: qué PDF sale de una lección.
         pasos:
-          - {al: inicio, enfoca: [apuntes], max: 1.8}
-          - {en: trae, resalta: apuntes}
-      - id: editar
+          - {al: inicio, enfoca: [nav, snippets], max: 2, dx: 200}
+          - {en: sección, resalta: nav, lado: derecha, hasta: 2.2}
+          - {en: snippets, resalta: snippets, lado: derecha, hasta: 1.4}
+          - {en: salida, enfoca: [apuntes], max: 1.6}
+          - {en: salida, resalta: apuntes}
+      - id: fila
         texto: >-
-          Editar aquí una de ellas la escribe en tu repositorio, con el mismo
-          nombre, y desde ahí manda la tuya. Duplicar hace otra a partir de
-          ella.
+          Cada fila dice qué produce, y en qué repositorios está. Las que trae
+          Didacta no están en ninguno: vienen con el programa.
         pasos:
-          - {al: inicio, enfoca: [editar, duplicar], max: 2.2, dx: -300}
-          - {en: Editar, resalta: editar, lado: abajo, hasta: 3}
-          - {en: Duplicar, resalta: duplicar, lado: abajo}
+          - {al: inicio, resalta: describe, lado: abajo, hasta: 2}
+          - {en: repositorios, resalta: [casilla, programa], lado: abajo, hasta: 2.4}
+          - {en: Didacta, resalta: serie, etiqueta: "Viene con Didacta", lado: abajo}
 
   - id: bolsillo
     capitulo: Apuntes de bolsillo
     antes: 0.5
-    pantalla: duplicar
+    pantalla: seccion
     frases:
+      - id: duplicar
+        texto: >-
+          Duplicar Apuntes abre el editor. A la izquierda, lo que la define. A
+          la derecha, una lección del ejemplo compilada con ella.
+        pasos:
+          - {al: inicio, enfoca: [editar, duplicar], max: 2.2, dx: -300}
+          - {en: Duplicar, pulsa: duplicar, hasta: 0.8}
+          - {en: editor, cambia: editor}
+          - {en: editor, enfoca: [titulo, vista], max: 1.1, captura: editor}
+          - {en: izquierda, resalta: [titulo, opciones], lado: derecha, captura: editor, hasta: 2.2}
+          - {en: derecha, resalta: pdf, lado: izquierda, captura: editor}
       - id: nombre
         texto: >-
-          Duplicar Apuntes: un nombre, Apuntes de bolsillo. Y como es la
-          primera que se declara, se escriben también las de serie, para que
-          todo se siga compilando igual.
+          Un nombre, Apuntes de bolsillo; su identificador; y en las opciones
+          de la clase, diez puntos y papel A5.
         pasos:
-          - {al: inicio, enfoca: [titulo], max: 1.8, dy: 100}
-          - {en: nombre, resalta: titulo, lado: abajo, hasta: 3}
-      - id: opciones
+          - {al: inicio, cambia: a5}
+          - {al: inicio, enfoca: [titulo, opciones], max: 1.7, captura: a5}
+          - {en: nombre, resalta: titulo, lado: abajo, captura: a5, hasta: 1.8}
+          - {en: identificador, resalta: id, lado: abajo, captura: a5, hasta: 1.6}
+          - {en: opciones, resalta: opciones, lado: abajo, captura: a5}
+      - id: sola
         texto: >-
-          Su identificador, y las opciones de la clase: diez puntos y papel
-          A5. Los ejes, los de Apuntes.
+          La vista previa se vuelve a compilar sola, sin guardar nada.
         pasos:
-          - {al: inicio, cambia: opciones}
-          - {al: inicio, enfoca: [id, opciones], max: 1.8, captura: opciones}
-          - {en: identificador, resalta: id, captura: opciones, hasta: 1.8}
-          - {en: opciones, resalta: opciones, captura: opciones}
-      - id: declarar
-        texto: >-
-          Declarar, y ya está en la lista, en el repositorio del ejemplo.
-        pasos:
-          - {al: inicio, pulsa: guardar, captura: opciones}
-          - {en: lista, cambia: creada}
-          - {en: lista, enfoca: [fila], max: 1.8, captura: creada}
-          - {en: repositorio, resalta: fila, captura: creada}
+          - {al: inicio, enfoca: [estado, pdf], max: 1.2, captura: a5}
+          - {en: compilar, resalta: estado, lado: abajo, captura: a5, hasta: 1.6}
+          - {en: guardar, resalta: pdf, lado: izquierda, captura: a5}
 
   - id: cabecera
     capitulo: La cabecera
@@ -83,19 +91,51 @@ escenas:
     frases:
       - id: final
         texto: >-
-          Cabecera: el LaTeX que se lee al final del preámbulo de Didacta. Aquí,
-          un interlineado más apretado, para que quepa en A5.
+          Su cabecera es LaTeX que se lee al final del preámbulo de Didacta.
+          Aquí, unos márgenes de bolsillo y otro color para las definiciones.
         pasos:
-          - {al: inicio, enfoca: [texto], max: 1.6}
-          - {en: interlineado, resalta: texto}
+          - {al: inicio, enfoca: [texto, explica], max: 1.7}
+          - {en: final, resalta: explica, lado: abajo, hasta: 2.4}
+          - {en: márgenes, resalta: texto, lado: arriba}
+      - id: momento
+        texto: >-
+          Y se ve al momento, antes de guardar.
+        pasos:
+          - {al: inicio, enfoca: [pdf], max: 1.15}
+          - {en: momento, resalta: pdf, lado: izquierda}
+
+  - id: guardar
+    capitulo: Guardar
+    antes: 0.5
+    pantalla: donde
+    frases:
+      - id: sitio
+        texto: >-
+          Se guarda en el repositorio marcado. Y como es la primera que se
+          declara, se escriben también las de serie, para que todo se siga
+          compilando igual.
+        pasos:
+          - {al: inicio, enfoca: [sitios], max: 1.8}
+          - {en: marcado, resalta: ejemplo, lado: arriba, hasta: 2.2}
+          - {en: primera, cambia: editor}
+          - {en: primera, enfoca: [primera], max: 1.8, captura: editor}
+          - {en: serie, resalta: primera, lado: abajo, captura: editor}
+      - id: lista
+        texto: >-
+          Guardar, y ya está en la lista, con su cabecera.
+        pasos:
+          - {al: inicio, cambia: donde}
+          - {al: inicio, enfoca: [guardar], max: 2, captura: donde}
+          - {en: Guardar, pulsa: guardar, captura: donde, hasta: 0.8}
+          - {en: lista, cambia: creada}
+          - {en: lista, enfoca: [fila], max: 1.6, captura: creada}
+          - {en: lista, resalta: fila, captura: creada}
       - id: apagar
         texto: >-
-          Y apagar una no la borra: sigue declarada, con su cabecera, para el
+          Y apagarla no la borra: sigue declarada, con su cabecera, para el
           día que vuelva a hacer falta.
         pasos:
-          - {al: inicio, cambia: creada}
-          - {al: inicio, enfoca: [activa, cabecera], max: 2, captura: creada}
-          - {en: apagar, resalta: activa, lado: derecha, captura: creada}
+          - {al: inicio, resalta: activa, lado: derecha, captura: creada}
 
   - id: cierre
     antes: 0.5
@@ -108,4 +148,4 @@ escenas:
         pausa: 0.5
       - id: siguiente
         texto: >-
-          En el siguiente vídeo, tus propios snippets.
+          En el siguiente vídeo, una plantilla en varios repositorios.

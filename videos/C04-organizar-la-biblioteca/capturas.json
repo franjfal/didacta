@@ -1,0 +1,70 @@
+{
+  "capturas": [
+    {
+      "nombre": "movida",
+      "ruta": "/?en=calculo/continuidad/funciones-continuas",
+      "acciones": [
+        {"esperar": 10},
+        {"capturar": {"nombre": "antes", "cajas": {
+          "nueva_categoria": {"clave": "library-add-0"},
+          "nuevo_tema": {"clave": "library-add-1"},
+          "nuevo_subtema": {"clave": "library-add-2"}
+        }}},
+        {"pulsar": {"clave": "library-add-2"}, "esperar": 8},
+        {"escribir": {"en": {"clave": "place-name-es"}, "texto": "Discontinuidades"}},
+        {"escribir": {"en": {"clave": "place-name-en"}, "texto": "Discontinuities"}},
+        {"capturar": {"nombre": "dialogo", "cajas": {
+          "es": {"clave": "place-name-es"},
+          "en": {"clave": "place-name-en"},
+          "id": {"clave": "place-id"},
+          "nota": {"contiene": "Se declara en taxonomy.yaml", "fila": 200},
+          "crear": {"clave": "place-create"}
+        }}},
+        {"pulsar": {"clave": "place-create"}, "esperar": 6},
+        {"hasta_que": {"contiene": "creado"}, "max": 400, "despues": 12},
+        {"ir": "/?en=calculo/continuidad/funciones-continuas", "esperar": 12},
+        {"capturar": {"nombre": "creado", "cajas": {
+          "nuevo": {"clave": "subtopic-discontinuidades"},
+          "tarjeta": {"texto": "Discontinuidades evitables", "alto": 60}
+        }}},
+        {"soltar": {
+          "desde": {"texto": "Discontinuidades evitables"},
+          "hasta": {"clave": "subtopic-discontinuidades"},
+          "capturar": "soltando",
+          "cajas": {"nuevo": {"clave": "subtopic-discontinuidades"}}
+        }, "esperar": 6},
+        {"hasta_que": {"contiene": "movida"}, "max": 600, "despues": 12},
+        {"pulsar": {"clave": "subtopic-discontinuidades"}, "esperar": 12}
+      ],
+      "cajas": {
+        "nuevo": {"clave": "subtopic-discontinuidades"},
+        "leccion": {"texto": "Discontinuidades evitables", "alto": 60}
+      }
+    },
+    {
+      "nombre": "parcial",
+      "ruta": "/courses/calculo-i/2026-2027/parcial-1",
+      "acciones": [{"esperar": 14}],
+      "cajas": {
+        "fila": {"texto": "Discontinuidades evitables", "fila": 500}
+      }
+    },
+    {
+      "nombre": "dialogo_mover",
+      "ruta": "/?en=calculo/limites/concepto-de-limite",
+      "acciones": [
+        {"esperar": 10},
+        {"pulsar": {"texto": "Límites por la definición", "secundario": true}, "esperar": 8},
+        {"capturar": {"nombre": "menu", "cajas": {
+          "menu": {"clave": "unit-card-move", "alto": 110},
+          "mover": {"clave": "unit-card-move"}
+        }}},
+        {"pulsar": {"clave": "unit-card-move"}, "esperar": 8},
+        {"pulsar": {"clave": "place-calculo-de-limites"}, "esperar": 6}
+      ],
+      "cajas": {
+        "dialogo": {"clave": "move-unit-place"}
+      }
+    }
+  ]
+}

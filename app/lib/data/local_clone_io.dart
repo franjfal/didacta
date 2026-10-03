@@ -1712,3 +1712,108 @@ Future<CloneTarget> inspectTarget({
   }
   return CloneTarget.occupied;
 }
+
+/// Lleva un clon a otra carpeta. Ver [LocalClone.move].
+///
+/// Dentro de la cola del clon: un guardado o un envío a medio camino no
+/// puede encontrarse la carpeta a medio mover.
+Future<String?> moveClone({
+  required String from,
+  required String to,
+}) => _exclusive(from, () async {
+  final source = Directory(from);
+  final target = Directory(to);
+  final fromPath = source.absolute.path;
+  final toPath = target.absolute.path;
+  if (fromPath == toPath) return null;
+  if (!await source.exists()) {
+    throw CloneException(tr('{0} no existe: no hay nada que mover.', [from]));
+  }
+  if ('$toPath/'.startsWith('$fromPath/') ||
+      '$toPath\\'.startsWith('$fromPath\\')) {
+    throw CloneException(
+      tr('{0} está dentro de {1}: una carpeta no cabe dentro de sí misma.', [
+        to,
+        from,
+      ]),
+    );
+  }
+  if (await target.exists()) {
+    if (target.listSync().isNotEmpty) {
+      throw CloneException(
+        tr(
+          'En {0} ya hay algo, así que no muevo nada encima. Vacíala, '
+          'o quita lo que haya, y vuelve a probar.',
+          [to],
+        ),
+      );
+    }
+    // Vacía: `rename` no escribe sobre una carpeta, ni siquiera vacía.
+    await target.delete();
+  }
+  await target.parent.create(recursive: true);
+
+  String? leftBehind;
+  try {
+    await source.rename(toPath);
+  } on FileSystemException {
+    // Otro disco: renombrar no cruza de uno a otro. Se copia entero, y
+    // el original solo se toca con la copia hecha. Si la copia falla, se
+    // quita lo copiado y el original sigue como estaba.
+    try {
+      await _copyTree(source, target);
+    } catch (thrown) {
+      if (await target.exists()) await target.delete(recursive: true);
+      throw CloneException(
+        tr('No he podido copiar {0} a {1}. Sigue donde estaba.', [from, to]),
+        stderr: '$thrown',
+      );
+    }
+    try {
+      await source.delete(recursive: true);
+    } catch (_) {
+      // La copia está entera y es la que vale. Volver atrás ahora --borrar
+      // la copia-- podría dejar sin ninguna si el original quedó a medias.
+      leftBehind = tr(
+        'He movido {0} a {1}, pero no he podido borrar del todo la '
+        'carpeta de antes. Lo que queda en {0} ya no se usa: bórralo a '
+        'mano.',
+        [from, to],
+      );
+    }
+  }
+
+  // Las versiones congeladas viven dentro de `.git` y git apunta a ellas
+  // por su ruta completa: con la carpeta en otro sitio, hay que decírselo.
+  // Si no se deja, se tiran: son una caché y se rehacen al abrirlas.
+  final moved = _GitClone(directory: toPath);
+  final trees = await moved.worktrees();
+  if (trees.isNotEmpty) {
+    try {
+      await _run(
+        ['worktree', 'repair', for (final tree in trees) tree.directory],
+        directory: toPath,
+        what: tr('poner al día las versiones congeladas'),
+      );
+    } on CloneException {
+      await moved.clearWorktrees();
+    }
+  }
+  return leftBehind;
+});
+
+/// Copia [from] dentro de [to], enlaces incluidos tal cual.
+Future<void> _copyTree(Directory from, Directory to) async {
+  await to.create(recursive: true);
+  await for (final entry in from.list(followLinks: false)) {
+    final name = entry.uri.pathSegments.lastWhere((part) => part.isNotEmpty);
+    final into = '${to.path}${Platform.pathSeparator}$name';
+    if (entry is Link) {
+      await Link(into).create(await entry.target());
+    } else if (entry is Directory) {
+      await _copyTree(entry, Directory(into));
+    } else if (entry is File) {
+      await entry.copy(into);
+    }
+  }
+}

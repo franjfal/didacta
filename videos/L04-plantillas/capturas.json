@@ -2,36 +2,11 @@
   "capturas": [
     {
       "nombre": "_plantillas",
-      "ruta": "/settings?s=material",
+      "ruta": "/settings?s=plantillas",
       "completa": true,
       "acciones": [
         {
-          "esperar": 12
-        },
-        {
-          "mostrar": {
-            "clave": "open-templates"
-          },
-          "esperar": 4
-        },
-        {
-          "capturar": {
-            "nombre": "seccion",
-            "cajas": {
-              "gestionar": {
-                "clave": "open-templates"
-              },
-              "copiar": {
-                "clave": "export-templates"
-              }
-            }
-          }
-        },
-        {
-          "pulsar": {
-            "clave": "open-templates"
-          },
-          "esperar": 8
+          "esperar": 14
         },
         {
           "mostrar": {
@@ -41,22 +16,38 @@
         },
         {
           "capturar": {
-            "nombre": "lista",
+            "nombre": "seccion",
             "cajas": {
+              "nav": {
+                "texto": "Plantillas de compilación",
+                "n": 0
+              },
+              "snippets": {
+                "texto": "Snippets de LaTeX"
+              },
               "apuntes": {
                 "clave": "template-notes"
+              },
+              "describe": {
+                "contiene": "notes · article"
+              },
+              "casilla": {
+                "clave": "template-notes-in-profe/didacta-ejemplo"
+              },
+              "programa": {
+                "clave": "template-notes-in-@programa"
+              },
+              "serie": {
+                "texto": "viene con Didacta",
+                "cerca": {
+                  "clave": "template-notes"
+                }
               },
               "duplicar": {
                 "clave": "template-copy-notes"
               },
               "editar": {
                 "clave": "template-edit-notes"
-              },
-              "activa": {
-                "clave": "template-active-notes"
-              },
-              "nueva": {
-                "clave": "new-template"
               }
             }
           }
@@ -68,34 +59,52 @@
           "esperar": 8
         },
         {
+          "hasta_que": {
+            "contiene": "Compilado en"
+          },
+          "max": 400
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "capturar": {
+            "nombre": "editor",
+            "cajas": {
+              "primera": {
+                "clave": "template-first"
+              },
+              "titulo": {
+                "clave": "template-title-es"
+              },
+              "id": {
+                "clave": "template-id"
+              },
+              "opciones": {
+                "clave": "template-options"
+              },
+              "vista": {
+                "clave": "template-preview"
+              },
+              "pdf": {
+                "clave": "template-preview-pdf"
+              },
+              "leccion": {
+                "clave": "template-preview-unit"
+              },
+              "estado": {
+                "clave": "template-preview-status"
+              }
+            }
+          }
+        },
+        {
           "escribir": {
             "en": {
               "clave": "template-title-es"
             },
             "texto": "Apuntes de bolsillo"
           }
-        },
-        {
-          "esperar": 3
-        },
-        {
-          "capturar": {
-            "nombre": "duplicar",
-            "cajas": {
-              "titulo": {
-                "clave": "template-title-es"
-              },
-              "guardar": {
-                "clave": "template-save"
-              }
-            }
-          }
-        },
-        {
-          "mostrar": {
-            "clave": "template-options"
-          },
-          "esperar": 4
         },
         {
           "escribir": {
@@ -114,23 +123,84 @@
           }
         },
         {
-          "esperar": 3
+          "esperar": 60
         },
         {
           "capturar": {
-            "nombre": "opciones",
+            "nombre": "a5",
             "cajas": {
+              "titulo": {
+                "clave": "template-title-es"
+              },
               "id": {
                 "clave": "template-id"
-              },
-              "clase": {
-                "clave": "template-class"
               },
               "opciones": {
                 "clave": "template-options"
               },
-              "donde": {
-                "clave": "template-repo"
+              "pdf": {
+                "clave": "template-preview-pdf"
+              },
+              "estado": {
+                "clave": "template-preview-status"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "template-preamble-text"
+          },
+          "esperar": 4
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "template-preamble-text"
+            },
+            "texto": "% Márgenes de bolsillo, y otro color para las definiciones.\n\\geometry{margin=1.5cm}\n\\definecolor{didactaDefn}{RGB}{170,70,50}\n"
+          }
+        },
+        {
+          "esperar": 60
+        },
+        {
+          "capturar": {
+            "nombre": "cabecera",
+            "cajas": {
+              "texto": {
+                "clave": "template-preamble-text"
+              },
+              "explica": {
+                "contiene": "Se lee al final del preámbulo de Didacta"
+              },
+              "pdf": {
+                "clave": "template-preview-pdf"
+              },
+              "estado": {
+                "clave": "template-preview-status"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "template-editor-homes"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "donde",
+            "cajas": {
+              "sitios": {
+                "clave": "template-editor-homes"
+              },
+              "ejemplo": {
+                "clave": "template-editor-in-profe/didacta-ejemplo"
+              },
+              "programa": {
+                "clave": "template-editor-in-@programa"
               },
               "guardar": {
                 "clave": "template-save"
@@ -142,7 +212,7 @@
           "pulsar": {
             "clave": "template-save"
           },
-          "esperar": 4
+          "esperar": 8
         },
         {
           "esperar": 60
@@ -160,41 +230,11 @@
               "fila": {
                 "clave": "template-bolsillo"
               },
-              "cabecera": {
-                "clave": "template-preamble-bolsillo"
-              },
               "activa": {
                 "clave": "template-active-bolsillo"
-              }
-            }
-          }
-        },
-        {
-          "pulsar": {
-            "clave": "template-preamble-bolsillo"
-          },
-          "esperar": 8
-        },
-        {
-          "escribir": {
-            "en": {
-              "clave": "template-preamble-text"
-            },
-            "texto": "% Más apretado, para que quepa en A5.\n\\renewcommand{\\baselinestretch}{0.95}\n"
-          }
-        },
-        {
-          "esperar": 3
-        },
-        {
-          "capturar": {
-            "nombre": "cabecera",
-            "cajas": {
-              "texto": {
-                "clave": "template-preamble-text"
               },
-              "guardar": {
-                "clave": "template-preamble-save"
+              "casilla": {
+                "clave": "template-bolsillo-in-profe/didacta-ejemplo"
               }
             }
           }

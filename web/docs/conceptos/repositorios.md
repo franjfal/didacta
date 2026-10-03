@@ -11,11 +11,12 @@ concreta dentro.
 ```
 <repositorio>/
 ├── didacta.yaml                       ajustes del repositorio
-├── content/<área>/<tema>/<unidad>/
-│   ├── unit.yaml                      título, etiquetas, idiomas, estado
+├── taxonomy.yaml                      categorías, temas, subtemas y bloques
+├── content/<categoría>/<tema>/<subtema>/<unidad>/
+│   ├── unit.yaml                      id, título, sitio, idiomas, estado
 │   ├── es.tex  va.tex  en.tex         el mismo contenido, un fichero por idioma
 │   └── figures/                       sus imágenes
-├── problems/<área>/<tema>/<unidad>/
+├── problems/<categoría>/<tema>/<subtema>/<unidad>/
 │   ├── unit.yaml
 │   └── es.tex  va.tex  en.tex         enunciado + resultado + solución + corrección
 ├── courses/<asignatura>/

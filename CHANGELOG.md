@@ -42,14 +42,69 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ## Próxima
 
+- **Las prácticas de Análisis I, en diapositivas.** Fallaban todas: estaban
+  escritas como apuntes, sin diapositivas, y en beamer salían páginas que se
+  salían por abajo. Ahora cada práctica tiene su presentación de repaso --la
+  teoría, los ejemplos resueltos y los ejercicios intercalados, cortados en
+  diapositivas que caben--, y los problemas propuestos del final solo salen en
+  los apuntes, que no cambian ni una palabra.
+- **Un apartado sin diapositivas no sale en ellas.** Un apartado cuyo
+  material va solo en los apuntes ya no deja en la presentación una portada
+  seguida de nada, ni su línea en el índice. Y `\slidetitle{…}` pone el título
+  de una diapositiva sin añadir un encabezado a los apuntes.
+
+- **La biblioteca, en tres niveles.** Categoría, tema y **subtema**, cada uno
+  en su columna, como las del Finder, y a la derecha las lecciones. El subtema
+  es lo que antes eran las etiquetas encima de la lista, ahora declarado y con
+  nombre en cada idioma; cada lección vive exactamente en uno, que es también
+  su carpeta. Al pie de cada columna se crea la categoría, el tema o el
+  subtema que falte, en todos los repositorios abiertos a la vez, y salen en el
+  orden de la asignatura.
+- **Mover una lección, arrastrándola.** Se arrastra su tarjeta hasta un
+  subtema, o se elige «Mover a…» con el botón derecho, en las mismas columnas.
+  La carpeta se mueve de verdad, y no hay que reescribir nada de lo que la
+  usa: los temas y los prerrequisitos la nombran ahora por su id, que no
+  cambia, y es Didacta quien le dice a LaTeX dónde está al compilar.
+- **Elegir lecciones en columnas.** Al crear una lección, y al añadirlas a un
+  tema de un curso, se elige el sitio con las mismas tres columnas de la
+  biblioteca en lugar de escribir una ruta o abrir carpetas del disco.
+- **Compilar varias salidas a la vez ya no deja huecos.** Si dos salidas
+  empezaban juntas, la segunda podía compilarse sin saber el idioma original
+  de algunas lecciones.
+
 - **Didacta 1.0.** La web tiene ya casi toda la galería de videotutoriales:
-  76 vídeos cortos, con subtítulos y capítulos, que recorren Didacta de
+  79 vídeos cortos, con subtítulos y capítulos, que recorren Didacta de
   principio a fin --empezar, escribir una lección, preparar una asignatura,
   compilar, traducir, repartir, no perder nada, el curso que viene, a tu
   manera y lo de quien mantiene el repositorio--. Grabarlos pantalla a
   pantalla ha servido además para encontrar y arreglar lo que sigue.
-- **Las plantillas de serie dicen lo que son.** En Ajustes → Bloques y
-  plantillas, la lista decía «solo los enunciados» también de las copias del
+- **Las plantillas, en su propia sección.** Ajustes → Plantillas de
+  compilación, justo antes de los snippets y con las dos interfaces: era un
+  botón escondido dentro de «Bloques y plantillas». Cada plantilla se abre en
+  un editor como el de los snippets, con una lección compilada al lado con lo
+  que hay en la pantalla, sin guardar, y la lista de lo que se compila con
+  ella. Y cada una tiene una casilla por repositorio: marcar otro la copia allí
+  con su cabecera, desmarcarlo la quita solo de ahí, y editarla escribe en
+  todos. La cabecera, que antes se guardaba en uno solo, también.
+- **El papel de una plantilla se respeta.** Una plantilla con `a5paper` o
+  `letterpaper` en sus opciones salía en A4 sin decir nada, porque Didacta
+  ponía el suyo encima. Ahora sale en el papel que dice; sin ninguno, A4, como
+  siempre.
+- **Todos los repositorios en la misma carpeta.** Elegir dónde se clonan solo
+  valía para los nuevos: uno clonado antes, o añadido como carpeta que ya
+  tenías, se quedaba donde estaba, y con dos repositorios cada uno acababa en
+  un sitio. Ahora, en Ajustes → Cuenta y repositorios, el que está fuera lo
+  dice y se lleva con un botón; cambiar la carpeta ofrece llevar los de antes,
+  y añadir una carpeta de otro sitio pregunta si moverla. Va la carpeta
+  entera, con lo que tenga sin enviar, y nunca encima de otra cosa.
+- **Las cajas propias, en cada idioma.** Una caja de teorema hecha en
+  Ajustes → Snippets lleva ahora un título por cada idioma del repositorio:
+  «Resumen» en castellano, «Resum» en valenciano, sin un snippet por idioma.
+  Uno vacío saca el del idioma de referencia, y la vista previa se puede
+  compilar en cualquiera de ellos. Las de Didacta --Observación, Teorema y
+  las demás-- ya salían traducidas.
+- **Las plantillas de serie dicen lo que son.** En Ajustes → Plantillas de
+  compilación, la lista decía «solo los enunciados» también de las copias del
   profesor, y al editar una de las que trae Didacta el editor salía con los
   ejes por defecto --alumno, sin soluciones, con pausas-- en lugar de los
   suyos. Ahora cada una enseña lo que lleva y se edita desde lo que es.

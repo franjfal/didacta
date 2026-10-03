@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import '../data/browser.dart';
 import '../data/github.dart';
 import '../data/local_clone.dart';
+import '../model/workspace.dart';
 import '../state/session.dart';
 import 'theme.dart';
 import '../l10n/tr.dart';
@@ -281,8 +282,9 @@ class RepositoryAdder {
     onBusy(true);
     onProblem(null);
     onStep(tr('Comprobando {0} en GitHub…', [chosen]));
+    ContentRepo? added;
     try {
-      await session.addExistingRepository(chosen);
+      added = await session.addExistingRepository(chosen);
       onStep('');
       // Se añadió, pero puede no haber quedado al día: eso no es un fallo de
       // añadir, y decirlo como si lo fuera haría pensar que no se añadió.
@@ -290,6 +292,114 @@ class RepositoryAdder {
     } catch (thrown) {
       onProblem(thrown);
     } finally {
+      onBusy(false);
+    }
+    // Una carpeta de fuera se puede quedar donde está, pero se pregunta: si
+    // no, los que se clonan van a la carpeta de todos y los añadidos así a
+    // cualquier otro sitio, y cada repositorio acaba en uno distinto.
+    if (added != null && !session.isInCloneBase(added) && context.mounted) {
+      await intoBase(context, only: [added]);
+    }
+  }
+
+  /// Ofrece llevar a la carpeta de todos los repositorios que están fuera
+  /// --[only], o todos los de fuera-- y, si se acepta, los lleva.
+  ///
+  /// Se pregunta, con el antes y el después delante, porque es mover la
+  /// carpeta de alguien: otro programa puede estar mirándola, y quien la
+  /// abre a mano tiene que saber que ya no está ahí.
+  Future<void> intoBase(BuildContext context, {List<ContentRepo>? only}) async {
+    final base = session.cloneBase;
+    final repos = [
+      for (final repo in only ?? session.outsideCloneBase)
+        if (!session.isInCloneBase(repo)) repo,
+    ];
+    if (repos.isEmpty || base.isEmpty) return;
+
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          repos.length == 1
+              ? tr('¿Llevo {0} a {1}?', [repos.single.name, base])
+              : tr('¿Llevo {0} repositorios a {1}?', [repos.length, base]),
+        ),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                repos.length == 1
+                    ? tr(
+                        'Está fuera de la carpeta donde van los repositorios. '
+                        'Se mueve la carpeta entera, con lo que tenga sin '
+                        'enviar; si en el destino ya hay algo, no se toca.',
+                      )
+                    : tr(
+                        'Están fuera de la carpeta donde van los '
+                        'repositorios. Se mueve cada carpeta entera, con lo '
+                        'que tenga sin enviar; si en el destino ya hay algo, '
+                        'no se toca.',
+                      ),
+                style: const TextStyle(fontSize: 12.5, height: 1.45),
+              ),
+              const SizedBox(height: 10),
+              for (final repo in repos)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    '${repo.directory}\n→ ${session.targetFor(repo.name)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      color: context.palette.muted,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              repos.length == 1
+                  ? tr('Dejarlo donde está')
+                  : tr('Dejarlos donde están'),
+            ),
+          ),
+          FilledButton(
+            key: const Key('move-into-base'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(repos.length == 1 ? tr('Moverlo') : tr('Moverlos')),
+          ),
+        ],
+      ),
+    );
+    if (go != true) return;
+
+    onBusy(true);
+    onProblem(null);
+    final problems = <String>[];
+    try {
+      for (final (index, repo) in repos.indexed) {
+        final of = repos.length > 1
+            ? tr(' ({0} de {1})', [index + 1, repos.length])
+            : '';
+        onStep(tr('Moviendo {0}{1}…', [repo.id, of]));
+        try {
+          final left = await session.relocateRepository(repo.id);
+          if (left != null) problems.add(left);
+        } catch (thrown) {
+          // Uno que no se puede mover no para a los demás.
+          problems.add('$thrown');
+        }
+      }
+    } finally {
+      onStep('');
+      onProblem(problems.isEmpty ? null : problems.join('\n\n'));
       onBusy(false);
     }
   }

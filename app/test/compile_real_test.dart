@@ -37,7 +37,7 @@ Future<String> brokenExample(String engine) async {
   addTearDown(() => root.delete(recursive: true));
   await Process.run('cp', ['-R', '$engine/app/assets/ejemplo/.', root.path]);
   final lesson = File(
-    '${root.path}/content/calculo/limites/algebra-de-limites/es.tex',
+    '${root.path}/content/calculo/limites/calculo-de-limites/algebra-de-limites/es.tex',
   );
   final lines = lesson.readAsLinesSync();
   final title = lines.indexWhere((line) => line.contains(r'\didactatitle'));
@@ -71,9 +71,9 @@ void main() {
       final result = results.single;
       expect(result.ok, isFalse);
       final error = result.errorDiagnostics.first;
-      expect(error.unit, 'content/calculo/limites/algebra-de-limites');
+      expect(error.unit, 'content/calculo/limites/calculo-de-limites/algebra-de-limites');
       expect(error.language, 'es');
-      expect(error.path, 'content/calculo/limites/algebra-de-limites/es.tex');
+      expect(error.path, 'content/calculo/limites/calculo-de-limites/algebra-de-limites/es.tex');
       expect(error.line, isNotNull);
       expect(error.message, contains('Undefined control sequence'));
       expect(error.context, contains(r'\foo'));

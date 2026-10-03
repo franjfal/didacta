@@ -142,7 +142,8 @@ class RealBuildTests(unittest.TestCase):
         self.assertFalse(output["stale"])
 
         lesson = os.path.join(self.repo, "content", "calculo", "limites",
-                              "algebra-de-limites", "es.tex")
+                              "calculo-de-limites", "algebra-de-limites",
+                              "es.tex")
         # Solo la fecha: no está viejo.
         later = time.time() + 100
         os.utime(lesson, (later, later))
@@ -155,7 +156,8 @@ class RealBuildTests(unittest.TestCase):
     def test_una_pasada_queda_vieja_hasta_compilarla_entera(self):
         import json
         lesson = os.path.join(self.repo, "content", "calculo", "limites",
-                              "algebra-de-limites", "es.tex")
+                              "calculo-de-limites", "algebra-de-limites",
+                              "es.tex")
         done = self.cli("build", "calculo-i@2026-2027/tema-1", "-p", "notes",
                         "--json")
         self.assertEqual(done.returncode, 0, done.stderr[-800:])

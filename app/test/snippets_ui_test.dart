@@ -53,18 +53,21 @@ class TwoRepos extends FakeSession {
   ContentGateway gatewayFor(String? repo) => gateways[repo] ?? gatewayOverride;
 }
 
-Catalogue catalogueOf(Map<String, List<SnippetDeclaration>?> snippets) =>
-    Catalogue(
-      name: 't',
-      languages: const ['es'],
-      defaultLanguage: 'es',
-      contentHash: '',
-      units: const [],
-      courses: const [],
-      profiles: const [],
-      errors: const [],
-      snippets: snippets,
-    );
+Catalogue catalogueOf(
+  Map<String, List<SnippetDeclaration>?> snippets, {
+  List<RepoLanguages> byRepo = const [],
+}) => Catalogue(
+  name: 't',
+  languages: const ['es'],
+  byRepo: byRepo,
+  defaultLanguage: 'es',
+  contentHash: '',
+  units: const [],
+  courses: const [],
+  profiles: const [],
+  errors: const [],
+  snippets: snippets,
+);
 
 const resumen = SnippetDeclaration(
   id: 'resumen',
@@ -78,8 +81,11 @@ const resumen = SnippetDeclaration(
 late FakeGateway teoriaFiles;
 late FakeGateway problemasFiles;
 
-Future<TwoRepos> start(Map<String, List<SnippetDeclaration>?> declared) async {
-  final catalogue = catalogueOf(declared);
+Future<TwoRepos> start(
+  Map<String, List<SnippetDeclaration>?> declared, {
+  List<RepoLanguages> byRepo = const [],
+}) async {
+  final catalogue = catalogueOf(declared, byRepo: byRepo);
   final session = TwoRepos({
     teoria: teoriaFiles,
     problemas: problemasFiles,
@@ -249,6 +255,70 @@ void main() {
         teoriaFiles.files[Session.snippetsPath],
         contains(r'\DidactaNewTheorem{resumen}{Resumen}{didactaProp}'),
       );
+    });
+
+    testWidgets('con repositorios en varios idiomas, la caja lleva un título '
+        'por idioma', (tester) async {
+      final session = await start(
+        {teoria: null, problemas: null},
+        byRepo: const [
+          RepoLanguages(
+            repo: teoria,
+            languages: ['es', 'va'],
+            defaultLanguage: 'es',
+          ),
+          RepoLanguages(
+            repo: problemas,
+            languages: ['es', 'en'],
+            defaultLanguage: 'es',
+          ),
+        ],
+      );
+      await pump(tester, session, const SettingsPage(section: 'snippets'));
+      await tester.tap(find.byKey(const Key('new-snippet')));
+      await settle(tester);
+
+      Finder field(String key) => find.descendant(
+        of: find.byKey(Key(key)),
+        matching: find.byType(EditableText),
+      );
+      await tester.enterText(field('snippet-label'), 'Resumen');
+      await tester.enterText(field('snippet-environment'), 'resumen');
+      await settle(tester);
+      await tester.tap(find.text('Caja de teorema'));
+      await settle(tester);
+
+      // El de referencia lleva el rótulo; los demás, vacíos, dicen qué sale.
+      expect(find.text('Título en castellano'), findsOneWidget);
+      expect(find.byKey(const Key('snippet-box-title-va')), findsOneWidget);
+      expect(find.byKey(const Key('snippet-box-title-en')), findsOneWidget);
+      expect(
+        find.text(r'\DidactaNewTheorem{resumen}{Resumen}{didactaThm}'),
+        findsOneWidget,
+      );
+      // La vista previa se puede mirar en cada uno.
+      expect(find.byKey(const Key('snippet-preview-language')), findsOneWidget);
+
+      await tester.enterText(field('snippet-box-title-va'), 'Resum');
+      await settle(tester);
+      const translated =
+          r'\DidactaNewTheorem{resumen}'
+          r'{\DidactaTranslated{es=Resumen, va=Resum}}{didactaThm}';
+      expect(find.text(translated), findsOneWidget);
+
+      // Sin el repositorio en valenciano, el título en valenciano se queda.
+      await tester.ensureVisible(find.byKey(Key('snippet-editor-in-$teoria')));
+      await settle(tester);
+      await tester.tap(find.byKey(Key('snippet-editor-in-$teoria')));
+      await settle(tester);
+      expect(find.byKey(const Key('snippet-box-title-va')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('save-snippet')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('save-unchecked-snippet')));
+      await settle(tester);
+      final written = problemasFiles.files[Session.snippetsPath]!;
+      expect(written, contains('    definition: |\n      $translated'));
     });
 
     testWidgets('no deja redefinir un entorno de Didacta', (tester) async {

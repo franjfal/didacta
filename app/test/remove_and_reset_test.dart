@@ -292,6 +292,32 @@ void main() {
       expect(find.textContaining('está en la Papelera'), findsOneWidget);
     });
 
+    testWidgets('uno fuera de la carpeta de todos se ve, y se lleva', (
+      tester,
+    ) async {
+      // Como quien cambia la carpeta: los dos se quedan en la de antes.
+      final nueva = '${root.path}/Nueva';
+      preferences.base = nueva;
+      final session = await pumpSettings(tester);
+      expect(find.textContaining('Está fuera de $nueva'), findsNWidgets(2));
+
+      final move = find.byKey(const Key('repo-move-x/uno'));
+      await tester.ensureVisible(move);
+      await tester.tap(move);
+      await settleReal(tester);
+      expect(find.text('¿Llevo uno a $nueva?'), findsOneWidget);
+      expect(find.textContaining('$nueva/uno'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('move-into-base')));
+      // Mover vuelve a abrir los repositorios con git: más rato.
+      await settleReal(tester, rounds: 30);
+
+      expect(session.workspace.byId('x/uno')!.directory, '$nueva/uno');
+      expect(await tester.runAsync(() => Directory(uno).exists()), isFalse);
+      expect(session.workspace.byId('x/dos')!.directory, dos);
+      expect(find.textContaining('Está fuera de $nueva'), findsOneWidget);
+    });
+
     testWidgets('cancelar no quita nada', (tester) async {
       final session = await pumpSettings(tester);
       final remove = find.byKey(const Key('repo-remove-x/dos'));

@@ -155,8 +155,11 @@ void main() {
   ) async {
     await pumpLinked(tester);
     expect(find.textContaining('Este documento no compone nada'), findsNothing);
-    expect(find.text('analysis/normed/definition'), findsOneWidget);
-    expect(find.text('analysis/normed/banach'), findsOneWidget);
+    // Las lecciones, por su título y con su sitio en la biblioteca debajo:
+    // lo escrito en la composición solo se enseña cuando no se encuentra.
+    expect(find.text('Espacios normados'), findsOneWidget);
+    expect(find.text('Espacios de Banach'), findsOneWidget);
+    expect(find.text('Analysis › Normed'), findsNWidgets(2));
   });
 
   testWidgets('la barra dice de qué fichero salen', (tester) async {

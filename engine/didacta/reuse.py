@@ -525,13 +525,13 @@ def _split_children(root, settings, groups, known, plan):
             if unit is None:
                 continue
             if unit.relpath not in done:
-                new_path, _ = identity_mod.duplicate_unit(
+                new_path, new_id = identity_mod.duplicate_unit(
                     root, unit.relpath, settings
                 )
-                done[unit.relpath] = new_path
+                done[unit.relpath] = new_id
                 plan.created.append(new_path)
             identity_mod.repoint_reference(
-                path, document_id, index, _reference_for(done[unit.relpath])
+                path, document_id, index, done[unit.relpath]
             )
             plan.add(path)
         if done:
@@ -564,7 +564,11 @@ def _references_in(path, document_id=None):
 
 
 def _reference_for(relpath):
-    """La referencia que escribe una composición: la ruta sin el árbol."""
+    """La ruta de una lección sin el árbol.
+
+    Ya no es lo que escribe una composición, que nombra la lección por su id;
+    es lo que alguien escribió antes, y lo que se reconoce para cambiarlo.
+    """
     parts = relpath.split("/")
     if parts and parts[0] in (repo_mod.CONTENT, repo_mod.PROBLEMS):
         return "/".join(parts[1:])
@@ -617,7 +621,7 @@ def split_unit(root, settings, reference, groups, *, courses=None, units=None):
     for group in wanted:
         new_path, new_id = identity_mod.duplicate_unit(root, unit.relpath, settings)
         plan.created.append(new_path)
-        reference_text = _reference_for(new_path)
+        reference_text = new_id
         for key in group:
             place = known[key]
             path, document_id = _composition_of(root, place)
@@ -823,8 +827,10 @@ def use_unit(root, settings, reference, place, *, duplicate=False,
 
     plan = Plan("dar la lección", content=unit.id)
     relpath = unit.relpath
+    identifier = _stable_id(root, unit, plan)
     if duplicate:
-        relpath, _ = identity_mod.duplicate_unit(root, unit.relpath, settings)
+        relpath, identifier = identity_mod.duplicate_unit(
+            root, unit.relpath, settings)
         plan.created.append(relpath)
         plan.notes.append(
             "%s -> %s: son dos lecciones a partir de ahora"
@@ -837,7 +843,7 @@ def use_unit(root, settings, reference, place, *, duplicate=False,
     )
     path, document_id = _composition_of(root, where)
     keyword = "problem" if unit.is_problem else "unit"
-    _append_reference(path, document_id, keyword, _reference_for(relpath))
+    _append_reference(path, document_id, keyword, identifier)
     plan.add(path)
     if path != os.path.join(entry.directory, repo_mod.YEAR_META):
         plan.notes.append(
@@ -845,6 +851,29 @@ def use_unit(root, settings, reference, place, *, duplicate=False,
             "cursos que lo dan"
         )
     return plan
+
+
+def _stable_id(root, unit, plan):
+    """El id estable de una lección, escribiéndoselo si no lo tiene.
+
+    Lo que se escribe en una composición es el id, y el que sale de la ruta
+    no sirve: dejaría de decir la verdad en cuanto la lección se moviera. El
+    que se pone es el que le pondría `didacta ids`, así que dos personas que
+    lo hagan por su cuenta escriben el mismo.
+    """
+    declared = (unit.raw or {}).get("id")
+    if identity_mod.is_id(declared):
+        return declared
+    identifier = identity_mod.derived_id(identity_mod.UNIT, unit.relpath)
+    meta = os.path.join(root, unit.relpath, repo_mod.UNIT_META)
+    text = ""
+    if os.path.isfile(meta):
+        with open(meta, encoding="utf-8") as handle:
+            text = handle.read()
+    with open(meta, "w", encoding="utf-8") as handle:
+        handle.write(identity_mod.set_unit_id(text, identifier))
+    plan.add(meta)
+    return identifier
 
 
 def _append_reference(path, document_id, keyword, reference):
@@ -903,15 +932,20 @@ def _append_reference(path, document_id, keyword, reference):
 
 def move_unit(root, settings, reference, new_path, *, courses=None,
               units=None):
-    """Cambia de carpeta una lección y reescribe todo lo que la nombra.
+    """Cambia de carpeta una lección.
 
     Es la misma lección --el mismo id, el mismo historial de traducciones--
-    en otro sitio. Lo que la nombra por su ruta se reescribe: cada
-    composición, los temas compartidos y los prerrequisitos de las demás. Lo
-    que la nombra por su id no hace falta tocarlo, y no se toca.
+    en otro sitio de la biblioteca. Lo que la usa la nombra por su id, así
+    que no hay nada que reescribir: la próxima compilación le dice a LaTeX
+    dónde está ahora. Lo único que se escribe, además de la carpeta, es su
+    sitio en el `unit.yaml`.
 
-    [new_path] va sin el área: `categoría/tema/nombre`. Una lección no cambia
-    de área al moverla, porque el área la decide lo que es.
+    Si algo la nombraba todavía por su ruta --una composición escrita a mano,
+    un prerrequisito antiguo--, se cambia por el id, para que no se vuelva a
+    romper en la próxima.
+
+    [new_path] va sin el área: `categoría/tema/subtema/nombre`. Una lección no
+    cambia de área al moverla, porque el área la decide lo que es.
     """
     if units is None:
         units, _ = repo_mod.scan_units(root, settings)
@@ -928,12 +962,20 @@ def move_unit(root, settings, reference, new_path, *, courses=None,
     if os.path.exists(os.path.join(root, new_relpath)):
         raise ReuseError("%s ya existe" % new_relpath)
 
-    plan = Plan("mover lección", content=unit.id)
-    old_refs = {unit.relpath, _reference_for(unit.relpath)}
-    new_ref = _reference_for(new_relpath)
+    # Un id estable, que es lo que van a nombrar las composiciones. Si no lo
+    # tenía --el de la ruta no lo es: dejaría de decir la verdad al moverla--
+    # se le pone ahora el que le pondría `didacta ids`.
+    declared = (unit.raw or {}).get("id")
+    identifier = (declared if identity_mod.is_id(declared)
+                  else identity_mod.derived_id(identity_mod.UNIT, unit.relpath))
 
-    # Las composiciones, antes de mover nada: si alguna no se deja reescribir
-    # la lección se queda donde estaba y no hay nada a medias.
+    plan = Plan("mover lección", content=identifier)
+    old_refs = {unit.relpath, _reference_for(unit.relpath), unit.id}
+    old_refs.discard(identifier)
+
+    # Lo que la nombra por la ruta, antes de mover nada: si alguna
+    # composición no se deja reescribir la lección se queda donde estaba y no
+    # hay nada a medias.
     rewrites = []
     for place in unit_places(courses, units, root, unit.id):
         if place.ref is None or place.ref.strip("/") not in old_refs:
@@ -944,24 +986,20 @@ def move_unit(root, settings, reference, new_path, *, courses=None,
     source = os.path.join(root, unit.relpath)
     target = os.path.join(root, new_relpath)
 
-    # Sin `id:` escrito, el id sale de la ruta y cambiaría al moverla: lo que
-    # la nombra por id dejaría de encontrarla. Se deja escrito el de siempre.
     meta = os.path.join(source, repo_mod.UNIT_META)
     text = ""
     if os.path.isfile(meta):
         with open(meta, encoding="utf-8") as handle:
             text = handle.read()
-    if not re.search(r"(?m)^id\s*:\s*\S", text):
-        text = identity_mod.set_unit_id(text, unit.id)
+    if identifier != declared:
+        text = identity_mod.set_unit_id(text, identifier)
 
-    # La categoría y el tema, si seguían a la carpeta, la siguen siguiendo.
-    old_parts = unit.relpath.split("/")[1:]
+    # Su sitio en la biblioteca es la carpeta: categoría, tema y subtema. Se
+    # escribe también en el `unit.yaml`, que es lo que lee quien lo abre.
     new_parts = new_path.split("/")
-    for key, position in (("category", 0), ("topic", 1)):
-        if len(old_parts) <= position + 1 or len(new_parts) <= position + 1:
-            continue
-        if getattr(unit, key) == old_parts[position]:
-            text = _set_scalar(text, key, new_parts[position])
+    if len(new_parts) == 4:
+        for key, value in zip(("category", "topic", "subtopic"), new_parts):
+            text = _set_scalar(text, key, value)
 
     os.makedirs(os.path.dirname(target), exist_ok=True)
     shutil.move(source, target)
@@ -973,7 +1011,7 @@ def move_unit(root, settings, reference, new_path, *, courses=None,
     _prune_empty(root, os.path.dirname(source))
 
     for path, document_id, index in rewrites:
-        identity_mod.repoint_reference(path, document_id, index, new_ref)
+        identity_mod.repoint_reference(path, document_id, index, identifier)
         plan.add(path)
 
     for other in units.values():
@@ -984,7 +1022,7 @@ def move_unit(root, settings, reference, new_path, *, courses=None,
         path = os.path.join(root, other.relpath, repo_mod.UNIT_META)
         with open(path, encoding="utf-8") as handle:
             before = handle.read()
-        after = _repoint_prerequisites(before, old_refs, new_ref)
+        after = _repoint_prerequisites(before, old_refs, identifier)
         if after != before:
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write(after)
@@ -995,10 +1033,17 @@ def move_unit(root, settings, reference, new_path, *, courses=None,
 
 
 def _set_scalar(text, key, value):
-    """`clave: valor` en su línea, o al final si no está."""
+    """`clave: valor` en su línea; si no está, detrás de la que la precede en
+    la clasificación (el subtema va detrás del tema), o al final."""
     pattern = re.compile(r"(?m)^%s\s*:.*$" % re.escape(key))
     if pattern.search(text):
         return pattern.sub(lambda _: "%s: %s" % (key, value), text, count=1)
+    before = {"subtopic": "topic", "topic": "category"}.get(key)
+    if before:
+        anchor = re.compile(r"(?m)^%s\s*:.*$" % re.escape(before)).search(text)
+        if anchor:
+            return "%s\n%s: %s%s" % (text[:anchor.end()], key, value,
+                                      text[anchor.end():])
     return text.rstrip("\n") + "\n%s: %s\n" % (key, value)
 
 

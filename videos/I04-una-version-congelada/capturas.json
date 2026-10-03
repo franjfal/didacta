@@ -50,7 +50,7 @@
         {
           "editar": {
             "fichero": "courses/calculo-i/2026-2027/year.yaml",
-            "buscar": "      - unit: calculo/limites/algebra-de-limites\n",
+            "buscar": "      - unit: calculo/limites/calculo-de-limites/algebra-de-limites\n",
             "poner": "",
             "mensaje": "Quitar «Álgebra de límites» del Tema 1",
             "enviar": true
@@ -58,7 +58,7 @@
         },
         {
           "editar": {
-            "fichero": "content/calculo/limites/definicion-de-limite/es.tex",
+            "fichero": "content/calculo/limites/concepto-de-limite/definicion-de-limite/es.tex",
             "buscar": "salvo quizá en el propio $a$.",
             "poner": "salvo quizá en $a$.",
             "mensaje": "Acortar la definición de límite",
@@ -187,7 +187,7 @@
           }
         },
         {
-          "ir": "/unit/content/calculo/limites/definicion-de-limite?lang=es",
+          "ir": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite?lang=es",
           "esperar": 14
         },
         {

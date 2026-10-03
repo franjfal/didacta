@@ -12,8 +12,8 @@ Una definición con su ejemplo. Un teorema con su demostración. Un problema.
 ## Una unidad es un directorio
 
 ```
-content/analysis/normed/definition/
-├── unit.yaml          título, etiquetas, idiomas, estado
+content/analysis/normed/conceptos/definition/
+├── unit.yaml          id, título, sitio, idiomas, estado
 ├── es.tex             el contenido, en castellano
 ├── va.tex             el mismo contenido, en valenciano
 └── figures/
@@ -21,9 +21,24 @@ content/analysis/normed/definition/
 ```
 
 Que sea un directorio y no un fichero es lo que hace que **sus idiomas, sus
-metadatos y sus figuras se muevan juntos**. Reclasificar una unidad --moverla
-de `analysis/normed` a `analysis/banach`-- es mover una carpeta, y no hay
-ninguna forma de dejarse la mitad detrás.
+metadatos y sus figuras se muevan juntos**. La carpeta está donde está la
+lección en la biblioteca --categoría, tema y subtema--, así que reclasificarla
+--llevarla de `analysis/normed/conceptos` a `analysis/banach/ejemplos`-- es
+mover una carpeta, y no hay ninguna forma de dejarse la mitad detrás.
+
+## Se nombra por su id
+
+Lo que usa una unidad --un tema de un curso, el prerrequisito de otra-- no la
+nombra por su carpeta sino por su **id**, que no cambia nunca:
+
+```yaml
+structure:
+  - unit: u-3fa9c2e1b0d4
+```
+
+Por eso moverla no obliga a reescribir nada: al compilar, Didacta le dice a
+LaTeX en qué carpeta vive cada id. En la aplicación se ve siempre el título;
+el id solo se ve si se abre el fichero.
 
 ## El idioma es el nombre del fichero
 
@@ -78,7 +93,7 @@ existe.
 ## Los metadatos
 
 ```yaml
-id: analysis.normed.definition
+id: u-3fa9c2e1b0d4
 kind: theory
 block: theory        # de qué parte de la asignatura forma parte
 
@@ -86,9 +101,10 @@ title:
   es: Espacios normados
   va: Espais normats
 
-category: analysis
+category: analysis   # su sitio en la biblioteca, que es también su carpeta
 topic: normed
-tags: [norma, banach]
+subtopic: conceptos
+tags: [norma, banach]  # palabras libres, para buscar
 
 reference: es          # de qué idioma salen los demás
 
@@ -96,7 +112,7 @@ languages:
   es: {status: source}
   va: {status: translated, indent: false}
 
-prerequisites: [analysis/metric/distance]
+prerequisites: [u-81c0d5e2aa47]   # por id, como en las composiciones
 objectives:
   - Reconocer una norma
   - Distinguir norma de métrica

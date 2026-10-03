@@ -9,7 +9,9 @@
 /// * escribir el fichero no se lleva por delante sus comentarios, y lo que se
 ///   escribe se vuelve a leer igual --los bloques `|` de LaTeX incluidos--;
 /// * dos repositorios que dicen cosas distintas del mismo id salen como
-///   conflicto, campo a campo.
+///   conflicto, campo a campo;
+/// * el título de una caja en varios idiomas se escribe como lo lee
+///   `\DidactaTranslated` y se vuelve a leer igual.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -310,6 +312,69 @@ void main() {
         frame,
       );
       expect(undone.text, text);
+    });
+  });
+
+  group('el título en varios idiomas', () {
+    test('con un idioma, el texto tal cual', () {
+      expect(translatedLatex({'es': 'Resumen'}), 'Resumen');
+      expect(translatedLatex({'es': 'Resumen', 'va': '  '}), 'Resumen');
+      expect(translatedLatex({'es': ''}), '');
+    });
+
+    test('con varios, un DidactaTranslated en su orden', () {
+      expect(
+        translatedLatex({'va': 'Resum', 'es': 'Resumen', 'en': 'Summary'}),
+        r'\DidactaTranslated{va=Resum, es=Resumen, en=Summary}',
+      );
+    });
+
+    test('una coma o un igual van entre llaves, y se leen sin ellas', () {
+      final latex = translatedLatex({'es': 'Uno, dos', 'en': 'a=b'});
+      expect(latex, r'\DidactaTranslated{es={Uno, dos}, en={a=b}}');
+      expect(parseTranslated(latex), {'es': 'Uno, dos', 'en': 'a=b'});
+    });
+
+    test('lo que no es un DidactaTranslated entero no se lee', () {
+      expect(parseTranslated('Resumen'), isNull);
+      expect(parseTranslated(r'\DidactaTranslated{es=Resumen'), isNull);
+      expect(parseTranslated(r'\DidactaTranslated{Resumen}'), isNull);
+    });
+
+    test('una caja se lee de vuelta, con un título o con varios', () {
+      final plain = TheoremBox.parse(
+        r'\DidactaNewTheorem{resumen}{Resumen}{didactaThm}',
+      )!;
+      expect(plain.environment, 'resumen');
+      expect(plain.titles, {'': 'Resumen'});
+      expect(plain.colour, 'didactaThm');
+
+      const box = TheoremBox(
+        environment: 'resumen',
+        titles: {'es': 'Resumen', 'va': 'Resum'},
+        colour: 'didactaRem',
+      );
+      expect(
+        box.definition,
+        r'\DidactaNewTheorem{resumen}'
+        r'{\DidactaTranslated{es=Resumen, va=Resum}}{didactaRem}',
+      );
+      final back = TheoremBox.parse(box.definition)!;
+      expect(back.titles, box.titles);
+      expect(back.colour, 'didactaRem');
+    });
+
+    test('un título con LaTeX dentro no es una caja del formulario', () {
+      expect(
+        TheoremBox.parse(r'\DidactaNewTheorem{x}{\textit{X}}{didactaThm}'),
+        isNull,
+      );
+      expect(
+        TheoremBox.parse(
+          '\\DidactaNewTheorem{x}{X}{didactaThm}\n\\newcommand{\\y}{}',
+        ),
+        isNull,
+      );
     });
   });
 }

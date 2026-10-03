@@ -1,0 +1,20 @@
+id: u-20be4bc8dfa5
+
+kind: theory
+block: theory
+title:
+  es: El determinante de una matriz cuadrada
+  va: El determinant d'una matriu quadrada
+  en: The determinant of a square matrix
+category: algebra
+topic: matrices
+subtopic: operaciones
+tags: [matriz, determinante]
+reference: es
+languages:
+  es: {status: source}
+prerequisites: []
+objectives:
+  - Calcular el determinante de una matriz de orden dos o tres
+duration_minutes: 20
+difficulty: introductory

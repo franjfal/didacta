@@ -2,9 +2,9 @@
   "codigo": "D11",
   "titulo": "Crear una lección nueva",
   "fichero": "D11-crear-una-leccion-nueva.mp4",
-  "duracion": 54.08,
-  "megas": 2.8,
-  "fecha": "2026-09-28",
+  "duracion": 66.69,
+  "megas": 3.2,
+  "fecha": "2026-10-02",
   "version": "0.3.0",
   "capitulos": [
     {
@@ -12,57 +12,61 @@
       "titulo": "Crear una lección nueva"
     },
     {
-      "t": 5.52,
+      "t": 5.48,
       "titulo": "Nueva lección"
     },
     {
-      "t": 16.3,
+      "t": 25.7,
       "titulo": "Dónde va a quedar"
     },
     {
-      "t": 28.02,
+      "t": 38.94,
       "titulo": "Se abre"
     },
     {
-      "t": 35.6,
+      "t": 46.52,
       "titulo": "La otra puerta"
     }
   ],
   "transcripcion": [
     {
       "t": 1.2,
-      "texto": "Al terminar sabrás crear una lección nueva, en el tema que le toca."
+      "texto": "Al terminar sabrás crear una lección nueva, en el sitio que le toca."
     },
     {
-      "t": 6.02,
-      "texto": "En la biblioteca, dentro de Continuidad, pulsa «Nueva lección en Continuidad»."
+      "t": 5.98,
+      "texto": "En la biblioteca, dentro del subtema Funciones continuas, pulsa «Nueva lección en Funciones continuas»."
     },
     {
-      "t": 11.6,
-      "texto": "Pide el título, el tema, que ya viene puesto, y el tipo."
+      "t": 13.14,
+      "texto": "Pide el título, el sitio, en las mismas columnas de la biblioteca y abiertas donde estabas, y el tipo."
     },
     {
-      "t": 16.8,
-      "texto": "Antes de crearla, dice dónde va a quedar: esa carpeta es la dirección con la que la nombran los documentos."
+      "t": 20.0,
+      "texto": "Y si el subtema que buscas no existe, se crea aquí mismo, al pie de su columna."
     },
     {
-      "t": 24.0,
+      "t": 26.2,
+      "texto": "Antes de crearla, dice dónde va a quedar: la carpeta sigue al sitio de la biblioteca, categoría, tema y subtema."
+    },
+    {
+      "t": 34.92,
       "texto": "Y el tipo decide si va con la teoría o con los problemas."
     },
     {
-      "t": 28.52,
+      "t": 39.44,
       "texto": "Al crearla, se abre en el editor, en el idioma de referencia, con un esqueleto para empezar a escribir."
     },
     {
-      "t": 36.1,
+      "t": 47.02,
       "texto": "La otra puerta está al añadir lecciones a un tema: Crear una nueva, que la deja ya puesta en él."
     },
     {
-      "t": 43.36,
-      "texto": "El nombre de la carpeta es la dirección con la que la llaman."
+      "t": 54.28,
+      "texto": "Cada lección nace en su sitio: categoría, tema y subtema."
     },
     {
-      "t": 47.31,
+      "t": 59.92,
       "texto": "En el siguiente vídeo, duplicar, mover o renombrar una lección."
     }
   ]

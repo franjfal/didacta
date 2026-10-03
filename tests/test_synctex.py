@@ -95,7 +95,7 @@ def _tools():
 class RealBuildTests(unittest.TestCase):
     """Con el repositorio de ejemplo, LaTeX y SyncTeX de verdad."""
 
-    UNIT = "content/calculo/limites/algebra-de-limites"
+    UNIT = "content/calculo/limites/calculo-de-limites/algebra-de-limites"
 
     @classmethod
     def setUpClass(cls):

@@ -25,6 +25,7 @@ import io
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -368,6 +369,34 @@ class CompilingTests(unittest.TestCase):
         self.assertEqual(code, 0, data)
         self.assertTrue(data["slides"])
         self.assertTrue(os.path.isfile(data["pdf"]))
+
+    @unittest.skipUnless(shutil.which("gs"), "gs is required to read the PDF")
+    def test_a_translated_title_follows_the_language(self):
+        # Una caja propia escrita una vez: el título sale en el idioma que se
+        # compila, y en uno sin el suyo sale el primero.
+        definition = ("\\DidactaNewTheorem{resumen}{\\DidactaTranslated{"
+                      "es=Resumen, va=Resum, en={Sum, up}}}{didactaThm}")
+        seen = {}
+        for language in ("es", "va", "en", "fr"):
+            cli = load_cli()
+            out = io.StringIO()
+            with redirect_stdout(out):
+                code = cli.main([
+                    "--root", self.root, "snippet-preview",
+                    "--definition-text", definition,
+                    "--body-text", "\\begin{resumen}\nHola.\n\\end{resumen}",
+                    "-l", language, "--json",
+                ])
+            data = json.loads(out.getvalue())
+            self.assertEqual(code, 0, data)
+            text = subprocess.run(
+                ["gs", "-q", "-sDEVICE=txtwrite", "-o", "-", data["pdf"]],
+                capture_output=True, text=True, check=True).stdout
+            seen[language] = " ".join(text.split())
+        self.assertIn("Resumen 1", seen["es"])
+        self.assertIn("Resum 1", seen["va"])
+        self.assertIn("Sum, up 1", seen["en"])
+        self.assertIn("Resumen 1", seen["fr"])
 
     def test_a_broken_definition_is_reported(self):
         definition = os.path.join(self.work, "def.tex")

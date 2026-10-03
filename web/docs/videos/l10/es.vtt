@@ -1,0 +1,79 @@
+WEBVTT
+
+00:00:01.200 --> 00:00:04.700
+Al terminar sabrás tener la misma
+plantilla en varios repositorios,
+
+00:00:04.740 --> 00:00:06.339
+y cuándo conviene.
+
+00:00:07.189 --> 00:00:11.979
+La hoja dos del repositorio de problemas
+se compila con la Hoja del departamento.
+
+00:00:12.529 --> 00:00:15.283
+Pero solo la declara el
+repositorio del ejemplo.
+
+00:00:15.353 --> 00:00:21.125
+Con los dos abiertos, compila. Quien
+solo tenga el de problemas, no podría.
+
+00:00:21.925 --> 00:00:27.375
+Cada fila tiene una casilla por repositorio.
+Marcar el de problemas la copia allí,
+
+00:00:27.565 --> 00:00:29.550
+entera y con su cabecera.
+
+00:00:29.620 --> 00:00:33.690
+Desmarcarla la quitaría solo
+de ahí. Y si fuera la última,
+
+00:00:33.900 --> 00:00:35.749
+Didacta lo preguntaría antes.
+
+00:00:36.549 --> 00:00:41.319
+En el editor, las mismas casillas,
+y lo que se compila con ella: aquí,
+
+00:00:41.409 --> 00:00:43.203
+la hoja dos de problemas.
+
+00:00:43.273 --> 00:00:46.663
+Y la vista previa, con una
+lección de esa misma hoja.
+
+00:00:47.463 --> 00:00:51.973
+Los colores del departamento, en la
+cabecera, y se ven antes de guardar.
+
+00:00:52.043 --> 00:00:56.273
+Al guardar se escribe en los dos
+repositorios, para que digan lo mismo.
+
+00:00:57.103 --> 00:01:00.695
+Y si un día discrepan, lo
+avisa Entre repositorios.
+
+00:01:01.495 --> 00:01:06.545
+La última casilla es el programa: para
+lo que es tuyo y no de la asignatura,
+
+00:01:06.675 --> 00:01:08.085
+como tus colores.
+
+00:01:08.155 --> 00:01:13.975
+Ahí no la protege git, y se va con el
+ordenador. Por eso, Copiar a una carpeta:
+
+00:01:14.015 --> 00:01:15.897
+es su copia de seguridad.
+
+00:01:16.697 --> 00:01:21.952
+Con un repositorio basta para usarla;
+en dos, viaja con los dos materiales.
+
+00:01:22.202 --> 00:01:25.191
+En el siguiente vídeo,
+tus propios snippets.

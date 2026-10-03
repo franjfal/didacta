@@ -43,18 +43,18 @@ documents:
           es: Límite de una función
           va: Límit d'una funció
           en: The limit of a function
-      - unit: calculo/limites/definicion-de-limite
-      - unit: calculo/limites/limite-por-definicion
+      - unit: u-240b481e5d63
+      - unit: u-6431387efe7b
       # Una línea comentada es una lección que existe y que este año no se da.
       # Volver a darla es quitar la almohadilla.
-      # - unit: calculo/limites/historia-del-epsilon
-      - unit: calculo/limites/algebra-de-limites
+      # - unit: u-e08461a36e86
+      - unit: u-2d7a8345e536
       - section:
           es: Continuidad
           va: Continuïtat
           en: Continuity
-      - unit: calculo/continuidad/funcion-continua
-      - unit: calculo/continuidad/teorema-de-bolzano
+      - unit: u-a1bdfa8905d7
+      - unit: u-245a446424c6
 
   - id: hoja-1
     # Una hoja de problemas.
@@ -68,9 +68,9 @@ documents:
     # con la solución entera y los criterios de corrección.
     templates: [problems, problems-answers, problems-teacher]
     structure:
-      - problem: calculo/limites/limites-de-cocientes
-      - problem: calculo/continuidad/discontinuidades-evitables
-      - problem: calculo/continuidad/tres-raices-por-bolzano
+      - problem: u-06473454ddb4
+      - problem: u-739b8affe31c
+      - problem: u-0cc8936fcd26
 
   - id: parcial-1
     # Un examen.
@@ -85,5 +85,5 @@ documents:
     structure:
       # Los mismos dos problemas que están en la hoja 1: no son copias, son
       # referencias a las mismas lecciones.
-      - problem: calculo/continuidad/discontinuidades-evitables
-      - problem: calculo/continuidad/tres-raices-por-bolzano
+      - problem: u-739b8affe31c
+      - problem: u-0cc8936fcd26

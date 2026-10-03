@@ -367,6 +367,7 @@ def _unit_record(unit, settings, usage):
         "templates": list(unit.templates),
         "category": str(unit.category),
         "topic": str(unit.topic),
+        "subtopic": str(unit.subtopic or ""),
         # Coerced to text: a folder named `15` gives `topic: 15`, which YAML
         # reads as an integer, and then sorting the category tree compares an
         # int against a string. Everywhere else these are path segments.

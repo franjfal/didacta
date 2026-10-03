@@ -14,14 +14,29 @@
 
 \makeatletter
 
+%% El papel: el que digan las opciones de la clase --`a5paper`,
+%% `letterpaper`--, y A4 si no dicen ninguno. `geometry` ya lee el de las
+%% opciones por su cuenta; lo que no puede hacer Didacta es pisarlo con el
+%% suyo, que es lo que pasaba: una plantilla «Apuntes de bolsillo» con
+%% `10pt,a5paper` salía en A4 sin decir nada. Las quince de serie no nombran
+%% papel, así que siguen en A4, también con `pdflatex master.tex` a mano.
+\newif\ifdidacta@paper
+\ifx\@classoptionslist\relax\else
+  \@for\didacta@option:=\@classoptionslist\do{%
+    \edef\didacta@test{\noexpand\in@{paper}{\didacta@option}}%
+    \didacta@test
+    \ifin@\global\didacta@papertrue\fi}
+\fi
+\ifdidacta@paper\else\geometry{a4paper}\fi
+
 %% Compact profiles -- handout, problem sheets, exam -- want the space for
 %% content. Notes and books want a measure you can read for an hour, which
 %% means a narrower text block and room for the eye to rest.
 \iftoggle{didacta@compact}{%
-  \geometry{a4paper, top=2cm, bottom=2cm, left=2.2cm, right=2.2cm,
+  \geometry{top=2cm, bottom=2cm, left=2.2cm, right=2.2cm,
             headsep=0.7cm, footskip=1cm}
 }{%
-  \geometry{a4paper, top=2.6cm, bottom=2.6cm, left=3cm, right=2.6cm,
+  \geometry{top=2.6cm, bottom=2.6cm, left=3cm, right=2.6cm,
             headsep=0.8cm, footskip=1.2cm}
 }
 

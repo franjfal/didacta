@@ -57,14 +57,18 @@ escenas:
     frases:
       - id: mover
         texto: >-
-          Mover o renombrar le cambia la carpeta. Antes de confirmar, dice qué
-          documentos la usan, de qué cursos, y los reescribe en el mismo
-          cambio.
+          Mover o renombrar la lleva a otro subtema, en las mismas columnas de
+          la biblioteca, y deja cambiar el nombre de su carpeta.
         pasos:
-          - {al: inicio, enfoca: [dialogo, curso], max: 1.6}
-          - {en: carpeta, resalta: carpeta, hasta: 2}
-          - {en: documentos, resalta: aviso, etiqueta: "Lo que la usa", lado: derecha, hasta: 2}
-          - {en: cursos, resalta: curso}
+          - {al: inicio, enfoca: [sitio, aviso], max: 1.5}
+          - {en: subtema, resalta: subtema, hasta: 1.8}
+          - {en: carpeta, resalta: carpeta}
+      - id: nada
+        texto: >-
+          Y lo que la usa no hay que tocarlo: los temas la nombran por su id,
+          que no cambia al moverla.
+        pasos:
+          - {en: usa, resalta: aviso, etiqueta: "Nada que reescribir", lado: arriba}
 
   - id: darla
     capitulo: Darla en otro tema

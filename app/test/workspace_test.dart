@@ -106,6 +106,18 @@ void main() {
     });
   });
 
+  test('se puede llevar uno a otra carpeta sin cambiarle el sitio', () {
+    // El primero es el que se mira cuando hace falta uno solo: moverlo no
+    // puede mandarlo al final.
+    final workspace = const Workspace([
+      ContentRepo(owner: 'x', name: 'a', directory: '/a', colour: 1),
+      ContentRepo(owner: 'x', name: 'b', directory: '/b', colour: 2),
+    ]).relocated('x/a', '/Didacta/a');
+    expect(workspace.repos.map((repo) => repo.id), ['x/a', 'x/b']);
+    expect(workspace.byId('x/a')!.directory, '/Didacta/a');
+    expect(workspace.byId('x/a')!.colour, 1);
+  });
+
   group('de qué repositorio es un clon', () {
     test('de una URL de https', () {
       final found = repoFromRemote(

@@ -45,7 +45,7 @@ class MetadataSuggestions {
     final categories = <String, int>{};
     final topics = <String, Map<String, int>>{};
     final tags = <String, int>{};
-    final units = <String, String>{};
+    final units = <String, (String, String)>{};
     for (final unit in catalogue.units) {
       if (unit.category.isNotEmpty) {
         categories[unit.category] = (categories[unit.category] ?? 0) + 1;
@@ -57,7 +57,10 @@ class MetadataSuggestions {
       for (final tag in unit.tags) {
         tags[tag] = (tags[tag] ?? 0) + 1;
       }
-      units[unit.reference_] = unit.title(language ?? unit.reference);
+      units[unit.reference_] = (
+        unit.title(language ?? unit.reference),
+        unit.pathReference,
+      );
     }
     return MetadataSuggestions._(categories, topics, tags, units);
   }
@@ -66,8 +69,9 @@ class MetadataSuggestions {
   final Map<String, Map<String, int>> _topics;
   final Map<String, int> _tags;
 
-  /// Las lecciones por su referencia --la ruta sin el área--, con su título.
-  final Map<String, String> _units;
+  /// Las lecciones por su referencia --su id, que es lo que se escribe--, con
+  /// su título y su ruta, que es por lo que se las busca.
+  final Map<String, (String, String)> _units;
 
   List<Suggestion> categories(String typed) =>
       _rank(typed, _categories, fresh: tr('categoría nueva'));
@@ -113,9 +117,9 @@ class MetadataSuggestions {
     final contains = <Suggestion>[];
     for (final entry in _units.entries) {
       if (entry.key == except) continue;
-      final path = _folded(entry.key);
-      final title = _folded(entry.value);
-      final suggestion = Suggestion(entry.key, detail: entry.value);
+      final path = _folded(entry.value.$2);
+      final title = _folded(entry.value.$1);
+      final suggestion = Suggestion(entry.key, detail: entry.value.$1);
       if (wanted.isEmpty || path.startsWith(wanted)) {
         starts.add(suggestion);
       } else if (path.contains(wanted) || title.contains(wanted)) {
@@ -130,7 +134,10 @@ class MetadataSuggestions {
   bool knowsTopic(String value) =>
       _topics.values.any((topics) => topics.containsKey(value));
 
-  bool knowsUnit(String value) => _units.containsKey(value.trim());
+  /// Si nombra una lección: por su id, o por su ruta como se escribía antes.
+  bool knowsUnit(String value) =>
+      _units.containsKey(value.trim()) ||
+      _units.values.any((unit) => unit.$2 == value.trim());
 
   static const int _limit = 8;
 

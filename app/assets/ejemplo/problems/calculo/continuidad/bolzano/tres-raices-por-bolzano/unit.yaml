@@ -1,0 +1,38 @@
+# Un problema que se usa en la hoja 1 y en el primer parcial, y que solo está
+# en castellano.
+#
+# Por eso encabeza la cola de Traducción: la cola se ordena por cuántos
+# documentos usan cada lección, y traducir esta arregla dos a la vez.
+
+id: u-0cc8936fcd26
+kind: problem
+block: problems
+
+title:
+  es: Tres raíces con el teorema de Bolzano
+  va: Tres arrels amb el teorema de Bolzano
+  en: Three roots from Bolzano's theorem
+
+category: calculo
+topic: continuidad
+subtopic: bolzano
+tags: [continuidad, bolzano, raices, polinomio]
+
+reference: es
+languages:
+  es: {status: source}
+
+parts:
+  statement: true
+  hint: true
+  answer: true
+  solution: true
+  marking: true
+
+prerequisites: [u-245a446424c6]
+objectives:
+  - Localizar raíces de un polinomio buscando cambios de signo
+
+duration_minutes: 15
+difficulty: introductory
+marks: 3

@@ -8,8 +8,8 @@ subtitulo: En el tema que le toca, y en su carpeta
 ruta: Escribir una lección
 siguiente: "D12 · Duplicar, mover o renombrar una lección"
 voz: narrador
-lema: ["El nombre de la carpeta", "es la dirección con la que la llaman."]
-lema_en: "es la dirección"
+lema: ["Cada lección nace en su sitio:", "categoría, tema y subtema."]
+lema_en: "en su sitio"
 
 escenas:
   - id: apertura
@@ -18,7 +18,7 @@ escenas:
     frases:
       - id: presentacion
         texto: >-
-          Al terminar sabrás crear una lección nueva, en el tema que le toca.
+          Al terminar sabrás crear una lección nueva, en el sitio que le toca.
 
   - id: nueva
     capitulo: Nueva lección
@@ -27,22 +27,30 @@ escenas:
     frases:
       - id: boton
         texto: >-
-          En la biblioteca, dentro de Continuidad, pulsa «Nueva lección en
-          Continuidad».
+          En la biblioteca, dentro del subtema Funciones continuas, pulsa
+          «Nueva lección en Funciones continuas».
         pasos:
           - {al: inicio, reposo: true}
-          - {en: Continuidad, resalta: continuidad, hasta: 1.6}
+          - {en: subtema, resalta: continuidad, hasta: 1.6}
           - {en: pulsa, resalta: nueva, hasta: 1.4}
           - {en: pulsa, pulsa: nueva}
       - id: campos
         texto: >-
-          Pide el título, el tema, que ya viene puesto, y el tipo.
+          Pide el título, el sitio, en las mismas columnas de la biblioteca y
+          abiertas donde estabas, y el tipo.
         pasos:
           - {al: inicio, cambia: dialogo}
-          - {al: inicio, enfoca: [titulo, donde], max: 1.8, captura: dialogo}
+          - {al: inicio, enfoca: [titulo, donde], max: 1.5, captura: dialogo}
           - {en: título, resalta: titulo, captura: dialogo, hasta: 1.2}
-          - {en: tema, resalta: tema, captura: dialogo, hasta: 1.6}
+          - {en: sitio, resalta: sitio, captura: dialogo, hasta: 1.4}
+          - {en: abiertas, resalta: subtema, captura: dialogo, hasta: 1.4}
           - {en: tipo, resalta: tipo, captura: dialogo}
+      - id: falta
+        texto: >-
+          Y si el subtema que buscas no existe, se crea aquí mismo, al pie de
+          su columna.
+        pasos:
+          - {en: crea, resalta: nuevo_subtema, etiqueta: "Nuevo subtema", lado: abajo, captura: dialogo}
 
   - id: donde
     capitulo: Dónde va a quedar
@@ -51,8 +59,8 @@ escenas:
     frases:
       - id: carpeta
         texto: >-
-          Antes de crearla, dice dónde va a quedar: esa carpeta es la dirección
-          con la que la nombran los documentos.
+          Antes de crearla, dice dónde va a quedar: la carpeta sigue al sitio
+          de la biblioteca, categoría, tema y subtema.
         pasos:
           - {al: inicio, enfoca: [titulo, donde], max: 1.8}
           - {en: dónde, resalta: donde, etiqueta: "Su carpeta", lado: abajo}
@@ -95,7 +103,7 @@ escenas:
     frases:
       - id: lema
         texto: >-
-          El nombre de la carpeta es la dirección con la que la llaman.
+          Cada lección nace en su sitio: categoría, tema y subtema.
         pausa: 0.5
       - id: siguiente
         texto: >-

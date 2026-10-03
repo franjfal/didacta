@@ -61,18 +61,21 @@ void main() {
     expect(suggestions().tags('hilb').first.detail, 'etiqueta nueva');
   });
 
-  test('los prerrequisitos, por la ruta o por el título', () {
-    expect(values(suggestions().units('analysis/series')), [
-      'analysis/series/ratio',
-    ]);
-    final byTitle = suggestions().units('cociente');
-    expect(values(byTitle), ['analysis/series/ratio']);
-    expect(byTitle.single.detail, 'Criterio del cociente');
-    expect(
-      values(suggestions().units('', except: 'analysis/series/ratio')),
-      isNot(contains('analysis/series/ratio')),
-    );
-    expect(suggestions().knowsUnit('analysis/normed/definition'), isTrue);
-    expect(suggestions().knowsUnit('analysis/nada'), isFalse);
-  });
+  test(
+    'los prerrequisitos, por la ruta o por el título, y se escribe el id',
+    () {
+      expect(values(suggestions().units('analysis/series')), [
+        'analysis.series.ratio',
+      ]);
+      final byTitle = suggestions().units('cociente');
+      expect(values(byTitle), ['analysis.series.ratio']);
+      expect(byTitle.single.detail, 'Criterio del cociente');
+      expect(
+        values(suggestions().units('', except: 'analysis.series.ratio')),
+        isNot(contains('analysis.series.ratio')),
+      );
+      expect(suggestions().knowsUnit('analysis/normed/definition'), isTrue);
+      expect(suggestions().knowsUnit('analysis/nada'), isFalse);
+    },
+  );
 }

@@ -33,7 +33,7 @@ escenas:
       - id: que
         texto: >-
           Un bloque es una parte de la asignatura: la teoría, los problemas,
-          las prácticas. En Ajustes, Bloques y plantillas. Aquí, una lección
+          las prácticas. En Ajustes, Bloques y catálogo. Aquí, una lección
           ya dice que es de prácticas, y nadie lo ha declarado.
         pasos:
           - {al: inicio, enfoca: [titulo, sin], max: 1.8}

@@ -1,0 +1,25 @@
+id: u-d74ed55e993b
+
+kind: problem
+block: practicas
+title:
+  es: El límite de una raíz
+  va: El límit d'una arrel
+  en: The limit of a square root
+category: calculo
+topic: limites
+subtopic: calculo-de-limites
+tags: [limite, conjugado]
+reference: es
+languages:
+  es: {status: source}
+parts:
+  statement: true
+  answer: true
+  solution: true
+prerequisites: []
+objectives:
+  - Resolver una indeterminación con el conjugado
+duration_minutes: 10
+difficulty: introductory
+marks: 2

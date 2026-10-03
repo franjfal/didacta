@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "guardada",
-      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano?lang=en",
+      "ruta": "/unit/content/calculo/continuidad/bolzano/teorema-de-bolzano?lang=en",
       "acciones": [
         {
           "esperar": 12

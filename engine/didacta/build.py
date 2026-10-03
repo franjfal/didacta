@@ -40,6 +40,8 @@ from . import yamlio
 
 #: El idioma original en un `unit.yaml`: `reference: va`.
 _REFERENCE = re.compile(r"^reference:\s*['\"]?([a-z]{2})['\"]?\s*$", re.M)
+#: El `id:` de un `unit.yaml`, sin comillas.
+_UNIT_ID = re.compile(r"^id:\s*['\"]?([^'\"\s#]+)['\"]?\s*(?:#.*)?$", re.M)
 
 
 class BuildError(RuntimeError):
@@ -644,6 +646,7 @@ class Engine:
         self._defined = None
         self._settings = settings
         self._references = None
+        self._references_lock = threading.Lock()
 
     #: Con varias compilaciones a la vez, cada línea lleva delante de cuál es
     #: --`[slides · es]`--, o el registro sería cuatro LaTeX hablando a la vez.
@@ -675,19 +678,31 @@ class Engine:
         return self._defined or None
 
     def unit_references(self):
-        r"""El fichero con el idioma original de las lecciones que no lo tienen
-        en castellano, o None si no hay ninguna.
+        r"""El fichero con lo que LaTeX tiene que saber de cada lección, o None
+        si el repositorio no tiene ninguna.
 
-        Es lo que usa LaTeX para elegir el idioma de reserva de una lección
-        que no existe en el que se compila: primero su original, que es de
-        donde se tradujeron las demás. Se lee del `reference:` de cada
-        `unit.yaml` con una expresión y no con el lector de YAML: son dos mil
-        ficheros y lo único que hace falta es una línea.
+        Dos cosas por lección. **Dónde está**: una composición nombra la
+        lección por su id (`\DidactaUnit{u-3fa9c2e1b0d4}`) y LaTeX no lee los
+        `unit.yaml`, así que esto le dice en qué carpeta vive cada id. Es lo
+        que hace que mover una lección no obligue a reescribir nada de lo que
+        la usa. Y **su idioma original**, cuando no es el castellano, para el
+        idioma de reserva de una lección que no existe en el que se compila.
+
+        Se lee de cada `unit.yaml` con dos expresiones y no con el lector de
+        YAML: son dos mil ficheros y lo único que hace falta son dos líneas.
         """
+        # Con cerrojo: se compilan varias salidas a la vez, y la primera que
+        # pregunta lo escribe. Sin él, la segunda veía el «todavía nada» de la
+        # primera, se compilaba sin saber dónde estaba ninguna lección y salía
+        # con un hueco en lugar de cada una.
+        with self._references_lock:
+            return self._unit_references()
+
+    def _unit_references(self):
         if self._references is None:
-            self._references = ""
             root = getattr(self._settings, "root", None) if self._settings else None
             found = []
+            places = []
             for area in ("content", "problems"):
                 top = os.path.join(root, area) if root else None
                 if not top or not os.path.isdir(top):
@@ -699,23 +714,33 @@ class Engine:
                     try:
                         with open(os.path.join(directory, "unit.yaml"),
                                   encoding="utf-8") as handle:
-                            match = _REFERENCE.search(handle.read())
+                            text = handle.read()
                     except OSError:
                         continue
+                    relative = os.path.relpath(directory, root).replace(
+                        os.sep, "/")
+                    declared = _UNIT_ID.search(text)
+                    identifier = (declared.group(1).strip("\"'")
+                                  if declared else
+                                  ".".join(relative.split("/")[1:]))
+                    places.append((identifier, relative))
+                    match = _REFERENCE.search(text)
                     if match and match.group(1) != "es":
-                        relative = os.path.relpath(directory, root)
-                        found.append((relative.replace(os.sep, "/"),
-                                      match.group(1)))
-            if found:
+                        found.append((relative, match.group(1)))
+            if found or places:
                 path = os.path.join(self.build_dir, "units", "references.tex")
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path, "w", encoding="utf-8") as handle:
-                    handle.write("%% Generado por Didacta: el idioma original "
-                                 "de cada lección que no es el castellano.\n")
+                    handle.write("%% Generado por Didacta: dónde está cada "
+                                 "lección, y el idioma original de las que "
+                                 "no son en castellano.\n")
+                    for identifier, relative in sorted(places):
+                        handle.write("\\DidactaUnitAt{%s}{%s}\n"
+                                     % (identifier, relative))
                     for relative, language in sorted(found):
                         handle.write("\\DidactaUnitReference{%s}{%s}\n"
                                      % (relative, language))
-                self._references = path
+            self._references = path if (found or places) else ""
         return self._references or None
 
     # -- environment -----------------------------------------------------

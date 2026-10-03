@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "campos",
-      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "ruta": "/unit/problems/calculo/limites/calculo-de-limites/limites-de-cocientes",
       "acciones": [
         {
           "esperar": 8
@@ -37,7 +37,7 @@
     },
     {
       "nombre": "latex",
-      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "ruta": "/unit/problems/calculo/limites/calculo-de-limites/limites-de-cocientes",
       "acciones": [
         {
           "esperar": 8

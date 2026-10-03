@@ -33,7 +33,7 @@
     },
     {
       "nombre": "leccion",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "cajas": {
         "titulo": {
           "texto": "Límite de una función en un punto"
@@ -85,7 +85,7 @@
     },
     {
       "nombre": "discontinuidades",
-      "ruta": "/unit/problems/calculo/continuidad/discontinuidades-evitables",
+      "ruta": "/unit/problems/calculo/continuidad/funciones-continuas/discontinuidades-evitables",
       "cajas": {
         "titulo": {
           "texto": "Discontinuidades evitables"

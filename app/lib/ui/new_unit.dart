@@ -1,9 +1,10 @@
 /// Crear una lección desde la aplicación.
 ///
 /// No existía: había que ir al terminal a escribir `didacta new unit`, que el
-/// motor tenía desde el principio. Se pide lo mínimo --el título, el tema y el
-/// tipo-- y el resto sale de dónde se está: la categoría es la que se está
-/// mirando, y el nombre de la carpeta se saca del título.
+/// motor tenía desde el principio. Se pide lo mínimo --el título, el sitio y
+/// el tipo-- y el resto sale de dónde se está: el sitio es el que se está
+/// mirando en la biblioteca, elegido en las mismas columnas, y el nombre de la
+/// carpeta se saca del título.
 library;
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import '../router.dart';
 import '../state/session.dart';
 import 'course_admin_ui.dart';
 import 'document_properties.dart' show languageNameOf;
+import 'place_browser.dart';
 import 'theme.dart';
 import '../l10n/tr.dart';
 
@@ -23,13 +25,15 @@ typedef NewUnitRequest = ({
   String title,
   String category,
   String topic,
+  String subtopic,
   String slug,
   String kind,
   String? repo,
 });
 
 extension on NewUnitRequest {
-  String get path => '$category/$topic/$slug';
+  /// Su carpeta, que es su sitio: `categoría/tema/subtema/nombre`.
+  String get path => '$category/$topic/$subtopic/$slug';
 }
 
 /// Pregunta, crea la lección y la abre. Devuelve su ruta, o null.
@@ -43,10 +47,10 @@ Future<String?> createUnitFrom(
   Session session, {
   required String category,
   String? topic,
+  String? subtopic,
   String kind = 'theory',
   bool open = true,
   String? onlyIn,
-  bool askCategory = false,
 }) async {
   final writable = onlyIn != null
       ? [onlyIn]
@@ -60,10 +64,10 @@ Future<String?> createUnitFrom(
       session: session,
       category: category,
       topic: topic ?? '',
+      subtopic: subtopic ?? '',
       kind: kind,
       repos: writable,
       preferredRepo: repoWithMost(session, writable, category, topic),
-      askCategory: askCategory,
     ),
   );
   if (request == null || !context.mounted) return null;
@@ -114,15 +118,16 @@ class NewUnitDialog extends StatefulWidget {
     required this.session,
     required this.category,
     required this.topic,
+    this.subtopic = '',
     required this.kind,
     required this.repos,
     this.preferredRepo,
-    this.askCategory = false,
   });
 
   final Session session;
   final String category;
   final String topic;
+  final String subtopic;
   final String kind;
 
   /// Los repositorios donde se puede escribir. Con más de uno, se pregunta.
@@ -131,22 +136,19 @@ class NewUnitDialog extends StatefulWidget {
   /// El que viene elegido: el de las lecciones de al lado, si lo hay.
   final String? preferredRepo;
 
-  /// Si se deja cambiar la categoría aunque venga dada: desde una
-  /// composición es una suposición, desde la biblioteca es la que se mira.
-  final bool askCategory;
-
   @override
   State<NewUnitDialog> createState() => _NewUnitDialogState();
 }
 
 class _NewUnitDialogState extends State<NewUnitDialog> {
   final TextEditingController _title = TextEditingController();
-  late final TextEditingController _category = TextEditingController(
-    text: widget.category,
-  );
-  late final TextEditingController _topic = TextEditingController(
-    text: widget.topic,
-  );
+
+  /// Dónde va: lo que se miraba al pulsar, hasta donde se sepa.
+  late Place _place = [
+    widget.category,
+    widget.topic,
+    widget.subtopic,
+  ].takeWhile((part) => part.isNotEmpty).toList();
   late String _kind = widget.kind;
   late String? _repo = widget.repos.contains(widget.preferredRepo)
       ? widget.preferredRepo
@@ -155,23 +157,20 @@ class _NewUnitDialogState extends State<NewUnitDialog> {
   @override
   void dispose() {
     _title.dispose();
-    _category.dispose();
-    _topic.dispose();
     super.dispose();
   }
 
   String get _slug => slugify(_title.text);
-  String get _topicSlug => slugify(_topic.text);
-  String get _categorySlug => slugify(_category.text);
 
   String get _where =>
-      '${CourseAdmin.unitAreaFor(_kind)}/$_categorySlug/$_topicSlug/$_slug';
+      '${CourseAdmin.unitAreaFor(_kind)}/${placeKey(_place)}/$_slug';
 
   /// Qué impide crearla, o null.
   String? get _problem {
     if (_title.text.trim().isEmpty) return tr('Falta el título.');
-    if (_categorySlug.isEmpty) return tr('Falta la categoría.');
-    if (_topicSlug.isEmpty) return tr('Falta el tema.');
+    if (_place.length < 3) {
+      return tr('Elige un subtema: cada lección vive en uno.');
+    }
     if (_slug.isEmpty) return tr('El título no da un nombre de carpeta.');
     if (widget.session.unitByPath(_where, repo: _repo) != null) {
       return tr('Ya hay una lección en {0}.', [_where]);
@@ -185,7 +184,7 @@ class _NewUnitDialogState extends State<NewUnitDialog> {
     return AlertDialog(
       title: Text(tr('Nueva lección')),
       content: SizedBox(
-        width: 480,
+        width: 620,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -202,60 +201,27 @@ class _NewUnitDialogState extends State<NewUnitDialog> {
               onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                // La categoría, solo si no se sabe: desde la biblioteca es la
-                // que se está mirando, y preguntarla sería hacer repetirla.
-                if (widget.askCategory || widget.category.isEmpty) ...[
-                  Expanded(
-                    child: TextField(
-                      key: const Key('new-unit-category'),
-                      controller: _category,
-                      decoration: InputDecoration(
-                        labelText: tr('Categoría'),
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                ],
-                Expanded(
-                  child: TextField(
-                    key: const Key('new-unit-topic'),
-                    controller: _topic,
-                    decoration: InputDecoration(
-                      labelText: widget.askCategory || widget.category.isEmpty
-                          ? tr('Tema')
-                          : tr('Tema, dentro de {0}', [widget.category]),
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 170,
-                  child: DropdownButtonFormField<String>(
-                    key: const Key('new-unit-kind'),
-                    initialValue: _kind,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: tr('Tipo'),
-                      border: OutlineInputBorder(),
-                    ),
-                    items: [
-                      for (final kind in unitKinds)
-                        DropdownMenuItem(
-                          value: kind,
-                          child: Text(kindName(kind)),
-                        ),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => _kind = value ?? _kind),
-                  ),
-                ),
+            PlaceBrowser(
+              key: const Key('new-unit-place'),
+              session: widget.session,
+              place: _place,
+              onChanged: (next) => setState(() => _place = next),
+              height: 220,
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              key: const Key('new-unit-kind'),
+              initialValue: _kind,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: tr('Tipo'),
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final kind in unitKinds)
+                  DropdownMenuItem(value: kind, child: Text(kindName(kind))),
               ],
+              onChanged: (value) => setState(() => _kind = value ?? _kind),
             ),
             if (widget.repos.length > 1) ...[
               const SizedBox(height: 12),
@@ -307,8 +273,9 @@ class _NewUnitDialogState extends State<NewUnitDialog> {
               ? null
               : () => Navigator.of(context).pop((
                   title: _title.text.trim(),
-                  category: _categorySlug,
-                  topic: _topicSlug,
+                  category: _place[0],
+                  topic: _place[1],
+                  subtopic: _place[2],
                   slug: _slug,
                   kind: _kind,
                   repo: _repo,
@@ -498,17 +465,21 @@ class _DuplicateUnitDialogState extends State<DuplicateUnitDialog> {
   }
 }
 
-/// Lleva [unit] a otra carpeta, o le cambia el nombre de la suya, y la abre
-/// allí. Devuelve la ruta nueva, o null.
+/// Lleva [unit] a otro sitio de la biblioteca --otra categoría, tema o
+/// subtema, que es otra carpeta-- o le cambia el nombre de la suya, y la abre
+/// allí si [open]. Con [to] no pregunta: es lo que pasa al arrastrarla a un
+/// subtema. Devuelve la ruta nueva, o null.
 ///
-/// Es la misma lección en otro sitio: lo que la nombra se reescribe, y su id
-/// y sus traducciones no cambian. Con algo sin guardar en ella no se ofrece:
+/// Es la misma lección en otro sitio: lo que la usa la nombra por su id, así
+/// que no hay nada que reescribir, y su id y sus traducciones no cambian. Con algo sin guardar en ella no se ofrece:
 /// el editor abierto escribiría en la carpeta que ya no existe.
 Future<String?> moveUnitFrom(
   BuildContext context,
   Session session,
-  Unit unit,
-) async {
+  Unit unit, {
+  Place? to,
+  bool open = true,
+}) async {
   final messenger = ScaffoldMessenger.of(context);
   final pending = session.unsaved.whatAt(Routes.unit(unit.path));
   if (pending.isNotEmpty) {
@@ -525,23 +496,38 @@ Future<String?> moveUnitFrom(
     );
     return null;
   }
-  final to = await showDialog<String>(
-    context: context,
-    builder: (context) => MoveUnitDialog(session: session, unit: unit),
-  );
-  if (to == null || !context.mounted) return null;
+  final String? target;
+  if (to != null) {
+    target = '${placeKey(to)}/${unit.path.split('/').last}';
+    if (session.unitByPath('${unit.area}/$target', repo: unit.repo) != null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            tr('Ya hay una lección en {0}.', ['${unit.area}/$target']),
+          ),
+        ),
+      );
+      return null;
+    }
+  } else {
+    target = await showDialog<String>(
+      context: context,
+      builder: (context) => MoveUnitDialog(session: session, unit: unit),
+    );
+  }
+  if (target == null || !context.mounted) return null;
 
   final title = unit.title(session.language);
   final ok = await runAdmin(
     context,
     session,
-    (admin) => admin.moveUnit(unit: unit.path, to: to, title: title),
-    done: tr('Lección «{0}» movida a {1}/{2}.', [title, unit.area, to]),
+    (admin) => admin.moveUnit(unit: unit.path, to: target!, title: title),
+    done: tr('Lección «{0}» movida a {1}/{2}.', [title, unit.area, target]),
     repo: unit.repo.isEmpty ? null : unit.repo,
   );
   if (!ok) return null;
-  final moved = '${unit.area}/$to';
-  if (context.mounted) goTo(context, Routes.unit(moved));
+  final moved = '${unit.area}/$target';
+  if (open && context.mounted) goTo(context, Routes.unit(moved));
   await session.reloadCatalogue();
   return moved;
 }
@@ -557,26 +543,37 @@ class MoveUnitDialog extends StatefulWidget {
 }
 
 class _MoveUnitDialogState extends State<MoveUnitDialog> {
-  late final TextEditingController _path = TextEditingController(
-    text: widget.unit.reference_,
+  /// Donde está ahora: el sitio de su `unit.yaml`.
+  late final Place _from = [
+    widget.unit.category,
+    widget.unit.topic,
+    widget.unit.subtopic,
+  ].takeWhile((part) => part.isNotEmpty).toList();
+
+  late Place _place = _from;
+
+  late final TextEditingController _name = TextEditingController(
+    text: widget.unit.path.split('/').last,
   );
 
   @override
   void dispose() {
-    _path.dispose();
+    _name.dispose();
     super.dispose();
   }
 
-  /// La ruta escrita, carpeta a carpeta con el nombre que tendrá en disco.
-  String get _to => [
-    for (final part in _path.text.split('/'))
-      if (slugify(part).isNotEmpty) slugify(part),
-  ].join('/');
+  String get _slug => slugify(_name.text);
+
+  /// A dónde, sin el árbol: `categoría/tema/subtema/nombre`.
+  String get _to => '${placeKey(_place)}/$_slug';
 
   String get _where => '${widget.unit.area}/$_to';
 
   String? get _problem {
-    if (_to.isEmpty) return tr('Falta la carpeta.');
+    if (_place.length < 3) {
+      return tr('Elige un subtema: cada lección vive en uno.');
+    }
+    if (_slug.isEmpty) return tr('Falta el nombre de la carpeta.');
     if (_where == widget.unit.path) return tr('Es donde ya está.');
     if (widget.session.unitByPath(_where, repo: widget.unit.repo) != null) {
       return tr('Ya hay una lección en {0}.', [_where]);
@@ -584,73 +581,44 @@ class _MoveUnitDialogState extends State<MoveUnitDialog> {
     return null;
   }
 
-  /// Los documentos que la nombran, que son los que se van a reescribir.
-  int get _documents => {
-    for (final use in widget.unit.usedBy)
-      '${use.course}/${use.year}/${use.document}',
-  }.length;
-
-  /// Los cursos de esos documentos, con su nombre: «Análisis · 2025-2026».
-  ///
-  /// Mover está para todos, y quien mueve una lección suya puede no saber que
-  /// otro curso --el de un compañero, el del año pasado-- la usa también. Lo
-  /// que se reescribe se nombra antes de confirmar, no después.
-  List<String> get _courses {
-    final session = widget.session;
-    final seen = <String>{};
-    final named = <String>[];
-    for (final use in widget.unit.usedBy) {
-      if (!seen.add('${use.course}/${use.year}')) continue;
-      final title =
-          session.courseById(use.course)?.title(session.language) ?? use.course;
-      named.add('$title · ${use.year}');
-    }
-    named.sort();
-    return named;
-  }
-
-  /// Las otras lecciones que la tienen de prerrequisito, que también se
-  /// reescriben.
-  int get _prerequisiteOf {
-    final unit = widget.unit;
-    final names = {unit.id, unit.path, unit.reference_};
-    var count = 0;
-    for (final other in widget.session.catalogue.units) {
-      if (identical(other, unit) || other.repo != unit.repo) continue;
-      if (other.prerequisites.any(names.contains)) count += 1;
-    }
-    return count;
-  }
-
   @override
   Widget build(BuildContext context) {
     final problem = _problem;
-    final documents = _documents;
-    final courses = _courses;
-    final prerequisiteOf = _prerequisiteOf;
+    final uses = {
+      for (final use in widget.unit.usedBy)
+        '${use.course}/${use.year}/${use.document}',
+    }.length;
     return AlertDialog(
-      title: Text(tr('Mover o renombrar')),
+      title: Text(
+        tr('Mover «{0}»', [widget.unit.title(widget.session.language)]),
+      ),
       content: SizedBox(
-        width: 480,
+        width: 660,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              key: const Key('move-unit-path'),
-              controller: _path,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: tr('Carpeta, dentro de {0}/', [widget.unit.area]),
-                helperText: tr('categoría/tema/nombre'),
-                border: const OutlineInputBorder(),
-              ),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-              onChanged: (_) => setState(() {}),
+            PlaceBrowser(
+              key: const Key('move-unit-place'),
+              session: widget.session,
+              place: _place,
+              onChanged: (next) => setState(() => _place = next),
+              height: 300,
             ),
             const SizedBox(height: 12),
+            TextField(
+              key: const Key('move-unit-path'),
+              controller: _name,
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: tr('Nombre de la carpeta'),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 10),
             Text(
-              problem ?? tr('Pasará a {0}', [_where]),
+              problem ?? tr('Irá a {0}', [_where]),
               key: const Key('move-unit-where'),
               style: TextStyle(
                 fontSize: 12,
@@ -661,62 +629,28 @@ class _MoveUnitDialogState extends State<MoveUnitDialog> {
               ),
             ),
             const SizedBox(height: 10),
-            // Lo que más asusta de mover algo es romper lo que lo usa, así
-            // que se dice antes: cuántos documentos se tocan, y que su id y
-            // sus traducciones siguen siendo los mismos.
+            // Lo que más asusta de mover algo es romper lo que lo usa. Ya no
+            // puede pasar: los temas la nombran por su id, que no cambia, y
+            // es el motor quien le dice a LaTeX dónde está ahora.
             Text(
-              documents == 0
+              uses == 0
                   ? tr(
                       'Ningún documento la usa. Su id y sus traducciones no '
                       'cambian.',
                     )
-                  : documents == 1
+                  : uses == 1
                   ? tr(
-                      'Se reescribirá 1 documento que la usa, en el mismo '
-                      'cambio. Su id y sus traducciones no cambian.',
+                      'La usa 1 documento, y no hay que tocarlo: la nombra '
+                      'por su id, que no cambia.',
                     )
                   : tr(
-                      'Se reescribirán {0} documentos que la usan, en el '
-                      'mismo cambio. Su id y sus traducciones no cambian.',
-                      [documents],
+                      'La usan {0} documentos, y no hay que tocar ninguno: la '
+                      'nombran por su id, que no cambia.',
+                      [uses],
                     ),
               key: const Key('move-unit-uses'),
               style: TextStyle(fontSize: 13, color: context.palette.muted),
             ),
-            if (courses.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                courses.length == 1
-                    ? tr('En {0}.', [courses.single])
-                    : tr(
-                        'En {0} cursos: '
-                        '{1}. El cambio les llega a '
-                        'todos, también a los que no das tú.',
-                        [courses.length, _listed(courses)],
-                      ),
-                key: const Key('move-unit-courses'),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: courses.length == 1
-                      ? context.palette.muted
-                      : context.palette.teacher,
-                ),
-              ),
-            ],
-            if (prerequisiteOf > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                prerequisiteOf == 1
-                    ? tr('Y otra lección que la tiene de prerrequisito.')
-                    : tr(
-                        'Y {0} lecciones que la tienen de '
-                        'prerrequisito.',
-                        [prerequisiteOf],
-                      ),
-                key: const Key('move-unit-prerequisites'),
-                style: TextStyle(fontSize: 13, color: context.palette.muted),
-              ),
-            ],
           ],
         ),
       ),
@@ -735,15 +669,6 @@ class _MoveUnitDialogState extends State<MoveUnitDialog> {
       ],
     );
   }
-}
-
-/// «a, b y c», o las cinco primeras y cuántas más.
-String _listed(List<String> items) {
-  if (items.length > 5) {
-    return tr('{0} y {1} más', [items.take(5).join(', '), items.length - 5]);
-  }
-  if (items.length == 1) return items.single;
-  return tr('{0} y {1}', [items.take(items.length - 1).join(', '), items.last]);
 }
 
 /// Los tipos que acepta el motor, en el orden en que se ofrecen.

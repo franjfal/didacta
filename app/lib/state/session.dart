@@ -949,6 +949,7 @@ class Session extends ChangeNotifier {
     String classOptions = '',
     Map<String, String> axes = const {},
     String preamble = '',
+    bool active = true,
   }) => editor.declareTemplate(
     repo: repo,
     id: id,
@@ -957,12 +958,49 @@ class Session extends ChangeNotifier {
     classOptions: classOptions,
     axes: axes,
     preamble: preamble,
+    active: active,
   );
+
+  Future<void> addTemplateTo({required String repo, required String id}) =>
+      editor.addTemplateTo(repo: repo, id: id);
+
+  Future<void> removeTemplateFrom({required String repo, required String id}) =>
+      editor.removeTemplateFrom(repo: repo, id: id);
+
+  Future<SnippetPreview?> previewTemplate({
+    required Unit unit,
+    required String id,
+    required String documentClass,
+    String classOptions = '',
+    Map<String, String> axes = const {},
+    String preamble = '',
+    void Function(String line)? onOutput,
+  }) => editor.previewTemplate(
+    unit: unit,
+    id: id,
+    documentClass: documentClass,
+    classOptions: classOptions,
+    axes: axes,
+    preamble: preamble,
+    onOutput: onOutput,
+  );
+
+  Future<int> setTemplatePreambleEverywhere({
+    required String id,
+    required String text,
+  }) => editor.setTemplatePreambleEverywhere(id: id, text: text);
 
   Future<int> moveUnitsBetweenBlocks({
     required String from,
     required String to,
   }) => editor.moveUnitsBetweenBlocks(from: from, to: to);
+
+  /// Una categoría, un tema o un subtema nuevos, en todos los repositorios
+  /// abiertos: ver [CatalogueEditor.declarePlace].
+  Future<int> declarePlace({
+    required String key,
+    required Map<String, String> titles,
+  }) => editor.declarePlace(key: key, titles: titles);
 
   Unit? nextToReview(String language, {String? after}) =>
       editor.nextToReview(language, after: after);
@@ -982,11 +1020,13 @@ class Session extends ChangeNotifier {
   Future<SnippetPreview?> previewSnippet(
     LatexSnippet snippet, {
     String profile = 'notes',
+    String? language,
     String? repo,
     void Function(String line)? onOutput,
   }) => editor.previewSnippet(
     snippet,
     profile: profile,
+    language: language,
     repo: repo,
     onOutput: onOutput,
   );
@@ -1155,6 +1195,8 @@ class Session extends ChangeNotifier {
   List<String> get snippetRepos => editor.snippetRepos;
 
   List<LatexSnippet> snippetsIn(String? repo) => editor.snippetsIn(repo);
+
+  List<String> get templateHomes => editor.templateHomes;
 
   String templateHomeLabel(String home) => editor.templateHomeLabel(home);
 
@@ -1561,6 +1603,20 @@ class Session extends ChangeNotifier {
     notifyListeners();
     await refreshAccess();
   }
+
+  /// Si un repositorio está en la carpeta de todos. Ver
+  /// [Repositories.isInBase].
+  bool isInCloneBase(ContentRepo repo) => repositories.isInBase(repo);
+
+  /// Los repositorios abiertos que están fuera de la carpeta de todos.
+  List<ContentRepo> get outsideCloneBase => repositories.outsideBase;
+
+  /// La carpeta que le toca a un repositorio. Ver [Repositories.targetFor].
+  String targetFor(String name) => repositories.targetFor(name);
+
+  /// Lleva un repositorio a la carpeta de todos. Ver
+  /// [Repositories.relocate].
+  Future<String?> relocateRepository(String id) => repositories.relocate(id);
 
   /// Dónde se clonaría un repositorio, y qué hay ya ahí. Ver
   /// [Repositories.inspectTarget].

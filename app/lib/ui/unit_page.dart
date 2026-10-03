@@ -29,6 +29,7 @@ import '../data/content_gateway.dart';
 import '../data/diagnostics.dart';
 import '../data/draft_store.dart';
 import '../model/catalogue.dart';
+import '../model/library_tree.dart' show humaniseSlug;
 import '../model/file_history.dart' show FileCommit;
 import '../model/tex_indent.dart';
 import '../router.dart';
@@ -2729,8 +2730,23 @@ class _UnitPanel extends StatelessWidget {
           kindName(unit.kind),
           colour: context.palette.kind(unit.kind),
         ),
-        _Row(tr('categoría'), unit.category),
-        _Row(tr('tema'), unit.topic),
+        // Su sitio, con los nombres de la taxonomía y no los ids: los tres
+        // niveles de la biblioteca, que son también su carpeta.
+        for (final (level, label) in [
+          tr('categoría'),
+          tr('tema'),
+          tr('subtema'),
+        ].indexed)
+          if (unit.place.split('/').length > level &&
+              unit.place.split('/')[level].isNotEmpty)
+            _Row(
+              label,
+              session.catalogue.taxonomyTitle(
+                    unit.place.split('/').take(level + 1).join('/'),
+                    session.language,
+                  ) ??
+                  humaniseSlug(unit.place.split('/')[level]),
+            ),
         if (unit.difficulty != null)
           _Row(tr('dificultad'), difficultyName(unit.difficulty!)),
         if (unit.durationMinutes != null)

@@ -355,6 +355,21 @@ abstract class LocalClone {
     required String repo,
   }) => platform.inspectTarget(directory: directory, owner: owner, repo: repo);
 
+  /// Lleva el clon de [from] a [to], entero: lo que no se ha enviado y lo que
+  /// no se ha guardado en un commit van con él.
+  ///
+  /// Existe porque elegir dónde se clonan los repositorios no movía los que
+  /// ya estaban: un clon de antes, o uno añadido como carpeta, se quedaba
+  /// donde estaba, y con dos repositorios cada uno acababa en un sitio.
+  ///
+  /// [to] tiene que estar libre --no existir, o estar vacía--, y no puede
+  /// estar dentro de [from]. En el mismo disco es renombrar; entre dos, se
+  /// copia entero y solo con la copia hecha se borra el original. Devuelve un
+  /// aviso si el original no se pudo borrar del todo: la copia está bien y es
+  /// la que vale, pero queda algo detrás que quitar a mano.
+  static Future<String?> move({required String from, required String to}) =>
+      platform.moveClone(from: from, to: to);
+
   /// Clones [owner]/[repo] into [directory], authenticating with [token].
   ///
   /// Un repositorio sin commits lanza [EmptyRepositoryException] antes de

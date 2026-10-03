@@ -525,7 +525,13 @@ Future<void> mount(
 
 /// Qué pantallas se capturan, en el orden en que la documentación las cuenta.
 final List<Shot> shots = [
-  const Shot('biblioteca', '/', note: 'la biblioteca, en árbol'),
+  // Dentro de un tema, para que se vean las columnas: categoría, tema,
+  // subtema y, a la derecha, las lecciones de cada subtema.
+  const Shot(
+    'biblioteca',
+    '/?en=analysis/normed',
+    note: 'la biblioteca, en columnas',
+  ),
   Shot(
     'biblioteca-buscar',
     '/',

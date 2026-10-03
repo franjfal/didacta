@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "editada",
-      "ruta": "/unit/content/calculo/limites/limite-por-definicion?lang=es",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/limite-por-definicion?lang=es",
       "acciones": [
         {
           "esperar": 10

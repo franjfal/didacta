@@ -14,6 +14,7 @@ Unit unit({
   required String path,
   String kind = 'theory',
   List<String> tags = const [],
+  String? subtopic,
   Map<String, dynamic>? languages,
   List<Map<String, String>> usedBy = const [],
 }) {
@@ -25,6 +26,7 @@ Unit unit({
     'kind': kind,
     'category': parts[1],
     'topic': parts[2],
+    'subtopic': ?subtopic ?? (parts.length > 4 ? parts[3] : null),
     'tags': tags,
     'title': {'es': parts.last},
     'reference': 'es',
@@ -325,23 +327,90 @@ void main() {
       ]);
       expect([for (final t in counts) t.count], [1, 1]);
     });
+  });
 
-    test('el tema y la categoría las ofrecen', () {
+  group('los subtemas', () {
+    // El tercer nivel, y el que tiene las lecciones dentro: es la carpeta,
+    // `content/<categoría>/<tema>/<subtema>/<lección>`.
+    final units = [
+      unit(path: 'content/analisis/recta-real/induccion/suma-cuadrados'),
+      unit(path: 'content/analisis/recta-real/induccion/suma-cubos'),
+      unit(path: 'content/analisis/recta-real/valor-absoluto/desigualdad'),
+      unit(path: 'content/analisis/sucesiones/stolz/criterio'),
+    ];
+
+    test('agrupan las lecciones de un tema, y los números suman', () {
       final tree = LibraryTree.of(units);
-      final category = tree.categories.single;
+      final topic = tree.topic('analisis', 'recta-real')!;
       expect(
-        [for (final t in category.tags) t.tag],
+        [for (final s in topic.subtopics) s.subtopic],
         ['induccion', 'valor-absoluto'],
       );
+      expect([for (final s in topic.subtopics) s.count], [2, 1]);
+      expect(topic.count, 3);
       expect(
-        [for (final t in category.topic('recta-real')!.tags) t.tag],
-        ['induccion', 'valor-absoluto'],
+        tree
+            .subtopic('analisis', 'recta-real', 'induccion')!
+            .units
+            .map((u) => u.path.split('/').last),
+        ['suma-cuadrados', 'suma-cubos'],
       );
     });
 
-    test('sin etiquetas no hay fila que pintar', () {
+    test('salen en el orden de la taxonomía, no por tamaño', () {
+      // El orden en que se da la asignatura: el valor absoluto antes que la
+      // inducción, aunque la inducción tenga más.
+      final declared = {
+        '': ['analisis'],
+        'analisis': ['sucesiones', 'recta-real'],
+        'analisis/recta-real': ['valor-absoluto', 'induccion'],
+      };
+      final tree = LibraryTree.of(
+        units,
+        declared: (parent) => declared[parent] ?? const [],
+      );
+      final category = tree.category('analisis')!;
+      expect(
+        [for (final t in category.topics) t.topic],
+        ['sucesiones', 'recta-real'],
+      );
+      expect(
+        [for (final s in category.topic('recta-real')!.subtopics) s.subtopic],
+        ['valor-absoluto', 'induccion'],
+      );
+    });
+
+    test('lo declarado y vacío sale, si se pide', () {
+      // Un subtema recién creado tiene que verse para poder llevarle
+      // lecciones; uno que solo vacía un filtro, no.
+      final declared = {
+        '': ['analisis'],
+        'analisis': ['recta-real', 'nuevo-tema'],
+        'analisis/recta-real': ['induccion', 'valor-absoluto', 'vacio'],
+      };
+      final tree = LibraryTree.of(
+        units,
+        titleOf: (key) => key == 'analisis/recta-real/vacio' ? 'Vacío' : null,
+        declared: (parent) => declared[parent] ?? const [],
+        showEmpty: (key) =>
+            key == 'analisis/recta-real/vacio' || key == 'analisis/nuevo-tema',
+      );
+      final empty = tree.subtopic('analisis', 'recta-real', 'vacio')!;
+      expect(empty.count, 0);
+      expect(empty.label, 'Vacío');
+      expect(tree.topic('analisis', 'nuevo-tema')!.count, 0);
+      final unasked = LibraryTree.of(
+        units,
+        declared: (parent) => declared[parent] ?? const [],
+      );
+      expect(unasked.subtopic('analisis', 'recta-real', 'vacio'), isNull);
+    });
+
+    test('una lección sin subtema se dice, no sale sin nombre', () {
       final tree = LibraryTree.of([unit(path: 'content/a/t/uno')]);
-      expect(tree.categories.single.tags, isEmpty);
+      final only = tree.topic('a', 't')!.subtopics.single;
+      expect(only.subtopic, '');
+      expect(only.label, 'Sin subtema');
     });
   });
 }

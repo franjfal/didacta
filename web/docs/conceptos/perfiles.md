@@ -122,6 +122,9 @@ Y `templates/apuntes-a5.tex`, si hace falta:
 \geometry{margin=1.5cm}
 ```
 
+El papel que digan las opciones --`a5paper`, `letterpaper`-- es el que sale;
+sin ninguno, A4.
+
 Ese fichero se lee **al final del preámbulo de Didacta**, y ese orden es la
 razón de que exista: una plantilla puede redefinir lo que Didacta acaba de
 definir --los márgenes, los colores, un entorno-- en lugar de que Didacta la

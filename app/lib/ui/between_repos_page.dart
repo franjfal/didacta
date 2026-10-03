@@ -466,7 +466,9 @@ class _ConflictRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 RepoChip(
                   colour: session.colourOf(entry.key) ?? 0xFF62697A,
-                  label: session.workspace.byId(entry.key)?.label ?? entry.key,
+                  // Una plantilla puede estar también en la carpeta del
+                  // programa, que no es un repositorio y no tiene etiqueta.
+                  label: session.templateHomeLabel(entry.key),
                   compact: true,
                 ),
                 const SizedBox(width: 8),

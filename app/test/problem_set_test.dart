@@ -197,7 +197,7 @@ void main() {
     ).blockFor('examen-de-enero')!.entries;
     expect(
       [for (final entry in structure) entry.value],
-      ['analysis/normed/equivalence', 'analysis/normed/cauchy'],
+      ['analysis.normed.equivalence', 'analysis.normed.cauchy'],
     );
     // Un examen no lleva índice.
     expect(

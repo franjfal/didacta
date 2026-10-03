@@ -2,9 +2,9 @@
   "codigo": "L4",
   "titulo": "Plantillas: tus propias salidas",
   "fichero": "L04-plantillas.mp4",
-  "duracion": 83.54,
-  "megas": 4.1,
-  "fecha": "2026-09-29",
+  "duracion": 96.45,
+  "megas": 9.0,
+  "fecha": "2026-10-01",
   "version": "0.3.0",
   "capitulos": [
     {
@@ -12,58 +12,74 @@
       "titulo": "Plantillas: tus propias salidas"
     },
     {
-      "t": 8.62,
-      "titulo": "Las plantillas"
+      "t": 8.5,
+      "titulo": "Su sección"
     },
     {
-      "t": 29.64,
+      "t": 27.81,
       "titulo": "Apuntes de bolsillo"
     },
     {
-      "t": 54.31,
+      "t": 49.99,
       "titulo": "La cabecera"
+    },
+    {
+      "t": 62.87,
+      "titulo": "Guardar"
     }
   ],
   "transcripcion": [
     {
       "t": 1.2,
-      "texto": "Al terminar sabrás crear una salida propia, unos apuntes en A5, o retocar una de las que trae Didacta."
+      "texto": "Al terminar sabrás crear una salida propia, unos apuntes en A5, y verla compilada antes de guardarla."
     },
     {
-      "t": 9.12,
-      "texto": "Una plantilla es una salida: qué PDF sale de una lección. En Ajustes, Bloques y plantillas, las que trae Didacta."
+      "t": 9.0,
+      "texto": "Las plantillas tienen su sección en Ajustes, justo antes de los snippets. Una plantilla es una salida: qué PDF sale de una lección."
     },
     {
-      "t": 19.31,
-      "texto": "Editar aquí una de ellas la escribe en tu repositorio, con el mismo nombre, y desde ahí manda la tuya. Duplicar hace otra a partir de ella."
+      "t": 18.09,
+      "texto": "Cada fila dice qué produce, y en qué repositorios está. Las que trae Didacta no están en ninguno: vienen con el programa."
     },
     {
-      "t": 30.14,
-      "texto": "Duplicar Apuntes: un nombre, Apuntes de bolsillo. Y como es la primera que se declara, se escriben también las de serie, para que todo se siga compilando igual."
+      "t": 28.31,
+      "texto": "Duplicar Apuntes abre el editor. A la izquierda, lo que la define. A la derecha, una lección del ejemplo compilada con ella."
     },
     {
-      "t": 40.67,
-      "texto": "Su identificador, y las opciones de la clase: diez puntos y papel A5. Los ejes, los de Apuntes."
+      "t": 37.63,
+      "texto": "Un nombre, Apuntes de bolsillo; su identificador; y en las opciones de la clase, diez puntos y papel A5."
     },
     {
-      "t": 49.41,
-      "texto": "Declarar, y ya está en la lista, en el repositorio del ejemplo."
+      "t": 45.8,
+      "texto": "La vista previa se vuelve a compilar sola, sin guardar nada."
     },
     {
-      "t": 54.81,
-      "texto": "Cabecera: el LaTeX que se lee al final del preámbulo de Didacta. Aquí, un interlineado más apretado, para que quepa en A5."
+      "t": 50.49,
+      "texto": "Su cabecera es LaTeX que se lee al final del preámbulo de Didacta. Aquí, unos márgenes de bolsillo y otro color para las definiciones."
     },
     {
-      "t": 64.38,
-      "texto": "Y apagar una no la borra: sigue declarada, con su cabecera, para el día que vuelva a hacer falta."
+      "t": 59.91,
+      "texto": "Y se ve al momento, antes de guardar."
     },
     {
-      "t": 71.94,
+      "t": 63.37,
+      "texto": "Se guarda en el repositorio marcado. Y como es la primera que se declara, se escriben también las de serie, para que todo se siga compilando igual."
+    },
+    {
+      "t": 72.65,
+      "texto": "Guardar, y ya está en la lista, con su cabecera."
+    },
+    {
+      "t": 76.45,
+      "texto": "Y apagarla no la borra: sigue declarada, con su cabecera, para el día que vuelva a hacer falta."
+    },
+    {
+      "t": 83.98,
       "texto": "La cabecera va al final del preámbulo: puede redefinir lo que Didacta acaba de definir."
     },
     {
-      "t": 77.95,
-      "texto": "En el siguiente vídeo, tus propios snippets."
+      "t": 90.0,
+      "texto": "En el siguiente vídeo, una plantilla en varios repositorios."
     }
   ]
 }

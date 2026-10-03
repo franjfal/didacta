@@ -7,54 +7,54 @@ una asignatura en partes,
 00:00:03.860 --> 00:00:06.670
 y decidir con qué se compila cada una.
 
-00:00:07.520 --> 00:00:13.310
+00:00:07.520 --> 00:00:13.470
 Un bloque es una parte de la asignatura:
 la teoría, los problemas, las prácticas.
 
-00:00:13.680 --> 00:00:19.660
-En Ajustes, Bloques y plantillas. Aquí,
+00:00:14.180 --> 00:00:20.000
+En Ajustes, Bloques y catálogo. Aquí,
 una lección ya dice que es de prácticas,
 
-00:00:19.700 --> 00:00:21.769
+00:00:20.040 --> 00:00:22.206
 y nadie lo ha declarado.
 
-00:00:21.839 --> 00:00:27.291
+00:00:22.276 --> 00:00:27.728
 Nuevo bloque: su nombre, y su identificador,
 que es lo que escribe cada lección.
 
-00:00:27.361 --> 00:00:30.836
+00:00:27.798 --> 00:00:31.273
 Y el nombre, en cada idioma: el lápiz.
 
-00:00:31.636 --> 00:00:34.186
+00:00:32.073 --> 00:00:34.623
 Ojo: con el primero declarado,
 
-00:00:34.356 --> 00:00:39.261
+00:00:34.793 --> 00:00:39.698
 la teoría y los problemas también hay
 que declararlos; si no, salen por su id.
 
-00:00:39.331 --> 00:00:43.713
+00:00:39.768 --> 00:00:44.150
 Declarar, al lado de cada uno,
 y ya traen su nombre de siempre.
 
-00:00:44.513 --> 00:00:48.083
+00:00:44.950 --> 00:00:48.520
 El segundo botón decide con qué
 plantillas se compila lo de ese bloque:
 
-00:00:48.473 --> 00:00:50.740
+00:00:48.910 --> 00:00:51.177
 lo que toque, o las que elijas.
 
-00:00:51.540 --> 00:00:56.060
+00:00:51.977 --> 00:00:56.497
 Y quitar uno pregunta qué se hace con
 sus lecciones: moverlas a otro bloque,
 
-00:00:56.100 --> 00:01:00.882
+00:00:56.537 --> 00:01:01.319
 o dejarlas sin bloque declarado,
 que salen en Entre repos.
 
-00:01:01.682 --> 00:01:06.491
+00:01:02.119 --> 00:01:06.928
 Renombrar un bloque es cambiar una
 línea: no se mueve ningún fichero.
 
-00:01:06.741 --> 00:01:10.802
+00:01:07.178 --> 00:01:11.239
 En el siguiente vídeo, las
 plantillas: tus propias salidas.

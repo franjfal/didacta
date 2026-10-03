@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "elegir",
-      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+      "ruta": "/unit/content/calculo/continuidad/bolzano/teorema-de-bolzano",
       "acciones": [
         {
           "esperar": 10
@@ -99,7 +99,7 @@
                 "fila": 500
               },
               "prerrequisito": {
-                "texto": "calculo/continuidad/funcion-continua",
+                "texto": "calculo/continuidad/funciones-continuas/funcion-continua",
                 "fila": 500
               }
             }

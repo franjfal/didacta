@@ -51,10 +51,10 @@
                 "clave": "problem-set-search"
               },
               "vistos": {
-                "clave": "problem-set-seen-problems/calculo/continuidad/tres-raices-por-bolzano"
+                "clave": "problem-set-seen-problems/calculo/continuidad/bolzano/tres-raices-por-bolzano"
               },
               "vistos2": {
-                "clave": "problem-set-seen-problems/calculo/continuidad/discontinuidades-evitables"
+                "clave": "problem-set-seen-problems/calculo/continuidad/funciones-continuas/discontinuidades-evitables"
               },
               "sin": {
                 "clave": "problem-set-unseen"
@@ -80,14 +80,14 @@
                 "clave": "problem-set-unseen"
               },
               "cocientes": {
-                "clave": "problem-set-unit-problems/calculo/limites/limites-de-cocientes"
+                "clave": "problem-set-unit-problems/calculo/limites/calculo-de-limites/limites-de-cocientes"
               }
             }
           }
         },
         {
           "pulsar": {
-            "clave": "problem-set-unit-problems/calculo/limites/limites-de-cocientes"
+            "clave": "problem-set-unit-problems/calculo/limites/calculo-de-limites/limites-de-cocientes"
           },
           "esperar": 6
         },
@@ -102,7 +102,7 @@
                 "clave": "problem-set-create"
               },
               "cocientes": {
-                "clave": "problem-set-unit-problems/calculo/limites/limites-de-cocientes"
+                "clave": "problem-set-unit-problems/calculo/limites/calculo-de-limites/limites-de-cocientes"
               }
             }
           }

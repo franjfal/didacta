@@ -2,9 +2,9 @@
   "codigo": "C1",
   "titulo": "Recorrer la biblioteca",
   "fichero": "C01-recorrer-la-biblioteca.mp4",
-  "duracion": 69.91,
-  "megas": 4.5,
-  "fecha": "2026-09-28",
+  "duracion": 76.42,
+  "megas": 4.9,
+  "fecha": "2026-10-02",
   "version": "0.3.0",
   "capitulos": [
     {
@@ -13,18 +13,18 @@
     },
     {
       "t": 6.88,
-      "titulo": "Tres columnas"
+      "titulo": "Tres niveles"
     },
     {
-      "t": 19.6,
+      "t": 26.11,
       "titulo": "Lo que dice una fila"
     },
     {
-      "t": 35.67,
+      "t": 42.18,
       "titulo": "Ojear sin entrar"
     },
     {
-      "t": 46.78,
+      "t": 53.29,
       "titulo": "Ir y volver"
     }
   ],
@@ -35,42 +35,46 @@
     },
     {
       "t": 7.38,
-      "texto": "La biblioteca enseña el material como ya está ordenado: la categoría, el tema, y sus lecciones."
+      "texto": "La biblioteca enseña el material en columnas, como el Finder: la categoría, el tema, el subtema, y sus lecciones."
     },
     {
-      "t": 14.37,
+      "t": 15.95,
+      "texto": "Cada lección vive en un subtema, y solo en uno: es también su carpeta."
+    },
+    {
+      "t": 20.88,
       "texto": "Cada nivel dice cuánto contiene, y cuánto está traducido al idioma que miras."
     },
     {
-      "t": 20.1,
+      "t": 26.61,
       "texto": "Cada fila lleva el título, el tipo, y el estado de cada idioma, con su color y sus dos letras."
     },
     {
-      "t": 26.97,
+      "t": 33.48,
       "texto": "Y mirando en inglés, lo que no tiene título en inglés sale con el del original, en cursiva y gris: así no parece traducido."
     },
     {
-      "t": 36.17,
+      "t": 42.68,
       "texto": "Si una lección ya está compilada, puedes ojearla encima de la lista, sin entrar en ella."
     },
     {
-      "t": 41.98,
+      "t": 48.49,
       "texto": "Es la pregunta de quien prepara una clase: ¿cuál era la que tenía el dibujo?"
     },
     {
-      "t": 47.28,
+      "t": 53.79,
       "texto": "Abre una lección, y vuelve con la flecha de atrás: la biblioteca sigue como la dejaste."
     },
     {
-      "t": 53.57,
+      "t": 60.07,
       "texto": "Y en la raíz, Abiertas hace poco: las últimas lecciones que has abierto, a un clic."
     },
     {
-      "t": 61.06,
+      "t": 67.57,
       "texto": "La biblioteca respeta el orden que tu material ya tiene."
     },
     {
-      "t": 64.84,
+      "t": 71.35,
       "texto": "En el siguiente vídeo, buscar una lección."
     }
   ]

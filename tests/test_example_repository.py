@@ -180,7 +180,7 @@ class ExampleRepositoryTests(unittest.TestCase):
     def test_one_unit_is_in_the_library_and_in_no_document(self):
         unused = [path for path, record in self.records.items()
                   if not record["usedBy"]]
-        self.assertEqual(unused, ["content/calculo/limites/historia-del-epsilon"])
+        self.assertEqual(unused, ["content/calculo/limites/concepto-de-limite/historia-del-epsilon"])
 
     def test_the_translation_queue_has_real_work_in_it(self):
         status = {path: {code: entry["status"]
@@ -201,7 +201,7 @@ class ExampleRepositoryTests(unittest.TestCase):
         # Es la que encabeza la cola de Traducción, que se ordena por cuántos
         # documentos usan cada lección.
         record = self.records[
-            "problems/calculo/continuidad/tres-raices-por-bolzano"]
+            "problems/calculo/continuidad/bolzano/tres-raices-por-bolzano"]
         self.assertEqual(record["languages"]["va"]["status"], "missing")
         self.assertEqual(len(record["usedBy"]), 2)
 

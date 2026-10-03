@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "duplicar",
-      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "ruta": "/unit/problems/calculo/limites/calculo-de-limites/limites-de-cocientes",
       "acciones": [
         {
           "esperar": 10
@@ -68,7 +68,7 @@
     },
     {
       "nombre": "mover",
-      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "ruta": "/unit/problems/calculo/limites/calculo-de-limites/limites-de-cocientes",
       "acciones": [
         {
           "esperar": 10
@@ -86,18 +86,19 @@
           "esperar": 8
         },
         {
-          "escribir": {
-            "en": {
-              "clave": "move-unit-path"
-            },
-            "texto": "calculo/limites/cocientes"
-          }
-        },
-        {
+          "pulsar": {
+            "clave": "place-concepto-de-limite"
+          },
           "esperar": 6
         }
       ],
       "cajas": {
+        "sitio": {
+          "clave": "move-unit-place"
+        },
+        "subtema": {
+          "clave": "place-concepto-de-limite"
+        },
         "carpeta": {
           "clave": "move-unit-path"
         },
@@ -105,21 +106,18 @@
           "clave": "move-unit-where"
         },
         "dialogo": {
-          "texto": "Mover o renombrar",
+          "contiene": "Mover «",
           "alto": 200
         },
         "aviso": {
-          "contiene": "Se reescribirá",
+          "contiene": "por su id",
           "fila": 300
-        },
-        "curso": {
-          "contiene": "En Cálculo I"
         }
       }
     },
     {
       "nombre": "darla",
-      "ruta": "/unit/problems/calculo/limites/limites-de-cocientes",
+      "ruta": "/unit/problems/calculo/limites/calculo-de-limites/limites-de-cocientes",
       "acciones": [
         {
           "esperar": 10

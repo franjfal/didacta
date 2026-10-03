@@ -322,8 +322,10 @@ void main() {
       await tapIfShown(tester, commit);
       await settle(tester);
 
+      // Por su id, que es lo que sobrevive a moverla; lo de antes se queda
+      // como estaba escrito.
       expect(committedEntries(gateway), [
-        '- unit: algebra/matrices/rank',
+        '- unit: algebra.matrices.rank',
         '- section: Normas',
         '- unit: analysis/normed/definition',
         '- unit: analysis/normed/banach',
@@ -526,66 +528,52 @@ void main() {
     // leyendo --las composiciones de antes lo usan-- pero no se escribe: de
     // qué parte de la asignatura es una unidad lo dice su `block`, no la
     // clave con la que se la nombra.
-    expect(committedEntries(gateway).last, '- unit: analysis/normed/exercises');
+    expect(committedEntries(gateway).last, '- unit: analysis.normed.exercises');
     // And the row is now in the list, numbered last among the active ones.
     expect(find.textContaining('5 de 6 activas'), findsOneWidget);
   });
 
   group('el selector de unidades', () {
     // Dos formas de encontrar una unidad porque son dos preguntas: el
-    // buscador responde a «sé cómo se llama» y el árbol a «sé dónde la
+    // buscador responde a «sé cómo se llama» y las columnas a «sé dónde la
     // dejé», que es lo que pasa al preparar un tema y querer ver qué hay en
-    // una carpeta antes de elegir.
+    // un subtema antes de elegir.
 
     Future<void> openPicker(WidgetTester tester) async {
       await tester.tap(addUnit);
       await settle(tester);
     }
 
-    testWidgets('empieza por las carpetas, y todas cerradas', (tester) async {
+    testWidgets('empieza por las columnas de la biblioteca', (tester) async {
       await pumpComposition(tester);
       await openPicker(tester);
 
-      // Las áreas del disco, que es la estructura que alguien tiene en la
-      // cabeza cuando sabe dónde dejó algo.
-      expect(find.byKey(const Key('folder-content')), findsOneWidget);
-      expect(find.byKey(const Key('folder-problems')), findsOneWidget);
-      // Y nada abierto: ni una categoría ni una unidad a la vista.
-      expect(find.byKey(const Key('folder-content/analysis')), findsNothing);
-      expect(
-        find.byKey(const Key('unit-content/analysis/normed/definition')),
-        findsNothing,
-      );
-    });
-
-    testWidgets('se va abriendo carpeta a carpeta hasta las unidades', (
-      tester,
-    ) async {
-      await pumpComposition(tester);
-      await openPicker(tester);
-
-      await tester.tap(find.byKey(const Key('folder-content')));
-      await settle(tester);
-      expect(find.byKey(const Key('folder-content/analysis')), findsOneWidget);
-      // Una categoría abierta no enseña todavía las unidades: falta el tema.
-      expect(
-        find.byKey(const Key('unit-content/analysis/normed/banach')),
-        findsNothing,
-      );
-
-      await tester.tap(find.byKey(const Key('folder-content/analysis')));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('folder-content/analysis/normed')));
-      await settle(tester);
+      // Categoría, tema y subtema, como en la biblioteca: la misma
+      // organización que se ve al explorar es la que se encuentra al
+      // componer. Abiertas en el tema que más sale en el documento.
+      expect(find.byKey(const Key('picker-places')), findsOneWidget);
+      expect(find.byKey(const Key('place-analysis')), findsOneWidget);
+      expect(find.byKey(const Key('place-normed')), findsOneWidget);
       expect(
         find.byKey(const Key('unit-content/analysis/normed/banach')),
         findsOneWidget,
       );
+    });
 
-      // Y se cierra otra vez.
-      await tester.tap(find.byKey(const Key('folder-content')));
+    testWidgets('elegir otro sitio enseña sus lecciones', (tester) async {
+      await pumpComposition(tester);
+      await openPicker(tester);
+
+      await tester.tap(find.byKey(const Key('place-algebra')));
       await settle(tester);
-      expect(find.byKey(const Key('folder-content/analysis')), findsNothing);
+      expect(
+        find.byKey(const Key('unit-content/analysis/normed/banach')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('unit-content/algebra/matrices/rank')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('varias de una vez, y entran en el orden elegido', (
@@ -596,13 +584,7 @@ void main() {
       final gateway = await pumpComposition(tester, documentId: 'hoja-1');
       await openPicker(tester);
 
-      await tester.tap(find.byKey(const Key('folder-content')));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('folder-content/algebra')));
-      await settle(tester);
-      await tester.tap(
-        find.byKey(const Key('folder-content/algebra/matrices')),
-      );
+      await tester.tap(find.byKey(const Key('place-algebra')));
       await settle(tester);
       await tester.tap(
         find.byKey(const Key('unit-content/algebra/matrices/rank')),
@@ -630,37 +612,12 @@ void main() {
 
       expect(committedEntries(gateway, 'hoja-1'), [
         '- problem: analysis/normed/exercises',
-        '- unit: algebra/matrices/rank',
-        '- unit: analysis/normed/banach',
+        '- unit: algebra.matrices.rank',
+        '- unit: analysis.normed.banach',
       ]);
     });
 
-    testWidgets('una carpeta cerrada dice cuántas lleva elegidas', (
-      tester,
-    ) async {
-      // Si no, al cerrarla se pierde la cuenta de lo que se llevaba.
-      await pumpComposition(tester, documentId: 'hoja-1');
-      await openPicker(tester);
-
-      await tester.tap(find.byKey(const Key('folder-content')));
-      await settle(tester);
-      await tester.tap(find.byKey(const Key('folder-content/algebra')));
-      await settle(tester);
-      await tester.tap(
-        find.byKey(const Key('folder-content/algebra/matrices')),
-      );
-      await settle(tester);
-      await tester.tap(
-        find.byKey(const Key('unit-content/algebra/matrices/rank')),
-      );
-      await settle(tester);
-
-      await tester.tap(find.byKey(const Key('folder-content')));
-      await settle(tester);
-      expect(find.text('1 elegidas'), findsOneWidget);
-    });
-
-    testWidgets('el buscador y las carpetas son la misma pantalla', (
+    testWidgets('el buscador y las columnas son la misma pantalla', (
       tester,
     ) async {
       await pumpComposition(tester);
@@ -668,12 +625,12 @@ void main() {
 
       await tester.enterText(find.byKey(const Key('picker-search')), 'rank');
       await settle(tester);
-      expect(find.byKey(const Key('folder-content')), findsNothing);
+      expect(find.byKey(const Key('picker-places')), findsNothing);
 
-      // Y al borrar vuelven las carpetas, sin un modo que aprender.
+      // Y al borrar vuelven las columnas, sin un modo que aprender.
       await tester.tap(find.byKey(const Key('picker-clear')));
       await settle(tester);
-      expect(find.byKey(const Key('folder-content')), findsOneWidget);
+      expect(find.byKey(const Key('picker-places')), findsOneWidget);
     });
 
     testWidgets('sin elegir nada no se puede aceptar', (tester) async {

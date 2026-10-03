@@ -79,3 +79,19 @@ bool _isRoot(String path) => path == '/' || _isDriveRoot(path);
 /// Si [inner] está dentro de [outer] (y no es la misma).
 bool _inside(String inner, String outer) =>
     inner.length > outer.length && inner.startsWith('$outer/');
+
+/// Si [a] y [b] son la misma carpeta, escrita de dos formas.
+bool sameFolder(String a, String b) => _normal(a) == _normal(b);
+
+/// Si [folder] está dentro de [outer], a cualquier profundidad.
+bool folderInside(String folder, String outer) =>
+    _inside(_normal(folder), _normal(outer));
+
+/// Si [folder] cuelga directamente de [base] --`base/algo` y no más abajo--,
+/// que es donde va cada repositorio cuando hay una carpeta para todos.
+bool directlyIn(String folder, String base) {
+  final inner = _normal(folder);
+  final outer = _normal(base);
+  if (outer.isEmpty || !_inside(inner, outer)) return false;
+  return !inner.substring(outer.length + 1).contains('/');
+}

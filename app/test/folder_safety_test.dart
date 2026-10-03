@@ -91,4 +91,43 @@ void main() {
       isNull,
     );
   });
+
+  group('dónde está cada repositorio', () {
+    test('directamente dentro de la carpeta de todos', () {
+      expect(
+        directlyIn('/Users/ana/Didacta/curso', '/Users/ana/Didacta'),
+        isTrue,
+      );
+      expect(
+        directlyIn('/Users/ana/Didacta/curso/', '/Users/ana/Didacta/'),
+        isTrue,
+      );
+      // Más abajo, o fuera, no.
+      expect(
+        directlyIn('/Users/ana/Didacta/a/curso', '/Users/ana/Didacta'),
+        isFalse,
+      );
+      expect(directlyIn('/Users/ana/curso', '/Users/ana/Didacta'), isFalse);
+      // Que empiece igual no es estar dentro.
+      expect(
+        directlyIn('/Users/ana/Didacta2/curso', '/Users/ana/Didacta'),
+        isFalse,
+      );
+      expect(directlyIn('/Users/ana/Didacta', '/Users/ana/Didacta'), isFalse);
+      expect(directlyIn('/Users/ana/Didacta/curso', ''), isFalse);
+    });
+
+    test('en Windows, sin fijarse en mayúsculas ni en barras', () {
+      expect(
+        directlyIn(r'c:\users\ana\didacta\curso', r'C:\Users\Ana\Didacta'),
+        isTrue,
+      );
+      expect(
+        sameFolder(r'C:\Users\Ana\Didacta\', 'c:/users/ana/didacta'),
+        isTrue,
+      );
+      expect(folderInside('/a/b/c', '/a'), isTrue);
+      expect(folderInside('/a', '/a'), isFalse);
+    });
+  });
 }

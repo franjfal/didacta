@@ -438,6 +438,121 @@ bool _same(Object? a, Object? b) {
   return a == b;
 }
 
+/// Un texto en varios idiomas, como lo lee `\DidactaTranslated` de
+/// `didacta.sty`: `\DidactaTranslated{es=Resumen, va=Resum}`.
+///
+/// Con un solo idioma, el texto tal cual: una caja en un repositorio que
+/// solo se da en castellano se sigue escribiendo `{Resumen}`, como siempre, y
+/// el fichero no cambia por una posibilidad que no se usa. Los vacíos no se
+/// escriben; sin ninguno, nada.
+String translatedLatex(Map<String, String> texts) {
+  final given = {
+    for (final entry in texts.entries)
+      if (entry.value.trim().isNotEmpty) entry.key: entry.value.trim(),
+  };
+  if (given.isEmpty) return '';
+  if (given.length == 1) return given.values.single;
+  String value(String text) =>
+      text.contains(',') || text.contains('=') ? '{$text}' : text;
+  return '\\DidactaTranslated{'
+      '${[for (final entry in given.entries) '${entry.key}=${value(entry.value)}'].join(', ')}'
+      '}';
+}
+
+/// Lo contrario de [translatedLatex]: los textos por idioma, o null si
+/// [latex] no es un `\DidactaTranslated{…}` entero.
+Map<String, String>? parseTranslated(String latex) {
+  const head = r'\DidactaTranslated{';
+  final text = latex.trim();
+  if (!text.startsWith(head) || !text.endsWith('}')) return null;
+  final inner = text.substring(head.length, text.length - 1);
+  final parts = <String>[];
+  var depth = 0;
+  var from = 0;
+  for (var i = 0; i < inner.length; i += 1) {
+    final ch = inner[i];
+    if (ch == r'\') {
+      i += 1;
+    } else if (ch == '{') {
+      depth += 1;
+    } else if (ch == '}') {
+      depth -= 1;
+      if (depth < 0) return null;
+    } else if (ch == ',' && depth == 0) {
+      parts.add(inner.substring(from, i));
+      from = i + 1;
+    }
+  }
+  if (depth != 0) return null;
+  parts.add(inner.substring(from));
+  final out = <String, String>{};
+  for (final part in parts) {
+    if (part.trim().isEmpty) continue;
+    final equals = part.indexOf('=');
+    if (equals < 0) return null;
+    final code = part.substring(0, equals).trim();
+    var value = part.substring(equals + 1).trim();
+    if (!RegExp(r'^[a-z]{2,3}$').hasMatch(code)) return null;
+    if (value.startsWith('{') && value.endsWith('}')) {
+      value = value.substring(1, value.length - 1);
+    }
+    out[code] = value;
+  }
+  return out;
+}
+
+/// Una caja como las de Didacta: lo que escribe «Caja de teorema» en el
+/// editor, y lo que se lee de vuelta de una definición para volver a
+/// enseñarla como formulario.
+class TheoremBox {
+  const TheoremBox({
+    required this.environment,
+    required this.titles,
+    required this.colour,
+  });
+
+  /// El de una definición que es exactamente una caja, o null.
+  ///
+  /// El título puede ser un texto o un `\DidactaTranslated{…}`; sin idioma,
+  /// el texto se devuelve con la clave vacía y quien lo enseña decide en qué
+  /// idioma está.
+  static TheoremBox? parse(String definition) {
+    final match = RegExp(
+      r'^\s*\\DidactaNewTheorem\{([^{}]*)\}\{(.*)\}\{([^{}]*)\}\s*$',
+      dotAll: true,
+    ).firstMatch(definition);
+    if (match == null) return null;
+    final title = match.group(2)!;
+    final Map<String, String> titles;
+    if (title.startsWith(r'\DidactaTranslated{')) {
+      final parsed = parseTranslated(title);
+      if (parsed == null) return null;
+      titles = parsed;
+    } else if (title.contains('{') || title.contains('}')) {
+      // Un título con LaTeX dentro --`\textit{…}`-- no lo sabe escribir el
+      // formulario: se enseña como LaTeX propio.
+      return null;
+    } else {
+      titles = {'': title};
+    }
+    return TheoremBox(
+      environment: match.group(1)!,
+      titles: titles,
+      colour: match.group(3)!,
+    );
+  }
+
+  final String environment;
+
+  /// El título en cada idioma, en el orden en que se escribe: el primero es
+  /// el que sale en un idioma que no tiene el suyo.
+  final Map<String, String> titles;
+  final String colour;
+
+  String get definition =>
+      '\\DidactaNewTheorem{$environment}{${translatedLatex(titles)}}{$colour}';
+}
+
 /// El de Didacta con ese id, o null.
 TexWrapper? didactaWrapperById(String id) {
   for (final wrapper in didactaWrappers) {

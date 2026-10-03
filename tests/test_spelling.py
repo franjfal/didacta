@@ -26,7 +26,8 @@ sys.path.insert(0, os.path.join(ROOT, "engine"))
 
 from didacta import spelling  # noqa: E402
 
-ALGEBRA = os.path.join("content", "calculo", "limites", "algebra-de-limites")
+ALGEBRA = os.path.join("content", "calculo", "limites", "calculo-de-limites",
+                       "algebra-de-limites")
 
 #: Un hunspell de mentira. Tiene diccionario de castellano y de catalán --el
 #: valenciano cae en él--, y no de inglés. No conoce las palabras de WRONG, y
@@ -217,7 +218,7 @@ class CheckTests(FakeHunspell):
         found = self.found(self.check("--with", "spelling"))
         self.assertEqual(len(found), 1, found)
         self.assertEqual(found[0]["unit"],
-                         "content/calculo/limites/algebra-de-limites")
+                         "content/calculo/limites/calculo-de-limites/algebra-de-limites")
         self.assertEqual(found[0]["language"], "es")
         self.assertEqual(found[0]["line"], self.lines_of(es))
         self.assertEqual(found[0]["severity"], "warning")

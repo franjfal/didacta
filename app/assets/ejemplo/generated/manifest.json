@@ -41,7 +41,7 @@
       "name": "Português"
     }
   ],
-  "contentHash": "28b60b633da08901",
+  "contentHash": "9b43def89d6d7206",
   "counts": {
     "byKind": {
       "example": 1,
@@ -393,6 +393,24 @@
         "topics": [
           {
             "id": "limites",
+            "subtopics": [
+              {
+                "id": "concepto-de-limite",
+                "title": {
+                  "en": "The idea of a limit",
+                  "es": "El concepto de límite",
+                  "va": "El concepte de límit"
+                }
+              },
+              {
+                "id": "calculo-de-limites",
+                "title": {
+                  "en": "Computing limits",
+                  "es": "Cálculo de límites",
+                  "va": "Càlcul de límits"
+                }
+              }
+            ],
             "title": {
               "en": "Limits",
               "es": "Límites",
@@ -401,6 +419,24 @@
           },
           {
             "id": "continuidad",
+            "subtopics": [
+              {
+                "id": "funciones-continuas",
+                "title": {
+                  "en": "Continuous functions",
+                  "es": "Funciones continuas",
+                  "va": "Funcions contínues"
+                }
+              },
+              {
+                "id": "bolzano",
+                "title": {
+                  "en": "Bolzano's theorem",
+                  "es": "El teorema de Bolzano",
+                  "va": "El teorema de Bolzano"
+                }
+              }
+            ],
             "title": {
               "en": "Continuity",
               "es": "Continuidad",

@@ -91,8 +91,8 @@ class SettingsSection {
 /// busca a propósito. Las que no pueden hacer nada aquí no salen: una sección
 /// de herramientas en la web solo diría «aquí no».
 ///
-/// Las de quien mantiene el repositorio del departamento --los bloques, las
-/// plantillas y el catálogo; el servidor MCP-- solo con la interfaz Completa.
+/// Las de quien mantiene el repositorio del departamento --los bloques y el
+/// catálogo; el servidor MCP-- solo con la interfaz Completa.
 /// Salvo que se llegue a una por su dirección ([asked]), que es un enlace
 /// que alguien ha seguido a propósito, o que el servidor esté encendido
 /// ([mcpOn]): lo que está en marcha tiene que poder apagarse.
@@ -136,14 +136,24 @@ List<SettingsSection> settingsSections(
   if (session.completeInterface || asked == 'material')
     SettingsSection(
       id: 'material',
-      label: tr('Bloques y plantillas'),
+      label: tr('Bloques y catálogo'),
       icon: Icons.category_outlined,
       group: 1,
-      summary: tr(
-        'En qué partes se divide una asignatura, qué PDF salen del material '
-        'y qué hay cargado.',
-      ),
+      summary: tr('En qué partes se divide una asignatura, y qué hay cargado.'),
     ),
+  // Con cualquier interfaz, como los snippets: la cabecera de un
+  // departamento o los colores de quien enseña también son de quien no
+  // mantiene el repositorio, y para eso está la carpeta del programa.
+  SettingsSection(
+    id: 'plantillas',
+    label: tr('Plantillas de compilación'),
+    icon: Icons.picture_as_pdf_outlined,
+    group: 1,
+    summary: tr(
+      'Qué PDF salen del material: cada plantilla, cómo queda, en qué '
+      'repositorios está y qué se compila con ella.',
+    ),
+  ),
   SettingsSection(
     id: 'snippets',
     label: tr('Snippets de LaTeX'),
@@ -312,15 +322,20 @@ class SettingsPage extends StatelessWidget {
       SectionLabel(tr('Glosario')),
       GlossarySection(session: session),
     ],
-    // Se leen en este orden: el bloque dice **qué** material es, la
-    // plantilla **qué sale** de él, y el catálogo enseña el resultado.
+    // El bloque dice **qué** material es, y el catálogo enseña el
+    // resultado. Qué sale de él --las plantillas-- tiene su sección.
     'material' => [
       SectionLabel(tr('Bloques')),
       _BlocksSection(session: session),
-      SectionLabel(tr('Plantillas')),
-      _TemplatesSection(session: session),
       SectionLabel(tr('Catálogo')),
       _CatalogueSection(session: session),
+    ],
+    'plantillas' => [
+      TemplatesManager(session: session),
+      if (session.templateStore != null) ...[
+        SectionLabel(tr('La carpeta del programa')),
+        _ProgramTemplatesSection(session: session),
+      ],
     ],
     'snippets' => [SnippetsManager(session: session)],
     'herramientas' => [
@@ -828,7 +843,7 @@ class _InterfaceChoice extends StatelessWidget {
               session.completeInterface
                   ? tr(
                       'Todo a la vista, también lo de quien mantiene el '
-                      'repositorio: Bloques y plantillas y el servidor MCP '
+                      'repositorio: Bloques y catálogo y el servidor MCP '
                       'aquí en Ajustes, las rutas de las herramientas y el '
                       'registro entero al compilar, reemplazar en el editor, '
                       'mover temas y gestionar su vinculación, y '
@@ -1437,10 +1452,19 @@ class _ReposSectionState extends State<_ReposSection> {
     },
   );
 
+  /// Elegir la carpeta de todos, y ofrecer llevar ahí los que ya estaban:
+  /// cambiarla sin moverlos dejaba los de antes en la vieja y los nuevos en
+  /// la nueva.
   Future<void> _chooseBase() async {
-    final chosen = await getDirectoryPath();
+    final chosen = await getDirectoryPath(
+      initialDirectory: widget.session.cloneBase.isEmpty
+          ? null
+          : widget.session.cloneBase,
+    );
     if (chosen == null) return;
     await widget.session.setCloneBase(chosen);
+    if (!mounted) return;
+    await _adder.intoBase(context);
   }
 
   @override
@@ -1482,6 +1506,10 @@ class _ReposSectionState extends State<_ReposSection> {
                   repo: repo,
                   onRemove: () =>
                       removeRepositoryAsking(context, session, repo),
+                  outside: !session.isInCloneBase(repo),
+                  onMove: _working
+                      ? null
+                      : () => _adder.intoBase(context, only: [repo]),
                 ),
                 const Divider(height: 18),
               ],
@@ -1560,11 +1588,19 @@ class _RepoRow extends StatelessWidget {
     required this.session,
     required this.repo,
     required this.onRemove,
+    this.outside = false,
+    this.onMove,
   });
 
   final Session session;
   final ContentRepo repo;
   final VoidCallback onRemove;
+
+  /// Si está fuera de la carpeta de todos.
+  final bool outside;
+
+  /// Llevarlo a la carpeta de todos; null mientras no se puede.
+  final VoidCallback? onMove;
 
   /// La carpeta en el explorador de archivos. Si no se abre --se movió, o no
   /// hay explorador--, se dice dónde debería estar.
@@ -1649,6 +1685,30 @@ class _RepoRow extends StatelessWidget {
             ),
           ],
         ),
+        if (outside)
+          Padding(
+            padding: const EdgeInsets.only(top: 4, left: 32),
+            child: Wrap(
+              spacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  tr('Está fuera de {0}, donde van los demás.', [
+                    session.cloneBase,
+                  ]),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: context.palette.muted,
+                  ),
+                ),
+                TextButton(
+                  key: Key('repo-move-${repo.id}'),
+                  onPressed: onMove,
+                  child: Text(tr('Llevarlo allí…')),
+                ),
+              ],
+            ),
+          ),
         if (problem != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),
@@ -1981,32 +2041,32 @@ class _BlockPill extends StatelessWidget {
 /// vistazo es cuántas se sacan de verdad, porque ese número multiplica cada
 /// compilación: un curso de treinta temas con siete versiones encendidas son
 /// doscientos diez PDF.
-class _TemplatesSection extends StatefulWidget {
-  const _TemplatesSection({required this.session});
+/// La carpeta del programa: dónde está, qué hay y cómo sacarle copia.
+///
+/// La única red que tiene lo que se guarda ahí: no es un repositorio, no la
+/// protege git y se va con el ordenador.
+class _ProgramTemplatesSection extends StatefulWidget {
+  const _ProgramTemplatesSection({required this.session});
 
   final Session session;
 
   @override
-  State<_TemplatesSection> createState() => _TemplatesSectionState();
+  State<_ProgramTemplatesSection> createState() =>
+      _ProgramTemplatesSectionState();
 }
 
-class _TemplatesSectionState extends State<_TemplatesSection> {
+class _ProgramTemplatesSectionState extends State<_ProgramTemplatesSection> {
   bool _working = false;
 
   @override
   Widget build(BuildContext context) {
     final session = widget.session;
-    final catalogue = session.catalogue;
-    final store = session.templateStore;
-    final inProgram = catalogue.templatesInUse
+    final store = session.templateStore!;
+    final inProgram = session.catalogue.templatesInUse
         .where(
           (template) => template.sources.containsKey(Session.programTemplates),
         )
         .length;
-    final all = catalogue.templatesInUse;
-    final active = catalogue.activeTemplates;
-    final declared = all.where((template) => template.declared).length;
-    final missing = catalogue.undeclaredTemplates;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -2018,34 +2078,12 @@ class _TemplatesSectionState extends State<_TemplatesSection> {
             children: [
               Text(
                 tr(
-                  'Una plantilla es una salida: qué PDF sale de una lección o '
-                  'de un tema. Trae la clase de documento, sus opciones y --si '
-                  'quieres-- tu propia cabecera de LaTeX.',
+                  'Para las plantillas que son tuyas y no de la asignatura --el '
+                  'membrete de tu departamento, tus colores--, o para cuando '
+                  'no puedes escribir en el repositorio.',
                 ),
                 style: TextStyle(fontSize: 12.5, height: 1.45),
               ),
-              const SizedBox(height: 10),
-              _Fact(tr('salidas'), '${all.length}'),
-              _Fact(tr('encendidas'), '${active.length}'),
-              _Fact(
-                tr('declaradas por tus repositorios'),
-                declared == 0
-                    ? tr('ninguna: se compila con las que trae Didacta')
-                    : '$declared',
-              ),
-              if (missing.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Note(
-                  tr(
-                    'Algo se compila con {0} plantilla(s) que no '
-                    'declara ningún repositorio abierto: {1}. '
-                    'No se sacan, para no pedirle a LaTeX una salida que no '
-                    'existe.',
-                    [missing.length, missing.join(', ')],
-                  ),
-                  tone: context.palette.teacher,
-                ),
-              ],
               if (inProgram > 0) ...[
                 const SizedBox(height: 8),
                 Note(
@@ -2065,33 +2103,21 @@ class _TemplatesSectionState extends State<_TemplatesSection> {
                 runSpacing: 6,
                 children: [
                   OutlinedButton.icon(
-                    key: const Key('open-templates'),
-                    icon: const Icon(Icons.description_outlined, size: 15),
-                    label: Text(tr('Gestionar las plantillas')),
-                    onPressed: _working
-                        ? null
-                        : () => showTemplates(context, session),
+                    key: const Key('export-templates'),
+                    icon: const Icon(Icons.save_alt, size: 15),
+                    label: Text(tr('Copiar a una carpeta')),
+                    onPressed: _working ? null : () => _export(store),
                   ),
-                  if (store != null) ...[
-                    OutlinedButton.icon(
-                      key: const Key('export-templates'),
-                      icon: const Icon(Icons.save_alt, size: 15),
-                      label: Text(tr('Copiar a una carpeta')),
-                      onPressed: _working ? null : () => _export(store),
-                    ),
-                    OutlinedButton.icon(
-                      key: const Key('import-templates'),
-                      icon: const Icon(Icons.file_download_outlined, size: 15),
-                      label: Text(tr('Traer de una carpeta')),
-                      onPressed: _working ? null : () => _import(store),
-                    ),
-                  ],
+                  OutlinedButton.icon(
+                    key: const Key('import-templates'),
+                    icon: const Icon(Icons.file_download_outlined, size: 15),
+                    label: Text(tr('Traer de una carpeta')),
+                    onPressed: _working ? null : () => _import(store),
+                  ),
                 ],
               ),
-              if (store != null) ...[
-                const SizedBox(height: 8),
-                _Fact(tr('carpeta del programa'), store.directory),
-              ],
+              const SizedBox(height: 8),
+              _Fact(tr('carpeta del programa'), store.directory),
             ],
           ),
         ),

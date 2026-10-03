@@ -1,0 +1,243 @@
+{
+  "repos_extra": [
+    {
+      "desde": "problemas",
+      "dueno": "departamento",
+      "nombre": "problemas-calculo"
+    }
+  ],
+  "capturas": [
+    {
+      "nombre": "_varios",
+      "ruta": "/settings?s=plantillas",
+      "completa": true,
+      "preparar": [
+        {
+          "copiar": {
+            "desde": "plantillas/templates.yaml",
+            "a": "templates.yaml",
+            "mensaje": "Las plantillas del repositorio"
+          }
+        },
+        {
+          "copiar": {
+            "desde": "plantillas/hoja-departamento.tex",
+            "a": "templates/hoja-departamento.tex",
+            "mensaje": "La cabecera de la hoja del departamento"
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 16
+        },
+        {
+          "mostrar": {
+            "clave": "template-hoja-departamento"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "lista",
+            "cajas": {
+              "fila": {
+                "clave": "template-hoja-departamento"
+              },
+              "describe": {
+                "contiene": "hoja-departamento · article"
+              },
+              "ejemplo": {
+                "clave": "template-hoja-departamento-in-profe/didacta-ejemplo"
+              },
+              "problemas": {
+                "clave": "template-hoja-departamento-in-departamento/problemas-calculo"
+              },
+              "programa": {
+                "clave": "template-hoja-departamento-in-@programa"
+              },
+              "editar": {
+                "clave": "template-edit-hoja-departamento"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "template-hoja-departamento-in-departamento/problemas-calculo"
+          },
+          "esperar": 50
+        },
+        {
+          "mostrar": {
+            "clave": "template-hoja-departamento"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "copiada",
+            "cajas": {
+              "fila": {
+                "clave": "template-hoja-departamento"
+              },
+              "ejemplo": {
+                "clave": "template-hoja-departamento-in-profe/didacta-ejemplo"
+              },
+              "problemas": {
+                "clave": "template-hoja-departamento-in-departamento/problemas-calculo"
+              },
+              "aviso": {
+                "contiene": "también está en",
+                "ajustado": true
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "template-edit-hoja-departamento"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "Compilado en"
+          },
+          "max": 400
+        },
+        {
+          "esperar": 6
+        },
+        {
+          "mostrar": {
+            "clave": "template-uses"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "editor",
+            "cajas": {
+              "sitios": {
+                "clave": "template-editor-homes"
+              },
+              "ejemplo": {
+                "clave": "template-editor-in-profe/didacta-ejemplo"
+              },
+              "problemas": {
+                "clave": "template-editor-in-departamento/problemas-calculo"
+              },
+              "programa": {
+                "clave": "template-editor-in-@programa"
+              },
+              "explica": {
+                "contiene": "Con uno basta"
+              },
+              "usos": {
+                "clave": "template-uses"
+              },
+              "documento": {
+                "contiene": "Hoja 2"
+              },
+              "pdf": {
+                "clave": "template-preview-pdf"
+              },
+              "leccion": {
+                "clave": "template-preview-unit"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "template-preamble-text"
+          },
+          "esperar": 4
+        },
+        {
+          "escribir": {
+            "en": {
+              "clave": "template-preamble-text"
+            },
+            "texto": "% Los colores del departamento.\n\\definecolor{didactaAccent}{RGB}{40,95,165}\n\\definecolor{didactaAccentDark}{RGB}{25,65,125}\n\\definecolor{didactaDefn}{RGB}{40,95,165}\n"
+          }
+        },
+        {
+          "esperar": 60
+        },
+        {
+          "capturar": {
+            "nombre": "cabecera",
+            "cajas": {
+              "texto": {
+                "clave": "template-preamble-text"
+              },
+              "pdf": {
+                "clave": "template-preview-pdf"
+              },
+              "guardar": {
+                "clave": "template-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "template-save"
+          },
+          "esperar": 8
+        },
+        {
+          "hasta_que": {
+            "contiene": "guardada en"
+          },
+          "max": 800
+        },
+        {
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "guardada",
+            "cajas": {
+              "aviso": {
+                "contiene": "guardada en",
+                "ajustado": true
+              },
+              "fila": {
+                "clave": "template-hoja-departamento"
+              }
+            }
+          }
+        },
+        {
+          "mostrar": {
+            "clave": "export-templates"
+          },
+          "esperar": 4
+        },
+        {
+          "capturar": {
+            "nombre": "programa",
+            "cajas": {
+              "tarjeta": {
+                "contiene": "Para las plantillas que son tuyas",
+                "alto": 160
+              },
+              "copiar": {
+                "clave": "export-templates"
+              },
+              "traer": {
+                "clave": "import-templates"
+              },
+              "casilla": {
+                "clave": "template-hoja-departamento-in-@programa"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

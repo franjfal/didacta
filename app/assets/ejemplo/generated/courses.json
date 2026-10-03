@@ -51,13 +51,13 @@
                   }
                 },
                 {
-                  "unit": "calculo/limites/definicion-de-limite"
+                  "unit": "u-240b481e5d63"
                 },
                 {
-                  "unit": "calculo/limites/limite-por-definicion"
+                  "unit": "u-6431387efe7b"
                 },
                 {
-                  "unit": "calculo/limites/algebra-de-limites"
+                  "unit": "u-2d7a8345e536"
                 },
                 {
                   "section": {
@@ -67,10 +67,10 @@
                   }
                 },
                 {
-                  "unit": "calculo/continuidad/funcion-continua"
+                  "unit": "u-a1bdfa8905d7"
                 },
                 {
-                  "unit": "calculo/continuidad/teorema-de-bolzano"
+                  "unit": "u-245a446424c6"
                 }
               ],
               "themes": [],
@@ -80,11 +80,11 @@
                 "va": "Tema 1: límits i continuïtat"
               },
               "unitRefs": [
-                "calculo/limites/definicion-de-limite",
-                "calculo/limites/limite-por-definicion",
-                "calculo/limites/algebra-de-limites",
-                "calculo/continuidad/funcion-continua",
-                "calculo/continuidad/teorema-de-bolzano"
+                "u-240b481e5d63",
+                "u-6431387efe7b",
+                "u-2d7a8345e536",
+                "u-a1bdfa8905d7",
+                "u-245a446424c6"
               ]
             },
             {
@@ -99,13 +99,13 @@
               ],
               "structure": [
                 {
-                  "problem": "calculo/limites/limites-de-cocientes"
+                  "problem": "u-06473454ddb4"
                 },
                 {
-                  "problem": "calculo/continuidad/discontinuidades-evitables"
+                  "problem": "u-739b8affe31c"
                 },
                 {
-                  "problem": "calculo/continuidad/tres-raices-por-bolzano"
+                  "problem": "u-0cc8936fcd26"
                 }
               ],
               "themes": [],
@@ -115,9 +115,9 @@
                 "va": "Full 1: límits i continuïtat"
               },
               "unitRefs": [
-                "calculo/limites/limites-de-cocientes",
-                "calculo/continuidad/discontinuidades-evitables",
-                "calculo/continuidad/tres-raices-por-bolzano"
+                "u-06473454ddb4",
+                "u-739b8affe31c",
+                "u-0cc8936fcd26"
               ]
             },
             {
@@ -131,10 +131,10 @@
               ],
               "structure": [
                 {
-                  "problem": "calculo/continuidad/discontinuidades-evitables"
+                  "problem": "u-739b8affe31c"
                 },
                 {
-                  "problem": "calculo/continuidad/tres-raices-por-bolzano"
+                  "problem": "u-0cc8936fcd26"
                 }
               ],
               "themes": [],
@@ -144,8 +144,8 @@
                 "va": "Primer parcial"
               },
               "unitRefs": [
-                "calculo/continuidad/discontinuidades-evitables",
-                "calculo/continuidad/tres-raices-por-bolzano"
+                "u-739b8affe31c",
+                "u-0cc8936fcd26"
               ]
             }
           ],

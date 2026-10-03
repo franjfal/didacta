@@ -221,7 +221,7 @@ window.montaje = function (E, G, D) {
       padre: g,
       html: `<div class="antetitulo" style="font-size:18px">Una lección</div>
         <div style="font-size:36px;font-weight:800;letter-spacing:-.02em;line-height:1.12;margin:14px 0 12px">Límite de una función en un punto</div>
-        <div class="mono" style="font-size:16px;color:var(--apagado);white-space:nowrap">calculo/limites/definicion-de-limite</div>
+        <div class="mono" style="font-size:16px;color:var(--apagado);white-space:nowrap">calculo/limites/concepto-de-limite/definicion-de-limite</div>
         <div class="idiomas" style="display:flex;gap:10px;margin-top:22px"></div>`,
       estilo: { left: '300px', top: '380px' },
     });

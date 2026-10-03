@@ -5,64 +5,6 @@
       "area": "content",
       "block": "theory",
       "category": "calculo",
-      "difficulty": "introductory",
-      "durationMinutes": 25,
-      "id": "u-a1bdfa8905d7",
-      "kind": "theory",
-      "languages": {
-        "en": {
-          "bytes": 0,
-          "exists": false,
-          "status": "missing"
-        },
-        "es": {
-          "bytes": 2045,
-          "exists": true,
-          "status": "source"
-        },
-        "va": {
-          "bytes": 2080,
-          "exists": true,
-          "status": "translated"
-        }
-      },
-      "objectives": [
-        "Reconocer la continuidad como «el límite vale lo mismo que la función»",
-        "Distinguir una discontinuidad evitable de un salto"
-      ],
-      "path": "content/calculo/continuidad/funcion-continua",
-      "prerequisites": [
-        "calculo/limites/algebra-de-limites",
-        "calculo/limites/definicion-de-limite"
-      ],
-      "reference": "es",
-      "tags": [
-        "continuidad",
-        "definicion",
-        "discontinuidad"
-      ],
-      "templates": [],
-      "title": {
-        "en": "Continuous functions",
-        "es": "Funciones continuas",
-        "va": "Funcions contínues"
-      },
-      "topic": "continuidad",
-      "usedBy": [
-        {
-          "course": "calculo-i",
-          "document": "tema-1",
-          "index": 3,
-          "ref": "calculo/continuidad/funcion-continua",
-          "year": "2026-2027"
-        }
-      ],
-      "warnings": []
-    },
-    {
-      "area": "content",
-      "block": "theory",
-      "category": "calculo",
       "difficulty": "intermediate",
       "durationMinutes": 30,
       "id": "u-245a446424c6",
@@ -89,11 +31,12 @@
         "Deducir el teorema de los valores intermedios",
         "Localizar la raíz de una ecuación en un intervalo"
       ],
-      "path": "content/calculo/continuidad/teorema-de-bolzano",
+      "path": "content/calculo/continuidad/bolzano/teorema-de-bolzano",
       "prerequisites": [
-        "calculo/continuidad/funcion-continua"
+        "u-a1bdfa8905d7"
       ],
       "reference": "es",
+      "subtopic": "bolzano",
       "tags": [
         "bolzano",
         "continuidad",
@@ -112,7 +55,66 @@
           "course": "calculo-i",
           "document": "tema-1",
           "index": 4,
-          "ref": "calculo/continuidad/teorema-de-bolzano",
+          "ref": "u-245a446424c6",
+          "year": "2026-2027"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "area": "content",
+      "block": "theory",
+      "category": "calculo",
+      "difficulty": "introductory",
+      "durationMinutes": 25,
+      "id": "u-a1bdfa8905d7",
+      "kind": "theory",
+      "languages": {
+        "en": {
+          "bytes": 0,
+          "exists": false,
+          "status": "missing"
+        },
+        "es": {
+          "bytes": 2045,
+          "exists": true,
+          "status": "source"
+        },
+        "va": {
+          "bytes": 2080,
+          "exists": true,
+          "status": "translated"
+        }
+      },
+      "objectives": [
+        "Reconocer la continuidad como «el límite vale lo mismo que la función»",
+        "Distinguir una discontinuidad evitable de un salto"
+      ],
+      "path": "content/calculo/continuidad/funciones-continuas/funcion-continua",
+      "prerequisites": [
+        "u-240b481e5d63",
+        "u-2d7a8345e536"
+      ],
+      "reference": "es",
+      "subtopic": "funciones-continuas",
+      "tags": [
+        "continuidad",
+        "definicion",
+        "discontinuidad"
+      ],
+      "templates": [],
+      "title": {
+        "en": "Continuous functions",
+        "es": "Funciones continuas",
+        "va": "Funcions contínues"
+      },
+      "topic": "continuidad",
+      "usedBy": [
+        {
+          "course": "calculo-i",
+          "document": "tema-1",
+          "index": 3,
+          "ref": "u-a1bdfa8905d7",
           "year": "2026-2027"
         }
       ],
@@ -147,11 +149,12 @@
         "Calcular límites de sumas, productos y cocientes",
         "Evaluar directamente el límite de un polinomio o de una función racional"
       ],
-      "path": "content/calculo/limites/algebra-de-limites",
+      "path": "content/calculo/limites/calculo-de-limites/algebra-de-limites",
       "prerequisites": [
-        "calculo/limites/definicion-de-limite"
+        "u-240b481e5d63"
       ],
       "reference": "es",
+      "subtopic": "calculo-de-limites",
       "tags": [
         "demostracion",
         "limite",
@@ -169,7 +172,7 @@
           "course": "calculo-i",
           "document": "tema-1",
           "index": 2,
-          "ref": "calculo/limites/algebra-de-limites",
+          "ref": "u-2d7a8345e536",
           "year": "2026-2027"
         }
       ],
@@ -204,9 +207,10 @@
         "Enunciar la definición épsilon-delta de límite",
         "Interpretarla con una banda de anchura 2ε alrededor de L"
       ],
-      "path": "content/calculo/limites/definicion-de-limite",
+      "path": "content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "prerequisites": [],
       "reference": "es",
+      "subtopic": "concepto-de-limite",
       "tags": [
         "definicion",
         "epsilon-delta",
@@ -224,7 +228,7 @@
           "course": "calculo-i",
           "document": "tema-1",
           "index": 0,
-          "ref": "calculo/limites/definicion-de-limite",
+          "ref": "u-240b481e5d63",
           "year": "2026-2027"
         }
       ],
@@ -258,11 +262,12 @@
       "objectives": [
         "Situar la definición de límite en su contexto histórico"
       ],
-      "path": "content/calculo/limites/historia-del-epsilon",
+      "path": "content/calculo/limites/concepto-de-limite/historia-del-epsilon",
       "prerequisites": [
-        "calculo/limites/definicion-de-limite"
+        "u-240b481e5d63"
       ],
       "reference": "es",
+      "subtopic": "concepto-de-limite",
       "tags": [
         "historia",
         "limite"
@@ -306,11 +311,12 @@
         "Encontrar un δ adecuado para un ε dado",
         "Acotar un factor para que δ no dependa de x"
       ],
-      "path": "content/calculo/limites/limite-por-definicion",
+      "path": "content/calculo/limites/concepto-de-limite/limite-por-definicion",
       "prerequisites": [
-        "calculo/limites/definicion-de-limite"
+        "u-240b481e5d63"
       ],
       "reference": "es",
+      "subtopic": "concepto-de-limite",
       "tags": [
         "ejemplo",
         "epsilon-delta",
@@ -328,7 +334,72 @@
           "course": "calculo-i",
           "document": "tema-1",
           "index": 1,
-          "ref": "calculo/limites/limite-por-definicion",
+          "ref": "u-6431387efe7b",
+          "year": "2026-2027"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "area": "problems",
+      "block": "problems",
+      "category": "calculo",
+      "difficulty": "introductory",
+      "durationMinutes": 15,
+      "id": "u-0cc8936fcd26",
+      "kind": "problem",
+      "languages": {
+        "en": {
+          "bytes": 0,
+          "exists": false,
+          "status": "missing"
+        },
+        "es": {
+          "bytes": 1275,
+          "exists": true,
+          "status": "source"
+        },
+        "va": {
+          "bytes": 0,
+          "exists": false,
+          "status": "missing"
+        }
+      },
+      "objectives": [
+        "Localizar raíces de un polinomio buscando cambios de signo"
+      ],
+      "path": "problems/calculo/continuidad/bolzano/tres-raices-por-bolzano",
+      "prerequisites": [
+        "u-245a446424c6"
+      ],
+      "reference": "es",
+      "subtopic": "bolzano",
+      "tags": [
+        "bolzano",
+        "continuidad",
+        "polinomio",
+        "raices"
+      ],
+      "templates": [],
+      "title": {
+        "en": "Three roots from Bolzano's theorem",
+        "es": "Tres raíces con el teorema de Bolzano",
+        "va": "Tres arrels amb el teorema de Bolzano"
+      },
+      "topic": "continuidad",
+      "usedBy": [
+        {
+          "course": "calculo-i",
+          "document": "hoja-1",
+          "index": 2,
+          "ref": "u-0cc8936fcd26",
+          "year": "2026-2027"
+        },
+        {
+          "course": "calculo-i",
+          "document": "parcial-1",
+          "index": 1,
+          "ref": "u-0cc8936fcd26",
           "year": "2026-2027"
         }
       ],
@@ -363,11 +434,12 @@
         "Ajustar un parámetro para que una función sea continua",
         "Probar que una discontinuidad no se puede evitar"
       ],
-      "path": "problems/calculo/continuidad/discontinuidades-evitables",
+      "path": "problems/calculo/continuidad/funciones-continuas/discontinuidades-evitables",
       "prerequisites": [
-        "calculo/continuidad/funcion-continua"
+        "u-a1bdfa8905d7"
       ],
       "reference": "es",
+      "subtopic": "funciones-continuas",
       "tags": [
         "continuidad",
         "discontinuidad",
@@ -385,78 +457,14 @@
           "course": "calculo-i",
           "document": "hoja-1",
           "index": 1,
-          "ref": "calculo/continuidad/discontinuidades-evitables",
+          "ref": "u-739b8affe31c",
           "year": "2026-2027"
         },
         {
           "course": "calculo-i",
           "document": "parcial-1",
           "index": 0,
-          "ref": "calculo/continuidad/discontinuidades-evitables",
-          "year": "2026-2027"
-        }
-      ],
-      "warnings": []
-    },
-    {
-      "area": "problems",
-      "block": "problems",
-      "category": "calculo",
-      "difficulty": "introductory",
-      "durationMinutes": 15,
-      "id": "u-0cc8936fcd26",
-      "kind": "problem",
-      "languages": {
-        "en": {
-          "bytes": 0,
-          "exists": false,
-          "status": "missing"
-        },
-        "es": {
-          "bytes": 1275,
-          "exists": true,
-          "status": "source"
-        },
-        "va": {
-          "bytes": 0,
-          "exists": false,
-          "status": "missing"
-        }
-      },
-      "objectives": [
-        "Localizar raíces de un polinomio buscando cambios de signo"
-      ],
-      "path": "problems/calculo/continuidad/tres-raices-por-bolzano",
-      "prerequisites": [
-        "calculo/continuidad/teorema-de-bolzano"
-      ],
-      "reference": "es",
-      "tags": [
-        "bolzano",
-        "continuidad",
-        "polinomio",
-        "raices"
-      ],
-      "templates": [],
-      "title": {
-        "en": "Three roots from Bolzano's theorem",
-        "es": "Tres raíces con el teorema de Bolzano",
-        "va": "Tres arrels amb el teorema de Bolzano"
-      },
-      "topic": "continuidad",
-      "usedBy": [
-        {
-          "course": "calculo-i",
-          "document": "hoja-1",
-          "index": 2,
-          "ref": "calculo/continuidad/tres-raices-por-bolzano",
-          "year": "2026-2027"
-        },
-        {
-          "course": "calculo-i",
-          "document": "parcial-1",
-          "index": 1,
-          "ref": "calculo/continuidad/tres-raices-por-bolzano",
+          "ref": "u-739b8affe31c",
           "year": "2026-2027"
         }
       ],
@@ -490,11 +498,12 @@
       "objectives": [
         "Resolver indeterminaciones 0/0 factorizando o con el conjugado"
       ],
-      "path": "problems/calculo/limites/limites-de-cocientes",
+      "path": "problems/calculo/limites/calculo-de-limites/limites-de-cocientes",
       "prerequisites": [
-        "calculo/limites/algebra-de-limites"
+        "u-2d7a8345e536"
       ],
       "reference": "es",
+      "subtopic": "calculo-de-limites",
       "tags": [
         "conjugado",
         "factorizar",
@@ -513,7 +522,7 @@
           "course": "calculo-i",
           "document": "hoja-1",
           "index": 0,
-          "ref": "calculo/limites/limites-de-cocientes",
+          "ref": "u-06473454ddb4",
           "year": "2026-2027"
         }
       ],

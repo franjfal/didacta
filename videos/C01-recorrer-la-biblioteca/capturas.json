@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "columnas",
-      "ruta": "/?en=calculo/limites",
+      "ruta": "/?en=calculo/limites/concepto-de-limite",
       "acciones": [
         {
           "esperar": 10
@@ -22,7 +22,8 @@
           "alto": 380
         },
         "lecciones": {
-          "texto": "5 unidades",
+          "texto": "3 unidades",
+          "n": 0,
           "alto": 380
         },
         "calculo": {
@@ -69,12 +70,22 @@
         "historia": {
           "texto": "Una breve historia de la épsilon",
           "alto": 60
+        },
+        "subtemas": {
+          "texto": "Cálculo de límites",
+          "n": 0,
+          "alto": 380
+        },
+        "concepto": {
+          "texto": "El concepto de límite",
+          "n": 1,
+          "fila": 150
         }
       }
     },
     {
       "nombre": "ojear",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "acciones": [
         {
           "esperar": 8
@@ -98,7 +109,7 @@
           "despues": 10
         },
         {
-          "ir": "/?en=calculo/limites",
+          "ir": "/?en=calculo/limites/concepto-de-limite",
           "esperar": 12
         },
         {
@@ -111,14 +122,15 @@
             "nombre": "apuntada",
             "cajas": {
               "ojo": {
-                "clave": "quick-look-content/calculo/limites/definicion-de-limite"
+                "clave": "quick-look-content/calculo/limites/concepto-de-limite/definicion-de-limite"
               },
               "tarjeta": {
                 "texto": "Límite de una función en un punto",
                 "alto": 60
               },
               "lecciones": {
-                "texto": "5 unidades",
+                "texto": "3 unidades",
+                "n": 0,
                 "alto": 380
               }
             }
@@ -126,7 +138,7 @@
         },
         {
           "pulsar": {
-            "clave": "quick-look-content/calculo/limites/definicion-de-limite"
+            "clave": "quick-look-content/calculo/limites/concepto-de-limite/definicion-de-limite"
           },
           "esperar": 24
         }
@@ -146,7 +158,7 @@
     },
     {
       "nombre": "recientes",
-      "ruta": "/?en=calculo/limites",
+      "ruta": "/?en=calculo/limites/calculo-de-limites",
       "acciones": [
         {
           "esperar": 10
@@ -191,7 +203,8 @@
                 "fila": 150
               },
               "lecciones": {
-                "texto": "5 unidades",
+                "texto": "2 unidades",
+                "n": 0,
                 "alto": 380
               },
               "migas": {
@@ -202,11 +215,11 @@
           }
         },
         {
-          "ir": "/unit/content/calculo/continuidad/teorema-de-bolzano",
+          "ir": "/unit/content/calculo/continuidad/bolzano/teorema-de-bolzano",
           "esperar": 10
         },
         {
-          "ir": "/unit/content/calculo/limites/definicion-de-limite",
+          "ir": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
           "esperar": 10
         },
         {
@@ -222,11 +235,11 @@
     },
     {
       "nombre": "ingles",
-      "ruta": "/?en=calculo/limites",
+      "ruta": "/?en=calculo/limites/concepto-de-limite",
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/limites/historia-del-epsilon/unit.yaml",
+            "fichero": "content/calculo/limites/concepto-de-limite/historia-del-epsilon/unit.yaml",
             "buscar": "  en: A short history of epsilon\n",
             "poner": "",
             "mensaje": "La nota histórica, sin título en inglés",
@@ -267,7 +280,8 @@
           "alto": 60
         },
         "lecciones": {
-          "texto": "5 unidades",
+          "texto": "3 unidades",
+          "n": 0,
           "alto": 380
         }
       }

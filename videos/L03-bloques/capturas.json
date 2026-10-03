@@ -300,7 +300,7 @@
       "preparar": [
         {
           "editar": {
-            "fichero": "problems/calculo/continuidad/tres-raices-por-bolzano/unit.yaml",
+            "fichero": "problems/calculo/continuidad/bolzano/tres-raices-por-bolzano/unit.yaml",
             "buscar": "block: problems",
             "poner": "block: practicas",
             "mensaje": "Un problema para las prácticas",

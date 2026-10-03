@@ -1,0 +1,77 @@
+{
+  "codigo": "C4",
+  "titulo": "Organizar la biblioteca",
+  "fichero": "C04-organizar-la-biblioteca.mp4",
+  "duracion": 71.89,
+  "megas": 4.1,
+  "fecha": "2026-10-02",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Organizar la biblioteca"
+    },
+    {
+      "t": 8.38,
+      "titulo": "Crear lo que falta"
+    },
+    {
+      "t": 34.73,
+      "titulo": "Arrastrar una lección"
+    },
+    {
+      "t": 44.51,
+      "titulo": "Nada que reescribir"
+    },
+    {
+      "t": 53.66,
+      "titulo": "Con el botón derecho"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás crear temas y subtemas desde la propia biblioteca, y llevar una lección de un sitio a otro."
+    },
+    {
+      "t": 8.88,
+      "texto": "Al pie de cada columna se crea lo que falte: una categoría, un tema o un subtema."
+    },
+    {
+      "t": 15.28,
+      "texto": "Pide el nombre en cada idioma. Del primero sale el identificador, que es también el nombre de la carpeta."
+    },
+    {
+      "t": 22.58,
+      "texto": "Y se declara en todos los repositorios abiertos, para que la teoría y los problemas enseñen las mismas columnas."
+    },
+    {
+      "t": 29.49,
+      "texto": "El subtema nuevo sale enseguida, vacío, listo para llevarle lecciones."
+    },
+    {
+      "t": 35.23,
+      "texto": "Para llevar una lección a otro sitio, arrástrala hasta la fila de su subtema."
+    },
+    {
+      "t": 40.11,
+      "texto": "La carpeta se mueve con ella, con sus idiomas y sus figuras."
+    },
+    {
+      "t": 45.01,
+      "texto": "Y lo que la usa no hay que tocarlo: el parcial la sigue encontrando, porque la nombra por su id, que no cambia al moverla."
+    },
+    {
+      "t": 54.16,
+      "texto": "Lo mismo, sin arrastrar: el botón derecho sobre la lección, Mover a, y el sitio se elige en las mismas columnas."
+    },
+    {
+      "t": 62.79,
+      "texto": "Lo que ves en las columnas es lo que hay en tu carpeta."
+    },
+    {
+      "t": 66.45,
+      "texto": "En el siguiente vídeo, la pantalla de una lección."
+    }
+  ]
+}

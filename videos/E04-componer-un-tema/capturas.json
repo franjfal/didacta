@@ -78,7 +78,7 @@
                 "clave": "picker-search"
               },
               "resultado": {
-                "clave": "unit-problems/calculo/limites/limites-de-cocientes"
+                "clave": "unit-problems/calculo/limites/calculo-de-limites/limites-de-cocientes"
               },
               "anadir": {
                 "clave": "picker-add"
@@ -88,7 +88,7 @@
         },
         {
           "pulsar": {
-            "clave": "unit-problems/calculo/limites/limites-de-cocientes"
+            "clave": "unit-problems/calculo/limites/calculo-de-limites/limites-de-cocientes"
           },
           "esperar": 6
         },
@@ -180,8 +180,8 @@
         {
           "editar": {
             "fichero": "courses/calculo-i/2026-2027/year.yaml",
-            "buscar": "- unit: calculo/limites/algebra-de-limites",
-            "poner": "- unit: calculo/limites/algebra-de-limites\n      - unit: calculo/limites/limites-laterales",
+            "buscar": "- unit: calculo/limites/calculo-de-limites/algebra-de-limites",
+            "poner": "- unit: calculo/limites/calculo-de-limites/algebra-de-limites\n      - unit: calculo/limites/limites-laterales",
             "mensaje": "Una lección que todavía no existe",
             "enviar": true
           }

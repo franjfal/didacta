@@ -32,7 +32,7 @@ escenas:
         - {cmd: "didacta status", en: status}
         - {out: "Ejemplo de Didacta\n~/Didacta/didacta-ejemplo\n\n  units          9\n                 6 theory, 3 problems\n  courses        1\n  documents      3\n  profiles       15\n  languages      es, va, en"}
         - {cmd: "didacta units --missing va", en: faltan}
-        - {out: "  kind     es     va     en     unit\n  theory   src    --     --     content/calculo/continuidad/teorema-de-bolzano\n  problem  src    --     --     problems/calculo/continuidad/tres-raices-por-bolzano\n\n  2 unit(s)"}
+        - {out: "  kind     es     va     en     unit\n  theory   src    --     --     content/calculo/continuidad/bolzano/teorema-de-bolzano\n  problem  src    --     --     problems/calculo/continuidad/bolzano/tres-raices-por-bolzano\n\n  2 unit(s)"}
         - {cmd: "didacta check", en: check}
         - {out: "repository is consistent", color: verde}
     frases:

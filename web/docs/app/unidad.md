@@ -185,15 +185,14 @@ ancho--, y añade lo que antes estaba a dos pantallas de distancia:
   y sus metadatos y con un id propio. Desde ese momento son dos lecciones:
   corregir una no corrige la otra. Si lo que se quiere es la misma lección en
   dos sitios, es la entrada siguiente.
-- **Mover o renombrar…**, para cambiarla de carpeta o cambiar el nombre de la
-  suya. Es la misma lección en otro sitio: su id y sus traducciones no
-  cambian, y cada documento que la usa --también los temas vinculados y los
-  prerrequisitos de otras lecciones-- se reescribe en el mismo cambio, así que
-  nada se queda apuntando a la carpeta vieja. Antes de mover dice cuántos
-  documentos va a tocar y de qué cursos son, y avisa en otro color cuando la
-  usa más de uno: el cambio les llega también a los que no das tú. Con algo
-  sin guardar en la lección no se ofrece: primero hay que guardarlo o
-  descartarlo.
+- **Mover o renombrar…**, para llevarla a otro subtema --se elige en las
+  mismas columnas de la biblioteca-- o cambiar el nombre de su carpeta. Es la
+  misma lección en otro sitio: su id y sus traducciones no cambian, y lo que
+  la usa --los temas de los cursos, también los vinculados, y los
+  prerrequisitos de otras lecciones-- la nombra por su id, así que no hay que
+  tocar nada y nada se queda apuntando a la carpeta vieja. Con algo sin
+  guardar en la lección no se ofrece: primero hay que guardarlo o
+  descartarlo. [:octicons-arrow-right-24: Mover desde la biblioteca](biblioteca.md#mover)
 - **Darla en otro tema…**, para la misma lección también allí.
 - **Gestionar vinculación…**, cuando se da en más de un sitio: separa unas
   ubicaciones del resto, de modo que unas sigan con la de siempre y las demás
@@ -208,14 +207,17 @@ lección…**, que la trae tal como estaba dejando un cambio pendiente.
 
 Se edita con un formulario, no escribiendo YAML.
 
-**La categoría, el tema, las etiquetas y los prerrequisitos sugieren lo que ya
-existe** mientras se escribe, con cuántas lecciones usan cada cosa: `alg`
-ofrece `algebra`, y en los prerrequisitos se busca por la ruta o por el título
-de la lección. Lo escrito que no existe va el primero de la lista, marcado
-como nuevo --Intro lo deja tal cual--, y debajo del campo se avisa: «Categoría
-nueva: ninguna otra lección la usa». Es la forma de que una errata no cree una
-categoría nueva y deje la lección sola en la biblioteca. Un prerrequisito que
-no es la ruta de ninguna lección también se dice.
+**El sitio** --categoría › tema › subtema-- no se escribe: se ve, y al lado
+está **Mover…**, que lo cambia junto con la carpeta
+([Mover una lección](biblioteca.md#mover)). Antes eran dos campos de texto, y
+cambiar uno sin mover la carpeta dejaba la lección en un sitio en la
+biblioteca y en otro en el disco.
+
+**Las etiquetas y los prerrequisitos sugieren lo que ya existe** mientras se
+escribe, con cuántas lecciones usan cada cosa; en los prerrequisitos se busca
+por el título de la lección. Lo escrito que no existe va el primero de la
+lista, marcado como nuevo --Intro lo deja tal cual--. Un prerrequisito que no
+es ninguna lección también se dice.
 
 Y por debajo hay algo que conviene saber:
 

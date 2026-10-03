@@ -145,17 +145,18 @@ void main() {
   });
 
   group('unit', () {
-    test('the reference drops the area, as a composition writes it', () {
-      // year.yaml says `analysis/normed-spaces/definition`; the LaTeX side
-      // appends content/ or problems/ itself.
+    test('a composition names it by its id; the path drops the area', () {
+      // year.yaml writes the id, which does not change when the unit moves;
+      // the path is what was written before, and is still recognised.
       final unit = Unit.fromJson(unitJson());
-      expect(unit.reference_, 'analysis/normed-spaces/definition');
+      expect(unit.reference_, unit.id);
+      expect(unit.pathReference, 'analysis/normed-spaces/definition');
       expect(unit.isProblem, isFalse);
 
       final problem = Unit.fromJson(
         unitJson(path: 'problems/analysis/normed-spaces/norm-axioms'),
       );
-      expect(problem.reference_, 'analysis/normed-spaces/norm-axioms');
+      expect(problem.pathReference, 'analysis/normed-spaces/norm-axioms');
       expect(problem.isProblem, isTrue);
     });
 

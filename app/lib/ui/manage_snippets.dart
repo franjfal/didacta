@@ -33,6 +33,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../data/compiler.dart' show CompileException;
 import '../model/latex_snippets.dart';
+import '../model/library_tree.dart' show languageName;
 import '../model/slug.dart';
 import '../model/tex_wrap.dart';
 import '../model/workspace.dart' show repoColours;
@@ -79,9 +80,6 @@ final Set<String> _didactaEnvironments = {
 
 final RegExp _environmentName = RegExp(r'^[A-Za-z@]+\*?$');
 final RegExp _commandName = RegExp(r'^[A-Za-z@]+$');
-final RegExp _theoremDefinition = RegExp(
-  r'^\s*\\DidactaNewTheorem\{([^{}]*)\}\{([^{}]*)\}\{([^{}]*)\}\s*$',
-);
 
 // ---------------------------------------------------------------------------
 // La sección de Ajustes
@@ -1099,7 +1097,9 @@ class _SnippetEditorState extends State<SnippetEditor> {
       for (final name in _original.commandAliases) '\\$name',
     ].join(', '),
   );
-  late final TextEditingController _boxTitle = TextEditingController();
+
+  /// El título de la caja en cada idioma, según se van enseñando.
+  final Map<String, TextEditingController> _boxTitles = {};
   late final TexEditingController _definition = TexEditingController(
     text: _original.definition,
   );
@@ -1121,6 +1121,12 @@ class _SnippetEditorState extends State<SnippetEditor> {
       : widget.entry!.byRepo.keys.toSet();
 
   String _profile = 'notes';
+
+  /// En qué idioma se compila la vista previa: el de la sesión, si lo dan
+  /// los repositorios elegidos.
+  late String _language = _repoLanguages.contains(widget.session.language)
+      ? widget.session.language
+      : _repoLanguages.first;
   SnippetPreview? _preview;
 
   /// Qué se compiló la última vez: si ya no es lo que hay, está vieja.
@@ -1142,13 +1148,20 @@ class _SnippetEditorState extends State<SnippetEditor> {
           repo: widget.session.snippetRepos.firstOrNull,
         ) ==
         null;
-    final theorem = _theoremDefinition.firstMatch(_original.definition);
+    final theorem = TheoremBox.parse(_original.definition);
     if (_original.definition.trim().isEmpty) {
       _kind = _Definition.none;
     } else if (theorem != null) {
       _kind = _Definition.theorem;
-      _boxTitle.text = theorem.group(2)!;
-      _colour = theorem.group(3)!;
+      // Un título sin idioma es el del idioma de referencia: es en el que
+      // se escribía antes de que la caja supiera de idiomas.
+      final first = _repoLanguages.first;
+      for (final MapEntry(:key, :value) in theorem.titles.entries) {
+        _boxTitles[key.isEmpty ? first : key] = TextEditingController(
+          text: value,
+        )..addListener(_changed);
+      }
+      _colour = theorem.colour;
     } else {
       _kind = _Definition.custom;
     }
@@ -1158,7 +1171,6 @@ class _SnippetEditorState extends State<SnippetEditor> {
       _command,
       _arguments,
       _aliases,
-      _boxTitle,
       _definition,
       _sample,
     ]) {
@@ -1178,7 +1190,7 @@ class _SnippetEditorState extends State<SnippetEditor> {
       _command,
       _arguments,
       _aliases,
-      _boxTitle,
+      ..._boxTitles.values,
       _definition,
       _sample,
     ]) {
@@ -1202,11 +1214,55 @@ class _SnippetEditorState extends State<SnippetEditor> {
               })
       : _original.id;
 
+  TextEditingController _boxTitle(String language) => _boxTitles.putIfAbsent(
+    language,
+    () => TextEditingController()..addListener(_changed),
+  );
+
+  /// Los idiomas de los repositorios elegidos, el de referencia del primero
+  /// delante: es el que sale en un idioma que no tiene su título.
+  List<String> get _repoLanguages {
+    final session = widget.session;
+    final catalogue = session.catalogueOrNull;
+    final repos = [
+      for (final repo in session.snippetRepos)
+        if (_repos.contains(repo)) repo,
+    ];
+    final out = <String>[];
+    void add(String code) {
+      if (!out.contains(code)) out.add(code);
+    }
+
+    if (catalogue != null && repos.isNotEmpty) {
+      add(catalogue.defaultLanguageOf(repos.first));
+      for (final repo in repos) {
+        catalogue.languagesOf(repo).forEach(add);
+      }
+    }
+    if (out.isEmpty) add(session.language);
+    return out;
+  }
+
+  /// Los idiomas en que se puede escribir el título: los de los
+  /// repositorios, y los que ya tengan uno escrito --desmarcar un
+  /// repositorio no se lleva por delante una traducción--.
+  List<String> get _boxLanguages => [
+    ..._repoLanguages,
+    for (final MapEntry(:key, :value) in _boxTitles.entries)
+      if (value.text.trim().isNotEmpty && !_repoLanguages.contains(key)) key,
+  ];
+
+  TheoremBox get _box => TheoremBox(
+    environment: _environment.text.trim(),
+    titles: {
+      for (final code in _boxLanguages) code: _boxTitle(code).text.trim(),
+    },
+    colour: _colour,
+  );
+
   String get _definitionText => switch (_kind) {
     _Definition.none => '',
-    _Definition.theorem =>
-      '\\DidactaNewTheorem{${_environment.text.trim()}}'
-          '{${_boxTitle.text.trim()}}{$_colour}',
+    _Definition.theorem => _box.definition,
     _Definition.custom => _definition.text,
   };
 
@@ -1272,7 +1328,8 @@ class _SnippetEditorState extends State<SnippetEditor> {
           tr('«\\{0}» no vale como nombre de orden.', [name]),
       if (_kind == _Definition.theorem && _shape == SnippetShape.command)
         tr('Una caja como un teorema es un entorno: elige «Entorno».'),
-      if (_kind == _Definition.theorem && _boxTitle.text.trim().isEmpty)
+      if (_kind == _Definition.theorem &&
+          _box.titles.values.every((title) => title.isEmpty))
         tr('La caja necesita un título: el que sale en su pestaña.'),
       if (_kind != _Definition.none &&
           _didactaEnvironments.contains(environment) &&
@@ -1297,8 +1354,12 @@ class _SnippetEditorState extends State<SnippetEditor> {
         text.contains('\\NewDocumentEnvironment{$name}');
   }
 
+  String get _previewLanguage =>
+      _boxLanguages.contains(_language) ? _language : _boxLanguages.first;
+
   String get _previewKey =>
-      '$_definitionText\u0000${_current.previewBody}\u0000$_profile';
+      '$_definitionText\u0000${_current.previewBody}\u0000$_profile'
+      '\u0000$_previewLanguage';
 
   Future<void> _compile() async {
     if (!mounted || _unavailable) return;
@@ -1320,6 +1381,7 @@ class _SnippetEditorState extends State<SnippetEditor> {
       final result = await widget.session.previewSnippet(
         snippet,
         profile: _profile,
+        language: _previewLanguage,
         repo: repo,
       );
       if (!mounted) return;
@@ -1447,10 +1509,16 @@ class _SnippetEditorState extends State<SnippetEditor> {
       stale: _preview != null && _previewed != _previewKey,
       unavailable: _unavailable,
       profile: _profile,
+      language: _previewLanguage,
+      languages: _boxLanguages,
       revision: _revision,
       body: _current.usable ? _current.previewBody : '',
       onProfile: (value) {
         setState(() => _profile = value);
+        unawaited(_compile());
+      },
+      onLanguage: (value) {
+        setState(() => _language = value);
         unawaited(_compile());
       },
       onCompile: _compile,
@@ -1725,8 +1793,9 @@ class _SnippetEditorState extends State<SnippetEditor> {
               if (_kind == _Definition.custom && _definition.text.isEmpty) {
                 _definition.text = _skeleton();
               }
-              if (_kind == _Definition.theorem && _boxTitle.text.isEmpty) {
-                _boxTitle.text = _label.text.trim();
+              final first = _boxTitle(_repoLanguages.first);
+              if (_kind == _Definition.theorem && first.text.isEmpty) {
+                first.text = _label.text.trim();
               }
             });
             _changed();
@@ -1760,12 +1829,7 @@ class _SnippetEditorState extends State<SnippetEditor> {
               ),
             ),
             const SizedBox(height: 8),
-            _Field(
-              key: const Key('snippet-box-title'),
-              controller: _boxTitle,
-              label: tr('Título de la caja'),
-              hint: tr('Resumen'),
-            ),
+            ..._boxTitleFields(),
             const SizedBox(height: 10),
             _ColourChoice(
               value: _colour,
@@ -1787,7 +1851,8 @@ class _SnippetEditorState extends State<SnippetEditor> {
             Text(
               tr(
                 'Va al preámbulo de todo lo que se compila en los repositorios '
-                'elegidos, antes del de la plantilla.',
+                'elegidos, antes del de la plantilla. Un texto que cambia con '
+                'el idioma se escribe \\DidactaTranslated{es=…, va=…}.',
               ),
               style: TextStyle(fontSize: 11.5, color: context.palette.muted),
             ),
@@ -1829,6 +1894,47 @@ class _SnippetEditorState extends State<SnippetEditor> {
         ],
       ],
     );
+  }
+
+  /// El título de la caja: uno, o uno por idioma si los repositorios
+  /// elegidos se dan en más de uno.
+  List<Widget> _boxTitleFields() {
+    final languages = _boxLanguages;
+    if (languages.length == 1) {
+      return [
+        _Field(
+          key: const Key('snippet-box-title'),
+          controller: _boxTitle(languages.single),
+          label: tr('Título de la caja'),
+          hint: tr('Resumen'),
+        ),
+      ];
+    }
+    final first = languages.first;
+    final fallback = _boxTitle(first).text.trim();
+    return [
+      for (final (index, code) in languages.indexed) ...[
+        if (index > 0) const SizedBox(height: 8),
+        _Field(
+          key: Key(
+            index == 0 ? 'snippet-box-title' : 'snippet-box-title-$code',
+          ),
+          controller: _boxTitle(code),
+          label: tr('Título en {0}', [languageName(code)]),
+          hint: index == 0 || fallback.isEmpty
+              ? tr('Resumen')
+              : tr('Vacío, sale «{0}»', [fallback]),
+        ),
+      ],
+      const SizedBox(height: 6),
+      Text(
+        tr('Sale el del idioma en que se compila; si uno está vacío, sale el '
+          'título en {0}.', [
+          languageName(first),
+        ]),
+        style: TextStyle(fontSize: 11.5, color: context.palette.muted),
+      ),
+    ];
   }
 
   /// El principio de una definición propia, para no empezar de cero.
@@ -2191,9 +2297,12 @@ class _PreviewPane extends StatelessWidget {
     required this.stale,
     required this.unavailable,
     required this.profile,
+    required this.language,
+    required this.languages,
     required this.revision,
     required this.body,
     required this.onProfile,
+    required this.onLanguage,
     required this.onCompile,
   });
 
@@ -2202,9 +2311,14 @@ class _PreviewPane extends StatelessWidget {
   final bool stale;
   final bool unavailable;
   final String profile;
+
+  /// El idioma en que se compila, entre los de los repositorios elegidos.
+  final String language;
+  final List<String> languages;
   final int revision;
   final String body;
   final ValueChanged<String> onProfile;
+  final ValueChanged<String> onLanguage;
   final VoidCallback onCompile;
 
   @override
@@ -2256,6 +2370,18 @@ class _PreviewPane extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (languages.length > 1) ...[
+                  _Filter<String>(
+                    key: const Key('snippet-preview-language'),
+                    icon: Icons.translate,
+                    value: language,
+                    options: [
+                      for (final code in languages) (code, languageName(code)),
+                    ],
+                    onChanged: onLanguage,
+                  ),
+                  const SizedBox(width: 6),
+                ],
                 _Filter<String>(
                   key: const Key('snippet-preview-profile'),
                   icon: Icons.picture_as_pdf_outlined,

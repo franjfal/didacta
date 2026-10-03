@@ -30,6 +30,27 @@ un bloque de texto seguido.
 `\didactatitle` es el título de la unidad, y sale donde cada medio lo espere:
 como título de la diapositiva, o como encabezado de la sección.
 
+### Material escrito como apuntes
+
+Una hoja de problemas o una práctica se escriben primero como apuntes, con sus
+apartados, y se ponen en diapositivas después. Para eso:
+
+- `\slidetitle{…}` es el título de la diapositiva **y nada en los apuntes**,
+  que ya tienen sus apartados: `\didactatitle` les llenaría el documento de
+  encabezados que no estaban.
+- Todo va dentro de un `frame` o de `notesonly`. Lo que queda fuera, en
+  diapositivas, sale como una página sin forma que se sale por abajo.
+- Lo que solo se quiere en los apuntes --los problemas propuestos del final,
+  una demostración larga-- va en `notesonly`. **Un apartado que se queda sin
+  ninguna diapositiva no sale en las diapositivas**: ni su portada ni su línea
+  en el índice.
+- Una caja que no cabe en una diapositiva no se parte sola: beamer la manda
+  entera a la siguiente. Se escribe entera en `notesonly` y, en `slidesonly`,
+  partida en dos; la continuación con el entorno con asterisco
+  (`example*`, `exercise*`…), que no lleva número.
+- `\paragraph{…}` también vale en diapositivas: el encabezado en negrita de un
+  párrafo.
+
 ## Los tres canales
 
 ```mermaid

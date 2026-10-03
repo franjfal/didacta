@@ -66,16 +66,10 @@
     },
     {
       "nombre": "ejes",
-      "ruta": "/settings?s=material",
+      "ruta": "/settings?s=plantillas",
       "acciones": [
         {
-          "esperar": 10
-        },
-        {
-          "pulsar": {
-            "clave": "open-templates"
-          },
-          "esperar": 10
+          "esperar": 14
         },
         {
           "capturar": {

@@ -111,6 +111,7 @@ Map<String, dynamic> unitJson({
   List<String> warnings = const <String>[],
   List<String> tags = const ['norma', 'banach'],
   String? block,
+  String? subtopic,
 }) => {
   'id': path.split('/').skip(1).join('.'),
   'path': path,
@@ -119,6 +120,7 @@ Map<String, dynamic> unitJson({
   'block': block ?? (area == 'problems' ? 'problems' : 'theory'),
   'category': category,
   'topic': topic,
+  'subtopic': ?subtopic,
   'tags': tags,
   'title': title,
   'reference': 'es',

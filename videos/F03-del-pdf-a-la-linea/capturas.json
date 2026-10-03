@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "pdf",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite",
       "acciones": [
         {
           "esperar": 10
@@ -56,7 +56,7 @@
     },
     {
       "nombre": "corregida",
-      "ruta": "/unit/content/calculo/limites/definicion-de-limite?lang=es&linea=23",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/definicion-de-limite?lang=es&linea=23",
       "acciones": [
         {
           "esperar": 14

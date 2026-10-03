@@ -1307,12 +1307,38 @@ def cmd_check(args):
                     % (unit.relpath, unit.category, repo_mod.TAXONOMY)
                 )
             elif category is not None and unit.topic:
-                if category.topic(unit.topic) is None:
+                topic = category.topic(unit.topic)
+                if topic is None:
                     errors.append(
                         "%s: topic `%s` is not a topic of `%s` in %s"
                         % (unit.relpath, unit.topic, unit.category,
                            repo_mod.TAXONOMY)
                     )
+                elif not unit.subtopic:
+                    warnings.append(
+                        "%s: no subtopic; every lesson lives in one"
+                        % unit.relpath
+                    )
+                elif topic.subtopic(unit.subtopic) is None:
+                    errors.append(
+                        "%s: subtopic `%s` is not a subtopic of `%s/%s` in %s"
+                        % (unit.relpath, unit.subtopic, unit.category,
+                           unit.topic, repo_mod.TAXONOMY)
+                    )
+
+    # Su sitio y su carpeta dicen lo mismo, salvo que alguien haya movido la
+    # carpeta a mano: entonces la biblioteca la enseña donde dice el
+    # `unit.yaml` y el disco la tiene en otro sitio.
+    for unit in units.values():
+        parts = unit.relpath.split("/")
+        if len(parts) != 5 or not unit.subtopic:
+            continue
+        if parts[1:4] != [unit.category, unit.topic, unit.subtopic]:
+            warnings.append(
+                "%s: unit.yaml places it in %s/%s/%s; `didacta move` keeps "
+                "the folder and the metadata together"
+                % (unit.relpath, unit.category, unit.topic, unit.subtopic)
+            )
 
     # Prerequisites must name real units.
     for unit in units.values():
@@ -1456,8 +1482,11 @@ block: {block}
 title:
   {language}: {title}
 
+# Su sitio en la biblioteca, que es también su carpeta:
+# <categoría>/<tema>/<subtema>/<lección>. Para cambiarlo, `didacta move`.
 category: {category}
 topic: {topic}
+subtopic: {subtopic}
 tags: []
 
 # The language the others are translated from.
@@ -1589,6 +1618,7 @@ def cmd_new_unit(args):
             language=language,
             category=parts[0] if len(parts) > 1 else "",
             topic=parts[1] if len(parts) > 2 else "",
+            subtopic=parts[2] if len(parts) > 3 else "",
         ))
 
     print(S.ok("created ") + relpath)
@@ -2112,11 +2142,11 @@ def cmd_copy(args):
                 if unit is None:
                     continue
                 if unit.relpath not in duplicated:
-                    duplicated[unit.relpath], _ = identity_mod.duplicate_unit(
+                    _, duplicated[unit.relpath] = identity_mod.duplicate_unit(
                         root, unit.relpath, settings)
                 identity_mod.repoint_reference(
                     target_year, local[name], index,
-                    reuse_mod._reference_for(duplicated[unit.relpath]))
+                    duplicated[unit.relpath])
     if separated or duplicated:
         _recompose(root, settings, quiet=True)
 
@@ -3391,6 +3421,134 @@ def cmd_snippet_preview(args):
     return report(data, 0 if result.ok else 1)
 
 
+def cmd_template_preview(args):
+    """Compila una lección con una plantilla que todavía no está guardada.
+
+    Es la pregunta del editor de plantillas --«¿cómo queda el material con
+    esta clase, estos márgenes, esta cabecera?»-- sobre lo que hay en la
+    pantalla, así que la plantilla llega entera por la orden y no se lee del
+    `templates.yaml`. Se declara **por encima** de las demás con su mismo id:
+    si la plantilla ya existe, la vista previa enseña la versión editada y no
+    la guardada.
+
+    Una lección de verdad y no un texto de ejemplo, al revés que un snippet:
+    lo que decide una plantilla --la clase, la página, las pausas, cuánto se
+    enseña de un ejercicio-- solo se ve con material que tenga de todo.
+
+    Una pasada de pdflatex, por lo mismo que en `snippet-preview`. Sale en su
+    propia carpeta, para no pisar la vista previa de la lección con la
+    plantilla guardada.
+    """
+    root, settings = load_repo(args)
+
+    def report(data, code):
+        if args.json:
+            json.dump(data, sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+        elif data.get("ok"):
+            print(data["pdf"])
+        else:
+            print(S.bad("FAIL: %s" % (data.get("error") or "")))
+            errors = [each for each in data.get("diagnostics", [])
+                      if each["severity"] == "error"]
+            for diagnostic in errors[:6]:
+                print("  %s" % S.bad(diagnostic["message"]))
+        return code
+
+    def refuse(why):
+        return report({"ok": False, "error": why, "pdf": None,
+                       "diagnostics": []}, 1)
+
+    units, _ = repo_mod.scan_units(root, settings)
+    unit = _find_unit(units, args.unit)
+    if unit is None:
+        return refuse("no unit matches %r" % args.unit)
+
+    identifier = (args.id or "").strip() or "template-preview"
+    document_class = (args.document_class or "").strip()
+    if not document_class:
+        return refuse("una plantilla sin clase de documento no se puede compilar")
+    raw_axes = {}
+    for pair in args.axis or []:
+        key, _, value = pair.partition("=")
+        raw_axes[key.strip()] = value.strip()
+    try:
+        axes = templates_mod._axes(raw_axes, "template-preview", identifier)
+    except templates_mod.TemplateError as exc:
+        return refuse(str(exc))
+
+    engine = build_mod.Engine(
+        latex_dir=LATEX_DIR,
+        build_dir=os.path.join(root, settings.build_dir),
+        engine="pdflatex",
+        verbose=args.verbose,
+        on_output=progress_sink(args),
+        template_dirs=template_dirs(args, root),
+        settings=settings,
+    )
+    ready, why = engine.available()
+    if not ready:
+        return report({"ok": False, "error": why, "pdf": None,
+                       "diagnostics": []}, 2)
+
+    folder = os.path.join(engine.build_dir, TEMPLATE_PREVIEW_DIR)
+    os.makedirs(folder, exist_ok=True)
+    preamble_text = (args.preamble_text if args.preamble_text is not None
+                     else "")
+    preamble = None
+    if preamble_text.strip():
+        preamble = os.path.join(folder, "preamble.tex")
+        with open(preamble, "w", encoding="utf-8") as handle:
+            handle.write(preamble_text)
+
+    template = templates_mod.Template(
+        id=identifier,
+        document_class=document_class,
+        class_options=(args.options or "").strip(),
+        axes=axes,
+        preamble=preamble,
+    )
+    # La que se edita, en lugar de la guardada: el fichero de declaraciones
+    # se escribe a partir de esta lista, y el perfil sale de este mapa.
+    engine.templates = [each for each in engine.templates
+                        if each.id != identifier] + [template]
+    engine.profiles[identifier] = template
+
+    language = args.language or unit.reference
+    title = (unit.titles.get(language) or unit.titles.get(unit.reference)
+             or unit.id)
+    reference = unit.reference_path
+    source = preview_mod.write_wrapper(
+        root, engine.build_dir, reference, title, area=unit.area
+    )
+    result = engine.build(
+        source,
+        template,
+        language,
+        document_id=os.path.join(
+            TEMPLATE_PREVIEW_DIR,
+            os.path.basename(preview_mod.document_id_for(reference)),
+        ),
+        document_title=title,
+        content_root=repo_mod.content_root_for(source, root),
+        bibliography=(
+            settings.bibliography if settings.bibliography_path else None
+        ),
+    )
+    data = result.as_dict()
+    data.update({
+        "pdf": result.pdf,
+        "slides": document_class == "beamer",
+        "unit": unit.relpath,
+    })
+    return report(data, 0 if result.ok else 1)
+
+
+#: Dónde se compila la vista previa de una plantilla, bajo la carpeta de
+#: compilación. Siempre la misma: se edita una a la vez.
+TEMPLATE_PREVIEW_DIR = "template-preview"
+
+
 def _cropped(pdf):
     """El PDF recortado a lo que ocupa, o None si no se puede recortar."""
     tool = shutil.which("pdfcrop")
@@ -4314,6 +4472,28 @@ def main(argv=None):
     p.set_defaults(func=cmd_snippet_preview)
 
     p = sub.add_parser(
+        "template-preview",
+        help="compile one unit with a template as given, unsaved",
+    )
+    p.add_argument("unit", help="the unit, as for `preview`")
+    p.add_argument("--id", help="the template's id: it replaces the saved one")
+    p.add_argument("--class", dest="document_class", required=True,
+                   help="document class (article, book, beamer...)")
+    p.add_argument("--options", help="class options, e.g. 12pt,oneside")
+    p.add_argument("--axis", action="append", metavar="KEY=VALUE",
+                   help="one axis of the template; repeat for each")
+    p.add_argument("--preamble-text", metavar="TEX",
+                   help="the template's own preamble, as text")
+    p.add_argument("-l", "--language", choices=sorted(profiles_mod.LANGUAGES),
+                   help="language (default: the unit's)")
+    p.add_argument("--json", action="store_true",
+                   help="write the result as JSON, for an interface to read")
+    p.add_argument("--progress", action="store_true",
+                   help="stream LaTeX's output to stderr as it happens")
+    p.add_argument("-v", "--verbose", action="store_true")
+    p.set_defaults(func=cmd_template_preview)
+
+    p = sub.add_parser(
         "tidy", help="remove the migration header from the unit sources"
     )
     p.add_argument("--apply", action="store_true",
@@ -4343,7 +4523,7 @@ def main(argv=None):
     new_sub = p.add_subparsers(dest="what")
 
     q = new_sub.add_parser("unit", help="a new unit")
-    q.add_argument("path", help="category/topic/unit")
+    q.add_argument("path", help="category/topic/subtopic/unit")
     q.add_argument("--kind", default="theory", choices=repo_mod.UNIT_KINDS)
     q.add_argument("--block", help="the part of the subject, as declared in "
                                    "taxonomy.yaml")

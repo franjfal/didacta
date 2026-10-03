@@ -50,6 +50,7 @@ import '../state/session.dart';
 import 'add_repository.dart';
 import 'library_search.dart';
 import 'new_unit.dart';
+import 'place_browser.dart';
 import 'problem.dart';
 import 'quick_look.dart';
 import 'review_panel.dart';
@@ -79,33 +80,33 @@ String _blockName(List<CourseBlock> blocks, String id, String language) {
 /// categorías con el mismo nombre, y separaba la teoría de sus ejercicios,
 /// que es justo lo que nadie quiere al preguntar «¿qué tengo de esto?».
 class BrowsePath {
-  const BrowsePath({this.category, this.topic, this.tag});
+  const BrowsePath({this.category, this.topic, this.subtopic});
 
   final String? category;
   final String? topic;
 
-  /// La etiqueta elegida dentro del tema.
+  /// El subtema elegido dentro del tema: el tercer nivel, y la tercera
+  /// columna.
   ///
-  /// Es un nivel más de navegación --categoría, tema, etiqueta-- pero no un
-  /// nivel más del árbol: se pinta como una fila de filtros encima de la
-  /// lista. Una unidad puede llevar varias etiquetas, así que un árbol la
-  /// pondría en varias ramas a la vez, y entonces contar deja de significar
-  /// nada.
-  final String? tag;
+  /// Antes este sitio lo ocupaba la etiqueta, pintada como fichas encima de
+  /// la lista porque una lección podía llevar varias y en un árbol saldría en
+  /// varias ramas. El subtema es uno solo por lección --es su carpeta--, así
+  /// que ya puede ser una columna como las otras dos.
+  final String? subtopic;
 
   bool get isRoot => category == null;
 
-  /// Entrar en un tema empieza sin etiqueta: las de un tema no son las del
+  /// Entrar en un tema empieza sin subtema: los de un tema no son los del
   /// anterior.
   BrowsePath toTopic(String topic) =>
       BrowsePath(category: category, topic: topic);
 
-  BrowsePath withTag(String? tag) =>
-      BrowsePath(category: category, topic: topic, tag: tag);
+  BrowsePath toSubtopic(String? subtopic) =>
+      BrowsePath(category: category, topic: topic, subtopic: subtopic);
 
   /// Un nivel hacia arriba.
   BrowsePath up() {
-    if (tag != null) return BrowsePath(category: category, topic: topic);
+    if (subtopic != null) return BrowsePath(category: category, topic: topic);
     if (topic != null) return BrowsePath(category: category);
     return const BrowsePath();
   }
@@ -207,7 +208,7 @@ class _LibraryPageState extends State<LibraryPage> {
     _path = BrowsePath(
       category: browse.isNotEmpty ? browse[0] : null,
       topic: browse.length > 1 ? browse[1] : null,
-      tag: browse.length > 2 ? browse[2] : null,
+      subtopic: browse.length > 2 ? browse[2] : null,
     );
     _filter = place.filterIn(_filter?.language ?? 'es');
     if (_search.text != place.query) _search.text = place.query;
@@ -218,7 +219,7 @@ class _LibraryPageState extends State<LibraryPage> {
   /// Dónde está la pantalla ahora, para escribirlo en la dirección.
   LibraryPlace get _place => LibraryPlace.of(
     (_filter ?? const LibraryFilter()).copyWith(query: _search.text.trim()),
-    [?_path.category, ?_path.topic, ?_path.tag],
+    [?_path.category, ?_path.topic, ?_path.subtopic],
     inText: _inText,
   );
 
@@ -278,9 +279,21 @@ class _LibraryPageState extends State<LibraryPage> {
       browse.language,
     ].join('|');
     if (_treeFor != catalogue || _treeKey != key) {
+      // Lo que tiene alguna lección, con o sin filtros: lo declarado que no
+      // tiene ninguna es un sitio vacío de verdad --uno recién creado-- y
+      // sale en su columna; lo que solo vacía un filtro, no.
+      final occupied = <String>{
+        for (final unit in catalogue.units) ...[
+          unit.category,
+          '${unit.category}/${unit.topic}',
+          '${unit.category}/${unit.topic}/${unit.subtopic}',
+        ],
+      };
       _tree = LibraryTree.of(
         catalogue.units.where(browse.matches),
         titleOf: (key) => catalogue.taxonomyTitle(key, browse.language),
+        declared: catalogue.declaredChildren,
+        showEmpty: (key) => !occupied.contains(key),
       );
       _treeFor = catalogue;
       _treeKey = key;
@@ -1462,6 +1475,9 @@ class _Breadcrumbs extends StatelessWidget {
     final topic = category == null || path.topic == null
         ? null
         : category.topic(path.topic!);
+    final subtopic = topic == null || path.subtopic == null
+        ? null
+        : topic.subtopic(path.subtopic!);
 
     return Wrap(
       spacing: 2,
@@ -1485,7 +1501,7 @@ class _Breadcrumbs extends StatelessWidget {
           _Crumb(
             key: const Key('crumb-topic'),
             label: topic.label,
-            onTap: path.tag == null
+            onTap: subtopic == null
                 ? null
                 : () => onPath(
                     BrowsePath(
@@ -1493,12 +1509,12 @@ class _Breadcrumbs extends StatelessWidget {
                       topic: topic.topic,
                     ),
                   ),
-            last: path.tag == null,
+            last: subtopic == null,
           ),
-        if (path.tag != null)
+        if (subtopic != null)
           _Crumb(
-            key: const Key('crumb-tag'),
-            label: humaniseSlug(path.tag!),
+            key: const Key('crumb-subtopic'),
+            label: subtopic.label,
             onTap: null,
             last: true,
           ),
@@ -1665,6 +1681,13 @@ class _Chip extends StatelessWidget {
 // Explorar: el árbol
 // ---------------------------------------------------------------------------
 
+/// Las columnas, como las del Finder: categoría, tema, subtema y lecciones.
+///
+/// Se abren de izquierda a derecha según se elige: con una categoría salen
+/// sus temas y, a la derecha, sus lecciones por tema; con un tema, sus
+/// subtemas y las lecciones por subtema; con un subtema, solo las suyas. Es
+/// el mismo árbol que hay en el disco --`content/<categoría>/<tema>/<subtema>/`--
+/// y por eso cada lección está exactamente en un sitio.
 class _Browser extends StatelessWidget {
   const _Browser({
     required this.tree,
@@ -1691,53 +1714,68 @@ class _Browser extends StatelessWidget {
         final category = path.category == null
             ? null
             : tree.category(path.category!);
+        final topic = category == null || path.topic == null
+            ? null
+            : category.topic(path.topic!);
+        final subtopic = topic == null || path.subtopic == null
+            ? null
+            : topic.subtopic(path.subtopic!);
+
+        Widget categories() => _CategoryColumn(
+          tree: tree,
+          path: path,
+          language: language,
+          filter: filter,
+          blocks: blocks,
+          onPath: onPath,
+          onFilter: onFilter,
+        );
+        Widget topics() => _TopicColumn(
+          category: category!,
+          path: path,
+          language: language,
+          onPath: onPath,
+        );
+        Widget subtopics() => _SubtopicColumn(
+          topic: topic!,
+          path: path,
+          language: language,
+          onPath: onPath,
+        );
+        Widget units() => _UnitColumn(
+          category: category!,
+          path: path,
+          language: language,
+          sort: filter.sort,
+          onPath: onPath,
+        );
 
         // En estrecho se baja un nivel a la vez, con el migas de pan de la
         // cabecera para volver. Tres columnas de 130 px no son tres columnas.
         if (constraints.maxWidth < 760) {
-          if (category == null) {
-            return _CategoryColumn(
-              tree: tree,
-              path: path,
-              language: language,
-              filter: filter,
-              blocks: blocks,
-              onPath: onPath,
-              onFilter: onFilter,
-            );
-          }
-          if (path.topic == null) {
-            return _TopicColumn(
-              category: category,
-              path: path,
-              language: language,
-              onPath: onPath,
-            );
-          }
-          return _UnitColumn(
-            category: category,
-            path: path,
-            language: language,
-            sort: filter.sort,
-            onPath: onPath,
-          );
+          if (category == null) return categories();
+          if (topic == null) return topics();
+          if (subtopic == null) return subtopics();
+          return units();
         }
+
+        // Con sitio para todo, todo; si no, como el Finder: las columnas de
+        // la izquierda se van quedando fuera según se baja, y las migas de
+        // pan dicen dónde se está.
+        final wide = constraints.maxWidth >= 1100;
+        final columns = <Widget>[
+          if (category == null || topic == null || wide)
+            SizedBox(width: 240, child: categories()),
+          if (category != null) SizedBox(width: 220, child: topics()),
+          if (topic != null) SizedBox(width: 220, child: subtopics()),
+        ];
 
         return Row(
           children: [
-            SizedBox(
-              width: 252,
-              child: _CategoryColumn(
-                tree: tree,
-                path: path,
-                language: language,
-                filter: filter,
-                blocks: blocks,
-                onPath: onPath,
-                onFilter: onFilter,
-              ),
-            ),
-            const VerticalDivider(width: 1),
+            for (final column in columns) ...[
+              column,
+              const VerticalDivider(width: 1),
+            ],
             if (category == null)
               Expanded(
                 child: _Overview(
@@ -1756,30 +1794,122 @@ class _Browser extends StatelessWidget {
                   ),
                 ),
               )
-            else ...[
-              SizedBox(
-                width: 232,
-                child: _TopicColumn(
-                  category: category,
-                  path: path,
-                  language: language,
-                  onPath: onPath,
-                ),
-              ),
-              const VerticalDivider(width: 1),
+            // Como en el Finder, la lista aparece al llegar al último
+            // nivel: hasta elegir un subtema, la derecha dice qué falta.
+            else if (topic == null)
               Expanded(
-                child: _UnitColumn(
-                  category: category,
-                  path: path,
-                  language: language,
-                  sort: filter.sort,
-                  onPath: onPath,
+                child: _ChooseNext(
+                  key: const Key('library-choose-topic'),
+                  label: tr('Elige un tema'),
+                  detail: category.count == 1
+                      ? tr('1 lección en {0}', [category.label])
+                      : tr('{0} lecciones en {1}', [
+                          category.count,
+                          category.label,
+                        ]),
                 ),
-              ),
-            ],
+              )
+            else if (subtopic == null)
+              Expanded(
+                child: _ChooseNext(
+                  key: const Key('library-choose-subtopic'),
+                  label: tr('Elige un subtema'),
+                  detail: topic.count == 1
+                      ? tr('1 lección en {0}', [topic.label])
+                      : tr('{0} lecciones en {1}', [topic.count, topic.label]),
+                ),
+              )
+            else
+              Expanded(child: units()),
           ],
         );
       },
+    );
+  }
+}
+
+/// Lo que hay a la derecha mientras no se ha llegado a un subtema: qué falta
+/// por elegir, y cuánto hay dentro.
+class _ChooseNext extends StatelessWidget {
+  const _ChooseNext({super.key, required this.label, required this.detail});
+
+  final String label;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.west, size: 22, color: context.palette.rule),
+        const SizedBox(height: 10),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: context.palette.muted,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          detail,
+          style: TextStyle(fontSize: 12.5, color: context.palette.muted),
+        ),
+      ],
+    ),
+  );
+}
+
+/// «+ Nuevo tema…» al pie de una columna: crear lo que falta donde se echa en
+/// falta, sin salir a editar `taxonomy.yaml`.
+class _AddFooter extends StatelessWidget {
+  const _AddFooter({
+    required this.label,
+    required this.parent,
+    required this.onPath,
+  });
+
+  final String label;
+
+  /// Dentro de qué se crea: `[]` para una categoría.
+  final List<String> parent;
+  final ValueChanged<BrowsePath> onPath;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = watchSession(context);
+    if (!canDeclarePlaces(session)) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: context.palette.rule)),
+      ),
+      child: TextButton.icon(
+        key: Key('library-add-${parent.length}'),
+        style: TextButton.styleFrom(
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        ),
+        icon: const Icon(Icons.add, size: 16),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 12.5),
+        ),
+        onPressed: () async {
+          final created = await createPlace(context, session, parent: parent);
+          if (created == null) return;
+          onPath(
+            BrowsePath(
+              category: created[0],
+              topic: created.length > 1 ? created[1] : null,
+              subtopic: created.length > 2 ? created[2] : null,
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -1831,6 +1961,11 @@ class _CategoryColumn extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+          _AddFooter(
+            label: tr('Nueva categoría…'),
+            parent: const [],
+            onPath: onPath,
           ),
         ],
       ),
@@ -2105,22 +2240,38 @@ class _TopicColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       color: context.palette.surface,
-      child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
         children: [
-          _ColumnHeader(
-            label: tr('{0} temas', [category.topics.length]),
-            count: category.count,
-            selected: path.topic == null,
-            onTap: () => onPath(BrowsePath(category: category.category)),
-          ),
-          for (final topic in category.topics)
-            _TopicRow(
-              topic: topic,
-              language: language,
-              selected: path.topic == topic.topic,
-              onTap: () => onPath(path.toTopic(topic.topic)),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                _ColumnHeader(
+                  label: tr('{0} temas', [category.topics.length]),
+                  count: category.count,
+                  selected: path.topic == null,
+                  onTap: () => onPath(BrowsePath(category: category.category)),
+                ),
+                for (final topic in category.topics)
+                  _TopicRow(
+                    topic: topic,
+                    language: language,
+                    selected: path.topic == topic.topic,
+                    onTap: () => onPath(
+                      BrowsePath(
+                        category: category.category,
+                        topic: topic.topic,
+                      ),
+                    ),
+                  ),
+              ],
             ),
+          ),
+          _AddFooter(
+            label: tr('Nuevo tema…'),
+            parent: [category.category],
+            onPath: onPath,
+          ),
         ],
       ),
     );
@@ -2200,6 +2351,158 @@ class _TopicRow extends StatelessWidget {
   }
 }
 
+/// La tercera columna: los subtemas de un tema.
+///
+/// Cada fila es también un sitio donde soltar una lección arrastrada desde la
+/// lista: moverla es eso, como en el Finder. Es la misma operación que
+/// «Mover a…» --la carpeta va al subtema y nada de lo que la usa cambia-- sin
+/// el diálogo.
+class _SubtopicColumn extends StatelessWidget {
+  const _SubtopicColumn({
+    required this.topic,
+    required this.path,
+    required this.language,
+    required this.onPath,
+  });
+
+  final TopicNode topic;
+  final BrowsePath path;
+  final String language;
+  final ValueChanged<BrowsePath> onPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: context.palette.surface,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                _ColumnHeader(
+                  label: tr('{0} subtemas', [topic.subtopics.length]),
+                  count: topic.count,
+                  selected: path.subtopic == null,
+                  onTap: () => onPath(path.toSubtopic(null)),
+                ),
+                for (final subtopic in topic.subtopics)
+                  _SubtopicRow(
+                    subtopic: subtopic,
+                    selected: path.subtopic == subtopic.subtopic,
+                    onTap: () => onPath(path.toSubtopic(subtopic.subtopic)),
+                  ),
+              ],
+            ),
+          ),
+          _AddFooter(
+            label: tr('Nuevo subtema…'),
+            parent: [topic.category, topic.topic],
+            onPath: onPath,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubtopicRow extends StatelessWidget {
+  const _SubtopicRow({
+    required this.subtopic,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final SubtopicNode subtopic;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final session = watchSession(context);
+    final place = [subtopic.category, subtopic.topic, subtopic.subtopic];
+    return DragTarget<Unit>(
+      // Solo lo que se puede mover aquí: de un repositorio en el que se
+      // escribe, y que no está ya en este subtema.
+      onWillAcceptWithDetails: (details) =>
+          subtopic.subtopic.isNotEmpty &&
+          details.data.place != subtopic.key &&
+          session.canWriteIn(details.data.repo),
+      onAcceptWithDetails: (details) =>
+          moveUnitFrom(context, session, details.data, to: place, open: false),
+      builder: (context, candidates, _) {
+        final dropping = candidates.isNotEmpty;
+        return InkWell(
+          key: Key('subtopic-${subtopic.subtopic}'),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              color: dropping
+                  ? context.palette.accentDark.withValues(alpha: 0.16)
+                  : selected
+                  ? context.palette.accentDark.withValues(alpha: 0.08)
+                  : null,
+              border: Border(
+                bottom: BorderSide(color: context.palette.rule),
+                left: BorderSide(
+                  width: 3,
+                  color: dropping
+                      ? context.palette.accentDark
+                      : Colors.transparent,
+                ),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(11, 8, 8, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subtopic.label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.2,
+                          fontStyle: subtopic.subtopic.isEmpty
+                              ? FontStyle.italic
+                              : FontStyle.normal,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          for (final kind in subtopic.kinds.take(4))
+                            Dot(colour: context.palette.kind(kind), size: 7),
+                          const SizedBox(width: 6),
+                          Text(
+                            subtopic.count == 0
+                                ? tr('vacío')
+                                : '${subtopic.count}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: context.palette.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// La tercera columna: las unidades, como tarjetas.
 ///
 /// Tarjetas y no filas: aquí hay una docena de cosas, no dos mil, así que el
@@ -2225,16 +2528,27 @@ class _UnitColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topic = path.topic == null ? null : category.topic(path.topic!);
-    final groups = topic == null ? category.topics : [topic];
-    // Las etiquetas del sitio donde se está, no las del catálogo: dentro de
-    // un tema lo que se quiere es su reparto, no las cuatrocientas que hay en
-    // la biblioteca entera.
-    final tags = topic == null ? category.tags : topic.tags;
+    final subtopic = topic == null || path.subtopic == null
+        ? null
+        : topic.subtopic(path.subtopic!);
+    // En grupos con su nombre: los temas de la categoría, los subtemas del
+    // tema, o el subtema solo.
+    final groups = <(String, List<Unit>)>[
+      if (subtopic != null)
+        (subtopic.label, subtopic.units)
+      else if (topic != null)
+        for (final node in topic.subtopics) (node.label, node.units)
+      else
+        for (final node in category.topics) (node.label, node.units),
+    ];
     final session = watchSession(context);
-    // Crear aquí, en el tema que se mira: es donde se echa en falta la lección.
+    // Crear aquí, donde se está mirando: es donde se echa en falta la
+    // lección. En un subtema va a él; más arriba, el diálogo pregunta el que
+    // falte.
     final canCreate =
         session.admin() != null &&
         session.workspace.repos.any((repo) => session.canWriteIn(repo.id));
+    final where = subtopic?.label ?? topic?.label ?? category.label;
 
     // Una lista de filas y `ListView.builder`: se construye lo que se ve. Un
     // tema con cuatrocientos problemas eran cuatrocientas tarjetas hechas de
@@ -2246,36 +2560,38 @@ class _UnitColumn extends StatelessWidget {
           child: TextButton.icon(
             key: const Key('library-new-unit'),
             icon: const Icon(Icons.add, size: 16),
-            label: Text(
-              topic == null
-                  ? tr('Nueva lección en {0}', [category.label])
-                  : tr('Nueva lección en {0}', [topic.label]),
-            ),
+            label: Text(tr('Nueva lección en {0}', [where])),
             onPressed: () => createUnitFrom(
               context,
               session,
               category: category.category,
               topic: topic?.topic,
+              subtopic: subtopic?.subtopic,
             ),
           ),
         ),
-      if (tags.isNotEmpty) ...[
-        () => _TagFilter(
-          tags: tags,
-          selected: path.tag,
-          onSelected: (tag) => onPath(path.withTag(tag)),
+      if (subtopic != null && subtopic.units.isEmpty)
+        () => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          child: Text(
+            tr(
+              'Todavía no hay ninguna lección en «{0}». Crea una aquí, o '
+              'arrastra una de otro sitio hasta la fila de este subtema.',
+              [subtopic.label],
+            ),
+            key: const Key('library-empty-subtopic'),
+            style: TextStyle(fontSize: 13, color: context.palette.muted),
+          ),
         ),
-        () => const SizedBox(height: 6),
-      ],
-      for (final group in groups)
-        if (_shown(group.units) case final shown when shown.isNotEmpty) ...[
+      for (final (label, units) in groups)
+        if (_shown(units) case final shown when shown.isNotEmpty) ...[
           () => Padding(
             padding: const EdgeInsets.only(bottom: 8, top: 6),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
-                    group.label,
+                    label,
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -2297,7 +2613,7 @@ class _UnitColumn extends StatelessWidget {
             ),
           ),
           for (final unit in shown)
-            () => UnitCard(unit: unit, language: language),
+            () => UnitCard(unit: unit, language: language, movable: true),
           () => const SizedBox(height: 16),
         ],
     ];
@@ -2309,76 +2625,115 @@ class _UnitColumn extends StatelessWidget {
   }
 
   List<Unit> _shown(List<Unit> units) =>
-      LibraryFilter(language: language, sort: sort).apply([
-        for (final unit in units)
-          if (path.tag == null || unit.tags.contains(path.tag)) unit,
-      ]);
-}
-
-/// Las etiquetas de donde se está, encima de la lista.
-///
-/// El nivel que falta entre el tema y los ficheros. Va aquí y no en el árbol
-/// de la izquierda porque una unidad puede llevar varias etiquetas: en un
-/// árbol saldría en varias ramas a la vez, y entonces los números de al lado
-/// dejan de sumar lo que hay.
-class _TagFilter extends StatelessWidget {
-  const _TagFilter({
-    required this.tags,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  final List<TagCount> tags;
-  final String? selected;
-
-  /// `null` para quitar el filtro.
-  final ValueChanged<String?> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 5,
-      runSpacing: 5,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Padding(
-          padding: EdgeInsets.only(right: 3, bottom: 1),
-          child: Text(
-            tr('Etiquetas'),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: context.palette.muted,
-              letterSpacing: 0.4,
-            ),
-          ),
-        ),
-        for (final entry in tags)
-          FilterChip(
-            key: Key('tag-${entry.tag}'),
-            label: Text('${humaniseSlug(entry.tag)} · ${entry.count}'),
-            selected: selected == entry.tag,
-            visualDensity: VisualDensity.compact,
-            labelStyle: const TextStyle(fontSize: 12),
-            // Volver a pulsar la que está puesta la quita: es el gesto que
-            // todo el mundo intenta, y sin él hace falta buscar una equis.
-            onSelected: (_) =>
-                onSelected(selected == entry.tag ? null : entry.tag),
-          ),
-      ],
-    );
-  }
+      LibraryFilter(language: language, sort: sort).apply(units);
 }
 
 /// Una unidad como tarjeta.
 class UnitCard extends StatelessWidget {
-  const UnitCard({super.key, required this.unit, required this.language});
+  const UnitCard({
+    super.key,
+    required this.unit,
+    required this.language,
+    this.movable = false,
+  });
 
   final Unit unit;
   final String language;
 
+  /// Si se puede llevar a otro subtema: arrastrándola a su fila, o con «Mover
+  /// a…» del menú del botón derecho. Solo en las columnas, que es donde están
+  /// los subtemas a los que soltarla.
+  final bool movable;
+
   @override
   Widget build(BuildContext context) {
+    final session = watchSession(context);
+    final card = _card(context);
+    if (!movable || !session.canWriteIn(unit.repo) || session.admin() == null) {
+      return card;
+    }
+    Future<void> move() => moveUnitFrom(context, session, unit, open: false);
+    return GestureDetector(
+      onSecondaryTapUp: (details) async {
+        final chosen = await showMenu<String>(
+          context: context,
+          position: RelativeRect.fromLTRB(
+            details.globalPosition.dx,
+            details.globalPosition.dy,
+            details.globalPosition.dx,
+            details.globalPosition.dy,
+          ),
+          items: [
+            PopupMenuItem(value: 'open', child: Text(tr('Abrir'))),
+            PopupMenuItem(
+              key: const Key('unit-card-move'),
+              value: 'move',
+              child: Text(tr('Mover a…')),
+            ),
+          ],
+        );
+        if (!context.mounted) return;
+        if (chosen == 'open') context.go(Routes.unit(unit.path));
+        if (chosen == 'move') await move();
+      },
+      child: Draggable<Unit>(
+        data: unit,
+        // Lo que se ve bajo el puntero: el título, no la tarjeta entera, que
+        // taparía la columna donde se va a soltar.
+        feedback: Material(
+          // Sin `elevation`: un borde del verde de la casa y una sombra corta
+          // dicen igual que esto se está llevando, y la sombra larga de un
+          // `Material` en alto sale como un marco negro en las capturas.
+          type: MaterialType.transparency,
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.palette.card,
+              borderRadius: BorderRadius.circular(Radii.card),
+              border: Border.all(color: context.palette.accentDark, width: 1.4),
+              boxShadow: [
+                BoxShadow(
+                  color: context.palette.shadow.withValues(alpha: 0.12),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Dot(colour: context.palette.kind(unit.kind)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        unit.title(language),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        childWhenDragging: Opacity(opacity: 0.4, child: card),
+        child: card,
+      ),
+    );
+  }
+
+  Widget _card(BuildContext context) {
     final fallback = unit.titleIsFallback(language);
     final repoTint = watchSession(context).colourOf(unit.repo);
     return Padding(

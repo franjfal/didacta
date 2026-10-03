@@ -9,7 +9,7 @@
   "capturas": [
     {
       "nombre": "esencial",
-      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/limite-por-definicion",
       "acciones": [
         {
           "esperar": 12
@@ -56,7 +56,7 @@
                 "contiene": "Todo a la vista"
               },
               "bloques": {
-                "texto": "Bloques y plantillas"
+                "texto": "Bloques y catálogo"
               },
               "mcp": {
                 "texto": "Servidor MCP"
@@ -68,7 +68,7 @@
           }
         },
         {
-          "ir": "/unit/content/calculo/limites/limite-por-definicion",
+          "ir": "/unit/content/calculo/limites/concepto-de-limite/limite-por-definicion",
           "esperar": 12
         },
         {

@@ -1,0 +1,89 @@
+{
+  "codigo": "L10",
+  "titulo": "Una plantilla en varios repositorios",
+  "fichero": "L10-una-plantilla-en-varios-repositorios.mp4",
+  "duracion": 87.79,
+  "megas": 8.0,
+  "fecha": "2026-10-03",
+  "version": "0.3.0",
+  "capitulos": [
+    {
+      "t": 0.0,
+      "titulo": "Una plantilla en varios repositorios"
+    },
+    {
+      "t": 6.69,
+      "titulo": "Por qué en dos"
+    },
+    {
+      "t": 21.43,
+      "titulo": "Una casilla por repositorio"
+    },
+    {
+      "t": 36.05,
+      "titulo": "Dónde se usa"
+    },
+    {
+      "t": 46.96,
+      "titulo": "Se escribe en todos"
+    },
+    {
+      "t": 60.99,
+      "titulo": "La carpeta del programa"
+    }
+  ],
+  "transcripcion": [
+    {
+      "t": 1.2,
+      "texto": "Al terminar sabrás tener la misma plantilla en varios repositorios, y cuándo conviene."
+    },
+    {
+      "t": 7.19,
+      "texto": "La hoja dos del repositorio de problemas se compila con la Hoja del departamento. Pero solo la declara el repositorio del ejemplo."
+    },
+    {
+      "t": 15.35,
+      "texto": "Con los dos abiertos, compila. Quien solo tenga el de problemas, no podría."
+    },
+    {
+      "t": 21.93,
+      "texto": "Cada fila tiene una casilla por repositorio. Marcar el de problemas la copia allí, entera y con su cabecera."
+    },
+    {
+      "t": 29.62,
+      "texto": "Desmarcarla la quitaría solo de ahí. Y si fuera la última, Didacta lo preguntaría antes."
+    },
+    {
+      "t": 36.55,
+      "texto": "En el editor, las mismas casillas, y lo que se compila con ella: aquí, la hoja dos de problemas."
+    },
+    {
+      "t": 43.27,
+      "texto": "Y la vista previa, con una lección de esa misma hoja."
+    },
+    {
+      "t": 47.46,
+      "texto": "Los colores del departamento, en la cabecera, y se ven antes de guardar."
+    },
+    {
+      "t": 52.04,
+      "texto": "Al guardar se escribe en los dos repositorios, para que digan lo mismo. Y si un día discrepan, lo avisa Entre repositorios."
+    },
+    {
+      "t": 61.49,
+      "texto": "La última casilla es el programa: para lo que es tuyo y no de la asignatura, como tus colores."
+    },
+    {
+      "t": 68.16,
+      "texto": "Ahí no la protege git, y se va con el ordenador. Por eso, Copiar a una carpeta: es su copia de seguridad."
+    },
+    {
+      "t": 76.7,
+      "texto": "Con un repositorio basta para usarla; en dos, viaja con los dos materiales."
+    },
+    {
+      "t": 82.2,
+      "texto": "En el siguiente vídeo, tus propios snippets."
+    }
+  ]
+}

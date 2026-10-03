@@ -7,11 +7,11 @@ information lived in a folder name, a Makefile variable and a LaTeX ``\\def``.
 
     <content-repo>/
       didacta.yaml                      the repository's own settings
-      content/<category>/<topic>/<unit>/
-          unit.yaml                     metadata: title, tags, languages, status
+      content/<category>/<topic>/<subtopic>/<unit>/
+          unit.yaml                     metadata: title, place, languages, status
           es.tex  va.tex  en.tex        one file per language, same content
           figures/                      assets belonging to this unit
-      problems/<category>/<topic>/<unit>/
+      problems/<category>/<topic>/<subtopic>/<unit>/
           unit.yaml
           es.tex  va.tex  en.tex        statement + answer + solution + marking
       courses/<course>/
@@ -32,8 +32,10 @@ has to be told.
 in the composition, where ordering belongs -- so reordering a chapter no longer
 means renaming files.
 
-**Compositions hold references, not paths.** ``analysis/normed-spaces/definition``
-resolves against the content root, so no document contains ``../../../../``.
+**Compositions hold ids, not paths.** A composition names a unit by the
+``id:`` of its ``unit.yaml``, and the engine tells LaTeX where that id lives
+when it compiles. So the folder a unit sits in can change -- moving it is how
+the library is reorganised -- and nothing that uses it has to be rewritten.
 """
 
 from __future__ import annotations
@@ -166,8 +168,17 @@ def slugify(text):
 # --------------------------------------------------------------------------
 
 
-class Topic:
-    """One topic of one category: a stable id and a name per language."""
+class Subtopic:
+    """El tercer nivel: un apartado de un tema, donde viven las lecciones.
+
+    Lo que antes era la etiqueta de cada lección, que nadie declaraba y que
+    en la práctica era la carpeta: `principio-de-cavalieri` dentro de la
+    integración. Declararlo es lo que deja ponerle nombre en tres idiomas,
+    crearlo vacío y llevar lecciones a él.
+
+    El id es del tema y no de la categoría: `general` puede haber en cada
+    tema, y es uno distinto en cada uno.
+    """
 
     __slots__ = ("id", "titles", "raw")
 
@@ -175,6 +186,35 @@ class Topic:
         self.id = id
         self.titles = titles or {}
         self.raw = raw or {}
+
+    def title(self, language=None):
+        if language and self.titles.get(language):
+            return self.titles[language]
+        for value in self.titles.values():
+            if value:
+                return value
+        return self.id
+
+    def as_dict(self):
+        return {"id": self.id, "title": dict(self.titles)}
+
+
+class Topic:
+    """One topic of one category: a stable id and a name per language."""
+
+    __slots__ = ("id", "titles", "subtopics", "raw")
+
+    def __init__(self, id, titles=None, subtopics=None, raw=None):
+        self.id = id
+        self.titles = titles or {}
+        self.subtopics = subtopics or []
+        self.raw = raw or {}
+
+    def subtopic(self, subtopic_id):
+        for subtopic in self.subtopics:
+            if subtopic.id == subtopic_id:
+                return subtopic
+        return None
 
     def title(self, language=None):
         """The name to show, falling back to the id rather than to nothing."""
@@ -186,7 +226,8 @@ class Topic:
         return self.id
 
     def as_dict(self):
-        return {"id": self.id, "title": dict(self.titles)}
+        return {"id": self.id, "title": dict(self.titles),
+                "subtopics": [t.as_dict() for t in self.subtopics]}
 
 
 class Block:
@@ -364,10 +405,31 @@ class Taxonomy:
                         % (path, topic_id, identifier)
                     )
                 topic_ids.add(topic_id)
+                subtopics = []
+                subtopic_ids = set()
+                for leaf in (entry.get("subtopics") or []):
+                    if not isinstance(leaf, dict) or not leaf.get("id"):
+                        raise RepoError(
+                            "%s: each subtopic of `%s/%s` should be a mapping "
+                            "with an `id`" % (path, identifier, topic_id)
+                        )
+                    if leaf["id"] in subtopic_ids:
+                        raise RepoError(
+                            "%s: duplicate subtopic `%s` in `%s/%s`"
+                            % (path, leaf["id"], identifier, topic_id)
+                        )
+                    subtopic_ids.add(leaf["id"])
+                    subtopics.append(Subtopic(
+                        id=str(leaf["id"]),
+                        titles=yamlio.localised(leaf.get("title"), languages,
+                                                path=path, key="title"),
+                        raw=leaf,
+                    ))
                 topics.append(Topic(
                     id=topic_id,
                     titles=yamlio.localised(entry.get("title"), languages,
                                             path=path, key="title"),
+                    subtopics=subtopics,
                     raw=entry,
                 ))
 
@@ -546,7 +608,8 @@ class Unit:
 
     __slots__ = (
         "id", "kind", "block", "templates", "directory", "relpath", "titles",
-        "category", "topic", "tags", "reference", "languages", "prerequisites",
+        "category", "topic", "subtopic", "tags", "reference", "languages",
+        "prerequisites",
         "objectives", "duration_minutes", "difficulty", "parts", "marks",
         "raw", "warnings",
     )
@@ -659,6 +722,7 @@ class Unit:
             "title": self.titles,
             "category": self.category,
             "topic": self.topic,
+            "subtopic": self.subtopic,
             "tags": self.tags,
             "reference": self.reference,
             "languages": {
@@ -689,8 +753,13 @@ def load_unit(root, relpath, settings):
 
     parts = relpath.replace("\\", "/").split("/")
     area = parts[0] if parts else CONTENT
+    # `<área>/<categoría>/<tema>/<subtema>/<lección>`: lo que la carpeta dice
+    # cuando el `unit.yaml` no lo dice. Mover una lección escribe las dos
+    # cosas a la vez, así que solo discrepan si alguien mueve una carpeta a
+    # mano, y eso lo cuenta `check`.
     inferred_category = parts[1] if len(parts) > 2 else ""
     inferred_topic = parts[2] if len(parts) > 3 else ""
+    inferred_subtopic = parts[3] if len(parts) > 4 else ""
 
     kind = data.get("kind") or ("problem" if area == PROBLEMS else "theory")
     if kind not in UNIT_KINDS:
@@ -792,6 +861,7 @@ def load_unit(root, relpath, settings):
         titles=titles,
         category=data.get("category") or inferred_category,
         topic=data.get("topic") or inferred_topic,
+        subtopic=str(data.get("subtopic") or inferred_subtopic),
         tags=[str(t) for t in (data.get("tags") or [])],
         reference=reference,
         languages=languages,

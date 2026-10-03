@@ -2,11 +2,11 @@
   "capturas": [
     {
       "nombre": "algithub",
-      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/limite-por-definicion",
       "preparar": [
         {
           "editar": {
-            "fichero": "content/calculo/limites/limite-por-definicion/es.tex",
+            "fichero": "content/calculo/limites/concepto-de-limite/limite-por-definicion/es.tex",
             "buscar": "buscamos",
             "poner": "buscamso",
             "mensaje": "Un límite por la definición",
@@ -112,7 +112,7 @@
     },
     {
       "nombre": "enviada",
-      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/limite-por-definicion",
       "preparar": [
         {
           "sin_enviar": 1
@@ -188,7 +188,7 @@
     },
     {
       "nombre": "descartar",
-      "ruta": "/unit/content/calculo/limites/limite-por-definicion",
+      "ruta": "/unit/content/calculo/limites/concepto-de-limite/limite-por-definicion",
       "acciones": [
         {
           "esperar": 10

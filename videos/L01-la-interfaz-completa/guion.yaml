@@ -38,7 +38,7 @@ escenas:
       - id: para
         texto: >-
           Completa es para quien mantiene el repositorio del departamento. En
-          Ajustes aparecen Bloques y plantillas, y el servidor MCP.
+          Ajustes aparecen Bloques y catálogo, y el servidor MCP.
         pasos:
           - {en: mantiene, resalta: explica, lado: arriba, hasta: 3}
           - {en: Ajustes, enfoca: [bloques, mcp], max: 2, dx: 200}

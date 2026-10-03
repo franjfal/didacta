@@ -7,7 +7,7 @@ codigo: C3
 titulo: Filtrar lo que falta, por tipo o por bloque
 subtitulo: Quedarte con lo que te interesa, y saber cuánto queda
 ruta: Encontrar material
-siguiente: "D1 · La pantalla de una lección"
+siguiente: "C4 · Organizar la biblioteca"
 voz: narrador
 lema: ["Los filtros recortan también el árbol,", "no solo la búsqueda."]
 lema_en: "no solo"
@@ -66,12 +66,11 @@ escenas:
           - {en: tipo, resalta: menu}
       - id: bloque
         texto: >-
-          O con un bloque, como la teoría o los problemas; o con una etiqueta.
+          O con un bloque, como la teoría o los problemas.
         pasos:
           - {al: inicio, cambia: bloque}
           - {al: inicio, reposo: true, captura: bloque}
-          - {en: bloque, resalta: bloques, etiqueta: "Por bloque", captura: bloque, hasta: 2.4}
-          - {en: etiqueta, resalta: etiquetas, etiqueta: "Por etiqueta", captura: bloque}
+          - {en: bloque, resalta: bloques, etiqueta: "Por bloque", captura: bloque}
       - id: repositorio
         texto: >-
           Y si tienes varios repositorios abiertos, también por repositorio.
@@ -113,4 +112,4 @@ escenas:
           Los filtros recortan también el árbol, no solo la búsqueda.
         pausa: 0.5
       - id: siguiente
-        texto: En el siguiente vídeo, la pantalla de una lección.
+        texto: En el siguiente vídeo, organizar la biblioteca.

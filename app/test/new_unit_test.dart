@@ -16,13 +16,33 @@ import 'package:didacta_app/ui/theme.dart';
 
 import 'fixture.dart';
 
-Future<NewUnitRequest?> Function() openDialog(
+/// Una lección que ya vive en un subtema, para que las columnas tengan uno.
+Map<String, dynamic> inSubtopic() => unitJson(
+  path: 'content/analysis/normed/conceptos/definition',
+  subtopic: 'conceptos',
+  title: const {'es': 'Definición'},
+);
+
+/// Y otra en otro tema, que es a donde se mueve en las pruebas.
+Map<String, dynamic> elsewhere() => unitJson(
+  path: 'content/analysis/banach/teoria/hahn-banach',
+  topic: 'banach',
+  subtopic: 'teoria',
+  title: const {'es': 'Hahn-Banach'},
+);
+
+/// Abre el diálogo y devuelve con qué leer lo que contestó al cerrarse.
+Future<NewUnitRequest? Function()> Function() openDialog(
   WidgetTester tester, {
   String topic = 'normed',
+  String subtopic = 'conceptos',
 }) {
   NewUnitRequest? answer;
   return () async {
-    final catalogue = catalogueWith(defaultUnits());
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final catalogue = catalogueWith([...defaultUnits(), inSubtopic()]);
     final session = FakeSession(
       gatewayOverride: FakeGateway(),
       catalogue: catalogue,
@@ -41,6 +61,7 @@ Future<NewUnitRequest?> Function() openDialog(
                     session: session,
                     category: 'analysis',
                     topic: topic,
+                    subtopic: subtopic,
                     kind: 'theory',
                     repos: const [],
                   ),
@@ -54,7 +75,7 @@ Future<NewUnitRequest?> Function() openDialog(
     );
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
-    return answer;
+    return () => answer;
   };
 }
 
@@ -97,39 +118,7 @@ void main() {
   testWidgets('del título sale el nombre de la carpeta, y se dice dónde va', (
     tester,
   ) async {
-    NewUnitRequest? answer;
-    final catalogue = catalogueWith(defaultUnits());
-    final session = FakeSession(
-      gatewayOverride: FakeGateway(),
-      catalogue: catalogue,
-    );
-    await session.primeForTest(catalogue);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: didactaTheme(),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () async {
-                answer = await showDialog<NewUnitRequest>(
-                  context: context,
-                  builder: (_) => NewUnitDialog(
-                    session: session,
-                    category: 'analysis',
-                    topic: 'normed',
-                    kind: 'theory',
-                    repos: const [],
-                  ),
-                );
-              },
-              child: const Text('abrir'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('abrir'));
-    await tester.pumpAndSettle();
+    final answer = await openDialog(tester)();
 
     // Sin título, no se crea.
     expect(
@@ -143,21 +132,48 @@ void main() {
       'Espacios de Hilbert',
     );
     await tester.pumpAndSettle();
+    // En el subtema que se miraba: su carpeta es su sitio.
     expect(
-      find.text('Se creará en content/analysis/normed/espacios-de-hilbert'),
+      find.text(
+        'Se creará en content/analysis/normed/conceptos/espacios-de-hilbert',
+      ),
       findsOneWidget,
     );
     await tester.tap(find.byKey(const Key('new-unit-create')));
     await tester.pumpAndSettle();
-    expect(answer?.title, 'Espacios de Hilbert');
-    expect(answer?.slug, 'espacios-de-hilbert');
-    expect(answer?.topic, 'normed');
+    final got = answer();
+    expect(got?.title, 'Espacios de Hilbert');
+    expect(got?.slug, 'espacios-de-hilbert');
+    expect(got?.topic, 'normed');
+    expect(got?.subtopic, 'conceptos');
+  });
+
+  testWidgets('sin subtema no se crea, y se elige en las columnas', (
+    tester,
+  ) async {
+    await openDialog(tester, subtopic: '')();
+    await tester.enterText(
+      find.byKey(const Key('new-unit-title')),
+      'Espacios de Hilbert',
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Elige un subtema: cada lección vive en uno.'),
+      findsWidgets,
+    );
+    await tester.tap(find.byKey(const Key('place-conceptos')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Se creará en content/analysis/normed/conceptos/espacios-de-hilbert',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('no deja crear una que ya existe', (tester) async {
-    final open = openDialog(tester);
-    await open();
-    // `content/analysis/normed/definition` está en el fixture.
+    await openDialog(tester)();
+    // `content/analysis/normed/conceptos/definition` está en el fixture.
     await tester.enterText(
       find.byKey(const Key('new-unit-title')),
       'Definition',
@@ -239,52 +255,45 @@ void main() {
   });
 
   group('mover', () {
-    testWidgets('dice a dónde va y cuántos documentos se tocan', (
+    testWidgets('se elige el subtema en las columnas, y dice a dónde va', (
       tester,
     ) async {
       await pumpAction(tester, moveUnitFrom);
       final apply = find.byKey(const Key('move-unit-apply'));
-      expect(find.text('Es donde ya está.'), findsOneWidget);
-      expect(tester.widget<FilledButton>(apply).onPressed, isNull);
-
-      await tester.enterText(
-        find.byKey(const Key('move-unit-path')),
-        'analysis/Espacios de Banach/Definición',
-      );
-      await tester.pumpAndSettle();
+      // Una lección de antes de los subtemas: hasta que no se elige uno, no.
       expect(
-        find.text('Pasará a content/analysis/espacios-de-banach/definicion'),
+        find.text('Elige un subtema: cada lección vive en uno.'),
         findsOneWidget,
       );
+      expect(tester.widget<FilledButton>(apply).onPressed, isNull);
+
+      await tester.tap(find.byKey(const Key('place-banach')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('place-teoria')));
+      await tester.pumpAndSettle();
       expect(
-        find.textContaining('Se reescribirá 1 documento que la usa'),
+        find.text('Irá a content/analysis/banach/teoria/definition'),
+        findsOneWidget,
+      );
+      // Y que no hay que reescribir nada de lo que la usa.
+      expect(
+        find.textContaining('La usa 1 documento, y no hay que tocarlo'),
         findsOneWidget,
       );
       expect(tester.widget<FilledButton>(apply).onPressed, isNotNull);
-    });
-
-    testWidgets('nombra los cursos que se reescriben', (tester) async {
-      await pumpAction(tester, moveUnitFrom);
-      final session = Provider.of<Session>(
-        tester.element(find.byType(AlertDialog)),
-        listen: false,
-      );
-      final unit = session.unitByPath(unitPath)!;
-      final use = unit.usedBy.single;
-      final course = session.courseById(use.course)!;
-      expect(
-        find.text('En ${course.title(session.language)} · ${use.year}.'),
-        findsOneWidget,
-      );
     });
 
     testWidgets('pide al motor el cambio y abre la lección donde está ahora', (
       tester,
     ) async {
       final engine = await pumpAction(tester, moveUnitFrom);
+      await tester.tap(find.byKey(const Key('place-banach')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('place-teoria')));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const Key('move-unit-path')),
-        'analysis/banach/definition',
+        'Definición',
       );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('move-unit-apply')));
@@ -293,12 +302,35 @@ void main() {
       expect(engine.commands.firstWhere((c) => c.first == 'move'), [
         'move',
         '--unit=content/analysis/normed/definition',
-        '--to=analysis/banach/definition',
+        '--to=analysis/banach/teoria/definicion',
       ]);
       expect(
-        find.text('abierta /unit/content/analysis/banach/definition'),
+        find.text('abierta /unit/content/analysis/banach/teoria/definicion'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('arrastrada a un subtema, se mueve sin preguntar', (
+      tester,
+    ) async {
+      final engine = await pumpAction(
+        tester,
+        (context, session, unit) => moveUnitFrom(
+          context,
+          session,
+          unit,
+          to: const ['analysis', 'banach', 'teoria'],
+          open: false,
+        ),
+      );
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(engine.commands.firstWhere((c) => c.first == 'move'), [
+        'move',
+        '--unit=content/analysis/normed/definition',
+        '--to=analysis/banach/teoria/definition',
+      ]);
+      // Y se queda donde estaba: soltarla en otra columna no es abrirla.
+      expect(find.textContaining('abierta'), findsNothing);
     });
 
     testWidgets('con algo sin guardar en ella, no', (tester) async {
@@ -328,7 +360,7 @@ Future<FakeCompiler> pumpAction(
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
   final engine = FakeCompiler();
-  final catalogue = catalogueWith(defaultUnits());
+  final catalogue = catalogueWith([...defaultUnits(), elsewhere()]);
   final session = FakeSession(
     gatewayOverride: FakeGateway(),
     catalogue: catalogue,

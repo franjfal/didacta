@@ -319,6 +319,94 @@ class Repositories {
     );
   }
 
+  /// La carpeta que le toca a un repositorio: la suya, dentro de la de
+  /// todos.
+  ///
+  /// Un solo sitio que lo decide, para que clonar, preparar, crear el
+  /// ejemplo y mover lleven a la misma carpeta.
+  String targetFor(String name) => '${session.cloneBase}/$name';
+
+  /// Si [repo] está donde le toca: directamente dentro de la carpeta de
+  /// todos. Sin carpeta elegida, cualquier sitio vale.
+  ///
+  /// Directamente dentro y no con su nombre exacto: un clon que alguien
+  /// renombró sigue estando en la carpeta, y moverlo para cambiarle el nombre
+  /// no arregla nada.
+  bool isInBase(ContentRepo repo) =>
+      session.cloneBase.isEmpty ||
+      directlyIn(repo.directory, session.cloneBase);
+
+  /// Los repositorios abiertos que están fuera de la carpeta de todos.
+  List<ContentRepo> get outsideBase => [
+    for (final repo in workspace.repos)
+      if (!isInBase(repo)) repo,
+  ];
+
+  /// Lleva el clon de un repositorio a la carpeta que le toca. Ver
+  /// [LocalClone.move].
+  ///
+  /// Devuelve un aviso si quedó algo detrás que quitar a mano, o null.
+  Future<String?> relocate(String id) async {
+    final repo = workspace.byId(id);
+    if (repo == null) {
+      throw CloneException(tr('{0} no está abierto.', [id]));
+    }
+    if (session.cloneBase.isEmpty) {
+      throw CloneException(tr('Elige antes dónde van los repositorios.'));
+    }
+    final to = targetFor(repo.name);
+    if (sameFolder(repo.directory, to)) return null;
+
+    final target = await inspectTarget(
+      owner: repo.owner,
+      name: repo.name,
+      directory: to,
+    );
+    if (target.state == CloneTarget.alreadyCloned) {
+      // Otra copia del mismo repositorio, con lo que tenga sin enviar. Ni se
+      // escribe encima ni se elige por nadie cuál de las dos vale.
+      throw CloneException(
+        tr(
+          'En {0} ya hay otra copia de {1}, así que no muevo la de {2} '
+          'encima: cada una puede tener cambios que la otra no. Quita la que '
+          'sobre y vuelve a probar.',
+          [to, repo.id, repo.directory],
+        ),
+      );
+    }
+    if (target.state == CloneTarget.occupied) {
+      throw CloneException(
+        tr(
+          'En {0} ya hay otra cosa, así que no muevo {1} encima. Vacíala, o '
+          'cámbiale el nombre, y vuelve a probar.',
+          [to, repo.id],
+        ),
+      );
+    }
+
+    // Lo que está a medio escribir se guardaría en la carpeta de antes, y
+    // un fichero nuevo la volvería a crear con solo eso dentro.
+    if (!session.unsaved.isEmpty) {
+      throw CloneException(
+        tr(
+          'Hay cambios sin guardar ({0}). Guárdalos o descártalos antes de '
+          'mover {1}: irían a la carpeta de antes.',
+          [session.unsaved.what.join(', '), repo.id],
+        ),
+      );
+    }
+
+    // Lo congelado que se esté mirando es de la carpeta de antes.
+    if (session.isFrozen) session.freezes.leave();
+
+    final leftBehind = await LocalClone.move(from: repo.directory, to: to);
+    workspace = workspace.relocated(id, to);
+    await _save();
+    await session.refreshAccess();
+    await session.reloadCatalogue();
+    return leftBehind;
+  }
+
   /// Dónde se clonaría un repositorio, y qué hay ya ahí.
   ///
   /// Se consulta **antes** de clonar: es lo que permite decir «ya lo tienes,
@@ -329,7 +417,7 @@ class Repositories {
     required String name,
     String? directory,
   }) async {
-    final where = directory ?? '${session.cloneBase}/$name';
+    final where = directory ?? targetFor(name);
     if (!LocalClone.supported) {
       return (directory: where, state: CloneTarget.free);
     }
@@ -354,7 +442,7 @@ class Repositories {
     int? colour,
     void Function(String line)? onProgress,
   }) async {
-    final where = directory ?? '${session.cloneBase}/$name';
+    final where = directory ?? targetFor(name);
     final token = await session.currentToken();
 
     if (LocalClone.supported) {
@@ -398,7 +486,7 @@ class Repositories {
         tr('Preparar un repositorio necesita clonarlo, y aquí no se puede.'),
       );
     }
-    final where = directory ?? '${session.cloneBase}/$name';
+    final where = directory ?? targetFor(name);
     final token = await session.currentToken();
     final signedIn = session.auth.user;
     final author = signedIn == null

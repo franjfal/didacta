@@ -1,72 +1,84 @@
 WEBVTT
 
-00:00:01.200 --> 00:00:05.340
+00:00:01.200 --> 00:00:05.320
 Al terminar sabrás crear una
 salida propia, unos apuntes en A5,
 
-00:00:05.380 --> 00:00:08.273
-o retocar una de las que trae Didacta.
+00:00:05.360 --> 00:00:08.153
+y verla compilada antes de guardarla.
 
-00:00:09.123 --> 00:00:15.733
-Una plantilla es una salida: qué
-PDF sale de una lección. En Ajustes,
+00:00:09.003 --> 00:00:13.253
+Las plantillas tienen su sección en
+Ajustes, justo antes de los snippets.
 
-00:00:15.843 --> 00:00:19.236
-Bloques y plantillas,
-las que trae Didacta.
+00:00:13.903 --> 00:00:18.025
+Una plantilla es una salida:
+qué PDF sale de una lección.
 
-00:00:19.306 --> 00:00:23.636
-Editar aquí una de ellas la escribe en
-tu repositorio, con el mismo nombre,
+00:00:18.095 --> 00:00:21.925
+Cada fila dice qué produce,
+y en qué repositorios está.
 
-00:00:24.026 --> 00:00:29.339
-y desde ahí manda la tuya. Duplicar
-hace otra a partir de ella.
+00:00:22.775 --> 00:00:27.512
+Las que trae Didacta no están en
+ninguno: vienen con el programa.
 
-00:00:30.139 --> 00:00:33.989
-Duplicar Apuntes: un
-nombre, Apuntes de bolsillo.
+00:00:28.312 --> 00:00:34.942
+Duplicar Apuntes abre el editor. A la
+izquierda, lo que la define. A la derecha,
 
-00:00:34.539 --> 00:00:38.209
-Y como es la primera que se declara,
-se escriben también las de serie,
+00:00:35.092 --> 00:00:37.556
+una lección del ejemplo
+compilada con ella.
 
-00:00:38.339 --> 00:00:40.599
-para que todo se siga compilando igual.
+00:00:37.626 --> 00:00:43.096
+Un nombre, Apuntes de bolsillo; su
+identificador; y en las opciones de la clase,
 
-00:00:40.669 --> 00:00:47.939
-Su identificador, y las opciones de la
-clase: diez puntos y papel A5. Los ejes,
+00:00:43.366 --> 00:00:45.731
+diez puntos y papel A5.
 
-00:00:48.209 --> 00:00:49.369
-los de Apuntes.
+00:00:45.801 --> 00:00:49.692
+La vista previa se vuelve a
+compilar sola, sin guardar nada.
 
-00:00:49.409 --> 00:00:54.008
-Declarar, y ya está en la lista,
-en el repositorio del ejemplo.
-
-00:00:54.808 --> 00:01:00.498
-Cabecera: el LaTeX que se lee al
+00:00:50.492 --> 00:00:55.782
+Su cabecera es LaTeX que se lee al
 final del preámbulo de Didacta. Aquí,
 
-00:01:00.768 --> 00:01:04.313
-un interlineado más apretado,
-para que quepa en A5.
+00:00:56.072 --> 00:00:59.845
+unos márgenes de bolsillo y otro
+color para las definiciones.
 
-00:01:04.383 --> 00:01:08.833
-Y apagar una no la borra: sigue
+00:00:59.915 --> 00:01:02.569
+Y se ve al momento, antes de guardar.
+
+00:01:03.369 --> 00:01:08.079
+Se guarda en el repositorio marcado.
+Y como es la primera que se declara,
+
+00:01:08.209 --> 00:01:12.583
+se escriben también las de serie, para
+que todo se siga compilando igual.
+
+00:01:12.653 --> 00:01:16.382
+Guardar, y ya está en la
+lista, con su cabecera.
+
+00:01:16.452 --> 00:01:20.882
+Y apagarla no la borra: sigue
 declarada, con su cabecera,
 
-00:01:09.023 --> 00:01:11.136
+00:01:20.992 --> 00:01:23.181
 para el día que vuelva a hacer falta.
 
-00:01:11.936 --> 00:01:14.306
+00:01:23.981 --> 00:01:26.351
 La cabecera va al final del preámbulo:
 
-00:01:14.836 --> 00:01:17.705
+00:01:26.881 --> 00:01:29.750
 puede redefinir lo que
 Didacta acaba de definir.
 
-00:01:17.955 --> 00:01:20.944
-En el siguiente vídeo,
-tus propios snippets.
+00:01:30.000 --> 00:01:33.853
+En el siguiente vídeo, una
+plantilla en varios repositorios.

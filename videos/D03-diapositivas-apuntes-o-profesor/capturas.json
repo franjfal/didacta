@@ -2,7 +2,7 @@
   "capturas": [
     {
       "nombre": "profesor",
-      "ruta": "/unit/content/calculo/continuidad/funcion-continua",
+      "ruta": "/unit/content/calculo/continuidad/funciones-continuas/funcion-continua",
       "acciones": [
         {
           "esperar": 10

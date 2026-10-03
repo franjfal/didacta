@@ -94,6 +94,12 @@
 \newcommand{\didactatitle}[1]{%
   \iftoggle{didacta@slides}{\frametitle{#1}}{\subsection{#1}}}
 
+%% A frame title that exists only on the slide. For material written as notes
+%% first --a problem sheet, with its own sections-- where a heading per slide
+%% would fill the document with subsections that were never there.
+\newcommand{\slidetitle}[1]{%
+  \iftoggle{didacta@slides}{\frametitle{#1}}{}}
+
 %% ---------------------------------------------------------------------------
 %% Block forms
 %%

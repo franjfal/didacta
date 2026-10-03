@@ -2,9 +2,9 @@
   "codigo": "D12",
   "titulo": "Duplicar, mover o renombrar una lección",
   "fichero": "D12-duplicar-mover-o-renombrar.mp4",
-  "duracion": 56.84,
-  "megas": 3.6,
-  "fecha": "2026-09-28",
+  "duracion": 60.1,
+  "megas": 3.8,
+  "fecha": "2026-10-02",
   "version": "0.3.0",
   "capitulos": [
     {
@@ -24,7 +24,7 @@
       "titulo": "Mover o renombrar"
     },
     {
-      "t": 33.67,
+      "t": 36.93,
       "titulo": "Darla en otro tema"
     }
   ],
@@ -43,18 +43,22 @@
     },
     {
       "t": 23.51,
-      "texto": "Mover o renombrar le cambia la carpeta. Antes de confirmar, dice qué documentos la usan, de qué cursos, y los reescribe en el mismo cambio."
+      "texto": "Mover o renombrar la lleva a otro subtema, en las mismas columnas de la biblioteca, y deja cambiar el nombre de su carpeta."
     },
     {
-      "t": 34.17,
+      "t": 30.68,
+      "texto": "Y lo que la usa no hay que tocarlo: los temas la nombran por su id, que no cambia al moverla."
+    },
+    {
+      "t": 37.43,
       "texto": "Y darla en otro tema no la copia: es la misma lección, en dos sitios. Corregirla una vez la corrige en los dos."
     },
     {
-      "t": 42.88,
+      "t": 46.14,
       "texto": "Duplicar da dos lecciones; darla en otro tema, una en dos sitios."
     },
     {
-      "t": 48.3,
+      "t": 51.55,
       "texto": "En el siguiente vídeo, empiezas a preparar una asignatura: la pantalla de Asignaturas."
     }
   ]

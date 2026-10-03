@@ -38,6 +38,11 @@ const List<TexWord> didactaCommands = [
     'Título de la diapositiva o del apartado',
     arguments: '{}',
   ),
+  TexWord(
+    'slidetitle',
+    'Título solo de la diapositiva; en los apuntes, nada',
+    arguments: '{}',
+  ),
   TexWord('dpause', 'Pausa: revela lo siguiente en las diapositivas'),
   TexWord('onlyslides', 'Solo en las diapositivas', arguments: '{}'),
   TexWord('onlynotes', 'Solo en los apuntes', arguments: '{}'),

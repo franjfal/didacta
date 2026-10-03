@@ -142,13 +142,20 @@ List<Map<String, dynamic>> screenshotUnits() {
 
   for (final area in _areas) {
     for (final entry in area.topics.entries) {
-      for (final title in entry.value) {
+      for (final (position, title) in entry.value.indexed) {
         final slug = _slug(title);
         units.add(
           unitJson(
             path: 'content/${area.category}/${entry.key}/$slug',
             category: area.category,
             topic: entry.key,
+            // El tercer nivel de la biblioteca: lo primero de cada tema son
+            // sus fundamentos y lo demás, sus resultados. Sin él, la columna
+            // de subtemas de las capturas saldría con uno solo, «Sin
+            // subtema», que no es lo que ve nadie con su material.
+            subtopic: position < (entry.value.length + 1) ~/ 2
+                ? 'fundamentos'
+                : 'resultados',
             title: {'es': title},
             languages: _languages(index),
             tags: _tagsFor(area.category),
@@ -190,6 +197,7 @@ List<Map<String, dynamic>> screenshotUnits() {
           kind: 'problem',
           category: parts.first,
           topic: parts.last,
+          subtopic: 'ejercicios',
           title: {'es': title},
           languages: _languages(index),
           tags: const ['ejercicios'],

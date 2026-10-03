@@ -168,7 +168,7 @@
     },
     {
       "nombre": "traducida",
-      "ruta": "/unit/content/calculo/continuidad/teorema-de-bolzano?lang=va",
+      "ruta": "/unit/content/calculo/continuidad/bolzano/teorema-de-bolzano?lang=va",
       "red": true,
       "acciones": [
         {

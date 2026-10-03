@@ -500,6 +500,8 @@ class _Converter:
         una orden de visibilidad."""
         table = {
             "onlynotes": True, "onlybook": True, "onlyslides": False,
+            # El título de una diapositiva: en los apuntes no hay diapositiva.
+            "slidetitle": False,
             "onlyteacher": self.teacher, "onlystudent": not self.teacher,
             "onlyfull": self.full, "onlybrief": not self.full,
             "slidesandteacher": self.teacher, "notesandteacher": True,

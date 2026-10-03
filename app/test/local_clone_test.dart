@@ -296,6 +296,74 @@ void main() {
     });
   });
 
+  group('mover el clon a otra carpeta', () {
+    test('se lleva lo que no se ha guardado en un commit', () async {
+      File('${clone.directory}/$unitFile').writeAsStringSync('a medias\n');
+      final to = '${root.path}/Didacta/clone';
+
+      final left = await LocalClone.move(from: clone.directory, to: to);
+
+      expect(left, isNull);
+      expect(await Directory(clone.directory).exists(), isFalse);
+      final moved = LocalClone(directory: to);
+      expect((await moved.status()).dirtyPaths, contains(unitFile));
+      expect(File('$to/$unitFile').readAsStringSync(), 'a medias\n');
+    });
+
+    test('a una carpeta vacía, también', () async {
+      final to = '${root.path}/vacia';
+      await Directory(to).create();
+      await LocalClone.move(from: clone.directory, to: to);
+      expect((await LocalClone(directory: to).status()).isClean, isTrue);
+    });
+
+    test('no escribe encima de lo que haya', () async {
+      final to = '${root.path}/ocupada';
+      await Directory(to).create();
+      File('$to/algo.txt').writeAsStringSync('de otra persona\n');
+
+      await expectLater(
+        LocalClone.move(from: clone.directory, to: to),
+        throwsA(isA<CloneException>()),
+      );
+      expect(File('$to/algo.txt').readAsStringSync(), 'de otra persona\n');
+      expect((await clone.status()).isClean, isTrue);
+    });
+
+    test('no se mete dentro de sí mismo', () async {
+      await expectLater(
+        LocalClone.move(
+          from: clone.directory,
+          to: '${clone.directory}/dentro/clone',
+        ),
+        throwsA(isA<CloneException>()),
+      );
+      expect((await clone.status()).isClean, isTrue);
+    });
+
+    test('las versiones congeladas siguen abriéndose', () async {
+      // Viven dentro de `.git` y git las apunta por su ruta completa: sin
+      // arreglarlas, la congelación de antes de mover dejaba de abrir.
+      final head = await clone.head();
+      await clone.worktreeAt(head);
+      final to = '${root.path}/movido';
+
+      await LocalClone.move(from: clone.directory, to: to);
+
+      final moved = LocalClone(directory: to);
+      final trees = await moved.worktrees();
+      expect(trees, hasLength(1));
+      expect(trees.single.directory, startsWith(to));
+      final again = await moved.worktreeAt(head);
+      expect(again.directory, trees.single.directory);
+      final at = await Process.run('git', [
+        'rev-parse',
+        'HEAD',
+      ], workingDirectory: again.directory);
+      expect((at.stdout as String).trim(), head);
+    });
+  });
+
   group('committing', () {
     test('writes, commits and pushes, attributed to the author', () async {
       final before = await clone.readFile(unitFile);

@@ -300,34 +300,15 @@ void main() {
   });
 
   group('sugerencias', () {
-    Finder field(String key) => find.descendant(
-      of: find.byKey(ValueKey(key)),
-      matching: find.byType(TextField),
-    );
-
-    testWidgets('una categoría que no existe se dice', (tester) async {
+    testWidgets('el sitio no se escribe: se ve, y se mueve', (tester) async {
+      // Eran dos campos de texto, y cambiar la categoría sin mover la carpeta
+      // dejaba la lección en un sitio en la biblioteca y en otro en el disco.
       await pumpMetadata(tester, units: defaultUnits());
-      expect(find.byKey(const Key('note-categoría')), findsNothing);
-      await tester.enterText(field('unit-category'), 'analisys');
-      await settle(tester);
-      expect(find.byKey(const Key('note-categoría')), findsOneWidget);
-      expect(find.textContaining('Categoría nueva'), findsOneWidget);
-    });
-
-    testWidgets('elegir una sugerencia la escribe', (tester) async {
-      final gateway = await pumpMetadata(tester, units: defaultUnits());
-      await tester.enterText(field('unit-category'), 'alg');
-      await settle(tester);
-      expect(find.byKey(const Key('suggestions')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('suggestion-algebra')));
-      await settle(tester);
-      expect(find.byKey(const Key('note-categoría')), findsNothing);
-
-      await tester.tap(save);
-      await settle(tester);
-      await tapIfShown(tester, commit);
-      await settle(tester);
-      expect(gateway.commits.single.text, contains('category: algebra'));
+      expect(find.byKey(const ValueKey('unit-category')), findsNothing);
+      expect(find.byKey(const ValueKey('unit-topic')), findsNothing);
+      expect(find.byKey(const ValueKey('unit-place')), findsOneWidget);
+      expect(find.text('Analysis › Normed'), findsOneWidget);
+      expect(find.byKey(const ValueKey('unit-place-move')), findsOneWidget);
     });
 
     testWidgets('una etiqueta, de las que ya hay o nueva', (tester) async {

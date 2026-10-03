@@ -1,0 +1,115 @@
+# Las plantillas de este repositorio: las de serie, tal como las escribió
+# Didacta al declarar la primera, y la hoja del departamento.
+
+templates:
+  - id: slides
+    title:
+      es: Diapositivas
+    class: beamer
+    options: "10pt,notheorems"
+    axes: {audience: student, detail: brief, layout: normal, medium: slides, pauses: "on", solutions: hidden}
+
+  - id: slides-flat
+    title:
+      es: Diapositivas (sin pausas)
+    class: beamer
+    options: "10pt,handout,notheorems"
+    axes: {audience: student, detail: brief, layout: normal, medium: slides, pauses: "off", solutions: hidden}
+
+  - id: slides-teacher
+    title:
+      es: Diapositivas (profesor)
+    class: beamer
+    options: "10pt,handout,notheorems"
+    axes: {audience: teacher, detail: brief, layout: normal, medium: slides, notes: show, pauses: "off", solutions: full}
+
+  - id: notes
+    title:
+      es: Apuntes
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: student, detail: full, layout: normal, medium: document, pauses: "off", solutions: hidden}
+
+  - id: notes-solutions
+    title:
+      es: Apuntes (con soluciones)
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: student, detail: full, layout: normal, medium: document, pauses: "off", solutions: full}
+
+  - id: notes-teacher
+    title:
+      es: Apuntes (profesor)
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: teacher, detail: full, layout: normal, medium: document, pauses: "off", solutions: full}
+
+  - id: book
+    title:
+      es: Libro
+    class: book
+    options: "11pt,twoside,openright"
+    axes: {audience: student, detail: full, layout: normal, medium: document, pauses: "off", solutions: hidden}
+
+  - id: handout
+    title:
+      es: Guía
+    class: article
+    options: "11pt,oneside"
+    axes: {audience: student, detail: full, layout: compact, medium: document, pauses: "off", solutions: hidden}
+
+  - id: handout-answers
+    title:
+      es: Guía (con resultados)
+    class: article
+    options: "11pt,oneside"
+    axes: {audience: student, detail: full, layout: compact, medium: document, pauses: "off", solutions: answers}
+
+  - id: handout-teacher
+    title:
+      es: Guía (profesor)
+    class: article
+    options: "11pt,oneside"
+    axes: {audience: teacher, detail: full, layout: compact, medium: document, pauses: "off", solutions: full}
+
+  - id: problems
+    title:
+      es: Hoja de problemas
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: student, detail: full, layout: compact, medium: document, pauses: "off", solutions: hidden}
+
+  - id: problems-answers
+    title:
+      es: Hoja de problemas (con resultados)
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: student, detail: full, layout: compact, medium: document, pauses: "off", solutions: answers}
+
+  - id: problems-teacher
+    title:
+      es: Hoja de problemas (profesor)
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: teacher, detail: full, layout: compact, medium: document, pauses: "off", solutions: full}
+
+  - id: exam
+    title:
+      es: Examen
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: student, detail: brief, layout: exam, medium: document, pauses: "off", solutions: hidden}
+
+  - id: exam-marking
+    title:
+      es: Examen (profesor)
+    class: article
+    options: "12pt,oneside"
+    axes: {audience: teacher, detail: full, layout: exam, medium: document, pauses: "off", solutions: full}
+
+  - id: hoja-departamento
+    title:
+      es: Hoja del departamento
+    class: article
+    options: "11pt,oneside"
+    axes: {audience: student, detail: full, layout: compact, medium: document, pauses: "off", solutions: hidden}

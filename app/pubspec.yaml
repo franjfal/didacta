@@ -80,21 +80,21 @@ flutter:
   # `example_repository_test.dart` dice cuál.
   assets:
     - assets/ejemplo/
-    - assets/ejemplo/content/calculo/continuidad/funcion-continua/
-    - assets/ejemplo/content/calculo/continuidad/teorema-de-bolzano/
-    - assets/ejemplo/content/calculo/limites/algebra-de-limites/
-    - assets/ejemplo/content/calculo/limites/definicion-de-limite/
-    - assets/ejemplo/content/calculo/limites/historia-del-epsilon/
-    - assets/ejemplo/content/calculo/limites/limite-por-definicion/
+    - assets/ejemplo/content/calculo/continuidad/funciones-continuas/funcion-continua/
+    - assets/ejemplo/content/calculo/continuidad/bolzano/teorema-de-bolzano/
+    - assets/ejemplo/content/calculo/limites/calculo-de-limites/algebra-de-limites/
+    - assets/ejemplo/content/calculo/limites/concepto-de-limite/definicion-de-limite/
+    - assets/ejemplo/content/calculo/limites/concepto-de-limite/historia-del-epsilon/
+    - assets/ejemplo/content/calculo/limites/concepto-de-limite/limite-por-definicion/
     - assets/ejemplo/courses/calculo-i/
     - assets/ejemplo/courses/calculo-i/2026-2027/
     - assets/ejemplo/generated/
     # `.github/workflows/`, sin el punto: Flutter no empaqueta lo oculto, y
     # `loadExampleRepository` le pone el punto al subirlo.
     - assets/ejemplo/github/workflows/
-    - assets/ejemplo/problems/calculo/continuidad/discontinuidades-evitables/
-    - assets/ejemplo/problems/calculo/continuidad/tres-raices-por-bolzano/
-    - assets/ejemplo/problems/calculo/limites/limites-de-cocientes/
+    - assets/ejemplo/problems/calculo/continuidad/funciones-continuas/discontinuidades-evitables/
+    - assets/ejemplo/problems/calculo/continuidad/bolzano/tres-raices-por-bolzano/
+    - assets/ejemplo/problems/calculo/limites/calculo-de-limites/limites-de-cocientes/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

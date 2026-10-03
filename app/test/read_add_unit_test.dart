@@ -78,7 +78,7 @@ void main() {
     final saved = gateway.commits.single;
     expect(saved.path, 'courses/am-iii/2025-2026/year.yaml');
     final entries = CompositionFile(saved.text).blockFor('tema-1')!.entries;
-    expect(entries.last.value, 'algebra/matrices/rank');
+    expect(entries.last.value, 'algebra.matrices.rank');
     // Lo de antes, intacto y en su sitio: la entrada comentada sigue ahí.
     expect(saved.text, contains('# - unit: analysis/normed/dedekind'));
     // Sin haber pasado por el editor.

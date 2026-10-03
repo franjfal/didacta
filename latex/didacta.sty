@@ -105,6 +105,41 @@
 \RequirePackage{lmodern}
 \expandafter\RequirePackage\expandafter[\didactaBabelName]{babel}
 
+%% \DidactaTranslated{es=Resumen, va=Resum, en=Summary}
+%%
+%% Un texto en cada idioma, y sale el del idioma que se compila. Es lo que
+%% hacen los `didacta-lang-XX.def` con los nombres de Didacta --un
+%% «Observación» que en valenciano es «Observació»--, para lo que define un
+%% repositorio: el título de una caja propia escrito una vez en
+%% `snippets.yaml` sale «Resumen» en castellano y «Resum» en valenciano, sin
+%% un snippet por idioma.
+%%
+%% Sin el idioma que se compila, el primero de la lista: la aplicación
+%% escribe primero el de referencia del repositorio, y un título en otro
+%% idioma es mejor que una caja sin título. Un valor con comas o con `=` va
+%% entre llaves: `es={Uno, dos}`.
+\RequirePackage{pgfkeys}
+\pgfkeys{/didacta/translated/.unknown/.code={%
+  \ifdefined\didacta@tr@first\else\def\didacta@tr@first{#1}\fi
+  \edef\didacta@tr@key{\pgfkeyscurrentname}%
+  \ifdefstrequal{\didacta@tr@key}{\DidactaLanguage}%
+    {\def\didacta@tr@text{#1}}{}%
+}}
+\DeclareRobustCommand{\DidactaTranslated}[1]{%
+  \begingroup
+    \let\didacta@tr@first\undefined
+    \let\didacta@tr@text\undefined
+    \pgfqkeys{/didacta/translated}{#1}%
+    \ifdefined\didacta@tr@text\else
+      \ifdefined\didacta@tr@first
+        \let\didacta@tr@text\didacta@tr@first
+      \else
+        \let\didacta@tr@text\@empty
+      \fi
+    \fi
+  \expandafter\endgroup\expandafter\@firstofone\expandafter{\didacta@tr@text}%
+}
+
 %% La coma decimal y el espacio antes de %: una sola política para todos.
 %%
 %% El castellano y el gallego de babel convierten `3.14` en «3,14» dentro de
@@ -485,10 +520,41 @@
   \fi
 }
 
+%% En diapositivas, un apartado sale cuando llega su primera diapositiva, y no
+%% antes. Un apartado entero de material que solo va en los apuntes --los
+%% problemas propuestos del final de una práctica-- no tiene ninguna, y si
+%% saliera al escribirse dejaría una portada de «Apartado 4» seguida de nada,
+%% y su línea en el índice. Así no sale, ni en el índice, sin que la
+%% composición tenga que decir nada: un apartado sin diapositivas no existe en
+%% las diapositivas. En los apuntes sale donde se escribe, como siempre.
+\def\didacta@pending@section{}
+\def\didacta@pending@subsection{}
 \newcommand{\DidactaSection}[1]{%
   \didacta@sec@resolve{#1}%
-  \section{\didacta@sec@now}%
+  \iftoggle{didacta@slides}{%
+    \global\let\didacta@pending@section\didacta@sec@now
+    \global\let\didacta@pending@subsection\@empty
+  }{%
+    \section{\didacta@sec@now}%
+  }%
 }
+
+%% Lo pendiente, justo antes de la diapositiva que lo estrena. Se vacía antes
+%% de escribirlo: la portada de un apartado es también una diapositiva, y
+%% volvería a pasar por aquí.
+\newcommand{\didacta@flush@sections}{%
+  \ifx\didacta@pending@section\@empty\else
+    \let\didacta@tmp\didacta@pending@section
+    \global\let\didacta@pending@section\@empty
+    \expandafter\section\expandafter{\didacta@tmp}%
+  \fi
+  \ifx\didacta@pending@subsection\@empty\else
+    \let\didacta@tmp\didacta@pending@subsection
+    \global\let\didacta@pending@subsection\@empty
+    \expandafter\subsection\expandafter{\didacta@tmp}%
+  \fi
+}
+\iftoggle{didacta@slides}{\AddToHook{env/frame/before}{\didacta@flush@sections}}{}
 
 %% Un subapartado, con las mismas claves. La composición los escribe desde
 %% que `year.yaml` los tiene, y sin esto el `\subsection` seguía saliendo en
@@ -496,26 +562,45 @@
 %% peor que ninguna, porque no se ve al revisar el apartado.
 \newcommand{\DidactaSubsection}[1]{%
   \didacta@sec@resolve{#1}%
-  \subsection{\didacta@sec@now}%
+  \iftoggle{didacta@slides}{%
+    \global\let\didacta@pending@subsection\didacta@sec@now
+  }{%
+    \subsection{\didacta@sec@now}%
+  }%
 }
+
+%% beamer no trae \paragraph, y el material escrito como apuntes lo usa para
+%% el encabezado en negrita de un párrafo («La suma de los n primeros
+%% términos.»). En una diapositiva es lo mismo: el texto en negrita y detrás
+%% el párrafo.
+\iftoggle{didacta@slides}{%
+  \providecommand{\paragraph}[1]{\par\smallskip\noindent\textbf{#1}\enspace}%
+}{}
 
 %% ---------------------------------------------------------------------------
 %% Including content
 %%
+%%   \DidactaUnit{u-3fa9c2e1b0d4}                        by its id
 %%   \DidactaUnit{analysis/normed-spaces/definition}     from content/
 %%   \DidactaProblem{analysis/normed-spaces/norm-axioms} from problems/
 %%
-%% A reference is a path inside the content repository's own tree, resolved
-%% against \DidactaContentRoot -- the repository root, which the engine passes
-%% in. So a composition never contains `../../../../`. Getting rid of those
-%% chains is a concrete win over the legacy layout, where the same import had
-%% to be written with four, five or six levels of `../` depending on where the
-%% master happened to sit, and where moving a folder broke every one of them.
+%% A composition names a unit by the `id:` of its unit.yaml. LaTeX does not
+%% read unit.yaml, so the engine writes, for every build, the folder each id
+%% lives in (\DidactaUnitAt, in the file \DidactaUnitReferences). That is what
+%% lets a unit move to another folder of the library without a single
+%% composition being rewritten: the id stays, and the map says where it went.
+%%
+%% An argument that is not a known id is a path inside the repository's own
+%% tree, resolved against \DidactaContentRoot -- the repository root, which
+%% the engine passes in. That is what a preview of a lone unit writes, and
+%% what a document compiled by hand can still write. Either way a composition
+%% never contains `../../../../`, which in the legacy layout had to be written
+%% with four, five or six levels depending on where the master sat.
 %%
 %% The optional argument overrides the language for one unit, which is what
 %% makes a bilingual handout possible without duplicating the composition:
 %%
-%%   \DidactaUnit[en]{analysis/normed-spaces/definition}
+%%   \DidactaUnit[en]{u-3fa9c2e1b0d4}
 %%
 %% `import` shifts the graphics path too, so a unit refers to its own figures
 %% as `figures/x.pdf` and works wherever it is included from.
@@ -536,44 +621,57 @@
 \newcommand{\DidactaProblem}[2][]{%
   \didacta@include@unit{\DidactaProblemDir}{#2}{#1}}
 
+%% Where a unit is, by id: its folder from the repository root, tree included
+%% (`content/calculo/limites/concepto/definicion`). The tree comes with it
+%% because an id does not say whether it is a lesson or a problem.
+\newcommand{\DidactaUnitAt}[2]{\@namedef{didacta@at@#1}{#2}}
+
+%% El idioma original de cada lección que no está escrita primero en
+%% castellano. Lo sabe el `unit.yaml` (`reference:`), que LaTeX no lee: el
+%% motor lo reúne en un fichero y lo pasa por \DidactaUnitReferences. Va por
+%% la carpeta, árbol incluido, como \DidactaUnitAt.
+\newcommand{\DidactaUnitReference}[2]{\@namedef{didacta@reference@#1}{#2}}
+\@ifundefined{DidactaUnitReferences}{}{%
+  \IfFileExists{\DidactaUnitReferences}{\input{\DidactaUnitReferences}}{}}
+
+%% #1 the tree a path resolves against, #2 the id or the path, #3 a language.
 \newcommand{\didacta@include@unit}[3]{%
   \begingroup
     \edef\didacta@unit@lang{\ifblank{#3}{\DidactaLanguage}{#3}}%
-    \edef\didacta@unit@path{\DidactaContentRoot#1#2/}%
+    \ifcsname didacta@at@#2\endcsname
+      \edef\didacta@unit@dir{\csname didacta@at@#2\endcsname}%
+    \else
+      \edef\didacta@unit@dir{#1#2}%
+    \fi
+    \edef\didacta@unit@path{\DidactaContentRoot\didacta@unit@dir/}%
     \IfFileExists{\didacta@unit@path\didacta@unit@lang.tex}{%
       \subimport{\didacta@unit@path}{\didacta@unit@lang}%
     }{%
       %% Fall back to the reference language rather than showing a hole: a
       %% deck with one untranslated slide is far more useful than a deck with
       %% a gap, and the placeholder still says which language is missing.
-      \didacta@unit@fallback{#1}{#2}{\didacta@unit@lang}%
+      \didacta@unit@fallback{\didacta@unit@dir}{#2}{\didacta@unit@lang}%
     }%
   \endgroup
 }
 
-%% El idioma original de cada lección que no está escrita primero en
-%% castellano. Lo sabe el `unit.yaml` (`reference:`), que LaTeX no lee: el
-%% motor lo reúne en un fichero y lo pasa por \DidactaUnitReferences.
-\newcommand{\DidactaUnitReference}[2]{\@namedef{didacta@reference@#1}{#2}}
-\@ifundefined{DidactaUnitReferences}{}{%
-  \IfFileExists{\DidactaUnitReferences}{\input{\DidactaUnitReferences}}{}}
-
 %% Try each language in turn, then give up visibly: first the unit's own
 %% original, which is the version everything else was translated from, and
-%% then every language Didacta prints, not just three.
+%% then every language Didacta prints, not just three. #1 is the folder, #2
+%% what the composition wrote, which is what the warning names.
 \newcommand{\didacta@unit@fallback}[3]{%
   \def\didacta@found{0}%
   \edef\didacta@order{%
-    \ifcsname didacta@reference@#1#2\endcsname
-      \csname didacta@reference@#1#2\endcsname,%
+    \ifcsname didacta@reference@#1\endcsname
+      \csname didacta@reference@#1\endcsname,%
     \fi
     es,va,ca,en,gl,eu,fr,it,pt,de}%
   \@for\didacta@try:=\didacta@order\do{%
     \if\didacta@found0
-      \IfFileExists{\DidactaContentRoot#1#2/\didacta@try.tex}{%
+      \IfFileExists{\DidactaContentRoot#1/\didacta@try.tex}{%
         \PackageWarning{didacta}{%
           No `#3' version of `#2'; using `\didacta@try' instead}%
-        \subimport{\DidactaContentRoot#1#2/}{\didacta@try}%
+        \subimport{\DidactaContentRoot#1/}{\didacta@try}%
         \def\didacta@found{1}%
       }{}%
     \fi

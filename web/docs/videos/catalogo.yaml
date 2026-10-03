@@ -142,7 +142,7 @@ rutas:
       - codigo: C1
         titulo: Recorrer la biblioteca
         minutos: 2
-        sabras: llegar a cualquier lección en tres clics y leer lo que dice cada fila.
+        sabras: llegar a cualquier lección en tres clics --categoría, tema y subtema-- y leer lo que dice cada fila.
         idea: la biblioteca respeta la organización que el material ya tiene en lugar de enseñar una lista de miles.
         mas:
           - {titulo: La biblioteca, pagina: app/biblioteca.md}
@@ -160,6 +160,14 @@ rutas:
         idea: los filtros recortan también el árbol, no solo la búsqueda.
         mas:
           - {titulo: Los filtros, pagina: "app/biblioteca.md#los-filtros"}
+      - codigo: C4
+        titulo: Organizar la biblioteca
+        minutos: 1.5
+        sabras: crear temas y subtemas desde las columnas, y llevar una lección de un sitio a otro.
+        idea: lo que ves en las columnas es lo que hay en tu carpeta.
+        mas:
+          - {titulo: Crear categorías, temas y subtemas, pagina: "app/biblioteca.md#crear-sitios"}
+          - {titulo: Mover una lección, pagina: "app/biblioteca.md#mover"}
 
   - letra: D
     titulo: Escribir una lección
@@ -235,8 +243,8 @@ rutas:
       - codigo: D11
         titulo: Crear una lección nueva
         minutos: 1.5
-        sabras: crear una lección en el tema correcto.
-        idea: el nombre de la carpeta es la dirección con la que la llaman los documentos.
+        sabras: crear una lección en el sitio correcto.
+        idea: cada lección nace en su sitio --categoría, tema y subtema--, que es también su carpeta.
         mas:
           - {titulo: Crear una lección, pagina: "app/biblioteca.md#crear-una-leccion"}
       - codigo: D12
@@ -606,11 +614,22 @@ rutas:
         titulo: "Plantillas: tus propias salidas"
         minutos: 3
         marca: Completa
-        sabras: crear una salida propia --unos apuntes en A5-- o retocar una de las que trae Didacta.
+        sabras: crear una salida propia --unos apuntes en A5-- y verla compilada antes de guardarla.
         idea: la cabecera va al final del preámbulo de Didacta, así que puede redefinir lo que Didacta acaba de definir.
         mas:
-          - {titulo: Plantillas, pagina: "app/ajustes.md#plantillas"}
+          - {titulo: Plantillas de compilación, pagina: "app/ajustes.md#plantillas"}
+          - {titulo: El editor, pagina: "app/ajustes.md#plantillas-editor"}
           - {titulo: Las plantillas, pagina: "conceptos/perfiles.md#las-plantillas-tus-propias-salidas"}
+      # Detrás del L4 aunque se numere L10: de L5 a L9 ya tenían su dirección.
+      - codigo: L10
+        titulo: Una plantilla en varios repositorios
+        minutos: 2.5
+        marca: Completa
+        sabras: tener la misma plantilla en varios repositorios, ver qué se compila con ella y guardar las tuyas en el programa.
+        idea: "con un repositorio basta para usarla; en dos, viaja con los dos materiales."
+        mas:
+          - {titulo: La lista, pagina: "app/ajustes.md#plantillas-lista"}
+          - {titulo: La carpeta del programa, pagina: "app/ajustes.md#carpeta-del-programa"}
       - codigo: L5
         titulo: Snippets propios
         minutos: 3
@@ -752,6 +771,7 @@ preguntas:
       - [organizar el material de varias personas, [L2]]
       - [añadir «Prácticas» a la teoría y los problemas, [L3]]
       - [unos apuntes con otro formato o con el membrete del departamento, [L4]]
+      - [la misma plantilla en el repositorio de la teoría y en el de problemas, [L10]]
       - [una caja propia en la barra del editor, [L5]]
       - [que GitHub compile solo, [L7]]
       - [usar un asistente de IA con el material, [L8]]

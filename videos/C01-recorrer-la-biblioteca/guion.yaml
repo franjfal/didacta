@@ -24,19 +24,25 @@ escenas:
           lo que dice cada fila.
 
   - id: columnas
-    capitulo: Tres columnas
+    capitulo: Tres niveles
     antes: 0.5
     pantalla: columnas
     frases:
       - id: orden
         texto: >-
-          La biblioteca enseña el material como ya está ordenado: la categoría,
-          el tema, y sus lecciones.
+          La biblioteca enseña el material en columnas, como el Finder: la
+          categoría, el tema, el subtema, y sus lecciones.
         pasos:
           - {al: inicio, reposo: true}
-          - {en: categoría, resalta: calculo, hasta: 1.3}
-          - {en: tema, resalta: limites, hasta: 1.3}
+          - {en: categoría, resalta: calculo, hasta: 1.1}
+          - {en: tema, resalta: limites, hasta: 1.1}
+          - {en: subtema, resalta: concepto, hasta: 1.1}
           - {en: lecciones, resalta: lecciones}
+      - id: sitio
+        texto: >-
+          Cada lección vive en un subtema, y solo en uno: es también su carpeta.
+        pasos:
+          - {en: subtema, resalta: subtemas, etiqueta: "Un subtema por lección", lado: derecha}
       - id: cuanto
         texto: >-
           Cada nivel dice cuánto contiene, y cuánto está traducido al idioma

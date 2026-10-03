@@ -116,6 +116,7 @@ class MergedCatalogueSource extends CatalogueSource {
       shared: merged.shared,
       snippets: merged.snippets,
       taxonomyTitles: merged.taxonomyTitles,
+      taxonomyDeclared: merged.taxonomyDeclared,
     );
   }
 }

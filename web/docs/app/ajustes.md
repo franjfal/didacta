@@ -16,7 +16,8 @@ columna pasa a ser una tira arriba.
 | [Guardar y sincronizar](#guardar) | qué pasa al guardar, las preferencias que viajan, la carpeta de reparto | `guardar` |
 | [Idiomas](#idiomas) | con cuáles trabajas y a cuáles traduce cada repositorio | `idiomas` |
 | [Traducción automática](#traduccion) | las claves del traductor y el glosario | `traduccion` |
-| [Bloques y plantillas](#material) | las partes de una asignatura, las salidas y el catálogo | `material` |
+| [Bloques y catálogo](#material) | las partes de una asignatura y lo que hay cargado | `material` |
+| [Plantillas de compilación](#plantillas) | qué PDF salen, cómo quedan y en qué repositorios están | `plantillas` |
 | [Snippets de LaTeX](#snippets) | lo que envuelve la barra del editor | `snippets` |
 | [Herramientas](#herramientas) | git, Python, LaTeX y el motor; cómo se compila | `herramientas` |
 | [Servidor MCP](#mcp) | un asistente de IA sobre tu material | `mcp` |
@@ -27,7 +28,7 @@ columna pasa a ser una tira arriba.
 
 En la web no salen *Herramientas* ni *Empezar de cero*: allí no hay nada que
 instalar ni que borrar. Y con la [interfaz](#interfaz) *Esencial*, que es la de
-salida, tampoco *Bloques y plantillas* ni *Servidor MCP*, que son de quien
+salida, tampoco *Bloques y catálogo* ni *Servidor MCP*, que son de quien
 mantiene el repositorio del departamento: salen con *Completa*, cuando se llega
 a ellas por un enlace, y el servidor también mientras esté encendido.
 
@@ -61,7 +62,15 @@ tiene cambios sin guardar o sin enviar a GitHub, el diálogo lo dice antes.
 Se añaden desde GitHub --Didacta lista los que alcanza tu cuenta-- o eligiendo
 una carpeta que ya esté clonada.
 
-**Dónde se clonan** se elige aquí. Por defecto, `~/Didacta`.
+**Dónde van** se elige aquí: una carpeta para todos, y dentro, cada
+repositorio en la suya. Por defecto, `~/Didacta`.
+
+Uno que esté **fuera** --clonado antes de elegirla, o añadido como carpeta que
+ya tenías-- lo dice debajo de su nombre, con un botón para **llevarlo allí**.
+Al cambiar de carpeta, Didacta ofrece llevar todos los de antes a la nueva, y
+al añadir una carpeta de otro sitio pregunta si moverla. Se mueve la carpeta
+entera, con lo que tenga sin enviar; si en el destino ya hay algo, no se toca,
+y con cambios sin guardar en alguna pantalla tampoco se mueve nada.
 
 ### Compilar en GitHub { #compilar-en-github }
 
@@ -205,10 +214,11 @@ términos que una traducción tiene que respetar.
 
 [:octicons-arrow-right-24: Traducción automática](traduccion.md#traduccion-automatica)
 
-## Bloques y plantillas { #material }
+## Bloques y catálogo { #material }
 
-Se leen en este orden: el bloque dice **qué** material es, la plantilla **qué
-sale** de él, y el catálogo enseña el resultado.
+El bloque dice **qué** material es, y el catálogo enseña lo que hay cargado.
+Lo que **sale** de él --las plantillas-- tiene [su propia
+sección](#plantillas).
 
 ### Bloques { #bloques }
 
@@ -267,48 +277,101 @@ ninguna parte sin que nadie lo haya decidido.
     único que cambia es que el bloque se enseña por su id. Quien no tenga el
     repositorio donde alguien puso el nombre sigue viendo todo su material.
 
-### Plantillas
+### El catálogo
+
+Lo que Didacta ha leído de tus repositorios, en cifras: cuántas unidades,
+asignaturas, salidas e idiomas, el hash del contenido y de dónde se ha leído.
+**Recargar el catálogo** lo vuelve a leer sin cerrar la aplicación, y si algo
+no se pudo leer --un `unit.yaml` roto, un curso que nombra un idioma que no
+está--, la lista de problemas sale aquí.
+
+## Plantillas de compilación { #plantillas }
 
 Una **plantilla** es una salida: qué PDF sale de una lección o de un tema. Trae
 la clase de documento, sus opciones, los cinco ejes y --si quieres-- tu propia
-cabecera de LaTeX.
+cabecera de LaTeX. Esta sección sale con las dos [interfaces](#interfaz): la
+cabecera de tu departamento o tus colores también son de quien no mantiene el
+repositorio.
 
-Las quince que trae Didacta salen aquí desde el primer día. Se pueden apagar,
-renombrar, duplicar y editar, y hay una cosa que conviene entender antes:
+Se parece a la de los snippets: **una lista** con todas, y cada una se abre en
+**un editor con su vista previa**.
 
-!!! warning "Editar una de serie la escribe en tu repositorio"
+### La lista { #plantillas-lista }
 
-    Las quince viven en el programa y **no se tocan ahí**. Al editar una,
-    Didacta la declara en el repositorio que elijas con su mismo id, y a partir
-    de ese momento manda la tuya. La de serie se queda intacta, que es lo que
-    mantiene vivo un `pdflatex master.tex` a mano en un editor.
+Cada fila dice qué produce --su id, la clase, cuánto enseña de un ejercicio,
+si tiene cabecera propia-- y **cuántas cosas la usan**. Debajo, una casilla por
+repositorio:
 
-    El formulario lo dice antes de guardar, y el identificador no se puede
-    cambiar: es justamente lo que hace que sustituya a la otra.
+- **marcada**, el repositorio la declara en su `templates.yaml`;
+- **marcar otro la copia allí**, entera y con su cabecera;
+- **desmarcar uno la quita solo de ese**. Si era el último, pregunta: lo que la
+  nombre deja de compilarla.
+
+Con un repositorio basta para usarla en todos: el bloque de teoría puede
+compilarse con una plantilla que declara el de problemas. Tenerla también en
+otro es lo que hace que viaje con ese material y que no dependa de tener
+abierto el primero. Si los dos acaban diciendo cosas distintas, lo avisa
+[Entre repositorios](entre-repos.md).
 
 #### Apagar no es borrar
 
-La casilla de cada plantilla decide si esa versión se compila. Apagarla la deja
-declarada, **con su cabecera**, y fuera de todo lo que se saca: es lo que se
-quiere de una versión que este curso no se da. Borrarla perdería justo lo que
-había que guardar.
+La casilla grande de cada plantilla decide si esa versión se compila. Apagarla
+la deja declarada, **con su cabecera**, y fuera de todo lo que se saca: es lo
+que se quiere de una versión que este curso no se da. Borrarla perdería justo
+lo que había que guardar. Es también la respuesta a tener quince salidas y usar
+cuatro.
 
-Es también la respuesta a tener quince salidas y usar cuatro.
+### El editor { #plantillas-editor }
 
-#### Dónde se guarda cada una
+**Editar**, **Duplicar** y **Nueva plantilla** abren el mismo editor. A la
+izquierda, lo que la define:
 
-Al crear o duplicar una plantilla se elige dónde vive:
+- **el nombre**, en los idiomas de los repositorios donde está;
+- **el identificador**, que es lo que escriben los bloques y los temas y no se
+  cambia;
+- **la clase y sus opciones**, y **los ejes** --medio, detalle, audiencia,
+  soluciones, pausas, maqueta--;
+- **su cabecera de LaTeX**. Se lee **al final del preámbulo de Didacta**, así
+  que puede redefinir lo que Didacta acaba de definir: los márgenes, los
+  colores, un entorno. No lleva `\documentclass` ni `\begin{document}`; de eso
+  se encarga la plantilla;
+- **en qué repositorios está**, con las mismas casillas que la lista;
+- **dónde se usa**: los bloques que la nombran, los que la heredan por no
+  decir nada, los documentos que la piden en su `year.yaml` y las lecciones que
+  se apartan de su bloque para pedirla.
 
-- **en un repositorio** --lo normal--: viaja con el material, la ve quien lo
-  comparte y la protege el historial de git;
-- **en el programa**: para lo que es tuyo y no de la asignatura --el membrete
-  de tu departamento, tus colores-- o para cuando el material es de otra
-  persona y no puedes escribir en él.
+A la derecha, **la vista previa**: una lección de verdad compilada con lo que
+hay en la pantalla, **sin guardar**. Se vuelve a compilar al dejar de escribir
+(o con ⌘↵), y la lección se elige arriba --por defecto, la primera que se
+compila con esa plantilla--. Si no compila, sale lo que ha dicho LaTeX.
+
+!!! tip "Diapositivas con beamer"
+
+    Con `beamer`, la clase necesita la opción `notheorems`: sin ella beamer
+    define sus propios teoremas, chocan con los de Didacta y no compila nada.
+    Todas las diapositivas de serie la llevan, y el editor avisa si falta.
+
+!!! warning "Editar una de serie la escribe en tu repositorio"
+
+    Las quince que trae Didacta viven en el programa y **no se tocan ahí**. Al
+    editar una, Didacta la declara en el repositorio que marques con su mismo
+    id, y a partir de ese momento manda la tuya. La de serie se queda intacta,
+    que es lo que mantiene vivo un `pdflatex master.tex` a mano en un editor.
+
+    El editor lo dice antes de guardar, y el identificador no se puede
+    cambiar: es justamente lo que hace que sustituya a la otra.
+
+### La carpeta del programa { #carpeta-del-programa }
+
+Además de los repositorios, una plantilla se puede guardar **en el programa**:
+para lo que es tuyo y no de la asignatura --el membrete de tu departamento, tus
+colores-- o para cuando el material es de otra persona y no puedes escribir en
+él. Sale como una casilla más, *programa*, en cada fila y en el editor.
 
 !!! danger "Lo que se guarda en el programa no lo protege nadie"
 
     No está en git, no se sincroniza y **se va con el ordenador**. Por eso los
-    dos botones de al lado no son un lujo:
+    dos botones del final de la sección no son un lujo:
 
     - **Copiar a una carpeta** saca un `templates.yaml` y sus `.tex` donde
       digas. Es la copia de seguridad, y se puede meter tal cual en cualquier
@@ -317,25 +380,10 @@ Al crear o duplicar una plantilla se elige dónde vive:
       nombre se conserva: recuperar una copia encima de lo que se ha escrito
       después es la forma más rápida de perder el trabajo de una tarde.
 
-    Ajustes dice cuántas plantillas están ahí y en qué carpeta, para que el día
-    que cambies de ordenador sepas qué llevarte.
-
-#### La cabecera
-
-El botón **Cabecera** abre el LaTeX de esa plantilla. Se lee **al final del
-preámbulo de Didacta**, así que puede redefinir lo que Didacta acaba de
-definir: los márgenes, los colores, un entorno. No lleva `\documentclass` ni
-`\begin{document}`; de eso se encarga la plantilla.
+    La sección dice cuántas plantillas están ahí y en qué carpeta, para que el
+    día que cambies de ordenador sepas qué llevarte.
 
 [:octicons-arrow-right-24: Qué es una plantilla, entero](../conceptos/perfiles.md#las-plantillas-tus-propias-salidas)
-
-### El catálogo
-
-Lo que Didacta ha leído de tus repositorios, en cifras: cuántas unidades,
-asignaturas, salidas e idiomas, el hash del contenido y de dónde se ha leído.
-**Recargar el catálogo** lo vuelve a leer sin cerrar la aplicación, y si algo
-no se pudo leer --un `unit.yaml` roto, un curso que nombra un idioma que no
-está--, la lista de problemas sale aquí.
 
 ## Snippets de LaTeX { #snippets }
 
@@ -365,12 +413,29 @@ izquierda y la **vista previa** a la derecha:
 - **cómo se define**: *Ya definido* si lo define Didacta o un paquete; *Caja de
   teorema* para una caja como las de Didacta, con su pestaña y su número, de
   la que solo se elige el título y el color; o *LaTeX propio*;
+- **el título en cada idioma**: si los repositorios elegidos se dan en más de
+  un idioma, la caja de teorema pide un título por cada uno --«Resumen»,
+  «Resum», «Summary»-- y el PDF saca el del idioma en que se compila. Uno
+  vacío saca el del idioma de referencia. En *LaTeX propio* se consigue lo
+  mismo con `\DidactaTranslated`, en cualquier texto de la definición;
 - un **texto de ejemplo**, que es lo que se ve dentro en la vista previa;
 - **en qué repositorios** se ofrece.
 
 La vista previa **compila de verdad**, con el preámbulo de Didacta, mientras
-escribes: en apuntes, en la versión del profesor o en diapositivas. Si la
-definición tiene un error, enseña lo que dijo LaTeX.
+escribes: en apuntes, en la versión del profesor o en diapositivas, y en
+cualquiera de los idiomas de los repositorios elegidos. Si la definición tiene
+un error, enseña lo que dijo LaTeX.
+
+!!! tip "Un texto que cambia con el idioma"
+
+    ```latex
+    \DidactaNewTheorem{resumen}{\DidactaTranslated{es=Resumen, va=Resum, en=Summary}}{didactaThm}
+    ```
+
+    Sale el texto del idioma que se compila; en uno que no está en la lista,
+    el primero. Un texto con comas o con `=` va entre llaves:
+    `es={Uno, dos}`. Los snippets de Didacta no lo necesitan: sus nombres ya
+    salen traducidos.
 
 !!! warning "Una definición va al preámbulo de todo el repositorio"
 
@@ -580,7 +645,7 @@ mantiene el repositorio del departamento:
 - copiar el comando para compilar un documento desde el terminal;
 - **Entre repos** en la columna de la izquierda siempre que haya varios
   repositorios abiertos. Con *Esencial* sale solo cuando hay algo que mirar;
-- en Ajustes, **Bloques y plantillas**, **Servidor MCP** y
+- en Ajustes, **Bloques y catálogo**, **Servidor MCP** y
   [poner los ids](#poner-los-ids-a-las-lecciones);
 - la ruta y la versión de cada herramienta y del motor. Con *Esencial*, si
   todo está en su sitio, la lista sale en una línea con **Ver detalles**; si

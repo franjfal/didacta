@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.join(ROOT, "engine"))
 from didacta import review  # noqa: E402
 
 LESSONS = os.path.join("content", "calculo", "limites")
-ALGEBRA = os.path.join(LESSONS, "algebra-de-limites")
-DEFINITION = os.path.join(LESSONS, "definicion-de-limite")
+ALGEBRA = os.path.join(LESSONS, "calculo-de-limites", "algebra-de-limites")
+DEFINITION = os.path.join(LESSONS, "concepto-de-limite", "definicion-de-limite")
 
 
 class ReviewTests(unittest.TestCase):
@@ -69,7 +69,7 @@ class ReviewTests(unittest.TestCase):
         found = self.found(report, "babel")
         self.assertEqual(len(found), 2)
         self.assertEqual(found[0]["language"], "va")
-        self.assertEqual(found[0]["unit"], "content/calculo/limites/algebra-de-limites")
+        self.assertEqual(found[0]["unit"], "content/calculo/limites/calculo-de-limites/algebra-de-limites")
         self.assertEqual(found[0]["line"], self.lines_of(va))
         self.assertIn(r"\sptext", found[0]["message"])
         self.assertEqual(found[0]["severity"], "error")
@@ -143,7 +143,7 @@ class ReviewTests(unittest.TestCase):
                 "va: {status: translated, source_hash: 'sha256:0000000000000000'}"))
         found = self.found(self.check(), "outdated")
         self.assertEqual([f["language"] for f in found], ["va"])
-        self.assertEqual(found[0]["unit"], "content/calculo/limites/algebra-de-limites")
+        self.assertEqual(found[0]["unit"], "content/calculo/limites/calculo-de-limites/algebra-de-limites")
 
     def test_estricto_los_avisos_tambien_fallan(self):
         self.append(os.path.join(ALGEBRA, "es.tex"), r"\ref{nada}")
@@ -166,7 +166,7 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(len(self.found(report, "decimals")), 1)
         self.assertEqual(len(self.found(report, "formulas")), 1)
         unused = self.found(report, "unused")
-        self.assertIn("content/calculo/limites/historia-del-epsilon",
+        self.assertIn("content/calculo/limites/concepto-de-limite/historia-del-epsilon",
                       [f["unit"] for f in unused])
         self.assertEqual(unused[0]["severity"], "info")
 
@@ -247,7 +247,7 @@ class OverflowTests(unittest.TestCase):
         self.assertEqual(done.returncode, 0, done.stdout[-800:])
         report = json.loads(cli("check", "--json").stdout)
         [slide] = [f for f in report["findings"] if f["check"] == "overflow"]
-        self.assertEqual(slide["unit"], "content/calculo/limites/algebra-de-limites")
+        self.assertEqual(slide["unit"], "content/calculo/limites/calculo-de-limites/algebra-de-limites")
         self.assertEqual(slide["language"], "es")
         self.assertEqual(slide["line"], before + 2)
         self.assertEqual(slide["document"], "calculo-i@2026-2027/tema-1")

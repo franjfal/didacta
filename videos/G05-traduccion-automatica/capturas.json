@@ -46,19 +46,19 @@
         },
         {
           "pulsar": {
-            "clave": "pick-content/calculo/continuidad/funcion-continua"
+            "clave": "pick-content/calculo/continuidad/funciones-continuas/funcion-continua"
           },
           "esperar": 3
         },
         {
           "pulsar": {
-            "clave": "pick-content/calculo/limites/algebra-de-limites"
+            "clave": "pick-content/calculo/limites/calculo-de-limites/algebra-de-limites"
           },
           "esperar": 3
         },
         {
           "pulsar": {
-            "clave": "pick-content/calculo/limites/historia-del-epsilon"
+            "clave": "pick-content/calculo/limites/concepto-de-limite/historia-del-epsilon"
           },
           "esperar": 3
         },
@@ -73,13 +73,13 @@
                 "contiene": "lecciones marcadas"
               },
               "f1": {
-                "clave": "pick-content/calculo/continuidad/funcion-continua"
+                "clave": "pick-content/calculo/continuidad/funciones-continuas/funcion-continua"
               },
               "f2": {
-                "clave": "pick-content/calculo/limites/algebra-de-limites"
+                "clave": "pick-content/calculo/limites/calculo-de-limites/algebra-de-limites"
               },
               "f3": {
-                "clave": "pick-content/calculo/limites/historia-del-epsilon"
+                "clave": "pick-content/calculo/limites/concepto-de-limite/historia-del-epsilon"
               }
             }
           }

@@ -57,3 +57,7 @@ Future<CloneTarget> inspectTarget({
   required String owner,
   required String repo,
 }) async => CloneTarget.free;
+
+/// En la web no hay carpetas que mover.
+Future<String?> moveClone({required String from, required String to}) async =>
+    throw CloneException(tr('Aquí no hay carpetas que mover.'));

@@ -1,0 +1,156 @@
+# L10 · Una plantilla en varios repositorios
+#
+# Montado desde este guion. Todo es de verdad dentro del arnés, con la
+# interfaz Completa y dos repositorios abiertos: el del ejemplo, que declara
+# las plantillas de serie y «Hoja del departamento» con su cabecera
+# (`"preparar"`), y el de problemas del departamento, cuya Hoja 2 se compila
+# con ella sin declararla. Se marca la casilla del de problemas --la copia
+# allí--, se abre el editor --las casillas, dónde se usa, la vista previa--, se
+# cambian los colores y se guarda en los dos. Al final, la carpeta del
+# programa. Va detrás del L4 aunque se numere L10: los de después ya tenían
+# su dirección en la web.
+codigo: L10
+titulo: Una plantilla en varios repositorios
+subtitulo: Que una salida viaje con todo el material que la usa
+ruta: Para quien mantiene el repositorio
+siguiente: "L5 · Snippets propios"
+voz: narrador
+lema: ["Con un repositorio basta para usarla;", "en dos, viaja con los dos materiales."]
+lema_en: "viaja"
+
+escenas:
+  - id: apertura
+    antes: 1.2
+    despues: 0.6
+    frases:
+      - id: presentacion
+        texto: >-
+          Al terminar sabrás tener la misma plantilla en varios repositorios,
+          y cuándo conviene.
+
+  - id: porque
+    capitulo: Por qué en dos
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: hoja
+        texto: >-
+          La hoja dos del repositorio de problemas se compila con la Hoja del
+          departamento. Pero solo la declara el repositorio del ejemplo.
+        pasos:
+          - {al: inicio, enfoca: [fila], max: 1.6}
+          - {en: Hoja del departamento, resalta: describe, lado: abajo, hasta: 2.4}
+          - {en: solo, resalta: ejemplo, etiqueta: "La declara", lado: abajo}
+      - id: solo
+        texto: >-
+          Con los dos abiertos, compila. Quien solo tenga el de problemas, no
+          podría.
+        pasos:
+          - {al: inicio, resalta: [ejemplo, problemas], lado: abajo, hasta: 2.2}
+          - {en: problemas, resalta: problemas, etiqueta: "No la tiene", color: profesor, lado: abajo}
+
+  - id: copiar
+    capitulo: Una casilla por repositorio
+    antes: 0.5
+    pantalla: lista
+    frases:
+      - id: marcar
+        texto: >-
+          Cada fila tiene una casilla por repositorio. Marcar el de problemas
+          la copia allí, entera y con su cabecera.
+        pasos:
+          - {al: inicio, enfoca: [ejemplo, programa], max: 2.4, dy: 40}
+          - {en: casilla, resalta: [ejemplo, problemas, programa], lado: abajo, hasta: 2.2}
+          - {en: Marcar, pulsa: problemas, hasta: 0.8}
+          - {en: copia, cambia: copiada}
+          - {en: copia, enfoca: [problemas, aviso], max: 1.2, captura: copiada}
+          - {en: copia, resalta: problemas, lado: abajo, captura: copiada, hasta: 1.8}
+          - {en: cabecera, resalta: aviso, lado: arriba, captura: copiada}
+      - id: desmarcar
+        texto: >-
+          Desmarcarla la quitaría solo de ahí. Y si fuera la última, Didacta lo
+          preguntaría antes.
+        pasos:
+          - {al: inicio, enfoca: [fila], max: 1.6, captura: copiada}
+          - {en: Desmarcarla, resalta: problemas, lado: abajo, captura: copiada, hasta: 2.4}
+          - {en: última, resalta: ejemplo, lado: abajo, captura: copiada}
+
+  - id: editor
+    capitulo: Dónde se usa
+    antes: 0.5
+    pantalla: editor
+    frases:
+      - id: usos
+        texto: >-
+          En el editor, las mismas casillas, y lo que se compila con ella:
+          aquí, la hoja dos de problemas.
+        pasos:
+          - {al: inicio, enfoca: [sitios, usos], max: 1.7}
+          - {en: casillas, resalta: sitios, lado: abajo, hasta: 2}
+          - {en: compila, resalta: usos, lado: arriba, hasta: 1.6}
+          - {en: hoja, resalta: documento, lado: arriba}
+      - id: vista
+        texto: >-
+          Y la vista previa, con una lección de esa misma hoja.
+        pasos:
+          - {al: inicio, enfoca: [leccion, pdf], max: 1.15}
+          - {en: vista, resalta: pdf, lado: izquierda, hasta: 2}
+          - {en: lección, resalta: leccion, lado: abajo}
+
+  - id: todos
+    capitulo: Se escribe en todos
+    antes: 0.5
+    pantalla: cabecera
+    frases:
+      - id: colores
+        texto: >-
+          Los colores del departamento, en la cabecera, y se ven antes de
+          guardar.
+        pasos:
+          - {al: inicio, enfoca: [texto, pdf], max: 1.1}
+          - {en: cabecera, resalta: texto, lado: arriba, hasta: 1.8}
+          - {en: ven, resalta: pdf, lado: izquierda}
+      - id: los-dos
+        texto: >-
+          Al guardar se escribe en los dos repositorios, para que digan lo
+          mismo. Y si un día discrepan, lo avisa Entre repositorios.
+        pasos:
+          - {al: inicio, enfoca: [guardar], max: 2}
+          - {en: guardar, pulsa: guardar, hasta: 0.8}
+          - {en: escribe, cambia: guardada}
+          - {en: escribe, enfoca: [aviso], max: 1.6, captura: guardada}
+          - {en: dos repositorios, resalta: aviso, lado: arriba, captura: guardada}
+
+  - id: programa
+    capitulo: La carpeta del programa
+    antes: 0.5
+    pantalla: programa
+    frases:
+      - id: tuya
+        texto: >-
+          La última casilla es el programa: para lo que es tuyo y no de la
+          asignatura, como tus colores.
+        pasos:
+          - {al: inicio, enfoca: [casilla], max: 2.2}
+          - {en: programa, resalta: casilla, lado: abajo}
+      - id: copia
+        texto: >-
+          Ahí no la protege git, y se va con el ordenador. Por eso, Copiar a
+          una carpeta: es su copia de seguridad.
+        pasos:
+          - {al: inicio, enfoca: [tarjeta], max: 1.5}
+          - {en: git, resalta: tarjeta, lado: arriba, hasta: 2.4}
+          - {en: Copiar, resalta: copiar, lado: abajo, etiqueta: "La copia de seguridad"}
+
+  - id: cierre
+    antes: 0.5
+    despues: 2.6
+    frases:
+      - id: lema
+        texto: >-
+          Con un repositorio basta para usarla; en dos, viaja con los dos
+          materiales.
+        pausa: 0.5
+      - id: siguiente
+        texto: >-
+          En el siguiente vídeo, tus propios snippets.

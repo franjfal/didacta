@@ -14,7 +14,7 @@ ENGINE="$BUNDLE/build.command"
 
 # Si alguien mueve la aplicación al Dock o a /Applications, el repositorio
 # sigue donde estaba: la ruta grabada al crearla es el plan B.
-FALLBACK="/Users/javier/didacta/build.command"
+FALLBACK="/Users/javier/didactaApp/build.command"
 
 if [[ ! -x "$ENGINE" ]]; then
   ENGINE="$FALLBACK"

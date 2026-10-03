@@ -11,9 +11,18 @@ Todo el material de todos los repositorios abiertos, junto.
 
 ## Dos vistas, dos preguntas
 
-**Explorar** --lo que se ve al entrar-- es el árbol en columnas, tal como está
-en el disco: `content/analysis/normed/definition`. Cada nivel dice cuánto
-contiene y cuánto está traducido al idioma que estás mirando.
+**Explorar** --lo que se ve al entrar-- son columnas, como las del Finder:
+**categoría**, **tema**, **subtema** y, a la derecha, las lecciones. Se van
+abriendo según eliges: con una categoría salen sus temas, y sus lecciones
+agrupadas por tema; con un tema, sus subtemas y sus lecciones por subtema; con
+un subtema, solo las suyas. Cada nivel dice cuánto contiene y cuánto está
+traducido al idioma que estás mirando.
+
+**Cada lección vive en un subtema**, y solo en uno. Es también su carpeta en
+el disco --`content/<categoría>/<tema>/<subtema>/<lección>/`--, así que la
+biblioteca y el repositorio dicen siempre lo mismo. En una ventana estrecha
+las columnas de la izquierda se van quedando fuera según bajas, y las migas de
+pan de arriba dicen dónde estás y te devuelven.
 
 **Buscar** aparece en cuanto escribes, y aplana la lista. «hilbert» no es un
 sitio del árbol: es todo lo que lo menciona, venga de donde venga. **Sin
@@ -49,10 +58,22 @@ esa carpeta; tampoco mira tildes, y pide tres letras por lo menos.
     filtrable-- y aun así era lo peor que se podía hacer con estos datos,
     porque **tiraba a la basura la organización que el autor ya había hecho**.
 
-    El material está en un árbol, y está en un árbol en el disco: dos áreas,
-    51 categorías, 444 temas, con una mediana de tres unidades por tema. Eso
-    son tres clics hasta cualquier unidad. La lista plana llegaba a la misma
-    unidad pasando por delante de otras dos mil.
+    El material está en un árbol, y está en un árbol en el disco. Tres clics
+    --categoría, tema, subtema-- llegan a cualquier lección. La lista plana
+    llegaba a la misma pasando por delante de otras dos mil.
+
+??? note "Por qué el subtema es una columna y no unas etiquetas"
+
+    El tercer nivel existía antes, pero como **etiquetas**: una fila de fichas
+    encima de la lista de un tema. Eran lo que de verdad se usaba para
+    encontrar algo --«principio de Cavalieri» dentro de la integración--, y
+    eran libres: una lección podía llevar varias, o ninguna, y nadie las
+    declaraba. Por eso no podían ser una columna: una lección con dos habría
+    salido en dos sitios, y los números de al lado habrían dejado de sumar.
+
+    El subtema se declara en `taxonomy.yaml`, con su nombre en cada idioma, y
+    cada lección tiene exactamente uno. Las etiquetas siguen existiendo, como
+    lo que son: palabras libres para buscar.
 
 ## Vuelve donde estabas
 
@@ -84,7 +105,7 @@ para volver a ello de un clic. La cruz la olvida.
   decide qué títulos y qué estados se enseñan;
 - **por estado de traducción** — qué falta, qué está viejo;
 - **por tipo** — una explicación, un ejemplo, un ejercicio;
-- **por etiqueta**;
+- **por etiqueta**, que ya no es un nivel sino una palabra libre para buscar;
 - **por repositorio**, cuando hay varios abiertos.
 
 Los filtros recortan **también el árbol**, no solo lo que se busca: con «Falta
@@ -109,8 +130,44 @@ lo que hay no contesta ninguna pregunta.
     filtro desde el que no se llega a parte del material es peor que uno feo.
     [Entre repositorios](entre-repos.md) dice cuáles son y cómo arreglarlo.
 
-Las categorías se ordenan **por tamaño y no alfabéticamente**: 51 categorías
-en orden alfabético entierran las que se están dando.
+Las categorías, los temas y los subtemas salen **en el orden en que los
+declara `taxonomy.yaml`**, que es el orden en que se dan: la recta real antes
+que las sucesiones aunque las sucesiones tengan más. Lo que no declara nadie va
+detrás, de mayor a menor.
+
+## Crear categorías, temas y subtemas { #crear-sitios }
+
+Al pie de cada columna, **Nueva categoría…**, **Nuevo tema…** y **Nuevo
+subtema…**. Piden el nombre en cada idioma de tus repositorios --basta con
+uno; los que dejes vacíos quedan como pendientes de traducir-- y del primero
+sale el identificador, que es también el nombre de la carpeta.
+
+Se declaran en el `taxonomy.yaml` de **todos los repositorios abiertos** en los
+que puedes escribir, con un cambio en cada uno: la teoría y los problemas de
+una asignatura suelen vivir en dos, y los dos tienen que enseñar las mismas
+columnas. Lo recién creado sale en su columna aunque esté vacío, para poder
+llevarle lecciones.
+
+Cambiar el nombre después se hace en `taxonomy.yaml`; el identificador no se
+cambia nunca.
+
+## Mover una lección { #mover }
+
+Tres formas, y las tres hacen lo mismo:
+
+- **arrastrar** la tarjeta de la lección hasta la fila de un subtema, en la
+  columna de subtemas;
+- el **botón derecho** sobre la tarjeta, **Mover a…**;
+- en la lección, **Mover…**, junto a su sitio en los metadatos.
+
+**Mover a…** abre las mismas tres columnas para elegir a dónde, y deja
+cambiar de paso el nombre de la carpeta.
+
+La carpeta se mueve de verdad, con sus idiomas y sus figuras, y **nada de lo
+que la usa hay que tocarlo**: los temas de los cursos y los prerrequisitos de
+otras lecciones la nombran por su **id** (`u-3fa9c2e1b0d4`), que no cambia, y
+al compilar Didacta le dice a LaTeX dónde está ahora. Su historial de
+traducciones tampoco cambia. Una lección no cambia de repositorio al moverla.
 
 ## Lo que dice cada fila
 
@@ -124,15 +181,17 @@ el carril y los PDF compilados.
 
 ## Crear una lección
 
-Arriba de la lista de un tema, **Nueva lección en…** ese tema. Pide lo mínimo:
+Arriba de la lista, **Nueva lección en…** el sitio que estás mirando. Pide lo
+mínimo:
 
 - el **título**, del que sale el nombre de la carpeta;
-- el **tema**, que viene puesto con el que se está mirando y se puede cambiar
-  por uno que todavía no existe;
+- el **sitio**, en las mismas tres columnas, que vienen abiertas donde estabas.
+  Hace falta llegar a un subtema, y si el que quieres no existe, se crea desde
+  ahí mismo;
 - el **tipo**: teoría, problema, ejemplo…
 
-Y antes de crearla enseña **dónde va a quedar** --`content/analysis/normed/espacios-de-hilbert`--,
-que es la ruta con la que se la nombra en las composiciones. Si ya hay una
+Y antes de crearla enseña **dónde va a quedar**
+--`content/analysis/normed/hilbert/espacios-de-hilbert`--. Si ya hay una
 lección ahí, lo dice y no deja crearla.
 
 Al crearla se guarda en el historial, como cualquier otro cambio, y se abre en

@@ -32,6 +32,8 @@ import '../model/yaml_patch.dart';
 import '../router.dart';
 import '../state/session.dart';
 import 'manage_templates.dart';
+import 'new_unit.dart' show moveUnitFrom;
+import 'place_browser.dart';
 import 'save_review.dart';
 import 'save_shortcut.dart';
 import 'suggest_field.dart';
@@ -639,37 +641,12 @@ class _Form extends StatelessWidget {
           enabled: enabled && blocks.isNotEmpty,
           onChanged: (value) => onEdit((p) => p.setScalar(['block'], value)),
         ),
-        // Con lo que ya usan las demás, y diciendo cuándo lo escrito es
-        // nuevo: una errata en la categoría crea una categoría y saca la
-        // lección de su sitio en la biblioteca sin que nadie lo vea.
-        _TextRow(
-          key: const ValueKey('unit-category'),
-          label: tr('categoría'),
-          value: patch.scalar(['category']) ?? '',
-          enabled: enabled,
-          suggestions: suggestions.categories,
-          note: (value) => value.isEmpty || suggestions.knowsCategory(value)
-              ? null
-              : tr(
-                  'Categoría nueva: ninguna otra lección la usa. Si es una '
-                  'errata, la lección saldrá sola en la biblioteca.',
-                ),
-          onChanged: (value) =>
-              onEdit((p) => p.setScalar(['category'], value.trim())),
-        ),
-        _TextRow(
-          key: const ValueKey('unit-topic'),
-          label: tr('tema'),
-          value: patch.scalar(['topic']) ?? '',
-          enabled: enabled,
-          suggestions: (typed) =>
-              suggestions.topics(typed, category: patch.scalar(['category'])),
-          note: (value) => value.isEmpty || suggestions.knowsTopic(value)
-              ? null
-              : tr('Tema nuevo: ninguna otra lección lo usa.'),
-          onChanged: (value) =>
-              onEdit((p) => p.setScalar(['topic'], value.trim())),
-        ),
+        // Su sitio en la biblioteca, que es también su carpeta. No se escribe
+        // aquí: eran dos campos de texto, y cambiar la categoría o el tema sin
+        // mover la carpeta dejaba la lección en un sitio en la biblioteca y en
+        // otro en el disco. Moverla es la única forma de cambiarlo, y lleva
+        // las dos cosas a la vez.
+        _PlaceRow(unit: unit, session: session, enabled: enabled),
         _TagsRow(
           tags: patch.list(['tags']),
           enabled: enabled,
@@ -936,6 +913,60 @@ class _TextRowState extends State<_TextRow> {
                 style: TextStyle(fontSize: 11.5, color: context.palette.ex),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Categoría › tema › subtema, y el botón para llevarla a otro sitio.
+class _PlaceRow extends StatelessWidget {
+  const _PlaceRow({
+    required this.unit,
+    required this.session,
+    required this.enabled,
+  });
+
+  final Unit unit;
+  final Session session;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final tree = placeTree(session.catalogue, session.language);
+    final place = [
+      unit.category,
+      unit.topic,
+      unit.subtopic,
+    ].takeWhile((part) => part.isNotEmpty).toList();
+    final canMove =
+        enabled && session.canWriteIn(unit.repo) && session.admin() != null;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 92,
+            child: Text(
+              tr('sitio'),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              place.isEmpty ? tr('sin clasificar') : placeLabel(tree, place),
+              key: const ValueKey('unit-place'),
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+          TextButton.icon(
+            key: const ValueKey('unit-place-move'),
+            icon: const Icon(Icons.drive_file_move_outline, size: 16),
+            label: Text(tr('Mover…')),
+            onPressed: canMove
+                ? () => moveUnitFrom(context, session, unit)
+                : null,
+          ),
         ],
       ),
     );

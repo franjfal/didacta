@@ -1,0 +1,5 @@
+# Los problemas de Cálculo del departamento: la hoja común de cada tema.
+name: Problemas de Cálculo del departamento
+languages: [es, va, en]
+default_language: es
+build_dir: .didacta-build

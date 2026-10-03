@@ -38,6 +38,7 @@ import 'save_review.dart';
 import 'pdf_tab.dart';
 import 'source_view.dart';
 import 'tabs.dart';
+import 'place_browser.dart' show unitPlace;
 import 'theme.dart';
 import 'tour.dart';
 import 'translate_tab.dart';
@@ -1142,13 +1143,14 @@ class _CompositionRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
+                  // Su sitio en la biblioteca, y no lo escrito: la
+                  // composición la nombra por su id, que no dice nada.
                   Text(
-                    reference,
+                    unitPlace(sessionOf(context).catalogue, unit!, language),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 10.5,
-                      fontFamily: 'monospace',
+                      fontSize: 11,
                       color: context.palette.muted,
                     ),
                   ),

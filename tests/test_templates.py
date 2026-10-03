@@ -336,5 +336,111 @@ class CompilingTests(unittest.TestCase):
             self.assertIn("DIDACTA-PLANTILLA-APLICADA", handle.read())
 
 
+def load_cli():
+    import importlib.machinery
+    import importlib.util
+
+    path = os.path.join(ROOT, "cli", "didacta")
+    loader = importlib.machinery.SourceFileLoader("didacta_cli_templates", path)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+@unittest.skipUnless(toolchain_available(), "latexmk and pdflatex are required")
+class TemplatePreviewTests(unittest.TestCase):
+    """`template-preview`: una lección con la plantilla de la pantalla.
+
+    Lo que importa es que compila **lo que llega por la orden** y no lo
+    guardado: si no, el editor enseñaría la versión de antes de cada cambio.
+    """
+
+    UNIT = "analysis/normed-spaces/induced-metric"
+
+    def setUp(self):
+        self.work = tempfile.mkdtemp(prefix="didacta-tpl-preview-")
+        self.addCleanup(shutil.rmtree, self.work, ignore_errors=True)
+        self.root = os.path.join(self.work, "repo")
+        shutil.copytree(DEMO, self.root,
+                        ignore=shutil.ignore_patterns(".didacta-build"))
+
+    def run_cli(self, *arguments):
+        import io
+        import json
+        from contextlib import redirect_stdout
+
+        out = io.StringIO()
+        with redirect_stdout(out):
+            code = load_cli().main(
+                ["--root", self.root, "template-preview", self.UNIT,
+                 *arguments, "--json"]
+            )
+        return code, json.loads(out.getvalue())
+
+    def test_the_unsaved_template_is_the_one_compiled(self):
+        # `notes` existe de serie como `article`: la vista previa tiene que
+        # salir con la clase y la cabecera que se le pasan.
+        code, data = self.run_cli(
+            "--id", "notes", "--class", "book", "--options", "11pt,oneside",
+            "--axis", "medium=document", "--axis", "detail=full",
+            "--preamble-text", "\\typeout{DIDACTA-VISTA-PREVIA}\n",
+        )
+        self.assertEqual(code, 0, data)
+        self.assertTrue(data["ok"])
+        self.assertFalse(data["slides"])
+        self.assertTrue(os.path.isfile(data["pdf"]))
+        logs = glob.glob(os.path.join(os.path.dirname(data["pdf"]), "*.log"))
+        text = ""
+        for each in logs:
+            with open(each, encoding="utf-8", errors="replace") as handle:
+                text += handle.read()
+        self.assertIn("DIDACTA-VISTA-PREVIA", text)
+        self.assertIn("book.cls", text)
+
+    def paper_width(self, options):
+        code, data = self.run_cli(
+            "--id", "papel", "--class", "article", "--options", options,
+            "--axis", "medium=document",
+            "--preamble-text", "\\typeout{DIDACTA-PAPEL=\\the\\paperwidth}\n",
+        )
+        self.assertEqual(code, 0, data)
+        text = ""
+        for each in glob.glob(os.path.join(os.path.dirname(data["pdf"]),
+                                           "*.log")):
+            with open(each, encoding="utf-8", errors="replace") as handle:
+                text += handle.read()
+        found = [line for line in text.splitlines()
+                 if line.startswith("DIDACTA-PAPEL=")]
+        self.assertTrue(found, "la cabecera no llegó al log")
+        return found[-1].split("=", 1)[1]
+
+    def test_the_paper_of_the_class_options_is_respected(self):
+        # Didacta fijaba el A4 al cargar su maquetación y una plantilla
+        # «Apuntes de bolsillo» con `10pt,a5paper` salía en A4 sin decir nada.
+        self.assertTrue(self.paper_width("10pt,a5paper").startswith("421."))
+        self.assertTrue(self.paper_width("11pt,letterpaper").startswith("614."))
+        # Sin papel en las opciones, A4: las quince de serie no lo nombran.
+        self.assertTrue(self.paper_width("12pt,oneside").startswith("597."))
+
+    def test_slides_are_said_to_be_slides(self):
+        code, data = self.run_cli(
+            "--id", "nuevas", "--class", "beamer",
+            # Sin `notheorems`, beamer define sus propios teoremas y choca con
+            # los de Didacta: lo llevan todas las de serie.
+            "--options", "10pt,notheorems", "--axis", "medium=slides",
+        )
+        self.assertEqual(code, 0, data)
+        self.assertTrue(data["slides"])
+
+    def test_a_wrong_axis_is_refused_before_compiling(self):
+        code, data = self.run_cli(
+            "--class", "article", "--axis", "medium=nada",
+        )
+        self.assertEqual(code, 1)
+        self.assertFalse(data["ok"])
+        self.assertIn("medium", data["error"])
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
