@@ -1635,7 +1635,6 @@ const Map<String, String> vaStrings = {
   'Plantillas de {0}: las del bloque': 'Plantilles de {0}: les del bloc',
   'Plantillas de «{0}»': 'Plantilles de «{0}»',
   'Plantillas del bloque {0}': 'Plantilles del bloc {0}',
-  'Poner el de la {0}': 'Posar el de la {0}',
   'Poner un id estable a cada lección\n\nDerivado de la ruta con un hash, así que es el mismo lo haga quien lo haga. A partir de aquí manda el id y no la ruta: mover una lección de carpeta ya no rompe quién la usa.': 'Posar un id estable a cada lliçó\n\nDerivat de la ruta amb un hash, així que és el mateix el faça qui el faça. A partir d\'ací mana l\'id i no la ruta: moure una lliçó de carpeta ja no trenca qui la usa.',
   'Ponerlo': 'Posar-lo',
   'Ponerlos': 'Posar-los',

@@ -1635,7 +1635,6 @@ const Map<String, String> enStrings = {
   'Plantillas de {0}: las del bloque': 'Templates for {0}: those of the block',
   'Plantillas de «{0}»': 'Templates for “{0}”',
   'Plantillas del bloque {0}': 'Templates for block {0}',
-  'Poner el de la {0}': 'Use the one from {0}',
   'Poner un id estable a cada lección\n\nDerivado de la ruta con un hash, así que es el mismo lo haga quien lo haga. A partir de aquí manda el id y no la ruta: mover una lección de carpeta ya no rompe quién la usa.': 'Give each lesson a stable id\n\nDerived from the path with a hash, so it is the same whoever does it. From here on the id is what counts, not the path: moving a lesson to another folder no longer breaks whatever uses it.',
   'Ponerlo': 'Switch it',
   'Ponerlos': 'Add them',
