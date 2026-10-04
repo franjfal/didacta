@@ -1076,6 +1076,16 @@ class Session extends ChangeNotifier {
     required Map<String, String> titles,
   }) => editor.setCourseTitles(course: course, titles: titles);
 
+  Future<int> setCoursePrintedDegree({
+    required String course,
+    required Map<String, String> texts,
+  }) => editor.setCoursePrintedDegree(course: course, texts: texts);
+
+  Future<int> setCourseDepartments({
+    required String course,
+    required Map<String, String> departments,
+  }) => editor.setCourseDepartments(course: course, departments: departments);
+
   Future<int> setDegreeTitles({
     required String id,
     required Map<String, String> titles,

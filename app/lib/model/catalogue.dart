@@ -1262,6 +1262,8 @@ class Course {
     this.code,
     this.teacher,
     this.institution,
+    this.degrees = const {},
+    this.departments = const {},
     this.sources = const {},
   });
 
@@ -1306,6 +1308,8 @@ class Course {
       code: json['code'] as String?,
       teacher: json['teacher'] as String?,
       institution: json['institution'] as String?,
+      degrees: _stringMap(json['degree']),
+      departments: _stringMap(json['department']),
       years: {
         for (final entry in years.entries)
           entry.key as String: CourseYear.fromJson(
@@ -1343,6 +1347,8 @@ class Course {
       code: code,
       teacher: teacher,
       institution: institution,
+      degrees: degrees,
+      departments: departments,
       degreeId: degreeId,
       sources: {
         for (final entry in sources.entries)
@@ -1376,6 +1382,8 @@ class Course {
       code: code ?? other.code,
       teacher: teacher ?? other.teacher,
       institution: institution ?? other.institution,
+      degrees: {...other.degrees, ...degrees},
+      departments: {...other.departments, ...departments},
       degreeId: degreeId ?? other.degreeId,
       years: merged,
       sources: {...sources, ...other.sources},
@@ -1388,6 +1396,15 @@ class Course {
   final String? code;
   final String? teacher;
   final String? institution;
+
+  /// La titulación como se imprime en la portada, por idioma.
+  ///
+  /// La del registro de grados cuando la asignatura nombra uno declarado, y
+  /// si no la que lleve escrita su `course.yaml`.
+  final Map<String, String> degrees;
+
+  /// El departamento como se imprime en la portada, por idioma.
+  final Map<String, String> departments;
 
   /// A qué titulación pertenece, por id. Null cuando no lo dice.
   ///

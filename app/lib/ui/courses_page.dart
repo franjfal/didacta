@@ -467,6 +467,21 @@ class _CoursesPageState extends State<CoursesPage> {
           degree: answer.degree,
         );
       }
+      // Después del grado: lo que se lee de `course.degrees` puede ser el
+      // título del registro, y solo se escribe cuando alguien lo ha cambiado.
+      final printed = answer.printedDegree;
+      if (printed != null && _differs(printed, course.degrees)) {
+        touched += await session.setCoursePrintedDegree(
+          course: course.id,
+          texts: printed,
+        );
+      }
+      if (_differs(answer.departments, course.departments)) {
+        touched += await session.setCourseDepartments(
+          course: course.id,
+          departments: answer.departments,
+        );
+      }
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -480,6 +495,10 @@ class _CoursesPageState extends State<CoursesPage> {
       showProblemIn(messenger, error);
     }
   }
+
+  /// Si lo escrito en la ficha cambia algo de lo que había, idioma a idioma.
+  static bool _differs(Map<String, String> edited, Map<String, String> was) =>
+      edited.entries.any((entry) => entry.value != (was[entry.key] ?? ''));
 
   /// Si dos listas de idiomas dicen lo mismo, en el orden que sea.
   ///

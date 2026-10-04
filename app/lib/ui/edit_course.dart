@@ -1,4 +1,5 @@
-/// Editar una asignatura: su nombre, sus idiomas y su titulación.
+/// Editar una asignatura: su nombre, sus idiomas, su titulación y lo que se
+/// imprime de ella en la portada.
 ///
 /// Las tres cosas en un sitio porque son la misma decisión. Los idiomas
 /// estaban en Ajustes, en una lista de todas las asignaturas, y eso obligaba a
@@ -27,10 +28,20 @@ class CourseEdit {
     required this.titles,
     required this.languages,
     required this.degree,
+    this.printedDegree,
+    this.departments = const {},
   });
 
   final Map<String, String> titles;
   final List<String> languages;
+
+  /// La titulación que se imprime, por idioma. Null cuando no se ha
+  /// preguntado: la asignatura nombra un grado declarado y el texto es el
+  /// suyo, que se cambia en el grado.
+  final Map<String, String>? printedDegree;
+
+  /// El departamento que se imprime, por idioma.
+  final Map<String, String> departments;
 
   /// A qué grado pertenece. Null es «a ninguno», que es un estado legítimo.
   final String? degree;
@@ -109,6 +120,30 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
       if (_languages.contains(option.code)) option,
   ];
 
+  /// Lo que se imprime en la portada, en cada idioma. Mismos motivos que
+  /// [_titles] para crearlos todos.
+  late final Map<String, TextEditingController> _printedDegree = {
+    for (final option in widget.options)
+      option.code: TextEditingController(
+        text: widget.course.degrees[option.code] ?? '',
+      ),
+  };
+  late final Map<String, TextEditingController> _departments = {
+    for (final option in widget.options)
+      option.code: TextEditingController(
+        text: widget.course.departments[option.code] ?? '',
+      ),
+  };
+
+  /// El grado elegido, si lo declara algún repositorio y tiene título: es
+  /// entonces el registro el que dice qué se imprime, no `course.yaml`.
+  Degree? get _declaredDegree {
+    for (final degree in widget.degrees) {
+      if (degree.id == _degree && degree.titles.isNotEmpty) return degree;
+    }
+    return null;
+  }
+
   late final Set<String> _languages = {
     ...widget.course.languages.isNotEmpty
         ? widget.course.languages
@@ -119,7 +154,11 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
 
   @override
   void dispose() {
-    for (final controller in _titles.values) {
+    for (final controller in [
+      ..._titles.values,
+      ..._printedDegree.values,
+      ..._departments.values,
+    ]) {
       controller.dispose();
     }
     super.dispose();
@@ -263,6 +302,62 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
                   tone: context.palette.teacher,
                 ),
               ),
+
+            const SizedBox(height: 14),
+            _Label(tr('En la portada')),
+            Text(
+              tr(
+                'La titulación y el departamento que se imprimen en la '
+                'portada y en los encabezados, en cada idioma. Lo que se deja '
+                'en blanco no se imprime.',
+              ),
+              style: TextStyle(fontSize: 11.5, color: context.palette.muted),
+            ),
+            const SizedBox(height: 6),
+            if (_declaredDegree case final declared?)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Note(
+                  key: const Key('course-printed-degree-from-registry'),
+                  tr(
+                    'La titulación se imprime con el título del grado: {0}. '
+                    'Se traduce en «Grados», arriba en la lista de '
+                    'asignaturas.',
+                    [
+                      [
+                        for (final option in _shown)
+                          '${option.name}: '
+                              '${declared.titles[option.code] ?? tr('sin traducir')}',
+                      ].join(' · '),
+                    ],
+                  ),
+                ),
+              )
+            else
+              for (final option in _shown)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: TextField(
+                    key: Key('course-printed-degree-${option.code}'),
+                    controller: _printedDegree[option.code],
+                    decoration: InputDecoration(
+                      labelText: tr('Titulación · {0}', [option.name]),
+                      isDense: true,
+                    ),
+                  ),
+                ),
+            for (final option in _shown)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: TextField(
+                  key: Key('course-department-${option.code}'),
+                  controller: _departments[option.code],
+                  decoration: InputDecoration(
+                    labelText: tr('Departamento · {0}', [option.name]),
+                    isDense: true,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -292,6 +387,17 @@ class _EditCourseDialogState extends State<EditCourseDialog> {
                         if (_languages.contains(option.code)) option.code,
                     ],
                     degree: _degree,
+                    printedDegree: _declaredDegree != null
+                        ? null
+                        : {
+                            for (final option in _shown)
+                              option.code: _printedDegree[option.code]!.text
+                                  .trim(),
+                          },
+                    departments: {
+                      for (final option in _shown)
+                        option.code: _departments[option.code]!.text.trim(),
+                    },
                   ),
                 )
               : null,

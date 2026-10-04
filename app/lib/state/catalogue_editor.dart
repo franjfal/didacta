@@ -300,14 +300,58 @@ class CatalogueEditor {
     required String course,
     required Map<String, String> titles,
   }) async {
-    final entry = session.courseById(course);
-    if (entry == null) {
-      throw ArgumentError(tr('no existe la asignatura {0}', [course]));
-    }
     if (titles.values.every((value) => value.trim().isEmpty)) {
       throw ArgumentError(
         tr('una asignatura sin título se enseñaría por su id'),
       );
+    }
+    return _setCourseLocalised(
+      course: course,
+      key: 'title',
+      values: titles,
+      message: tr('Título de {0}', [course]),
+    );
+  }
+
+  /// Cambia la titulación que se imprime en la portada, en cada idioma.
+  ///
+  /// Es el `degree:` de `course.yaml`, que es texto, y no el `degree_id` que
+  /// agrupa. Solo vale mientras la asignatura no nombre un grado declarado:
+  /// entonces manda el título del registro y esto es un resto.
+  Future<int> setCoursePrintedDegree({
+    required String course,
+    required Map<String, String> texts,
+  }) => _setCourseLocalised(
+    course: course,
+    key: 'degree',
+    values: texts,
+    message: tr('Titulación impresa de {0}', [course]),
+  );
+
+  /// Cambia el departamento que se imprime en la portada, en cada idioma.
+  Future<int> setCourseDepartments({
+    required String course,
+    required Map<String, String> departments,
+  }) => _setCourseLocalised(
+    course: course,
+    key: 'department',
+    values: departments,
+    message: tr('Departamento de {0}', [course]),
+  );
+
+  /// Escribe un campo de `course.yaml` que se dice en cada idioma.
+  ///
+  /// En todos los repositorios que declaran la asignatura. Un idioma vacío
+  /// quita su línea en vez de dejar una cadena vacía, que se imprimiría.
+  Future<int> _setCourseLocalised({
+    required String course,
+    required String key,
+    required Map<String, String> values,
+    required String message,
+  }) async {
+    final entry = session.courseById(course);
+    if (entry == null) {
+      throw ArgumentError(tr('no existe la asignatura {0}', [course]));
     }
 
     final where = 'courses/$course/course.yaml';
@@ -318,12 +362,16 @@ class CatalogueEditor {
 
       final file = await gateway.read(where);
       final patch = YamlPatch(file.text);
-      for (final item in titles.entries) {
+      for (final item in values.entries) {
         final value = item.value.trim();
         if (value.isEmpty) {
-          patch.remove(['title', item.key]);
+          patch.remove([key, item.key]);
+        } else if (RegExp('^$key:', multiLine: true).hasMatch(patch.result)) {
+          patch.setScalar([key, item.key], value);
         } else {
-          patch.setScalar(['title', item.key], value);
+          // El fichero todavía no tiene la clave --un departamento que nadie
+          // había escrito--, y no hay bloque en el que añadir el idioma.
+          patch.setInFlowMap([key], item.key, value);
         }
       }
       if (patch.result == file.text) continue;
@@ -332,7 +380,7 @@ class CatalogueEditor {
         path: where,
         text: patch.result,
         sha: file.sha,
-        message: tr('Título de {0}', [course]),
+        message: message,
       );
       written.add(repo);
     }

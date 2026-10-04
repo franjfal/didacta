@@ -299,6 +299,24 @@ void main() {
       expect(gateway.files['content/a/b/va.tex'], 'El texto en valenciano.');
     });
 
+    test('lo que se imprime en la portada se escribe por idioma', () async {
+      final gateway = repoGateway();
+      final session = await sessionWith({'x/uno': gateway});
+
+      await session.setCourseDepartments(
+        course: 'am-i',
+        departments: const {'es': 'Análisis Matemático', 'va': ''},
+      );
+      await session.setCoursePrintedDegree(
+        course: 'am-i',
+        texts: const {'va': 'Grau en Matemàtiques'},
+      );
+
+      final text = gateway.files['courses/am-i/course.yaml']!;
+      expect(text, contains('department: {es: Análisis Matemático}'));
+      expect(text, contains('va: Grau en Matemàtiques'));
+    });
+
     test('una asignatura que no existe se dice', () async {
       final session = await sessionWith({'x/uno': repoGateway()});
       expect(
@@ -355,6 +373,22 @@ void main() {
       await tester.tap(find.text('abrir'));
       await settle(tester);
       return answer;
+    }
+
+    /// La lista de la ficha solo construye lo que se ve: lo de la portada
+    /// está al final y hay que llegar hasta ello.
+    Future<void> reveal(WidgetTester tester, Key key) async {
+      await tester.scrollUntilVisible(
+        find.byKey(key),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await settle(tester);
     }
 
     Course course({
@@ -497,6 +531,57 @@ void main() {
       await tester.tap(find.byKey(const Key('course-save')));
       await settle(tester);
       expect(answer.single!.degree, isNull);
+    });
+
+    testWidgets('la titulación y el departamento impresos se piden por idioma', (
+      tester,
+    ) async {
+      // Lo que sale en la portada vivía solo en `course.yaml`: se traducía a
+      // mano en el fichero o no se traducía.
+      final answer = await show(tester, course(languages: const ['es', 'va']));
+
+      await reveal(tester, const Key('course-department-va'));
+      await tester.enterText(
+        find.byKey(const Key('course-printed-degree-va')),
+        'Grau en Matemàtiques',
+      );
+      await tester.enterText(
+        find.byKey(const Key('course-department-es')),
+        'Análisis Matemático',
+      );
+      expect(find.byKey(const Key('course-department-en')), findsNothing);
+      await tester.tap(find.byKey(const Key('course-save')));
+      await settle(tester);
+
+      expect(answer.single!.printedDegree!['va'], 'Grau en Matemàtiques');
+      expect(answer.single!.departments, {
+        'es': 'Análisis Matemático',
+        'va': '',
+      });
+    });
+
+    testWidgets('con un grado declarado, su título es el que se imprime', (
+      tester,
+    ) async {
+      // El registro manda sobre el `degree:` escrito a mano, así que pedirlo
+      // aquí sería escribir un texto que no se imprime nunca.
+      final answer = await show(
+        tester,
+        course(degree: 'matematicas'),
+        degrees: const [
+          Degree(id: 'matematicas', titles: {'es': 'Grado en Matemáticas'}),
+        ],
+      );
+
+      await reveal(tester, const Key('course-department-va'));
+      expect(
+        find.byKey(const Key('course-printed-degree-from-registry')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('course-printed-degree-es')), findsNothing);
+      await tester.tap(find.byKey(const Key('course-save')));
+      await settle(tester);
+      expect(answer.single!.printedDegree, isNull);
     });
 
     testWidgets('un grado que no declara nadie se avisa', (tester) async {

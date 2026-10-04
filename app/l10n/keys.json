@@ -3,23 +3,23 @@
   "ui/course_admin_ui.dart:201"
  ],
  "\n\nPara traducir con el original delante, marca «lado a lado» arriba: así se ve al lado y no se puede guardar por error como si fuera esta.": [
-  "ui/unit_page.dart:1473"
+  "ui/unit_page.dart:1474"
  ],
  " (conserva la identidad)": [
   "ui/reuse.dart:1086"
  ],
  " (posición {0})": [
-  "ui/unit_page.dart:3624"
+  "ui/unit_page.dart:3640"
  ],
  " ({0} de {1})": [
   "ui/add_repository.dart:91",
   "ui/add_repository.dart:389"
  ],
  " ({0}): lo que guardes aquí cambia en todos.": [
-  "ui/unit_page.dart:3594"
+  "ui/unit_page.dart:3610"
  ],
  " El fichero ha cambiado desde entonces; si lo recuperas, mira qué cambia antes de guardar.": [
-  "ui/unit_page.dart:3500"
+  "ui/unit_page.dart:3516"
  ],
  " con la cuenta {0}": [
   "state/repositories.dart:725"
@@ -28,41 +28,41 @@
   "ui/mcp_page.dart:504"
  ],
  " y ": [
-  "ui/composition_editor.dart:594",
+  "ui/composition_editor.dart:595",
   "model/tex_check.dart:172"
  ],
  " · 1 parecida": [
-  "ui/library_page.dart:2918"
+  "ui/library_page.dart:3273"
  ],
  " · buscando en el texto…": [
-  "ui/library_page.dart:2924"
+  "ui/library_page.dart:3279"
  ],
  " · catálogo reconstruido": [
   "ui/shell.dart:387"
  ],
  " · ninguna tal cual, se parece a lo que buscas": [
-  "ui/library_page.dart:2915"
+  "ui/library_page.dart:3270"
  ],
  " · ninguna tal cual, se parecen a lo que buscas": [
-  "ui/library_page.dart:2916"
+  "ui/library_page.dart:3271"
  ],
  " · referencia": [
   "ui/language_settings.dart:493"
  ],
  " · se escribe en {0}": [
-  "ui/problem_set.dart:425"
+  "ui/problem_set.dart:433"
  ],
  " · {0} en cola": [
   "ui/build_strip.dart:58"
  ],
  " · {0} parecidas": [
-  "ui/library_page.dart:2919"
+  "ui/library_page.dart:3274"
  ],
  " · {0} por lo que dicen dentro": [
-  "ui/library_page.dart:2928"
+  "ui/library_page.dart:3283"
  ],
  " · {0} probl.": [
-  "ui/library_page.dart:2707"
+  "ui/library_page.dart:3062"
  ],
  " · {0} sin aplicar": [
   "model/translation_run.dart:76"
@@ -96,7 +96,7 @@
   "ui/settings_page.dart:1151"
  ],
  "+ etiqueta": [
-  "ui/metadata_editor.dart:1235"
+  "ui/metadata_editor.dart:1266"
  ],
  "+{0} −{1} líneas": [
   "ui/history_tab.dart:824"
@@ -152,10 +152,10 @@
  ],
  "1 curso académico": [
   "ui/courses_page.dart:193",
-  "ui/courses_page.dart:1364"
+  "ui/courses_page.dart:1383"
  ],
  "1 curso académico sin enseñar": [
-  "ui/courses_page.dart:1476"
+  "ui/courses_page.dart:1495"
  ],
  "1 desactualizado": [
   "ui/year_page.dart:2000"
@@ -169,10 +169,10 @@
   "ui/courses_page.dart:196"
  ],
  "1 elegida: {0}": [
-  "ui/composition_editor.dart:1322"
+  "ui/composition_editor.dart:1351"
  ],
  "1 elegido": [
-  "ui/problem_set.dart:424"
+  "ui/problem_set.dart:432"
  ],
  "1 error": [
   "ui/review_panel.dart:271"
@@ -199,6 +199,10 @@
  "1 lección": [
   "ui/suggest_field.dart:132",
   "ui/manage_blocks.dart:456"
+ ],
+ "1 lección en {0}": [
+  "ui/library_page.dart:1805",
+  "ui/library_page.dart:1818"
  ],
  "1 lección la pide aparte de su bloque:": [
   "ui/template_editor.dart:930"
@@ -228,16 +232,16 @@
   "ui/manage_snippets.dart:218"
  ],
  "1 unidad": [
-  "ui/library_page.dart:2289"
+  "ui/library_page.dart:2605"
  ],
  "1 unidad de {0}{1}{2}": [
-  "ui/library_page.dart:2935"
+  "ui/library_page.dart:3290"
  ],
  "1 versión": [
   "ui/manage_blocks.dart:613"
  ],
  "A cuáles se traduce. Lo que no esté marcado no se pide y no cuenta como pendiente; quitarlo no borra ningún fichero. Solo salen los que mantiene su repositorio: para ofrecer otro, añádelo antes en Ajustes.": [
-  "ui/edit_course.dart:148"
+  "ui/edit_course.dart:187"
  ],
  "A la carpeta de reparto, que se sincroniza sola: {0}. Ordenado por tema, y sin tocar nada, solo lo que puede ver un estudiante.": [
   "ui/export_year.dart:227"
@@ -277,7 +281,7 @@
   "ui/tex_find_bar.dart:329"
  ],
  "Abiertas hace poco": [
-  "ui/library_page.dart:535"
+  "ui/library_page.dart:548"
  ],
  "Abre el Terminal y escribe: xcode-select --install": [
   "model/toolchain.dart:411",
@@ -291,6 +295,7 @@
  ],
  "Abrir": [
   "ui/unit_preview.dart:1110",
+  "ui/library_page.dart:2667",
   "ui/between_repos_page.dart:335",
   "ui/between_repos_page.dart:640",
   "ui/diagnostic_list.dart:150",
@@ -345,8 +350,8 @@
   "ui/pdf_controls.dart:206"
  ],
  "Activar": [
-  "ui/composition_editor.dart:876",
-  "state/catalogue_editor.dart:1675"
+  "ui/composition_editor.dart:877",
+  "state/catalogue_editor.dart:1794"
  ],
  "Actualizaciones": [
   "ui/settings_page.dart:198"
@@ -377,7 +382,7 @@
   "ui/command_palette.dart:211"
  ],
  "Actualizar los metadatos de «{0}»": [
-  "ui/metadata_editor.dart:398"
+  "ui/metadata_editor.dart:400"
  ],
  "Actualizar: releer el disco, regenerar el índice y mirar si hay algo nuevo en GitHub  {0}": [
   "ui/shell.dart:885"
@@ -415,7 +420,7 @@
   "ui/pdf_controls.dart:246"
  ],
  "Ajustes": [
-  "ui/composition_editor.dart:1667",
+  "ui/composition_editor.dart:1690",
   "ui/shell.dart:119",
   "ui/command_palette.dart:364",
   "ui/settings_page.dart:260"
@@ -430,13 +435,13 @@
   "ui/reuse.dart:1065"
  ],
  "Al crear el curso {0}.": [
-  "ui/courses_page.dart:770"
+  "ui/courses_page.dart:789"
  ],
  "Al guardar": [
   "ui/settings_page.dart:312"
  ],
  "Al guardar se ordena el {0}.\nQuítalo si este fichero tiene que quedarse tal cual.": [
-  "ui/unit_page.dart:1924"
+  "ui/unit_page.dart:1925"
  ],
  "Alejar": [
   "ui/pdf_controls.dart:178"
@@ -445,7 +450,7 @@
   "ui/problem.dart:178"
  ],
  "Algoritmo": [
-  "model/tex_vocabulary.dart:112",
+  "model/tex_vocabulary.dart:117",
   "model/tex_wrap.dart:345"
  ],
  "Alguien ha enviado algo desde la última vez. Trae primero sus cambios y vuelve a intentarlo: lo tuyo no se pierde.": [
@@ -497,7 +502,7 @@
   "ui/settings_page.dart:3090"
  ],
  "Apagar la plantilla {0}": [
-  "state/catalogue_editor.dart:1407"
+  "state/catalogue_editor.dart:1526"
  ],
  "Apariencia": [
   "ui/settings_page.dart:189"
@@ -512,22 +517,22 @@
   "ui/command_palette.dart:271"
  ],
  "Apartado": [
-  "ui/composition_editor.dart:1056",
-  "ui/composition_editor.dart:1096",
+  "ui/composition_editor.dart:1061",
+  "ui/composition_editor.dart:1101",
   "ui/source_view.dart:470"
  ],
  "Apartado sin título": [
-  "ui/composition_editor.dart:1018",
-  "ui/document_page.dart:992"
+  "ui/composition_editor.dart:1023",
+  "ui/document_page.dart:993"
  ],
  "Apartado, encima": [
-  "ui/composition_editor.dart:855"
+  "ui/composition_editor.dart:856"
  ],
  "Apartados": [
   "model/tex_wrap.dart:223"
  ],
  "Apartados (i), (ii), (iii)": [
-  "model/tex_vocabulary.dart:119"
+  "model/tex_vocabulary.dart:124"
  ],
  "Apertium devolvió los párrafos mezclados. No se aplica nada.": [
   "data/translator_http.dart:470"
@@ -536,7 +541,7 @@
   "data/translator_http.dart:419"
  ],
  "Aprobar y siguiente": [
-  "ui/unit_page.dart:2416"
+  "ui/unit_page.dart:2417"
  ],
  "Apunta o copia el código, abre GitHub y pégalo allí. Ya está copiado al portapapeles.": [
   "ui/sign_in.dart:343"
@@ -552,7 +557,7 @@
   "ui/tex_toolbar.dart:68"
  ],
  "Apuntes o copia del profesor": [
-  "model/tex_vocabulary.dart:57"
+  "model/tex_vocabulary.dart:62"
  ],
  "Aquí los instaladores se abren a mano.": [
   "data/toolchain_io.dart:400"
@@ -562,6 +567,9 @@
  ],
  "Aquí no hay dónde guardar una clave de forma segura. Usa la aplicación de escritorio.": [
   "ui/translation_settings.dart:55"
+ ],
+ "Aquí no hay lecciones de este repositorio.": [
+  "ui/composition_editor.dart:1499"
  ],
  "Aquí no hay motor que mover.": [
   "data/engine_pin_stub.dart:6",
@@ -606,10 +614,10 @@
   "model/toolchain.dart:813"
  ],
  "Arco seno": [
-  "model/tex_vocabulary.dart:88"
+  "model/tex_vocabulary.dart:93"
  ],
  "Arco tangente": [
-  "model/tex_vocabulary.dart:89"
+  "model/tex_vocabulary.dart:94"
  ],
  "Argumentos (opcional)": [
   "ui/manage_snippets.dart:1735"
@@ -627,11 +635,11 @@
   "ui/courses_page.dart:362"
  ],
  "Asignatura «{0}» quitada. Queda en el historial.": [
-  "ui/courses_page.dart:845"
+  "ui/courses_page.dart:864"
  ],
  "Asignaturas": [
-  "ui/document_page.dart:422",
-  "ui/document_page.dart:1481",
+  "ui/document_page.dart:423",
+  "ui/document_page.dart:1483",
   "ui/year_page.dart:98",
   "ui/year_page.dart:2701",
   "ui/platform_menus.dart:233",
@@ -682,10 +690,10 @@
   "ui/settings_page.dart:2767"
  ],
  "Avisos": [
-  "ui/unit_page.dart:2821"
+  "ui/unit_page.dart:2837"
  ],
  "Axioma": [
-  "model/tex_vocabulary.dart:111",
+  "model/tex_vocabulary.dart:116",
   "model/tex_wrap.dart:330"
  ],
  "Ayer": [
@@ -702,7 +710,7 @@
   "ui/manage_snippets.dart:55"
  ],
  "Añadida a «{0}». Es la misma lección: corregirla sigue siendo corregirla una vez.": [
-  "ui/unit_page.dart:3718"
+  "ui/unit_page.dart:3734"
  ],
  "Añadido": [
   "ui/manage_snippets.dart:347"
@@ -711,9 +719,9 @@
   "data/toolchain_io.dart:512"
  ],
  "Añadir": [
-  "ui/composition_editor.dart:1372",
+  "ui/composition_editor.dart:1401",
   "ui/language_settings.dart:449",
-  "ui/metadata_editor.dart:1303",
+  "ui/metadata_editor.dart:1334",
   "ui/settings_page.dart:1796",
   "ui/add_repository.dart:570"
  ],
@@ -748,13 +756,13 @@
   "data/course_admin.dart:254"
  ],
  "Añadir la primera unidad": [
-  "ui/composition_editor.dart:1602"
+  "ui/composition_editor.dart:1625"
  ],
  "Añadir la versión {0} de «{1}»": [
-  "ui/unit_page.dart:1231"
+  "ui/unit_page.dart:1232"
  ],
  "Añadir lecciones a este documento…": [
-  "ui/document_page.dart:382"
+  "ui/document_page.dart:383"
  ],
  "Añadir otro": [
   "ui/welcome.dart:879"
@@ -763,7 +771,7 @@
   "ui/add_repository.dart:447"
  ],
  "Añadir un repositorio": [
-  "ui/library_page.dart:711"
+  "ui/library_page.dart:724"
  ],
  "Añadir una carpeta que ya tengo": [
   "ui/settings_page.dart:1541"
@@ -772,13 +780,13 @@
   "main.dart:1019"
  ],
  "Añadir una lección": [
-  "ui/document_page.dart:840"
+  "ui/document_page.dart:841"
  ],
  "Añadir unidad": [
-  "ui/composition_editor.dart:1091"
+  "ui/composition_editor.dart:1096"
  ],
  "Añadir unidades": [
-  "ui/composition_editor.dart:1252"
+  "ui/composition_editor.dart:1271"
  ],
  "Añadir vinculada": [
   "ui/reuse.dart:747"
@@ -790,17 +798,17 @@
   "ui/year_page.dart:2887"
  ],
  "Añadir {0}": [
-  "ui/composition_editor.dart:1373",
+  "ui/composition_editor.dart:1402",
   "ui/add_repository.dart:571"
  ],
  "Añadir {0} lecciones a {1}": [
-  "ui/document_page.dart:225"
+  "ui/document_page.dart:226"
  ],
  "Añadir «{0}» a {1}": [
-  "ui/document_page.dart:221"
+  "ui/document_page.dart:222"
  ],
  "Añadir: {0}": [
-  "ui/metadata_editor.dart:1303"
+  "ui/metadata_editor.dart:1334"
  ],
  "Añil (algoritmo)": [
   "ui/manage_snippets.dart:61"
@@ -812,20 +820,20 @@
   "ui/manage_snippets.dart:922"
  ],
  "Biblioteca": [
-  "ui/library_page.dart:827",
-  "ui/library_page.dart:1473",
+  "ui/library_page.dart:840",
+  "ui/library_page.dart:1489",
   "ui/platform_menus.dart:238",
   "ui/shell.dart:107",
   "ui/command_palette.dart:340",
-  "ui/unit_page.dart:564",
-  "ui/unit_page.dart:3026"
+  "ui/unit_page.dart:565",
+  "ui/unit_page.dart:3042"
  ],
  "Bloque": [
   "ui/year_page.dart:1698",
   "ui/library_search.dart:141"
  ],
  "Bloque de {0}: {1}": [
-  "state/catalogue_editor.dart:811"
+  "state/catalogue_editor.dart:930"
  ],
  "Bloque {0} · {1}": [
   "ui/between_repos_page.dart:439"
@@ -878,13 +886,13 @@
   "ui/command_palette.dart:543"
  ],
  "Buscando en el texto…": [
-  "ui/library_page.dart:2932"
+  "ui/library_page.dart:3287"
  ],
  "Buscando tlmgr…": [
   "data/toolchain_io.dart:494"
  ],
  "Buscando «{0}»": [
-  "ui/library_page.dart:841"
+  "ui/library_page.dart:854"
  ],
  "Buscando…": [
   "ui/pdf_search.dart:187"
@@ -910,27 +918,27 @@
   "ui/tex_find_bar.dart:290"
  ],
  "Buscar en la biblioteca": [
-  "ui/library_page.dart:313"
+  "ui/library_page.dart:326"
  ],
  "Buscar por nombre, entorno u orden": [
   "ui/manage_snippets.dart:561"
  ],
  "Buscar por título, ruta o etiqueta…": [
-  "ui/composition_editor.dart:1265",
-  "ui/library_page.dart:1276",
-  "ui/problem_set.dart:329"
+  "ui/composition_editor.dart:1284",
+  "ui/library_page.dart:1289",
+  "ui/problem_set.dart:337"
  ],
  "Buscar solo en títulos y etiquetas": [
-  "ui/library_page.dart:322"
+  "ui/library_page.dart:335"
  ],
  "Buscar también dentro de las lecciones": [
-  "ui/library_page.dart:323"
+  "ui/library_page.dart:336"
  ],
  "Buscar también dentro de las lecciones, no solo en su título, su ruta y sus etiquetas": [
-  "ui/library_page.dart:945"
+  "ui/library_page.dart:958"
  ],
  "Buscar también dentro de las lecciones…": [
-  "ui/library_page.dart:1275"
+  "ui/library_page.dart:1288"
  ],
  "Buscar un snippet…": [
   "ui/tex_toolbar.dart:933"
@@ -942,10 +950,10 @@
   "ui/shortcuts.dart:28"
  ],
  "Búsquedas guardadas": [
-  "ui/library_page.dart:555"
+  "ui/library_page.dart:568"
  ],
  "Cabecera de la plantilla {0}": [
-  "state/catalogue_editor.dart:1526"
+  "state/catalogue_editor.dart:1645"
  ],
  "Caché vaciada: {0} versión(es). Se vuelven a preparar solas al abrirlas.": [
   "ui/freezes.dart:142"
@@ -954,7 +962,7 @@
   "ui/welcome.dart:496"
  ],
  "Cada grupo que se separe recibe una copia de la lección, con su texto, sus figuras y sus metadatos tal como están ahora, y un id propio. Nada se pierde y ningún otro sitio cambia.": [
-  "ui/unit_page.dart:3634"
+  "ui/unit_page.dart:3650"
  ],
  "Cada guardado enseña lo que cambia y pide el mensaje antes de dejarlo en el historial.": [
   "ui/settings_page.dart:2927"
@@ -1005,7 +1013,7 @@
   "ui/year_page.dart:1345"
  ],
  "Cambiar {0} en «{1}»": [
-  "ui/metadata_editor.dart:400"
+  "ui/metadata_editor.dart:402"
  ],
  "Cambiarla…": [
   "ui/publish_folder.dart:121"
@@ -1019,7 +1027,7 @@
   "ui/courses_page.dart:227"
  ],
  "Campos": [
-  "ui/unit_page.dart:1634"
+  "ui/unit_page.dart:1635"
  ],
  "Canales": [
   "model/latex_snippets.dart:114"
@@ -1028,24 +1036,24 @@
   "ui/sync_bar.dart:662",
   "ui/sync_bar.dart:1132",
   "ui/history_tab.dart:406",
-  "ui/composition_editor.dart:402",
-  "ui/composition_editor.dart:1363",
+  "ui/composition_editor.dart:403",
+  "ui/composition_editor.dart:1392",
   "ui/unit_preview.dart:999",
   "ui/engine_version_line.dart:51",
-  "ui/new_unit.dart:302",
-  "ui/new_unit.dart:487",
-  "ui/new_unit.dart:726",
+  "ui/new_unit.dart:268",
+  "ui/new_unit.dart:454",
+  "ui/new_unit.dart:660",
   "ui/manage_degrees.dart:567",
   "ui/manage_degrees.dart:661",
-  "ui/library_page.dart:489",
-  "ui/edit_course.dart:272",
+  "ui/library_page.dart:502",
+  "ui/edit_course.dart:367",
   "ui/reuse.dart:338",
   "ui/reuse.dart:732",
   "ui/reuse.dart:1142",
   "ui/language_settings.dart:590",
   "ui/new_document.dart:162",
   "ui/new_document.dart:288",
-  "ui/problem_set.dart:441",
+  "ui/problem_set.dart:449",
   "ui/manage_snippets.dart:412",
   "ui/manage_snippets.dart:2077",
   "ui/year_page.dart:1137",
@@ -1054,9 +1062,11 @@
   "ui/recent_changes.dart:214",
   "ui/remove_repository.dart:155",
   "ui/source_view.dart:1313",
-  "ui/metadata_editor.dart:1435",
+  "ui/metadata_editor.dart:1466",
   "ui/build_button.dart:227",
   "ui/document_properties.dart:279",
+  "ui/place_browser.dart:241",
+  "ui/place_browser.dart:592",
   "ui/commit_dialog.dart:84",
   "ui/review_panel.dart:368",
   "ui/toolchain_check.dart:706",
@@ -1068,7 +1078,7 @@
   "ui/export_year.dart:481",
   "ui/settings_page.dart:1791",
   "ui/settings_page.dart:2398",
-  "ui/unit_page.dart:2579",
+  "ui/unit_page.dart:2580",
   "ui/manage_blocks.dart:835",
   "ui/manage_blocks.dart:978",
   "ui/manage_blocks.dart:1061",
@@ -1091,12 +1101,6 @@
  "Carpeta de reparto": [
   "ui/settings_page.dart:316"
  ],
- "Carpeta, dentro de {0}/": [
-  "ui/new_unit.dart:644"
- ],
- "Carpetas del repositorio · {0} unidades": [
-  "ui/composition_editor.dart:1283"
- ],
  "Casi todas las distribuciones lo traen puesto; si no, lo instala el gestor de paquetes con la contraseña de administrador.": [
   "model/toolchain.dart:537"
  ],
@@ -1104,11 +1108,8 @@
   "ui/start_over.dart:85"
  ],
  "Categoría": [
-  "ui/new_unit.dart:215",
+  "ui/place_browser.dart:309",
   "ui/library_search.dart:193"
- ],
- "Categoría nueva: ninguna otra lección la usa. Si es una errata, la lección saldrá sola en la biblioteca.": [
-  "ui/metadata_editor.dart:653"
  ],
  "Catálogo": [
   "ui/settings_page.dart:330"
@@ -1135,7 +1136,7 @@
   "ui/review_panel.dart:380",
   "ui/toolchain_check.dart:978",
   "ui/update_section.dart:283",
-  "ui/unit_page.dart:2370",
+  "ui/unit_page.dart:2371",
   "ui/manage_blocks.dart:239",
   "ui/freezes.dart:155",
   "ui/translate_unit.dart:511"
@@ -1171,13 +1172,13 @@
   "model/toolchain.dart:530"
  ],
  "Cierra un entorno": [
-  "model/tex_vocabulary.dart:74"
+  "model/tex_vocabulary.dart:79"
  ],
  "Cita de la bibliografía": [
-  "model/tex_vocabulary.dart:82"
+  "model/tex_vocabulary.dart:87"
  ],
  "Cita dentro de la frase": [
-  "model/tex_vocabulary.dart:84"
+  "model/tex_vocabulary.dart:89"
  ],
  "Claro": [
   "ui/settings_page.dart:611"
@@ -1189,7 +1190,7 @@
   "ui/template_editor.dart:683"
  ],
  "Clasificación": [
-  "ui/metadata_editor.dart:613"
+  "ui/metadata_editor.dart:615"
  ],
  "Clave de API": [
   "ui/translation_settings.dart:188"
@@ -1266,13 +1267,13 @@
  ],
  "Compilar": [
   "ui/unit_preview.dart:789",
-  "ui/document_page.dart:783",
-  "ui/document_page.dart:1398",
+  "ui/document_page.dart:784",
+  "ui/document_page.dart:1400",
   "ui/settings_page.dart:347"
  ],
  "Compilar ahora": [
-  "ui/composition_editor.dart:533",
-  "ui/document_page.dart:250"
+  "ui/composition_editor.dart:534",
+  "ui/document_page.dart:251"
  ],
  "Compilar ahora (Ctrl+Intro)": [
   "ui/manage_snippets.dart:2397",
@@ -1313,7 +1314,7 @@
   "ui/unit_preview.dart:799"
  ],
  "Compilar este documento": [
-  "ui/document_page.dart:374"
+  "ui/document_page.dart:375"
  ],
  "Compilar lee los ficheros del disco, así que hace falta la copia del repositorio de contenido en tu ordenador. Se elige en Ajustes.": [
   "data/compiler_io.dart:372"
@@ -1325,7 +1326,7 @@
   "ui/year_page.dart:1641"
  ],
  "Compilar necesita LaTeX, y un navegador no lo tiene. Desde el repositorio de contenido:": [
-  "ui/document_page.dart:1402"
+  "ui/document_page.dart:1404"
  ],
  "Compilar necesita LaTeX, y un navegador no lo tiene. Usa la aplicación de escritorio.": [
   "ui/unit_preview.dart:322"
@@ -1349,7 +1350,7 @@
   "ui/tour.dart:304"
  ],
  "Compilar y ver el PDF": [
-  "ui/unit_page.dart:493"
+  "ui/unit_page.dart:494"
  ],
  "Compilar {0}": [
   "ui/unit_preview.dart:701",
@@ -1371,8 +1372,8 @@
   "ui/settings_page.dart:834"
  ],
  "Composición ({0})": [
-  "ui/document_page.dart:770",
-  "ui/document_page.dart:1258"
+  "ui/document_page.dart:771",
+  "ui/document_page.dart:1260"
  ],
  "Comprobando la sesión": [
   "state/startup.dart:110"
@@ -1415,7 +1416,7 @@
   "ui/export_year.dart:323"
  ],
  "Con lo buscado, los filtros y lo abierto. Sale en la raíz de la biblioteca, para volver a ella de un clic.": [
-  "ui/library_page.dart:469"
+  "ui/library_page.dart:482"
  ],
  "Con los que trabajas": [
   "ui/language_settings.dart:139"
@@ -1502,20 +1503,20 @@
   "data/content_gateway.dart:291"
  ],
  "Copiada en «{0}». Son dos lecciones a partir de ahora.": [
-  "ui/unit_page.dart:3715"
+  "ui/unit_page.dart:3731"
  ],
  "Copiado.": [
   "ui/problem.dart:395",
-  "ui/document_page.dart:1456",
+  "ui/document_page.dart:1458",
   "ui/mcp_page.dart:161"
  ],
  "Copiado: {0}": [
-  "ui/document_page.dart:495",
-  "ui/unit_page.dart:644"
+  "ui/document_page.dart:496",
+  "ui/unit_page.dart:645"
  ],
  "Copiar": [
   "ui/problem.dart:397",
-  "ui/document_page.dart:1445",
+  "ui/document_page.dart:1447",
   "ui/platform_menus.dart:162",
   "ui/build_console.dart:654",
   "ui/mcp_page.dart:215"
@@ -1524,7 +1525,7 @@
   "ui/course_admin_ui.dart:1133"
  ],
  "Copiar a otro curso…": [
-  "ui/courses_page.dart:1721"
+  "ui/courses_page.dart:1740"
  ],
  "Copiar a una carpeta": [
   "ui/settings_page.dart:2108"
@@ -1536,7 +1537,7 @@
   "ui/course_admin_ui.dart:994"
  ],
  "Copiar el comando para compilarlo": [
-  "ui/document_page.dart:489"
+  "ui/document_page.dart:490"
  ],
  "Copiar el detalle": [
   "ui/toolchain_check.dart:913"
@@ -1548,7 +1549,7 @@
   "ui/mcp_page.dart:108"
  ],
  "Copiar la referencia para una composición": [
-  "ui/unit_page.dart:636"
+  "ui/unit_page.dart:637"
  ],
  "Copiar los datos de": [
   "ui/course_admin_ui.dart:810"
@@ -1569,7 +1570,7 @@
   "data/course_admin.dart:426"
  ],
  "Corolario": [
-  "model/tex_vocabulary.dart:106",
+  "model/tex_vocabulary.dart:111",
   "model/tex_wrap.dart:290"
  ],
  "Corrección": [
@@ -1582,27 +1583,28 @@
   "ui/sync_bar.dart:560"
  ],
  "Corregir y revisar {0} de «{1}»": [
-  "state/catalogue_editor.dart:1773"
+  "state/catalogue_editor.dart:1892"
  ],
  "Cortar": [
   "ui/platform_menus.dart:150"
  ],
  "Cosecante": [
-  "model/tex_vocabulary.dart:91"
+  "model/tex_vocabulary.dart:96"
  ],
  "Cotangente": [
-  "model/tex_vocabulary.dart:90"
+  "model/tex_vocabulary.dart:95"
  ],
  "Crea la primera, o prueba Didacta con un ejemplo: una asignatura pequeña, con un tema, una hoja de problemas y lecciones traducidas, en un repositorio tuyo para tocar sin miedo.": [
-  "ui/courses_page.dart:926"
+  "ui/courses_page.dart:945"
  ],
  "Creando {0}/{1} en GitHub…": [
   "state/repositories.dart:587"
  ],
  "Crear": [
-  "ui/new_unit.dart:316",
+  "ui/new_unit.dart:283",
   "ui/new_document.dart:182",
   "ui/new_document.dart:297",
+  "ui/place_browser.dart:255",
   "ui/course_admin_ui.dart:704",
   "ui/course_admin_ui.dart:860",
   "ui/freezes.dart:864"
@@ -1618,10 +1620,10 @@
   "state/repositories.dart:533"
  ],
  "Crear el examen": [
-  "ui/problem_set.dart:447"
+  "ui/problem_set.dart:455"
  ],
  "Crear la hoja": [
-  "ui/problem_set.dart:447"
+  "ui/problem_set.dart:455"
  ],
  "Crear un curso desde aquí…": [
   "ui/shell.dart:416",
@@ -1631,15 +1633,15 @@
   "ui/freezes.dart:800"
  ],
  "Crear una nueva…": [
-  "ui/composition_editor.dart:1358"
+  "ui/composition_editor.dart:1387"
  ],
  "Crear versión congelada…": [
   "ui/year_page.dart:121",
-  "ui/courses_page.dart:1736",
+  "ui/courses_page.dart:1755",
   "ui/info_menu.dart:226"
  ],
  "Criterios de corrección": [
-  "model/tex_vocabulary.dart:123"
+  "model/tex_vocabulary.dart:128"
  ],
  "Ctrl+Intro compila la vista previa · Ctrl+S guarda": [
   "ui/manage_snippets.dart:2045",
@@ -1649,10 +1651,10 @@
   "ui/shortcuts.dart:89"
  ],
  "Cualquier estado": [
-  "ui/library_page.dart:1134"
+  "ui/library_page.dart:1147"
  ],
  "Cualquier tipo": [
-  "ui/library_page.dart:1150"
+  "ui/library_page.dart:1163"
  ],
  "Cualquiera de estas sirve: Didacta solo necesita latexmk y paquetes que están en CTAN. Lo que cambia es cuánto ocupa y si hace falta la contraseña de administrador.": [
   "ui/toolchain_check.dart:682"
@@ -1667,7 +1669,7 @@
   "ui/settings_page.dart:106"
  ],
  "Cuestión": [
-  "model/tex_vocabulary.dart:109",
+  "model/tex_vocabulary.dart:114",
   "model/tex_wrap.dart:322"
  ],
  "Cursiva": [
@@ -1680,13 +1682,13 @@
   "ui/freezes.dart:751"
  ],
  "Curso {0} creado, copiado de {1}, y {2} congelado como «{3}».": [
-  "ui/courses_page.dart:782"
+  "ui/courses_page.dart:801"
  ],
  "Curso {0} creado, copiado de {1}.": [
-  "ui/courses_page.dart:787"
+  "ui/courses_page.dart:806"
  ],
  "Curso {0} creado, vacío.": [
-  "ui/courses_page.dart:780"
+  "ui/courses_page.dart:799"
  ],
  "Curso {0} quitado. Queda en el historial.": [
   "ui/year_page.dart:271"
@@ -1710,7 +1712,7 @@
   "ui/manage_snippets.dart:1771"
  ],
  "Cómo se escribe una lección": [
-  "ui/library_page.dart:732"
+  "ui/library_page.dart:745"
  ],
  "Cómo se llama": [
   "ui/new_document.dart:261",
@@ -1727,7 +1729,7 @@
   "ui/add_repository.dart:486"
  ],
  "Dar «{0}» en otro tema": [
-  "ui/unit_page.dart:3698"
+  "ui/unit_page.dart:3714"
  ],
  "Dar «{0}» también en {1} {2}, vinculado a {3} {4}": [
   "data/course_admin.dart:465"
@@ -1736,11 +1738,11 @@
   "data/course_admin.dart:559"
  ],
  "Darla en otro tema…": [
-  "ui/unit_page.dart:523",
+  "ui/unit_page.dart:524",
   "ui/info_menu.dart:273"
  ],
  "Darla por revisada y abrir la siguiente sin revisar": [
-  "ui/unit_page.dart:2400"
+  "ui/unit_page.dart:2401"
  ],
  "De": [
   "ui/glossary_editor.dart:227"
@@ -1752,13 +1754,13 @@
   "ui/diff_view.dart:76"
  ],
  "De la carpeta": [
-  "ui/problem_set.dart:343"
+  "ui/problem_set.dart:351"
  ],
  "De los que hay en el material, cuáles quieres que te ofrezca la aplicación: la barra de arriba, los menús de compilar y la ficha de una asignatura. Es solo para ti, viaja con tus preferencias y no cambia ningún fichero. Un idioma quitado sigue saliendo donde algo ya lo declara, para que guardar no pueda borrarlo sin querer.": [
   "ui/language_settings.dart:141"
  ],
  "De otro repositorio: un documento y sus problemas viven en el mismo.": [
-  "ui/problem_set.dart:477"
+  "ui/problem_set.dart:485"
  ],
  "De un bloque solo se puede igualar el nombre desde aquí. Lo demás, a mano en `taxonomy.yaml`.": [
   "ui/between_repos_page.dart:493"
@@ -1791,30 +1793,39 @@
   "ui/manage_blocks.dart:857"
  ],
  "Declarar el bloque {0}": [
-  "state/catalogue_editor.dart:608"
+  "state/catalogue_editor.dart:652"
  ],
  "Declarar el grado {0}": [
-  "state/catalogue_editor.dart:492"
+  "state/catalogue_editor.dart:536"
+ ],
+ "Declarar el subtema {0}": [
+  "state/catalogue_editor.dart:720"
+ ],
+ "Declarar el tema {0}": [
+  "state/catalogue_editor.dart:719"
  ],
  "Declarar el tema «{0}» en {1} {2}": [
   "data/course_admin.dart:377"
  ],
+ "Declarar la categoría {0}": [
+  "state/catalogue_editor.dart:718"
+ ],
  "Declarar la plantilla {0}": [
-  "state/catalogue_editor.dart:1261"
+  "state/catalogue_editor.dart:1380"
  ],
  "Declarar la plantilla {0}, con las de serie": [
-  "state/catalogue_editor.dart:1260"
+  "state/catalogue_editor.dart:1379"
  ],
  "Declararlo": [
   "ui/between_repos_page.dart:203"
  ],
  "Definición": [
   "ui/welcome_art.dart:352",
-  "model/tex_vocabulary.dart:103",
+  "model/tex_vocabulary.dart:108",
   "model/tex_wrap.dart:266"
  ],
  "Definición por casos": [
-  "model/tex_vocabulary.dart:138",
+  "model/tex_vocabulary.dart:143",
   "model/tex_snippets.dart:99"
  ],
  "Deja Didacta en este ordenador como recién instalada: sin la sesión de GitHub, sin ajustes y sin la lista de repositorios. Al volver a abrirse empieza por la bienvenida.\n\nTirar la aplicación a la Papelera no borra nada de esto, así que es lo que hay que hacer antes si no quieres que quede nada.": [
@@ -1842,13 +1853,13 @@
   "ui/settings_page.dart:217"
  ],
  "Dejar de declarar el bloque {0}": [
-  "state/catalogue_editor.dart:636"
+  "state/catalogue_editor.dart:755"
  ],
  "Dejar de declarar el grado {0}": [
-  "state/catalogue_editor.dart:520"
+  "state/catalogue_editor.dart:564"
  ],
  "Dejar de editar la composición": [
-  "ui/document_page.dart:479"
+  "ui/document_page.dart:480"
  ],
  "Dejar de usarla": [
   "ui/publish_folder.dart:129"
@@ -1869,17 +1880,26 @@
   "ui/welcome.dart:486"
  ],
  "Demostración": [
-  "model/tex_vocabulary.dart:115",
+  "model/tex_vocabulary.dart:120",
   "model/tex_wrap.dart:353"
+ ],
+ "Dentro de {0}": [
+  "ui/place_browser.dart:196"
+ ],
+ "Departamento de {0}": [
+  "state/catalogue_editor.dart:339"
+ ],
+ "Departamento · {0}": [
+  "ui/edit_course.dart:356"
  ],
  "Derivar $f(x) = x^2$.": [
   "ui/problem_editor.dart:233"
  ],
  "Desactivar": [
-  "state/catalogue_editor.dart:1675"
+  "state/catalogue_editor.dart:1794"
  ],
  "Desactivar, se queda comentada": [
-  "ui/composition_editor.dart:877"
+  "ui/composition_editor.dart:878"
  ],
  "Desactualizadas": [
   "ui/translations_page.dart:274"
@@ -1954,24 +1974,24 @@
   "model/toolchain.dart:374"
  ],
  "Descartar": [
-  "ui/composition_editor.dart:681",
+  "ui/composition_editor.dart:682",
   "ui/year_page.dart:2144",
   "ui/source_view.dart:781",
-  "ui/metadata_editor.dart:489",
-  "ui/unit_page.dart:2156",
-  "ui/unit_page.dart:2207"
+  "ui/metadata_editor.dart:491",
+  "ui/unit_page.dart:2157",
+  "ui/unit_page.dart:2208"
  ],
  "Descartar los cambios": [
-  "ui/unit_page.dart:2145"
+  "ui/unit_page.dart:2146"
  ],
  "Descartarlo": [
-  "ui/unit_page.dart:3513"
+  "ui/unit_page.dart:3529"
  ],
  "Descripción (opcional)": [
   "ui/freezes.dart:653"
  ],
  "Desde la versión del {0} ({1}), que es la que se revisó en {2}:": [
-  "ui/unit_page.dart:2347"
+  "ui/unit_page.dart:2348"
  ],
  "Deshacer": [
   "ui/year_page.dart:1248",
@@ -1984,7 +2004,7 @@
   "ui/year_page.dart:277"
  ],
  "Deshacer: quitar la asignatura «{0}»": [
-  "ui/courses_page.dart:851"
+  "ui/courses_page.dart:870"
  ],
  "Deshacer: {0}": [
   "ui/year_page.dart:1270",
@@ -1997,10 +2017,10 @@
   "ui/recent_changes.dart:234"
  ],
  "Desmarcar «{0}»": [
-  "ui/courses_page.dart:1825"
+  "ui/courses_page.dart:1844"
  ],
  "Después de una migración esto suele significar que el documento original no importó ninguna unidad que se pudiera resolver.": [
-  "ui/composition_editor.dart:1590"
+  "ui/composition_editor.dart:1613"
  ],
  "Después: ~/Library/TinyTeX/bin/universal-darwin/tlmgr install latexmk beamer pgfplots tcolorbox biblatex biber": [
   "model/toolchain.dart:624"
@@ -2040,7 +2060,7 @@
   "ui/manage_templates.dart:38"
  ],
  "Diapositivas o copia del profesor": [
-  "model/tex_vocabulary.dart:54"
+  "model/tex_vocabulary.dart:59"
  ],
  "Didacta": [
   "main.dart:419",
@@ -2052,7 +2072,7 @@
   "ui/shell.dart:694",
   "ui/welcome.dart:312",
   "ui/sign_in.dart:253",
-  "model/catalogue.dart:1851"
+  "model/catalogue.dart:1890"
  ],
  "Didacta clona su propio repositorio al lado de los tuyos. Son unos megas y no hace falta cuenta: es público.": [
   "model/toolchain.dart:375"
@@ -2099,10 +2119,10 @@
  ],
  "Dividir la vinculación de «{0}»": [
   "ui/document_links.dart:94",
-  "ui/unit_page.dart:3628"
+  "ui/unit_page.dart:3644"
  ],
  "Dividir la vinculación de «{0}» en {1} grupo(s)": [
-  "ui/unit_page.dart:3652"
+  "ui/unit_page.dart:3668"
  ],
  "Dividir la vinculación de «{0}» en {1} grupo(s){2}": [
   "ui/document_links.dart:115"
@@ -2114,7 +2134,7 @@
   "ui/year_page.dart:1930"
  ],
  "Documento no encontrado": [
-  "ui/document_page.dart:1480"
+  "ui/document_page.dart:1482"
  ],
  "Documento suelto": [
   "ui/year_page.dart:1582"
@@ -2130,7 +2150,7 @@
   "ui/problem.dart:130"
  ],
  "Duplicar": [
-  "ui/new_unit.dart:494",
+  "ui/new_unit.dart:461",
   "ui/reuse.dart:45",
   "ui/manage_templates.dart:718"
  ],
@@ -2144,10 +2164,10 @@
   "ui/year_page.dart:2893"
  ],
  "Duplicar esta lección…": [
-  "ui/unit_page.dart:530"
+  "ui/unit_page.dart:531"
  ],
  "Duplicar la lección": [
-  "ui/new_unit.dart:432"
+  "ui/new_unit.dart:399"
  ],
  "Duplicar también las lecciones": [
   "ui/reuse.dart:308"
@@ -2162,7 +2182,7 @@
   "ui/info_menu.dart:248"
  ],
  "Duración, para el profesor": [
-  "model/tex_vocabulary.dart:65"
+  "model/tex_vocabulary.dart:70"
  ],
  "Déjala al menos en un sitio. Para quitarla del todo, usa «Quitar» en la lista.": [
   "ui/template_editor.dart:341"
@@ -2171,7 +2191,7 @@
   "ui/tour.dart:141"
  ],
  "Dónde está el material": [
-  "ui/library_page.dart:2605"
+  "ui/library_page.dart:2960"
  ],
  "Dónde está y qué hay guardado": [
   "ui/info_menu.dart:131"
@@ -2201,23 +2221,23 @@
   "ui/glossary_editor.dart:86"
  ],
  "Editar el título en todos los idiomas": [
-  "ui/composition_editor.dart:1050",
+  "ui/composition_editor.dart:1055",
   "ui/source_view.dart:917"
  ],
  "Editar en {0}": [
-  "ui/unit_page.dart:485"
+  "ui/unit_page.dart:486"
  ],
  "Editar la composición": [
-  "ui/document_page.dart:480"
+  "ui/document_page.dart:481"
  ],
  "Editar la versión {0} de «{1}»": [
-  "ui/unit_page.dart:1232"
+  "ui/unit_page.dart:1233"
  ],
  "Editar unit.yaml de «{0}»": [
-  "ui/metadata_editor.dart:396"
+  "ui/metadata_editor.dart:398"
  ],
  "Editar {0}": [
-  "ui/edit_course.dart:137",
+  "ui/edit_course.dart:176",
   "model/commit_message.dart:28"
  ],
  "Editar {0} ({1})": [
@@ -2248,14 +2268,14 @@
   "model/toolchain.dart:759"
  ],
  "Ejemplo": [
-  "model/tex_vocabulary.dart:108",
+  "model/tex_vocabulary.dart:113",
   "model/tex_wrap.dart:298"
  ],
  "Ejemplo de Didacta": [
   "state/repositories.dart:609"
  ],
  "Ejercicio": [
-  "model/tex_vocabulary.dart:118",
+  "model/tex_vocabulary.dart:123",
   "model/tex_wrap.dart:215"
  ],
  "El LaTeX de la lección en el idioma de la pestaña. El estado dice si la traducción está hecha, revisada o desfasada, y guardar lo deja en el historial con tu nombre.": [
@@ -2303,16 +2323,16 @@
  ],
  "El fichero está vacío.": [
   "ui/source_view.dart:1024",
-  "ui/unit_page.dart:1559"
+  "ui/unit_page.dart:1560"
  ],
  "El fichero ha cambiado en el repositorio desde que lo abriste. Vuelve a cargarlo para no sobrescribir el trabajo de otra persona; tu texto sigue aquí mientras decides.": [
-  "ui/unit_page.dart:1449"
+  "ui/unit_page.dart:1450"
  ],
  "El historial sale de la copia del repositorio en tu ordenador, y aquí no la hay. Se elige en Ajustes.": [
   "ui/history_tab.dart:279"
  ],
  "El id y la ruta no se editan aquí: hay composiciones que referencian este id, así que cambiarlo es un renombrado, no un campo de un formulario.": [
-  "ui/metadata_editor.dart:585"
+  "ui/metadata_editor.dart:587"
  ],
  "El instalador está abierto. Cuando termine, vuelve a comprobar.": [
   "ui/toolchain_check.dart:200"
@@ -2383,8 +2403,8 @@
   "data/compiler_io.dart:458"
  ],
  "El motor no ha contestado.": [
-  "state/catalogue_editor.dart:1037",
-  "state/catalogue_editor.dart:1381"
+  "state/catalogue_editor.dart:1156",
+  "state/catalogue_editor.dart:1500"
  ],
  "El motor no supo decir de dónde sale eso.": [
   "data/compiler_io.dart:981"
@@ -2396,10 +2416,10 @@
   "ui/year_page.dart:1425"
  ],
  "El original ha cambiado desde que se revisó esta traducción.": [
-  "ui/unit_page.dart:2249"
+  "ui/unit_page.dart:2250"
  ],
  "El original, para leerlo al lado. Pulsa aquí para editarlo.": [
-  "ui/unit_page.dart:3374"
+  "ui/unit_page.dart:3390"
  ],
  "El paquete descargado no contiene ninguna aplicación.": [
   "data/update_installer_io.dart:387"
@@ -2420,7 +2440,7 @@
   "model/toolchain.dart:157"
  ],
  "El que está abierto aquí": [
-  "model/tex_vocabulary.dart:265"
+  "model/tex_vocabulary.dart:270"
  ],
  "El que mantiene tu sistema, con sus actualizaciones. Pide la contraseña de administrador, así que se instala en un terminal.": [
   "model/toolchain.dart:796"
@@ -2441,20 +2461,20 @@
   "state/mcp_service.dart:183"
  ],
  "El tema compartido ha cambiado en el repositorio desde que lo abriste. Vuelve a cargarlo antes de guardar; tu orden sigue aquí mientras decides.": [
-  "ui/composition_editor.dart:263"
+  "ui/composition_editor.dart:264"
  ],
  "El término que se está definiendo": [
-  "model/tex_vocabulary.dart:63"
+  "model/tex_vocabulary.dart:68"
  ],
  "El título no da un nombre de carpeta.": [
-  "ui/new_unit.dart:175",
-  "ui/new_unit.dart:415"
+  "ui/new_unit.dart:174",
+  "ui/new_unit.dart:382"
  ],
  "El unit.yaml de la lección": [
-  "ui/unit_page.dart:2665"
+  "ui/unit_page.dart:2666"
  ],
  "El {0} se queda como esté.": [
-  "ui/unit_page.dart:1929"
+  "ui/unit_page.dart:1930"
  ],
  "El índice no describía lo que hay en el disco ({0}), así que se ha regenerado.": [
   "state/catalogue_store.dart:346"
@@ -2466,7 +2486,7 @@
   "data/release_channel.dart:204"
  ],
  "Elegir": [
-  "ui/metadata_editor.dart:1133"
+  "ui/metadata_editor.dart:1164"
  ],
  "Elegir dónde se clonan": [
   "ui/settings_page.dart:1561"
@@ -2487,7 +2507,7 @@
   "ui/settings_page.dart:1384"
  ],
  "Elegir salidas": [
-  "ui/document_page.dart:1369"
+  "ui/document_page.dart:1371"
  ],
  "Elige al menos un repositorio: sin ninguno no sale en ninguna barra.": [
   "ui/manage_snippets.dart:1344"
@@ -2501,6 +2521,24 @@
  "Elige los repositorios con tu material. Si está vacío, Didacta se ofrecerá a prepararlo.": [
   "ui/welcome.dart:868"
  ],
+ "Elige un subtema": [
+  "ui/library_page.dart:1816"
+ ],
+ "Elige un subtema: cada lección vive en uno.": [
+  "ui/new_unit.dart:172",
+  "ui/new_unit.dart:574",
+  "ui/place_browser.dart:577"
+ ],
+ "Elige un tema": [
+  "ui/library_page.dart:1803",
+  "ui/place_browser.dart:355"
+ ],
+ "Elige una categoría": [
+  "ui/place_browser.dart:335"
+ ],
+ "Elige una categoría, un tema y un subtema para ver sus lecciones.": [
+  "ui/composition_editor.dart:1433"
+ ],
  "Elige una fila para ver exactamente qué cambió dentro.": [
   "ui/compare_view.dart:189"
  ],
@@ -2508,7 +2546,7 @@
   "ui/history_tab.dart:599"
  ],
  "Elige uno o más. Van en el orden en que los elijas, y se reordenan después en la composición.": [
-  "ui/problem_set.dart:420"
+  "ui/problem_set.dart:428"
  ],
  "Empezar": [
   "ui/welcome.dart:394"
@@ -2523,13 +2561,13 @@
   "ui/settings_page.dart:213"
  ],
  "Empieza un entorno": [
-  "model/tex_vocabulary.dart:73"
+  "model/tex_vocabulary.dart:78"
  ],
  "En GitHub no se toca nada.": [
   "ui/start_over.dart:149"
  ],
  "En cada idioma de los de arriba. El que se deja en blanco no se enseña, y la asignatura se ve por el que tenga.": [
-  "ui/edit_course.dart:189"
+  "ui/edit_course.dart:228"
  ],
  "En cuanto entres, un recorrido corto te enseñará dónde está cada cosa: las asignaturas por dentro, la biblioteca y sus filtros, y una lección con sus idiomas y lo que se compila. Puedes salirte en cualquier momento y volver a verlo desde Ajustes.": [
   "ui/welcome.dart:1111"
@@ -2572,16 +2610,16 @@
   "data/toolchain_stub.dart:45"
  ],
  "En el programa (sin copia de seguridad)": [
-  "state/catalogue_editor.dart:1134"
+  "state/catalogue_editor.dart:1253"
  ],
  "En el programa no la protege nadie: no está en git, no se sincroniza y se va con este ordenador. Hazte copias desde Ajustes, y si la plantilla es de la asignatura y no tuya, guárdala en su repositorio.": [
   "ui/template_editor.dart:824"
  ],
  "En el tema": [
-  "ui/problem_set.dart:287"
+  "ui/problem_set.dart:295"
  ],
  "En el texto": [
-  "ui/library_page.dart:944"
+  "ui/library_page.dart:957"
  ],
  "En esa versión el fichero no estaba aquí: no hay texto que recuperar.": [
   "ui/history_tab.dart:369"
@@ -2591,6 +2629,9 @@
  ],
  "En esta pantalla": [
   "model/palette.dart:28"
+ ],
+ "En la portada": [
+  "ui/edit_course.dart:307"
  ],
  "En lo marcado no hay nada sin texto. Para pasar la máquina por lo que ya tiene, marca «Rehacer».": [
   "ui/translate_unit.dart:450"
@@ -2617,7 +2658,7 @@
   "ui/tour.dart:255"
  ],
  "En qué grado se da. Sirve para agruparlas y para filtrar; sin grado la asignatura se ve igual, suelta.": [
-  "ui/edit_course.dart:225"
+  "ui/edit_course.dart:264"
  ],
  "En qué idioma se ve el contenido": [
   "ui/sync_bar.dart:816"
@@ -2626,7 +2667,7 @@
   "ui/settings_page.dart:142"
  ],
  "En qué plantillas se compila esta lección. Lo normal es no elegir: sale lo que diga su bloque, y cambiar el bloque las cambia todas de una vez. Elegir aquí es apartar esta en concreto.": [
-  "ui/metadata_editor.dart:684"
+  "ui/metadata_editor.dart:661"
  ],
  "En qué repositorio se declara": [
   "ui/manage_degrees.dart:532"
@@ -2658,9 +2699,6 @@
  "En {0}": [
   "ui/missing_translations.dart:124"
  ],
- "En {0} cursos: {1}. El cambio les llega a todos, también a los que no das tú.": [
-  "ui/new_unit.dart:691"
- ],
  "En {0} hay algo que no es una copia de {1}. No lo he tocado: vacía esa carpeta, o cambia dónde se clonan los repositorios en Ajustes → Cuenta y repositorios.": [
   "ui/add_repository.dart:39"
  ],
@@ -2673,14 +2711,11 @@
  "En {0} ya hay otra cosa, así que no muevo {1} encima. Vacíala, o cámbiale el nombre, y vuelve a probar.": [
   "state/repositories.dart:379"
  ],
- "En {0}.": [
-  "ui/new_unit.dart:690"
- ],
  "En {0}: {1}": [
   "ui/course_admin_ui.dart:166"
  ],
  "Encender la plantilla {0}": [
-  "state/catalogue_editor.dart:1406"
+  "state/catalogue_editor.dart:1525"
  ],
  "Encendida": [
   "ui/template_editor.dart:746"
@@ -2740,7 +2775,7 @@
   "model/problem_file.dart:34"
  ],
  "Enunciado, resultado y solución": [
-  "ui/unit_page.dart:1630"
+  "ui/unit_page.dart:1631"
  ],
  "Enviado a GitHub.": [
   "ui/sync_bar.dart:175",
@@ -2775,10 +2810,11 @@
   "model/tex_wrap.dart:382"
  ],
  "Error frecuente, solo para el profesor": [
-  "model/tex_vocabulary.dart:125"
+  "model/tex_vocabulary.dart:130"
  ],
  "Es donde ya está.": [
-  "ui/new_unit.dart:580"
+  "ui/new_unit.dart:577",
+  "ui/place_browser.dart:575"
  ],
  "Es el idioma de referencia: el que se supone cuando nada dice otra cosa.": [
   "ui/language_settings.dart:283"
@@ -2793,7 +2829,7 @@
   "ui/reuse.dart:289"
  ],
  "Es el original: la versión de la que se traduce": [
-  "ui/unit_page.dart:1769"
+  "ui/unit_page.dart:1770"
  ],
  "Es el primer cambio del repositorio: no hay nada antes al que volver.": [
   "ui/recent_changes.dart:59"
@@ -2865,10 +2901,10 @@
   "ui/pdf_synctex.dart:213"
  ],
  "Espacio para responder, solo en el examen": [
-  "model/tex_vocabulary.dart:69"
+  "model/tex_vocabulary.dart:74"
  ],
  "Espacios de Banach": [
-  "ui/new_unit.dart:199"
+  "ui/new_unit.dart:198"
  ],
  "Esperando…": [
   "ui/sign_in.dart:202"
@@ -2877,10 +2913,10 @@
   "ui/unit_preview.dart:957"
  ],
  "Esta composición está vacía: no referencia ninguna unidad. En el material migrado suele significar que el master antiguo apuntaba a ficheros que no llegaron.": [
-  "ui/document_page.dart:857"
+  "ui/document_page.dart:858"
  ],
  "Esta composición está vacía: todavía no lleva ninguna lección.": [
-  "ui/document_page.dart:863"
+  "ui/document_page.dart:864"
  ],
  "Esta copia de Didacta se ha montado sin el ejemplo.": [
   "data/example_repository.dart:50"
@@ -2916,10 +2952,10 @@
   "ui/template_editor.dart:604"
  ],
  "Estado de la versión en {0}: {1}": [
-  "ui/unit_page.dart:1776"
+  "ui/unit_page.dart:1777"
  ],
  "Estado declarado por idioma": [
-  "ui/metadata_editor.dart:725"
+  "ui/metadata_editor.dart:702"
  ],
  "Estas": [
   "ui/manage_templates.dart:193"
@@ -2932,7 +2968,7 @@
   "model/toolchain.dart:524"
  ],
  "Este apartado no lleva nada todavía.": [
-  "ui/document_page.dart:1031"
+  "ui/document_page.dart:1032"
  ],
  "Este campo hay que igualarlo a mano: Didacta no sabe en qué línea de `course.yaml` se escribe.": [
   "ui/between_repos_page.dart:503"
@@ -2941,7 +2977,7 @@
   "ui/freezes.dart:102"
  ],
  "Este documento no compone nada todavía.": [
-  "ui/composition_editor.dart:1585"
+  "ui/composition_editor.dart:1608"
  ],
  "Este fichero es solo el enunciado, sin entornos. Al escribir un resultado o una solución se envuelve en `exercise`, que es lo que los numera y los encuadra.": [
   "ui/problem_editor.dart:156"
@@ -2968,22 +3004,22 @@
   "ui/year_page.dart:2355"
  ],
  "Este tema elige sus salidas, en su `year.yaml`.": [
-  "ui/document_page.dart:1361"
+  "ui/document_page.dart:1363"
  ],
  "Este tema no elige: compila lo que digan los bloques de las lecciones que lleva dentro.": [
-  "ui/document_page.dart:1357"
+  "ui/document_page.dart:1359"
  ],
  "Este tema se da en {0} cursos y es el mismo en todos: lo que ordenes, añadas o quites aquí se ve en los demás. Para que deje de ser así, «Crear copia independiente», en el «…» del tema en su curso.": [
-  "ui/composition_editor.dart:248"
+  "ui/composition_editor.dart:249"
  ],
  "Este tema vuelve a compilar lo que digan sus bloques.": [
-  "ui/document_page.dart:727"
+  "ui/document_page.dart:728"
  ],
  "Esto es lo que va a cambiar en year.yaml. Los demás documentos del curso no se tocan.": [
   "ui/commit_dialog.dart:59"
  ],
  "Esto es lo que va a cambiar. Los comentarios y el orden de las claves no se tocan.": [
-  "ui/metadata_editor.dart:1387"
+  "ui/metadata_editor.dart:1418"
  ],
  "Esto limita las versiones de este documento. Al compilar se elige entre las que queden, para esa vez.": [
   "ui/document_properties.dart:173"
@@ -3060,23 +3096,20 @@
  "Estás viendo «{0}»{1} · {2}{3}. Es una versión congelada: se mira, no se edita.": [
   "ui/shell.dart:375"
  ],
- "Etiquetas": [
-  "ui/library_page.dart:2347"
- ],
  "Examen": [
   "ui/new_document.dart:48",
-  "ui/problem_set.dart:228",
+  "ui/problem_set.dart:236",
   "ui/manage_templates.dart:70"
  ],
  "Examen de enero": [
-  "ui/problem_set.dart:253"
+  "ui/problem_set.dart:261"
  ],
  "Examen u hoja de problemas": [
-  "ui/problem_set.dart:217",
+  "ui/problem_set.dart:225",
   "ui/year_page.dart:1592"
  ],
  "Existe en este idioma": [
-  "ui/library_page.dart:1135"
+  "ui/library_page.dart:1148"
  ],
  "Exponente": [
   "model/tex_snippets.dart:81"
@@ -3086,10 +3119,10 @@
  ],
  "Exportar aquí": [
   "ui/export_actions.dart:144",
-  "ui/courses_page.dart:577"
+  "ui/courses_page.dart:596"
  ],
  "Exportar este curso a una carpeta": [
-  "ui/courses_page.dart:1658"
+  "ui/courses_page.dart:1677"
  ],
  "Exportar igualmente": [
   "ui/review_panel.dart:374"
@@ -3115,21 +3148,18 @@
  "Falta el Client ID. Crea en GitHub una GitHub App (Settings → Developer settings → GitHub Apps) o una OAuth App, con «Enable Device Flow» marcado, y pega aquí su Client ID.": [
   "ui/sign_in.dart:96"
  ],
- "Falta el tema.": [
-  "ui/new_unit.dart:174"
+ "Falta el nombre de la carpeta.": [
+  "ui/new_unit.dart:576"
+ ],
+ "Falta el nombre.": [
+  "ui/place_browser.dart:163"
  ],
  "Falta el título.": [
-  "ui/new_unit.dart:172",
-  "ui/new_unit.dart:413"
+  "ui/new_unit.dart:170",
+  "ui/new_unit.dart:380"
  ],
  "Falta en este idioma": [
-  "ui/library_page.dart:1136"
- ],
- "Falta la carpeta.": [
-  "ui/new_unit.dart:579"
- ],
- "Falta la categoría.": [
-  "ui/new_unit.dart:173"
+  "ui/library_page.dart:1149"
  ],
  "Falta la clave.": [
   "model/translation.dart:82"
@@ -3174,23 +3204,23 @@
   "model/tex_snippets.dart:79"
  ],
  "Fuente": [
-  "ui/document_page.dart:776"
+  "ui/document_page.dart:777"
  ],
  "Fórmula aparte": [
   "model/tex_snippets.dart:76"
  ],
  "Fórmula aparte, sin numerar": [
-  "model/tex_vocabulary.dart:137"
+  "model/tex_vocabulary.dart:142"
  ],
  "Fórmula destacada": [
-  "model/tex_vocabulary.dart:117",
+  "model/tex_vocabulary.dart:122",
   "model/tex_wrap.dart:367"
  ],
  "Fórmula en la línea": [
   "model/tex_snippets.dart:69"
  ],
  "Fórmulas alineadas, sin numerar": [
-  "model/tex_vocabulary.dart:136"
+  "model/tex_vocabulary.dart:141"
  ],
  "Fórmulas distintas entre idiomas": [
   "model/review.dart:8"
@@ -3208,7 +3238,7 @@
   "ui/tex_toolbar.dart:996"
  ],
  "Gestionar vinculación…": [
-  "ui/document_page.dart:455",
+  "ui/document_page.dart:456",
   "ui/year_page.dart:2908",
   "ui/info_menu.dart:283"
  ],
@@ -3273,7 +3303,7 @@
   "ui/glossary_editor.dart:199"
  ],
  "Grado de {0}: {1}": [
-  "state/catalogue_editor.dart:440"
+  "state/catalogue_editor.dart:484"
  ],
  "Grado en Matemáticas": [
   "ui/manage_degrees.dart:500"
@@ -3286,7 +3316,7 @@
  ],
  "Grados": [
   "ui/manage_degrees.dart:58",
-  "ui/courses_page.dart:1223"
+  "ui/courses_page.dart:1242"
  ],
  "Gratuito y sin clave, y con la variante valenciana: «seua», «duració». Traduce menos idiomas que los otros dos --el castellano, el valenciano, el catalán, el gallego, el inglés, el francés, el italiano y el portugués, en unos pares--, y el texto va a su servidor público.": [
   "ui/translation_settings.dart:452"
@@ -3313,20 +3343,20 @@
   "ui/reuse.dart:1079"
  ],
  "Guarda o descarta antes lo que tienes sin guardar: {0}.": [
-  "ui/new_unit.dart:518"
+  "ui/new_unit.dart:489"
  ],
  "Guardada en el programa, sin copia de seguridad. Púlsalo para quitarla de ahí.": [
   "ui/template_editor.dart:1011"
  ],
  "Guardada: «{0}».": [
-  "ui/library_page.dart:249"
+  "ui/library_page.dart:250"
  ],
  "Guardado en GitHub · al día": [
   "ui/shell.dart:731"
  ],
  "Guardado en el historial.": [
   "ui/source_view.dart:532",
-  "ui/courses_page.dart:475",
+  "ui/courses_page.dart:490",
   "state/repo_sync.dart:295"
  ],
  "Guardado en tu ordenador, pero no se ha podido enviar a GitHub. Se enviará la próxima vez que envíes.": [
@@ -3346,22 +3376,22 @@
   "ui/sync_bar.dart:78"
  ],
  "Guardado: {0} salida(s).": [
-  "ui/document_page.dart:728"
+  "ui/document_page.dart:729"
  ],
  "Guardando…": [
-  "ui/composition_editor.dart:693",
+  "ui/composition_editor.dart:694",
   "ui/year_page.dart:2155",
   "ui/source_view.dart:793",
-  "ui/metadata_editor.dart:501",
+  "ui/metadata_editor.dart:503",
   "ui/course_admin_ui.dart:232",
-  "ui/unit_page.dart:2177",
+  "ui/unit_page.dart:2178",
   "ui/translate_unit.dart:603"
  ],
  "Guardar": [
   "ui/sync_bar.dart:684",
-  "ui/composition_editor.dart:693",
-  "ui/library_page.dart:494",
-  "ui/edit_course.dart:298",
+  "ui/composition_editor.dart:694",
+  "ui/library_page.dart:507",
+  "ui/edit_course.dart:404",
   "ui/export_actions.dart:59",
   "ui/manage_snippets.dart:2088",
   "ui/year_page.dart:2155",
@@ -3369,19 +3399,19 @@
   "ui/translation_settings.dart:277",
   "ui/source_view.dart:793",
   "ui/source_view.dart:1322",
-  "ui/metadata_editor.dart:501",
-  "ui/metadata_editor.dart:1443",
+  "ui/metadata_editor.dart:503",
+  "ui/metadata_editor.dart:1474",
   "ui/commit_dialog.dart:92",
-  "ui/unit_page.dart:2177",
-  "ui/unit_page.dart:2587",
+  "ui/unit_page.dart:2178",
+  "ui/unit_page.dart:2588",
   "ui/freezes.dart:413",
   "ui/template_editor.dart:1186"
  ],
  "Guardar ({0})": [
-  "ui/unit_page.dart:2164"
+  "ui/unit_page.dart:2165"
  ],
  "Guardar el cambio": [
-  "ui/unit_page.dart:2548"
+  "ui/unit_page.dart:2549"
  ],
  "Guardar el orden y los grupos de {0}": [
   "ui/year_page.dart:1373"
@@ -3397,8 +3427,8 @@
   "ui/sync_bar.dart:355"
  ],
  "Guardar esta búsqueda": [
-  "ui/library_page.dart:461",
-  "ui/library_page.dart:2969"
+  "ui/library_page.dart:474",
+  "ui/library_page.dart:3324"
  ],
  "Guardar igualmente": [
   "ui/manage_snippets.dart:1464"
@@ -3407,7 +3437,7 @@
   "ui/commit_dialog.dart:51"
  ],
  "Guardar lo corregido, darla por revisada y abrir la siguiente sin revisar": [
-  "ui/unit_page.dart:2396"
+  "ui/unit_page.dart:2397"
  ],
  "Guardar lo deja en el historial": [
   "ui/settings_page.dart:2896"
@@ -3426,7 +3456,7 @@
   "ui/pdf_tab.dart:714"
  ],
  "Guardar unit.yaml": [
-  "ui/metadata_editor.dart:1379"
+  "ui/metadata_editor.dart:1410"
  ],
  "Guardar y sincronizar": [
   "ui/settings_page.dart:115"
@@ -3435,7 +3465,7 @@
   "ui/source_view.dart:1247"
  ],
  "Guardar «{0}» en {1}": [
-  "ui/unit_page.dart:472"
+  "ui/unit_page.dart:473"
  ],
  "Guardarla también en el programa: no la protege git y se va con este ordenador.": [
   "ui/template_editor.dart:1015"
@@ -3479,7 +3509,7 @@
   "state/repositories.dart:391"
  ],
  "Hay texto sin guardar de {0}: Didacta se cerró antes de guardarlo.{1}": [
-  "ui/unit_page.dart:3493"
+  "ui/unit_page.dart:3509"
  ],
  "Hay trabajo sin enviar a GitHub en {0}: se iría con ellas.": [
   "ui/start_over.dart:175"
@@ -3522,13 +3552,13 @@
   "ui/settings_page.dart:170"
  ],
  "Historial": [
-  "ui/document_page.dart:798"
+  "ui/document_page.dart:799"
  ],
  "Hoja 3. Series de funciones": [
-  "ui/problem_set.dart:254"
+  "ui/problem_set.dart:262"
  ],
  "Hoja de problemas": [
-  "ui/problem_set.dart:229"
+  "ui/problem_set.dart:237"
  ],
  "Homebrew descargará git e instalará en tu carpeta.": [
   "model/toolchain.dart:390"
@@ -3540,17 +3570,20 @@
   "ui/update_section.dart:167"
  ],
  "Identidad": [
-  "ui/metadata_editor.dart:575"
+  "ui/metadata_editor.dart:577"
  ],
  "Identificador": [
   "ui/history_tab.dart:817",
   "ui/manage_degrees.dart:510",
   "ui/new_document.dart:120",
   "ui/new_document.dart:271",
-  "ui/problem_set.dart:269",
+  "ui/problem_set.dart:277",
   "ui/course_admin_ui.dart:779",
   "ui/manage_blocks.dart:781",
   "ui/template_editor.dart:659"
+ ],
+ "Identificador: {0}": [
+  "ui/place_browser.dart:216"
  ],
  "Idioma": [
   "ui/platform_menus.dart:280",
@@ -3565,7 +3598,7 @@
   "ui/course_admin_ui.dart:793"
  ],
  "Idiomas": [
-  "ui/edit_course.dart:146",
+  "ui/edit_course.dart:185",
   "ui/export_year.dart:238",
   "ui/settings_page.dart:124"
  ],
@@ -3585,7 +3618,7 @@
   "ui/between_repos_page.dart:726"
  ],
  "Igualar el snippet «{0}»": [
-  "state/catalogue_editor.dart:987"
+  "state/catalogue_editor.dart:1106"
  ],
  "Igualar {0} de {1}": [
   "state/catalogue_editor.dart:91"
@@ -3606,7 +3639,7 @@
   "ui/freezes.dart:643"
  ],
  "Insertar encima": [
-  "ui/composition_editor.dart:843"
+  "ui/composition_editor.dart:844"
  ],
  "Instalado. Comprobando…": [
   "ui/toolchain_check.dart:203"
@@ -3665,7 +3698,7 @@
  ],
  "Ir a Ajustes": [
   "ui/unit_preview.dart:1335",
-  "ui/unit_page.dart:2995"
+  "ui/unit_page.dart:3011"
  ],
  "Ir a Asignaturas": [
   "ui/shortcuts.dart:20"
@@ -3676,13 +3709,16 @@
  "Ir a la biblioteca": [
   "router.dart:249",
   "ui/shortcuts.dart:21",
-  "ui/unit_page.dart:3057"
+  "ui/unit_page.dart:3073"
  ],
  "Ir a la línea {0}: {1}": [
   "ui/tex_warnings.dart:156"
  ],
  "Ir a…": [
   "ui/platform_menus.dart:201"
+ ],
+ "Irá a {0}": [
+  "ui/new_unit.dart:621"
  ],
  "Javier": [
   "ui/welcome_art.dart:580",
@@ -3705,8 +3741,11 @@
   "ui/tour.dart:271",
   "ui/tour.dart:281"
  ],
+ "La biblioteca de este repositorio · {0} unidades": [
+  "ui/composition_editor.dart:1302"
+ ],
  "La biblioteca está vacía": [
-  "ui/library_page.dart:675",
+  "ui/library_page.dart:688",
   "ui/library_search.dart:323"
  ],
  "La caja necesita un título: el que sale en su pestaña.": [
@@ -3743,7 +3782,7 @@
   "ui/unit_preview.dart:1362"
  ],
  "La composición de «{0}»": [
-  "ui/composition_editor.dart:199"
+  "ui/composition_editor.dart:200"
  ],
  "La composición es la lista de lecciones en el orden en que se leen. Fuente es el LaTeX entero; Compilar saca las versiones que elijas en los idiomas que elijas; Traducir aparece si falta algo; e Historial dice quién cambió qué.": [
   "ui/tour.dart:234"
@@ -3841,11 +3880,23 @@
  "La solución entera": [
   "ui/manage_templates.dart:56"
  ],
+ "La titulación se imprime con el título del grado: {0}. Se traduce en «Grados», arriba en la lista de asignaturas.": [
+  "ui/edit_course.dart:322"
+ ],
+ "La titulación y el departamento que se imprimen en la portada y en los encabezados, en cada idioma. Lo que se deja en blanco no se imprime.": [
+  "ui/edit_course.dart:309"
+ ],
  "La unidad ha cambiado después de compilar esto": [
-  "ui/unit_page.dart:2691"
+  "ui/unit_page.dart:2692"
  ],
  "La unidad ha cambiado después de compilar esto. Lo que se ve es de antes del cambio.": [
   "ui/pdf_tab.dart:652"
+ ],
+ "La usa 1 documento, y no hay que tocarlo: la nombra por su id, que no cambia.": [
+  "ui/new_unit.dart:642"
+ ],
+ "La usan {0} documentos, y no hay que tocar ninguno: la nombran por su id, que no cambia.": [
+  "ui/new_unit.dart:646"
  ],
  "La ventana": [
   "ui/tour.dart:140",
@@ -3855,7 +3906,7 @@
   "ui/freezes.dart:376"
  ],
  "La versión del {0} está en el editor, sin guardar. Guardar la deja como la de ahora; Descartar vuelve atrás.": [
-  "ui/unit_page.dart:830"
+  "ui/unit_page.dart:831"
  ],
  "La versión reducida de MacTeX, instalada en el sistema. Los paquetes que falten se añaden luego con `sudo tlmgr install`.": [
   "model/toolchain.dart:634"
@@ -3864,7 +3915,7 @@
   "data/local_clone_io.dart:1104"
  ],
  "La única asignatura está oculta": [
-  "ui/courses_page.dart:917"
+  "ui/courses_page.dart:936"
  ],
  "LaTeX no ha dicho por qué.": [
   "ui/manage_snippets.dart:2544",
@@ -3877,34 +3928,34 @@
   "ui/manage_templates.dart:329"
  ],
  "Las categorías de mayor a menor. La barra de cada una es el estado del {0}.": [
-  "ui/library_page.dart:2610"
+  "ui/library_page.dart:2965"
  ],
  "Las cuentas con las que se traduce una lección de un clic.": [
   "ui/settings_page.dart:134"
  ],
  "Las de los bloques de sus lecciones. Todavía no lleva ninguna, así que salen todas las encendidas.": [
-  "ui/document_page.dart:704"
+  "ui/document_page.dart:705"
  ],
  "Las de los bloques de sus lecciones: {0}": [
-  "ui/document_page.dart:708"
+  "ui/document_page.dart:709"
  ],
  "Las de su bloque. No hay ninguna encendida.": [
-  "ui/metadata_editor.dart:1122"
+  "ui/metadata_editor.dart:1153"
  ],
  "Las de sus bloques": [
   "ui/document_properties.dart:192"
  ],
  "Las de «{0}»: {1}": [
-  "ui/metadata_editor.dart:1123"
+  "ui/metadata_editor.dart:1154"
  ],
  "Las dos": [
   "ui/manage_snippets.dart:1669"
  ],
  "Las escondiste de la lista, pero siguen ahí. Se vuelven a enseñar desde «Las ocultas».": [
-  "ui/courses_page.dart:919"
+  "ui/courses_page.dart:938"
  ],
  "Las ocultas": [
-  "ui/courses_page.dart:1034"
+  "ui/courses_page.dart:1053"
  ],
  "Las partes en que se divide una asignatura: la teoría, los problemas, las prácticas. Cada lección dice a cuál pertenece, y quien lo declara es el repositorio.": [
   "ui/settings_page.dart:1932"
@@ -3916,7 +3967,7 @@
   "ui/tour.dart:194"
  ],
  "Las que doy": [
-  "ui/courses_page.dart:1033"
+  "ui/courses_page.dart:1052"
  ],
  "Las que pasan del margen derecho más de 5 pt, con su lección y su línea. De las diapositivas que se salen por abajo se avisa siempre.": [
   "ui/settings_page.dart:2771"
@@ -3931,7 +3982,7 @@
   "ui/year_page.dart:251"
  ],
  "Las unidades no se tocan: siguen en la biblioteca y en las demás asignaturas que las usen. Lo que se pierde es la selección y el orden de esta.": [
-  "ui/courses_page.dart:824"
+  "ui/courses_page.dart:843"
  ],
  "Las versiones congeladas son de una asignatura, y esto no está en ninguna todavía.": [
   "ui/info_menu.dart:192"
@@ -3948,19 +3999,19 @@
   "model/review.dart:9"
  ],
  "Lección «{0}» creada a partir de «{1}».": [
-  "ui/new_unit.dart:359"
+  "ui/new_unit.dart:326"
  ],
  "Lección «{0}» creada.": [
-  "ui/new_unit.dart:79"
+  "ui/new_unit.dart:83"
  ],
  "Lección «{0}» movida a {1}/{2}.": [
-  "ui/new_unit.dart:539"
+  "ui/new_unit.dart:525"
  ],
  "Lee tus repositorios y le dice a LaTeX qué componer: qué lecciones lleva cada documento, en qué orden y con qué plantilla.": [
   "model/toolchain.dart:170"
  ],
  "Lema": [
-  "model/tex_vocabulary.dart:105",
+  "model/tex_vocabulary.dart:110",
   "model/tex_wrap.dart:282"
  ],
  "Leyendo el catálogo": [
@@ -3974,17 +4025,17 @@
   "ui/publish_folder.dart:102"
  ],
  "Limpiar": [
-  "ui/library_page.dart:1282"
+  "ui/library_page.dart:1295"
  ],
  "Linux": [
   "model/toolchain.dart:48",
   "data/app_info.dart:68"
  ],
  "Lista con viñetas": [
-  "model/tex_vocabulary.dart:134"
+  "model/tex_vocabulary.dart:139"
  ],
  "Lista numerada": [
-  "model/tex_vocabulary.dart:135"
+  "model/tex_vocabulary.dart:140"
  ],
  "Listo": [
   "ui/tour.dart:972",
@@ -4007,7 +4058,7 @@
   "ui/settings_page.dart:1707"
  ],
  "Lo calcula el motor: {0}": [
-  "ui/unit_page.dart:1768"
+  "ui/unit_page.dart:1769"
  ],
  "Lo creo en tu cuenta como {0}/didacta-ejemplo, privado, y lo abro aquí. Es tuyo: puedes compilarlo, cambiarlo y romperlo sin miedo, y borrarlo desde GitHub cuando ya no lo quieras.": [
   "ui/add_repository.dart:696"
@@ -4078,7 +4129,7 @@
   "ui/settings_page.dart:162"
  ],
  "Lo que la lección da por sabido": [
-  "model/tex_vocabulary.dart:127"
+  "model/tex_vocabulary.dart:132"
  ],
  "Lo que se añade aquí": [
   "ui/tour.dart:222"
@@ -4132,7 +4183,7 @@
   "ui/tour.dart:204"
  ],
  "Los ejes activos, para depurar": [
-  "model/tex_vocabulary.dart:85"
+  "model/tex_vocabulary.dart:90"
  ],
  "Los ficheros se han cambiado, pero no se pudieron guardar en el historial: quedan escritos y sin guardar.": [
   "data/course_admin.dart:811"
@@ -4144,16 +4195,16 @@
   "ui/unit_preview.dart:811"
  ],
  "Los idiomas lado a lado": [
-  "ui/unit_page.dart:516"
+  "ui/unit_page.dart:517"
  ],
  "Los menús, los botones y los avisos. No cambia el idioma del material, que se elige arriba, en cada pantalla.": [
   "ui/settings_page.dart:683"
  ],
  "Los metadatos de «{0}»": [
-  "ui/metadata_editor.dart:211"
+  "ui/metadata_editor.dart:213"
  ],
  "Los problemas": [
-  "ui/problem_set.dart:311"
+  "ui/problem_set.dart:319"
  ],
  "Los programas que Didacta pide prestados para escribir y compilar.": [
   "ui/settings_page.dart:173"
@@ -4198,10 +4249,10 @@
   "ui/source_view.dart:770"
  ],
  "Marcar {0} de «{1}» como {2}": [
-  "state/catalogue_editor.dart:1719"
+  "state/catalogue_editor.dart:1838"
  ],
  "Marcar «{0}»": [
-  "ui/courses_page.dart:1825"
+  "ui/courses_page.dart:1844"
  ],
  "Marta": [
   "ui/welcome_art.dart:581",
@@ -4215,7 +4266,7 @@
   "ui/welcome.dart:339"
  ],
  "Matriz entre paréntesis": [
-  "model/tex_vocabulary.dart:139",
+  "model/tex_vocabulary.dart:144",
   "model/tex_snippets.dart:93"
  ],
  "Mayús+": [
@@ -4228,9 +4279,9 @@
   "state/translation_service.dart:462"
  ],
  "Mensaje": [
-  "ui/metadata_editor.dart:1424",
+  "ui/metadata_editor.dart:1455",
   "ui/commit_dialog.dart:73",
-  "ui/unit_page.dart:2568"
+  "ui/unit_page.dart:2569"
  ],
  "Metadatos que no coinciden": [
   "ui/between_repos_page.dart:81"
@@ -4261,7 +4312,7 @@
   "ui/manage_snippets.dart:56"
  ],
  "Mostrar el panel de la derecha": [
-  "ui/unit_page.dart:626"
+  "ui/unit_page.dart:627"
  ],
  "Motor de la {0}, la versión de la aplicación.": [
   "ui/engine_version_line.dart:86"
@@ -4279,11 +4330,12 @@
   "ui/engine_version_line.dart:83"
  ],
  "Mover": [
-  "ui/new_unit.dart:733",
+  "ui/new_unit.dart:667",
   "ui/reuse.dart:44",
   "ui/manage_blocks.dart:1154"
  ],
  "Mover a…": [
+  "ui/library_page.dart:2671",
   "ui/year_page.dart:2881"
  ],
  "Mover la lección «{0}» a {1}": [
@@ -4292,11 +4344,8 @@
  "Mover las lecciones de «{0}»": [
   "ui/manage_blocks.dart:1098"
  ],
- "Mover o renombrar": [
-  "ui/new_unit.dart:632"
- ],
  "Mover o renombrar esta lección…": [
-  "ui/unit_page.dart:536"
+  "ui/unit_page.dart:537"
  ],
  "Mover o renombrar…": [
   "ui/info_menu.dart:258"
@@ -4305,10 +4354,13 @@
   "ui/between_repos_page.dart:209"
  ],
  "Mover una lección de {0} a {1}": [
-  "state/catalogue_editor.dart:783"
+  "state/catalogue_editor.dart:902"
  ],
  "Mover {0} lecciones de {1} a {2}": [
-  "state/catalogue_editor.dart:784"
+  "state/catalogue_editor.dart:903"
+ ],
+ "Mover «{0}»": [
+  "ui/new_unit.dart:593"
  ],
  "Mover «{0}» de {1} {2} a {3} {4}": [
   "data/course_admin.dart:494"
@@ -4322,6 +4374,9 @@
  "Moverlos": [
   "ui/add_repository.dart:376"
  ],
+ "Mover…": [
+  "ui/metadata_editor.dart:965"
+ ],
  "Moviendo {0}{1}…": [
   "ui/add_repository.dart:391"
  ],
@@ -4329,13 +4384,13 @@
   "ui/manage_snippets.dart:892"
  ],
  "Más de este curso": [
-  "ui/courses_page.dart:1688"
+  "ui/courses_page.dart:1707"
  ],
  "Más de este curso académico": [
   "ui/year_page.dart:108"
  ],
  "Más de la asignatura": [
-  "ui/courses_page.dart:1411"
+  "ui/courses_page.dart:1430"
  ],
  "Más grande  {0}": [
   "ui/settings_page.dart:753"
@@ -4347,7 +4402,7 @@
   "ui/update_section.dart:373"
  ],
  "Más usadas primero": [
-  "ui/library_page.dart:1184"
+  "ui/library_page.dart:1197"
  ],
  "Más: exportar, título, reutilizar, quitar": [
   "ui/year_page.dart:2827"
@@ -4356,19 +4411,19 @@
   "ui/welcome_art.dart:331"
  ],
  "Nada coincide": [
-  "ui/library_page.dart:2933"
+  "ui/library_page.dart:3288"
  ],
  "Nada coincide con «{0}».": [
   "ui/command_palette.dart:568"
  ],
  "Nada coincide.": [
-  "ui/composition_editor.dart:1384"
+  "ui/composition_editor.dart:1413"
  ],
  "Nada compilado todavía. Elige las versiones y pulsa compilar.": [
   "ui/unit_preview.dart:903"
  ],
  "Nada con estos filtros": [
-  "ui/library_page.dart:2572"
+  "ui/library_page.dart:2927"
  ],
  "Nada con {0}": [
   "ui/library_search.dart:322"
@@ -4392,7 +4447,7 @@
   "ui/course_admin_ui.dart:612"
  ],
  "Negrita": [
-  "model/tex_vocabulary.dart:94",
+  "model/tex_vocabulary.dart:99",
   "model/tex_wrap.dart:169"
  ],
  "Ni órdenes de otro idioma, ni entornos sin definir, ni figuras que falten, ni referencias sin destino.": [
@@ -4404,13 +4459,13 @@
   "ui/manage_templates.dart:54"
  ],
  "Ninguna asignatura en esta titulación": [
-  "ui/courses_page.dart:911"
+  "ui/courses_page.dart:930"
  ],
  "Ninguna composición la referencia. Después de una migración esto es material que llegó y no se está dando.": [
-  "ui/unit_page.dart:587"
+  "ui/unit_page.dart:588"
  ],
  "Ninguna composición la referencia. Después de una migración esto es material que llegó y no se está dando: o falta ponerlo en una asignatura, o se puede quitar.": [
-  "ui/unit_page.dart:2768"
+  "ui/unit_page.dart:2784"
  ],
  "Ninguna toca git. Lo que un modelo escriba queda en disco y lo envías tú, viendo qué cambia.": [
   "ui/mcp_page.dart:425"
@@ -4427,19 +4482,19 @@
   "ui/settings_page.dart:1941"
  ],
  "Ninguno, suelto": [
-  "ui/problem_set.dart:292"
+  "ui/problem_set.dart:300"
  ],
  "Ningún documento la usa. Su id y sus traducciones no cambian.": [
-  "ui/new_unit.dart:669"
+  "ui/new_unit.dart:637"
  ],
  "Ningún documento llama fuera de su repositorio.": [
   "ui/between_repos_page.dart:276"
  ],
  "Ningún grado declarado todavía.": [
-  "ui/courses_page.dart:1173"
+  "ui/courses_page.dart:1192"
  ],
  "Ningún problema con estos filtros.": [
-  "ui/problem_set.dart:404"
+  "ui/problem_set.dart:412"
  ],
  "Ningún snippet con este filtro.": [
   "ui/manage_snippets.dart:239"
@@ -4473,7 +4528,7 @@
   "ui/manage_snippets.dart:2522"
  ],
  "No compiló.": [
-  "ui/unit_page.dart:307"
+  "ui/unit_page.dart:308"
  ],
  "No dice lo mismo en todos los repositorios que lo tienen": [
   "ui/manage_snippets.dart:832"
@@ -4518,7 +4573,7 @@
   "ui/year_page.dart:67"
  ],
  "No está en el catálogo. Puede que se haya renombrado, o que el catálogo esté desactualizado: se regenera con `didacta index`.": [
-  "ui/unit_page.dart:3047"
+  "ui/unit_page.dart:3063"
  ],
  "No está en marcha": [
   "ui/mcp_page.dart:50"
@@ -4542,7 +4597,7 @@
   "ui/source_view.dart:1010"
  ],
  "No existe la versión en {0} de esta unidad. Lo que se escriba aquí la crea, y hasta entonces ningún documento que la use se puede compilar en {1}.{2}": [
-  "ui/unit_page.dart:1464"
+  "ui/unit_page.dart:1465"
  ],
  "No existe todavía: {0}": [
   "ui/source_view.dart:1103"
@@ -4556,7 +4611,7 @@
  ],
  "No ha cambiado nada.": [
   "ui/manage_degrees.dart:241",
-  "ui/courses_page.dart:474",
+  "ui/courses_page.dart:489",
   "ui/manage_blocks.dart:314",
   "ui/manage_blocks.dart:408"
  ],
@@ -4595,7 +4650,7 @@
   "ui/shell.dart:571"
  ],
  "No hay ancho para dos columnas de LaTeX. Oculta el panel de la derecha o ensancha la ventana.": [
-  "ui/unit_page.dart:3420"
+  "ui/unit_page.dart:3436"
  ],
  "No hay conexión con GitHub.": [
   "data/release_channel.dart:261",
@@ -4632,7 +4687,7 @@
   "ui/freezes.dart:1049"
  ],
  "No hay ninguna lección con esa ruta.": [
-  "ui/metadata_editor.dart:775"
+  "ui/metadata_editor.dart:752"
  ],
  "No hay ninguna lección con la que mirarla: abre un repositorio con material. Se puede guardar igual.": [
   "ui/template_editor.dart:1389"
@@ -4654,13 +4709,13 @@
   "state/mcp_service.dart:107"
  ],
  "No hay ningún repositorio abierto. Añade el tuyo, o prueba Didacta con un ejemplo en tu cuenta de GitHub.": [
-  "ui/library_page.dart:685"
+  "ui/library_page.dart:698"
  ],
  "No hay permiso para escribir la descarga.": [
   "data/update_installer_io.dart:238"
  ],
  "No hay problemas en {0}.": [
-  "ui/problem_set.dart:395"
+  "ui/problem_set.dart:403"
  ],
  "No hay repositorios abiertos.": [
   "ui/settings_page.dart:3131"
@@ -4724,13 +4779,13 @@
   "ui/pdf_tab.dart:895"
  ],
  "No se ha podido abrir el fichero": [
-  "ui/unit_page.dart:2966"
+  "ui/unit_page.dart:2982"
  ],
  "No se ha podido abrir la composición": [
-  "ui/composition_editor.dart:1638"
+  "ui/composition_editor.dart:1661"
  ],
  "No se ha podido abrir unit.yaml": [
-  "ui/metadata_editor.dart:1500"
+  "ui/metadata_editor.dart:1531"
  ],
  "No se ha podido compilar: el motor no ha arrancado. No es un error de la definición.": [
   "ui/manage_snippets.dart:2518"
@@ -4773,10 +4828,10 @@
   "ui/year_page.dart:492"
  ],
  "No se ha tocado el fichero: {0}": [
-  "ui/composition_editor.dart:174"
+  "ui/composition_editor.dart:175"
  ],
  "No se ha tocado el fichero: {0}. Edítalo como texto si hace falta.": [
-  "ui/metadata_editor.dart:181"
+  "ui/metadata_editor.dart:183"
  ],
  "No se llega a GitHub": [
   "ui/problem.dart:122"
@@ -4843,7 +4898,7 @@
   "data/frozen.dart:208"
  ],
  "No se pudo traducir. {0}": [
-  "ui/unit_page.dart:1869"
+  "ui/unit_page.dart:1870"
  ],
  "No se pudo traer de GitHub «{0}».": [
   "data/frozen.dart:154"
@@ -4869,7 +4924,7 @@
   "ui/course_admin_ui.dart:165"
  ],
  "No se sabe desde cuándo: esta traducción no guardó la huella del original al revisarse --lo traducido antes de que existiera--, o esa versión no está en el historial. Ponlas lado a lado para compararlas.": [
-  "ui/unit_page.dart:2335"
+  "ui/unit_page.dart:2336"
  ],
  "No se sabe renovar esta credencial.": [
   "state/auth_state.dart:71"
@@ -4879,24 +4934,27 @@
   "ui/manage_blocks.dart:185"
  ],
  "Nombrados y sin declarar: {0}. Sus asignaturas se ven, pero sin agrupar.": [
-  "ui/courses_page.dart:1195"
+  "ui/courses_page.dart:1214"
  ],
  "Nombre": [
-  "ui/library_page.dart:480",
-  "ui/edit_course.dart:185",
+  "ui/library_page.dart:493",
+  "ui/edit_course.dart:224",
   "ui/freezes.dart:642"
  ],
  "Nombre cambiado en {0} repositorio(s).": [
   "ui/manage_blocks.dart:315"
  ],
+ "Nombre de la carpeta": [
+  "ui/new_unit.dart:614"
+ ],
  "Nombre de la plantilla {0}": [
-  "state/catalogue_editor.dart:1393"
+  "state/catalogue_editor.dart:1512"
  ],
  "Nombre del bloque": [
   "ui/manage_blocks.dart:1022"
  ],
  "Nombre del bloque {0}": [
-  "state/catalogue_editor.dart:673"
+  "state/catalogue_editor.dart:792"
  ],
  "Nombre del repositorio de contenido": [
   "ui/add_repository.dart:646"
@@ -4906,6 +4964,7 @@
  ],
  "Nombre en {0}": [
   "ui/manage_degrees.dart:499",
+  "ui/place_browser.dart:209",
   "ui/manage_blocks.dart:769"
  ],
  "Nombres heredados (opcional)": [
@@ -4918,19 +4977,19 @@
   "ui/manage_templates.dart:68"
  ],
  "Nota": [
-  "model/tex_vocabulary.dart:110"
+  "model/tex_vocabulary.dart:115"
  ],
  "Nota al pie": [
-  "model/tex_vocabulary.dart:96"
+  "model/tex_vocabulary.dart:101"
  ],
  "Nota didáctica": [
   "model/tex_wrap.dart:375"
  ],
  "Nota didáctica, solo para el profesor": [
-  "model/tex_vocabulary.dart:124"
+  "model/tex_vocabulary.dart:129"
  ],
  "Notación": [
-  "model/tex_vocabulary.dart:113",
+  "model/tex_vocabulary.dart:118",
   "model/tex_wrap.dart:338"
  ],
  "Novedades": [
@@ -4940,14 +4999,20 @@
   "ui/course_admin_ui.dart:758",
   "ui/courses_page.dart:118",
   "ui/courses_page.dart:235",
-  "ui/courses_page.dart:991"
+  "ui/courses_page.dart:1010"
+ ],
+ "Nueva categoría": [
+  "ui/place_browser.dart:157"
+ ],
+ "Nueva categoría…": [
+  "ui/library_page.dart:1966",
+  "ui/place_browser.dart:316"
  ],
  "Nueva lección": [
-  "ui/new_unit.dart:186"
+  "ui/new_unit.dart:185"
  ],
  "Nueva lección en {0}": [
-  "ui/library_page.dart:2251",
-  "ui/library_page.dart:2252"
+  "ui/library_page.dart:2563"
  ],
  "Nueva plantilla": [
   "ui/template_editor.dart:535",
@@ -4962,10 +5027,10 @@
  ],
  "Nuevo curso académico": [
   "ui/course_admin_ui.dart:564",
-  "ui/courses_page.dart:1487"
+  "ui/courses_page.dart:1506"
  ],
  "Nuevo curso académico…": [
-  "ui/courses_page.dart:1434"
+  "ui/courses_page.dart:1453"
  ],
  "Nuevo documento suelto": [
   "ui/year_page.dart:1404"
@@ -4984,10 +5049,22 @@
   "ui/manage_snippets.dart:616",
   "ui/manage_snippets.dart:1549"
  ],
+ "Nuevo subtema": [
+  "ui/place_browser.dart:159"
+ ],
+ "Nuevo subtema…": [
+  "ui/library_page.dart:2399",
+  "ui/place_browser.dart:352"
+ ],
  "Nuevo tema": [
   "ui/new_document.dart:240",
   "ui/year_page.dart:1397",
-  "ui/year_page.dart:1574"
+  "ui/year_page.dart:1574",
+  "ui/place_browser.dart:158"
+ ],
+ "Nuevo tema…": [
+  "ui/library_page.dart:2271",
+  "ui/place_browser.dart:332"
  ],
  "O descarga Python 3 de python.org/downloads/windows, marcando «Add python.exe to PATH».": [
   "model/toolchain.dart:516"
@@ -5006,11 +5083,11 @@
   "ui/theme.dart:404"
  ],
  "Objetivos": [
-  "ui/metadata_editor.dart:780",
-  "ui/unit_page.dart:2795"
+  "ui/metadata_editor.dart:757",
+  "ui/unit_page.dart:2811"
  ],
  "Objetivos de la lección": [
-  "model/tex_vocabulary.dart:126"
+  "model/tex_vocabulary.dart:131"
  ],
  "Observación": [
   "model/tex_wrap.dart:306"
@@ -5022,14 +5099,14 @@
   "ui/build_console.dart:672"
  ],
  "Ocultar de esta lista": [
-  "ui/courses_page.dart:1427",
-  "ui/courses_page.dart:1714"
+  "ui/courses_page.dart:1446",
+  "ui/courses_page.dart:1733"
  ],
  "Ocultar el lateral": [
   "ui/pdf_controls.dart:346"
  ],
  "Ocultar el panel de la derecha": [
-  "ui/unit_page.dart:625"
+  "ui/unit_page.dart:626"
  ],
  "Ocultar reemplazar": [
   "ui/tex_find_bar.dart:353"
@@ -5038,7 +5115,7 @@
   "ui/sync_bar.dart:896"
  ],
  "Ocultar «{0}» de esta lista. Sigue estando: no se quita nada.": [
-  "ui/courses_page.dart:1792"
+  "ui/courses_page.dart:1811"
  ],
  "Ocultar. La compilación sigue": [
   "ui/build_console.dart:598"
@@ -5050,7 +5127,7 @@
   "ui/quick_look.dart:364"
  ],
  "Olvidar esta búsqueda": [
-  "ui/library_page.dart:569"
+  "ui/library_page.dart:582"
  ],
  "Olvidarlo": [
   "ui/settings_page.dart:2641"
@@ -5062,7 +5139,7 @@
   "model/tex_snippets.dart:168"
  ],
  "Orden": [
-  "ui/library_page.dart:1074",
+  "ui/library_page.dart:1087",
   "ui/library_search.dart:129"
  ],
  "Orden guardado": [
@@ -5080,13 +5157,13 @@
   "ui/tour.dart:336"
  ],
  "Ordenado. Guarda para dejarlo así.": [
-  "ui/unit_page.dart:1842"
+  "ui/unit_page.dart:1843"
  ],
  "Ordenar": [
   "ui/tex_toolbar.dart:1273"
  ],
  "Ordenar los snippets": [
-  "state/catalogue_editor.dart:965"
+  "state/catalogue_editor.dart:1084"
  ],
  "Origen: {0}": [
   "main.dart:937"
@@ -5157,7 +5234,7 @@
   "ui/translate_unit.dart:806"
  ],
  "Para planificar una clase": [
-  "ui/metadata_editor.dart:705"
+  "ui/metadata_editor.dart:682"
  ],
  "Para poder volver a verlo y compilarlo como se dio, pase lo que pase después. No copia nada: apunta a lo último guardado.": [
   "ui/course_admin_ui.dart:645"
@@ -5189,15 +5266,12 @@
  "Pasar a oscuro": [
   "ui/shell.dart:671"
  ],
- "Pasará a {0}": [
-  "ui/new_unit.dart:653"
- ],
  "Pausa": [
   "ui/tex_toolbar.dart:1301",
   "ui/tex_toolbar.dart:1311"
  ],
  "Pausa: revela lo siguiente en las diapositivas": [
-  "model/tex_vocabulary.dart:41"
+  "model/tex_vocabulary.dart:46"
  ],
  "Pausas": [
   "ui/manage_templates.dart:61"
@@ -5209,13 +5283,13 @@
   "ui/platform_menus.dart:170"
  ],
  "Pertenece a": [
-  "ui/document_page.dart:454"
+  "ui/document_page.dart:455"
  ],
  "Pertenece a «{0}», que no declara ningún repositorio abierto. Se sigue viendo entera, pero sin agrupar. Al aceptar se queda sin grado.": [
-  "ui/edit_course.dart:257"
+  "ui/edit_course.dart:296"
  ],
  "Pista": [
-  "model/tex_vocabulary.dart:120",
+  "model/tex_vocabulary.dart:125",
   "model/tex_wrap.dart:251"
  ],
  "Plantilla {0} · {1}": [
@@ -5225,22 +5299,22 @@
   "ui/settings_page.dart:149"
  ],
  "Plantillas de {0}": [
-  "state/catalogue_editor.dart:1560"
+  "state/catalogue_editor.dart:1679"
  ],
  "Plantillas de {0} en {1} {2}": [
-  "state/catalogue_editor.dart:1589"
+  "state/catalogue_editor.dart:1708"
  ],
  "Plantillas de {0}: las de sus bloques": [
-  "state/catalogue_editor.dart:1588"
+  "state/catalogue_editor.dart:1707"
  ],
  "Plantillas de {0}: las del bloque": [
-  "state/catalogue_editor.dart:1559"
+  "state/catalogue_editor.dart:1678"
  ],
  "Plantillas de «{0}»": [
   "ui/manage_blocks.dart:386"
  ],
  "Plantillas del bloque {0}": [
-  "state/catalogue_editor.dart:850"
+  "state/catalogue_editor.dart:969"
  ],
  "Poner el de la {0}": [
   "ui/engine_version_line.dart:122"
@@ -5259,7 +5333,7 @@
   "ui/engine_version_line.dart:121"
  ],
  "Ponle otro título, para distinguirla de la original.": [
-  "ui/new_unit.dart:420"
+  "ui/new_unit.dart:387"
  ],
  "Ponle un nombre o un identificador: es lo que escriben los bloques.": [
   "ui/template_editor.dart:335"
@@ -5274,16 +5348,16 @@
   "ui/problem_editor.dart:235"
  ],
  "Por revisar o desactualizada": [
-  "ui/library_page.dart:1137"
+  "ui/library_page.dart:1150"
  ],
  "Por ruta": [
-  "ui/library_page.dart:1182"
+  "ui/library_page.dart:1195"
  ],
  "Por traducir primero": [
-  "ui/library_page.dart:1185"
+  "ui/library_page.dart:1198"
  ],
  "Por título": [
-  "ui/library_page.dart:1183"
+  "ui/library_page.dart:1196"
  ],
  "Por título, por etiqueta o por lo que dice dentro. Al escribir, el árbol se aplana en una lista de resultados: «hilbert» no es un sitio del árbol.": [
   "ui/tour.dart:265"
@@ -5313,8 +5387,8 @@
   "ui/add_repository.dart:663"
  ],
  "Prerrequisitos": [
-  "ui/metadata_editor.dart:766",
-  "ui/unit_page.dart:2815"
+  "ui/metadata_editor.dart:743",
+  "ui/unit_page.dart:2831"
  ],
  "Primera página": [
   "ui/pdf_controls.dart:358"
@@ -5324,9 +5398,9 @@
   "ui/translation_settings.dart:509"
  ],
  "Probar con un ejemplo": [
-  "ui/library_page.dart:723",
+  "ui/library_page.dart:736",
   "ui/welcome.dart:846",
-  "ui/courses_page.dart:1000",
+  "ui/courses_page.dart:1019",
   "ui/settings_page.dart:1552",
   "ui/add_repository.dart:678"
  ],
@@ -5349,7 +5423,7 @@
   "model/latex_snippets.dart:119"
  ],
  "Propiedad": [
-  "model/tex_vocabulary.dart:107",
+  "model/tex_vocabulary.dart:112",
   "model/tex_wrap.dart:314"
  ],
  "Propiedades del documento": [
@@ -5363,7 +5437,7 @@
   "model/latex_snippets.dart:120"
  ],
  "Proposición": [
-  "model/tex_vocabulary.dart:104",
+  "model/tex_vocabulary.dart:109",
   "model/tex_wrap.dart:274"
  ],
  "Práctica": [
@@ -5373,7 +5447,7 @@
   "ui/manage_blocks.dart:770"
  ],
  "Publicar en la carpeta de reparto": [
-  "ui/courses_page.dart:1703"
+  "ui/courses_page.dart:1722"
  ],
  "Publicar {0}": [
   "ui/export_year.dart:509"
@@ -5394,7 +5468,7 @@
   "ui/tour.dart:173"
  ],
  "Puntuación, solo en los exámenes": [
-  "model/tex_vocabulary.dart:66"
+  "model/tex_vocabulary.dart:71"
  ],
  "Página entera": [
   "ui/pdf_controls.dart:239",
@@ -5404,26 +5478,26 @@
   "ui/pdf_sidebar.dart:121"
  ],
  "Queda en el historial con tu nombre y lo que digas aquí, así que después se puede ver quién cambió qué, y cuándo.": [
-  "ui/unit_page.dart:2556"
+  "ui/unit_page.dart:2557"
  ],
  "Quedarse con el de {0}": [
   "ui/between_repos_page.dart:701"
  ],
  "Quita el filtro para verlas todas.": [
-  "ui/courses_page.dart:912"
+  "ui/courses_page.dart:931"
  ],
  "Quitado": [
   "ui/manage_snippets.dart:347",
   "ui/manage_snippets.dart:382"
  ],
  "Quitar": [
-  "ui/composition_editor.dart:406",
-  "ui/composition_editor.dart:887",
+  "ui/composition_editor.dart:407",
+  "ui/composition_editor.dart:888",
   "ui/language_settings.dart:598",
   "ui/manage_snippets.dart:420",
   "ui/year_page.dart:1145",
   "ui/translation_settings.dart:259",
-  "ui/metadata_editor.dart:1285",
+  "ui/metadata_editor.dart:1316",
   "ui/course_admin_ui.dart:474",
   "ui/manage_blocks.dart:984",
   "ui/freezes.dart:463",
@@ -5439,26 +5513,26 @@
   "ui/manage_snippets.dart:928"
  ],
  "Quitar el bloque {0}": [
-  "state/catalogue_editor.dart:733"
+  "state/catalogue_editor.dart:852"
  ],
  "Quitar el bloque {0}, con sus lecciones a {1}": [
-  "state/catalogue_editor.dart:734"
+  "state/catalogue_editor.dart:853"
  ],
  "Quitar el curso {0} de {1}": [
   "data/course_admin.dart:200"
  ],
  "Quitar el filtro": [
   "ui/sync_bar.dart:585",
-  "ui/courses_page.dart:977"
+  "ui/courses_page.dart:996"
  ],
  "Quitar el grado de {0}": [
-  "state/catalogue_editor.dart:439"
+  "state/catalogue_editor.dart:483"
  ],
  "Quitar el grupo {0} de {1}": [
   "ui/year_page.dart:1340"
  ],
  "Quitar el snippet «{0}»": [
-  "state/catalogue_editor.dart:924"
+  "state/catalogue_editor.dart:1043"
  ],
  "Quitar esta versión…": [
   "ui/freezes.dart:328"
@@ -5473,7 +5547,7 @@
   "ui/year_page.dart:2618"
  ],
  "Quitar este filtro": [
-  "ui/library_page.dart:1655"
+  "ui/library_page.dart:1671"
  ],
  "Quitar este término": [
   "ui/glossary_editor.dart:312"
@@ -5485,14 +5559,14 @@
   "data/course_admin.dart:194"
  ],
  "Quitar la asignatura…": [
-  "ui/courses_page.dart:1445"
+  "ui/courses_page.dart:1464"
  ],
  "Quitar la plantilla {0}": [
-  "state/catalogue_editor.dart:1328",
-  "state/catalogue_editor.dart:1439"
+  "state/catalogue_editor.dart:1447",
+  "state/catalogue_editor.dart:1558"
  ],
  "Quitar la selección": [
-  "ui/composition_editor.dart:1342"
+  "ui/composition_editor.dart:1371"
  ],
  "Quitar la versión congelada «{0}» de {1} {2}": [
   "data/course_admin.dart:640"
@@ -5501,8 +5575,8 @@
   "ui/tex_toolbar.dart:889"
  ],
  "Quitar los filtros": [
-  "ui/library_page.dart:1208",
-  "ui/library_page.dart:2588"
+  "ui/library_page.dart:1221",
+  "ui/library_page.dart:2943"
  ],
  "Quitar y mandar a la Papelera": [
   "ui/remove_repository.dart:171"
@@ -5535,7 +5609,7 @@
  ],
  "Qué es": [
   "ui/welcome.dart:336",
-  "ui/unit_page.dart:2726"
+  "ui/unit_page.dart:2727"
  ],
  "Qué escribe": [
   "ui/manage_snippets.dart:1652"
@@ -5547,7 +5621,7 @@
   "ui/tour.dart:275"
  ],
  "Qué ha cambiado en el original ({0})": [
-  "ui/unit_page.dart:2325"
+  "ui/unit_page.dart:2326"
  ],
  "Qué hacer con esta versión": [
   "ui/freezes.dart:275"
@@ -5578,7 +5652,7 @@
   "ui/mcp_page.dart:64"
  ],
  "Qué sabe hacer alguien después de esta unidad": [
-  "ui/metadata_editor.dart:783"
+  "ui/metadata_editor.dart:760"
  ],
  "Qué se copia": [
   "ui/course_admin_ui.dart:1041"
@@ -5593,7 +5667,7 @@
   "ui/document_properties.dart:169"
  ],
  "Qué versión se abre al ojear una lección": [
-  "ui/library_page.dart:1331"
+  "ui/library_page.dart:1344"
  ],
  "Qué versión tienes y si hay una más nueva.": [
   "ui/settings_page.dart:201"
@@ -5617,7 +5691,7 @@
   "model/tex_wrap.dart:360"
  ],
  "Recuadro sin número ni etiqueta": [
-  "model/tex_vocabulary.dart:114"
+  "model/tex_vocabulary.dart:119"
  ],
  "Recuperar esta versión": [
   "ui/history_tab.dart:730"
@@ -5626,7 +5700,7 @@
   "ui/history_tab.dart:736"
  ],
  "Recuperarlo": [
-  "ui/unit_page.dart:3518"
+  "ui/unit_page.dart:3534"
  ],
  "Reemplazar": [
   "ui/tex_find_bar.dart:354",
@@ -5662,11 +5736,11 @@
  "Reintentar": [
   "main.dart:1025",
   "main.dart:1049",
-  "ui/composition_editor.dart:1660",
+  "ui/composition_editor.dart:1683",
   "ui/year_page.dart:2204",
-  "ui/metadata_editor.dart:1520",
+  "ui/metadata_editor.dart:1551",
   "ui/toolchain_check.dart:622",
-  "ui/unit_page.dart:3002"
+  "ui/unit_page.dart:3018"
  ],
  "Relaciones": [
   "model/tex_snippets.dart:129"
@@ -5681,14 +5755,14 @@
   "ui/freezes.dart:318"
  ],
  "Repositorio": [
-  "ui/new_unit.dart:267",
+  "ui/new_unit.dart:233",
   "ui/platform_menus.dart:295"
  ],
  "Repositorios": [
   "ui/settings_page.dart:303"
  ],
  "Resaltado": [
-  "model/tex_vocabulary.dart:64",
+  "model/tex_vocabulary.dart:69",
   "model/tex_wrap.dart:196"
  ],
  "Responde y acepta la clave.": [
@@ -5749,13 +5823,13 @@
   "ui/freezes.dart:311"
  ],
  "Resultado": [
-  "model/tex_vocabulary.dart:121",
+  "model/tex_vocabulary.dart:126",
   "model/problem_file.dart:35"
  ],
  "Resumen": [
   "ui/manage_snippets.dart:1909",
   "ui/manage_snippets.dart:1925",
-  "model/tex_vocabulary.dart:128"
+  "model/tex_vocabulary.dart:133"
  ],
  "Resumen, Solo en clase, Caja de fórmulas…": [
   "ui/manage_snippets.dart:1613"
@@ -5767,7 +5841,7 @@
   "ui/manage_snippets.dart:766"
  ],
  "Revisar": [
-  "ui/library_page.dart:892"
+  "ui/library_page.dart:905"
  ],
  "Revisar los cambios antes de guardar": [
   "ui/settings_page.dart:2922"
@@ -5779,7 +5853,7 @@
   "ui/review_panel.dart:216"
  ],
  "Revisar {0} de «{1}»": [
-  "state/catalogue_editor.dart:1772"
+  "state/catalogue_editor.dart:1891"
  ],
  "Rojo (profesor)": [
   "ui/manage_snippets.dart:62"
@@ -5809,20 +5883,20 @@
   "ui/add_repository.dart:474"
  ],
  "Salida de la plantilla {0}": [
-  "state/catalogue_editor.dart:1419"
+  "state/catalogue_editor.dart:1538"
  ],
  "Salidas": [
-  "ui/metadata_editor.dart:680"
+  "ui/metadata_editor.dart:657"
  ],
  "Salidas ({0})": [
-  "ui/document_page.dart:1263",
-  "ui/document_page.dart:1349"
+  "ui/document_page.dart:1265",
+  "ui/document_page.dart:1351"
  ],
  "Salidas de esta lección": [
-  "ui/metadata_editor.dart:1120"
+  "ui/metadata_editor.dart:1151"
  ],
  "Salidas de «{0}»": [
-  "ui/document_page.dart:702"
+  "ui/document_page.dart:703"
  ],
  "Salir": [
   "ui/settings_page.dart:1342"
@@ -5837,7 +5911,7 @@
   "ui/unsaved_dialog.dart:50"
  ],
  "Salió en: {0}": [
-  "ui/problem_set.dart:491"
+  "ui/problem_set.dart:499"
  ],
  "Saltar la presentación": [
   "ui/welcome.dart:384"
@@ -5888,18 +5962,21 @@
   "ui/new_document.dart:151"
  ],
  "Se creará en {0}": [
-  "ui/new_unit.dart:286",
-  "ui/new_unit.dart:471"
+  "ui/new_unit.dart:252",
+  "ui/new_unit.dart:438"
  ],
  "Se da en": [
-  "ui/document_page.dart:452",
-  "ui/unit_page.dart:586"
+  "ui/document_page.dart:453",
+  "ui/unit_page.dart:587"
  ],
  "Se da en {0} cursos": [
-  "ui/unit_page.dart:3590"
+  "ui/unit_page.dart:3606"
  ],
  "Se dan en {0}: {1}. Quítalo de sus fichas y luego de aquí.": [
   "ui/language_settings.dart:290"
+ ],
+ "Se declara en taxonomy.yaml de todos los repositorios abiertos, para que la teoría y los problemas enseñen las mismas columnas. Los nombres se pueden cambiar después; el identificador, no: es también el nombre de la carpeta.": [
+  "ui/place_browser.dart:228"
  ],
  "Se descarga el instalador oficial de CTAN y se abre. La instalación se hace en su ventana y tarda un rato largo.": [
   "model/toolchain.dart:750"
@@ -5947,7 +6024,7 @@
   "ui/sign_in.dart:375"
  ],
  "Se perderá lo que has escrito desde que abriste el fichero.": [
-  "ui/unit_page.dart:2198"
+  "ui/unit_page.dart:2199"
  ],
  "Se preguntan al servidor cuando arranca. Enciéndelo para verlas.": [
   "ui/mcp_page.dart:402"
@@ -5965,13 +6042,7 @@
   "ui/freezes.dart:444"
  ],
  "Se quita «{0}» de este documento. La unidad no se borra: sigue en la biblioteca y en los demás documentos que la usen.\n\nSi es que este año no se da, desactívala en lugar de quitarla: queda en su sitio, comentada, y se vuelve a activar en un toque.": [
-  "ui/composition_editor.dart:390"
- ],
- "Se reescribirá 1 documento que la usa, en el mismo cambio. Su id y sus traducciones no cambian.": [
-  "ui/new_unit.dart:674"
- ],
- "Se reescribirán {0} documentos que la usan, en el mismo cambio. Su id y sus traducciones no cambian.": [
-  "ui/new_unit.dart:678"
+  "ui/composition_editor.dart:391"
  ],
  "Se regenera el índice del catálogo, que es lo que hace que el cambio se vea. Tarda unos segundos.": [
   "ui/course_admin_ui.dart:241"
@@ -5986,7 +6057,7 @@
   "ui/problem_editor.dart:267"
  ],
  "Se usa en {0} ubicación(es)": [
-  "ui/unit_page.dart:2763"
+  "ui/unit_page.dart:2779"
  ],
  "Se utiliza en 1 ubicación:": [
   "ui/reuse.dart:808"
@@ -6000,7 +6071,7 @@
  "Seguir editando": [
   "ui/unsaved_dialog.dart:56",
   "ui/manage_snippets.dart:1459",
-  "ui/unit_page.dart:2203"
+  "ui/unit_page.dart:2204"
  ],
  "Seguir el final": [
   "ui/build_console.dart:644"
@@ -6012,10 +6083,10 @@
   "ui/new_document.dart:49"
  ],
  "Seno hiperbólico": [
-  "model/tex_vocabulary.dart:92"
+  "model/tex_vocabulary.dart:97"
  ],
  "Seno, con su nombre en cada idioma": [
-  "model/tex_vocabulary.dart:86"
+  "model/tex_vocabulary.dart:91"
  ],
  "Separado. A partir de ahora es un tema aparte.": [
   "ui/year_page.dart:3010"
@@ -6024,7 +6095,7 @@
   "ui/year_page.dart:2996"
  ],
  "Separar una copia…": [
-  "ui/unit_page.dart:3607"
+  "ui/unit_page.dart:3623"
  ],
  "Separar una versión en otra pestaña": [
   "ui/pdf_tab.dart:860"
@@ -6126,13 +6197,13 @@
   "ui/mcp_page.dart:97"
  ],
  "Sin grado": [
-  "ui/edit_course.dart:242"
+  "ui/edit_course.dart:281"
  ],
  "Sin guardar · +{0} −{1} en year.yaml": [
   "ui/year_page.dart:2139"
  ],
  "Sin los que ya salieron en un examen de {0}": [
-  "ui/problem_set.dart:371"
+  "ui/problem_set.dart:379"
  ],
  "Sin marcar ninguno solo lee, que ya es casi todo el valor y no puede estropear nada. Lo que escriba queda en disco y lo envías tú, viendo qué cambia: no hay ninguna herramienta que guarde en el historial.": [
   "ui/settings_page.dart:3117"
@@ -6158,6 +6229,9 @@
  "Sin revisar": [
   "ui/translations_page.dart:276"
  ],
+ "Sin subtema": [
+  "model/library_tree.dart:157"
+ ],
  "Sin tema": [
   "ui/export_year.dart:518"
  ],
@@ -6165,10 +6239,10 @@
   "ui/translations_page.dart:275"
  ],
  "Sin versión en {0}: se compilará con la de {1} y un aviso.": [
-  "ui/document_page.dart:1161"
+  "ui/document_page.dart:1163"
  ],
  "Snippet «{0}»": [
-  "state/catalogue_editor.dart:923"
+  "state/catalogue_editor.dart:1042"
  ],
  "Snippet «{0}» · {1}": [
   "ui/between_repos_page.dart:626"
@@ -6189,13 +6263,13 @@
   "model/tex_wrap.dart:146"
  ],
  "Solo con el detalle completo (no en un examen)": [
-  "model/tex_vocabulary.dart:48"
+  "model/tex_vocabulary.dart:53"
  ],
  "Solo con el detalle completo, con párrafos": [
-  "model/tex_vocabulary.dart:133"
+  "model/tex_vocabulary.dart:138"
  ],
  "Solo con el detalle reducido": [
-  "model/tex_vocabulary.dart:51"
+  "model/tex_vocabulary.dart:56"
  ],
  "Solo diapositivas": [
   "model/tex_wrap.dart:139"
@@ -6204,28 +6278,28 @@
   "ui/settings_page.dart:1255"
  ],
  "Solo en las copias del profesor": [
-  "model/tex_vocabulary.dart:44"
+  "model/tex_vocabulary.dart:49"
  ],
  "Solo en las diapositivas": [
-  "model/tex_vocabulary.dart:42"
+  "model/tex_vocabulary.dart:47"
  ],
  "Solo en las diapositivas, con párrafos": [
-  "model/tex_vocabulary.dart:130"
+  "model/tex_vocabulary.dart:135"
  ],
  "Solo en los apuntes": [
-  "model/tex_vocabulary.dart:43"
+  "model/tex_vocabulary.dart:48"
  ],
  "Solo en los apuntes, con párrafos": [
-  "model/tex_vocabulary.dart:129"
+  "model/tex_vocabulary.dart:134"
  ],
  "Solo estas": [
   "ui/document_properties.dart:214"
  ],
  "Solo las que no usa ninguna asignatura": [
-  "ui/library_page.dart:1198"
+  "ui/library_page.dart:1211"
  ],
  "Solo lectura · {0}": [
-  "ui/unit_page.dart:1766"
+  "ui/unit_page.dart:1767"
  ],
  "Solo lectura: aquí no se puede guardar": [
   "ui/shell.dart:713"
@@ -6237,7 +6311,7 @@
   "ui/manage_blocks.dart:555"
  ],
  "Solo para el profesor, con párrafos": [
-  "model/tex_vocabulary.dart:131"
+  "model/tex_vocabulary.dart:136"
  ],
  "Solo profesor": [
   "model/tex_wrap.dart:155"
@@ -6246,7 +6320,7 @@
   "ui/translation_settings.dart:217"
  ],
  "Solo un problema tiene enunciado, resultado y solución; lo demás se escribe de corrido.": [
-  "ui/unit_page.dart:1600"
+  "ui/unit_page.dart:1601"
  ],
  "Soluciones": [
   "ui/manage_templates.dart:52"
@@ -6255,7 +6329,7 @@
   "model/tex_wrap.dart:237"
  ],
  "Solución detallada": [
-  "model/tex_vocabulary.dart:122",
+  "model/tex_vocabulary.dart:127",
   "model/problem_file.dart:36"
  ],
  "Son unos 6 GB desde CTAN. Al terminar se abre el instalador de macOS, que te pedirá la contraseña de administrador.": [
@@ -6280,18 +6354,21 @@
   "ui/tour.dart:326"
  ],
  "Subapartado": [
-  "ui/composition_editor.dart:1056",
-  "ui/composition_editor.dart:1101",
+  "ui/composition_editor.dart:1061",
+  "ui/composition_editor.dart:1106",
   "ui/source_view.dart:470"
  ],
  "Subapartado, encima": [
-  "ui/composition_editor.dart:861"
+  "ui/composition_editor.dart:862"
  ],
  "Subiendo el ejemplo a {0}/{1}…": [
   "state/repositories.dart:596"
  ],
  "Subir": [
   "ui/manage_snippets.dart:917"
+ ],
+ "Subtema": [
+  "ui/place_browser.dart:342"
  ],
  "Subíndice": [
   "model/tex_snippets.dart:82"
@@ -6312,7 +6389,7 @@
   "ui/theme.dart:406"
  ],
  "Tal como quedó": [
-  "ui/courses_page.dart:795"
+  "ui/courses_page.dart:814"
  ],
  "Tamaño del texto": [
   "ui/settings_page.dart:573"
@@ -6336,10 +6413,10 @@
   "ui/export_year.dart:430"
  ],
  "Tangente hiperbólica": [
-  "model/tex_vocabulary.dart:93"
+  "model/tex_vocabulary.dart:98"
  ],
  "Tangente, con su nombre en cada idioma": [
-  "model/tex_vocabulary.dart:87"
+  "model/tex_vocabulary.dart:92"
  ],
  "TeX Live entera, con todo lo de CTAN. La que no te va a faltar nunca, si tienes el disco y la tarde.": [
   "model/toolchain.dart:660"
@@ -6348,8 +6425,8 @@
   "model/toolchain.dart:744"
  ],
  "Tema": [
-  "ui/new_unit.dart:229",
-  "ui/year_page.dart:1006"
+  "ui/year_page.dart:1006",
+  "ui/place_browser.dart:324"
  ],
  "Tema 1": [
   "ui/welcome_art.dart:580"
@@ -6360,14 +6437,8 @@
  "Tema 3. Series de funciones": [
   "ui/new_document.dart:109"
  ],
- "Tema nuevo: ninguna otra lección lo usa.": [
-  "ui/metadata_editor.dart:669"
- ],
  "Tema «{0}» creado.": [
   "ui/year_page.dart:803"
- ],
- "Tema, dentro de {0}": [
-  "ui/new_unit.dart:230"
  ],
  "Temas del curso": [
   "ui/compare_view.dart:250"
@@ -6376,7 +6447,7 @@
   "ui/tour.dart:202"
  ],
  "Teorema": [
-  "model/tex_vocabulary.dart:102",
+  "model/tex_vocabulary.dart:107",
   "model/tex_wrap.dart:258"
  ],
  "Teoría": [
@@ -6423,29 +6494,35 @@
   "ui/welcome.dart:1088"
  ],
  "Tipo": [
-  "ui/new_unit.dart:244",
-  "ui/library_page.dart:1066",
+  "ui/new_unit.dart:217",
+  "ui/library_page.dart:1079",
   "ui/new_document.dart:132",
   "ui/library_search.dart:179"
  ],
  "Titulación": [
-  "ui/edit_course.dart:223"
+  "ui/edit_course.dart:262"
+ ],
+ "Titulación impresa de {0}": [
+  "state/catalogue_editor.dart:328"
+ ],
+ "Titulación · {0}": [
+  "ui/edit_course.dart:344"
  ],
  "Toda función continua en un intervalo cerrado y acotado alcanza su máximo y su mínimo.": [
   "model/latex_snippets.dart:133"
  ],
  "Todas": [
   "ui/translate_tab.dart:129",
-  "ui/problem_set.dart:346",
+  "ui/problem_set.dart:354",
   "ui/tex_find_bar.dart:399",
   "ui/translations_page.dart:374",
-  "ui/courses_page.dart:1035"
+  "ui/courses_page.dart:1054"
  ],
  "Todas las asignaturas  ·  {0}": [
-  "ui/courses_page.dart:1095"
+  "ui/courses_page.dart:1114"
  ],
  "Todas las asignaturas están ocultas": [
-  "ui/courses_page.dart:918"
+  "ui/courses_page.dart:937"
  ],
  "Todas las lecciones tienen su bloque declarado.": [
   "ui/between_repos_page.dart:138"
@@ -6463,10 +6540,13 @@
   "ui/language_settings.dart:153"
  ],
  "Todavía no hay ninguna asignatura": [
-  "ui/courses_page.dart:925"
+  "ui/courses_page.dart:944"
  ],
  "Todavía no hay ninguna lección": [
-  "ui/library_page.dart:676"
+  "ui/library_page.dart:689"
+ ],
+ "Todavía no hay ninguna lección en «{0}». Crea una aquí, o arrastra una de otro sitio hasta la fila de este subtema.": [
+  "ui/library_page.dart:2577"
  ],
  "Todavía no hay ninguno declarado.": [
   "ui/manage_degrees.dart:75",
@@ -6491,8 +6571,8 @@
   "ui/unit_preview.dart:1324"
  ],
  "Todo": [
-  "ui/library_page.dart:1119",
-  "ui/library_page.dart:1898",
+  "ui/library_page.dart:1132",
+  "ui/library_page.dart:2033",
   "ui/manage_templates.dart:43"
  ],
  "Todo a la vista, también lo de quien mantiene el repositorio: Bloques y catálogo y el servidor MCP aquí en Ajustes, las rutas de las herramientas y el registro entero al compilar, reemplazar en el editor, mover temas y gestionar su vinculación, y «Entre repos» siempre en la columna de la izquierda.": [
@@ -6520,10 +6600,10 @@
   "ui/history_tab.dart:716"
  ],
  "Todo menos el profesor, con párrafos": [
-  "model/tex_vocabulary.dart:132"
+  "model/tex_vocabulary.dart:137"
  ],
  "Todo menos las copias del profesor": [
-  "model/tex_vocabulary.dart:45"
+  "model/tex_vocabulary.dart:50"
  ],
  "Todo sale de la memoria: no hay que mandar nada al proveedor, y no cuesta nada.": [
   "ui/translate_unit.dart:668"
@@ -6537,7 +6617,7 @@
   "ui/translate_unit.dart:347"
  ],
  "Todos los grados": [
-  "ui/courses_page.dart:1124"
+  "ui/courses_page.dart:1143"
  ],
  "Todos los grupos": [
   "ui/manage_snippets.dart:598"
@@ -6552,7 +6632,7 @@
   "ui/translations_page.dart:143"
  ],
  "Traducción": [
-  "ui/library_page.dart:1058",
+  "ui/library_page.dart:1071",
   "ui/platform_menus.dart:243",
   "ui/shell.dart:113",
   "ui/command_palette.dart:348",
@@ -6565,14 +6645,14 @@
   "ui/library_search.dart:155"
  ],
  "Traducida como borrador. Revísala antes de darla por buena.": [
-  "ui/unit_page.dart:1872"
+  "ui/unit_page.dart:1873"
  ],
  "Traducir": [
   "ui/translations_page.dart:385",
   "ui/translate_unit.dart:521"
  ],
  "Traducir ({0})": [
-  "ui/document_page.dart:791"
+  "ui/document_page.dart:792"
  ],
  "Traducir 1": [
   "ui/translate_tab.dart:144"
@@ -6603,7 +6683,7 @@
   "state/translation_service.dart:387"
  ],
  "Traducirla a {0} con la máquina": [
-  "ui/unit_page.dart:1496"
+  "ui/unit_page.dart:1497"
  ],
  "Trae el material de GitHub y guarda cada cambio con tu nombre. Es lo que hace que puedas ver cómo estaba un fichero el mes pasado.": [
   "model/toolchain.dart:132"
@@ -6690,14 +6770,14 @@
   "model/tex_wrap.dart:190"
  ],
  "Título": [
-  "ui/new_unit.dart:198",
+  "ui/new_unit.dart:197",
   "ui/manage_snippets.dart:1949",
   "ui/document_properties.dart:140",
   "ui/course_admin_ui.dart:769",
   "model/tex_wrap.dart:209"
  ],
  "Título ({0})": [
-  "ui/new_unit.dart:455"
+  "ui/new_unit.dart:422"
  ],
  "Título cambiado en {0} repositorio(s).": [
   "ui/manage_degrees.dart:242"
@@ -6712,25 +6792,25 @@
   "model/tex_vocabulary.dart:38"
  ],
  "Título de {0}": [
-  "state/catalogue_editor.dart:335"
+  "state/catalogue_editor.dart:312"
  ],
  "Título de {0} en todos los idiomas": [
   "ui/heading_title.dart:168"
  ],
  "Título de {0} en {1} {2}": [
-  "state/catalogue_editor.dart:394"
+  "state/catalogue_editor.dart:438"
  ],
  "Título del grado": [
   "ui/manage_degrees.dart:222"
  ],
  "Título del grado {0}": [
-  "state/catalogue_editor.dart:554"
+  "state/catalogue_editor.dart:598"
  ],
  "Título del tema cambiado.": [
   "ui/year_page.dart:1027"
  ],
  "Título del tema {0} en {1} {2}": [
-  "state/catalogue_editor.dart:366"
+  "state/catalogue_editor.dart:410"
  ],
  "Título del {0}": [
   "ui/heading_title.dart:94"
@@ -6740,11 +6820,14 @@
  ],
  "Título en {0}": [
   "ui/new_document.dart:108",
-  "ui/problem_set.dart:251",
+  "ui/problem_set.dart:259",
   "ui/manage_snippets.dart:1923"
  ],
+ "Título solo de la diapositiva; en los apuntes, nada": [
+  "model/tex_vocabulary.dart:43"
+ ],
  "Títulos": [
-  "ui/metadata_editor.dart:593"
+  "ui/metadata_editor.dart:595"
  ],
  "Un bloque del curso, con todo lo suyo dentro: la teoría, los problemas, la bibliografía. Se crea vacío y los documentos se añaden desde él.": [
   "ui/new_document.dart:248"
@@ -6770,7 +6853,7 @@
   "ui/tour.dart:220"
  ],
  "Un dibujo, con [alt={…}]: lo que se ve en él": [
-  "model/tex_vocabulary.dart:116"
+  "model/tex_vocabulary.dart:121"
  ],
  "Un documento": [
   "ui/tour.dart:212",
@@ -6786,7 +6869,7 @@
   "ui/between_repos_page.dart:266"
  ],
  "Un elemento de una lista o un apartado": [
-  "model/tex_vocabulary.dart:72"
+  "model/tex_vocabulary.dart:77"
  ],
  "Un fichero": [
   "ui/sync_bar.dart:601"
@@ -6795,7 +6878,7 @@
   "ui/manage_degrees.dart:65"
  ],
  "Un idioma cada vez": [
-  "ui/unit_page.dart:515"
+  "ui/unit_page.dart:516"
  ],
  "Un idioma en blanco se queda marcado como pendiente en el fichero, no se borra el apartado.": [
   "ui/heading_title.dart:42"
@@ -6876,10 +6959,10 @@
   "ui/reuse.dart:58"
  ],
  "Una diapositiva": [
-  "model/tex_vocabulary.dart:101"
+  "model/tex_vocabulary.dart:106"
  ],
  "Una figura de figures/, con lo que se ve en ella": [
-  "model/tex_vocabulary.dart:79"
+  "model/tex_vocabulary.dart:84"
  ],
  "Una fuente, quince salidas": [
   "ui/welcome.dart:485"
@@ -6894,10 +6977,10 @@
   "ui/tour.dart:322"
  ],
  "Una lección es una carpeta dentro de content/ o problems/ del repositorio, con un .tex por idioma. La guía cuenta cómo es una.": [
-  "ui/library_page.dart:690"
+  "ui/library_page.dart:703"
  ],
  "Una lección nueva que empieza siendo una copia de «{0}»: sus idiomas, sus figuras y sus metadatos. Desde ese momento son dos, y cambiar una no cambia la otra.": [
-  "ui/new_unit.dart:440"
+  "ui/new_unit.dart:407"
  ],
  "Una llave «{» que no se cierra.": [
   "model/tex_check.dart:237"
@@ -6924,10 +7007,10 @@
   "ui/unit_preview.dart:806"
  ],
  "Unidad no encontrada": [
-  "ui/unit_page.dart:3025"
+  "ui/unit_page.dart:3041"
  ],
  "Unidad, encima…": [
-  "ui/composition_editor.dart:868"
+  "ui/composition_editor.dart:869"
  ],
  "Uno tuyo de GitHub": [
   "ui/welcome.dart:867"
@@ -6972,7 +7055,7 @@
   "model/tex_snippets.dart:88"
  ],
  "Varias citas": [
-  "model/tex_vocabulary.dart:83"
+  "model/tex_vocabulary.dart:88"
  ],
  "Ventana": [
   "ui/platform_menus.dart:326"
@@ -6991,7 +7074,7 @@
   "ui/toolchain_check.dart:483"
  ],
  "Ver el LaTeX": [
-  "ui/unit_page.dart:1611"
+  "ui/unit_page.dart:1612"
  ],
  "Ver el PDF": [
   "ui/year_page.dart:2764"
@@ -7000,18 +7083,18 @@
   "ui/year_page.dart:2762"
  ],
  "Ver el fichero": [
-  "ui/metadata_editor.dart:193",
-  "ui/metadata_editor.dart:478"
+  "ui/metadata_editor.dart:195",
+  "ui/metadata_editor.dart:480"
  ],
  "Ver el formulario": [
-  "ui/metadata_editor.dart:477"
+  "ui/metadata_editor.dart:479"
  ],
  "Ver el fuente": [
-  "ui/document_page.dart:390"
+  "ui/document_page.dart:391"
  ],
  "Ver el historial": [
-  "ui/document_page.dart:391",
-  "ui/unit_page.dart:507"
+  "ui/document_page.dart:392",
+  "ui/unit_page.dart:508"
  ],
  "Ver el recorrido guiado": [
   "ui/settings_page.dart:1103"
@@ -7023,10 +7106,10 @@
   "ui/shortcuts.dart:41"
  ],
  "Ver la composición": [
-  "ui/document_page.dart:389"
+  "ui/document_page.dart:390"
  ],
  "Ver las asignaturas": [
-  "ui/document_page.dart:1500",
+  "ui/document_page.dart:1502",
   "ui/year_page.dart:2725"
  ],
  "Ver las asignaturas ocultas": [
@@ -7036,7 +7119,7 @@
   "ui/courses_page.dart:141"
  ],
  "Ver las ocultas": [
-  "ui/courses_page.dart:983"
+  "ui/courses_page.dart:1002"
  ],
  "Ver las órdenes": [
   "model/toolchain.dart:803"
@@ -7045,13 +7128,13 @@
   "ui/command_palette.dart:318"
  ],
  "Ver los campos": [
-  "ui/unit_page.dart:1611"
+  "ui/unit_page.dart:1612"
  ],
  "Ver los idiomas uno al lado del otro": [
-  "ui/unit_page.dart:3102"
+  "ui/unit_page.dart:3118"
  ],
  "Ver los metadatos": [
-  "ui/unit_page.dart:500"
+  "ui/unit_page.dart:501"
  ],
  "Ver los {0}": [
   "ui/diagnostic_list.dart:65"
@@ -7063,10 +7146,10 @@
   "ui/settings_page.dart:3106"
  ],
  "Ver qué ha cambiado": [
-  "ui/unit_page.dart:2265"
+  "ui/unit_page.dart:2266"
  ],
  "Ver solo las asignaturas de un grado": [
-  "ui/courses_page.dart:1089"
+  "ui/courses_page.dart:1108"
  ],
  "Ver todas las asignaturas": [
   "ui/courses_page.dart:143"
@@ -7078,15 +7161,15 @@
   "ui/year_page.dart:2901"
  ],
  "Ver versiones congeladas ({0})…": [
-  "ui/courses_page.dart:1746"
+  "ui/courses_page.dart:1765"
  ],
  "Ver versiones congeladas…": [
   "ui/year_page.dart:128",
-  "ui/courses_page.dart:1745",
+  "ui/courses_page.dart:1764",
   "ui/info_menu.dart:209"
  ],
  "Ver y filtrar": [
-  "ui/library_page.dart:1009"
+  "ui/library_page.dart:1022"
  ],
  "Ver {0}": [
   "data/file_manager.dart:29"
@@ -7123,7 +7206,7 @@
   "data/frozen.dart:359"
  ],
  "Versión corta en diapositivas, larga en los apuntes": [
-  "model/tex_vocabulary.dart:60"
+  "model/tex_vocabulary.dart:65"
  ],
  "Versión del {0}": [
   "ui/history_tab.dart:682"
@@ -7137,7 +7220,7 @@
  ],
  "Vinculación dividida. Cada grupo sigue sincronizado por dentro.": [
   "ui/document_links.dart:126",
-  "ui/unit_page.dart:3658"
+  "ui/unit_page.dart:3674"
  ],
  "Violeta (axioma)": [
   "ui/manage_snippets.dart:60"
@@ -7173,7 +7256,7 @@
   "ui/sync_bar.dart:897"
  ],
  "Volver a enseñar «{0}» en esta lista": [
-  "ui/courses_page.dart:1791"
+  "ui/courses_page.dart:1810"
  ],
  "Volver a entrar": [
   "ui/problem.dart:72"
@@ -7185,13 +7268,13 @@
   "ui/command_palette.dart:238"
  ],
  "Volver a las carpetas": [
-  "ui/composition_editor.dart:1269"
+  "ui/composition_editor.dart:1288"
  ],
  "Volver a revisar": [
   "ui/review_panel.dart:360"
  ],
  "Volver a un idioma a la vez": [
-  "ui/unit_page.dart:3101"
+  "ui/unit_page.dart:3117"
  ],
  "Volver a ver la presentación": [
   "ui/settings_page.dart:1097"
@@ -7233,18 +7316,12 @@
  "Y los de siempre al escribir: ⌘Z, ⌘C, ⌘V…": [
   "ui/shortcuts.dart:165"
  ],
- "Y otra lección que la tiene de prerrequisito.": [
-  "ui/new_unit.dart:710"
- ],
  "Y para acabar": [
   "ui/tour.dart:333",
   "ui/tour.dart:342"
  ],
  "Y se envía a GitHub": [
   "ui/settings_page.dart:2948"
- ],
- "Y {0} lecciones que la tienen de prerrequisito.": [
-  "ui/new_unit.dart:711"
  ],
  "Ya compiladas": [
   "ui/unit_preview.dart:923"
@@ -7253,7 +7330,7 @@
   "ui/manage_snippets.dart:1778"
  ],
  "Ya estaba ordenado.": [
-  "ui/unit_page.dart:1843"
+  "ui/unit_page.dart:1844"
  ],
  "Ya estaba todo: no se ha traído nada.": [
   "ui/settings_page.dart:2177"
@@ -7284,15 +7361,19 @@
   "ui/add_repository.dart:130"
  ],
  "Ya hay una lección en {0}.": [
-  "ui/new_unit.dart:177",
-  "ui/new_unit.dart:423",
-  "ui/new_unit.dart:582"
+  "ui/new_unit.dart:176",
+  "ui/new_unit.dart:390",
+  "ui/new_unit.dart:506",
+  "ui/new_unit.dart:579"
  ],
  "Ya hay una plantilla con este id.": [
   "ui/template_editor.dart:336"
  ],
  "Ya hay uno así en este curso": [
-  "ui/problem_set.dart:271"
+  "ui/problem_set.dart:279"
+ ],
+ "Ya hay uno que se llama así aquí.": [
+  "ui/place_browser.dart:177"
  ],
  "Ya lo tengo clonado": [
   "ui/welcome.dart:895"
@@ -7312,6 +7393,12 @@
  "[Título]  o  {red}": [
   "ui/manage_snippets.dart:1736"
  ],
+ "`{0}` necesita un nombre en algún idioma": [
+  "model/taxonomy_file.dart:331"
+ ],
+ "`{0}` no es un sitio de la biblioteca": [
+  "model/taxonomy_file.dart:303"
+ ],
  "`{0}` tiene un valor escalar, así que no puede contener `{1}`": [
   "model/yaml_patch.dart:359"
  ],
@@ -7319,7 +7406,7 @@
   "state/catalogue_store.dart:336"
  ],
  "activar {0}": [
-  "ui/composition_editor.dart:585"
+  "ui/composition_editor.dart:586"
  ],
  "actividad": [
   "ui/theme.dart:421"
@@ -7340,7 +7427,7 @@
   "ui/settings_page.dart:1663"
  ],
  "alemán": [
-  "model/library_tree.dart:224"
+  "model/library_tree.dart:272"
  ],
  "apagada": [
   "ui/manage_templates.dart:758"
@@ -7374,13 +7461,13 @@
   "ui/year_page.dart:1413"
  ],
  "añadir unidades composición": [
-  "ui/document_page.dart:384"
+  "ui/document_page.dart:385"
  ],
  "añadir {0}": [
-  "ui/composition_editor.dart:582"
+  "ui/composition_editor.dart:583"
  ],
  "bloque": [
-  "ui/metadata_editor.dart:635"
+  "ui/metadata_editor.dart:637"
  ],
  "buscar en el texto": [
   "data/local_clone_io.dart:1259"
@@ -7389,36 +7476,32 @@
   "ui/build_button.dart:204"
  ],
  "cambiar el orden": [
-  "ui/composition_editor.dart:592"
+  "ui/composition_editor.dart:593"
  ],
  "carpeta del programa": [
   "ui/settings_page.dart:2120"
  ],
  "carpeta nombre": [
-  "ui/unit_page.dart:537"
+  "ui/unit_page.dart:538"
  ],
  "castellano": [
   "model/tex_check.dart:87",
-  "model/library_tree.dart:217"
+  "model/library_tree.dart:265"
  ],
  "catalán": [
-  "model/library_tree.dart:219"
+  "model/library_tree.dart:267"
  ],
  "catalán y valenciano": [
   "model/tex_check.dart:89"
  ],
  "categoría": [
-  "ui/metadata_editor.dart:647",
-  "ui/unit_page.dart:2732"
+  "ui/unit_page.dart:2736"
  ],
  "categoría nueva": [
-  "model/metadata_suggestions.dart:73"
- ],
- "categoría/tema/nombre": [
-  "ui/new_unit.dart:645"
+  "model/metadata_suggestions.dart:77"
  ],
  "clase": [
-  "model/catalogue.dart:1193"
+  "model/catalogue.dart:1214"
  ],
  "clonar {0}/{1}": [
   "data/local_clone_io.dart:167",
@@ -7437,7 +7520,7 @@
   "ui/pdf_tab.dart:682"
  ],
  "compilar": [
-  "ui/unit_page.dart:2655"
+  "ui/unit_page.dart:2656"
  ],
  "con cabecera propia": [
   "ui/manage_templates.dart:751"
@@ -7452,7 +7535,7 @@
   "data/local_clone_io.dart:301"
  ],
  "copiar copia": [
-  "ui/unit_page.dart:531"
+  "ui/unit_page.dart:532"
  ],
  "crear añadir curso": [
   "ui/courses_page.dart:119"
@@ -7467,7 +7550,7 @@
   "ui/command_palette.dart:333"
  ],
  "código": [
-  "model/catalogue.dart:1190"
+  "model/catalogue.dart:1211"
  ],
  "definición": [
   "model/latex_snippets.dart:331"
@@ -7488,7 +7571,7 @@
   "model/folder_safety.dart:41"
  ],
  "desactivar {0}": [
-  "ui/composition_editor.dart:588"
+  "ui/composition_editor.dart:589"
  ],
  "descripción": [
   "model/latex_snippets.dart:320"
@@ -7497,14 +7580,14 @@
   "ui/welcome_art.dart:448"
  ],
  "dificultad": [
-  "ui/metadata_editor.dart:715",
-  "ui/unit_page.dart:2735"
+  "ui/metadata_editor.dart:692",
+  "ui/unit_page.dart:2751"
  ],
  "difícil": [
   "ui/theme.dart:433"
  ],
  "dividir editores comparar": [
-  "ui/unit_page.dart:517"
+  "ui/unit_page.dart:518"
  ],
  "documento": [
   "ui/course_admin_ui.dart:399",
@@ -7515,12 +7598,12 @@
   "ui/course_admin_ui.dart:411"
  ],
  "duración": [
-  "ui/metadata_editor.dart:368",
-  "ui/metadata_editor.dart:707",
-  "ui/unit_page.dart:2737"
+  "ui/metadata_editor.dart:370",
+  "ui/metadata_editor.dart:684",
+  "ui/unit_page.dart:2753"
  ],
  "editar": [
-  "ui/composition_editor.dart:594"
+  "ui/composition_editor.dart:595"
  ],
  "ejemplo": [
   "ui/theme.dart:422"
@@ -7532,10 +7615,10 @@
   "ui/freezes.dart:990"
  ],
  "el documento `{0}` no está en {1}. Puede que el catálogo esté desactualizado: se regenera con `didacta index`.": [
-  "ui/composition_editor.dart:138"
+  "ui/composition_editor.dart:139"
  ],
  "el estado «{0}» lo calcula el motor; no se puede declarar": [
-  "state/catalogue_editor.dart:1691"
+  "state/catalogue_editor.dart:1810"
  ],
  "el fichero que compila": [
   "model/course_diff.dart:406"
@@ -7550,7 +7633,7 @@
   "model/composition_file.dart:494"
  ],
  "el original no se revisa: es de donde se traduce": [
-  "state/catalogue_editor.dart:1750"
+  "state/catalogue_editor.dart:1869"
  ],
  "el programa": [
   "ui/document_properties.dart:325"
@@ -7559,12 +7642,12 @@
   "ui/settings_page.dart:1155"
  ],
  "el repositorio": [
-  "ui/library_page.dart:901",
+  "ui/library_page.dart:914",
   "ui/review_panel.dart:104",
   "ui/course_admin_ui.dart:136"
  ],
  "el tema compartido `{0}` dice vivir en {1}, y ahí no hay ninguna composición. Puede que el fichero esté en otro repositorio que no tienes abierto.": [
-  "ui/composition_editor.dart:131"
+  "ui/composition_editor.dart:132"
  ],
  "el tema «{0}»": [
   "ui/freezes.dart:995"
@@ -7573,13 +7656,13 @@
   "model/course_diff.dart:457"
  ],
  "el título original": [
-  "ui/metadata_editor.dart:600"
+  "ui/metadata_editor.dart:602"
  ],
  "el valor de `{0}` no es un mapa que se pueda editar campo a campo: {1}": [
   "model/yaml_patch.dart:198"
  ],
  "elegidas para esta lección": [
-  "ui/metadata_editor.dart:1107"
+  "ui/metadata_editor.dart:1138"
  ],
  "elegir la rama {0}": [
   "data/local_clone_io.dart:233"
@@ -7612,12 +7695,12 @@
  ],
  "enunciados y resultados": [
   "ui/manage_templates.dart:746",
-  "model/catalogue.dart:1630",
+  "model/catalogue.dart:1668",
   "data/compiler.dart:57"
  ],
  "enunciados, resultados y solución": [
   "ui/manage_templates.dart:747",
-  "model/catalogue.dart:1631",
+  "model/catalogue.dart:1669",
   "data/compiler.dart:58"
  ],
  "enviar el primer cambio a GitHub": [
@@ -7643,13 +7726,13 @@
   "data/update_installer_io.dart:148"
  ],
  "esta asignatura": [
-  "ui/courses_page.dart:1383"
+  "ui/courses_page.dart:1402"
  ],
  "esta unidad": [
   "ui/unit_preview.dart:149"
  ],
  "estado de {0}": [
-  "ui/metadata_editor.dart:391"
+  "ui/metadata_editor.dart:393"
  ],
  "estado: {0}": [
   "ui/tabs.dart:114"
@@ -7670,7 +7753,7 @@
   "model/problem_file.dart:157"
  ],
  "este repositorio": [
-  "ui/problem_set.dart:401"
+  "ui/problem_set.dart:409"
  ],
  "este repositorio no declara el grado `{0}`": [
   "model/degrees_file.dart:198"
@@ -7679,7 +7762,7 @@
   "model/templates_file.dart:154"
  ],
  "este repositorio ya declara el bloque `{0}`": [
-  "model/taxonomy_file.dart:168"
+  "model/taxonomy_file.dart:169"
  ],
  "este repositorio ya declara el grado `{0}`": [
   "model/degrees_file.dart:136"
@@ -7689,7 +7772,7 @@
   "ui/year_page.dart:1984"
  ],
  "estos repositorios": [
-  "ui/problem_set.dart:400"
+  "ui/problem_set.dart:408"
  ],
  "estos {0} ficheros": [
   "ui/recent_changes.dart:185"
@@ -7710,49 +7793,49 @@
   "ui/course_admin_ui.dart:674"
  ],
  "etiqueta nueva": [
-  "model/metadata_suggestions.dart:104"
+  "model/metadata_suggestions.dart:108"
  ],
  "etiquetas": [
-  "ui/metadata_editor.dart:1166"
+  "ui/metadata_editor.dart:1197"
  ],
  "euskera": [
-  "model/library_tree.dart:221"
+  "model/library_tree.dart:269"
  ],
  "examen": [
   "ui/welcome_art.dart:452",
   "ui/theme.dart:417"
  ],
  "examen {0}{1}": [
-  "ui/problem_set.dart:503"
+  "ui/problem_set.dart:511"
  ],
  "existe en {0}": [
-  "ui/library_page.dart:1596"
+  "ui/library_page.dart:1612"
  ],
  "experimento": [
   "ui/theme.dart:423"
  ],
  "falta en {0}": [
-  "ui/library_page.dart:1597"
+  "ui/library_page.dart:1613"
  ],
  "falta {0}": [
   "ui/translate_tab.dart:199"
  ],
  "filtrar lecciones": [
-  "ui/library_page.dart:314"
+  "ui/library_page.dart:327"
  ],
  "filtro lista": [
   "ui/courses_page.dart:145"
  ],
  "francés": [
   "model/tex_check.dart:90",
-  "model/library_tree.dart:223"
+  "model/library_tree.dart:271"
  ],
  "fácil": [
   "ui/theme.dart:431"
  ],
  "gallego": [
   "model/tex_check.dart:88",
-  "model/library_tree.dart:220"
+  "model/library_tree.dart:268"
  ],
  "git falló al {0} (código {1}).": [
   "data/local_clone_io.dart:1680"
@@ -7767,7 +7850,7 @@
   "data/local_clone_io.dart:1662"
  ],
  "grado": [
-  "model/catalogue.dart:1192"
+  "model/catalogue.dart:1213"
  ],
  "gratis con {0}": [
   "ui/translate_unit.dart:692"
@@ -7779,7 +7862,7 @@
   "ui/translation_settings.dart:171"
  ],
  "guardar commit": [
-  "ui/unit_page.dart:477"
+  "ui/unit_page.dart:478"
  ],
  "guardar composición": [
   "ui/year_page.dart:1374"
@@ -7824,7 +7907,7 @@
   "ui/theme.dart:424"
  ],
  "historial": [
-  "ui/unit_page.dart:2671"
+  "ui/unit_page.dart:2672"
  ],
  "historial últimos deshacer": [
   "ui/courses_page.dart:133"
@@ -7843,7 +7926,7 @@
   "ui/manage_snippets.dart:2001"
  ],
  "idioma pestaña {0}": [
-  "ui/unit_page.dart:487"
+  "ui/unit_page.dart:488"
  ],
  "idioma {0}": [
   "ui/year_page.dart:96",
@@ -7851,16 +7934,16 @@
  ],
  "idiomas": [
   "ui/settings_page.dart:2223",
-  "model/catalogue.dart:1189"
+  "model/catalogue.dart:1210"
  ],
  "inglés": [
-  "model/library_tree.dart:222"
+  "model/library_tree.dart:270"
  ],
  "institución": [
-  "model/catalogue.dart:1188"
+  "model/catalogue.dart:1209"
  ],
  "italiano": [
-  "model/library_tree.dart:225"
+  "model/library_tree.dart:273"
  ],
  "la carpeta donde se clonan todos": [
   "model/folder_safety.dart:36"
@@ -7893,10 +7976,10 @@
   "ui/compare_view.dart:85"
  ],
  "lado a lado": [
-  "ui/unit_page.dart:3124"
+  "ui/unit_page.dart:3140"
  ],
  "las de «{0}»": [
-  "ui/metadata_editor.dart:1106"
+  "ui/metadata_editor.dart:1137"
  ],
  "las versiones congeladas": [
   "model/course_diff.dart:392"
@@ -7950,7 +8033,7 @@
   "model/course_diff.dart:444"
  ],
  "los repositorios": [
-  "ui/library_page.dart:900"
+  "ui/library_page.dart:913"
  ],
  "los separa": [
   "ui/course_admin_ui.dart:680"
@@ -7965,10 +8048,10 @@
   "ui/translate_unit.dart:727"
  ],
  "metadatos": [
-  "ui/unit_page.dart:2664"
+  "ui/unit_page.dart:2665"
  ],
  "minutos": [
-  "ui/metadata_editor.dart:708"
+  "ui/metadata_editor.dart:685"
  ],
  "mirar el índice": [
   "data/local_clone_io.dart:960"
@@ -8004,7 +8087,7 @@
   "ui/course_admin_ui.dart:823"
  ],
  "ninguna encendida": [
-  "ui/metadata_editor.dart:1093"
+  "ui/metadata_editor.dart:1124"
  ],
  "no": [
   "model/latex_snippets.dart:329"
@@ -8022,7 +8105,7 @@
   "ui/settings_page.dart:1154"
  ],
  "no está en el catálogo": [
-  "ui/document_page.dart:1080",
+  "ui/document_page.dart:1081",
   "model/document_reading.dart:164"
  ],
  "no existe": [
@@ -8044,8 +8127,8 @@
  ],
  "no existe la asignatura {0}": [
   "state/catalogue_editor.dart:127",
-  "state/catalogue_editor.dart:305",
-  "state/catalogue_editor.dart:416"
+  "state/catalogue_editor.dart:354",
+  "state/catalogue_editor.dart:460"
  ],
  "no existe la carpeta {0}": [
   "data/template_store_io.dart:58",
@@ -8061,27 +8144,27 @@
   "state/repo_sync.dart:508"
  ],
  "no hay carpeta del programa": [
-  "state/catalogue_editor.dart:1141",
-  "state/catalogue_editor.dart:1164"
+  "state/catalogue_editor.dart:1260",
+  "state/catalogue_editor.dart:1283"
  ],
  "no hay ninguna plantilla {0}": [
-  "state/catalogue_editor.dart:1284"
+  "state/catalogue_editor.dart:1403"
  ],
  "no se declara el bloque `{0}`": [
-  "model/taxonomy_file.dart:79",
-  "model/taxonomy_file.dart:139",
-  "model/taxonomy_file.dart:245"
+  "model/taxonomy_file.dart:80",
+  "model/taxonomy_file.dart:140",
+  "model/taxonomy_file.dart:246"
  ],
  "no se declara el bloque {0}": [
-  "state/catalogue_editor.dart:656",
-  "state/catalogue_editor.dart:706",
-  "state/catalogue_editor.dart:832"
+  "state/catalogue_editor.dart:775",
+  "state/catalogue_editor.dart:825",
+  "state/catalogue_editor.dart:951"
  ],
  "no se declara el grado `{0}`": [
   "model/degrees_file.dart:70"
  ],
  "no se declara el grado {0}": [
-  "state/catalogue_editor.dart:537"
+  "state/catalogue_editor.dart:581"
  ],
  "no se declara el snippet `{0}`": [
   "model/snippets_file.dart:93"
@@ -8093,10 +8176,10 @@
   "model/templates_file.dart:269"
  ],
  "no se declara la plantilla {0}": [
-  "state/catalogue_editor.dart:1453"
+  "state/catalogue_editor.dart:1572"
  ],
  "no se encuentra «{0}» en {1}": [
-  "ui/document_page.dart:210"
+  "ui/document_page.dart:211"
  ],
  "no se entiende el mapa: {0}": [
   "model/yaml_patch.dart:471"
@@ -8108,20 +8191,20 @@
   "ui/source_view.dart:500"
  ],
  "no se pudo leer {0} (HTTP {1}). ¿Se ha generado el índice con `didacta index`?": [
-  "data/catalogue_source.dart:165"
+  "data/catalogue_source.dart:166"
  ],
  "no se puede escribir en {0}": [
   "state/translation_service.dart:111",
   "state/translation_service.dart:255",
   "state/catalogue_editor.dart:234",
-  "state/catalogue_editor.dart:461",
-  "state/catalogue_editor.dart:509",
-  "state/catalogue_editor.dart:580",
-  "state/catalogue_editor.dart:625",
-  "state/catalogue_editor.dart:1170",
-  "state/catalogue_editor.dart:1645",
-  "state/catalogue_editor.dart:1698",
-  "state/catalogue_editor.dart:1755"
+  "state/catalogue_editor.dart:505",
+  "state/catalogue_editor.dart:553",
+  "state/catalogue_editor.dart:624",
+  "state/catalogue_editor.dart:744",
+  "state/catalogue_editor.dart:1289",
+  "state/catalogue_editor.dart:1764",
+  "state/catalogue_editor.dart:1817",
+  "state/catalogue_editor.dart:1874"
  ],
  "no se puede quitar {0} de {1}: se dan en ese idioma {2}": [
   "state/catalogue_editor.dart:244"
@@ -8142,7 +8225,7 @@
   "ui/theme.dart:425"
  ],
  "opciones": [
-  "model/catalogue.dart:1194"
+  "model/catalogue.dart:1215"
  ],
  "orden": [
   "model/latex_snippets.dart:322"
@@ -8151,13 +8234,13 @@
   "ui/library_search.dart:60"
  ],
  "ordenar al guardar": [
-  "ui/unit_page.dart:1951"
+  "ui/unit_page.dart:1952"
  ],
  "origen": [
   "ui/settings_page.dart:2227"
  ],
  "original": [
-  "ui/metadata_editor.dart:79"
+  "ui/metadata_editor.dart:81"
  ],
  "para guardar hace falta decir qué has cambiado": [
   "state/repo_sync.dart:142"
@@ -8172,7 +8255,7 @@
   "ui/year_page.dart:1383"
  ],
  "pdf compilar ver": [
-  "ui/document_page.dart:376"
+  "ui/document_page.dart:377"
  ],
  "perfiles de salida": [
   "ui/settings_page.dart:2222"
@@ -8181,8 +8264,8 @@
   "ui/toolchain_check.dart:786"
  ],
  "plantillas": [
-  "ui/metadata_editor.dart:1083",
-  "model/catalogue.dart:1187"
+  "ui/metadata_editor.dart:1114",
+  "model/catalogue.dart:1208"
  ],
  "poner al día las versiones congeladas": [
   "data/local_clone_io.dart:1796"
@@ -8194,14 +8277,14 @@
   "ui/manage_templates.dart:757"
  ],
  "por revisar": [
-  "ui/library_page.dart:1598",
+  "ui/library_page.dart:1614",
   "ui/library_search.dart:159"
  ],
  "por traducir": [
   "ui/library_search.dart:46"
  ],
  "portugués": [
-  "model/library_tree.dart:226"
+  "model/library_tree.dart:274"
  ],
  "preferencias configuración": [
   "ui/command_palette.dart:375"
@@ -8226,7 +8309,7 @@
   "ui/theme.dart:416"
  ],
  "profesor": [
-  "model/catalogue.dart:1191"
+  "model/catalogue.dart:1212"
  ],
  "programa": [
   "ui/template_editor.dart:999"
@@ -8247,7 +8330,7 @@
   "data/local_clone_io.dart:1161"
  ],
  "quitar {0}": [
-  "ui/composition_editor.dart:583"
+  "ui/composition_editor.dart:584"
  ],
  "qué temas lleva el curso y en qué orden": [
   "model/course_diff.dart:368"
@@ -8268,10 +8351,10 @@
   "data/local_clone_io.dart:1341"
  ],
  "revisada": [
-  "ui/metadata_editor.dart:78"
+  "ui/metadata_editor.dart:80"
  ],
  "ruta": [
-  "ui/metadata_editor.dart:577",
+  "ui/metadata_editor.dart:579",
   "ui/library_search.dart:43"
  ],
  "rótulo": [
@@ -8298,31 +8381,34 @@
  "sin clase": [
   "ui/manage_templates.dart:744"
  ],
+ "sin clasificar": [
+  "ui/metadata_editor.dart:957"
+ ],
  "sin clave": [
   "model/translation.dart:130"
  ],
  "sin declarar": [
-  "ui/courses_page.dart:1210"
+  "ui/courses_page.dart:1229"
  ],
  "sin definir": [
-  "ui/metadata_editor.dart:1017"
+  "ui/metadata_editor.dart:1048"
  ],
  "sin guardar": [
   "ui/tabs.dart:144",
   "ui/source_view.dart:1051",
-  "ui/unit_page.dart:2131"
+  "ui/unit_page.dart:2132"
  ],
  "sin indexar todavía": [
   "ui/year_page.dart:2604"
  ],
  "sin motor": [
-  "ui/courses_page.dart:515"
+  "ui/courses_page.dart:534"
  ],
  "sin motor para {0}": [
   "state/build_service.dart:222"
  ],
  "sin revisar": [
-  "ui/metadata_editor.dart:76",
+  "ui/metadata_editor.dart:78",
   "model/catalogue.dart:100"
  ],
  "sin sincronizar": [
@@ -8330,34 +8416,41 @@
  ],
  "sin traducir": [
   "ui/manage_degrees.dart:640",
-  "ui/edit_course.dart:212",
-  "ui/metadata_editor.dart:601",
+  "ui/edit_course.dart:251",
+  "ui/edit_course.dart:330",
+  "ui/metadata_editor.dart:603",
   "ui/document_properties.dart:152",
   "ui/manage_blocks.dart:1038",
   "ui/heading_title.dart:113"
  ],
  "sin usar": [
-  "ui/library_page.dart:2500",
+  "ui/library_page.dart:2855",
   "model/library_filter.dart:155"
  ],
  "sin usar en ninguna asignatura": [
-  "ui/library_page.dart:1605",
+  "ui/library_page.dart:1621",
   "ui/library_search.dart:172"
  ],
  "sin {0}": [
   "model/library_filter.dart:149"
  ],
+ "sitio": [
+  "ui/metadata_editor.dart:951"
+ ],
  "solo lectura": [
   "ui/translate_tab.dart:200",
   "ui/language_settings.dart:330",
   "ui/shell.dart:864",
-  "ui/unit_page.dart:3390",
+  "ui/unit_page.dart:3406",
   "ui/add_repository.dart:540"
  ],
  "solo los enunciados": [
   "ui/manage_templates.dart:749",
-  "model/catalogue.dart:1633",
+  "model/catalogue.dart:1671",
   "data/compiler.dart:60"
+ ],
+ "subtema": [
+  "ui/unit_page.dart:2738"
  ],
  "sí": [
   "model/latex_snippets.dart:329"
@@ -8366,15 +8459,14 @@
   "ui/command_palette.dart:319"
  ],
  "tema": [
-  "ui/metadata_editor.dart:662",
-  "ui/unit_page.dart:2733"
+  "ui/unit_page.dart:2737"
  ],
  "tema cambiado": [
   "model/course_diff.dart:169"
  ],
  "tema nuevo": [
   "ui/compare_view.dart:317",
-  "model/metadata_suggestions.dart:91",
+  "model/metadata_suggestions.dart:95",
   "model/course_diff.dart:159"
  ],
  "tema quitado": [
@@ -8393,7 +8485,7 @@
   "ui/theme.dart:415"
  ],
  "texto contenido grep": [
-  "ui/library_page.dart:324"
+  "ui/library_page.dart:337"
  ],
  "texto de ejemplo": [
   "model/latex_snippets.dart:332"
@@ -8402,14 +8494,14 @@
   "data/engine_pin_io.dart:51"
  ],
  "tipo": [
-  "ui/metadata_editor.dart:615",
-  "ui/unit_page.dart:2728"
+  "ui/metadata_editor.dart:617",
+  "ui/unit_page.dart:2729"
  ],
  "titulaciones grado agrupar": [
   "ui/courses_page.dart:126"
  ],
  "titulación ({0})": [
-  "model/catalogue.dart:1184"
+  "model/catalogue.dart:1205"
  ],
  "todas: 1 versión": [
   "ui/manage_blocks.dart:610"
@@ -8418,21 +8510,21 @@
   "ui/manage_blocks.dart:611"
  ],
  "todo el curso {0}": [
-  "ui/courses_page.dart:1632"
+  "ui/courses_page.dart:1651"
  ],
  "todo el tema «{0}»": [
   "ui/year_page.dart:2010"
  ],
  "todo, con la solución paso a paso": [
   "ui/manage_templates.dart:748",
-  "model/catalogue.dart:1632",
+  "model/catalogue.dart:1670",
   "data/compiler.dart:59"
  ],
  "todos": [
   "ui/year_page.dart:1703"
  ],
  "traducida": [
-  "ui/metadata_editor.dart:77"
+  "ui/metadata_editor.dart:79"
  ],
  "traducir a {0}": [
   "ui/missing_translations.dart:219"
@@ -8469,20 +8561,20 @@
   "ui/library_search.dart:44"
  ],
  "título ({0})": [
-  "model/catalogue.dart:1183"
+  "model/catalogue.dart:1204"
  ],
  "título {0}": [
-  "ui/metadata_editor.dart:375"
+  "ui/metadata_editor.dart:377"
  ],
  "un .zip con todo": [
   "ui/export_year.dart:444"
  ],
  "un bloque no se puede mover a sí mismo": [
-  "state/catalogue_editor.dart:709"
+  "state/catalogue_editor.dart:828"
  ],
  "un bloque sin nombre en ningún idioma se enseñaría por su id": [
-  "model/taxonomy_file.dart:88",
-  "model/taxonomy_file.dart:177"
+  "model/taxonomy_file.dart:89",
+  "model/taxonomy_file.dart:178"
  ],
  "un cambio guardado sin enviar a GitHub": [
   "ui/remove_repository.dart:106"
@@ -8516,13 +8608,13 @@
   "model/themes_file.dart:80"
  ],
  "una asignatura sin título se enseñaría por su id": [
-  "state/catalogue_editor.dart:309"
+  "state/catalogue_editor.dart:305"
  ],
  "una asignatura tiene que darse en algún idioma": [
   "state/catalogue_editor.dart:123"
  ],
  "una entrada": [
-  "ui/composition_editor.dart:603"
+  "ui/composition_editor.dart:604"
  ],
  "una figura": [
   "model/course_diff.dart:467"
@@ -8540,28 +8632,31 @@
   "ui/settings_page.dart:2220"
  ],
  "unit.yaml ficha etiquetas prerrequisitos": [
-  "ui/unit_page.dart:501"
+  "ui/unit_page.dart:502"
  ],
  "unit.yaml ha cambiado en el repositorio desde que lo abriste. Vuelve a cargarlo antes de guardar; lo que has puesto sigue aquí mientras decides.": [
-  "ui/metadata_editor.dart:251"
+  "ui/metadata_editor.dart:253"
  ],
  "unos {0} $": [
   "ui/translate_unit.dart:728"
  ],
  "usar añadir documento curso": [
-  "ui/unit_page.dart:524"
+  "ui/unit_page.dart:525"
  ],
  "vacía": [
   "ui/build_folder.dart:155"
  ],
+ "vacío": [
+  "ui/library_page.dart:2485"
+ ],
  "valenciano": [
-  "model/library_tree.dart:218"
+  "model/library_tree.dart:266"
  ],
  "ver el estado": [
   "data/local_clone_io.dart:400"
  ],
  "versiones cambios anteriores git": [
-  "ui/unit_page.dart:508"
+  "ui/unit_page.dart:509"
  ],
  "versiones congeladas": [
   "ui/course_admin_ui.dart:439"
@@ -8573,7 +8668,7 @@
   "ui/manage_templates.dart:681"
  ],
  "vista previa pdf compilar": [
-  "ui/unit_page.dart:494"
+  "ui/unit_page.dart:495"
  ],
  "vista rápida · {0} / {1}": [
   "ui/pdf_tab.dart:686"
@@ -8594,7 +8689,7 @@
   "state/repo_sync.dart:424"
  ],
  "ya está en este documento": [
-  "ui/composition_editor.dart:1543"
+  "ui/composition_editor.dart:1566"
  ],
  "ya hay un bloque con este id": [
   "ui/manage_blocks.dart:785"
@@ -8612,7 +8707,7 @@
   "ui/compare_view.dart:331"
  ],
  "year.yaml ha cambiado en el repositorio desde que lo abriste. Vuelve a cargarlo antes de guardar; tu orden sigue aquí mientras decides.": [
-  "ui/composition_editor.dart:268"
+  "ui/composition_editor.dart:269"
  ],
  "zoom aumentar letra proyector": [
   "ui/command_palette.dart:294"
@@ -8644,9 +8739,9 @@
   "ui/update_section.dart:169"
  ],
  "{0} (no existe)": [
-  "ui/composition_editor.dart:945",
+  "ui/composition_editor.dart:946",
   "ui/missing_translations.dart:193",
-  "ui/unit_page.dart:2852"
+  "ui/unit_page.dart:2868"
  ],
  "{0} Compilará en GitHub desde el próximo envío.": [
   "ui/settings_page.dart:1808"
@@ -8661,10 +8756,10 @@
   "ui/translate_unit.dart:687"
  ],
  "{0} al día": [
-  "ui/library_page.dart:2803"
+  "ui/library_page.dart:3158"
  ],
  "{0} al día · {1} por revisar · {2} sin escribir": [
-  "ui/library_page.dart:2749"
+  "ui/library_page.dart:3104"
  ],
  "{0} algún PDF desactualizado o sin compilar: {1}.": [
   "ui/export_year.dart:366"
@@ -8709,13 +8804,13 @@
   "ui/remove_repository.dart:103"
  ],
  "{0} car.": [
-  "ui/unit_page.dart:2137"
+  "ui/unit_page.dart:2138"
  ],
  "{0} caracteres que mandar": [
   "ui/translate_unit.dart:679"
  ],
  "{0} categorías": [
-  "ui/library_page.dart:1819"
+  "ui/library_page.dart:1949"
  ],
  "{0} commits por traer": [
   "state/repo_sync.dart:374"
@@ -8731,15 +8826,15 @@
  ],
  "{0} cursos académicos": [
   "ui/courses_page.dart:194",
-  "ui/courses_page.dart:1365"
+  "ui/courses_page.dart:1384"
  ],
  "{0} cursos académicos sin enseñar": [
-  "ui/courses_page.dart:1477"
+  "ui/courses_page.dart:1496"
  ],
  "{0} de {1}": [
   "ui/sync_bar.dart:731",
-  "ui/composition_editor.dart:655",
-  "ui/composition_editor.dart:1282",
+  "ui/composition_editor.dart:656",
+  "ui/composition_editor.dart:1301",
   "ui/tex_find_bar.dart:256",
   "ui/build_console.dart:551",
   "ui/tour.dart:899"
@@ -8763,7 +8858,7 @@
   "ui/translations_page.dart:96"
  ],
  "{0} de {1} unidades · {2}": [
-  "ui/library_page.dart:848"
+  "ui/library_page.dart:861"
  ],
  "{0} de {1} {2}, y el curso nuevo {3}: lo que cambies ahí en {4} cambia también en {5}. En el curso nuevo, «Crear copia independiente» {6}.": [
   "ui/course_admin_ui.dart:660"
@@ -8778,10 +8873,10 @@
   "ui/source_view.dart:752"
  ],
  "{0} dice «{1}»": [
-  "model/catalogue.dart:1228"
+  "model/catalogue.dart:1249"
  ],
  "{0} doc · {1} unid.": [
-  "ui/courses_page.dart:1612"
+  "ui/courses_page.dart:1631"
  ],
  "{0} documentos": [
   "ui/year_page.dart:91",
@@ -8790,25 +8885,22 @@
   "ui/courses_page.dart:197"
  ],
  "{0} documentos copiados a {1}.": [
-  "ui/courses_page.dart:727"
+  "ui/courses_page.dart:746"
  ],
  "{0} documentos tienen": [
   "ui/export_year.dart:373"
  ],
- "{0} elegidas": [
-  "ui/composition_editor.dart:1470"
- ],
  "{0} elegidas, y se añaden en este orden": [
-  "ui/composition_editor.dart:1325"
+  "ui/composition_editor.dart:1354"
  ],
  "{0} elegidos, en este orden": [
-  "ui/problem_set.dart:424"
+  "ui/problem_set.dart:432"
  ],
  "{0} en GitHub": [
   "ui/shell.dart:944"
  ],
  "{0} en la composición de {1} ({2} {3})": [
-  "ui/composition_editor.dart:595"
+  "ui/composition_editor.dart:596"
  ],
  "{0} en un PDF abre la lección en la línea de donde sale lo pulsado.": [
   "ui/shortcuts.dart:154",
@@ -8824,7 +8916,7 @@
   "ui/manage_snippets.dart:311"
  ],
  "{0} entradas": [
-  "ui/composition_editor.dart:603"
+  "ui/composition_editor.dart:604"
  ],
  "{0} errores": [
   "ui/review_panel.dart:271"
@@ -8833,7 +8925,7 @@
   "data/local_clone_io.dart:1735"
  ],
  "{0} está en dos repositorios": [
-  "model/catalogue.dart:726"
+  "model/catalogue.dart:747"
  ],
  "{0} está vacío.": [
   "ui/add_repository.dart:204"
@@ -8878,7 +8970,7 @@
   "ui/tex_warnings.dart:80"
  ],
  "{0} grado(s): {1}": [
-  "ui/courses_page.dart:1174"
+  "ui/courses_page.dart:1193"
  ],
  "{0} guardadas": [
   "ui/info_menu.dart:301"
@@ -8890,11 +8982,15 @@
   "data/local_clone_io.dart:594"
  ],
  "{0} la sangría de {1} en «{2}»": [
-  "state/catalogue_editor.dart:1671"
+  "state/catalogue_editor.dart:1790"
  ],
  "{0} lecciones": [
   "ui/suggest_field.dart:134",
   "ui/manage_blocks.dart:456"
+ ],
+ "{0} lecciones en {1}": [
+  "ui/library_page.dart:1806",
+  "ui/library_page.dart:1819"
  ],
  "{0} lecciones la piden aparte de su bloque:": [
   "ui/template_editor.dart:931"
@@ -8909,7 +9005,7 @@
   "ui/build_console.dart:634"
  ],
  "{0} min": [
-  "ui/unit_page.dart:2737",
+  "ui/unit_page.dart:2753",
   "data/local_clone_io.dart:1688"
  ],
  "{0} movidas a «{1}».": [
@@ -8923,7 +9019,7 @@
  ],
  "{0} no contiene un objeto JSON": [
   "data/catalogue_source_io.dart:67",
-  "data/catalogue_source.dart:178"
+  "data/catalogue_source.dart:179"
  ],
  "{0} no es una copia de un repositorio de GitHub. Didacta solo trabaja sobre esas copias: lo que se escribe tiene que poder enviarse, y una carpeta suelta no tiene a dónde.": [
   "state/repositories.dart:677"
@@ -8956,7 +9052,7 @@
   "ui/courses_page.dart:396"
  ],
  "{0} no tiene el snippet {1}": [
-  "state/catalogue_editor.dart:979"
+  "state/catalogue_editor.dart:1098"
  ],
  "{0} no traduce a «{1}».": [
   "data/translator_http.dart:60"
@@ -8974,7 +9070,7 @@
   "ui/manage_templates.dart:361"
  ],
  "{0} por revisar": [
-  "ui/library_page.dart:2808",
+  "ui/library_page.dart:3163",
   "model/library_filter.dart:151"
  ],
  "{0} por traer": [
@@ -9051,7 +9147,7 @@
   "state/repo_sync.dart:375"
  ],
  "{0} sin escribir": [
-  "ui/library_page.dart:2813"
+  "ui/library_page.dart:3168"
  ],
  "{0} sin guardar": [
   "ui/settings_page.dart:1662"
@@ -9068,8 +9164,11 @@
  "{0} snippets que no van a salir bien": [
   "ui/tex_toolbar.dart:1199"
  ],
+ "{0} subtemas": [
+  "ui/library_page.dart:2384"
+ ],
  "{0} temas": [
-  "ui/library_page.dart:2112"
+  "ui/library_page.dart:2250"
  ],
  "{0} tiene cambios sin guardar en el historial, y lo que llega de GitHub también lo cambia. Guárdalo y vuelve a traer.": [
   "data/local_clone_io.dart:861"
@@ -9093,15 +9192,15 @@
   "ui/glossary_editor.dart:74"
  ],
  "{0} unidades": [
-  "ui/library_page.dart:2290",
+  "ui/library_page.dart:2606",
   "ui/year_page.dart:2398",
   "ui/course_admin_ui.dart:1084"
  ],
  "{0} unidades de {1}{2}{3}": [
-  "ui/library_page.dart:2936"
+  "ui/library_page.dart:3291"
  ],
  "{0} unidades · {1} categorías · {2} temas": [
-  "ui/library_page.dart:860"
+  "ui/library_page.dart:873"
  ],
  "{0} versiones": [
   "ui/manage_blocks.dart:613"
@@ -9113,14 +9212,12 @@
   "ui/document_properties.dart:201"
  ],
  "{0} y {1}": [
-  "ui/new_unit.dart:746",
   "ui/export_year.dart:195",
-  "ui/unit_page.dart:3561"
+  "ui/unit_page.dart:3577"
  ],
  "{0} y {1} más": [
-  "ui/new_unit.dart:743",
   "ui/export_year.dart:193",
-  "ui/unit_page.dart:3558"
+  "ui/unit_page.dart:3574"
  ],
  "{0} ya está en tu ordenador": [
   "ui/add_repository.dart:126"
@@ -9132,7 +9229,7 @@
   "data/local_clone_io.dart:585"
  ],
  "{0} {1} · {2} (en {3}) llama a {4}, que está en {5}": [
-  "model/catalogue.dart:1419"
+  "model/catalogue.dart:1457"
  ],
  "{0} · línea {1} · {2}{3}": [
   "ui/library_search.dart:439"
@@ -9147,13 +9244,13 @@
   "ui/tex_warnings.dart:88"
  ],
  "{0} · {1} de {2} activas": [
-  "ui/composition_editor.dart:656"
+  "ui/composition_editor.dart:657"
  ],
  "{0} · {1} · de antes del último cambio": [
   "ui/pdf_dialog.dart:417"
  ],
  "{0} · {1} · idioma {2}": [
-  "ui/document_page.dart:416"
+  "ui/document_page.dart:417"
  ],
  "{0} · {1} · vista rápida, sin compilar entero": [
   "ui/pdf_dialog.dart:411"
@@ -9168,10 +9265,10 @@
   "model/notification.dart:49"
  ],
  "{0}.json has no schemaVersion": [
-  "model/catalogue.dart:1832"
+  "model/catalogue.dart:1871"
  ],
  "{0}.json is schema {1}; this app reads {2}. Regenerate with `didacta index`, or update the app.": [
-  "model/catalogue.dart:1837"
+  "model/catalogue.dart:1876"
  ],
  "{0}/{1} está vacío en GitHub: todavía no tiene nada, así que no hay nada que descargar.": [
   "data/local_clone.dart:297"
@@ -9223,7 +9320,7 @@
   "ui/manage_snippets.dart:1328"
  ],
  "«sin traducir» y «desactualizado» no se declaran: el motor los calcula, el primero de que el fichero exista y el segundo comparando el contenido con el original. Escribirlos aquí garantizaría que se queden obsoletos.": [
-  "ui/metadata_editor.dart:729"
+  "ui/metadata_editor.dart:706"
  ],
  "«token»": [
   "data/local_clone_io.dart:1697"
@@ -9232,7 +9329,13 @@
   "model/snippet_check.dart:101"
  ],
  "«{0}» copiado a {1}.": [
-  "ui/courses_page.dart:726"
+  "ui/courses_page.dart:745"
+ ],
+ "«{0}» creado en {1} repositorios.": [
+  "ui/place_browser.dart:94"
+ ],
+ "«{0}» creado.": [
+  "ui/place_browser.dart:93"
  ],
  "«{0}» duplicado en {1} {2}, con sus propias lecciones.": [
   "ui/reuse.dart:432"
@@ -9241,7 +9344,7 @@
   "ui/reuse.dart:437"
  ],
  "«{0}» en {1}": [
-  "ui/unit_page.dart:399"
+  "ui/unit_page.dart:400"
  ],
  "«{0}» es un snippet de {1} y no de este repositorio: aquí no compila. Añádelo a este en Ajustes → Snippets de LaTeX, o usa otro.": [
   "model/snippet_check.dart:87"
@@ -9268,7 +9371,7 @@
   "ui/manage_snippets.dart:1484"
  ],
  "«{0}» ha vuelto.": [
-  "ui/courses_page.dart:852"
+  "ui/courses_page.dart:871"
  ],
  "«{0}» lleva {1} detrás de \\begin{{2}}, y aquí falta: LaTeX tomará el principio del texto por el argumento.": [
   "model/snippet_check.dart:137"
@@ -9283,10 +9386,10 @@
   "ui/freezes.dart:1150"
  ],
  "«{0}» revisada. No queda nada sin revisar en {1}.": [
-  "ui/unit_page.dart:2450"
+  "ui/unit_page.dart:2451"
  ],
  "«{0}» revisada. Siguiente: «{1}».": [
-  "ui/unit_page.dart:2462"
+  "ui/unit_page.dart:2463"
  ],
  "«{0}» se abre y no se cierra": [
   "model/tex_outline.dart:188"
@@ -9307,7 +9410,7 @@
   "model/translation_run.dart:300"
  ],
  "· {0} temas{1}": [
-  "ui/library_page.dart:2701"
+  "ui/library_page.dart:3056"
  ],
  "¿Compilar lo desactualizado de {0}?": [
   "ui/year_page.dart:913"
@@ -9319,7 +9422,7 @@
   "ui/language_settings.dart:107"
  ],
  "¿Descartar los cambios?": [
-  "ui/unit_page.dart:2196"
+  "ui/unit_page.dart:2197"
  ],
  "¿Deshacer «{0}»?": [
   "ui/recent_changes.dart:169"
@@ -9346,7 +9449,7 @@
   "ui/settings_page.dart:2381"
  ],
  "¿Quitar de la composición?": [
-  "ui/composition_editor.dart:388"
+  "ui/composition_editor.dart:389"
  ],
  "¿Quitar el curso {0} de «{1}»?": [
   "ui/year_page.dart:236"
@@ -9357,7 +9460,7 @@
  "¿Quitar «{0}»?": [
   "ui/manage_snippets.dart:389",
   "ui/year_page.dart:1120",
-  "ui/courses_page.dart:816",
+  "ui/courses_page.dart:835",
   "ui/freezes.dart:440"
  ],
  "¿Qué distribución de TeX?": [
@@ -9388,7 +9491,7 @@
   "ui/tour.dart:285"
  ],
  "Énfasis": [
-  "model/tex_vocabulary.dart:95"
+  "model/tex_vocabulary.dart:100"
  ],
  "Índice": [
   "ui/pdf_sidebar.dart:112"
