@@ -80,11 +80,19 @@ class LibraryPlace {
       sort: pick(_sorts, text('orden'), LibrarySort.path),
       unusedOnly: text('sinusar') == '1',
       inText: text('texto') == '1',
-      browse: [
-        for (final part in (text('en') ?? '').split('/'))
-          if (part.isNotEmpty) part,
-      ].take(3).toList(),
+      browse: _browse(text('en') ?? ''),
     );
+  }
+
+  /// El subtema de las lecciones que no declaran ninguno es la cadena vacía,
+  /// y tiene que sobrevivir a la dirección: `analysis/normed/`.
+  static List<String> _browse(String value) {
+    final parts = value.split('/');
+    final deep = parts.length > 2 && parts[0].isNotEmpty && parts[1].isNotEmpty;
+    return [
+      for (var i = 0; i < parts.length; i += 1)
+        if (parts[i].isNotEmpty || (i == 2 && deep)) parts[i],
+    ].take(3).toList();
   }
 
   /// Lo que se escribe en la dirección: solo lo que no es lo de salida.

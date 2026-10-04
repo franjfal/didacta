@@ -77,13 +77,17 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Normed').first);
     await settle(tester);
-    expect(where(tester).queryParameters['en'], 'analysis/normed');
+    // Las lecciones salen al llegar al último nivel: sin subtema declarado,
+    // es el grupo «sin subtema».
+    await tester.tap(find.byKey(const Key('subtopic-')));
+    await settle(tester);
+    expect(where(tester).queryParameters['en'], startsWith('analysis/normed'));
 
     routerOf(tester).go(Routes.unit(unitPath));
     await settle(tester);
     await tester.tap(back);
     await settle(tester);
-    expect(where(tester).queryParameters['en'], 'analysis/normed');
+    expect(where(tester).queryParameters['en'], startsWith('analysis/normed'));
     // El tema abierto: se ven sus lecciones.
     expect(find.text('Espacios normados'), findsWidgets);
   });
