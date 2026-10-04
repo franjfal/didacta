@@ -525,7 +525,7 @@ Debajo, **de qué versión es**: «Motor de la 0.2.1, la versión de la
 aplicación». El que descarga Didacta va siempre en la versión de la
 aplicación, y al actualizarla se mueve solo a la nueva. Uno que no descargó
 ella --una copia propia, uno clonado a mano-- no se toca solo: si no es el de
-esta versión, lo dice y ofrece **Poner el de la 0.2.1**, que pregunta antes.
+esta versión, lo dice y ofrece **Actualizar a 0.2.1**, que pregunta antes.
 Con cambios sin guardar en esa carpeta no se ofrece: se perderían.
 
 **La distribución de TeX.** Si no la encuentra, la pantalla dice **dónde ha

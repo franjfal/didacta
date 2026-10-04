@@ -94,6 +94,7 @@ class EngineService extends ChangeNotifier {
       repositoryPath: session.primaryPath,
     );
     _setEngine(found);
+    if (_enginePath != null) unawaited(checkVersion());
   }
 
   /// El motor frente a la aplicación: si es el de su versión.

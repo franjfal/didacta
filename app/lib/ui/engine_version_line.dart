@@ -119,7 +119,7 @@ class _EngineVersionLineState extends State<EngineVersionLine> {
                 child: Text(
                   _busy
                       ? tr('Poniéndolo…')
-                      : tr('Poner el de la {0}', [version.app]),
+                      : tr('Actualizar a {0}', [version.app]),
                 ),
               ),
           ],

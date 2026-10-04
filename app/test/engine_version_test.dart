@@ -4,6 +4,7 @@
 @Tags(['integration'])
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -80,7 +81,7 @@ void main() {
         find.textContaining('Motor en desarrollo (abc1234)'),
         findsOneWidget,
       );
-      expect(find.text('Poner el de la 0.2.1'), findsOneWidget);
+      expect(find.text('Actualizar a 0.2.1'), findsOneWidget);
     });
 
     testWidgets('con cambios sin guardar no ofrece moverlo', (tester) async {
@@ -175,11 +176,29 @@ void main() {
       return session;
     }
 
+    Future<void> waitForEngineVersion(FakeSession session) async {
+      if (session.engineVersion != null) return;
+      final ready = Completer<void>();
+      void listen() {
+        if (session.engineVersion != null && !ready.isCompleted) {
+          ready.complete();
+        }
+      }
+
+      session.engine.addListener(listen);
+      try {
+        listen();
+        await ready.future.timeout(const Duration(seconds: 10));
+      } finally {
+        session.engine.removeListener(listen);
+      }
+    }
+
     test('el que instaló Didacta lo pone sola en su versión', () async {
       final engine = engineClone();
       await markManaged(engine);
       final session = await withEngine(engine);
-      await session.checkEngineVersion();
+      await waitForEngineVersion(session);
       expect(session.engineVersion!.matches, isTrue);
       expect(File('$engine/VERSION').readAsStringSync(), '0.2.1');
     });
@@ -187,7 +206,7 @@ void main() {
     test('el de otro no lo toca, y el botón sí', () async {
       final engine = engineClone();
       final session = await withEngine(engine);
-      await session.checkEngineVersion();
+      await waitForEngineVersion(session);
       expect(session.engineVersion!.matches, isFalse);
       expect(session.engineVersion!.canPin, isTrue);
       expect(File('$engine/VERSION').readAsStringSync(), 'main');
