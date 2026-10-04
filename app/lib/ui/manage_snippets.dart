@@ -1928,10 +1928,11 @@ class _SnippetEditorState extends State<SnippetEditor> {
       ],
       const SizedBox(height: 6),
       Text(
-        tr('Sale el del idioma en que se compila; si uno está vacío, sale el '
-          'título en {0}.', [
-          languageName(first),
-        ]),
+        tr(
+          'Sale el del idioma en que se compila; si uno está vacío, sale el '
+          'título en {0}.',
+          [languageName(first)],
+        ),
         style: TextStyle(fontSize: 11.5, color: context.palette.muted),
       ),
     ];

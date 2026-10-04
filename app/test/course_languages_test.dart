@@ -533,32 +533,36 @@ void main() {
       expect(answer.single!.degree, isNull);
     });
 
-    testWidgets('la titulación y el departamento impresos se piden por idioma', (
-      tester,
-    ) async {
-      // Lo que sale en la portada vivía solo en `course.yaml`: se traducía a
-      // mano en el fichero o no se traducía.
-      final answer = await show(tester, course(languages: const ['es', 'va']));
+    testWidgets(
+      'la titulación y el departamento impresos se piden por idioma',
+      (tester) async {
+        // Lo que sale en la portada vivía solo en `course.yaml`: se traducía a
+        // mano en el fichero o no se traducía.
+        final answer = await show(
+          tester,
+          course(languages: const ['es', 'va']),
+        );
 
-      await reveal(tester, const Key('course-department-va'));
-      await tester.enterText(
-        find.byKey(const Key('course-printed-degree-va')),
-        'Grau en Matemàtiques',
-      );
-      await tester.enterText(
-        find.byKey(const Key('course-department-es')),
-        'Análisis Matemático',
-      );
-      expect(find.byKey(const Key('course-department-en')), findsNothing);
-      await tester.tap(find.byKey(const Key('course-save')));
-      await settle(tester);
+        await reveal(tester, const Key('course-department-va'));
+        await tester.enterText(
+          find.byKey(const Key('course-printed-degree-va')),
+          'Grau en Matemàtiques',
+        );
+        await tester.enterText(
+          find.byKey(const Key('course-department-es')),
+          'Análisis Matemático',
+        );
+        expect(find.byKey(const Key('course-department-en')), findsNothing);
+        await tester.tap(find.byKey(const Key('course-save')));
+        await settle(tester);
 
-      expect(answer.single!.printedDegree!['va'], 'Grau en Matemàtiques');
-      expect(answer.single!.departments, {
-        'es': 'Análisis Matemático',
-        'va': '',
-      });
-    });
+        expect(answer.single!.printedDegree!['va'], 'Grau en Matemàtiques');
+        expect(answer.single!.departments, {
+          'es': 'Análisis Matemático',
+          'va': '',
+        });
+      },
+    );
 
     testWidgets('con un grado declarado, su título es el que se imprime', (
       tester,

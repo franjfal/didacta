@@ -71,9 +71,15 @@ void main() {
       final result = results.single;
       expect(result.ok, isFalse);
       final error = result.errorDiagnostics.first;
-      expect(error.unit, 'content/calculo/limites/calculo-de-limites/algebra-de-limites');
+      expect(
+        error.unit,
+        'content/calculo/limites/calculo-de-limites/algebra-de-limites',
+      );
       expect(error.language, 'es');
-      expect(error.path, 'content/calculo/limites/calculo-de-limites/algebra-de-limites/es.tex');
+      expect(
+        error.path,
+        'content/calculo/limites/calculo-de-limites/algebra-de-limites/es.tex',
+      );
       expect(error.line, isNotNull);
       expect(error.message, contains('Undefined control sequence'));
       expect(error.context, contains(r'\foo'));
