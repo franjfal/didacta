@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.1 — 2026-10-04
 
 - **Las prácticas de Análisis I, en diapositivas.** Fallaban todas: estaban
   escritas como apuntes, sin diapositivas, y en beamer salían páginas que se
