@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.4 — 2026-10-05
 
 - **En Windows, winget se ofrece al principio.** La pantalla de requisitos
   mira primero si el Windows tiene winget, el instalador de programas de
