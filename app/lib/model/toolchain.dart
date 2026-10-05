@@ -222,14 +222,17 @@ class InstallPlan {
   });
 
   /// El plan que no hace nada: solo instrucciones.
+  ///
+  /// [url], aquí, es la página de descarga oficial: no se descarga nada, se
+  /// abre en el navegador para que quien instala elija y ejecute.
   const InstallPlan.manual({
     required this.label,
     required this.explains,
     this.manualSteps = const [],
+    this.url,
   }) : kind = InstallKind.manual,
        program = null,
        arguments = const [],
-       url = null,
        filename = null,
        needs = null,
        handsOver = false,
@@ -250,7 +253,8 @@ class InstallPlan {
   final String? program;
   final List<String> arguments;
 
-  /// De dónde se descarga, para [InstallKind.script] e [InstallKind.installer].
+  /// De dónde se descarga, para [InstallKind.script] e [InstallKind.installer];
+  /// en un plan [InstallKind.manual], la página oficial de descarga.
   ///
   /// Siempre `https` y siempre de la fuente oficial --CTAN, tinytex.yihui.org--
   /// y la interfaz la enseña entera antes de descargar nada. Que se vea de
@@ -361,6 +365,30 @@ const String _macTex = 'https://mirror.ctan.org/systems/mac/mactex/MacTeX.pkg';
 const String _texLiveWindows =
     'https://mirror.ctan.org/systems/texlive/tlnet/install-tl-windows.exe';
 
+/// El «Instalador de aplicación» de Microsoft, que es lo que trae winget.
+///
+/// La ficha web de la Microsoft Store y no `ms-windows-store://`: los enlaces
+/// que abre Didacta son solo `https`, y la ficha tiene su botón para abrir la
+/// Store.
+const String wingetStorePage = 'https://apps.microsoft.com/detail/9NBLGGH4NNS1';
+
+/// La documentación de winget, con lo que hacer si la Store no está.
+const String wingetGuide =
+    'https://learn.microsoft.com/windows/package-manager/winget/';
+
+/// Qué se puede instalar con winget en este sistema, para decirlo con nombre.
+///
+/// Sale de los planes y no de una lista aparte: si mañana un plan deja de
+/// usar winget, el aviso deja de prometerlo solo.
+List<String> wingetInstallable(Host host) => [
+  for (final tool in didactaTools)
+    if (tool.id != ToolId.latex &&
+        plansFor(tool.id, host).any((plan) => plan.needs == 'winget'))
+      tool.name,
+  for (final option in latexOptions(host))
+    if (option.plan.needs == 'winget') option.name,
+];
+
 /// Los planes para una herramienta en un sistema, del mejor al peor.
 ///
 /// Devuelve varios a propósito: quien instala prueba el primero cuyo
@@ -440,6 +468,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         explains: tr(
           'Este Windows no tiene winget, así que la instalación es a mano.',
         ),
+        url: 'https://git-scm.com/downloads/win',
         manualSteps: [
           tr('Descarga el instalador de git-scm.com/downloads/win'),
           tr('Ejecútalo y acepta las opciones por defecto.'),
@@ -524,6 +553,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         explains: tr(
           'Este Windows no tiene winget, así que la instalación es a mano.',
         ),
+        url: 'https://www.python.org/downloads/windows/',
         manualSteps: [
           tr('Descarga Python 3 de python.org/downloads/windows'),
           tr('En el instalador, marca «Add python.exe to PATH».'),
@@ -548,7 +578,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
   },
   // LaTeX no tiene un plan: tiene un catálogo, y lo elige quien instala.
   // [latexOptions] es la lista, y cada opción trae el suyo.
-  ToolId.latex => [for (final option in latexOptions(host)) option.plan],
+  ToolId.latex => [for (final option in latexOptions(host)) ...option.plans],
 };
 
 /// Una distribución de TeX que se puede elegir.
@@ -560,6 +590,7 @@ class LatexOption {
     required this.what,
     required this.guide,
     required this.plan,
+    this.fallback,
     this.needsAdmin = false,
     this.recommended = false,
   });
@@ -577,6 +608,14 @@ class LatexOption {
 
   final String guide;
   final InstallPlan plan;
+
+  /// Lo que queda cuando [plan] depende de algo que no está --winget--: el
+  /// instalador oficial, a mano. Sin él, elegir MiKTeX en un Windows sin
+  /// winget acababa en «no encuentro winget».
+  final InstallPlan? fallback;
+
+  /// Los candidatos, en el orden en que se prueban.
+  List<InstallPlan> get plans => [plan, ?fallback];
 
   /// Si el instalador va a pedir la contraseña de administrador.
   ///
@@ -734,6 +773,18 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
         manualSteps: [
           tr('Descarga el instalador básico de miktex.org/download'),
           tr('Ejecútalo y acepta las opciones por defecto.'),
+        ],
+      ),
+      fallback: InstallPlan.manual(
+        label: tr('Descargar MiKTeX'),
+        explains: tr(
+          'Este Windows no tiene winget, así que la instalación es a mano.',
+        ),
+        url: 'https://miktex.org/download',
+        manualSteps: [
+          tr('Descarga el instalador básico de miktex.org/download'),
+          tr('Ejecútalo y acepta las opciones por defecto.'),
+          tr('Cierra Didacta y vuelve a abrirla.'),
         ],
       ),
     ),

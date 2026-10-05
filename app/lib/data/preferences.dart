@@ -79,6 +79,12 @@ abstract class Preferences {
   Future<bool> completeInterface();
   Future<void> setCompleteInterface(bool value);
 
+  /// Si en Windows se ha dicho que no a instalar winget y se prefiere
+  /// instalar cada cosa a mano. Es lo que quita el aviso de la pantalla de
+  /// requisitos: preguntarlo en cada arranque sería insistir.
+  Future<bool> wingetDeclined();
+  Future<void> setWingetDeclined(bool value);
+
   /// Las últimas lecciones abiertas, `repositorio|ruta`, la más reciente
   /// primero. De esta máquina: lo que se abrió en el despacho no es lo que
   /// se quiere a mano en el aula.
@@ -303,6 +309,7 @@ class StoredPreferences implements Preferences {
   static const String _commitOnSave = 'didacta.clone.commitOnSave';
   static const String _review = 'didacta.save.review';
   static const String _complete = 'didacta.interface.complete';
+  static const String _wingetDeclined = 'didacta.tools.wingetDeclined';
   static const String _recent = 'didacta.library.recent';
   static const String _searches = 'didacta.library.searches';
   static const String _jobs = 'didacta.build.jobs';
@@ -361,6 +368,14 @@ class StoredPreferences implements Preferences {
   @override
   Future<void> setCompleteInterface(bool value) async =>
       (await SharedPreferences.getInstance()).setBool(_complete, value);
+
+  @override
+  Future<bool> wingetDeclined() async =>
+      (await SharedPreferences.getInstance()).getBool(_wingetDeclined) ?? false;
+
+  @override
+  Future<void> setWingetDeclined(bool value) async =>
+      (await SharedPreferences.getInstance()).setBool(_wingetDeclined, value);
 
   @override
   Future<List<String>> recentUnits() async =>
@@ -794,6 +809,14 @@ class MemoryPreferences implements Preferences {
 
   @override
   Future<void> setCompleteInterface(bool value) async => complete = value;
+
+  bool declinedWinget = false;
+
+  @override
+  Future<bool> wingetDeclined() async => declinedWinget;
+
+  @override
+  Future<void> setWingetDeclined(bool value) async => declinedWinget = value;
 
   List<String> recent = const [];
 

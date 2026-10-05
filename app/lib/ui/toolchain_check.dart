@@ -106,11 +106,39 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   /// fuera», que no es lo mismo para quien mira.
   final Set<ToolId> _handedOver = {};
 
+  /// Si hay winget, en Windows. Null en los demás sistemas y mientras no se
+  /// ha mirado: el aviso solo sale cuando se sabe que no está.
+  bool? _hasWinget;
+
+  /// Si se ha dicho que no a instalar winget. Se recuerda entre arranques:
+  /// quien ya ha elegido instalar a mano no tiene por qué volver a leerlo.
+  bool _wingetDeclined = false;
+
   @override
   void initState() {
     super.initState();
+    unawaited(_readWingetChoice());
     unawaited(_check());
   }
+
+  Future<void> _readWingetChoice() async {
+    final declined = await widget.session.preferences.wingetDeclined();
+    if (mounted && declined != _wingetDeclined) {
+      setState(() => _wingetDeclined = declined);
+    }
+  }
+
+  Future<void> _setWingetDeclined(bool value) async {
+    setState(() => _wingetDeclined = value);
+    await widget.session.preferences.setWingetDeclined(value);
+  }
+
+  /// Si hay que ofrecer winget: en Windows, sin él, sin haber dicho que no,
+  /// y con algo que falte que winget sabría instalar.
+  bool get _offerWinget =>
+      _hasWinget == false &&
+      !_wingetDeclined &&
+      _missing.any((tool) => tool.id != ToolId.engine);
 
   @override
   void didUpdateWidget(ToolchainCheck old) {
@@ -130,6 +158,13 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
     setState(() => _checking = true);
     final List<ToolState> found;
     try {
+      // En Windows, lo primero: si hay winget decide si lo que falta se
+      // instala solo o a mano, y eso es lo que hay que decir antes de que
+      // nadie pulse nada.
+      final winget = _toolchain.host == Host.windows
+          ? await _toolchain.hasProgram('winget')
+          : null;
+      if (mounted) _hasWinget = winget;
       found = await _toolchain.inspectAll();
     } catch (caught, trace) {
       // Que nunca se quede girando: lo que no se ha podido comprobar se dice
@@ -279,7 +314,7 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
     if (option == null) return null;
     // El plan de la opción elegida puede depender de algo --winget-- y
     // entonces cae en su alternativa, que es la manual con instrucciones.
-    return _toolchain.choose([option.plan]);
+    return _toolchain.choose(option.plans);
   }
 
   Future<void> _installEngine() async {
@@ -382,6 +417,19 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_offerWinget && !_checking) ...[
+          _WingetOffer(
+            installable: wingetInstallable(_toolchain.host),
+            onRecheck: _installing != null ? null : _check,
+            onDecline: () => _setWingetDeclined(true),
+          ),
+          const SizedBox(height: 12),
+        ] else if (_hasWinget == false &&
+            _wingetDeclined &&
+            missing.any((tool) => tool.id != ToolId.engine)) ...[
+          _WingetDeclined(onUndo: () => _setWingetDeclined(false)),
+          const SizedBox(height: 8),
+        ],
         Card(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -462,6 +510,181 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       ],
     );
   }
+}
+
+/// En Windows sin winget: lo que se gana instalándolo, cómo, y la salida
+/// de no hacerlo.
+///
+/// Se pregunta al principio y no al pulsar «Instalar» porque cambia lo que
+/// hacen todos los botones de la lista: con winget, Git, Python y MiKTeX se
+/// instalan solos; sin él, cada uno es una descarga que hay que hacer a mano.
+/// Y es una pregunta con salida: hay ordenadores --los de un aula, los
+/// gestionados por la universidad-- donde la Store no está, y ahí lo que
+/// sirve es seguir a mano sin que se insista.
+class _WingetOffer extends StatelessWidget {
+  const _WingetOffer({
+    required this.installable,
+    required this.onRecheck,
+    required this.onDecline,
+  });
+
+  /// Lo que winget instalaría, por su nombre.
+  final List<String> installable;
+
+  final VoidCallback? onRecheck;
+  final VoidCallback onDecline;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = context.palette.muted;
+    Widget step(String number, String text) => Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 18,
+            child: Text(
+              number,
+              style: const TextStyle(fontSize: 12.5, height: 1.5),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12.5, height: 1.5),
+            ),
+          ),
+        ],
+      ),
+    );
+    return Card(
+      key: const Key('winget-offer'),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.bolt_outlined,
+                  size: 17,
+                  color: context.palette.accentDark,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    tr('Con winget, Didacta lo instala todo sola'),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              tr(
+                'Este Windows no tiene winget, el instalador de programas de '
+                'Windows. Con él, Didacta puede instalar automáticamente {0}. '
+                'Sin él, cada uno se instala a mano con su instalador oficial.',
+                [installable.join(', ')],
+              ),
+              style: TextStyle(fontSize: 12.5, height: 1.5, color: muted),
+            ),
+            const SizedBox(height: 10),
+            step(
+              '1.',
+              tr(
+                'Abre la Microsoft Store en «Instalador de aplicación» (App '
+                'Installer), que es lo que trae winget. Si ya aparece como '
+                'instalado, pulsa «Actualizar».',
+              ),
+            ),
+            step('2.', tr('Instálalo; tarda un minuto y no pide contraseña.')),
+            step(
+              '3.',
+              tr('Vuelve aquí y pulsa «Ya lo tengo, volver a comprobar».'),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  key: const Key('winget-store'),
+                  onPressed: () => openLink(wingetStorePage),
+                  icon: const Icon(Icons.open_in_new, size: 15),
+                  label: Text(tr('Abrir la Microsoft Store')),
+                ),
+                OutlinedButton(
+                  key: const Key('winget-recheck'),
+                  onPressed: onRecheck,
+                  child: Text(tr('Ya lo tengo, volver a comprobar')),
+                ),
+                TextButton(
+                  key: const Key('winget-decline'),
+                  onPressed: onDecline,
+                  child: Text(tr('No, instalar a mano')),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                key: const Key('winget-guide'),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => openLink(wingetGuide),
+                child: Text(
+                  tr(
+                    '¿No tienes la Microsoft Store? Otras formas de instalarlo',
+                  ),
+                  style: const TextStyle(fontSize: 11.5),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Se dijo que no a winget: una línea que recuerda qué significa, y la
+/// vuelta atrás.
+class _WingetDeclined extends StatelessWidget {
+  const _WingetDeclined({required this.onUndo});
+
+  final VoidCallback onUndo;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    key: const Key('winget-declined'),
+    children: [
+      Icon(Icons.info_outline, size: 15, color: context.palette.muted),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          tr(
+            'Sin winget: cada instalación abre la descarga oficial y se hace '
+            'a mano.',
+          ),
+          style: TextStyle(fontSize: 12, color: context.palette.muted),
+        ),
+      ),
+      TextButton(
+        key: const Key('winget-undo'),
+        onPressed: onUndo,
+        child: Text(tr('Instalar winget')),
+      ),
+    ],
+  );
 }
 
 /// Todo en su sitio, en una línea: qué hay y cómo ver el detalle.
@@ -982,6 +1205,15 @@ class ToolProblemDialog extends StatelessWidget {
           icon: const Icon(Icons.open_in_new, size: 15),
           label: Text(tr('La guía oficial')),
         ),
+        // A mano, el paso que cuesta es encontrar la descarga buena entre
+        // las de mentira que salen antes en el buscador: se abre la oficial.
+        if (!plan.automatic && plan.url != null)
+          TextButton.icon(
+            key: const Key('open-download'),
+            onPressed: () => openLink(plan.url!),
+            icon: const Icon(Icons.download_outlined, size: 15),
+            label: Text(tr('Abrir la descarga oficial')),
+          ),
         if (onRetry != null)
           TextButton(
             key: const Key('problem-recheck'),

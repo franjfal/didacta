@@ -269,6 +269,10 @@ class _ProcessToolchain implements Toolchain {
   }
 
   @override
+  Future<bool> hasProgram(String name) async =>
+      findIn([name], toolDirectories(texPath: texPath)) != null;
+
+  @override
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,

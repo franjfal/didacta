@@ -1517,6 +1517,9 @@ class FakeToolchain implements Toolchain {
   }
 
   @override
+  Future<bool> hasProgram(String name) async => available.contains(name);
+
+  @override
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,

@@ -19,6 +19,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
+import 'package:didacta_app/data/preferences.dart';
 import 'package:didacta_app/data/toolchain.dart';
 import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/state/session.dart';
@@ -360,6 +361,135 @@ void main() {
 
       expect(toolchain.installed.single.label, 'Descargar BasicTeX');
       expect(toolchain.present, contains(ToolId.latex));
+    });
+  });
+
+  group('winget, en Windows', () {
+    FakeSession sessionWith(MemoryPreferences preferences) => FakeSession(
+      gatewayOverride: FakeGateway(),
+      catalogue: catalogueWith(defaultUnits()),
+      preferencesOverride: preferences,
+    );
+
+    testWidgets('sin winget, lo dice al principio y con qué ganaría', (
+      tester,
+    ) async {
+      await pumpCheck(tester, FakeToolchain(host: Host.windows, available: {}));
+
+      expect(find.byKey(const Key('winget-offer')), findsOneWidget);
+      // Con nombre: «se puede instalar automáticamente» sin decir qué no
+      // ayuda a decidir si merece la pena.
+      expect(find.textContaining('Git, Python 3, MiKTeX'), findsOneWidget);
+      expect(find.byKey(const Key('winget-store')), findsOneWidget);
+      expect(find.byKey(const Key('winget-decline')), findsOneWidget);
+    });
+
+    testWidgets('con winget no hay nada que decir', (tester) async {
+      await pumpCheck(
+        tester,
+        FakeToolchain(host: Host.windows, available: const {'winget'}),
+      );
+      expect(find.byKey(const Key('winget-offer')), findsNothing);
+      expect(find.byKey(const Key('winget-declined')), findsNothing);
+    });
+
+    testWidgets('fuera de Windows tampoco', (tester) async {
+      await pumpCheck(tester, FakeToolchain(available: const {}));
+      expect(find.byKey(const Key('winget-offer')), findsNothing);
+    });
+
+    testWidgets('con todo instalado no se ofrece', (tester) async {
+      await pumpCheck(
+        tester,
+        FakeToolchain(
+          host: Host.windows,
+          available: {},
+          present: ToolId.values.toSet(),
+        ),
+      );
+      expect(find.byKey(const Key('winget-offer')), findsNothing);
+    });
+
+    testWidgets('decir que no pasa a mano, se recuerda y tiene vuelta', (
+      tester,
+    ) async {
+      final preferences = MemoryPreferences();
+      final toolchain = FakeToolchain(host: Host.windows, available: {});
+      await pumpCheck(tester, toolchain, session: sessionWith(preferences));
+
+      await tester.tap(find.byKey(const Key('winget-decline')));
+      await settle(tester);
+
+      expect(find.byKey(const Key('winget-offer')), findsNothing);
+      expect(find.byKey(const Key('winget-declined')), findsOneWidget);
+      expect(preferences.declinedWinget, isTrue);
+
+      // Y lo que se instala ahora es lo manual, con la descarga oficial.
+      await tester.tap(find.byKey(const Key('install-git')));
+      await settle(tester);
+      expect(find.text('Git: cómo instalarlo'), findsOneWidget);
+      expect(find.byKey(const Key('open-download')), findsOneWidget);
+      expect(toolchain.installed, isEmpty);
+      await tester.tap(find.widgetWithText(FilledButton, 'Cerrar'));
+      await settle(tester);
+
+      await tester.tap(find.byKey(const Key('winget-undo')));
+      await settle(tester);
+      expect(find.byKey(const Key('winget-offer')), findsOneWidget);
+      expect(preferences.declinedWinget, isFalse);
+    });
+
+    testWidgets('dicho que no otra vez, no vuelve a preguntar', (tester) async {
+      await pumpCheck(
+        tester,
+        FakeToolchain(host: Host.windows, available: {}),
+        session: sessionWith(MemoryPreferences()..declinedWinget = true),
+      );
+      expect(find.byKey(const Key('winget-offer')), findsNothing);
+      expect(find.byKey(const Key('winget-declined')), findsOneWidget);
+    });
+
+    testWidgets('instalado winget, volver a comprobar lo usa', (tester) async {
+      final available = <String>{};
+      final toolchain = FakeToolchain(
+        host: Host.windows,
+        available: available,
+        present: const {ToolId.python, ToolId.latex, ToolId.engine},
+      );
+      await pumpCheck(tester, toolchain);
+      expect(find.byKey(const Key('winget-offer')), findsOneWidget);
+
+      available.add('winget');
+      await tester.tap(find.byKey(const Key('winget-recheck')));
+      await settle(tester);
+      expect(find.byKey(const Key('winget-offer')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('install-git')));
+      await settle(tester);
+      expect(toolchain.installed.single.program, 'winget');
+      expect(toolchain.present, contains(ToolId.git));
+    });
+
+    testWidgets('MiKTeX sin winget es la descarga, no un fallo', (
+      tester,
+    ) async {
+      final toolchain = FakeToolchain(
+        host: Host.windows,
+        available: {},
+        present: const {ToolId.git, ToolId.python, ToolId.engine},
+      );
+      await pumpCheck(tester, toolchain);
+
+      await tester.tap(find.byKey(const Key('install-latex')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('latex-miktex')));
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('latex-choose')));
+      await settle(tester);
+
+      expect(find.text('LaTeX: cómo instalarlo'), findsOneWidget);
+      expect(find.byKey(const Key('open-download')), findsOneWidget);
+      expect(toolchain.installed, isEmpty);
     });
   });
 

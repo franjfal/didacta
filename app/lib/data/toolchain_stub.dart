@@ -38,6 +38,9 @@ class _NoToolchain implements Toolchain {
       candidates.last;
 
   @override
+  Future<bool> hasProgram(String name) async => false;
+
+  @override
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,

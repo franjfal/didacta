@@ -1567,6 +1567,9 @@ class _Missing implements Toolchain {
       real.choose(candidates);
 
   @override
+  Future<bool> hasProgram(String name) => real.hasProgram(name);
+
+  @override
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,

@@ -113,6 +113,11 @@ abstract class Toolchain {
   /// plan», que sería una fila sin botón y sin explicación.
   Future<InstallPlan> choose(List<InstallPlan> candidates);
 
+  /// Si está el programa del que dependen los planes automáticos: `winget`,
+  /// `brew`. Lo mismo que mira [choose], preguntado antes de elegir nada
+  /// para poder decirlo al principio y no al pulsar el primer botón.
+  Future<bool> hasProgram(String name);
+
   /// Ejecuta el plan, contando por [onOutput] lo que va pasando.
   ///
   /// Lanza [ToolInstallException] cuando no sale. Con el detalle dentro: un

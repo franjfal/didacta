@@ -40,6 +40,20 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **En Windows, winget se ofrece al principio.** La pantalla de requisitos
+  mira primero si el Windows tiene winget, el instalador de programas de
+  Windows. Si no lo tiene, lo dice antes de que pulses nada: con winget,
+  Didacta instala sola Git, Python y MiKTeX, y explica cómo conseguirlo desde
+  la Microsoft Store. Si prefieres no instalarlo, cada cosa se instala a mano
+  con su instalador oficial, y no se vuelve a preguntar (aunque se puede
+  cambiar de idea).
+- **Instalar a mano lleva a la descarga buena.** Cuando algo se instala a
+  mano, el diálogo trae un botón que abre la página de descarga oficial. Y
+  elegir MiKTeX en un Windows sin winget ya no acaba en un error: lleva a su
+  descarga.
+
 ## 1.0.3 — 2026-10-05
 
 - **La comprobación de requisitos ya no se queda colgada en Windows.** Al

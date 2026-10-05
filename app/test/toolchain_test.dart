@@ -166,6 +166,36 @@ void main() {
   });
 
   group('las distribuciones de TeX', () {
+    test('cada una acaba en un plan que no depende de nada', () {
+      // MiKTeX solo tenía el plan de winget: elegirla en un Windows sin
+      // winget acababa en «no encuentro winget» en lugar de en la descarga.
+      for (final host in Host.values) {
+        for (final option in latexOptions(host)) {
+          expect(
+            option.plans.last.needs,
+            isNull,
+            reason: '${option.name} en ${host.name}',
+          );
+        }
+      }
+    });
+
+    test('sin winget, lo manual de Windows abre la descarga oficial', () {
+      for (final tool in didactaTools) {
+        for (final plan in plansFor(tool.id, Host.windows)) {
+          if (plan.automatic) continue;
+          expect(plan.url, isNotNull, reason: plan.label);
+          expect(Uri.parse(plan.url!).scheme, 'https', reason: plan.label);
+        }
+      }
+    });
+
+    test('winget instala Git, Python 3 y MiKTeX, y solo en Windows', () {
+      expect(wingetInstallable(Host.windows), ['Git', 'Python 3', 'MiKTeX']);
+      expect(wingetInstallable(Host.macos), isEmpty);
+      expect(wingetInstallable(Host.linux), isEmpty);
+    });
+
     test('hay una recomendada en cada sistema, y no pide administrador', () {
       // La recomendada es la que se ofrece marcada, así que tiene que ser la
       // que funciona sin ayuda de nadie: en un ordenador de la universidad,
