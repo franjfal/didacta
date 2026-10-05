@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.3 — 2026-10-05
 
 - **La comprobación de requisitos ya no se queda colgada en Windows.** Al
   abrir Didacta en Windows, la pantalla que mira si están LaTeX, Git, Python
