@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.2 — 2026-10-05
 
 - **Entrar en GitHub desde Windows.** En algunos ordenadores con Windows,
   «Entrar con GitHub» fallaba con un error de certificado
