@@ -16,6 +16,9 @@
 @TestOn('vm')
 library;
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:didacta_app/data/toolchain.dart';
 import 'package:didacta_app/model/toolchain.dart';
 import 'package:didacta_app/state/session.dart';
@@ -69,6 +72,38 @@ void main() {
     // una lista que invita a tocar lo que funciona.
     expect(find.widgetWithText(OutlinedButton, 'Instalar'), findsNothing);
     expect(find.byKey(const Key('install-missing')), findsNothing);
+  });
+
+  testWidgets('si la comprobación falla, no se queda girando', (tester) async {
+    // Lo que pasaba en Windows: una excepción salía de la búsqueda, el
+    // future no acababa nunca y la rueda giraba para siempre. Ahora lo que no
+    // se ha podido mirar se dice en su fila, y se puede volver a comprobar.
+    await pumpCheck(tester, _BrokenToolchain());
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(
+      find.textContaining('No se ha podido comprobar'),
+      findsNWidgets(didactaTools.length),
+    );
+    final recheck = tester.widget<OutlinedButton>(
+      find.byKey(const Key('recheck-tools')),
+    );
+    expect(recheck.onPressed, isNotNull);
+  });
+
+  testWidgets('mientras comprueba, una sola rueda por fila', (tester) async {
+    final toolchain = _SlowToolchain();
+    await pumpCheck(tester, toolchain);
+
+    // Estaba la marca de la izquierda girando y otra rueda a la derecha,
+    // donde va el botón: dos por fila para decir lo mismo.
+    expect(
+      find.byType(CircularProgressIndicator),
+      findsNWidgets(didactaTools.length),
+    );
+    toolchain.done.complete();
+    await settle(tester);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
   });
 
   testWidgets('dice dónde está cada una, no solo que está', (tester) async {
@@ -432,5 +467,21 @@ class _NoBiberToolchain extends FakeToolchain {
       searched: state.searched,
       notes: [missingBiber(host)],
     );
+  }
+}
+
+class _BrokenToolchain extends FakeToolchain {
+  @override
+  Future<List<ToolState>> inspectAll() async =>
+      throw const FileSystemException('Exists failed', r'C:\texlive');
+}
+
+class _SlowToolchain extends FakeToolchain {
+  final done = Completer<void>();
+
+  @override
+  Future<List<ToolState>> inspectAll() async {
+    await done.future;
+    return super.inspectAll();
   }
 }

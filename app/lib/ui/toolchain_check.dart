@@ -38,6 +38,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../data/browser.dart';
+import '../data/diagnostics.dart';
 import '../data/toolchain.dart';
 import '../model/toolchain.dart';
 import '../state/session.dart';
@@ -127,7 +128,27 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
   Future<void> _check() async {
     if (!mounted) return;
     setState(() => _checking = true);
-    final found = await _toolchain.inspectAll();
+    final List<ToolState> found;
+    try {
+      found = await _toolchain.inspectAll();
+    } catch (caught, trace) {
+      // Que nunca se quede girando: lo que no se ha podido comprobar se dice
+      // en su fila, y «Volver a comprobar» vuelve a estar a mano.
+      Diagnostics.instance.note('toolchain_check', caught, trace);
+      if (!mounted) return;
+      setState(() {
+        for (final tool in didactaTools) {
+          _states[tool.id] ??= ToolState(
+            tool: tool,
+            searched: const [],
+            problem: tr('No se ha podido comprobar: {0}', [caught]),
+          );
+        }
+        _checking = false;
+      });
+      widget.onChanged?.call();
+      return;
+    }
     if (!mounted) return;
     setState(() {
       for (final state in found) {
@@ -606,16 +627,10 @@ class _ToolRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          if (checking)
-            const Padding(
-              padding: EdgeInsets.only(top: 4),
-              child: SizedBox(
-                width: 13,
-                height: 13,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else if (!ready)
+          // Mientras se comprueba, el botón no está y no hay nada en su
+          // sitio: ya gira la marca de la izquierda, y dos ruedas por fila
+          // dicen lo mismo dos veces.
+          if (!checking && !ready)
             OutlinedButton(
               key: Key('install-${tool.id.name}'),
               onPressed: installing ? null : onInstall,

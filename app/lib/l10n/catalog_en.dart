@@ -1473,6 +1473,7 @@ const Map<String, String> enStrings = {
   'No se ha podido compilar: el motor no ha arrancado. No es un error de la definición.': 'Couldn\'t build: the engine didn\'t start. It\'s not an error in the definition.',
   'No se ha podido compilar: el motor no ha arrancado. No es un error de la plantilla.': 'It could not be built: the engine did not start. It is not an error in the template.',
   'No se ha podido comprobar en GitHub si llegas a {0}/{1}, así que no lo añado: añadirlo sin saberlo sería abrir algo que quizá no se puede sincronizar.': 'Couldn\'t check on GitHub whether you can reach {0}/{1}, so I\'m not adding it: adding it without knowing would mean opening something that perhaps can\'t be synchronised.',
+  'No se ha podido comprobar: {0}': 'Couldn\'t check: {0}',
   'No se ha podido escribir en ningún repositorio.': 'Couldn\'t write to any repository.',
   'No se ha podido guardar lo traducido: {0}': 'Couldn\'t save the translation: {0}',
   'No se ha podido leer 1 original: la cuenta no está completa.': '1 original couldn\'t be read: the count is incomplete.',

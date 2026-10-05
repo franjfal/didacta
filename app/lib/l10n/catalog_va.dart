@@ -1473,6 +1473,7 @@ const Map<String, String> vaStrings = {
   'No se ha podido compilar: el motor no ha arrancado. No es un error de la definición.': 'No s\'ha pogut compilar: el motor no ha arrancat. No és un error de la definició.',
   'No se ha podido compilar: el motor no ha arrancado. No es un error de la plantilla.': 'No s\'ha pogut compilar: el motor no ha arrancat. No és un error de la plantilla.',
   'No se ha podido comprobar en GitHub si llegas a {0}/{1}, así que no lo añado: añadirlo sin saberlo sería abrir algo que quizá no se puede sincronizar.': 'No s\'ha pogut comprovar a GitHub si arribes a {0}/{1}, així que no l\'afig: afegir-lo sense saber-ho seria obrir alguna cosa que potser no es pot sincronitzar.',
+  'No se ha podido comprobar: {0}': 'No s\'ha pogut comprovar: {0}',
   'No se ha podido escribir en ningún repositorio.': 'No s\'ha pogut escriure en cap repositori.',
   'No se ha podido guardar lo traducido: {0}': 'No s\'ha pogut desar el que s\'ha traduït: {0}',
   'No se ha podido leer 1 original: la cuenta no está completa.': 'No s\'ha pogut llegir 1 original: el compte no està complet.',

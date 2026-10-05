@@ -161,15 +161,24 @@ List<String> texDirectories({String? configured}) {
   /// `/usr/local/texlive/2026/bin/universal-darwin` y sus parientes. Por
   /// glob y no con el año escrito: el año cambia todos los abriles, y una
   /// lista con años dentro caduca sola.
+  ///
+  /// Nunca lanza: en Windows `existsSync` no contesta `false` ante una ruta
+  /// mal formada --lanza--, y lo mismo hace `listSync` con una carpeta sin
+  /// permiso o un disco que se ha ido. Una carpeta rara no puede tumbar la
+  /// búsqueda entera, que es de lo que cuelga la comprobación de requisitos.
   void texliveUnder(String root) {
-    final directory = Directory(root);
-    if (!directory.existsSync()) return;
-    for (final year in directory.listSync().whereType<Directory>()) {
-      final bin = Directory('${year.path}/bin');
-      if (!bin.existsSync()) continue;
-      for (final platform in bin.listSync().whereType<Directory>()) {
-        found.add(platform.path);
+    try {
+      final directory = Directory(root);
+      if (!directory.existsSync()) return;
+      for (final year in directory.listSync().whereType<Directory>()) {
+        final bin = Directory('${year.path}/bin');
+        if (!_exists(bin.path)) continue;
+        for (final platform in bin.listSync().whereType<Directory>()) {
+          found.add(platform.path);
+        }
       }
+    } on FileSystemException {
+      return;
     }
   }
 
@@ -200,7 +209,7 @@ List<String> texDirectories({String? configured}) {
       ]);
     }
   } else if (Platform.isWindows) {
-    texliveUnder(r'C:	exlive');
+    texliveUnder(r'C:\texlive');
     final local = Platform.environment['LOCALAPPDATA'] ?? '';
     final roaming = Platform.environment['APPDATA'] ?? '';
     found.addAll([
@@ -216,8 +225,19 @@ List<String> texDirectories({String? configured}) {
   final seen = <String>{};
   return [
     for (final directory in found)
-      if (seen.add(directory) && Directory(directory).existsSync()) directory,
+      if (seen.add(directory) && _exists(directory)) directory,
   ];
+}
+
+/// Si la carpeta está, sin lanzar nunca: una ruta que el sistema no acepta
+/// --un carácter que no vale, un disco que no está-- es una carpeta que no
+/// está.
+bool _exists(String directory) {
+  try {
+    return Directory(directory).existsSync();
+  } on FileSystemException {
+    return false;
+  }
 }
 
 /// El PATH con TeX dentro.
@@ -244,8 +264,14 @@ Future<String?> findTool(String name, {String? configured}) async {
   ).split(separator)) {
     if (directory.isEmpty) continue;
     for (final candidate in names) {
-      if (await File('$directory/$candidate').exists()) {
-        return '$directory/$candidate';
+      // Una entrada del PATH que el sistema no acepta es una que no tiene
+      // nada: en Windows, mirar dentro lanza en lugar de contestar que no.
+      try {
+        if (await File('$directory/$candidate').exists()) {
+          return '$directory/$candidate';
+        }
+      } on FileSystemException {
+        continue;
       }
     }
   }

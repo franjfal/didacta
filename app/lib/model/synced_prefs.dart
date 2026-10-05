@@ -55,6 +55,9 @@ class SyncedPrefs {
   /// que no se aplican, y eso es un panel desplegado de más: hacer que la
   /// aplicación no abra por un fichero de ajustes sería desproporcionado.
   factory SyncedPrefs.fromJson(String raw) {
+    // Un fichero vacío no es un error: es uno que se creó y no llegó a
+    // escribirse. Son los valores de siempre, sin apuntarlo como fallo.
+    if (raw.trim().isEmpty) return const SyncedPrefs();
     try {
       final data = jsonDecode(raw);
       if (data is! Map) return const SyncedPrefs();

@@ -100,4 +100,27 @@ void main() {
     if (!File('/Library/TeX/texbin/latexmk').existsSync()) return;
     expect(await findTool('latexmk'), '/Library/TeX/texbin/latexmk');
   });
+
+  test('ninguna ruta del código lleva un carácter de control', () {
+    // Pasó con `'C:\texlive'`: sin la `r` delante, `\t` es un tabulador, la
+    // ruta es `C:<TAB>exlive`, y en Windows `existsSync` no contesta que no
+    // --lanza--. La comprobación de requisitos se quedaba girando para
+    // siempre. En macOS la misma ruta dice «no existe» y nadie lo ve, así que
+    // se mira el código y no lo que hace.
+    final windowsPath = RegExp(r'''(?<![r\w])['"][A-Za-z]:\\[tnrbfv0]''');
+    final control = RegExp('[\x00-\x08\x0b-\x1f]');
+    final offending = <String>[];
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      if (file is! File || !file.path.endsWith('.dart')) continue;
+      final lines = file.readAsLinesSync();
+      for (var i = 0; i < lines.length; i += 1) {
+        final line = lines[i];
+        if (line.trimLeft().startsWith('//')) continue;
+        if (control.hasMatch(line) || windowsPath.hasMatch(line)) {
+          offending.add('${file.path}:${i + 1}');
+        }
+      }
+    }
+    expect(offending, isEmpty);
+  });
 }

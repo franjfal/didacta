@@ -40,6 +40,18 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **La comprobación de requisitos ya no se queda colgada en Windows.** Al
+  abrir Didacta en Windows, la pantalla que mira si están LaTeX, Git, Python
+  y el motor giraba para siempre, tuvieras instalado lo que tuvieras: una de
+  las carpetas donde se busca TeX estaba mal escrita, y Windows contestaba
+  con un error en lugar de con un «no está». Ahora termina siempre, y si algo
+  no se puede comprobar lo dice en su fila y deja volver a comprobar.
+- **Una sola rueda por fila mientras se comprueba.** Cada herramienta
+  enseñaba dos indicadores de carga a la vez, uno a cada lado; queda el de la
+  izquierda.
+
 ## 1.0.2 — 2026-10-05
 
 - **Entrar en GitHub desde Windows.** En algunos ordenadores con Windows,

@@ -107,8 +107,15 @@ List<String> toolDirectories({String? texPath}) {
     for (final name in names) {
       for (final suffix in suffixes) {
         final candidate = '$directory${Platform.pathSeparator}$name$suffix';
-        if (File(candidate).existsSync()) {
-          return (path: candidate, directory: directory);
+        // Sin lanzar: el PATH heredado trae lo que cada instalador quiso
+        // poner, y en Windows una entrada entre comillas o con un carácter
+        // que no vale hace que `existsSync` lance en lugar de decir que no.
+        try {
+          if (File(candidate).existsSync()) {
+            return (path: candidate, directory: directory);
+          }
+        } on FileSystemException {
+          continue;
         }
       }
     }
@@ -128,9 +135,20 @@ class _ProcessToolchain implements Toolchain {
   @override
   Host get host => currentHost;
 
+  /// Una por una, y la que falla se queda en su fila como problema: un error
+  /// que se escapara de aquí dejaba la comprobación de requisitos girando
+  /// para siempre, sin decir nada de ninguna de las cuatro.
   @override
   Future<List<ToolState>> inspectAll() async => [
-    for (final tool in didactaTools) await inspect(tool.id),
+    for (final tool in didactaTools)
+      await inspect(tool.id).catchError((Object caught, StackTrace trace) {
+        Diagnostics.instance.note('toolchain.inspect', caught, trace);
+        return ToolState(
+          tool: tool,
+          searched: const [],
+          problem: tr('No se ha podido comprobar: {0}', [caught]),
+        );
+      }),
   ];
 
   @override
