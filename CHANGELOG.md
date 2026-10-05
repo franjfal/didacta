@@ -40,6 +40,16 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **Entrar en GitHub desde Windows.** En algunos ordenadores con Windows,
+  «Entrar con GitHub» fallaba con un error de certificado
+  (`CERTIFICATE_VERIFY_FAILED`): Windows no tenía todavía el certificado raíz
+  de GitHub, porque solo los baja cuando algún programa suyo los necesita.
+  Didacta lleva ahora su propio conjunto de certificados raíz, el mismo que
+  usan Firefox y curl, y lo suma a los del sistema. También vale para buscar
+  actualizaciones y para los traductores.
+
 ## 1.0.1 — 2026-10-04
 
 - **Las prácticas de Análisis I, en diapositivas.** Fallaban todas: estaban

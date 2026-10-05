@@ -95,6 +95,8 @@ flutter:
     - assets/ejemplo/problems/calculo/continuidad/funciones-continuas/discontinuidades-evitables/
     - assets/ejemplo/problems/calculo/continuidad/bolzano/tres-raices-por-bolzano/
     - assets/ejemplo/problems/calculo/limites/calculo-de-limites/limites-de-cocientes/
+    # Las raíces de Mozilla, para Windows: ver `lib/data/trusted_roots.dart`.
+    - assets/certificados/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

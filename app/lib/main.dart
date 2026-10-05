@@ -36,6 +36,7 @@ import 'data/github.dart' show didactaAppClientId, retiredOAuthClientId;
 import 'data/catalogue_source.dart';
 import 'data/preferences.dart';
 import 'data/repository_access.dart';
+import 'data/trusted_roots.dart';
 import 'router.dart';
 import 'data/mcp_process.dart';
 import 'state/appearance.dart';
@@ -104,6 +105,10 @@ Future<void> main() async {
   // tocar los ajustes: en Windows y en Linux viven en esa carpeta, y leerlos
   // primero sería arrancar con los de una instalación vacía.
   await bringLegacyData();
+
+  // Antes de la primera conexión: en Windows, sin esto, entrar en GitHub
+  // puede fallar con un error de certificado (issue #1).
+  await trustBundledRoots();
 
   // Dónde se clonan los repositorios, si no se ha dicho otra cosa. En el
   // navegador no hay carpeta personal, y `Platform.environment` lanza.
