@@ -1519,6 +1519,13 @@ class FakeToolchain implements Toolchain {
   @override
   Future<bool> hasProgram(String name) async => available.contains(name);
 
+  /// Las distribuciones de TeX de esta máquina de mentira. Se puede cambiar
+  /// a mano para fingir una que aparece después de instalarla.
+  List<TexDistribution> distributions = [];
+
+  @override
+  Future<List<TexDistribution>> texDistributions() async => distributions;
+
   @override
   Future<void> install(
     InstallPlan plan, {

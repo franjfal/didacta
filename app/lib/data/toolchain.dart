@@ -118,6 +118,10 @@ abstract class Toolchain {
   /// para poder decirlo al principio y no al pulsar el primer botón.
   Future<bool> hasProgram(String name);
 
+  /// Las distribuciones de TeX que hay en esta máquina, la que se usa
+  /// marcada. Nunca lanza: una carpeta que no se puede leer no está.
+  Future<List<TexDistribution>> texDistributions();
+
   /// Ejecuta el plan, contando por [onOutput] lo que va pasando.
   ///
   /// Lanza [ToolInstallException] cuando no sale. Con el detalle dentro: un

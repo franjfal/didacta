@@ -272,6 +272,75 @@ class _ProcessToolchain implements Toolchain {
   Future<bool> hasProgram(String name) async =>
       findIn([name], toolDirectories(texPath: texPath)) != null;
 
+  /// Cada carpeta con `pdflatex` o `latexmk` dentro, de las que se buscan
+  /// siempre y de las del PATH, contada una vez aunque se llegue a ella por
+  /// un enlace: `/Library/TeX/texbin` y `/usr/local/texlive/2026/bin/…` son
+  /// la misma, y enseñarlas como dos sería inventarse una distribución.
+  @override
+  Future<List<TexDistribution>> texDistributions() async {
+    final separator = Platform.isWindows ? ';' : ':';
+    final candidates = [
+      ...texDirectories(),
+      ...(Platform.environment['PATH'] ?? '').split(separator),
+      if (texPath case final configured? when configured.isNotEmpty) configured,
+    ];
+    // Con la que se compila: la primera del PATH que se le da al motor que
+    // tenga latexmk. Es la misma cuenta que hace findTool.
+    final using = findIn([
+      'latexmk',
+    ], texAwarePath(configured: texPath).split(separator));
+    final usingKey = using == null ? null : _resolved(using.directory);
+
+    final seen = <String>{};
+    final found = <TexDistribution>[];
+    for (final directory in candidates) {
+      if (directory.isEmpty) continue;
+      final latexmk = findIn(['latexmk'], [directory]);
+      final pdflatex = findIn(['pdflatex'], [directory]);
+      if (latexmk == null && pdflatex == null) continue;
+      final key = _resolved(directory);
+      if (!seen.add(key)) continue;
+      final described = describeTexDirectory(key);
+      found.add(
+        TexDistribution(
+          kind: described.kind,
+          name: described.name,
+          directory: directory,
+          version: pdflatex == null ? null : await _texVersion(pdflatex.path),
+          hasLatexmk: latexmk != null,
+          inUse: key == usingKey,
+        ),
+      );
+    }
+    return found;
+  }
+
+  /// La carpeta con los enlaces resueltos, para comparar. En Windows, en
+  /// minúsculas: `C:\texlive` y `c:\TeXLive` son la misma.
+  String _resolved(String directory) {
+    String path;
+    try {
+      path = Directory(directory).resolveSymbolicLinksSync();
+    } on FileSystemException {
+      path = directory;
+    }
+    return Platform.isWindows ? path.toLowerCase() : path;
+  }
+
+  Future<String?> _texVersion(String pdflatex) async {
+    try {
+      final result = await Process.run(pdflatex, [
+        '--version',
+      ]).timeout(const Duration(seconds: 8));
+      if (result.exitCode != 0) return null;
+      return texVersionFrom('${result.stdout}');
+    } on ProcessException {
+      return null;
+    } on TimeoutException {
+      return null;
+    }
+  }
+
   @override
   Future<void> install(
     InstallPlan plan, {

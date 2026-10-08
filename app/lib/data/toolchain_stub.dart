@@ -41,6 +41,9 @@ class _NoToolchain implements Toolchain {
   Future<bool> hasProgram(String name) async => false;
 
   @override
+  Future<List<TexDistribution>> texDistributions() async => const [];
+
+  @override
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,

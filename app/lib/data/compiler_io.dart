@@ -245,9 +245,19 @@ String texAwarePath({String? configured}) {
   final separator = Platform.isWindows ? ';' : ':';
   final inherited = Platform.environment['PATH'] ?? '';
   final extra = texDirectories(configured: configured);
-  // Lo heredado primero: si alguien ha puesto una versión suya delante en el
-  // PATH, es la que quiere usar, y esto no es quién para adelantarle otra.
-  return [if (inherited.isNotEmpty) inherited, ...extra].join(separator);
+  // Lo elegido en Ajustes, lo primero de todo: es la distribución que se ha
+  // dicho que se quiere, y detrás del PATH heredado no serviría de nada en
+  // un Windows con MiKTeX en el PATH. Después lo heredado: si alguien ha
+  // puesto una versión suya delante en el PATH, es la que quiere usar, y
+  // esto no es quién para adelantarle otra de las que se encuentran solas.
+  final chosen = configured != null && extra.contains(configured)
+      ? configured
+      : null;
+  return [
+    ?chosen,
+    if (inherited.isNotEmpty) inherited,
+    ...extra.where((directory) => directory != chosen),
+  ].join(separator);
 }
 
 /// Busca una herramienta en el PATH y en donde vive TeX.

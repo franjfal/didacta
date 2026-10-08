@@ -1570,6 +1570,9 @@ class _Missing implements Toolchain {
   Future<bool> hasProgram(String name) => real.hasProgram(name);
 
   @override
+  Future<List<TexDistribution>> texDistributions() => real.texDistributions();
+
+  @override
   Future<void> install(
     InstallPlan plan, {
     void Function(String line)? onOutput,

@@ -868,6 +868,94 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
   ],
 };
 
+/// Una distribución de TeX instalada en esta máquina.
+///
+/// Puede haber varias a la vez, y es normal: un TinyTeX de la primera vez y
+/// un MacTeX que se instaló después porque faltaban paquetes, o el MiKTeX de
+/// siempre y un TeX Live nuevo. Didacta compila con una, y cuál es lo decide
+/// la carpeta de TeX de Ajustes; esto es lo que hace falta para elegirla.
+class TexDistribution {
+  const TexDistribution({
+    required this.kind,
+    required this.name,
+    required this.directory,
+    this.version,
+    this.hasLatexmk = true,
+    this.inUse = false,
+  });
+
+  /// De qué familia es: `tinytex`, `basictex`, `texlive`, `miktex` u
+  /// `other`. Es lo que la empareja con su [LatexOption], para poder decir
+  /// en el selector de instalar cuáles ya están.
+  final String kind;
+
+  /// Cómo se llama, dicho para leerlo: «TeX Live 2026», «TinyTeX».
+  final String name;
+
+  /// La carpeta de los programas --la que tiene `latexmk` dentro--. Es lo
+  /// que se guarda como carpeta de TeX al elegirla.
+  final String directory;
+
+  /// Lo que dice de sí misma: «TeX Live 2026», «MiKTeX 24.1». Null si no
+  /// contestó.
+  final String? version;
+
+  /// Si trae `latexmk`. Sin él el motor no compila, por mucho TeX que haya.
+  final bool hasLatexmk;
+
+  /// Si es con la que se compila ahora.
+  final bool inUse;
+
+  /// El [LatexOption.id] que la instalaría en [host], si lo hay.
+  String? optionId(Host host) => switch ((kind, host)) {
+    ('tinytex', _) => 'tinytex',
+    ('miktex', Host.windows) => 'miktex',
+    ('basictex', Host.macos) => 'basictex',
+    ('texlive', Host.macos) => 'mactex',
+    ('texlive', Host.windows) => 'texlive',
+    _ => null,
+  };
+}
+
+/// De qué distribución es una carpeta de programas de TeX, por su ruta.
+///
+/// Por la ruta y no preguntando: las rutas de instalación por defecto dicen
+/// la familia y el año (`/usr/local/texlive/2026basic/bin/…`), y preguntar a
+/// cada una tarda. [resolved] es la ruta con los enlaces resueltos, que es la
+/// que dice algo: `/Library/TeX/texbin` es un enlace a la de verdad.
+({String kind, String name}) describeTexDirectory(String resolved) {
+  final path = resolved.replaceAll('\\', '/').toLowerCase();
+  if (path.contains('tinytex')) return (kind: 'tinytex', name: 'TinyTeX');
+  if (path.contains('miktex')) return (kind: 'miktex', name: 'MiKTeX');
+  final year = RegExp(r'texlive/(\d{4})(basic)?/').firstMatch(path);
+  if (year != null) {
+    return year.group(2) != null
+        ? (kind: 'basictex', name: 'BasicTeX ${year.group(1)}')
+        : (kind: 'texlive', name: 'TeX Live ${year.group(1)}');
+  }
+  if (path.contains('homebrew') || path.startsWith('/usr/local/bin')) {
+    return (kind: 'other', name: tr('TeX de Homebrew'));
+  }
+  if (path.startsWith('/usr/bin') || path.startsWith('/bin')) {
+    return (kind: 'other', name: tr('El TeX del sistema'));
+  }
+  return (kind: 'other', name: tr('TeX en {0}', [resolved]));
+}
+
+/// La versión que dice `pdflatex --version` en su primera línea: lo que va
+/// entre paréntesis al final, que es la distribución --«pdfTeX
+/// 3.141592653-2.6-1.40.27 (TeX Live 2026)» da «TeX Live 2026»--. Si no hay
+/// paréntesis, la línea entera.
+String? texVersionFrom(String output) {
+  final line = output
+      .split('\n')
+      .map((line) => line.trim())
+      .firstWhere((line) => line.isNotEmpty, orElse: () => '');
+  if (line.isEmpty) return null;
+  final match = RegExp(r'\(([^()]+)\)\s*$').firstMatch(line);
+  return match?.group(1)?.trim() ?? line;
+}
+
 /// Lo que se dice cuando hay LaTeX pero no `biber`.
 ///
 /// No es un «falta»: sin biber se compila todo lo que no cita, que es casi
