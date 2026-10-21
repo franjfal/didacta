@@ -119,7 +119,7 @@ class RealBuildTests(unittest.TestCase):
     def cli(self, *args):
         return subprocess.run(
             [sys.executable, os.path.join(ROOT, "cli", "didacta"), *args],
-            cwd=self.repo, capture_output=True, text=True,
+            cwd=self.repo, capture_output=True, text=True, encoding="utf-8",
             env=dict(os.environ, NO_COLOR="1"),
         )
 

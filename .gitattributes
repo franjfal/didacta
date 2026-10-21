@@ -1,0 +1,22 @@
+# Fin de línea LF en todo el texto, en cualquier sistema.
+#
+# El Git de Windows trae `core.autocrlf=true` de serie, y el checkout del CI
+# también: sin esto, en Windows cada fichero de texto salía con `\r\n`. Los
+# tests que leen el instalador o un workflow buscaban `\n`, los de
+# test/fixtures dejaban de ser byte a byte los mismos, y el índice del
+# ejemplo, que guarda el tamaño de cada lección, ya no cuadraba con el disco.
+# Es lo mismo que Didacta pone en un repositorio de contenido nuevo
+# (`LocalClone.textAttributes`).
+* text=auto eol=lf
+
+# Lo que no es texto.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.mp4 binary
+*.wav binary
+*.zip binary

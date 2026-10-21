@@ -82,7 +82,7 @@ class SiteCliTests(unittest.TestCase):
         done = subprocess.run(
             [sys.executable, os.path.join(ROOT, "cli", "didacta"), "site",
              COURSE, "-l", "es", "-l", "va", "--json", *args],
-            cwd=self.repo, capture_output=True, text=True,
+            cwd=self.repo, capture_output=True, text=True, encoding="utf-8",
             env=dict(os.environ, NO_COLOR="1"),
         )
         return done

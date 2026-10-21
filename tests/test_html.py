@@ -121,7 +121,7 @@ class CommandTests(unittest.TestCase):
             [sys.executable, os.path.join(ROOT, "cli", "didacta"), "--root",
              DEMO, "html", "am-iii@2025-2026", "-l", "va", "--to", work,
              "--json"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8",
         )
         self.assertEqual(done.returncode, 0, done.stderr)
         report = json.loads(done.stdout)
@@ -155,7 +155,7 @@ class ExportTests(unittest.TestCase):
             [sys.executable, os.path.join(ROOT, "cli", "didacta"), "--root",
              DEMO, "export", "am-iii@2025-2026", "-l", "va", "--html",
              "--to", to, "--zip", archive, "--json"],
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8",
         )
         self.assertEqual(done.returncode, 0, done.stderr)
         report = json.loads(done.stdout)

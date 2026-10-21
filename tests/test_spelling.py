@@ -34,6 +34,10 @@ ALGEBRA = os.path.join("content", "calculo", "limites", "calculo-de-limites",
 #: sugiere lo que dice ahí.
 FAKE = textwrap.dedent('''\
     import re, sys
+    # Como el de verdad con `-i UTF-8`. En Windows, sin esto, una tubería
+    # va en cp1252.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        stream.reconfigure(encoding="utf-8")
     WRONG = {"conjunot": "conjunto", "tambien": "también", "Banach": None,
              "fucnió": "funció"}
     args = sys.argv[1:]
@@ -144,6 +148,15 @@ class FakeHunspell(unittest.TestCase):
         self.work = tempfile.mkdtemp(prefix="didacta-spelling-")
         self.addCleanup(shutil.rmtree, self.work, True)
         self.hunspell = os.path.join(self.work, "hunspell")
+        if os.name == "nt":
+            # Windows no sabe qué es un `#!`: un `.bat` que llama a Python.
+            script = self.hunspell + ".py"
+            with open(script, "w", encoding="utf-8") as handle:
+                handle.write(FAKE)
+            self.hunspell += ".bat"
+            with open(self.hunspell, "w", encoding="utf-8") as handle:
+                handle.write('@"%s" "%s" %%*\n' % (sys.executable, script))
+            return
         with open(self.hunspell, "w", encoding="utf-8") as handle:
             handle.write("#!%s\n%s" % (sys.executable, FAKE))
         os.chmod(self.hunspell, os.stat(self.hunspell).st_mode | stat.S_IEXEC)
@@ -198,7 +211,7 @@ class CheckTests(FakeHunspell):
         done = subprocess.run(
             [sys.executable, os.path.join(ROOT, "cli", "didacta"), "check",
              "--json", *args],
-            cwd=self.repo, capture_output=True, text=True,
+            cwd=self.repo, capture_output=True, text=True, encoding="utf-8",
             env=dict(os.environ, NO_COLOR="1",
                      DIDACTA_HUNSPELL=hunspell or self.hunspell),
         )

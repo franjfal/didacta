@@ -306,7 +306,9 @@ class EngineTests(unittest.TestCase):
         command = self.engine._command(
             "m.tex", "job", "/tmp/out", self.engine.profiles["slides"], "es", None)
         self.assertNotIn("-g", command)
-        self.assertEqual(command[-1], "/tmp/out/" + build_mod.Engine.WRAPPER)
+        # Absoluta: en Windows, `/tmp/out` es `D:\tmp\out`.
+        self.assertEqual(command[-1], os.path.join(
+            os.path.abspath("/tmp/out"), build_mod.Engine.WRAPPER))
 
     def test_el_pretex_va_en_el_fichero_y_solo_se_reescribe_si_cambia(self):
         outdir = os.path.join(self.build_dir, "wrapper")

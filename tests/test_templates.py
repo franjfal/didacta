@@ -131,7 +131,8 @@ class LoadingTests(unittest.TestCase):
             preambles={"mias": "\\usepackage{lmodern}\n"},
         )
         template = self.store.load()[0]
-        self.assertTrue(template.preamble.endswith("templates/mias.tex"))
+        self.assertTrue(template.preamble.endswith(
+            os.path.join("templates", "mias.tex")))
         self.assertTrue(os.path.isfile(template.preamble))
 
     def test_without_one_it_is_none_rather_than_a_missing_path(self):

@@ -28,7 +28,7 @@ def check(where):
     environment["NO_COLOR"] = "1"
     result = subprocess.run(
         [sys.executable, CLI, "check"], cwd=where, env=environment,
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8",
     )
     return result.returncode, result.stdout
 
@@ -188,7 +188,7 @@ class IntegrityTests(unittest.TestCase):
         environment["NO_COLOR"] = "1"
         result = subprocess.run(
             [sys.executable, CLI, "status"], cwd=self.root, env=environment,
-            capture_output=True, text=True,
+            capture_output=True, text=True, encoding="utf-8",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("am-i", result.stdout)

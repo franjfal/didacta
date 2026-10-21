@@ -89,7 +89,7 @@ class SlidesStructureTests(unittest.TestCase):
             [sys.executable, os.path.join(ROOT, "cli", "didacta"), "build",
              "calculo-i@2026-2027/tema-1", "-p", "slides", "-p", "notes",
              "-l", "es", "--json"],
-            cwd=cls.repo, capture_output=True, text=True,
+            cwd=cls.repo, capture_output=True, text=True, encoding="utf-8",
             env=dict(os.environ, NO_COLOR="1"),
         )
         start = done.stdout.index("[")

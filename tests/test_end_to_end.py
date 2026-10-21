@@ -68,7 +68,7 @@ def didacta(arguments, where):
     environment["NO_COLOR"] = "1"
     result = subprocess.run(
         [sys.executable, CLI] + arguments, cwd=where, env=environment,
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8",
     )
     if result.returncode != 0:
         raise AssertionError(

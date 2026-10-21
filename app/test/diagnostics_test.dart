@@ -72,7 +72,10 @@ void main() {
         ),
       );
     }
-    final names = folder.listSync().map((e) => e.path.split('/').last).toSet();
+    final names = folder
+        .listSync()
+        .map((e) => e.path.split(Platform.pathSeparator).last)
+        .toSet();
     expect(names, {'diagnostics.log', 'diagnostics.1.log'});
     // Nunca más de dos: el nuevo y el anterior.
     expect(File('${folder.path}/diagnostics.log').lengthSync(), lessThan(600));

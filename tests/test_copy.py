@@ -16,8 +16,10 @@ Lo que se fija aquí, en orden de lo que más duele si se rompe:
 
 from __future__ import annotations
 
+import contextlib
 import importlib.machinery
 import importlib.util
+import io
 import os
 import shutil
 import sys
@@ -342,7 +344,12 @@ class HonestDuplicateTests(unittest.TestCase):
         # curso con otro nombre salía con el de siempre, o no salía.
         args = Args(self.root, "am-i@2022-2023", "am-i@2026-2027", ["tema-1"])
         args.As = "tema-1-bis"
-        self.assertEqual(self.cli.cmd_copy(args), 0)
+        # Lo que dice, recogido: lleva una «→», que en la consola de Windows
+        # --cp1252-- no se puede escribir.
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(self.cli.cmd_copy(args), 0)
+        self.assertIn("tema-1 → tema-1-bis", out.getvalue())
         copy = self.read("courses/am-i/2026-2027/year.yaml")
         self.assertIn("- id: tema-1-bis", copy)
         self.assertNotIn("- id: tema-1\n", copy)

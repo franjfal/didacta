@@ -108,10 +108,14 @@ void main() {
     Directory.current = work;
     addTearDown(() => Directory.current = before);
 
-    // Resuelto: en macOS `/var` es un enlace a `/private/var`, y el
-    // directorio actual sale resuelto mientras `root.path` no.
+    // Resueltas las dos: en macOS `/var` es un enlace a `/private/var`, y el
+    // directorio actual sale resuelto mientras `root.path` no. En Windows es
+    // al revés: el directorio actual sale con el nombre corto
+    // (`RUNNER~1`), y lo encontrado lleva `\` y `/` mezcladas.
+    final found = await LocalClone.discover();
+    expect(found, isNotNull);
     expect(
-      await LocalClone.discover(),
+      Directory(found!).resolveSymbolicLinksSync(),
       Directory('${root.path}/didacta_db').resolveSymbolicLinksSync(),
     );
   });
