@@ -250,8 +250,9 @@ void main() {
     });
 
     test('MiKTeX va en la carpeta del usuario, como promete', () {
-      final miktex = latexOptions(Host.windows)
-          .firstWhere((option) => option.id == 'miktex');
+      final miktex = latexOptions(
+        Host.windows,
+      ).firstWhere((option) => option.id == 'miktex');
       expect(miktex.needsAdmin, isFalse);
       final arguments = miktex.plan.arguments;
       expect(arguments[arguments.indexOf('--scope') + 1], 'user');
