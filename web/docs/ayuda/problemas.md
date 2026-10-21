@@ -114,15 +114,18 @@ escrito en Perl. TeX Live y MacTeX traen su Perl; **MiKTeX no**. Se nota
 porque nada compila, y el mensaje habla de `perl` o de un *script engine* que
 no se encuentra.
 
-Se arregla instalando Perl, en una consola:
+La pantalla de requisitos lo detecta: dice que falta Perl, y su botón
+**Instalar** instala Strawberry Perl con winget. A mano, en una consola:
 
 ```bash
 winget install --id StrawberryPerl.StrawberryPerl -e
 ```
 
 o con el instalador de [strawberryperl.com](https://strawberryperl.com/).
-Después **cierra Didacta y vuelve a abrirla**: una aplicación lee dónde están
-los programas al arrancar, y la que ya estaba abierta no ve el Perl nuevo.
+Didacta lo busca en `C:\Strawberry`, donde lo deja el instalador, así que basta
+con **Volver a comprobar**. Si lo has instalado en otro sitio, **cierra Didacta
+y vuelve a abrirla**: una aplicación lee el PATH al arrancar, y la que ya
+estaba abierta no ve el Perl nuevo.
 
 ### «I can't write on file» (Windows)
 

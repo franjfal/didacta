@@ -491,6 +491,59 @@ void main() {
       expect(find.byKey(const Key('open-download')), findsOneWidget);
       expect(toolchain.installed, isEmpty);
     });
+
+    // El MiKTeX recién instalado: su latexmk no arranca sin Perl. Lo que
+    // tiene que pasar al pulsar es instalar Perl, no volver a elegir
+    // distribución --otro MiKTeX tampoco arrancaría--.
+    ToolState miktexWithoutPerl() => ToolState(
+      tool: toolById(ToolId.latex),
+      path: r'C:\Program Files\MiKTeX\miktex\bin\x64\latexmk.exe',
+      searched: const ['/de/mentira'],
+      problem: 'Es el latexmk de MiKTeX, y necesita Perl.',
+      fixes: perlPlans(Host.windows),
+    );
+
+    testWidgets('MiKTeX sin Perl: instalar es instalar Perl', (tester) async {
+      final toolchain = FakeToolchain(
+        host: Host.windows,
+        available: const {'winget'},
+        present: const {ToolId.git, ToolId.python, ToolId.engine},
+        broken: {ToolId.latex: miktexWithoutPerl()},
+      );
+      await pumpCheck(tester, toolchain);
+      expect(find.textContaining('necesita Perl'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('install-latex')));
+      await settle(tester);
+
+      // Sin el selector de distribuciones en medio.
+      expect(find.byKey(const Key('latex-choose')), findsNothing);
+      expect(
+        toolchain.installed.single.arguments,
+        contains('StrawberryPerl.StrawberryPerl'),
+      );
+      expect(toolchain.present, contains(ToolId.latex));
+    });
+
+    testWidgets('MiKTeX sin Perl ni winget: la descarga de Perl', (
+      tester,
+    ) async {
+      final toolchain = FakeToolchain(
+        host: Host.windows,
+        available: const {},
+        present: const {ToolId.git, ToolId.python, ToolId.engine},
+        broken: {ToolId.latex: miktexWithoutPerl()},
+      );
+      await pumpCheck(tester, toolchain);
+
+      await tester.tap(find.byKey(const Key('install-latex')));
+      await settle(tester);
+
+      expect(find.byKey(const Key('latex-choose')), findsNothing);
+      expect(find.byKey(const Key('open-download')), findsOneWidget);
+      expect(find.textContaining('strawberryperl.com'), findsWidgets);
+      expect(toolchain.installed, isEmpty);
+    });
   });
 
   testWidgets('volver a comprobar ve lo que se ha instalado por fuera', (

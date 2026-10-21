@@ -34,6 +34,7 @@ class ToolState {
     this.problem,
     this.searched = const [],
     this.notes = const [],
+    this.fixes = const [],
   });
 
   final Tool tool;
@@ -57,6 +58,12 @@ class ToolState {
   /// Lo que le falta sin dejar de funcionar: LaTeX sin `biber` compila, pero
   /// no las bibliografías. Se enseña debajo del tick, sin quitárselo.
   final List<String> notes;
+
+  /// Lo que arregla [problem], cuando no es volver a instalar la herramienta.
+  ///
+  /// El `latexmk` de MiKTeX sin Perl no se arregla con otro MiKTeX: se
+  /// arregla con Perl. Vacío cuando lo que toca es lo de siempre.
+  final List<InstallPlan> fixes;
 
   bool get ready => path != null && problem == null;
 }

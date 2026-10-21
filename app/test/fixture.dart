@@ -1462,12 +1462,18 @@ class FakeToolchain implements Toolchain {
     this.failure,
     this.appears = true,
     this.available = const {'brew'},
-  }) : _present = {...present};
+    Map<ToolId, ToolState> broken = const {},
+  }) : _present = {...present},
+       _broken = {...broken};
 
   @override
   final Host host;
 
   final Set<ToolId> _present;
+
+  /// Lo que está pero no arranca, con lo que se dice de ello. Una
+  /// instalación que sale bien lo quita: es el arreglo que se ofrecía.
+  final Map<ToolId, ToolState> _broken;
 
   /// Qué hay instalado ahora mismo. Cambia cuando una instalación sale bien.
   Set<ToolId> get present => _present;
@@ -1499,6 +1505,8 @@ class FakeToolchain implements Toolchain {
         searched: const ['/de/mentira'],
       );
     }
+    final broken = _broken[id];
+    if (broken != null) return broken;
     return ToolState(tool: tool, searched: const ['/de/mentira']);
   }
 
@@ -1539,8 +1547,11 @@ class FakeToolchain implements Toolchain {
     // Qué herramienta era se deduce del plan, que es lo único que llega
     // aquí: cada uno aparece en la lista de una sola.
     for (final tool in didactaTools) {
-      if (plansFor(tool.id, host).any((other) => other.label == plan.label)) {
+      final fixes = _broken[tool.id]?.fixes ?? const <InstallPlan>[];
+      if (plansFor(tool.id, host).any((other) => other.label == plan.label) ||
+          fixes.any((other) => other.label == plan.label)) {
         _present.add(tool.id);
+        _broken.remove(tool.id);
       }
     }
   }

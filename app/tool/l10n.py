@@ -190,7 +190,9 @@ def extract() -> dict:
             if not name.endswith(".dart"):
                 continue
             path = os.path.join(folder, name)
-            relative = os.path.relpath(path, LIB)
+            # Con «/» también en Windows: es lo que esperan [CONST_TEXTS] y
+            # el `l10n/` de aquí abajo, y lo que ya hay en `keys.json`.
+            relative = os.path.relpath(path, LIB).replace(os.sep, "/")
             if relative.startswith("l10n/"):
                 continue
             with open(path, encoding="utf-8") as handle:

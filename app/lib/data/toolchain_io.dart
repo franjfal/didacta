@@ -18,6 +18,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../model/launch.dart' show isStoreAlias;
 import '../model/toolchain.dart';
 import 'compiler_io.dart' show pythonDirectories, texAwarePath, texDirectories;
 import 'toolchain.dart';
@@ -103,7 +104,13 @@ List<String> toolDirectories({String? texPath}) {
   List<String> directories,
 ) {
   final suffixes = Platform.isWindows ? ['.exe', '.bat', '.cmd', ''] : [''];
-  for (final directory in directories) {
+  for (final listed in directories) {
+    // Sin la barra del final, que el PATH de Windows trae a menudo
+    // --`…\miktex\bin\x64\`-- y que dejaba la ruta enseñada con dos.
+    final directory =
+        listed.length > 1 && (listed.endsWith(r'\') || listed.endsWith('/'))
+        ? listed.substring(0, listed.length - 1)
+        : listed;
     for (final name in names) {
       for (final suffix in suffixes) {
         final candidate = '$directory${Platform.pathSeparator}$name$suffix';
@@ -111,7 +118,7 @@ List<String> toolDirectories({String? texPath}) {
         // poner, y en Windows una entrada entre comillas o con un carácter
         // que no vale hace que `existsSync` lance en lugar de decir que no.
         try {
-          if (File(candidate).existsSync()) {
+          if (_launchable(candidate)) {
             return (path: candidate, directory: directory);
           }
         } on FileSystemException {
@@ -122,6 +129,19 @@ List<String> toolDirectories({String? texPath}) {
   }
   return null;
 }
+
+/// Si en [path] hay algo que se pueda lanzar.
+///
+/// En Windows no basta con `File.existsSync`: a los alias de
+/// `WindowsApps` contesta que no, porque son enlaces y no ficheros, y se
+/// lanzan como cualquier programa. `winget.exe` es uno, así que Didacta decía
+/// «este Windows no tiene winget» con el Instalador de aplicación puesto y
+/// funcionando, y mandaba a instalar a mano todo lo que winget sabe instalar.
+bool _launchable(String path) =>
+    File(path).existsSync() ||
+    (Platform.isWindows &&
+        FileSystemEntity.typeSync(path, followLinks: false) ==
+            FileSystemEntityType.link);
 
 class _ProcessToolchain implements Toolchain {
   _ProcessToolchain({this.texPath, this.enginePath});
@@ -159,13 +179,38 @@ class _ProcessToolchain implements Toolchain {
     // siga ahí, que es lo que se rompe cuando alguien mueve la carpeta.
     if (id == ToolId.engine) return _inspectEngine(tool);
 
-    final directories = toolDirectories(texPath: texPath);
+    final directories = [
+      for (final directory in toolDirectories(texPath: texPath))
+        // Python, sin los alias de la Store: el motor no los usa --ver
+        // `engineCommand`--, y dar por bueno uno que el motor se va a saltar
+        // es un tick que miente.
+        if (id != ToolId.python || !isStoreAlias('$directory\\')) directory,
+    ];
     final found = findIn(tool.executables, directories);
     if (found == null) {
       return ToolState(tool: tool, searched: directories);
     }
 
-    final version = await _versionOf(found.path, tool.versionArguments);
+    final answer = await _versionOf(found.path, tool.versionArguments);
+    final version = answer.version;
+    if (version == null &&
+        id == ToolId.latex &&
+        latexmkNeedsPerl(answer.output)) {
+      // El de MiKTeX recién instalado. Decir «instalación a medias» aquí
+      // mandaba a reinstalar MiKTeX, que no lo arregla: lo que falta es
+      // Perl, y eso es lo que se ofrece.
+      return ToolState(
+        tool: tool,
+        path: found.path,
+        searched: directories,
+        problem: tr(
+          'Es el latexmk de MiKTeX, y necesita Perl para arrancar: en este '
+          'ordenador no hay. MiKTeX no lo trae; pulsa «Instalar» para '
+          'instalar Strawberry Perl.',
+        ),
+        fixes: perlPlans(host),
+      );
+    }
     if (version == null) {
       // El fichero está y no arranca. Es peor que faltar --parece
       // disponible-- y por eso se cuenta aparte en lugar de darlo por bueno.
@@ -233,27 +278,45 @@ class _ProcessToolchain implements Toolchain {
   /// comprobación que no termina deja la pantalla en «comprobando…» para
   /// siempre. Diez segundos es mucho para un `--version` y poco para que
   /// alguien se canse.
-  Future<String?> _versionOf(String path, List<String> arguments) async {
+  ///
+  /// Con lo que contestó al lado, también cuando no arranca: es lo que dice
+  /// **por qué**, y el `latexmk` de MiKTeX sin Perl solo se reconoce así.
+  ///
+  /// Con el mismo PATH con el que se compila, y no con el heredado: lo que
+  /// un programa busca al arrancar --el Perl de ese `latexmk`-- tiene que
+  /// aparecer aquí si va a aparecer al compilar, y lo recién instalado no
+  /// está en el PATH con el que se abrió Didacta.
+  Future<({String? version, String output})> _versionOf(
+    String path,
+    List<String> arguments,
+  ) async {
     try {
       final result = await Process.run(
         path,
         arguments,
-        environment: {'NO_COLOR': '1'},
+        environment: {
+          'NO_COLOR': '1',
+          'PATH': texAwarePath(configured: texPath),
+        },
       ).timeout(const Duration(seconds: 10));
-      if (result.exitCode != 0) return null;
       final output = '${result.stdout}\n${result.stderr}';
+      if (result.exitCode != 0) return (version: null, output: output);
       // La versión si se puede leer, y la primera línea si no: haber
       // contestado ya dice que el programa arranca, que es lo que se estaba
       // preguntando.
-      return versionFrom(output) ??
-          output
-              .split('\n')
-              .map((line) => line.trim())
-              .firstWhere((line) => line.isNotEmpty, orElse: () => '');
-    } on ProcessException {
-      return null;
+      return (
+        version:
+            versionFrom(output) ??
+            output
+                .split('\n')
+                .map((line) => line.trim())
+                .firstWhere((line) => line.isNotEmpty, orElse: () => ''),
+        output: output,
+      );
+    } on ProcessException catch (error) {
+      return (version: null, output: error.message);
     } on TimeoutException {
-      return null;
+      return (version: null, output: '');
     }
   }
 
@@ -456,6 +519,10 @@ class _ProcessToolchain implements Toolchain {
     final code = await process.exitCode;
     await Future.wait(reading);
 
+    if (code != 0 && plan.program == 'winget' && wingetAlreadyDone(code)) {
+      onOutput?.call(tr('Ya estaba instalado.'));
+      return;
+    }
     if (code != 0) {
       throw ToolInstallException(
         tr('La instalación terminó con un error (código {0}).', [code]),

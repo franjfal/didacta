@@ -28,8 +28,8 @@
   "ui/mcp_page.dart:504"
  ],
  " y ": [
-  "ui/composition_editor.dart:595",
-  "model/tex_check.dart:172"
+  "model/tex_check.dart:172",
+  "ui/composition_editor.dart:595"
  ],
  " · 1 parecida": [
   "ui/library_page.dart:3273"
@@ -127,12 +127,12 @@
   "data/diagnostics.dart:201"
  ],
  "1 asignatura": [
-  "ui/manage_degrees.dart:313",
-  "ui/courses_page.dart:190"
+  "ui/courses_page.dart:190",
+  "ui/manage_degrees.dart:313"
  ],
  "1 aviso": [
-  "ui/source_view.dart:755",
   "ui/review_panel.dart:274",
+  "ui/source_view.dart:755",
   "ui/tex_toolbar.dart:1218"
  ],
  "1 bien": [
@@ -164,9 +164,9 @@
   "ui/source_view.dart:751"
  ],
  "1 documento": [
+  "ui/courses_page.dart:196",
   "ui/year_page.dart:90",
-  "ui/year_page.dart:2040",
-  "ui/courses_page.dart:196"
+  "ui/year_page.dart:2040"
  ],
  "1 elegida: {0}": [
   "ui/composition_editor.dart:1351"
@@ -197,8 +197,8 @@
   "ui/info_menu.dart:300"
  ],
  "1 lección": [
-  "ui/suggest_field.dart:132",
-  "ui/manage_blocks.dart:456"
+  "ui/manage_blocks.dart:456",
+  "ui/suggest_field.dart:132"
  ],
  "1 lección en {0}": [
   "ui/library_page.dart:1805",
@@ -250,14 +250,14 @@
   "ui/language_settings.dart:178"
  ],
  "A qué asignatura": [
+  "ui/course_admin_ui.dart:962",
   "ui/reuse.dart:233",
-  "ui/reuse.dart:595",
-  "ui/course_admin_ui.dart:962"
+  "ui/reuse.dart:595"
  ],
  "A qué curso académico": [
+  "ui/course_admin_ui.dart:1018",
   "ui/reuse.dart:257",
-  "ui/reuse.dart:621",
-  "ui/course_admin_ui.dart:1018"
+  "ui/reuse.dart:621"
  ],
  "A qué idiomas les falta": [
   "ui/translate_unit.dart:334"
@@ -284,26 +284,29 @@
   "ui/library_page.dart:548"
  ],
  "Abre el Terminal y escribe: xcode-select --install": [
-  "model/toolchain.dart:411",
-  "model/toolchain.dart:492"
+  "model/toolchain.dart:527",
+  "model/toolchain.dart:600"
+ ],
+ "Abre la Microsoft Store en «Instalador de aplicación» (App Installer), que es lo que trae winget. Si ya aparece como instalado, pulsa «Actualizar».": [
+  "ui/toolchain_check.dart:609"
  ],
  "Abriendo": [
-  "main.dart:658"
+  "main.dart:663"
  ],
  "Abriendo {0}{1}…": [
   "ui/add_repository.dart:160"
  ],
  "Abrir": [
-  "ui/unit_preview.dart:1110",
-  "ui/library_page.dart:2667",
   "ui/between_repos_page.dart:335",
   "ui/between_repos_page.dart:640",
   "ui/diagnostic_list.dart:150",
   "ui/freezes.dart:286",
-  "ui/translate_unit.dart:890"
+  "ui/library_page.dart:2667",
+  "ui/translate_unit.dart:890",
+  "ui/unit_preview.dart:1110"
  ],
  "Abrir Ajustes": [
-  "main.dart:745",
+  "main.dart:750",
   "ui/shortcuts.dart:23"
  ],
  "Abrir GitHub": [
@@ -319,13 +322,19 @@
   "model/launch.dart:138"
  ],
  "Abrir en el visor del sistema": [
-  "ui/unit_preview.dart:1129",
+  "ui/pdf_dialog.dart:446",
   "ui/quick_look.dart:286",
-  "ui/pdf_dialog.dart:446"
+  "ui/unit_preview.dart:1129"
+ ],
+ "Abrir la Microsoft Store": [
+  "ui/toolchain_check.dart:629"
  ],
  "Abrir la carpeta": [
-  "model/launch.dart:140",
-  "data/file_manager_stub.dart:8"
+  "data/file_manager_stub.dart:8",
+  "model/launch.dart:140"
+ ],
+ "Abrir la descarga oficial": [
+  "ui/toolchain_check.dart:1224"
  ],
  "Abrir la unidad": [
   "ui/quick_look.dart:302"
@@ -337,21 +346,21 @@
   "ui/pdf_tab.dart:721"
  ],
  "Acepta el instalador que aparece. Tarda unos minutos.": [
-  "model/toolchain.dart:412"
+  "model/toolchain.dart:528"
  ],
  "Aceptar": [
-  "ui/manage_degrees.dart:669",
   "ui/document_properties.dart:303",
-  "ui/manage_blocks.dart:1069",
   "ui/heading_title.dart:138",
+  "ui/manage_blocks.dart:1069",
+  "ui/manage_degrees.dart:669",
   "ui/manage_templates.dart:269"
  ],
  "Acercar": [
   "ui/pdf_controls.dart:206"
  ],
  "Activar": [
-  "ui/composition_editor.dart:877",
-  "state/catalogue_editor.dart:1794"
+  "state/catalogue_editor.dart:1798",
+  "ui/composition_editor.dart:877"
  ],
  "Actualizaciones": [
   "ui/settings_page.dart:198"
@@ -369,6 +378,7 @@
   "ui/shell.dart:768"
  ],
  "Actualizar a {0}": [
+  "ui/engine_version_line.dart:122",
   "ui/update_section.dart:124"
  ],
  "Actualizar ahora": [
@@ -378,8 +388,8 @@
   "ui/platform_menus.dart:313"
  ],
  "Actualizar desde el disco y GitHub": [
-  "ui/shortcuts.dart:35",
-  "ui/command_palette.dart:211"
+  "ui/command_palette.dart:211",
+  "ui/shortcuts.dart:35"
  ],
  "Actualizar los metadatos de «{0}»": [
   "ui/metadata_editor.dart:400"
@@ -388,9 +398,9 @@
   "ui/shell.dart:885"
  ],
  "Adelante": [
+  "ui/command_palette.dart:201",
   "ui/platform_menus.dart:222",
-  "ui/shortcuts.dart:25",
-  "ui/command_palette.dart:201"
+  "ui/shortcuts.dart:25"
  ],
  "Adelante  {0}": [
   "ui/shell.dart:588"
@@ -402,8 +412,8 @@
   "ui/review_panel.dart:249"
  ],
  "Ahora manda tu «{0}». La de Didacta sigue igual.": [
-  "ui/template_editor.dart:476",
-  "ui/manage_templates.dart:426"
+  "ui/manage_templates.dart:426",
+  "ui/template_editor.dart:476"
  ],
  "Ahora mismo hay {0} ubicaciones sincronizadas. Reparte cada una en el grupo que le toque: dentro de cada grupo seguirán sincronizadas, y entre grupos dejarán de estarlo.": [
   "ui/reuse.dart:1010"
@@ -420,10 +430,10 @@
   "ui/pdf_controls.dart:246"
  ],
  "Ajustes": [
-  "ui/composition_editor.dart:1690",
-  "ui/shell.dart:119",
   "ui/command_palette.dart:364",
-  "ui/settings_page.dart:260"
+  "ui/composition_editor.dart:1690",
+  "ui/settings_page.dart:260",
+  "ui/shell.dart:119"
  ],
  "Ajustes › {0}": [
   "ui/command_palette.dart:373"
@@ -466,11 +476,11 @@
   "ui/manage_templates.dart:343"
  ],
  "Algún paquete no se pudo añadir ({0}). LaTeX ya está instalado; lo que falte lo dirá el log al compilar.": [
-  "data/toolchain_io.dart:523"
+  "data/toolchain_io.dart:680"
  ],
  "Alumno": [
-  "ui/tex_toolbar.dart:70",
-  "ui/manage_templates.dart:48"
+  "ui/manage_templates.dart:48",
+  "ui/tex_toolbar.dart:70"
  ],
  "Anterior": [
   "ui/pdf_controls.dart:365",
@@ -502,7 +512,7 @@
   "ui/settings_page.dart:3090"
  ],
  "Apagar la plantilla {0}": [
-  "state/catalogue_editor.dart:1526"
+  "state/catalogue_editor.dart:1530"
  ],
  "Apariencia": [
   "ui/settings_page.dart:189"
@@ -560,7 +570,7 @@
   "model/tex_vocabulary.dart:62"
  ],
  "Aquí los instaladores se abren a mano.": [
-  "data/toolchain_io.dart:400"
+  "data/toolchain_io.dart:557"
  ],
  "Aquí no hay carpetas que mover.": [
   "data/local_clone_stub.dart:63"
@@ -579,13 +589,13 @@
   "ui/year_page.dart:949"
  ],
  "Aquí no se puede clonar nada.": [
-  "state/engine_service.dart:150"
+  "state/engine_service.dart:151"
  ],
  "Aquí no se puede compilar, así que no se ha comprobado la definición. Va al preámbulo de todo lo que se compile en los repositorios elegidos: si tiene un error, no compilará nada de ellos hasta que se arregle.": [
   "ui/manage_snippets.dart:1439"
  ],
  "Aquí no se puede compilar. La vista previa necesita la aplicación de escritorio, con el motor de Didacta y TeX: se puede guardar igual, y se comprueba al compilar.": [
-  "ui/manage_snippets.dart:2422",
+  "ui/manage_snippets.dart:2423",
   "ui/template_editor.dart:1393"
  ],
  "Aquí no se puede guardar una credencial de forma segura, así que no se puede entrar. Didacta se usa desde la aplicación de escritorio.": [
@@ -595,23 +605,23 @@
   "state/update_service.dart:327"
  ],
  "Aquí no se pueden guardar ficheros.": [
-  "ui/export_actions.dart:47",
-  "data/file_copy_stub.dart:9"
+  "data/file_copy_stub.dart:9",
+  "ui/export_actions.dart:47"
  ],
  "Aquí se verá cómo queda, con el preámbulo de verdad.": [
-  "ui/manage_snippets.dart:2434"
+  "ui/manage_snippets.dart:2435"
  ],
  "Aquí se verá una lección compilada con esta plantilla.": [
   "ui/template_editor.dart:1405"
  ],
  "Arch: sudo pacman -S git": [
-  "model/toolchain.dart:460"
+  "model/toolchain.dart:568"
  ],
  "Arch: sudo pacman -S python": [
-  "model/toolchain.dart:544"
+  "model/toolchain.dart:644"
  ],
  "Arch: sudo pacman -S texlive-latexextra texlive-binextra": [
-  "model/toolchain.dart:813"
+  "model/toolchain.dart:932"
  ],
  "Arco seno": [
   "model/tex_vocabulary.dart:93"
@@ -638,24 +648,24 @@
   "ui/courses_page.dart:864"
  ],
  "Asignaturas": [
+  "ui/command_palette.dart:332",
+  "ui/courses_page.dart:185",
   "ui/document_page.dart:423",
   "ui/document_page.dart:1483",
-  "ui/year_page.dart:98",
-  "ui/year_page.dart:2701",
   "ui/platform_menus.dart:233",
   "ui/shell.dart:101",
   "ui/tour.dart:159",
   "ui/tour.dart:169",
   "ui/tour.dart:179",
   "ui/tour.dart:190",
-  "ui/command_palette.dart:332",
-  "ui/courses_page.dart:185"
+  "ui/year_page.dart:98",
+  "ui/year_page.dart:2701"
  ],
  "Asignaturas es lo que estás dando este cuatrimestre, y por eso va primero. La biblioteca es todo el material ordenado por materia, que es cómo se busca. Traducción es la cola de lo que falta. Y Ajustes.": [
   "ui/tour.dart:143"
  ],
  "Así se escribe": [
-  "ui/manage_snippets.dart:2229"
+  "ui/manage_snippets.dart:2230"
  ],
  "Atajos de teclado": [
   "ui/platform_menus.dart:343",
@@ -665,11 +675,11 @@
   "ui/settings_page.dart:1112"
  ],
  "Atrás": [
+  "ui/command_palette.dart:190",
   "ui/platform_menus.dart:213",
   "ui/shortcuts.dart:24",
   "ui/tour.dart:956",
-  "ui/welcome.dart:377",
-  "ui/command_palette.dart:190"
+  "ui/welcome.dart:377"
  ],
  "Atrás  {0}": [
   "ui/shell.dart:570"
@@ -716,14 +726,14 @@
   "ui/manage_snippets.dart:347"
  ],
  "Añadiendo los paquetes que Didacta usa. Tarda un poco.": [
-  "data/toolchain_io.dart:512"
+  "data/toolchain_io.dart:669"
  ],
  "Añadir": [
+  "ui/add_repository.dart:570",
   "ui/composition_editor.dart:1401",
   "ui/language_settings.dart:449",
   "ui/metadata_editor.dart:1334",
-  "ui/settings_page.dart:1796",
-  "ui/add_repository.dart:570"
+  "ui/settings_page.dart:1796"
  ],
  "Añadir desde GitHub": [
   "ui/settings_page.dart:1529"
@@ -777,7 +787,7 @@
   "ui/settings_page.dart:1541"
  ],
  "Añadir una carpeta…": [
-  "main.dart:1019"
+  "main.dart:1024"
  ],
  "Añadir una lección": [
   "ui/document_page.dart:841"
@@ -798,8 +808,8 @@
   "ui/year_page.dart:2887"
  ],
  "Añadir {0}": [
-  "ui/composition_editor.dart:1402",
-  "ui/add_repository.dart:571"
+  "ui/add_repository.dart:571",
+  "ui/composition_editor.dart:1402"
  ],
  "Añadir {0} lecciones a {1}": [
   "ui/document_page.dart:226"
@@ -820,20 +830,20 @@
   "ui/manage_snippets.dart:922"
  ],
  "Biblioteca": [
+  "ui/command_palette.dart:340",
   "ui/library_page.dart:840",
   "ui/library_page.dart:1489",
   "ui/platform_menus.dart:238",
   "ui/shell.dart:107",
-  "ui/command_palette.dart:340",
   "ui/unit_page.dart:565",
   "ui/unit_page.dart:3042"
  ],
  "Bloque": [
-  "ui/year_page.dart:1698",
-  "ui/library_search.dart:141"
+  "ui/library_search.dart:141",
+  "ui/year_page.dart:1698"
  ],
  "Bloque de {0}: {1}": [
-  "state/catalogue_editor.dart:930"
+  "state/catalogue_editor.dart:934"
  ],
  "Bloque {0} · {1}": [
   "ui/between_repos_page.dart:439"
@@ -851,8 +861,8 @@
   "ui/manage_blocks.dart:360"
  ],
  "Bloques": [
-  "ui/settings_page.dart:328",
   "ui/manage_blocks.dart:151",
+  "ui/settings_page.dart:328",
   "ui/template_editor.dart:902"
  ],
  "Bloques y catálogo": [
@@ -889,7 +899,7 @@
   "ui/library_page.dart:3287"
  ],
  "Buscando tlmgr…": [
-  "data/toolchain_io.dart:494"
+  "data/toolchain_io.dart:651"
  ],
  "Buscando «{0}»": [
   "ui/library_page.dart:854"
@@ -898,8 +908,8 @@
   "ui/pdf_search.dart:187"
  ],
  "Buscar": [
-  "ui/tour.dart:263",
-  "ui/add_repository.dart:458"
+  "ui/add_repository.dart:458",
+  "ui/tour.dart:263"
  ],
  "Buscar TeX solo": [
   "ui/settings_page.dart:2665"
@@ -911,8 +921,8 @@
   "ui/pdf_search.dart:232"
  ],
  "Buscar en el PDF ({0})": [
-  "ui/pdf_tab.dart:528",
-  "ui/pdf_dialog.dart:378"
+  "ui/pdf_dialog.dart:378",
+  "ui/pdf_tab.dart:528"
  ],
  "Buscar en el texto": [
   "ui/tex_find_bar.dart:290"
@@ -953,7 +963,7 @@
   "ui/library_page.dart:568"
  ],
  "Cabecera de la plantilla {0}": [
-  "state/catalogue_editor.dart:1645"
+  "state/catalogue_editor.dart:1649"
  ],
  "Caché vaciada: {0} versión(es). Se vuelven a preparar solas al abrirlas.": [
   "ui/freezes.dart:142"
@@ -1022,9 +1032,9 @@
   "ui/history_tab.dart:823"
  ],
  "Cambios recientes": [
-  "ui/recent_changes.dart:252",
   "ui/courses_page.dart:132",
-  "ui/courses_page.dart:227"
+  "ui/courses_page.dart:227",
+  "ui/recent_changes.dart:252"
  ],
  "Campos": [
   "ui/unit_page.dart:1635"
@@ -1033,83 +1043,83 @@
   "model/latex_snippets.dart:114"
  ],
  "Cancelar": [
-  "ui/sync_bar.dart:662",
-  "ui/sync_bar.dart:1132",
-  "ui/history_tab.dart:406",
+  "ui/add_repository.dart:556",
+  "ui/add_repository.dart:658",
+  "ui/add_repository.dart:710",
+  "ui/build_button.dart:227",
+  "ui/build_folder.dart:122",
+  "ui/commit_dialog.dart:84",
   "ui/composition_editor.dart:403",
   "ui/composition_editor.dart:1392",
-  "ui/unit_preview.dart:999",
-  "ui/engine_version_line.dart:51",
-  "ui/new_unit.dart:268",
-  "ui/new_unit.dart:454",
-  "ui/new_unit.dart:660",
-  "ui/manage_degrees.dart:567",
-  "ui/manage_degrees.dart:661",
-  "ui/library_page.dart:502",
-  "ui/edit_course.dart:367",
-  "ui/reuse.dart:338",
-  "ui/reuse.dart:732",
-  "ui/reuse.dart:1142",
-  "ui/language_settings.dart:590",
-  "ui/new_document.dart:162",
-  "ui/new_document.dart:288",
-  "ui/problem_set.dart:449",
-  "ui/manage_snippets.dart:412",
-  "ui/manage_snippets.dart:2077",
-  "ui/year_page.dart:1137",
-  "ui/year_page.dart:2991",
-  "ui/glossary_editor.dart:343",
-  "ui/recent_changes.dart:214",
-  "ui/remove_repository.dart:155",
-  "ui/source_view.dart:1313",
-  "ui/metadata_editor.dart:1466",
-  "ui/build_button.dart:227",
-  "ui/document_properties.dart:279",
-  "ui/place_browser.dart:241",
-  "ui/place_browser.dart:592",
-  "ui/commit_dialog.dart:84",
-  "ui/review_panel.dart:368",
-  "ui/toolchain_check.dart:706",
-  "ui/update_section.dart:367",
   "ui/course_admin_ui.dart:464",
   "ui/course_admin_ui.dart:693",
   "ui/course_admin_ui.dart:848",
   "ui/course_admin_ui.dart:1115",
+  "ui/document_properties.dart:279",
+  "ui/edit_course.dart:367",
+  "ui/engine_version_line.dart:51",
   "ui/export_year.dart:481",
-  "ui/settings_page.dart:1791",
-  "ui/settings_page.dart:2398",
-  "ui/unit_page.dart:2580",
-  "ui/manage_blocks.dart:835",
-  "ui/manage_blocks.dart:978",
-  "ui/manage_blocks.dart:1061",
-  "ui/manage_blocks.dart:1149",
-  "ui/start_over.dart:213",
   "ui/freezes.dart:455",
   "ui/freezes.dart:689",
   "ui/freezes.dart:855",
   "ui/freezes.dart:1073",
-  "ui/template_editor.dart:1175",
+  "ui/glossary_editor.dart:343",
   "ui/heading_title.dart:130",
-  "ui/build_folder.dart:122",
-  "ui/add_repository.dart:556",
-  "ui/add_repository.dart:658",
-  "ui/add_repository.dart:710",
-  "ui/translate_unit.dart:511",
+  "ui/history_tab.dart:406",
+  "ui/language_settings.dart:590",
+  "ui/library_page.dart:502",
+  "ui/manage_blocks.dart:835",
+  "ui/manage_blocks.dart:978",
+  "ui/manage_blocks.dart:1061",
+  "ui/manage_blocks.dart:1149",
+  "ui/manage_degrees.dart:567",
+  "ui/manage_degrees.dart:661",
+  "ui/manage_snippets.dart:412",
+  "ui/manage_snippets.dart:2078",
   "ui/manage_templates.dart:251",
-  "ui/manage_templates.dart:536"
+  "ui/manage_templates.dart:536",
+  "ui/metadata_editor.dart:1466",
+  "ui/new_document.dart:162",
+  "ui/new_document.dart:288",
+  "ui/new_unit.dart:268",
+  "ui/new_unit.dart:454",
+  "ui/new_unit.dart:660",
+  "ui/place_browser.dart:241",
+  "ui/place_browser.dart:592",
+  "ui/problem_set.dart:449",
+  "ui/recent_changes.dart:214",
+  "ui/remove_repository.dart:155",
+  "ui/reuse.dart:338",
+  "ui/reuse.dart:732",
+  "ui/reuse.dart:1142",
+  "ui/review_panel.dart:368",
+  "ui/settings_page.dart:1791",
+  "ui/settings_page.dart:2398",
+  "ui/source_view.dart:1313",
+  "ui/start_over.dart:213",
+  "ui/sync_bar.dart:662",
+  "ui/sync_bar.dart:1132",
+  "ui/template_editor.dart:1175",
+  "ui/toolchain_check.dart:953",
+  "ui/translate_unit.dart:511",
+  "ui/unit_page.dart:2580",
+  "ui/unit_preview.dart:999",
+  "ui/update_section.dart:367",
+  "ui/year_page.dart:1137",
+  "ui/year_page.dart:2991"
  ],
  "Carpeta de reparto": [
   "ui/settings_page.dart:316"
  ],
  "Casi todas las distribuciones lo traen puesto; si no, lo instala el gestor de paquetes con la contraseña de administrador.": [
-  "model/toolchain.dart:537"
+  "model/toolchain.dart:637"
  ],
  "Casi todo": [
   "ui/start_over.dart:85"
  ],
  "Categoría": [
-  "ui/place_browser.dart:309",
-  "ui/library_search.dart:193"
+  "ui/library_search.dart:193",
+  "ui/place_browser.dart:309"
  ],
  "Catálogo": [
   "ui/settings_page.dart:330"
@@ -1118,28 +1128,28 @@
   "ui/update_section.dart:346"
  ],
  "Cerrar": [
-  "main.dart:815",
-  "ui/problem.dart:408",
-  "ui/compare_view.dart:219",
-  "ui/history_tab.dart:839",
-  "ui/manage_degrees.dart:143",
-  "ui/reuse.dart:824",
-  "ui/build_strip.dart:103",
-  "ui/build_strip.dart:105",
-  "ui/save_review.dart:170",
-  "ui/recent_changes.dart:316",
+  "main.dart:820",
   "ui/build_console.dart:599",
   "ui/build_console.dart:672",
-  "ui/shortcuts.dart:176",
-  "ui/quick_look.dart:307",
-  "ui/pdf_dialog.dart:453",
-  "ui/review_panel.dart:380",
-  "ui/toolchain_check.dart:978",
-  "ui/update_section.dart:283",
-  "ui/unit_page.dart:2371",
-  "ui/manage_blocks.dart:239",
+  "ui/build_strip.dart:103",
+  "ui/build_strip.dart:105",
+  "ui/compare_view.dart:219",
   "ui/freezes.dart:155",
-  "ui/translate_unit.dart:511"
+  "ui/history_tab.dart:839",
+  "ui/manage_blocks.dart:239",
+  "ui/manage_degrees.dart:143",
+  "ui/pdf_dialog.dart:453",
+  "ui/problem.dart:408",
+  "ui/quick_look.dart:307",
+  "ui/recent_changes.dart:316",
+  "ui/reuse.dart:824",
+  "ui/review_panel.dart:380",
+  "ui/save_review.dart:170",
+  "ui/shortcuts.dart:176",
+  "ui/toolchain_check.dart:1234",
+  "ui/translate_unit.dart:511",
+  "ui/unit_page.dart:2371",
+  "ui/update_section.dart:283"
  ],
  "Cerrar  Esc": [
   "ui/tex_find_bar.dart:363"
@@ -1161,15 +1171,18 @@
   "ui/tabs.dart:162"
  ],
  "Cerrar sin guardar": [
-  "main.dart:343",
-  "ui/manage_snippets.dart:2013",
+  "main.dart:348",
+  "ui/manage_snippets.dart:2014",
   "ui/template_editor.dart:1111"
  ],
  "Cierra Didacta y vuelve a abrirla para que vea el PATH nuevo.": [
-  "model/toolchain.dart:446"
+  "model/toolchain.dart:554"
  ],
  "Cierra Didacta y vuelve a abrirla.": [
-  "model/toolchain.dart:530"
+  "model/toolchain.dart:452",
+  "model/toolchain.dart:465",
+  "model/toolchain.dart:630",
+  "model/toolchain.dart:855"
  ],
  "Cierra un entorno": [
   "model/tex_vocabulary.dart:79"
@@ -1241,11 +1254,11 @@
   "model/notification.dart:38"
  ],
  "Compilado en {0} s": [
-  "ui/manage_snippets.dart:2337",
+  "ui/manage_snippets.dart:2338",
   "ui/template_editor.dart:1253"
  ],
  "Compilando la vista previa…": [
-  "ui/manage_snippets.dart:2433",
+  "ui/manage_snippets.dart:2434",
   "ui/template_editor.dart:1404"
  ],
  "Compilando {0}": [
@@ -1261,26 +1274,26 @@
   "ui/unit_preview.dart:899"
  ],
  "Compilando…": [
-  "ui/unit_preview.dart:783",
-  "ui/manage_snippets.dart:2330",
-  "ui/template_editor.dart:1246"
+  "ui/manage_snippets.dart:2331",
+  "ui/template_editor.dart:1246",
+  "ui/unit_preview.dart:783"
  ],
  "Compilar": [
-  "ui/unit_preview.dart:789",
   "ui/document_page.dart:784",
   "ui/document_page.dart:1400",
-  "ui/settings_page.dart:347"
+  "ui/settings_page.dart:347",
+  "ui/unit_preview.dart:789"
  ],
  "Compilar ahora": [
   "ui/composition_editor.dart:534",
   "ui/document_page.dart:251"
  ],
  "Compilar ahora (Ctrl+Intro)": [
-  "ui/manage_snippets.dart:2397",
+  "ui/manage_snippets.dart:2398",
   "ui/template_editor.dart:1364"
  ],
  "Compilar ahora (⌘↵)": [
-  "ui/manage_snippets.dart:2396",
+  "ui/manage_snippets.dart:2397",
   "ui/template_editor.dart:1363"
  ],
  "Compilar antes solo ese": [
@@ -1317,7 +1330,7 @@
   "ui/document_page.dart:375"
  ],
  "Compilar lee los ficheros del disco, así que hace falta la copia del repositorio de contenido en tu ordenador. Se elige en Ajustes.": [
-  "data/compiler_io.dart:372"
+  "data/compiler_io.dart:427"
  ],
  "Compilar lo desactualizado": [
   "ui/year_page.dart:1381"
@@ -1353,8 +1366,8 @@
   "ui/unit_page.dart:494"
  ],
  "Compilar {0}": [
-  "ui/unit_preview.dart:701",
-  "ui/build_button.dart:232"
+  "ui/build_button.dart:232",
+  "ui/unit_preview.dart:701"
  ],
  "Compilar {0} en {1}. Mantén pulsado para elegir el idioma o compilar todas las versiones": [
   "ui/build_button.dart:166"
@@ -1382,17 +1395,17 @@
   "ui/add_repository.dart:284"
  ],
  "Comprobando…": [
-  "ui/update_section.dart:116",
-  "ui/settings_page.dart:2580"
+  "ui/settings_page.dart:2580",
+  "ui/update_section.dart:116"
  ],
  "Con TinyTeX: tlmgr install biblatex biber. En Debian o Ubuntu: sudo apt install biber.": [
-  "model/toolchain.dart:835"
+  "model/toolchain.dart:1042"
  ],
  "Con TinyTeX: tlmgr install biblatex biber. MacTeX ya lo trae.": [
-  "model/toolchain.dart:828"
+  "model/toolchain.dart:1035"
  ],
  "Con TinyTeX: tlmgr install biblatex biber. MiKTeX lo instala solo la primera vez que hace falta.": [
-  "model/toolchain.dart:831"
+  "model/toolchain.dart:1038"
  ],
  "Con ahora": [
   "ui/history_tab.dart:715"
@@ -1451,6 +1464,9 @@
  "Con uno basta: los demás repositorios la usan sin declararla. Tenerla también en otro hace que viaje con ese material; al guardar se escribe en todos los marcados.": [
   "ui/template_editor.dart:814"
  ],
+ "Con winget, Didacta lo instala todo sola": [
+  "ui/toolchain_check.dart:587"
+ ],
  "Conexión": [
   "ui/mcp_page.dart:58"
  ],
@@ -1506,20 +1522,20 @@
   "ui/unit_page.dart:3731"
  ],
  "Copiado.": [
-  "ui/problem.dart:395",
   "ui/document_page.dart:1458",
-  "ui/mcp_page.dart:161"
+  "ui/mcp_page.dart:161",
+  "ui/problem.dart:395"
  ],
  "Copiado: {0}": [
   "ui/document_page.dart:496",
   "ui/unit_page.dart:645"
  ],
  "Copiar": [
-  "ui/problem.dart:397",
-  "ui/document_page.dart:1447",
-  "ui/platform_menus.dart:162",
   "ui/build_console.dart:654",
-  "ui/mcp_page.dart:215"
+  "ui/document_page.dart:1447",
+  "ui/mcp_page.dart:215",
+  "ui/platform_menus.dart:162",
+  "ui/problem.dart:397"
  ],
  "Copiar 1": [
   "ui/course_admin_ui.dart:1133"
@@ -1540,7 +1556,7 @@
   "ui/document_page.dart:490"
  ],
  "Copiar el detalle": [
-  "ui/toolchain_check.dart:913"
+  "ui/toolchain_check.dart:1160"
  ],
  "Copiar informe de diagnóstico": [
   "ui/settings_page.dart:1137"
@@ -1583,7 +1599,7 @@
   "ui/sync_bar.dart:560"
  ],
  "Corregir y revisar {0} de «{1}»": [
-  "state/catalogue_editor.dart:1892"
+  "state/catalogue_editor.dart:1896"
  ],
  "Cortar": [
   "ui/platform_menus.dart:150"
@@ -1601,20 +1617,20 @@
   "state/repositories.dart:587"
  ],
  "Crear": [
-  "ui/new_unit.dart:283",
-  "ui/new_document.dart:182",
-  "ui/new_document.dart:297",
-  "ui/place_browser.dart:255",
   "ui/course_admin_ui.dart:704",
   "ui/course_admin_ui.dart:860",
-  "ui/freezes.dart:864"
+  "ui/freezes.dart:864",
+  "ui/new_document.dart:182",
+  "ui/new_document.dart:297",
+  "ui/new_unit.dart:283",
+  "ui/place_browser.dart:255"
  ],
  "Crear copia independiente": [
   "ui/year_page.dart:2914"
  ],
  "Crear el ejemplo": [
-  "ui/welcome.dart:861",
-  "ui/add_repository.dart:715"
+  "ui/add_repository.dart:715",
+  "ui/welcome.dart:861"
  ],
  "Crear el ejemplo necesita clonarlo, y aquí no se puede.": [
   "state/repositories.dart:533"
@@ -1626,8 +1642,8 @@
   "ui/problem_set.dart:455"
  ],
  "Crear un curso desde aquí…": [
-  "ui/shell.dart:416",
-  "ui/freezes.dart:305"
+  "ui/freezes.dart:305",
+  "ui/shell.dart:416"
  ],
  "Crear un curso desde «{0}»": [
   "ui/freezes.dart:800"
@@ -1636,15 +1652,15 @@
   "ui/composition_editor.dart:1387"
  ],
  "Crear versión congelada…": [
-  "ui/year_page.dart:121",
   "ui/courses_page.dart:1755",
-  "ui/info_menu.dart:226"
+  "ui/info_menu.dart:226",
+  "ui/year_page.dart:121"
  ],
  "Criterios de corrección": [
   "model/tex_vocabulary.dart:128"
  ],
  "Ctrl+Intro compila la vista previa · Ctrl+S guarda": [
-  "ui/manage_snippets.dart:2045",
+  "ui/manage_snippets.dart:2046",
   "ui/template_editor.dart:1143"
  ],
  "Ctrl+clic": [
@@ -1657,7 +1673,7 @@
   "ui/library_page.dart:1163"
  ],
  "Cualquiera de estas sirve: Didacta solo necesita latexmk y paquetes que están en CTAN. Lo que cambia es cuánto ocupa y si hace falta la contraseña de administrador.": [
-  "ui/toolchain_check.dart:682"
+  "ui/toolchain_check.dart:929"
  ],
  "Cuenta": [
   "ui/welcome.dart:337"
@@ -1703,7 +1719,7 @@
   "ui/welcome_art.dart:329"
  ],
  "Cómo hacerlo a mano": [
-  "ui/toolchain_check.dart:920"
+  "ui/toolchain_check.dart:1167"
  ],
  "Cómo juntarlos": [
   "ui/problem.dart:73"
@@ -1715,8 +1731,8 @@
   "ui/library_page.dart:745"
  ],
  "Cómo se llama": [
-  "ui/new_document.dart:261",
   "ui/manage_snippets.dart:1608",
+  "ui/new_document.dart:261",
   "ui/template_editor.dart:624"
  ],
  "Cómo se llega. Sale en la hoja con soluciones y en la del profesor.": [
@@ -1738,8 +1754,8 @@
   "data/course_admin.dart:559"
  ],
  "Darla en otro tema…": [
-  "ui/unit_page.dart:524",
-  "ui/info_menu.dart:273"
+  "ui/info_menu.dart:273",
+  "ui/unit_page.dart:524"
  ],
  "Darla por revisada y abrir la siguiente sin revisar": [
   "ui/unit_page.dart:2401"
@@ -1772,13 +1788,13 @@
   "ui/between_repos_page.dart:497"
  ],
  "Debian o Ubuntu: sudo apt install git": [
-  "model/toolchain.dart:458"
+  "model/toolchain.dart:566"
  ],
  "Debian o Ubuntu: sudo apt install python3": [
-  "model/toolchain.dart:542"
+  "model/toolchain.dart:642"
  ],
  "Debian o Ubuntu: sudo apt install texlive-latex-extra texlive-science latexmk": [
-  "model/toolchain.dart:809"
+  "model/toolchain.dart:928"
  ],
  "Decir dónde está TeX": [
   "ui/settings_page.dart:2652"
@@ -1787,46 +1803,46 @@
   "ui/manage_blocks.dart:575"
  ],
  "Declarar": [
-  "ui/manage_degrees.dart:124",
-  "ui/manage_degrees.dart:583",
   "ui/manage_blocks.dart:220",
-  "ui/manage_blocks.dart:857"
+  "ui/manage_blocks.dart:857",
+  "ui/manage_degrees.dart:124",
+  "ui/manage_degrees.dart:583"
  ],
  "Declarar el bloque {0}": [
-  "state/catalogue_editor.dart:652"
+  "state/catalogue_editor.dart:656"
  ],
  "Declarar el grado {0}": [
-  "state/catalogue_editor.dart:536"
+  "state/catalogue_editor.dart:540"
  ],
  "Declarar el subtema {0}": [
-  "state/catalogue_editor.dart:720"
+  "state/catalogue_editor.dart:724"
  ],
  "Declarar el tema {0}": [
-  "state/catalogue_editor.dart:719"
+  "state/catalogue_editor.dart:723"
  ],
  "Declarar el tema «{0}» en {1} {2}": [
   "data/course_admin.dart:377"
  ],
  "Declarar la categoría {0}": [
-  "state/catalogue_editor.dart:718"
+  "state/catalogue_editor.dart:722"
  ],
  "Declarar la plantilla {0}": [
-  "state/catalogue_editor.dart:1380"
+  "state/catalogue_editor.dart:1384"
  ],
  "Declarar la plantilla {0}, con las de serie": [
-  "state/catalogue_editor.dart:1379"
+  "state/catalogue_editor.dart:1383"
  ],
  "Declararlo": [
   "ui/between_repos_page.dart:203"
  ],
  "Definición": [
-  "ui/welcome_art.dart:352",
   "model/tex_vocabulary.dart:108",
-  "model/tex_wrap.dart:266"
+  "model/tex_wrap.dart:266",
+  "ui/welcome_art.dart:352"
  ],
  "Definición por casos": [
-  "model/tex_vocabulary.dart:143",
-  "model/tex_snippets.dart:99"
+  "model/tex_snippets.dart:99",
+  "model/tex_vocabulary.dart:143"
  ],
  "Deja Didacta en este ordenador como recién instalada: sin la sesión de GitHub, sin ajustes y sin la lista de repositorios. Al volver a abrirse empieza por la bienvenida.\n\nTirar la aplicación a la Papelera no borra nada de esto, así que es lo que hay que hacer antes si no quieres que quede nada.": [
   "ui/start_over.dart:44"
@@ -1853,10 +1869,10 @@
   "ui/settings_page.dart:217"
  ],
  "Dejar de declarar el bloque {0}": [
-  "state/catalogue_editor.dart:755"
+  "state/catalogue_editor.dart:759"
  ],
  "Dejar de declarar el grado {0}": [
-  "state/catalogue_editor.dart:564"
+  "state/catalogue_editor.dart:568"
  ],
  "Dejar de editar la composición": [
   "ui/document_page.dart:480"
@@ -1896,7 +1912,7 @@
   "ui/problem_editor.dart:233"
  ],
  "Desactivar": [
-  "state/catalogue_editor.dart:1794"
+  "state/catalogue_editor.dart:1798"
  ],
  "Desactivar, se queda comentada": [
   "ui/composition_editor.dart:878"
@@ -1908,43 +1924,47 @@
   "ui/update_section.dart:308"
  ],
  "Descarga BasicTeX.pkg de tug.org/mactex/morepackages.html": [
-  "model/toolchain.dart:651"
+  "model/toolchain.dart:760"
  ],
  "Descarga MacTeX.pkg de tug.org/mactex": [
-  "model/toolchain.dart:677"
+  "model/toolchain.dart:786"
  ],
  "Descarga Python 3 de python.org/downloads/windows": [
-  "model/toolchain.dart:528"
+  "model/toolchain.dart:628"
  ],
  "Descarga cancelada.": [
   "data/update_installer_io.dart:96"
  ],
  "Descarga el instalador básico de miktex.org/download": [
-  "model/toolchain.dart:735"
+  "model/toolchain.dart:842",
+  "model/toolchain.dart:853"
  ],
  "Descarga el instalador de git-scm.com/downloads/win": [
-  "model/toolchain.dart:444"
+  "model/toolchain.dart:552"
+ ],
+ "Descarga el instalador de strawberryperl.com": [
+  "model/toolchain.dart:463"
  ],
  "Descarga install-tl-windows.exe de tug.org/texlive/windows.html": [
-  "model/toolchain.dart:758"
+  "model/toolchain.dart:877"
  ],
  "Descarga yihui.org/tinytex/install-bin-windows.bat y ejecútalo.": [
-  "model/toolchain.dart:705"
+  "model/toolchain.dart:814"
  ],
  "Descargado en {0}": [
-  "data/toolchain_io.dart:470"
+  "data/toolchain_io.dart:627"
  ],
  "Descargado {0}": [
-  "data/toolchain_io.dart:465"
+  "data/toolchain_io.dart:622"
  ],
  "Descargado {0} de {1}": [
-  "data/toolchain_io.dart:461"
+  "data/toolchain_io.dart:618"
  ],
  "Descargando el motor…": [
-  "ui/toolchain_check.dart:267"
+  "ui/toolchain_check.dart:332"
  ],
  "Descargando {0}": [
-  "data/toolchain_io.dart:432"
+  "data/toolchain_io.dart:589"
  ],
  "Descargando {0} de {1}": [
   "ui/update_section.dart:395"
@@ -1956,30 +1976,36 @@
   "ui/update_section.dart:391"
  ],
  "Descargar BasicTeX": [
-  "model/toolchain.dart:642"
+  "model/toolchain.dart:751"
  ],
  "Descargar Git para Windows": [
-  "model/toolchain.dart:439"
+  "model/toolchain.dart:546"
  ],
  "Descargar MacTeX": [
-  "model/toolchain.dart:668"
+  "model/toolchain.dart:777"
+ ],
+ "Descargar MiKTeX": [
+  "model/toolchain.dart:847"
  ],
  "Descargar Python": [
-  "model/toolchain.dart:523"
+  "model/toolchain.dart:622"
+ ],
+ "Descargar Strawberry Perl": [
+  "model/toolchain.dart:456"
  ],
  "Descargar TeX Live": [
-  "model/toolchain.dart:749"
+  "model/toolchain.dart:868"
  ],
  "Descargar el motor": [
-  "model/toolchain.dart:374"
+  "model/toolchain.dart:490"
  ],
  "Descartar": [
   "ui/composition_editor.dart:682",
-  "ui/year_page.dart:2144",
-  "ui/source_view.dart:781",
   "ui/metadata_editor.dart:491",
+  "ui/source_view.dart:781",
   "ui/unit_page.dart:2157",
-  "ui/unit_page.dart:2208"
+  "ui/unit_page.dart:2208",
+  "ui/year_page.dart:2144"
  ],
  "Descartar los cambios": [
   "ui/unit_page.dart:2146"
@@ -1994,11 +2020,11 @@
   "ui/unit_page.dart:2348"
  ],
  "Deshacer": [
-  "ui/year_page.dart:1248",
+  "ui/course_admin_ui.dart:192",
+  "ui/platform_menus.dart:125",
   "ui/recent_changes.dart:219",
   "ui/recent_changes.dart:305",
-  "ui/platform_menus.dart:125",
-  "ui/course_admin_ui.dart:192"
+  "ui/year_page.dart:1248"
  ],
  "Deshacer: quitar el curso {0} de {1}": [
   "ui/year_page.dart:277"
@@ -2007,8 +2033,8 @@
   "ui/courses_page.dart:870"
  ],
  "Deshacer: {0}": [
-  "ui/year_page.dart:1270",
-  "ui/recent_changes.dart:233"
+  "ui/recent_changes.dart:233",
+  "ui/year_page.dart:1270"
  ],
  "Deshecho: el curso está como antes.": [
   "ui/year_page.dart:1281"
@@ -2023,7 +2049,7 @@
   "ui/composition_editor.dart:1613"
  ],
  "Después: ~/Library/TinyTeX/bin/universal-darwin/tlmgr install latexmk beamer pgfplots tcolorbox biblatex biber": [
-  "model/toolchain.dart:624"
+  "model/toolchain.dart:733"
  ],
  "Detalle": [
   "ui/manage_templates.dart:42"
@@ -2032,50 +2058,50 @@
   "ui/problem.dart:291"
  ],
  "Detener": [
-  "ui/build_strip.dart:81",
   "ui/build_console.dart:592",
+  "ui/build_strip.dart:81",
   "ui/translate_unit.dart:506"
  ],
  "Detenida a los {0} s": [
   "ui/build_console.dart:538"
  ],
  "Detenida.": [
-  "ui/build_console.dart:263",
-  "state/build_console.dart:239"
+  "state/build_console.dart:239",
+  "ui/build_console.dart:263"
  ],
  "Detenida: {0} de {1} hechos": [
   "state/build_service.dart:303"
  ],
  "Deteniendo…": [
-  "ui/build_strip.dart:81",
-  "ui/build_console.dart:592"
+  "ui/build_console.dart:592",
+  "ui/build_strip.dart:81"
  ],
  "Diapositiva": [
-  "model/tex_wrap.dart:202",
-  "model/latex_snippets.dart:116"
+  "model/latex_snippets.dart:116",
+  "model/tex_wrap.dart:202"
  ],
  "Diapositivas": [
   "ui/manage_snippets.dart:69",
-  "ui/tex_toolbar.dart:67",
-  "ui/manage_templates.dart:38"
+  "ui/manage_templates.dart:38",
+  "ui/tex_toolbar.dart:67"
  ],
  "Diapositivas o copia del profesor": [
   "model/tex_vocabulary.dart:59"
  ],
  "Didacta": [
-  "main.dart:419",
-  "main.dart:447",
-  "main.dart:522",
-  "main.dart:651",
+  "main.dart:424",
+  "main.dart:452",
+  "main.dart:527",
+  "main.dart:656",
+  "model/catalogue.dart:1890",
   "ui/manage_snippets.dart:767",
   "ui/platform_menus.dart:92",
   "ui/shell.dart:694",
-  "ui/welcome.dart:312",
   "ui/sign_in.dart:253",
-  "model/catalogue.dart:1890"
+  "ui/welcome.dart:312"
  ],
  "Didacta clona su propio repositorio al lado de los tuyos. Son unos megas y no hace falta cuenta: es público.": [
-  "model/toolchain.dart:375"
+  "model/toolchain.dart:491"
  ],
  "Didacta entra como GitHub App: llega a los repositorios que le des, no a todos los tuyos. La sesión se renueva sola.": [
   "ui/settings_page.dart:1370"
@@ -2140,8 +2166,8 @@
   "ui/year_page.dart:1582"
  ],
  "Documentos": [
-  "ui/template_editor.dart:920",
-  "model/palette.dart:43"
+  "model/palette.dart:43",
+  "ui/template_editor.dart:920"
  ],
  "Documentos que llaman fuera": [
   "ui/between_repos_page.dart:87"
@@ -2150,9 +2176,9 @@
   "ui/problem.dart:130"
  ],
  "Duplicar": [
+  "ui/manage_templates.dart:718",
   "ui/new_unit.dart:461",
-  "ui/reuse.dart:45",
-  "ui/manage_templates.dart:718"
+  "ui/reuse.dart:45"
  ],
  "Duplicar aquí": [
   "ui/reuse.dart:747"
@@ -2237,12 +2263,12 @@
   "ui/metadata_editor.dart:398"
  ],
  "Editar {0}": [
-  "ui/edit_course.dart:176",
-  "model/commit_message.dart:28"
+  "model/commit_message.dart:28",
+  "ui/edit_course.dart:176"
  ],
  "Editar {0} ({1})": [
-  "model/source_drafts.dart:103",
-  "model/commit_message.dart:26"
+  "model/commit_message.dart:26",
+  "model/source_drafts.dart:103"
  ],
  "Editar {0} cosas de {1}": [
   "model/commit_message.dart:33"
@@ -2261,11 +2287,13 @@
   "ui/manage_snippets.dart:903"
  ],
  "Ejecútalo y acepta las opciones por defecto.": [
-  "model/toolchain.dart:445",
-  "model/toolchain.dart:736"
+  "model/toolchain.dart:464",
+  "model/toolchain.dart:553",
+  "model/toolchain.dart:843",
+  "model/toolchain.dart:854"
  ],
  "Ejecútalo y sigue el instalador.": [
-  "model/toolchain.dart:759"
+  "model/toolchain.dart:878"
  ],
  "Ejemplo": [
   "model/tex_vocabulary.dart:113",
@@ -2282,7 +2310,10 @@
   "ui/tour.dart:316"
  ],
  "El TeX Live de tu distribución": [
-  "model/toolchain.dart:794"
+  "model/toolchain.dart:913"
+ ],
+ "El TeX del sistema": [
+  "model/toolchain.dart:1008"
  ],
  "El cambio está hecho y guardado, pero el índice no se pudo regenerar, así que la pantalla no lo verá todavía. Ejecuta `didacta index` en el repositorio.": [
   "data/course_admin.dart:801"
@@ -2291,10 +2322,10 @@
   "data/course_admin.dart:773"
  ],
  "El catálogo lo genera el motor, que no está configurado. Se elige en Ajustes; mientras tanto, desde el repositorio de contenido:": [
-  "main.dart:981"
+  "main.dart:986"
  ],
  "El catálogo lo genera el motor, y Didacta lo puede regenerar ahora mismo a partir de lo que hay en el disco.": [
-  "main.dart:973"
+  "main.dart:978"
  ],
  "El color con el que se marca en toda la aplicación": [
   "ui/settings_page.dart:1874"
@@ -2335,7 +2366,10 @@
   "ui/metadata_editor.dart:587"
  ],
  "El instalador está abierto. Cuando termine, vuelve a comprobar.": [
-  "ui/toolchain_check.dart:200"
+  "ui/toolchain_check.dart:256"
+ ],
+ "El latexmk de MiKTeX necesita Perl, y este Windows no tiene winget para instalarlo solo.": [
+  "model/toolchain.dart:457"
  ],
  "El manifiesto del último release no se entiende.": [
   "data/release_channel.dart:216"
@@ -2359,55 +2393,55 @@
   "ui/reuse.dart:49"
  ],
  "El motor de Didacta está escrito en Python, y en este ordenador no encuentro ninguno.\n\nInstala Python 3 desde https://www.python.org/downloads/ --basta con la versión 3.9 o posterior, y no hace falta instalar nada más--. Si ya lo tienes, puede que sea el de la Microsoft Store, que no es un Python sino un acceso directo a la tienda.": [
-  "data/compiler_io.dart:131"
+  "data/compiler_io.dart:137"
  ],
  "El motor de Didacta está escrito en Python. No hace falta saber Python ni instalar nada más: el motor no tiene dependencias.": [
   "model/toolchain.dart:145"
  ],
  "El motor está en {0}": [
-  "ui/toolchain_check.dart:283"
+  "ui/toolchain_check.dart:348"
  ],
  "El motor falló (código {0}).": [
-  "data/compiler_io.dart:930"
+  "data/compiler_io.dart:985"
  ],
  "El motor necesita Python {0} o posterior, y esta es la {1}.": [
-  "data/toolchain_io.dart:172"
+  "data/toolchain_io.dart:234"
  ],
  "El motor no cambió nada, así que no hay nada que guardar.": [
   "data/course_admin.dart:795"
  ],
  "El motor no devolvió un estado legible.": [
-  "data/compiler_io.dart:434",
-  "data/compiler_io.dart:497",
-  "data/compiler_io.dart:667"
+  "data/compiler_io.dart:489",
+  "data/compiler_io.dart:552",
+  "data/compiler_io.dart:722"
  ],
  "El motor no devolvió un resultado legible para {0}.": [
-  "data/compiler_io.dart:777"
+  "data/compiler_io.dart:832"
  ],
  "El motor no devolvió un resultado legible.": [
-  "data/compiler_io.dart:584"
+  "data/compiler_io.dart:639"
  ],
  "El motor no devolvió una revisión legible.": [
-  "data/compiler_io.dart:1014"
+  "data/compiler_io.dart:1069"
  ],
  "El motor no dijo cuánto ocupa la carpeta de compilación.": [
-  "data/compiler_io.dart:1038"
+  "data/compiler_io.dart:1093"
  ],
  "El motor no dijo por qué puerto escucha ({0}).": [
   "data/mcp_process_io.dart:120"
  ],
  "El motor no dijo qué había exportado.": [
-  "data/compiler_io.dart:642"
+  "data/compiler_io.dart:697"
  ],
  "El motor no dijo si el índice está al día.": [
-  "data/compiler_io.dart:458"
+  "data/compiler_io.dart:513"
  ],
  "El motor no ha contestado.": [
-  "state/catalogue_editor.dart:1156",
-  "state/catalogue_editor.dart:1500"
+  "state/catalogue_editor.dart:1160",
+  "state/catalogue_editor.dart:1504"
  ],
  "El motor no supo decir de dónde sale eso.": [
-  "data/compiler_io.dart:981"
+  "data/compiler_io.dart:1036"
  ],
  "El nombre de la carpeta y lo que se referencia": [
   "ui/course_admin_ui.dart:780"
@@ -2443,7 +2477,7 @@
   "model/tex_vocabulary.dart:270"
  ],
  "El que mantiene tu sistema, con sus actualizaciones. Pide la contraseña de administrador, así que se instala en un terminal.": [
-  "model/toolchain.dart:796"
+  "model/toolchain.dart:915"
  ],
  "El repositorio": [
   "ui/build_folder.dart:47"
@@ -2579,16 +2613,16 @@
   "ui/settings_page.dart:1767"
  ],
  "En el Terminal: brew install git": [
-  "model/toolchain.dart:395"
+  "model/toolchain.dart:511"
  ],
  "En el Terminal: brew install python": [
-  "model/toolchain.dart:477"
+  "model/toolchain.dart:585"
  ],
  "En el Terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh": [
-  "model/toolchain.dart:621"
+  "model/toolchain.dart:730"
  ],
  "En el instalador, marca «Add python.exe to PATH».": [
-  "model/toolchain.dart:529"
+  "model/toolchain.dart:629"
  ],
  "En el navegador no hace falta actualizar: recarga la página y ya tienes la última versión.": [
   "data/update_installer_stub.dart:20"
@@ -2607,10 +2641,10 @@
   "data/update_installer_stub.dart:46"
  ],
  "En el navegador no se puede instalar nada.": [
-  "data/toolchain_stub.dart:45"
+  "data/toolchain_stub.dart:51"
  ],
  "En el programa (sin copia de seguridad)": [
-  "state/catalogue_editor.dart:1253"
+  "state/catalogue_editor.dart:1257"
  ],
  "En el programa no la protege nadie: no está en git, no se sincroniza y se va con este ordenador. Hazte copias desde Ajustes, y si la plantilla es de la asignatura y no tuya, guárdala en su repositorio.": [
   "ui/template_editor.dart:824"
@@ -2685,13 +2719,16 @@
   "ui/manage_blocks.dart:821"
  ],
  "En un terminal: curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh": [
-  "model/toolchain.dart:786"
+  "model/toolchain.dart:905"
  ],
  "En una consola: winget install --id Git.Git -e": [
-  "model/toolchain.dart:434"
+  "model/toolchain.dart:541"
  ],
  "En una consola: winget install --id Python.Python.3.12 -e": [
-  "model/toolchain.dart:515"
+  "model/toolchain.dart:614"
+ ],
+ "En una consola: winget install --id StrawberryPerl.StrawberryPerl -e": [
+  "model/toolchain.dart:450"
  ],
  "En uno solo. Declararlo en dos no rompe nada --se juntan por id-- pero es lo que hace que luego discrepen.": [
   "ui/manage_degrees.dart:555"
@@ -2715,7 +2752,7 @@
   "ui/course_admin_ui.dart:166"
  ],
  "Encender la plantilla {0}": [
-  "state/catalogue_editor.dart:1525"
+  "state/catalogue_editor.dart:1529"
  ],
  "Encendida": [
   "ui/template_editor.dart:746"
@@ -2767,9 +2804,9 @@
   "ui/shell.dart:89"
  ],
  "Entre repositorios": [
-  "ui/manage_snippets.dart:514",
   "ui/between_repos_page.dart:72",
-  "ui/command_palette.dart:357"
+  "ui/command_palette.dart:357",
+  "ui/manage_snippets.dart:514"
  ],
  "Enunciado": [
   "model/problem_file.dart:34"
@@ -2778,24 +2815,24 @@
   "ui/unit_page.dart:1631"
  ],
  "Enviado a GitHub.": [
-  "ui/sync_bar.dart:175",
-  "ui/platform_menus.dart:447"
+  "ui/platform_menus.dart:447",
+  "ui/sync_bar.dart:175"
  ],
  "Enviar": [
   "ui/sync_bar.dart:1139",
   "ui/sync_bar.dart:1141"
  ],
  "Enviar a GitHub": [
+  "state/repo_sync.dart:497",
   "ui/sync_bar.dart:318",
-  "ui/sync_bar.dart:1049",
-  "state/repo_sync.dart:497"
+  "ui/sync_bar.dart:1049"
  ],
  "Enviar cambios": [
   "ui/platform_menus.dart:306"
  ],
  "Enviar los cambios guardados": [
-  "ui/shortcuts.dart:37",
-  "ui/command_palette.dart:228"
+  "ui/command_palette.dart:228",
+  "ui/shortcuts.dart:37"
  ],
  "Envolver en un snippet, o quitar el que rodea al cursor": [
   "ui/tex_toolbar.dart:726"
@@ -2818,6 +2855,9 @@
  ],
  "Es el idioma de referencia: el que se supone cuando nada dice otra cosa.": [
   "ui/language_settings.dart:283"
+ ],
+ "Es el latexmk de MiKTeX, y necesita Perl para arrancar: en este ordenador no hay. MiKTeX no lo trae; pulsa «Instalar» para instalar Strawberry Perl.": [
+  "data/toolchain_io.dart:205"
  ],
  "Es el mismo tema en todas ellas, no copias: lo que se edite desde cualquiera se ve en las demás.": [
   "ui/year_page.dart:2527"
@@ -2844,7 +2884,7 @@
   "ui/language_settings.dart:165"
  ],
  "Es la carpeta que tiene dentro didacta.yaml, content/ y courses/.": [
-  "main.dart:962"
+  "main.dart:967"
  ],
  "Es la primera plantilla que se declara: con ella se escriben también las que trae Didacta, para que todo se siga compilando igual. Las que no quieras, se apagan.": [
   "ui/template_editor.dart:616"
@@ -2925,7 +2965,7 @@
   "ui/settings_page.dart:588"
  ],
  "Esta copia se ha montado sin servidor MCP.": [
-  "main.dart:254"
+  "main.dart:259"
  ],
  "Esta fórmula no es la del original: «{0}» donde el original dice «{1}».": [
   "model/formula_check.dart:230"
@@ -2964,8 +3004,12 @@
   "ui/settings_page.dart:2333"
  ],
  "Este Windows no tiene winget, así que la instalación es a mano.": [
-  "model/toolchain.dart:440",
-  "model/toolchain.dart:524"
+  "model/toolchain.dart:547",
+  "model/toolchain.dart:623",
+  "model/toolchain.dart:848"
+ ],
+ "Este Windows no tiene winget, el instalador de programas de Windows. Con él, Didacta puede instalar automáticamente {0}. Sin él, cada uno se instala a mano con su instalador oficial.": [
+  "ui/toolchain_check.dart:598"
  ],
  "Este apartado no lleva nada todavía.": [
   "ui/document_page.dart:1032"
@@ -2986,7 +3030,7 @@
   "ui/history_tab.dart:297"
  ],
  "Este paso no lo puede hacer Didacta por ti.": [
-  "data/toolchain_io.dart:266"
+  "data/toolchain_io.dart:419"
  ],
  "Este problema no son tres campos": [
   "ui/problem_editor.dart:260"
@@ -3054,13 +3098,13 @@
   "model/translation.dart:80"
  ],
  "Está descargado en {0}.": [
-  "data/toolchain_io.dart:401"
+  "data/toolchain_io.dart:558"
  ],
  "Está en el historial: desde allí se puede ver otra vez o deshacer.": [
   "ui/save_review.dart:158"
  ],
  "Está en {0} pero no contesta. Puede ser una instalación a medias o un enlace roto.": [
-  "data/toolchain_io.dart:158"
+  "data/toolchain_io.dart:220"
  ],
  "Está en {0}. Púlsalo para quitarla de ahí.": [
   "ui/template_editor.dart:1020"
@@ -3072,8 +3116,8 @@
   "ui/settings_page.dart:1696"
  ],
  "Está todo. Didacta puede traer material y sacar PDF.": [
-  "ui/toolchain_check.dart:434",
-  "ui/toolchain_check.dart:466"
+  "ui/toolchain_check.dart:512",
+  "ui/toolchain_check.dart:719"
  ],
  "Están fuera de la carpeta donde van los repositorios. Se mueve cada carpeta entera, con lo que tenga sin enviar; si en el destino ya hay algo, no se toca.": [
   "ui/add_repository.dart:340"
@@ -3097,9 +3141,9 @@
   "ui/shell.dart:375"
  ],
  "Examen": [
+  "ui/manage_templates.dart:70",
   "ui/new_document.dart:48",
-  "ui/problem_set.dart:236",
-  "ui/manage_templates.dart:70"
+  "ui/problem_set.dart:236"
  ],
  "Examen de enero": [
   "ui/problem_set.dart:261"
@@ -3118,8 +3162,8 @@
   "ui/year_page.dart:2839"
  ],
  "Exportar aquí": [
-  "ui/export_actions.dart:144",
-  "ui/courses_page.dart:596"
+  "ui/courses_page.dart:596",
+  "ui/export_actions.dart:144"
  ],
  "Exportar este curso a una carpeta": [
   "ui/courses_page.dart:1677"
@@ -3143,7 +3187,7 @@
   "ui/translation_settings.dart:333"
  ],
  "Falta biber, que es lo que compone la bibliografía: los documentos que citan un .bib saldrán sin ella. {0}": [
-  "model/toolchain.dart:840"
+  "model/toolchain.dart:1047"
  ],
  "Falta el Client ID. Crea en GitHub una GitHub App (Settings → Developer settings → GitHub Apps) o una OAuth App, con «Enable Device Flow» marcado, y pega aquí su Client ID.": [
   "ui/sign_in.dart:96"
@@ -3180,13 +3224,13 @@
   "ui/history_tab.dart:815"
  ],
  "Fedora: sudo dnf install git": [
-  "model/toolchain.dart:459"
+  "model/toolchain.dart:567"
  ],
  "Fedora: sudo dnf install python3": [
-  "model/toolchain.dart:543"
+  "model/toolchain.dart:643"
  ],
  "Fedora: sudo dnf install texlive-scheme-medium latexmk": [
-  "model/toolchain.dart:812"
+  "model/toolchain.dart:931"
  ],
  "Ficheros de temas": [
   "ui/compare_view.dart:272"
@@ -3239,8 +3283,8 @@
  ],
  "Gestionar vinculación…": [
   "ui/document_page.dart:456",
-  "ui/year_page.dart:2908",
-  "ui/info_menu.dart:283"
+  "ui/info_menu.dart:283",
+  "ui/year_page.dart:2908"
  ],
  "GitHub devolvió algo que no se entiende.": [
   "data/github.dart:373",
@@ -3303,7 +3347,7 @@
   "ui/glossary_editor.dart:199"
  ],
  "Grado de {0}: {1}": [
-  "state/catalogue_editor.dart:484"
+  "state/catalogue_editor.dart:488"
  ],
  "Grado en Matemáticas": [
   "ui/manage_degrees.dart:500"
@@ -3315,8 +3359,8 @@
   "ui/manage_degrees.dart:170"
  ],
  "Grados": [
-  "ui/manage_degrees.dart:58",
-  "ui/courses_page.dart:1242"
+  "ui/courses_page.dart:1242",
+  "ui/manage_degrees.dart:58"
  ],
  "Gratuito y sin clave, y con la variante valenciana: «seua», «duració». Traduce menos idiomas que los otros dos --el castellano, el valenciano, el catalán, el gallego, el inglés, el francés, el italiano y el portugués, en unos pares--, y el texto va a su servidor público.": [
   "ui/translation_settings.dart:452"
@@ -3355,13 +3399,13 @@
   "ui/shell.dart:731"
  ],
  "Guardado en el historial.": [
-  "ui/source_view.dart:532",
+  "state/repo_sync.dart:295",
   "ui/courses_page.dart:490",
-  "state/repo_sync.dart:295"
+  "ui/source_view.dart:532"
  ],
  "Guardado en tu ordenador, pero no se ha podido enviar a GitHub. Se enviará la próxima vez que envíes.": [
-  "state/repo_sync.dart:289",
-  "data/local_clone.dart:274"
+  "data/local_clone.dart:274",
+  "state/repo_sync.dart:289"
  ],
  "Guardado en {0} repositorio(s).": [
   "ui/manage_blocks.dart:409"
@@ -3380,32 +3424,32 @@
  ],
  "Guardando…": [
   "ui/composition_editor.dart:694",
-  "ui/year_page.dart:2155",
-  "ui/source_view.dart:793",
-  "ui/metadata_editor.dart:503",
   "ui/course_admin_ui.dart:232",
+  "ui/metadata_editor.dart:503",
+  "ui/source_view.dart:793",
+  "ui/translate_unit.dart:603",
   "ui/unit_page.dart:2178",
-  "ui/translate_unit.dart:603"
+  "ui/year_page.dart:2155"
  ],
  "Guardar": [
-  "ui/sync_bar.dart:684",
+  "ui/commit_dialog.dart:92",
   "ui/composition_editor.dart:694",
-  "ui/library_page.dart:507",
   "ui/edit_course.dart:404",
   "ui/export_actions.dart:59",
-  "ui/manage_snippets.dart:2088",
-  "ui/year_page.dart:2155",
+  "ui/freezes.dart:413",
   "ui/glossary_editor.dart:348",
-  "ui/translation_settings.dart:277",
-  "ui/source_view.dart:793",
-  "ui/source_view.dart:1322",
+  "ui/library_page.dart:507",
+  "ui/manage_snippets.dart:2089",
   "ui/metadata_editor.dart:503",
   "ui/metadata_editor.dart:1474",
-  "ui/commit_dialog.dart:92",
+  "ui/source_view.dart:793",
+  "ui/source_view.dart:1322",
+  "ui/sync_bar.dart:684",
+  "ui/template_editor.dart:1186",
+  "ui/translation_settings.dart:277",
   "ui/unit_page.dart:2178",
   "ui/unit_page.dart:2588",
-  "ui/freezes.dart:413",
-  "ui/template_editor.dart:1186"
+  "ui/year_page.dart:2155"
  ],
  "Guardar ({0})": [
   "ui/unit_page.dart:2165"
@@ -3420,8 +3464,8 @@
   "ui/translation_settings.dart:504"
  ],
  "Guardar en el historial": [
-  "ui/sync_bar.dart:546",
-  "state/repo_sync.dart:135"
+  "state/repo_sync.dart:135",
+  "ui/sync_bar.dart:546"
  ],
  "Guardar en el historial {0} fichero(s) escritos, eligiendo cuáles entran": [
   "ui/sync_bar.dart:355"
@@ -3449,8 +3493,8 @@
   "ui/source_view.dart:1246"
  ],
  "Guardar una copia": [
-  "ui/quick_look.dart:279",
-  "ui/pdf_dialog.dart:438"
+  "ui/pdf_dialog.dart:438",
+  "ui/quick_look.dart:279"
  ],
  "Guardar una copia de {0}": [
   "ui/pdf_tab.dart:714"
@@ -3477,11 +3521,11 @@
   "ui/new_document.dart:51"
  ],
  "Ha cambiado: se vuelve a compilar al parar de escribir": [
-  "ui/manage_snippets.dart:2336",
+  "ui/manage_snippets.dart:2337",
   "ui/template_editor.dart:1252"
  ],
  "Ha compilado, pero no ha dejado ningún PDF.": [
-  "ui/manage_snippets.dart:2444",
+  "ui/manage_snippets.dart:2445",
   "ui/template_editor.dart:1466"
  ],
  "Ha salido bien.": [
@@ -3542,14 +3586,14 @@
   "state/repositories.dart:308"
  ],
  "He mirado en: {0}.": [
-  "data/toolchain_io.dart:298"
+  "data/toolchain_io.dart:451"
  ],
  "He movido {0} a {1}, pero no he podido borrar del todo la carpeta de antes. Lo que queda en {0} ya no se usa: bórralo a mano.": [
   "data/local_clone_io.dart:1777"
  ],
  "Herramientas": [
-  "ui/welcome.dart:338",
-  "ui/settings_page.dart:170"
+  "ui/settings_page.dart:170",
+  "ui/welcome.dart:338"
  ],
  "Historial": [
   "ui/document_page.dart:799"
@@ -3561,10 +3605,10 @@
   "ui/problem_set.dart:237"
  ],
  "Homebrew descargará git e instalará en tu carpeta.": [
-  "model/toolchain.dart:390"
+  "model/toolchain.dart:506"
  ],
  "Homebrew instalará la última versión estable de Python 3.": [
-  "model/toolchain.dart:470"
+  "model/toolchain.dart:578"
  ],
  "Hoy": [
   "ui/update_section.dart:167"
@@ -3573,23 +3617,23 @@
   "ui/metadata_editor.dart:577"
  ],
  "Identificador": [
+  "ui/course_admin_ui.dart:779",
   "ui/history_tab.dart:817",
+  "ui/manage_blocks.dart:781",
   "ui/manage_degrees.dart:510",
   "ui/new_document.dart:120",
   "ui/new_document.dart:271",
   "ui/problem_set.dart:277",
-  "ui/course_admin_ui.dart:779",
-  "ui/manage_blocks.dart:781",
   "ui/template_editor.dart:659"
  ],
  "Identificador: {0}": [
   "ui/place_browser.dart:216"
  ],
  "Idioma": [
+  "ui/library_search.dart:114",
   "ui/platform_menus.dart:280",
   "ui/source_view.dart:732",
-  "ui/translations_page.dart:121",
-  "ui/library_search.dart:114"
+  "ui/translations_page.dart:121"
  ],
  "Idioma de Didacta": [
   "ui/settings_page.dart:575"
@@ -3618,7 +3662,7 @@
   "ui/between_repos_page.dart:726"
  ],
  "Igualar el snippet «{0}»": [
-  "state/catalogue_editor.dart:1106"
+  "state/catalogue_editor.dart:1110"
  ],
  "Igualar {0} de {1}": [
   "state/catalogue_editor.dart:91"
@@ -3641,45 +3685,60 @@
  "Insertar encima": [
   "ui/composition_editor.dart:844"
  ],
+ "Instala Perl con el gestor de paquetes del sistema.": [
+  "model/toolchain.dart:475"
+ ],
  "Instalado. Comprobando…": [
-  "ui/toolchain_check.dart:203"
+  "ui/toolchain_check.dart:259"
  ],
  "Instalar": [
-  "ui/toolchain_check.dart:622"
+  "ui/toolchain_check.dart:869"
+ ],
+ "Instalar Perl": [
+  "model/toolchain.dart:471"
+ ],
+ "Instalar Perl con winget": [
+  "model/toolchain.dart:440"
  ],
  "Instalar TinyTeX": [
-  "model/toolchain.dart:611",
-  "model/toolchain.dart:696",
-  "model/toolchain.dart:777"
+  "model/toolchain.dart:720",
+  "model/toolchain.dart:805",
+  "model/toolchain.dart:896"
  ],
  "Instalar con Homebrew": [
-  "model/toolchain.dart:389",
-  "model/toolchain.dart:469"
+  "model/toolchain.dart:505",
+  "model/toolchain.dart:577"
  ],
  "Instalar con winget": [
-  "model/toolchain.dart:419",
-  "model/toolchain.dart:500",
-  "model/toolchain.dart:720"
+  "model/toolchain.dart:535",
+  "model/toolchain.dart:608",
+  "model/toolchain.dart:829"
  ],
  "Instalar en Linux pide la contraseña de administrador, y eso se teclea en un terminal y no en una ventana de Didacta.": [
-  "model/toolchain.dart:453"
+  "model/toolchain.dart:561"
  ],
  "Instalar las herramientas de Apple": [
-  "model/toolchain.dart:401",
-  "model/toolchain.dart:483"
+  "model/toolchain.dart:517",
+  "model/toolchain.dart:591"
  ],
  "Instalar lo que falta ({0})": [
-  "ui/toolchain_check.dart:411"
+  "ui/toolchain_check.dart:489"
  ],
  "Instalar paquetes del sistema pide la contraseña de administrador, y eso se teclea en un terminal.": [
-  "model/toolchain.dart:804"
+  "model/toolchain.dart:923"
+ ],
+ "Instalar winget": [
+  "ui/toolchain_check.dart:693"
  ],
  "Instalarlo con tu gestor de paquetes": [
-  "model/toolchain.dart:452",
-  "model/toolchain.dart:536"
+  "model/toolchain.dart:560",
+  "model/toolchain.dart:636"
  ],
  "Institución (opcional)": [
   "ui/manage_degrees.dart:525"
+ ],
+ "Instálalo; tarda un minuto y no pide contraseña.": [
+  "ui/toolchain_check.dart:615"
  ],
  "Integral": [
   "model/tex_snippets.dart:85"
@@ -3697,8 +3756,8 @@
   "model/palette.dart:34"
  ],
  "Ir a Ajustes": [
-  "ui/unit_preview.dart:1335",
-  "ui/unit_page.dart:3011"
+  "ui/unit_page.dart:3011",
+  "ui/unit_preview.dart:1335"
  ],
  "Ir a Asignaturas": [
   "ui/shortcuts.dart:20"
@@ -3752,7 +3811,7 @@
   "ui/manage_snippets.dart:1333"
  ],
  "La carpeta configurada --{0}-- ya no tiene cli/didacta dentro. Se ha movido o se ha borrado.": [
-  "data/toolchain_io.dart:202"
+  "data/toolchain_io.dart:264"
  ],
  "La carpeta de compilación": [
   "ui/settings_page.dart:349"
@@ -3791,13 +3850,13 @@
   "ui/sign_in.dart:306"
  ],
  "La de siempre en Windows. Instala cada paquete la primera vez que un documento lo pide, así que empieza pequeña y crece sola.": [
-  "model/toolchain.dart:713"
+  "model/toolchain.dart:822"
  ],
  "La definición no ha compilado bien, o todavía no se ha probado como está ahora. Va al preámbulo de todo lo que se compile en los repositorios elegidos: si tiene un error, no compilará nada de ellos hasta que se arregle.": [
   "ui/manage_snippets.dart:1446"
  ],
  "La descarga falló (HTTP {0}).": [
-  "data/toolchain_io.dart:438"
+  "data/toolchain_io.dart:595"
  ],
  "La descarga no coincide con lo que anunciaba el release, así que no se va a instalar. Vuelve a intentarlo; si sigue pasando, avisa a quien publica Didacta.": [
   "data/update_installer_io.dart:132"
@@ -3806,7 +3865,7 @@
   "data/update_installer_io.dart:147"
  ],
  "La dirección de descarga no es válida.": [
-  "data/toolchain_io.dart:426"
+  "data/toolchain_io.dart:583"
  ],
  "La documentación": [
   "ui/settings_page.dart:1118"
@@ -3833,13 +3892,13 @@
   "model/tex_check.dart:225"
  ],
  "La guía oficial": [
-  "ui/toolchain_check.dart:968"
+  "ui/toolchain_check.dart:1215"
  ],
  "La instalación terminó con un error (código {0}).": [
-  "data/toolchain_io.dart:370"
+  "data/toolchain_io.dart:527"
  ],
  "La instalación terminó sin errores, pero {0} sigue sin aparecer donde Didacta busca.": [
-  "ui/toolchain_check.dart:214"
+  "ui/toolchain_check.dart:275"
  ],
  "La misma lección, también allí": [
   "ui/info_menu.dart:274"
@@ -3909,7 +3968,7 @@
   "ui/unit_page.dart:831"
  ],
  "La versión reducida de MacTeX, instalada en el sistema. Los paquetes que falten se añaden luego con `sudo tlmgr install`.": [
-  "model/toolchain.dart:634"
+  "model/toolchain.dart:743"
  ],
  "La versión {0} no está en el repositorio, ni aquí ni en GitHub. Puede que quien lo hizo no lo haya enviado todavía.": [
   "data/local_clone_io.dart:1104"
@@ -3918,7 +3977,7 @@
   "ui/courses_page.dart:936"
  ],
  "LaTeX no ha dicho por qué.": [
-  "ui/manage_snippets.dart:2544",
+  "ui/manage_snippets.dart:2545",
   "ui/template_editor.dart:1450"
  ],
  "LaTeX propio": [
@@ -3988,9 +4047,9 @@
   "ui/info_menu.dart:192"
  ],
  "Lecciones": [
+  "model/palette.dart:46",
   "ui/compare_view.dart:273",
-  "ui/template_editor.dart:928",
-  "model/palette.dart:46"
+  "ui/template_editor.dart:928"
  ],
  "Lecciones sin bloque": [
   "ui/between_repos_page.dart:84"
@@ -4028,8 +4087,8 @@
   "ui/library_page.dart:1295"
  ],
  "Linux": [
-  "model/toolchain.dart:48",
-  "data/app_info.dart:68"
+  "data/app_info.dart:68",
+  "model/toolchain.dart:48"
  ],
  "Lista con viñetas": [
   "model/tex_vocabulary.dart:139"
@@ -4070,8 +4129,8 @@
   "ui/course_admin_ui.dart:620"
  ],
  "Lo declara. Púlsalo para dejar de declararlo aquí.": [
-  "ui/manage_degrees.dart:400",
-  "ui/manage_blocks.dart:651"
+  "ui/manage_blocks.dart:651",
+  "ui/manage_degrees.dart:400"
  ],
  "Lo define Didacta o un paquete que ya se carga: no se añade nada al preámbulo.": [
   "ui/manage_snippets.dart:1808"
@@ -4089,13 +4148,13 @@
   "data/update_installer_io.dart:581"
  ],
  "Lo justo para compilar, en tu carpeta de usuario y sin permisos de administrador.": [
-  "model/toolchain.dart:688"
+  "model/toolchain.dart:797"
  ],
  "Lo justo para compilar, en tu carpeta personal y sin sudo. La opción que funciona en una máquina donde no eres administrador.": [
-  "model/toolchain.dart:769"
+  "model/toolchain.dart:888"
  ],
  "Lo justo para compilar, sin contraseña de administrador y en tu carpeta personal. Didacta le añade después los paquetes que usa.": [
-  "model/toolchain.dart:603"
+  "model/toolchain.dart:712"
  ],
  "Lo más probable es que la compilación se haya borrado: el directorio de compilación no se versiona y se puede limpiar. Vuelve a compilar con el botón de arriba.": [
   "ui/pdf_tab.dart:909"
@@ -4122,8 +4181,8 @@
   "ui/settings_page.dart:2905"
  ],
  "Lo que hace falta en tu ordenador": [
-  "ui/welcome.dart:1057",
-  "ui/settings_page.dart:343"
+  "ui/settings_page.dart:343",
+  "ui/welcome.dart:1057"
  ],
  "Lo que la barra del editor envuelve: cada snippet, cómo queda y en qué repositorios se ofrece.": [
   "ui/settings_page.dart:162"
@@ -4135,7 +4194,7 @@
   "ui/tour.dart:222"
  ],
  "Lo que se compila": [
-  "ui/manage_snippets.dart:2575"
+  "ui/manage_snippets.dart:2576"
  ],
  "Lo que se escribe dentro en la vista previa": [
   "ui/manage_snippets.dart:1867"
@@ -4249,7 +4308,7 @@
   "ui/source_view.dart:770"
  ],
  "Marcar {0} de «{1}» como {2}": [
-  "state/catalogue_editor.dart:1838"
+  "state/catalogue_editor.dart:1842"
  ],
  "Marcar «{0}»": [
   "ui/courses_page.dart:1844"
@@ -4259,15 +4318,15 @@
   "ui/welcome_art.dart:583"
  ],
  "Matemáticas": [
-  "ui/tex_toolbar.dart:256",
-  "model/tex_snippets.dart:64"
+  "model/tex_snippets.dart:64",
+  "ui/tex_toolbar.dart:256"
  ],
  "Material": [
   "ui/welcome.dart:339"
  ],
  "Matriz entre paréntesis": [
-  "model/tex_vocabulary.dart:144",
-  "model/tex_snippets.dart:93"
+  "model/tex_snippets.dart:93",
+  "model/tex_vocabulary.dart:144"
  ],
  "Mayús+": [
   "ui/shortcuts.dart:103"
@@ -4279,8 +4338,8 @@
   "state/translation_service.dart:462"
  ],
  "Mensaje": [
-  "ui/metadata_editor.dart:1455",
   "ui/commit_dialog.dart:73",
+  "ui/metadata_editor.dart:1455",
   "ui/unit_page.dart:2569"
  ],
  "Metadatos que no coinciden": [
@@ -4293,8 +4352,8 @@
   "ui/build_folder.dart:153"
  ],
  "Minúsculas, dígitos y guiones": [
-  "ui/new_document.dart:126",
-  "ui/course_admin_ui.dart:787"
+  "ui/course_admin_ui.dart:787",
+  "ui/new_document.dart:126"
  ],
  "Mirando qué proveedores hay configurados…": [
   "ui/translate_unit.dart:302"
@@ -4330,9 +4389,9 @@
   "ui/engine_version_line.dart:83"
  ],
  "Mover": [
+  "ui/manage_blocks.dart:1154",
   "ui/new_unit.dart:667",
-  "ui/reuse.dart:44",
-  "ui/manage_blocks.dart:1154"
+  "ui/reuse.dart:44"
  ],
  "Mover a…": [
   "ui/library_page.dart:2671",
@@ -4354,10 +4413,10 @@
   "ui/between_repos_page.dart:209"
  ],
  "Mover una lección de {0} a {1}": [
-  "state/catalogue_editor.dart:902"
+  "state/catalogue_editor.dart:906"
  ],
  "Mover {0} lecciones de {1} a {2}": [
-  "state/catalogue_editor.dart:903"
+  "state/catalogue_editor.dart:907"
  ],
  "Mover «{0}»": [
   "ui/new_unit.dart:593"
@@ -4454,9 +4513,9 @@
   "ui/review_panel.dart:305"
  ],
  "Ninguna": [
+  "ui/manage_templates.dart:54",
   "ui/translate_tab.dart:136",
-  "ui/translations_page.dart:379",
-  "ui/manage_templates.dart:54"
+  "ui/translations_page.dart:379"
  ],
  "Ninguna asignatura en esta titulación": [
   "ui/courses_page.dart:930"
@@ -4509,7 +4568,7 @@
   "data/translator_http.dart:86"
  ],
  "No borro nada fuera del directorio de compilación.": [
-  "data/compiler_io.dart:744"
+  "data/compiler_io.dart:799"
  ],
  "No coincide": [
   "ui/manage_snippets.dart:837"
@@ -4518,14 +4577,14 @@
   "ui/manage_snippets.dart:606"
  ],
  "No compila": [
-  "ui/manage_snippets.dart:2334",
+  "ui/manage_snippets.dart:2335",
   "ui/template_editor.dart:1250"
  ],
  "No compila. Guardada así, no saldrá nada de lo que se compile con ella.": [
   "ui/template_editor.dart:1428"
  ],
  "No compila. Si lo guardas así, no compilará nada de los repositorios que lo tengan.": [
-  "ui/manage_snippets.dart:2522"
+  "ui/manage_snippets.dart:2523"
  ],
  "No compiló.": [
   "ui/unit_page.dart:308"
@@ -4549,16 +4608,16 @@
   "data/release_channel.dart:316"
  ],
  "No encuentro latexmk. Didacta necesita una distribución de TeX --en macOS MacTeX o BasicTeX, en Windows MiKTeX o TeX Live, en Linux el texlive de la distribución-- o TinyTeX, que vale en las tres.\n\nHe mirado en: {0}.": [
-  "data/compiler_io.dart:385"
+  "data/compiler_io.dart:440"
  ],
  "No encuentro tlmgr, así que los paquetes se añadirán cuando hagan falta: el log de la primera compilación dice cuál.": [
-  "data/toolchain_io.dart:504"
+  "data/toolchain_io.dart:661"
  ],
  "No encuentro un nombre libre para el ejemplo: de {0} a {1}-9 están todos cogidos.": [
   "state/repositories.dart:632"
  ],
  "No encuentro {0} en esta máquina.": [
-  "data/toolchain_io.dart:297"
+  "data/toolchain_io.dart:450"
  ],
  "No es una versión semántica": [
   "model/app_version.dart:103"
@@ -4603,17 +4662,17 @@
   "ui/source_view.dart:1103"
  ],
  "No existe {0}.": [
-  "data/mcp_process_io.dart:48",
-  "data/compiler_io.dart:355"
+  "data/compiler_io.dart:410",
+  "data/mcp_process_io.dart:48"
  ],
  "No falta ningún idioma aquí. Nada que traducir.": [
   "ui/translate_unit.dart:328"
  ],
  "No ha cambiado nada.": [
-  "ui/manage_degrees.dart:241",
   "ui/courses_page.dart:489",
   "ui/manage_blocks.dart:314",
-  "ui/manage_blocks.dart:408"
+  "ui/manage_blocks.dart:408",
+  "ui/manage_degrees.dart:241"
  ],
  "No ha compilado": [
   "model/notification.dart:43"
@@ -4640,8 +4699,8 @@
   "ui/platform_menus.dart:454"
  ],
  "No había nada que guardar.": [
-  "ui/sync_bar.dart:75",
-  "ui/manage_snippets.dart:1481"
+  "ui/manage_snippets.dart:1481",
+  "ui/sync_bar.dart:75"
  ],
  "No has abierto ningún repositorio todavía, y no pasa nada: la aplicación te lo recordará, y se añaden en Ajustes cuando quieras.": [
   "ui/welcome.dart:1083"
@@ -4751,8 +4810,8 @@
   "ui/template_editor.dart:868"
  ],
  "No lo declara. Púlsalo para declararlo aquí también.": [
-  "ui/manage_degrees.dart:401",
-  "ui/manage_blocks.dart:652"
+  "ui/manage_blocks.dart:652",
+  "ui/manage_degrees.dart:401"
  ],
  "No lo muevo: {0}.": [
   "ui/engine_version_line.dart:131"
@@ -4767,7 +4826,7 @@
   "ui/manage_snippets.dart:1003"
  ],
  "No se encuentra el motor. Es el repositorio que tiene `cli/didacta`; se elige en Ajustes.": [
-  "data/compiler_io.dart:345"
+  "data/compiler_io.dart:400"
  ],
  "No se ha creado": [
   "ui/year_page.dart:765"
@@ -4788,13 +4847,17 @@
   "ui/metadata_editor.dart:1531"
  ],
  "No se ha podido compilar: el motor no ha arrancado. No es un error de la definición.": [
-  "ui/manage_snippets.dart:2518"
+  "ui/manage_snippets.dart:2519"
  ],
  "No se ha podido compilar: el motor no ha arrancado. No es un error de la plantilla.": [
   "ui/template_editor.dart:1424"
  ],
  "No se ha podido comprobar en GitHub si llegas a {0}/{1}, así que no lo añado: añadirlo sin saberlo sería abrir algo que quizá no se puede sincronizar.": [
   "state/repositories.dart:696"
+ ],
+ "No se ha podido comprobar: {0}": [
+  "data/toolchain_io.dart:168",
+  "ui/toolchain_check.dart:179"
  ],
  "No se ha podido escribir en ningún repositorio.": [
   "ui/between_repos_page.dart:544",
@@ -4840,17 +4903,17 @@
   "data/github.dart:458"
  ],
  "No se pudo abrir el PDF con otro programa ({0}).": [
-  "data/compiler_io.dart:1068"
+  "data/compiler_io.dart:1123"
  ],
  "No se pudo abrir el PDF.": [
-  "data/compiler_io.dart:1074"
+  "data/compiler_io.dart:1129"
  ],
  "No se pudo abrir el instalador.": [
-  "data/toolchain_io.dart:388",
-  "data/toolchain_io.dart:406"
+  "data/toolchain_io.dart:545",
+  "data/toolchain_io.dart:563"
  ],
  "No se pudo cargar el catálogo": [
-  "main.dart:924"
+  "main.dart:929"
  ],
  "No se pudo comprobar si hay una versión nueva.": [
   "state/update_service.dart:303"
@@ -4859,7 +4922,7 @@
   "data/release_channel.dart:237"
  ],
  "No se pudo descargar el instalador.": [
-  "data/toolchain_io.dart:474"
+  "data/toolchain_io.dart:631"
  ],
  "No se pudo descargar la actualización.": [
   "state/update_service.dart:379"
@@ -4880,13 +4943,13 @@
   "data/translator_http.dart:292"
  ],
  "No se pudo lanzar el motor ({0}).": [
-  "data/compiler_io.dart:881"
+  "data/compiler_io.dart:936"
  ],
  "No se pudo lanzar la actualización. Tu versión sigue intacta.": [
   "state/update_service.dart:420"
  ],
  "No se pudo lanzar {0}.": [
-  "data/toolchain_io.dart:329"
+  "data/toolchain_io.dart:482"
  ],
  "No se pudo leer la composición": [
   "ui/year_page.dart:2185"
@@ -4911,8 +4974,8 @@
   "ui/missing_translations.dart:91"
  ],
  "No se puede compilar.": [
-  "ui/unit_preview.dart:585",
-  "ui/settings_page.dart:2609"
+  "ui/settings_page.dart:2609",
+  "ui/unit_preview.dart:585"
  ],
  "No se puede deshacer": [
   "ui/recent_changes.dart:147"
@@ -4929,17 +4992,20 @@
  "No se sabe renovar esta credencial.": [
   "state/auth_state.dart:71"
  ],
+ "No, instalar a mano": [
+  "ui/toolchain_check.dart:639"
+ ],
  "Nombrados y sin declarar": [
-  "ui/manage_degrees.dart:90",
-  "ui/manage_blocks.dart:185"
+  "ui/manage_blocks.dart:185",
+  "ui/manage_degrees.dart:90"
  ],
  "Nombrados y sin declarar: {0}. Sus asignaturas se ven, pero sin agrupar.": [
   "ui/courses_page.dart:1214"
  ],
  "Nombre": [
-  "ui/library_page.dart:493",
   "ui/edit_course.dart:224",
-  "ui/freezes.dart:642"
+  "ui/freezes.dart:642",
+  "ui/library_page.dart:493"
  ],
  "Nombre cambiado en {0} repositorio(s).": [
   "ui/manage_blocks.dart:315"
@@ -4948,13 +5014,13 @@
   "ui/new_unit.dart:614"
  ],
  "Nombre de la plantilla {0}": [
-  "state/catalogue_editor.dart:1512"
+  "state/catalogue_editor.dart:1516"
  ],
  "Nombre del bloque": [
   "ui/manage_blocks.dart:1022"
  ],
  "Nombre del bloque {0}": [
-  "state/catalogue_editor.dart:792"
+  "state/catalogue_editor.dart:796"
  ],
  "Nombre del repositorio de contenido": [
   "ui/add_repository.dart:646"
@@ -4963,9 +5029,9 @@
   "ui/manage_blocks.dart:530"
  ],
  "Nombre en {0}": [
+  "ui/manage_blocks.dart:769",
   "ui/manage_degrees.dart:499",
-  "ui/place_browser.dart:209",
-  "ui/manage_blocks.dart:769"
+  "ui/place_browser.dart:209"
  ],
  "Nombres heredados (opcional)": [
   "ui/manage_snippets.dart:1745"
@@ -4996,10 +5062,10 @@
   "ui/update_section.dart:313"
  ],
  "Nueva asignatura": [
-  "ui/course_admin_ui.dart:758",
   "ui/courses_page.dart:118",
   "ui/courses_page.dart:235",
-  "ui/courses_page.dart:1010"
+  "ui/courses_page.dart:1010",
+  "ui/course_admin_ui.dart:758"
  ],
  "Nueva categoría": [
   "ui/place_browser.dart:157"
@@ -5015,8 +5081,8 @@
   "ui/library_page.dart:2563"
  ],
  "Nueva plantilla": [
-  "ui/template_editor.dart:535",
-  "ui/manage_templates.dart:372"
+  "ui/manage_templates.dart:372",
+  "ui/template_editor.dart:535"
  ],
  "Nueva versión": [
   "ui/update_section.dart:306"
@@ -5026,8 +5092,8 @@
   "ui/manage_blocks.dart:756"
  ],
  "Nuevo curso académico": [
-  "ui/course_admin_ui.dart:564",
-  "ui/courses_page.dart:1506"
+  "ui/courses_page.dart:1506",
+  "ui/course_admin_ui.dart:564"
  ],
  "Nuevo curso académico…": [
   "ui/courses_page.dart:1453"
@@ -5058,26 +5124,29 @@
  ],
  "Nuevo tema": [
   "ui/new_document.dart:240",
+  "ui/place_browser.dart:158",
   "ui/year_page.dart:1397",
-  "ui/year_page.dart:1574",
-  "ui/place_browser.dart:158"
+  "ui/year_page.dart:1574"
  ],
  "Nuevo tema…": [
   "ui/library_page.dart:2271",
   "ui/place_browser.dart:332"
  ],
  "O descarga Python 3 de python.org/downloads/windows, marcando «Add python.exe to PATH».": [
-  "model/toolchain.dart:516"
+  "model/toolchain.dart:615"
  ],
  "O descarga Python de python.org/downloads.": [
-  "model/toolchain.dart:493"
+  "model/toolchain.dart:601"
  ],
  "O descarga el instalador de git-scm.com/downloads/win": [
-  "model/toolchain.dart:435"
+  "model/toolchain.dart:542"
+ ],
+ "O descarga el instalador de strawberryperl.com": [
+  "model/toolchain.dart:451"
  ],
  "O, sin Homebrew: xcode-select --install": [
-  "model/toolchain.dart:396",
-  "model/toolchain.dart:478"
+  "model/toolchain.dart:512",
+  "model/toolchain.dart:586"
  ],
  "OR": [
   "ui/theme.dart:404"
@@ -5163,10 +5232,10 @@
   "ui/tex_toolbar.dart:1273"
  ],
  "Ordenar los snippets": [
-  "state/catalogue_editor.dart:1084"
+  "state/catalogue_editor.dart:1088"
  ],
  "Origen: {0}": [
-  "main.dart:937"
+  "main.dart:942"
  ],
  "Oscuro": [
   "ui/settings_page.dart:612"
@@ -5299,25 +5368,22 @@
   "ui/settings_page.dart:149"
  ],
  "Plantillas de {0}": [
-  "state/catalogue_editor.dart:1679"
+  "state/catalogue_editor.dart:1683"
  ],
  "Plantillas de {0} en {1} {2}": [
-  "state/catalogue_editor.dart:1708"
+  "state/catalogue_editor.dart:1712"
  ],
  "Plantillas de {0}: las de sus bloques": [
-  "state/catalogue_editor.dart:1707"
+  "state/catalogue_editor.dart:1711"
  ],
  "Plantillas de {0}: las del bloque": [
-  "state/catalogue_editor.dart:1678"
+  "state/catalogue_editor.dart:1682"
  ],
  "Plantillas de «{0}»": [
   "ui/manage_blocks.dart:386"
  ],
  "Plantillas del bloque {0}": [
-  "state/catalogue_editor.dart:969"
- ],
- "Poner el de la {0}": [
-  "ui/engine_version_line.dart:122"
+  "state/catalogue_editor.dart:973"
  ],
  "Poner un id estable a cada lección\n\nDerivado de la ruta con un hash, así que es el mismo lo haga quien lo haga. A partir de aquí manda el id y no la ruta: mover una lección de carpeta ya no rompe quién la usa.": [
   "data/course_admin.dart:591"
@@ -5398,11 +5464,11 @@
   "ui/translation_settings.dart:509"
  ],
  "Probar con un ejemplo": [
-  "ui/library_page.dart:736",
-  "ui/welcome.dart:846",
+  "ui/add_repository.dart:678",
   "ui/courses_page.dart:1019",
+  "ui/library_page.dart:736",
   "ui/settings_page.dart:1552",
-  "ui/add_repository.dart:678"
+  "ui/welcome.dart:846"
  ],
  "Problema": [
   "model/latex_snippets.dart:117"
@@ -5411,16 +5477,16 @@
   "ui/new_document.dart:47"
  ],
  "Problemas al leer el repositorio": [
-  "main.dart:795"
+  "main.dart:800"
  ],
  "Producto": [
   "model/tex_snippets.dart:84"
  ],
  "Profesor": [
+  "model/latex_snippets.dart:119",
   "ui/manage_snippets.dart:68",
-  "ui/tex_toolbar.dart:69",
   "ui/manage_templates.dart:48",
-  "model/latex_snippets.dart:119"
+  "ui/tex_toolbar.dart:69"
  ],
  "Propiedad": [
   "model/tex_vocabulary.dart:112",
@@ -5433,8 +5499,8 @@
   "ui/manage_snippets.dart:764"
  ],
  "Propios": [
-  "ui/manage_snippets.dart:1072",
-  "model/latex_snippets.dart:120"
+  "model/latex_snippets.dart:120",
+  "ui/manage_snippets.dart:1072"
  ],
  "Proposición": [
   "model/tex_vocabulary.dart:109",
@@ -5493,15 +5559,15 @@
  "Quitar": [
   "ui/composition_editor.dart:407",
   "ui/composition_editor.dart:888",
-  "ui/language_settings.dart:598",
-  "ui/manage_snippets.dart:420",
-  "ui/year_page.dart:1145",
-  "ui/translation_settings.dart:259",
-  "ui/metadata_editor.dart:1316",
   "ui/course_admin_ui.dart:474",
-  "ui/manage_blocks.dart:984",
   "ui/freezes.dart:463",
-  "ui/manage_templates.dart:541"
+  "ui/language_settings.dart:598",
+  "ui/manage_blocks.dart:984",
+  "ui/manage_snippets.dart:420",
+  "ui/manage_templates.dart:541",
+  "ui/metadata_editor.dart:1316",
+  "ui/translation_settings.dart:259",
+  "ui/year_page.dart:1145"
  ],
  "Quitar de este curso…": [
   "ui/year_page.dart:2863"
@@ -5513,26 +5579,26 @@
   "ui/manage_snippets.dart:928"
  ],
  "Quitar el bloque {0}": [
-  "state/catalogue_editor.dart:852"
+  "state/catalogue_editor.dart:856"
  ],
  "Quitar el bloque {0}, con sus lecciones a {1}": [
-  "state/catalogue_editor.dart:853"
+  "state/catalogue_editor.dart:857"
  ],
  "Quitar el curso {0} de {1}": [
   "data/course_admin.dart:200"
  ],
  "Quitar el filtro": [
-  "ui/sync_bar.dart:585",
-  "ui/courses_page.dart:996"
+  "ui/courses_page.dart:996",
+  "ui/sync_bar.dart:585"
  ],
  "Quitar el grado de {0}": [
-  "state/catalogue_editor.dart:483"
+  "state/catalogue_editor.dart:487"
  ],
  "Quitar el grupo {0} de {1}": [
   "ui/year_page.dart:1340"
  ],
  "Quitar el snippet «{0}»": [
-  "state/catalogue_editor.dart:1043"
+  "state/catalogue_editor.dart:1047"
  ],
  "Quitar esta versión…": [
   "ui/freezes.dart:328"
@@ -5562,8 +5628,8 @@
   "ui/courses_page.dart:1464"
  ],
  "Quitar la plantilla {0}": [
-  "state/catalogue_editor.dart:1447",
-  "state/catalogue_editor.dart:1558"
+  "state/catalogue_editor.dart:1451",
+  "state/catalogue_editor.dart:1562"
  ],
  "Quitar la selección": [
   "ui/composition_editor.dart:1371"
@@ -5587,10 +5653,10 @@
  ],
  "Quitar «{0}»": [
   "ui/manage_blocks.dart:895",
+  "ui/manage_templates.dart:491",
   "ui/tex_toolbar.dart:420",
   "ui/tex_toolbar.dart:596",
-  "ui/tex_toolbar.dart:1078",
-  "ui/manage_templates.dart:491"
+  "ui/tex_toolbar.dart:1078"
  ],
  "Quitarla de todos los sitios": [
   "ui/manage_templates.dart:723"
@@ -5608,8 +5674,8 @@
   "ui/tour.dart:192"
  ],
  "Qué es": [
-  "ui/welcome.dart:336",
-  "ui/unit_page.dart:2727"
+  "ui/unit_page.dart:2727",
+  "ui/welcome.dart:336"
  ],
  "Qué escribe": [
   "ui/manage_snippets.dart:1652"
@@ -5627,8 +5693,8 @@
   "ui/freezes.dart:275"
  ],
  "Qué has cambiado": [
-  "ui/sync_bar.dart:559",
-  "ui/source_view.dart:1303"
+  "ui/source_view.dart:1303",
+  "ui/sync_bar.dart:559"
  ],
  "Qué has cambiado, para guardar lo que falta": [
   "ui/sync_bar.dart:1122"
@@ -5713,10 +5779,10 @@
   "ui/tex_find_bar.dart:384"
  ],
  "Regenerando…": [
-  "main.dart:1041"
+  "main.dart:1046"
  ],
  "Regenerar el índice": [
-  "main.dart:1042"
+  "main.dart:1047"
  ],
  "Registro copiado.": [
   "ui/build_console.dart:665"
@@ -5734,13 +5800,13 @@
   "ui/translate_unit.dart:394"
  ],
  "Reintentar": [
-  "main.dart:1025",
-  "main.dart:1049",
+  "main.dart:1030",
+  "main.dart:1054",
   "ui/composition_editor.dart:1683",
-  "ui/year_page.dart:2204",
   "ui/metadata_editor.dart:1551",
-  "ui/toolchain_check.dart:622",
-  "ui/unit_page.dart:3018"
+  "ui/toolchain_check.dart:869",
+  "ui/unit_page.dart:3018",
+  "ui/year_page.dart:2204"
  ],
  "Relaciones": [
   "model/tex_snippets.dart:129"
@@ -5823,13 +5889,13 @@
   "ui/freezes.dart:311"
  ],
  "Resultado": [
-  "model/tex_vocabulary.dart:126",
-  "model/problem_file.dart:35"
+  "model/problem_file.dart:35",
+  "model/tex_vocabulary.dart:126"
  ],
  "Resumen": [
+  "model/tex_vocabulary.dart:133",
   "ui/manage_snippets.dart:1909",
-  "ui/manage_snippets.dart:1925",
-  "model/tex_vocabulary.dart:133"
+  "ui/manage_snippets.dart:1925"
  ],
  "Resumen, Solo en clase, Caja de fórmulas…": [
   "ui/manage_snippets.dart:1613"
@@ -5853,7 +5919,7 @@
   "ui/review_panel.dart:216"
  ],
  "Revisar {0} de «{1}»": [
-  "state/catalogue_editor.dart:1891"
+  "state/catalogue_editor.dart:1895"
  ],
  "Rojo (profesor)": [
   "ui/manage_snippets.dart:62"
@@ -5883,7 +5949,7 @@
   "ui/add_repository.dart:474"
  ],
  "Salida de la plantilla {0}": [
-  "state/catalogue_editor.dart:1538"
+  "state/catalogue_editor.dart:1542"
  ],
  "Salidas": [
   "ui/metadata_editor.dart:657"
@@ -5917,10 +5983,10 @@
   "ui/welcome.dart:384"
  ],
  "Se abrirá el instalador de Apple: Python 3 viene en las Herramientas de Línea de Órdenes, junto con git.": [
-  "model/toolchain.dart:484"
+  "model/toolchain.dart:592"
  ],
  "Se abrirá el instalador de Apple: git y Python vienen en las Herramientas de Línea de Órdenes. Acepta ahí y vuelve a comprobar cuando termine.": [
-  "model/toolchain.dart:402"
+  "model/toolchain.dart:518"
  ],
  "Se arregla moviendo la unidad al repositorio del documento, o el documento al de la unidad. Las dos cosas cambian dónde vive material que puede estar usando otra persona, así que no se hacen desde aquí.": [
   "ui/between_repos_page.dart:281"
@@ -5979,19 +6045,19 @@
   "ui/place_browser.dart:228"
  ],
  "Se descarga el instalador oficial de CTAN y se abre. La instalación se hace en su ventana y tarda un rato largo.": [
-  "model/toolchain.dart:750"
+  "model/toolchain.dart:869"
  ],
  "Se descarga el instalador oficial de TinyTeX y se ejecuta. Después Didacta le pide a tlmgr los paquetes que usa.": [
-  "model/toolchain.dart:697"
+  "model/toolchain.dart:806"
  ],
  "Se descarga el instalador oficial de TinyTeX y se ejecuta. Instala en ~/.TinyTeX y no pide sudo.": [
-  "model/toolchain.dart:778"
+  "model/toolchain.dart:897"
  ],
  "Se descarga el instalador oficial de TinyTeX y se ejecuta. Instala en ~/Library/TinyTeX y no pide contraseña. Después Didacta le pide a tlmgr los paquetes que el preámbulo necesita.": [
-  "model/toolchain.dart:612"
+  "model/toolchain.dart:721"
  ],
  "Se descarga el paquete oficial de CTAN y se abre el instalador de macOS, que te pedirá la contraseña de administrador.": [
-  "model/toolchain.dart:643"
+  "model/toolchain.dart:752"
  ],
  "Se escribe 2026-2027": [
   "ui/course_admin_ui.dart:592"
@@ -6000,7 +6066,7 @@
   "ui/settings_page.dart:2385"
  ],
  "Se está instalando fuera de Didacta. Cuando termine, pulsa «Volver a comprobar».": [
-  "ui/toolchain_check.dart:595"
+  "ui/toolchain_check.dart:848"
  ],
  "Se guarda con el mensaje que propone Didacta, que dice qué se cambió. Lo que cambió se ve en «Ver cambios», en el aviso, y en el historial.": [
   "ui/settings_page.dart:2931"
@@ -6015,7 +6081,7 @@
   "data/github.dart:311"
  ],
  "Se intentó: {0}.": [
-  "ui/toolchain_check.dart:878"
+  "ui/toolchain_check.dart:1125"
  ],
  "Se lee al final del preámbulo de Didacta, así que aquí se puede redefinir lo que Didacta acaba de definir: los márgenes, los colores, un entorno. No lleva \\documentclass ni \\begin{document}: de eso ya se encarga la plantilla.": [
   "ui/template_editor.dart:776"
@@ -6069,9 +6135,9 @@
   "ui/year_page.dart:1124"
  ],
  "Seguir editando": [
-  "ui/unsaved_dialog.dart:56",
   "ui/manage_snippets.dart:1459",
-  "ui/unit_page.dart:2204"
+  "ui/unit_page.dart:2204",
+  "ui/unsaved_dialog.dart:56"
  ],
  "Seguir el final": [
   "ui/build_console.dart:644"
@@ -6182,8 +6248,8 @@
   "ui/template_editor.dart:338"
  ],
  "Sin compilar": [
-  "ui/manage_snippets.dart:2328",
-  "ui/manage_snippets.dart:2334",
+  "ui/manage_snippets.dart:2329",
+  "ui/manage_snippets.dart:2335",
   "ui/template_editor.dart:1244",
   "ui/template_editor.dart:1250"
  ],
@@ -6241,8 +6307,11 @@
  "Sin versión en {0}: se compilará con la de {1} y un aviso.": [
   "ui/document_page.dart:1163"
  ],
+ "Sin winget: cada instalación abre la descarga oficial y se hace a mano.": [
+  "ui/toolchain_check.dart:683"
+ ],
  "Snippet «{0}»": [
-  "state/catalogue_editor.dart:1042"
+  "state/catalogue_editor.dart:1046"
  ],
  "Snippet «{0}» · {1}": [
   "ui/between_repos_page.dart:626"
@@ -6305,10 +6374,10 @@
   "ui/shell.dart:713"
  ],
  "Solo lectura: lo declara un repositorio en el que no puedes escribir": [
-  "ui/manage_degrees.dart:361",
   "ui/manage_blocks.dart:531",
   "ui/manage_blocks.dart:543",
-  "ui/manage_blocks.dart:555"
+  "ui/manage_blocks.dart:555",
+  "ui/manage_degrees.dart:361"
  ],
  "Solo para el profesor, con párrafos": [
   "model/tex_vocabulary.dart:136"
@@ -6329,11 +6398,11 @@
   "model/tex_wrap.dart:237"
  ],
  "Solución detallada": [
-  "model/tex_vocabulary.dart:127",
-  "model/problem_file.dart:36"
+  "model/problem_file.dart:36",
+  "model/tex_vocabulary.dart:127"
  ],
  "Son unos 6 GB desde CTAN. Al terminar se abre el instalador de macOS, que te pedirá la contraseña de administrador.": [
-  "model/toolchain.dart:669"
+  "model/toolchain.dart:778"
  ],
  "Son {0} documentos, {1}. Puede tardar un buen rato, y mientras tanto el ordenador va más lento. Abajo se ve por cuál va, y se puede detener en cualquier momento.": [
   "ui/build_button.dart:216"
@@ -6419,14 +6488,20 @@
   "model/tex_vocabulary.dart:92"
  ],
  "TeX Live entera, con todo lo de CTAN. La que no te va a faltar nunca, si tienes el disco y la tarde.": [
-  "model/toolchain.dart:660"
+  "model/toolchain.dart:769"
  ],
  "TeX Live oficial, con su instalador gráfico. La completa.": [
-  "model/toolchain.dart:744"
+  "model/toolchain.dart:863"
+ ],
+ "TeX de Homebrew": [
+  "model/toolchain.dart:1005"
+ ],
+ "TeX en {0}": [
+  "model/toolchain.dart:1010"
  ],
  "Tema": [
-  "ui/year_page.dart:1006",
-  "ui/place_browser.dart:324"
+  "ui/place_browser.dart:324",
+  "ui/year_page.dart:1006"
  ],
  "Tema 1": [
   "ui/welcome_art.dart:580"
@@ -6451,8 +6526,8 @@
   "model/tex_wrap.dart:258"
  ],
  "Teoría": [
-  "ui/new_document.dart:46",
-  "model/latex_snippets.dart:118"
+  "model/latex_snippets.dart:118",
+  "ui/new_document.dart:46"
  ],
  "Teoría, Problema, Propios…": [
   "ui/manage_snippets.dart:1637"
@@ -6467,19 +6542,19 @@
   "ui/manage_snippets.dart:1862"
  ],
  "Texto del tamaño normal": [
+  "ui/command_palette.dart:309",
   "ui/platform_menus.dart:264",
-  "ui/shortcuts.dart:40",
-  "ui/command_palette.dart:309"
+  "ui/shortcuts.dart:40"
  ],
  "Texto más grande": [
+  "ui/command_palette.dart:293",
   "ui/platform_menus.dart:254",
-  "ui/shortcuts.dart:38",
-  "ui/command_palette.dart:293"
+  "ui/shortcuts.dart:38"
  ],
  "Texto más pequeño": [
+  "ui/command_palette.dart:301",
   "ui/platform_menus.dart:259",
-  "ui/shortcuts.dart:39",
-  "ui/command_palette.dart:301"
+  "ui/shortcuts.dart:39"
  ],
  "Tiene {0}. Si mandas la carpeta a la Papelera, ese trabajo se va con ella.": [
   "ui/remove_repository.dart:110"
@@ -6494,10 +6569,10 @@
   "ui/welcome.dart:1088"
  ],
  "Tipo": [
-  "ui/new_unit.dart:217",
   "ui/library_page.dart:1079",
+  "ui/library_search.dart:179",
   "ui/new_document.dart:132",
-  "ui/library_search.dart:179"
+  "ui/new_unit.dart:217"
  ],
  "Titulación": [
   "ui/edit_course.dart:262"
@@ -6512,11 +6587,11 @@
   "model/latex_snippets.dart:133"
  ],
  "Todas": [
-  "ui/translate_tab.dart:129",
+  "ui/courses_page.dart:1054",
   "ui/problem_set.dart:354",
   "ui/tex_find_bar.dart:399",
-  "ui/translations_page.dart:374",
-  "ui/courses_page.dart:1054"
+  "ui/translate_tab.dart:129",
+  "ui/translations_page.dart:374"
  ],
  "Todas las asignaturas  ·  {0}": [
   "ui/courses_page.dart:1114"
@@ -6549,17 +6624,17 @@
   "ui/library_page.dart:2577"
  ],
  "Todavía no hay ninguno declarado.": [
-  "ui/manage_degrees.dart:75",
-  "ui/manage_blocks.dart:168"
+  "ui/manage_blocks.dart:168",
+  "ui/manage_degrees.dart:75"
  ],
  "Todavía no hay ninguno. Añade los repositorios de contenido con los que trabajes: se clonan en tu disco y se ven juntos, aunque una asignatura esté repartida entre varios.\n\nSi ya tienes uno clonado en el disco, añádelo como carpeta: para eso no hace falta entrar en GitHub.": [
   "ui/settings_page.dart:1490"
  ],
  "Todavía no hay ningún repositorio abierto. Añade uno en Ajustes: desde GitHub, o eligiendo una carpeta que ya tengas clonada en el disco.": [
-  "main.dart:732"
+  "main.dart:737"
  ],
  "Todavía no hay ningún repositorio de contenido abierto. Añade uno: si ya lo tienes clonado en el disco, elige su carpeta; si no, entra en GitHub desde Ajustes y añádelo desde allí.": [
-  "main.dart:952"
+  "main.dart:957"
  ],
  "Todavía no lleva lecciones, así que valen todas las encendidas.": [
   "ui/document_properties.dart:197"
@@ -6632,10 +6707,10 @@
   "ui/translations_page.dart:143"
  ],
  "Traducción": [
+  "ui/command_palette.dart:348",
   "ui/library_page.dart:1071",
   "ui/platform_menus.dart:243",
   "ui/shell.dart:113",
-  "ui/command_palette.dart:348",
   "ui/translations_page.dart:94"
  ],
  "Traducción automática": [
@@ -6648,8 +6723,8 @@
   "ui/unit_page.dart:1873"
  ],
  "Traducir": [
-  "ui/translations_page.dart:385",
-  "ui/translate_unit.dart:521"
+  "ui/translate_unit.dart:521",
+  "ui/translations_page.dart:385"
  ],
  "Traducir ({0})": [
   "ui/document_page.dart:792"
@@ -6695,8 +6770,8 @@
   "ui/platform_menus.dart:298"
  ],
  "Traer de GitHub": [
-  "ui/sync_bar.dart:310",
-  "state/repo_sync.dart:393"
+  "state/repo_sync.dart:393",
+  "ui/sync_bar.dart:310"
  ],
  "Traer de GitHub ({0} por traer)": [
   "ui/sync_bar.dart:309"
@@ -6708,8 +6783,8 @@
   "ui/settings_page.dart:2114"
  ],
  "Traer los cambios de GitHub": [
-  "ui/shortcuts.dart:36",
-  "ui/command_palette.dart:220"
+  "ui/command_palette.dart:220",
+  "ui/shortcuts.dart:36"
  ],
  "Traerla como estaba, sin reescribir nada": [
   "ui/info_menu.dart:236"
@@ -6718,8 +6793,8 @@
   "ui/shell.dart:778"
  ],
  "Traído de GitHub y actualizado.": [
-  "ui/sync_bar.dart:120",
-  "ui/platform_menus.dart:438"
+  "ui/platform_menus.dart:438",
+  "ui/sync_bar.dart:120"
  ],
  "Traído, con problemas": [
   "ui/platform_menus.dart:439"
@@ -6770,11 +6845,11 @@
   "model/tex_wrap.dart:190"
  ],
  "Título": [
-  "ui/new_unit.dart:197",
-  "ui/manage_snippets.dart:1949",
-  "ui/document_properties.dart:140",
+  "model/tex_wrap.dart:209",
   "ui/course_admin_ui.dart:769",
-  "model/tex_wrap.dart:209"
+  "ui/document_properties.dart:140",
+  "ui/manage_snippets.dart:1950",
+  "ui/new_unit.dart:197"
  ],
  "Título ({0})": [
   "ui/new_unit.dart:422"
@@ -6798,19 +6873,19 @@
   "ui/heading_title.dart:168"
  ],
  "Título de {0} en {1} {2}": [
-  "state/catalogue_editor.dart:438"
+  "state/catalogue_editor.dart:442"
  ],
  "Título del grado": [
   "ui/manage_degrees.dart:222"
  ],
  "Título del grado {0}": [
-  "state/catalogue_editor.dart:598"
+  "state/catalogue_editor.dart:602"
  ],
  "Título del tema cambiado.": [
   "ui/year_page.dart:1027"
  ],
  "Título del tema {0} en {1} {2}": [
-  "state/catalogue_editor.dart:410"
+  "state/catalogue_editor.dart:414"
  ],
  "Título del {0}": [
   "ui/heading_title.dart:94"
@@ -6819,9 +6894,9 @@
   "ui/manage_degrees.dart:360"
  ],
  "Título en {0}": [
+  "ui/manage_snippets.dart:1923",
   "ui/new_document.dart:108",
-  "ui/problem_set.dart:259",
-  "ui/manage_snippets.dart:1923"
+  "ui/problem_set.dart:259"
  ],
  "Título solo de la diapositiva; en los apuntes, nada": [
   "model/tex_vocabulary.dart:43"
@@ -6856,11 +6931,11 @@
   "model/tex_vocabulary.dart:121"
  ],
  "Un documento": [
+  "ui/course_admin_ui.dart:669",
   "ui/tour.dart:212",
   "ui/tour.dart:230",
   "ui/tour.dart:241",
-  "ui/tour.dart:251",
-  "ui/course_admin_ui.dart:669"
+  "ui/tour.dart:251"
  ],
  "Un documento tiene": [
   "ui/export_year.dart:372"
@@ -7028,7 +7103,7 @@
   "ui/settings_page.dart:2503"
  ],
  "Usar este repositorio": [
-  "main.dart:884"
+  "main.dart:889"
  ],
  "VISTA PREVIA": [
   "ui/template_editor.dart:1268"
@@ -7071,7 +7146,7 @@
  ],
  "Ver detalles": [
   "ui/build_console.dart:320",
-  "ui/toolchain_check.dart:483"
+  "ui/toolchain_check.dart:736"
  ],
  "Ver el LaTeX": [
   "ui/unit_page.dart:1612"
@@ -7122,7 +7197,7 @@
   "ui/courses_page.dart:1002"
  ],
  "Ver las órdenes": [
-  "model/toolchain.dart:803"
+  "model/toolchain.dart:922"
  ],
  "Ver los atajos de teclado": [
   "ui/command_palette.dart:318"
@@ -7155,7 +7230,7 @@
   "ui/courses_page.dart:143"
  ],
  "Ver todos": [
-  "main.dart:791"
+  "main.dart:796"
  ],
  "Ver ubicaciones vinculadas ({0})": [
   "ui/year_page.dart:2901"
@@ -7164,9 +7239,9 @@
   "ui/courses_page.dart:1765"
  ],
  "Ver versiones congeladas…": [
-  "ui/year_page.dart:128",
   "ui/courses_page.dart:1764",
-  "ui/info_menu.dart:209"
+  "ui/info_menu.dart:209",
+  "ui/year_page.dart:128"
  ],
  "Ver y filtrar": [
   "ui/library_page.dart:1022"
@@ -7229,15 +7304,15 @@
   "ui/unit_preview.dart:1222"
  ],
  "Vista rápida": [
-  "ui/unit_preview.dart:786",
-  "ui/settings_page.dart:2740"
+  "ui/settings_page.dart:2740",
+  "ui/unit_preview.dart:786"
  ],
  "Vista rápida · {0} versiones": [
   "ui/unit_preview.dart:787"
  ],
  "Vista rápida: una sola pasada. El índice, las referencias y el total de diapositivas pueden no estar al día; para repartirlo, «Compilar entero».": [
-  "ui/unit_preview.dart:1244",
-  "ui/pdf_tab.dart:666"
+  "ui/pdf_tab.dart:666",
+  "ui/unit_preview.dart:1244"
  ],
  "Volver a abrir Didacta": [
   "ui/start_over.dart:90"
@@ -7249,8 +7324,8 @@
   "ui/pdf_tab.dart:701"
  ],
  "Volver a comprobar": [
-  "ui/toolchain_check.dart:418",
-  "ui/toolchain_check.dart:974"
+  "ui/toolchain_check.dart:496",
+  "ui/toolchain_check.dart:1230"
  ],
  "Volver a enseñar {0}": [
   "ui/sync_bar.dart:897"
@@ -7282,27 +7357,33 @@
  "Volver al de Didacta": [
   "ui/manage_snippets.dart:912"
  ],
+ "Vuelve aquí y pulsa «Ya lo tengo, volver a comprobar».": [
+  "ui/toolchain_check.dart:618"
+ ],
  "Vuelve lo que había antes en {0}, como un cambio nuevo. El que se deshace sigue en la historia.": [
   "ui/recent_changes.dart:177"
  ],
  "Windows": [
-  "model/toolchain.dart:47",
-  "data/app_info.dart:67"
+  "data/app_info.dart:67",
+  "model/toolchain.dart:47"
  ],
  "Windows descargará e instalará Git para Windows.": [
-  "model/toolchain.dart:420"
+  "model/toolchain.dart:536"
  ],
- "Windows descargará e instalará MiKTeX.": [
-  "model/toolchain.dart:721"
+ "Windows descargará e instalará MiKTeX en tu carpeta de usuario. Su latexmk necesita Perl: si no lo tienes, Didacta te lo ofrecerá después.": [
+  "model/toolchain.dart:830"
  ],
  "Windows descargará e instalará Python 3.": [
-  "model/toolchain.dart:501"
+  "model/toolchain.dart:609"
+ ],
+ "Windows descargará e instalará Strawberry Perl, que es lo que el latexmk de MiKTeX necesita para arrancar. Pedirá permiso de administrador.": [
+  "model/toolchain.dart:441"
  ],
  "Y el resto": [
   "ui/tour.dart:343"
  ],
  "Y en Ajustes → Compilar, «Elegir el motor» y señalar esa carpeta.": [
-  "model/toolchain.dart:381"
+  "model/toolchain.dart:497"
  ],
  "Y en {0}, todo junto.": [
   "ui/export_actions.dart:87"
@@ -7328,6 +7409,9 @@
  ],
  "Ya definido": [
   "ui/manage_snippets.dart:1778"
+ ],
+ "Ya estaba instalado.": [
+  "data/toolchain_io.dart:522"
  ],
  "Ya estaba ordenado.": [
   "ui/unit_page.dart:1844"
@@ -7377,6 +7461,9 @@
  ],
  "Ya lo tengo clonado": [
   "ui/welcome.dart:895"
+ ],
+ "Ya lo tengo, volver a comprobar": [
+  "ui/toolchain_check.dart:634"
  ],
  "Ya tenías el ejemplo: {0} está abierto.": [
   "ui/add_repository.dart:254"
@@ -7485,8 +7572,8 @@
   "ui/unit_page.dart:538"
  ],
  "castellano": [
-  "model/tex_check.dart:87",
-  "model/library_tree.dart:265"
+  "model/library_tree.dart:265",
+  "model/tex_check.dart:87"
  ],
  "catalán": [
   "model/library_tree.dart:267"
@@ -7618,7 +7705,7 @@
   "ui/composition_editor.dart:139"
  ],
  "el estado «{0}» lo calcula el motor; no se puede declarar": [
-  "state/catalogue_editor.dart:1810"
+  "state/catalogue_editor.dart:1814"
  ],
  "el fichero que compila": [
   "model/course_diff.dart:406"
@@ -7633,7 +7720,7 @@
   "model/composition_file.dart:494"
  ],
  "el original no se revisa: es de donde se traduce": [
-  "state/catalogue_editor.dart:1869"
+  "state/catalogue_editor.dart:1873"
  ],
  "el programa": [
   "ui/document_properties.dart:325"
@@ -7642,9 +7729,9 @@
   "ui/settings_page.dart:1155"
  ],
  "el repositorio": [
+  "ui/course_admin_ui.dart:136",
   "ui/library_page.dart:914",
-  "ui/review_panel.dart:104",
-  "ui/course_admin_ui.dart:136"
+  "ui/review_panel.dart:104"
  ],
  "el tema compartido `{0}` dice vivir en {1}, y ahí no hay ninguna composición. Puede que el fichero esté en otro repositorio que no tienes abierto.": [
   "ui/composition_editor.dart:132"
@@ -7677,8 +7764,8 @@
   "model/launch.dart:146"
  ],
  "en su carpeta": [
-  "model/launch.dart:148",
-  "data/file_manager_stub.dart:10"
+  "data/file_manager_stub.dart:10",
+  "model/launch.dart:148"
  ],
  "en {0}": [
   "ui/build_button.dart:206",
@@ -7694,14 +7781,14 @@
   "model/latex_snippets.dart:321"
  ],
  "enunciados y resultados": [
-  "ui/manage_templates.dart:746",
+  "data/compiler.dart:57",
   "model/catalogue.dart:1668",
-  "data/compiler.dart:57"
+  "ui/manage_templates.dart:746"
  ],
  "enunciados, resultados y solución": [
-  "ui/manage_templates.dart:747",
+  "data/compiler.dart:58",
   "model/catalogue.dart:1669",
-  "data/compiler.dart:58"
+  "ui/manage_templates.dart:747"
  ],
  "enviar el primer cambio a GitHub": [
   "data/local_clone_io.dart:283"
@@ -7802,8 +7889,8 @@
   "model/library_tree.dart:269"
  ],
  "examen": [
-  "ui/welcome_art.dart:452",
-  "ui/theme.dart:417"
+  "ui/theme.dart:417",
+  "ui/welcome_art.dart:452"
  ],
  "examen {0}{1}": [
   "ui/problem_set.dart:511"
@@ -7827,15 +7914,15 @@
   "ui/courses_page.dart:145"
  ],
  "francés": [
-  "model/tex_check.dart:90",
-  "model/library_tree.dart:271"
+  "model/library_tree.dart:271",
+  "model/tex_check.dart:90"
  ],
  "fácil": [
   "ui/theme.dart:431"
  ],
  "gallego": [
-  "model/tex_check.dart:88",
-  "model/library_tree.dart:268"
+  "model/library_tree.dart:268",
+  "model/tex_check.dart:88"
  ],
  "git falló al {0} (código {1}).": [
   "data/local_clone_io.dart:1680"
@@ -7916,25 +8003,25 @@
   "ui/translation_settings.dart:471"
  ],
  "id: {0}": [
-  "ui/manage_snippets.dart:2006",
+  "ui/manage_snippets.dart:2007",
   "ui/template_editor.dart:1104"
  ],
  "id: {0} · de Didacta: al guardar pasa a estar en tu repositorio": [
   "ui/template_editor.dart:1099"
  ],
  "id: {0} · de Didacta: lo que cambies se guarda como un retoque": [
-  "ui/manage_snippets.dart:2001"
+  "ui/manage_snippets.dart:2002"
  ],
  "idioma pestaña {0}": [
   "ui/unit_page.dart:488"
  ],
  "idioma {0}": [
-  "ui/year_page.dart:96",
-  "ui/command_palette.dart:248"
+  "ui/command_palette.dart:248",
+  "ui/year_page.dart:96"
  ],
  "idiomas": [
-  "ui/settings_page.dart:2223",
-  "model/catalogue.dart:1210"
+  "model/catalogue.dart:1210",
+  "ui/settings_page.dart:2223"
  ],
  "inglés": [
   "model/library_tree.dart:270"
@@ -7983,6 +8070,9 @@
  ],
  "las versiones congeladas": [
   "model/course_diff.dart:392"
+ ],
+ "latexmk es un guion de Perl, y en este sistema no lo encuentra.": [
+  "model/toolchain.dart:472"
  ],
  "lecciones": [
   "model/course_diff.dart:175"
@@ -8105,13 +8195,13 @@
   "ui/settings_page.dart:1154"
  ],
  "no está en el catálogo": [
-  "ui/document_page.dart:1081",
-  "model/document_reading.dart:164"
+  "model/document_reading.dart:164",
+  "ui/document_page.dart:1081"
  ],
  "no existe": [
+  "model/catalogue.dart:102",
   "ui/tabs.dart:112",
-  "ui/tabs.dart:115",
-  "model/catalogue.dart:102"
+  "ui/tabs.dart:115"
  ],
  "no existe `{0}`, así que no se puede añadir `{1}` dentro": [
   "model/yaml_patch.dart:341"
@@ -8128,7 +8218,7 @@
  "no existe la asignatura {0}": [
   "state/catalogue_editor.dart:127",
   "state/catalogue_editor.dart:354",
-  "state/catalogue_editor.dart:460"
+  "state/catalogue_editor.dart:464"
  ],
  "no existe la carpeta {0}": [
   "data/template_store_io.dart:58",
@@ -8144,11 +8234,11 @@
   "state/repo_sync.dart:508"
  ],
  "no hay carpeta del programa": [
-  "state/catalogue_editor.dart:1260",
-  "state/catalogue_editor.dart:1283"
+  "state/catalogue_editor.dart:1264",
+  "state/catalogue_editor.dart:1287"
  ],
  "no hay ninguna plantilla {0}": [
-  "state/catalogue_editor.dart:1403"
+  "state/catalogue_editor.dart:1407"
  ],
  "no se declara el bloque `{0}`": [
   "model/taxonomy_file.dart:80",
@@ -8156,15 +8246,15 @@
   "model/taxonomy_file.dart:246"
  ],
  "no se declara el bloque {0}": [
-  "state/catalogue_editor.dart:775",
-  "state/catalogue_editor.dart:825",
-  "state/catalogue_editor.dart:951"
+  "state/catalogue_editor.dart:779",
+  "state/catalogue_editor.dart:829",
+  "state/catalogue_editor.dart:955"
  ],
  "no se declara el grado `{0}`": [
   "model/degrees_file.dart:70"
  ],
  "no se declara el grado {0}": [
-  "state/catalogue_editor.dart:581"
+  "state/catalogue_editor.dart:585"
  ],
  "no se declara el snippet `{0}`": [
   "model/snippets_file.dart:93"
@@ -8176,7 +8266,7 @@
   "model/templates_file.dart:269"
  ],
  "no se declara la plantilla {0}": [
-  "state/catalogue_editor.dart:1572"
+  "state/catalogue_editor.dart:1576"
  ],
  "no se encuentra «{0}» en {1}": [
   "ui/document_page.dart:211"
@@ -8194,17 +8284,17 @@
   "data/catalogue_source.dart:166"
  ],
  "no se puede escribir en {0}": [
-  "state/translation_service.dart:111",
-  "state/translation_service.dart:255",
   "state/catalogue_editor.dart:234",
-  "state/catalogue_editor.dart:505",
-  "state/catalogue_editor.dart:553",
-  "state/catalogue_editor.dart:624",
-  "state/catalogue_editor.dart:744",
-  "state/catalogue_editor.dart:1289",
-  "state/catalogue_editor.dart:1764",
-  "state/catalogue_editor.dart:1817",
-  "state/catalogue_editor.dart:1874"
+  "state/catalogue_editor.dart:509",
+  "state/catalogue_editor.dart:557",
+  "state/catalogue_editor.dart:628",
+  "state/catalogue_editor.dart:748",
+  "state/catalogue_editor.dart:1293",
+  "state/catalogue_editor.dart:1768",
+  "state/catalogue_editor.dart:1821",
+  "state/catalogue_editor.dart:1878",
+  "state/translation_service.dart:111",
+  "state/translation_service.dart:255"
  ],
  "no se puede quitar {0} de {1}: se dan en ese idioma {2}": [
   "state/catalogue_editor.dart:244"
@@ -8261,11 +8351,11 @@
   "ui/settings_page.dart:2222"
  ],
  "pide la contraseña de administrador": [
-  "ui/toolchain_check.dart:786"
+  "ui/toolchain_check.dart:1033"
  ],
  "plantillas": [
-  "ui/metadata_editor.dart:1114",
-  "model/catalogue.dart:1208"
+  "model/catalogue.dart:1208",
+  "ui/metadata_editor.dart:1114"
  ],
  "poner al día las versiones congeladas": [
   "data/local_clone_io.dart:1796"
@@ -8305,8 +8395,8 @@
   "data/local_clone_io.dart:626"
  ],
  "problemas": [
-  "ui/welcome_art.dart:451",
-  "ui/theme.dart:416"
+  "ui/theme.dart:416",
+  "ui/welcome_art.dart:451"
  ],
  "profesor": [
   "model/catalogue.dart:1212"
@@ -8354,8 +8444,8 @@
   "ui/metadata_editor.dart:80"
  ],
  "ruta": [
-  "ui/metadata_editor.dart:579",
-  "ui/library_search.dart:43"
+  "ui/library_search.dart:43",
+  "ui/metadata_editor.dart:579"
  ],
  "rótulo": [
   "model/latex_snippets.dart:318"
@@ -8394,8 +8484,8 @@
   "ui/metadata_editor.dart:1048"
  ],
  "sin guardar": [
-  "ui/tabs.dart:144",
   "ui/source_view.dart:1051",
+  "ui/tabs.dart:144",
   "ui/unit_page.dart:2132"
  ],
  "sin indexar todavía": [
@@ -8408,24 +8498,24 @@
   "state/build_service.dart:222"
  ],
  "sin revisar": [
-  "ui/metadata_editor.dart:78",
-  "model/catalogue.dart:100"
+  "model/catalogue.dart:100",
+  "ui/metadata_editor.dart:78"
  ],
  "sin sincronizar": [
   "ui/sync_bar.dart:270"
  ],
  "sin traducir": [
-  "ui/manage_degrees.dart:640",
+  "ui/document_properties.dart:152",
   "ui/edit_course.dart:251",
   "ui/edit_course.dart:330",
-  "ui/metadata_editor.dart:603",
-  "ui/document_properties.dart:152",
+  "ui/heading_title.dart:113",
   "ui/manage_blocks.dart:1038",
-  "ui/heading_title.dart:113"
+  "ui/manage_degrees.dart:640",
+  "ui/metadata_editor.dart:603"
  ],
  "sin usar": [
-  "ui/library_page.dart:2855",
-  "model/library_filter.dart:155"
+  "model/library_filter.dart:155",
+  "ui/library_page.dart:2855"
  ],
  "sin usar en ninguna asignatura": [
   "ui/library_page.dart:1621",
@@ -8438,16 +8528,16 @@
   "ui/metadata_editor.dart:951"
  ],
  "solo lectura": [
-  "ui/translate_tab.dart:200",
+  "ui/add_repository.dart:540",
   "ui/language_settings.dart:330",
   "ui/shell.dart:864",
-  "ui/unit_page.dart:3406",
-  "ui/add_repository.dart:540"
+  "ui/translate_tab.dart:200",
+  "ui/unit_page.dart:3406"
  ],
  "solo los enunciados": [
-  "ui/manage_templates.dart:749",
+  "data/compiler.dart:60",
   "model/catalogue.dart:1671",
-  "data/compiler.dart:60"
+  "ui/manage_templates.dart:749"
  ],
  "subtema": [
   "ui/unit_page.dart:2738"
@@ -8465,9 +8555,9 @@
   "model/course_diff.dart:169"
  ],
  "tema nuevo": [
-  "ui/compare_view.dart:317",
+  "model/course_diff.dart:159",
   "model/metadata_suggestions.dart:95",
-  "model/course_diff.dart:159"
+  "ui/compare_view.dart:317"
  ],
  "tema quitado": [
   "model/course_diff.dart:164"
@@ -8516,9 +8606,9 @@
   "ui/year_page.dart:2010"
  ],
  "todo, con la solución paso a paso": [
-  "ui/manage_templates.dart:748",
+  "data/compiler.dart:59",
   "model/catalogue.dart:1670",
-  "data/compiler.dart:59"
+  "ui/manage_templates.dart:748"
  ],
  "todos": [
   "ui/year_page.dart:1703"
@@ -8570,7 +8660,7 @@
   "ui/export_year.dart:444"
  ],
  "un bloque no se puede mover a sí mismo": [
-  "state/catalogue_editor.dart:828"
+  "state/catalogue_editor.dart:832"
  ],
  "un bloque sin nombre en ningún idioma se enseñaría por su id": [
   "model/taxonomy_file.dart:89",
@@ -8681,8 +8771,8 @@
   "ui/between_repos_page.dart:360"
  ],
  "y {0} más": [
-  "ui/sync_bar.dart:1094",
   "ui/source_view.dart:874",
+  "ui/sync_bar.dart:1094",
   "ui/template_editor.dart:952"
  ],
  "ya estaba al día": [
@@ -8719,12 +8809,12 @@
   "ui/command_palette.dart:302"
  ],
  "{0}\nEstá descargado en {1}.": [
-  "data/toolchain_io.dart:407"
+  "data/toolchain_io.dart:564"
  ],
  "{0}  (esta)": [
+  "ui/course_admin_ui.dart:976",
   "ui/reuse.dart:244",
-  "ui/reuse.dart:607",
-  "ui/course_admin_ui.dart:976"
+  "ui/reuse.dart:607"
  ],
  "{0}  (vinculado)": [
   "ui/reuse.dart:665"
@@ -8765,12 +8855,12 @@
   "ui/export_year.dart:366"
  ],
  "{0} asignaturas": [
-  "ui/manage_degrees.dart:313",
-  "ui/courses_page.dart:191"
+  "ui/courses_page.dart:191",
+  "ui/manage_degrees.dart:313"
  ],
  "{0} avisos": [
-  "ui/source_view.dart:756",
   "ui/review_panel.dart:275",
+  "ui/source_view.dart:756",
   "ui/tex_toolbar.dart:1218"
  ],
  "{0} bien": [
@@ -8832,11 +8922,11 @@
   "ui/courses_page.dart:1496"
  ],
  "{0} de {1}": [
-  "ui/sync_bar.dart:731",
+  "ui/build_console.dart:551",
   "ui/composition_editor.dart:656",
   "ui/composition_editor.dart:1301",
+  "ui/sync_bar.dart:731",
   "ui/tex_find_bar.dart:256",
-  "ui/build_console.dart:551",
   "ui/tour.dart:899"
  ],
  "{0} de {1} asignaturas": [
@@ -8879,10 +8969,10 @@
   "ui/courses_page.dart:1631"
  ],
  "{0} documentos": [
-  "ui/year_page.dart:91",
-  "ui/year_page.dart:2040",
+  "ui/courses_page.dart:197",
   "ui/course_admin_ui.dart:670",
-  "ui/courses_page.dart:197"
+  "ui/year_page.dart:91",
+  "ui/year_page.dart:2040"
  ],
  "{0} documentos copiados a {1}.": [
   "ui/courses_page.dart:746"
@@ -8943,8 +9033,8 @@
   "ui/settings_page.dart:2178"
  ],
  "{0} ficheros": [
-  "ui/sync_bar.dart:601",
   "ui/source_view.dart:748",
+  "ui/sync_bar.dart:601",
   "ui/translate_unit.dart:464"
  ],
  "{0} ficheros guardados en el historial.": [
@@ -8954,8 +9044,8 @@
   "state/repo_sync.dart:379"
  ],
  "{0} ficheros sin guardar en el historial": [
-  "ui/sync_bar.dart:1066",
-  "ui/shell.dart:721"
+  "ui/shell.dart:721",
+  "ui/sync_bar.dart:1066"
  ],
  "{0} ficheros tienen cambios sin guardar en el historial, y lo que llega de GitHub también los cambia: {1}. Guárdalos y vuelve a traer.": [
   "data/local_clone_io.dart:867"
@@ -8982,11 +9072,11 @@
   "data/local_clone_io.dart:594"
  ],
  "{0} la sangría de {1} en «{2}»": [
-  "state/catalogue_editor.dart:1790"
+  "state/catalogue_editor.dart:1794"
  ],
  "{0} lecciones": [
-  "ui/suggest_field.dart:134",
-  "ui/manage_blocks.dart:456"
+  "ui/manage_blocks.dart:456",
+  "ui/suggest_field.dart:134"
  ],
  "{0} lecciones en {1}": [
   "ui/library_page.dart:1806",
@@ -9005,8 +9095,8 @@
   "ui/build_console.dart:634"
  ],
  "{0} min": [
-  "ui/unit_page.dart:2753",
-  "data/local_clone_io.dart:1688"
+  "data/local_clone_io.dart:1688",
+  "ui/unit_page.dart:2753"
  ],
  "{0} movidas a «{1}».": [
   "ui/manage_blocks.dart:117"
@@ -9018,8 +9108,8 @@
   "ui/manage_snippets.dart:222"
  ],
  "{0} no contiene un objeto JSON": [
-  "data/catalogue_source_io.dart:67",
-  "data/catalogue_source.dart:179"
+  "data/catalogue_source.dart:179",
+  "data/catalogue_source_io.dart:67"
  ],
  "{0} no es una copia de un repositorio de GitHub. Didacta solo trabaja sobre esas copias: lo que se escribe tiene que poder enviarse, y una carpeta suelta no tiene a dónde.": [
   "state/repositories.dart:677"
@@ -9052,7 +9142,7 @@
   "ui/courses_page.dart:396"
  ],
  "{0} no tiene el snippet {1}": [
-  "state/catalogue_editor.dart:1098"
+  "state/catalogue_editor.dart:1102"
  ],
  "{0} no traduce a «{1}».": [
   "data/translator_http.dart:60"
@@ -9070,8 +9160,8 @@
   "ui/manage_templates.dart:361"
  ],
  "{0} por revisar": [
-  "ui/library_page.dart:3163",
-  "model/library_filter.dart:151"
+  "model/library_filter.dart:151",
+  "ui/library_page.dart:3163"
  ],
  "{0} por traer": [
   "ui/settings_page.dart:1660"
@@ -9080,7 +9170,7 @@
   "ui/settings_page.dart:2241"
  ],
  "{0} problemas al leer el repositorio: {1}": [
-  "main.dart:780"
+  "main.dart:785"
  ],
  "{0} propios": [
   "ui/manage_snippets.dart:220"
@@ -9143,8 +9233,8 @@
   "ui/courses_page.dart:199"
  ],
  "{0} sin enviar": [
-  "ui/settings_page.dart:1659",
-  "state/repo_sync.dart:375"
+  "state/repo_sync.dart:375",
+  "ui/settings_page.dart:1659"
  ],
  "{0} sin escribir": [
   "ui/library_page.dart:3168"
@@ -9192,9 +9282,9 @@
   "ui/glossary_editor.dart:74"
  ],
  "{0} unidades": [
+  "ui/course_admin_ui.dart:1084",
   "ui/library_page.dart:2606",
-  "ui/year_page.dart:2398",
-  "ui/course_admin_ui.dart:1084"
+  "ui/year_page.dart:2398"
  ],
  "{0} unidades de {1}{2}{3}": [
   "ui/library_page.dart:3291"
@@ -9280,7 +9370,7 @@
   "data/local_clone_io.dart:203"
  ],
  "{0}: cómo instalarlo": [
-  "ui/toolchain_check.dart:862"
+  "ui/toolchain_check.dart:1109"
  ],
  "{0}: falló": [
   "model/mcp.dart:158"
@@ -9292,7 +9382,7 @@
   "ui/template_editor.dart:908"
  ],
  "{0}: no se pudo instalar": [
-  "ui/toolchain_check.dart:861"
+  "ui/toolchain_check.dart:1108"
  ],
  "{0}: no se puede escribir en él": [
   "ui/manage_snippets.dart:998",
@@ -9442,6 +9532,9 @@
  "¿Llevo {0} repositorios a {1}?": [
   "ui/add_repository.dart:325"
  ],
+ "¿No tienes la Microsoft Store? Otras formas de instalarlo": [
+  "ui/toolchain_check.dart:654"
+ ],
  "¿Poner el motor en la {0}?": [
   "ui/engine_version_line.dart:39"
  ],
@@ -9458,13 +9551,13 @@
   "ui/language_settings.dart:85"
  ],
  "¿Quitar «{0}»?": [
-  "ui/manage_snippets.dart:389",
-  "ui/year_page.dart:1120",
   "ui/courses_page.dart:835",
-  "ui/freezes.dart:440"
+  "ui/freezes.dart:440",
+  "ui/manage_snippets.dart:389",
+  "ui/year_page.dart:1120"
  ],
  "¿Qué distribución de TeX?": [
-  "ui/toolchain_check.dart:674"
+  "ui/toolchain_check.dart:921"
  ],
  "¿Recuperar la versión del {0}?": [
   "ui/history_tab.dart:382"
@@ -9476,16 +9569,16 @@
   "ui/build_folder.dart:108"
  ],
  "¿Ya la tienes instalada? Didacta la ha buscado en: {0}.": [
-  "ui/toolchain_check.dart:947"
+  "ui/toolchain_check.dart:1194"
  ],
  "Ábrelo para ver sus lecciones y sacar sus PDF. Se arrastra para cambiarlo de orden o de tema, y su menú lo mueve, lo duplica en otro curso o lo vincula a otro sitio sin copiarlo.": [
   "ui/tour.dart:214"
  ],
  "Ábrelo y sigue el instalador.": [
-  "model/toolchain.dart:652"
+  "model/toolchain.dart:761"
  ],
  "Ábrelo y sigue el instalador. Tarda un rato largo.": [
-  "model/toolchain.dart:678"
+  "model/toolchain.dart:787"
  ],
  "Área, tema y lección, de todos tus repositorios juntos. Cada lección dice en cuántos sitios se usa: la que no se usa en ninguno es la que se puede tocar sin miedo.": [
   "ui/tour.dart:285"
@@ -9533,7 +9626,7 @@
   "ui/shortcuts.dart:89"
  ],
  "⌘↵ compila la vista previa · ⌘S guarda": [
-  "ui/manage_snippets.dart:2044",
+  "ui/manage_snippets.dart:2045",
   "ui/template_editor.dart:1142"
  ]
 }

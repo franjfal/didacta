@@ -389,6 +389,96 @@ List<String> wingetInstallable(Host host) => [
     if (option.plan.needs == 'winget') option.name,
 ];
 
+/// Si lo que contestó winget al terminar es que ya estaba hecho.
+///
+/// `winget install` de algo que ya está no sale con cero: sale con «ya está
+/// instalado» o con «no hay actualización que aplicar». Para quien ha
+/// pulsado «Instalar» las dos son la respuesta buena, y contarlas como un
+/// error con un código de diez cifras le mandaba a buscar un fallo que no
+/// existe. Los códigos son los de la documentación de winget; [code] llega
+/// con signo, que es como lo da Windows a quien lo lanza.
+bool wingetAlreadyDone(int code) => switch (code & 0xFFFFFFFF) {
+  0x8A150061 || 0x8A15002B => true,
+  _ => false,
+};
+
+/// Lo que se le dice a winget en cada instalación, además del paquete.
+///
+/// `--disable-interactivity` porque no hay nadie al otro lado de la tubería:
+/// una pregunta de winget se quedaría esperando para siempre. Las dos
+/// `--accept-*` por lo mismo, y `--source winget` para que no pregunte por
+/// las condiciones de la Microsoft Store, que aquí no se usa.
+List<String> _wingetInstall(String id, {String? scope}) => [
+  'install',
+  '--id',
+  id,
+  '-e',
+  '--source',
+  'winget',
+  if (scope != null) ...['--scope', scope],
+  '--accept-package-agreements',
+  '--accept-source-agreements',
+  '--disable-interactivity',
+];
+
+/// Si un `latexmk` no ha arrancado porque le falta Perl.
+///
+/// Es lo que le pasa al de MiKTeX recién instalado: `latexmk` es un guion de
+/// Perl, MiKTeX no trae Perl, y el `latexmk.exe` que pone es solo un lanzador
+/// que lo busca y se rinde. Lo dice siempre en inglés y con esta frase.
+bool latexmkNeedsPerl(String output) =>
+    RegExp(r"script engine\s+'?perl'?", caseSensitive: false).hasMatch(output);
+
+/// Cómo se consigue Perl, para el `latexmk` de MiKTeX.
+///
+/// Strawberry Perl porque es la que MiKTeX recomienda y la que hay en winget.
+/// Pide administrador: no tiene instalación por usuario.
+List<InstallPlan> perlPlans(Host host) => switch (host) {
+  Host.windows => [
+    InstallPlan(
+      kind: InstallKind.command,
+      label: tr('Instalar Perl con winget'),
+      explains: tr(
+        'Windows descargará e instalará Strawberry Perl, que es lo que el '
+        'latexmk de MiKTeX necesita para arrancar. Pedirá permiso de '
+        'administrador.',
+      ),
+      program: 'winget',
+      arguments: _wingetInstall('StrawberryPerl.StrawberryPerl'),
+      needs: 'winget',
+      manualSteps: [
+        tr(
+          'En una consola: winget install --id StrawberryPerl.StrawberryPerl -e',
+        ),
+        tr('O descarga el instalador de strawberryperl.com'),
+        tr('Cierra Didacta y vuelve a abrirla.'),
+      ],
+    ),
+    InstallPlan.manual(
+      label: tr('Descargar Strawberry Perl'),
+      explains: tr(
+        'El latexmk de MiKTeX necesita Perl, y este Windows no tiene winget '
+        'para instalarlo solo.',
+      ),
+      url: 'https://strawberryperl.com/',
+      manualSteps: [
+        tr('Descarga el instalador de strawberryperl.com'),
+        tr('Ejecútalo y acepta las opciones por defecto.'),
+        tr('Cierra Didacta y vuelve a abrirla.'),
+      ],
+    ),
+  ],
+  Host.macos || Host.linux => [
+    InstallPlan.manual(
+      label: tr('Instalar Perl'),
+      explains: tr(
+        'latexmk es un guion de Perl, y en este sistema no lo encuentra.',
+      ),
+      manualSteps: [tr('Instala Perl con el gestor de paquetes del sistema.')],
+    ),
+  ],
+};
+
 /// Los planes para una herramienta en un sistema, del mejor al peor.
 ///
 /// Devuelve varios a propósito: quien instala prueba el primero cuyo
@@ -447,16 +537,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         label: tr('Instalar con winget'),
         explains: tr('Windows descargará e instalará Git para Windows.'),
         program: 'winget',
-        arguments: [
-          'install',
-          '--id',
-          'Git.Git',
-          '-e',
-          '--source',
-          'winget',
-          '--accept-package-agreements',
-          '--accept-source-agreements',
-        ],
+        arguments: _wingetInstall('Git.Git'),
         needs: 'winget',
         manualSteps: [
           tr('En una consola: winget install --id Git.Git -e'),
@@ -529,16 +610,7 @@ List<InstallPlan> plansFor(ToolId tool, Host host) => switch (tool) {
         label: tr('Instalar con winget'),
         explains: tr('Windows descargará e instalará Python 3.'),
         program: 'winget',
-        arguments: [
-          'install',
-          '--id',
-          'Python.Python.3.12',
-          '-e',
-          '--source',
-          'winget',
-          '--accept-package-agreements',
-          '--accept-source-agreements',
-        ],
+        arguments: _wingetInstall('Python.Python.3.12'),
         needs: 'winget',
         manualSteps: [
           tr('En una consola: winget install --id Python.Python.3.12 -e'),
@@ -757,18 +829,16 @@ List<LatexOption> latexOptions(Host host) => switch (host) {
       plan: InstallPlan(
         kind: InstallKind.command,
         label: tr('Instalar con winget'),
-        explains: tr('Windows descargará e instalará MiKTeX.'),
+        explains: tr(
+          'Windows descargará e instalará MiKTeX en tu carpeta de usuario. '
+          'Su latexmk necesita Perl: si no lo tienes, Didacta te lo ofrecerá '
+          'después.',
+        ),
         program: 'winget',
-        arguments: [
-          'install',
-          '--id',
-          'MiKTeX.MiKTeX',
-          '-e',
-          '--source',
-          'winget',
-          '--accept-package-agreements',
-          '--accept-source-agreements',
-        ],
+        // Por usuario, que es lo que esta opción promete: sin `--scope`,
+        // winget puede elegir la del sistema, que pide administrador y deja
+        // una segunda copia al lado de la que hubiera.
+        arguments: _wingetInstall('MiKTeX.MiKTeX', scope: 'user'),
         needs: 'winget',
         manualSteps: [
           tr('Descarga el instalador básico de miktex.org/download'),

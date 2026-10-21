@@ -40,6 +40,22 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **En Windows, Didacta ve winget.** Decía que el Windows no tenía winget
+  aunque el Instalador de aplicación estuviera puesto, y mandaba a instalarlo
+  todo a mano. Ahora lo encuentra y lo usa.
+- **MiKTeX sin Perl se reconoce y se arregla.** El latexmk de MiKTeX necesita
+  Perl, y MiKTeX no lo trae. En lugar de decir que la instalación estaba a
+  medias, la pantalla de requisitos dice que falta Perl y el botón lo instala.
+  No hace falta cerrar Didacta después.
+- **Instalar con winget algo que ya está ya no da error.** Antes salía «terminó
+  con un error» y un código de diez cifras.
+- **MiKTeX se instala en tu carpeta de usuario,** sin pedir administrador y sin
+  dejar una segunda copia al lado de la que hubiera.
+- **Se encuentra el Python del nuevo instalador de python.org,** aunque no
+  esté en el PATH.
+
 ## 1.0.4 — 2026-10-05
 
 - **En Windows, winget se ofrece al principio.** La pantalla de requisitos

@@ -263,7 +263,12 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
       // Instalado y sigue sin aparecer. Pasa: hay instaladores que dejan el
       // programa en un sitio que no es ninguno de los de siempre. Decirlo
       // con la lista delante es mejor que un tick que miente.
-      if (_states[tool.id]?.ready != true && !plan.handsOver) {
+      // Si apareció y le falta otra cosa --el MiKTeX recién puesto, sin
+      // Perl--, eso ya lo dice su fila con su botón, y este modal mentiría.
+      final after = _states[tool.id];
+      if (after?.ready != true &&
+          (after?.fixes.isEmpty ?? true) &&
+          !plan.handsOver) {
         await _explain(
           tool,
           plan,
@@ -302,6 +307,10 @@ class _ToolchainCheckState extends State<ToolchainCheck> {
 
   /// Qué plan toca para esta herramienta, preguntando cuando hay que elegir.
   Future<InstallPlan?> _planFor(Tool tool) async {
+    // Lo que está pero no arranca por algo que se sabe arreglar: eso, y no
+    // otra copia de lo mismo. Al MiKTeX sin Perl le falta Perl, no MiKTeX.
+    final fixes = _states[tool.id]?.fixes ?? const <InstallPlan>[];
+    if (fixes.isNotEmpty) return _toolchain.choose(fixes);
     if (tool.id != ToolId.latex) {
       return _toolchain.choose(plansFor(tool.id, _toolchain.host));
     }

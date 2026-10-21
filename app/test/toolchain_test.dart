@@ -231,6 +231,72 @@ void main() {
     });
   });
 
+  group('winget', () {
+    List<InstallPlan> wingetPlans() => [
+      for (final tool in didactaTools)
+        ...plansFor(tool.id, Host.windows).where((p) => p.program == 'winget'),
+      ...perlPlans(Host.windows).where((p) => p.program == 'winget'),
+    ];
+
+    test('nunca se queda esperando una respuesta', () {
+      // Didacta cierra la entrada del proceso: una pregunta de winget sin
+      // esto es un cuelgue para siempre con la barra de progreso delante.
+      expect(wingetPlans(), hasLength(4));
+      for (final plan in wingetPlans()) {
+        expect(plan.arguments, contains('--disable-interactivity'));
+        expect(plan.arguments, contains('--accept-package-agreements'));
+        expect(plan.arguments, contains('--accept-source-agreements'));
+      }
+    });
+
+    test('MiKTeX va en la carpeta del usuario, como promete', () {
+      final miktex = latexOptions(Host.windows)
+          .firstWhere((option) => option.id == 'miktex');
+      expect(miktex.needsAdmin, isFalse);
+      final arguments = miktex.plan.arguments;
+      expect(arguments[arguments.indexOf('--scope') + 1], 'user');
+    });
+
+    test('«ya estaba» no es un error', () {
+      // Con signo, como lo da Windows: 0x8A150061 llega como negativo.
+      expect(wingetAlreadyDone(0x8A150061 - 0x100000000), isTrue);
+      expect(wingetAlreadyDone(0x8A15002B - 0x100000000), isTrue);
+      expect(wingetAlreadyDone(0x8A150061), isTrue);
+      // «No hay ningún paquete con ese nombre» sí lo es.
+      expect(wingetAlreadyDone(0x8A150014 - 0x100000000), isFalse);
+      expect(wingetAlreadyDone(1), isFalse);
+    });
+  });
+
+  group('Perl, para el latexmk de MiKTeX', () {
+    test('se reconoce lo que dice MiKTeX sin Perl', () {
+      // Tal cual lo escribe MiKTeX 25.12 en un Windows sin Perl.
+      const said =
+          'Sorry, but latexmk.exe did not succeed for the following reason:\n'
+          '\n'
+          "  MiKTeX could not find the script engine 'perl' which is required "
+          "to execute 'latexmk'.\n";
+      expect(latexmkNeedsPerl(said), isTrue);
+      expect(
+        latexmkNeedsPerl('Latexmk, John Collins, 2 January 2024. Version 4.83'),
+        isFalse,
+      );
+      expect(latexmkNeedsPerl(''), isFalse);
+    });
+
+    test('acaba en un plan que no depende de nada, con la descarga', () {
+      for (final host in Host.values) {
+        final plans = perlPlans(host);
+        expect(plans.last.needs, isNull, reason: host.name);
+        for (final plan in plans) {
+          expect(plan.manualSteps, isNotEmpty, reason: plan.label);
+        }
+      }
+      final manual = perlPlans(Host.windows).last;
+      expect(Uri.parse(manual.url!).scheme, 'https');
+    });
+  });
+
   group('los paquetes de TeX', () {
     test('están los que el preámbulo carga sí o sí', () {
       // Sin beamer no hay diapositivas y sin babel-spanish no compila una

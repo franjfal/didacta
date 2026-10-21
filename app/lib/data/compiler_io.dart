@@ -69,7 +69,13 @@ List<String> pythonDirectories() {
 
   final found = <String>[
     system,
-    if (local.isNotEmpty) '$local\\Programs\\Python\\Launcher',
+    if (local.isNotEmpty) ...[
+      '$local\\Programs\\Python\\Launcher',
+      // El «Python install manager», que es lo que python.org ofrece ahora
+      // para Windows: deja `python.exe` aquí y un alias en WindowsApps, que
+      // es el que se salta por ser de la Store.
+      '$local\\Python\\bin',
+    ],
   ];
   final versions = <(int, String)>[];
   for (final root in [
@@ -257,8 +263,21 @@ String texAwarePath({String? configured}) {
     ?chosen,
     if (inherited.isNotEmpty) inherited,
     ...extra.where((directory) => directory != chosen),
+    ...perlDirectories(),
   ].join(separator);
 }
+
+/// Dónde deja Perl Strawberry Perl, en Windows.
+///
+/// El `latexmk` de MiKTeX es un lanzador que busca Perl en el PATH, y
+/// Strawberry lo pone en el PATH del sistema, que Didacta no ve hasta que se
+/// vuelve a abrir. Sin esto, instalar Perl desde Didacta no arreglaba nada
+/// hasta reiniciarla. Al final: un Perl que ya esté en el PATH va antes.
+List<String> perlDirectories() => [
+  if (Platform.isWindows && _exists(_strawberryPerl)) _strawberryPerl,
+];
+
+const String _strawberryPerl = r'C:\Strawberry\perl\bin';
 
 /// Busca una herramienta en el PATH y en donde vive TeX.
 ///
