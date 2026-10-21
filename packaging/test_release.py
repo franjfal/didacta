@@ -49,7 +49,7 @@ class VersionTest(unittest.TestCase):
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def write(self, text):
-        with open(self.pubspec, "w") as handle:
+        with open(self.pubspec, "w", encoding="utf-8") as handle:
             handle.write(text)
 
     def test_la_forma_normal(self):
@@ -109,11 +109,11 @@ class BumpTest(unittest.TestCase):
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def write(self, text):
-        with open(self.pubspec, "w") as handle:
+        with open(self.pubspec, "w", encoding="utf-8") as handle:
             handle.write(text)
 
     def read(self):
-        with open(self.pubspec) as handle:
+        with open(self.pubspec, encoding="utf-8") as handle:
             return handle.read()
 
     def test_publicar_sube_la_mediana(self):
@@ -189,7 +189,7 @@ class BumpTest(unittest.TestCase):
         numbers = set()
         for index in range(4):
             copy = os.path.join(self.temp, "copia-%d.yaml" % index)
-            with open(copy, "w") as handle:
+            with open(copy, "w", encoding="utf-8") as handle:
                 handle.write("name: didacta_app\nversion: 1.1.0+7\n")
             release.PUBSPEC = copy
             numbers.add(release.bump())
@@ -410,7 +410,7 @@ class ChangelogTest(unittest.TestCase):
         shutil.rmtree(self.temp, ignore_errors=True)
 
     def write(self, text):
-        with open(self.changelog, "w") as handle:
+        with open(self.changelog, "w", encoding="utf-8") as handle:
             handle.write(text)
 
     def test_saca_la_seccion_y_solo_la_suya(self):
