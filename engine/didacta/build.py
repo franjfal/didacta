@@ -152,6 +152,16 @@ class Diagnostic:
         return data
 
 
+def _tex_path(path):
+    """[path], absoluta y como la lee TeX: con `/` también en Windows.
+
+    Va dentro de un `\\def` que luego se pasa a `\\IfFileExists` y a
+    `\\input`, y ahí `C:\\Users\\...` no es una ruta sino `\\Users`, una
+    orden que no existe. TeX acepta `/` en cualquier sistema.
+    """
+    return os.path.abspath(path).replace(os.sep, "/")
+
+
 def locate(diagnostics, source_dir, content_root):
     """Dice de qué lección y de qué idioma es cada diagnóstico.
 
@@ -170,7 +180,13 @@ def locate(diagnostics, source_dir, content_root):
         full = diagnostic.file
         if not os.path.isabs(full):
             full = os.path.join(source_dir, full)
-        relative = os.path.relpath(os.path.normpath(full), root).replace(os.sep, "/")
+        try:
+            relative = os.path.relpath(os.path.normpath(full), root)
+        except ValueError:
+            # En Windows, en otra unidad: el paquete de MiKTeX en `C:` y el
+            # repositorio en `D:`. Fuera del repositorio, como un `../`.
+            continue
+        relative = relative.replace(os.sep, "/")
         if relative.startswith("../"):
             continue
         diagnostic.path = relative
@@ -1143,24 +1159,24 @@ class Engine:
         # lee para saber qué clase de documento pedir.
         declared = self.declarations()
         if declared:
-            pretex += "\\def\\DidactaTemplates{%s}" % os.path.abspath(declared)
+            pretex += "\\def\\DidactaTemplates{%s}" % _tex_path(declared)
         # Y el preámbulo de la que se está compilando, si lo tiene. Lo lee
         # `didacta.sty` al final del suyo, así que puede redefinir lo que
         # Didacta acaba de definir.
         preamble = getattr(profile, "preamble", None)
         if preamble:
-            pretex += "\\def\\DidactaPreamble{%s}" % os.path.abspath(preamble)
+            pretex += "\\def\\DidactaPreamble{%s}" % _tex_path(preamble)
         # Lo que definen los snippets del repositorio. Lo lee `didacta.sty`
         # justo antes del preámbulo de la plantilla.
         defined = self.snippet_definitions()
         if defined:
-            pretex += "\\def\\DidactaSnippets{%s}" % os.path.abspath(defined)
+            pretex += "\\def\\DidactaSnippets{%s}" % _tex_path(defined)
         # El original de cada lección que no lo tiene en castellano, para el
         # idioma de reserva.
         references = self.unit_references()
         if references:
             pretex += ("\\def\\DidactaUnitReferences{%s}"
-                       % os.path.abspath(references))
+                       % _tex_path(references))
         if bibliography:
             # Relativa a la raíz, como las unidades: el paquete la compone con
             # \DidactaContentRoot, así que el documento no lleva ninguna ruta.
@@ -1168,7 +1184,7 @@ class Engine:
         if inject:
             # Absolute: the working directory is the source's directory, not
             # the output directory.
-            pretex += "\\def\\DidactaInjectFile{%s}" % os.path.abspath(inject)
+            pretex += "\\def\\DidactaInjectFile{%s}" % _tex_path(inject)
         return pretex
 
     def _write_wrapper(self, outdir, pretex, source_name):

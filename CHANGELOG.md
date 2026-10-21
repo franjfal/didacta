@@ -40,6 +40,16 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **En Windows, las plantillas, los snippets y los datos del curso entran en
+  el PDF.** Su ruta le llegaba a LaTeX con barras invertidas, y LaTeX las
+  leía como órdenes: no los encontraba.
+- **En Windows, un error en un paquete de MiKTeX ya no tumba la
+  compilación** cuando el repositorio está en otro disco.
+- **En Windows, los mensajes del motor llegan con sus acentos,** y copiar un
+  documento con otro nombre ya no termina en un error.
+
 ## 1.0.5 — 2026-10-21
 
 - **En Windows, Didacta ve winget.** Decía que el Windows no tenía winget

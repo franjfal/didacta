@@ -140,9 +140,13 @@ def in_repository(file, root):
     """
     # Las dos por su ruta real: en macOS `/tmp` es `/private/tmp`, y
     # `synctex` dice la que usó LaTeX.
-    relative = os.path.relpath(
-        os.path.realpath(file), os.path.realpath(root)
-    ).replace(os.sep, "/")
+    try:
+        relative = os.path.relpath(
+            os.path.realpath(file), os.path.realpath(root)
+        ).replace(os.sep, "/")
+    except ValueError:
+        # En Windows, en otra unidad: no es del repositorio.
+        return {}
     if relative.startswith("../"):
         return {}
     where = {"path": relative}

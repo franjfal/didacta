@@ -4844,9 +4844,14 @@ if __name__ == "__main__":
     # Line-buffered even when redirected. `migrate --verify` and `build --all`
     # run for many minutes, and with the default block buffering `> log` shows
     # nothing at all until the process ends -- which looks exactly like a hang.
+    #
+    # Y en UTF-8 siempre, que es lo que lee la aplicación. En Windows, por una
+    # tubería, Python escribe en la página de códigos del sistema (cp1252):
+    # los acentos le llegaban rotos y una «→» tumbaba la orden entera con un
+    # UnicodeEncodeError. En macOS y Linux ya lo era; esto no les cambia nada.
     try:
-        sys.stdout.reconfigure(line_buffering=True)
-        sys.stderr.reconfigure(line_buffering=True)
+        sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+        sys.stderr.reconfigure(encoding="utf-8", line_buffering=True)
     except AttributeError:  # pragma: no cover - Python < 3.7
         pass
     sys.exit(main())
