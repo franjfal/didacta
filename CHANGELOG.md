@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.6 — 2026-10-21
 
 - **En Windows, las plantillas, los snippets y los datos del curso entran en
   el PDF.** Su ruta le llegaba a LaTeX con barras invertidas, y LaTeX las
