@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.5 — 2026-10-21
 
 - **En Windows, Didacta ve winget.** Decía que el Windows no tenía winget
   aunque el Instalador de aplicación estuviera puesto, y mandaba a instalarlo
