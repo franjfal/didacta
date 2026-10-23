@@ -38,6 +38,7 @@ import '../data/github.dart';
 import '../data/local_clone.dart';
 import '../data/preferences.dart';
 import '../data/template_store.dart';
+import '../data/tex_packages.dart';
 import '../data/toolchain.dart';
 import '../model/catalogue.dart';
 import '../model/file_history.dart' show FileCommit;
@@ -678,6 +679,11 @@ class Session extends ChangeNotifier {
   /// rato.
   Toolchain toolchain() =>
       Toolchain(texPath: engine.texPath, enginePath: engine.enginePath);
+
+  /// Con qué se instala un paquete de LaTeX que le falta a una compilación:
+  /// el gestor de la distribución con la que se compila. Se construye cada
+  /// vez, como [toolchain], y una prueba la sustituye para no lanzar `tlmgr`.
+  TexPackages texPackages() => TexPackages(texPath: engine.texPath);
 
   // -- el índice y el disco: ver [CatalogueStore] --------------------------
 

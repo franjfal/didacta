@@ -343,11 +343,12 @@ rutas:
           - {titulo: Del PDF a la lección, pagina: "app/compilar.md#del-pdf-a-la-leccion"}
       - codigo: F4
         titulo: Cuando la compilación falla
-        minutos: 2
-        sabras: ir directo al error, y ver las diapositivas que se salen.
+        minutos: 2.5
+        sabras: ir directo al error, leer el log entero cuando haga falta e instalar un paquete de LaTeX que falte.
         idea: el error se dice en la lección que hay que arreglar, no en el documento que la incluye.
         mas:
           - {titulo: Cuando falla, pagina: "app/compilar.md#cuando-falla"}
+          - {titulo: Si falta un paquete de LaTeX, pagina: "app/compilar.md#paquete-que-falta"}
           - {titulo: Cuando algo falla, pagina: ayuda/problemas.md}
       - codigo: F5
         titulo: Compilar un curso entero, o solo lo desactualizado
@@ -698,6 +699,7 @@ preguntas:
       - [instalarla, [A2]]
       - [probar sin arriesgar mi material, [A4]]
       - ["que compile: no encuentra LaTeX", [A5]]
+      - ["que compile: le falta un paquete (File … not found)", [F4]]
       - [saber dónde está cada cosa, [A6, K2]]
       - [entender por qué una lección no pertenece a una asignatura, [B1]]
       - [saber qué PDF salen de una lección, [B2]]

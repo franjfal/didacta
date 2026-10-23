@@ -102,6 +102,10 @@ selección de líneas.
 Cerrarla no para nada, y se puede volver a abrir mientras corre y después,
 desde la tira de abajo. Mientras corre tiene también **Detener**.
 
+Si la compilación ha fallado, al pie está **Ver log completo**: el registro
+entero y el `.log` de LaTeX, con buscador y los errores marcados ([más
+abajo](#log-completo)).
+
 ## El PDF, dentro
 
 Cada salida es **una pestaña más**, al lado de los idiomas y de `unit.yaml`. Y
@@ -225,6 +229,61 @@ documento y versión, cada uno con su **Abrir**.
 
 Un idioma que falta no es un error: es un aviso. El documento se compila con
 el idioma de referencia en su sitio y se dice cuál faltaba.
+
+### Ver el log completo { #log-completo }
+
+Casi siempre basta con la tarjeta. Cuando no --un paquete que se queja con un
+mensaje raro, un error que solo se entiende con las veinte líneas de antes--,
+**Ver log completo**, en la tarjeta o al pie de la consola, abre todo lo que
+dijo la compilación sin ir a buscar ficheros:
+
+![El log completo de una compilación que ha fallado](../img/app/log-completo.png)
+
+- **Una pestaña por cosa que leer**: el `.log` de LaTeX de cada versión que
+  falló y la salida de la compilación, que es lo que se vio en la consola.
+- **El primer error de verdad, arriba**, con su fichero y su línea. No el
+  «Emergency stop» que LaTeX escribe detrás, que es la consecuencia; **Ir al
+  error** lleva a su línea.
+- **Los errores, en rojo**, y las flechas junto a «N errores» saltan de uno en
+  uno: en un log de tres mil líneas, son las cinco que hay que leer.
+- **Buscar en el log** (++cmd+f++ en macOS, ++ctrl+f++ en Windows y Linux)
+  marca lo encontrado y dice cuántas veces sale; ++enter++ va al siguiente.
+- **Copiar** y **Descargar…** se llevan el log entero, todas las pestañas,
+  como texto: para abrirlo en otro editor o mandárselo a quien te ayude.
+
+### Si falta un paquete de LaTeX { #paquete-que-falta }
+
+Con una distribución pequeña --TinyTeX, BasicTeX-- es normal que la primera
+vez falte algún paquete. LaTeX lo dice así:
+
+```
+LaTeX Error: File `tcolorbox.sty' not found.
+```
+
+Didacta lo reconoce, y la tarjeta y la consola lo dicen con un botón:
+**Instalar paquete**.
+
+![Instalar el paquete que falta](../img/app/instalar-paquete.png)
+
+1. **Busca qué paquete trae ese fichero** con el gestor de tu distribución
+   --`tlmgr` en TeX Live, MacTeX y TinyTeX; el de MiKTeX en Windows--, y dice
+   cuál va a instalar antes de hacerlo. No hay un gestor propio: el oficial
+   ya sabe de dónde bajarlo y dónde dejarlo, y así no hay dos copias de nada.
+2. **Antes, mira si ya está.** Si lo está, instalarlo otra vez no arreglaría
+   nada, y lo dice: lo más probable es que se esté compilando con otra
+   instalación de TeX, y cuál es se ve en
+   [Ajustes → Herramientas](ajustes.md#herramientas).
+3. **Instalar** enseña lo que va escribiendo el gestor. Si la carpeta de TeX
+   es del administrador --MacTeX, un TeX Live instalado para todos--, la
+   contraseña **la pide el sistema en su propia ventana**: Didacta no la ve.
+   Si `tlmgr` tiene que actualizarse antes, lo hace en el mismo paso.
+4. Al acabar, **Volver a compilar** repite lo que había fallado.
+
+Cuando no se puede desde aquí --el TeX de una distribución de Linux, que
+instala sus paquetes con `apt` o `dnf`; sin conexión con CTAN; un TeX Live de
+un año ya cerrado-- lo dice con palabras y da **las órdenes para hacerlo a
+mano**, cada una con su botón de copiar. Las mismas, por distribución, están
+en [Cuando algo falla](../ayuda/problemas.md#file-xsty-not-found).
 
 ## Diapositivas que se salen { #diapositivas-que-se-salen }
 

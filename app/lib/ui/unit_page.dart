@@ -277,7 +277,10 @@ class _UnitPageState extends State<UnitPage> {
           languages: [language],
           onOutput: console.add,
         );
-        console.finish(ok: made.every((result) => result.ok));
+        console.finishBuild(
+          made,
+          retry: () => _recompilePane(session, groupId, language),
+        );
         return made;
       });
       if (!mounted) return;

@@ -84,6 +84,46 @@
         },
         {
           "pulsar": {
+            "clave": "console-full-log"
+          },
+          "esperar": 10
+        },
+        {
+          "capturar": {
+            "nombre": "log",
+            "cajas": {
+              "primero": {
+                "clave": "log-first-error"
+              },
+              "irse": {
+                "clave": "log-first-error-go"
+              },
+              "lineas": {
+                "clave": "log-lines"
+              },
+              "errores": {
+                "clave": "log-error-count"
+              },
+              "flechas": {
+                "clave": "log-error-next"
+              },
+              "buscar": {
+                "clave": "log-search"
+              },
+              "descargar": {
+                "clave": "log-save"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "log-close"
+          },
+          "esperar": 6
+        },
+        {
+          "pulsar": {
             "texto": "Abrir",
             "n": 0
           },
@@ -97,6 +137,127 @@
         "titulo": {
           "texto": "Funciones continuas",
           "n": 0
+        }
+      }
+    },
+    {
+      "nombre": "paquete",
+      "ruta": "/courses/calculo-i/2026-2027",
+      "falta_paquete": {
+        "fichero": "tcolorbox.sty",
+        "paquete": "tcolorbox"
+      },
+      "preparar": [
+        {
+          "editar": {
+            "fichero": "content/calculo/continuidad/funciones-continuas/funcion-continua/es.tex",
+            "buscar": "\\fracc{x^2 - 1}{x - 1}",
+            "poner": "\\dfrac{x^2 - 1}{x - 1}",
+            "mensaje": "Corregir la errata",
+            "enviar": true
+          }
+        }
+      ],
+      "acciones": [
+        {
+          "esperar": 12
+        },
+        {
+          "pulsar": {
+            "clave": "build-document-tema-1"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "con errores"
+          },
+          "max": 800,
+          "despues": 12
+        },
+        {
+          "capturar": {
+            "nombre": "paquete-falta",
+            "cajas": {
+              "aviso": {
+                "clave": "missing-package",
+                "ajustado": true
+              },
+              "instalar": {
+                "clave": "missing-package-install"
+              },
+              "cabecera": {
+                "contiene": "Terminada",
+                "fila": 700
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "missing-package-install"
+          },
+          "esperar": 12
+        },
+        {
+          "capturar": {
+            "nombre": "paquete-dialogo",
+            "cajas": {
+              "dialogo": {
+                "clave": "install-packages"
+              },
+              "fichero": {
+                "clave": "install-need-tcolorbox.sty"
+              },
+              "confirmar": {
+                "clave": "install-confirm"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "install-confirm"
+          },
+          "esperar": 14
+        },
+        {
+          "capturar": {
+            "nombre": "paquete-instalado",
+            "cajas": {
+              "dialogo": {
+                "clave": "install-packages"
+              },
+              "hecho": {
+                "clave": "install-done"
+              },
+              "salida": {
+                "clave": "install-output"
+              },
+              "recompilar": {
+                "clave": "install-recompile"
+              }
+            }
+          }
+        },
+        {
+          "pulsar": {
+            "clave": "install-recompile"
+          },
+          "esperar": 6
+        },
+        {
+          "hasta_que": {
+            "contiene": "ninguno con errores"
+          },
+          "max": 800,
+          "despues": 12
+        }
+      ],
+      "cajas": {
+        "cabecera": {
+          "contiene": "Terminada",
+          "fila": 700
         }
       }
     }

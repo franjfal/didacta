@@ -45,8 +45,16 @@ bibliografía no rompe nada: sale como `[?]`, y **Revisar** avisa antes.
 
 ### «File `X.sty' not found»
 
-A tu distribución de TeX le falta un paquete. Lo que se hace depende de cuál
-tengas; [Ajustes → Herramientas](../app/ajustes.md#herramientas) dice cuál es.
+A tu distribución de TeX le falta un paquete. **Lo normal es arreglarlo
+desde Didacta**: la tarjeta de la compilación y la consola dicen qué fichero
+falta y tienen un botón, **Instalar paquete**, que lo busca e instala con el
+gestor de tu distribución y luego vuelve a compilar. Si hace falta la
+contraseña de administrador, la pide el sistema
+([cómo funciona](../app/compilar.md#paquete-que-falta)).
+
+Si no se puede desde ahí, el diálogo lo dice y da las órdenes. Son estas, y
+dependen de qué distribución tengas; [Ajustes →
+Herramientas](../app/ajustes.md#herramientas) dice cuál es.
 
 === "TinyTeX"
 
@@ -80,6 +88,15 @@ tengas; [Ajustes → Herramientas](../app/ajustes.md#herramientas) dice cuál es
     Ya lo traen todo. Si aun así falta, el paquete no está en CTAN y no hay
     orden que lo instale: define lo que uses de él en un snippet o en la
     cabecera de la plantilla.
+
+    Si `tlmgr` contesta *tlmgr itself needs to be updated*, primero:
+
+    ```bash
+    sudo tlmgr update --self
+    ```
+
+    Y si dice que tu TeX Live *is older than remote repository*, es de un año
+    que ya cerró: hay que instalar la versión de este año.
 
 === "MiKTeX (Windows)"
 

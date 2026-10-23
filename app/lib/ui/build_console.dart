@@ -24,6 +24,9 @@ import '../state/build_console.dart';
 import '../state/session.dart';
 import '../data/compiler.dart';
 import 'diagnostic_list.dart';
+import 'log_viewer.dart';
+import 'missing_package.dart';
+import '../data/tex_packages.dart';
 import 'theme.dart';
 import '../l10n/tr.dart';
 
@@ -177,6 +180,24 @@ class _BuildConsoleDialogState extends State<BuildConsoleDialog> {
             // lleva, encima del registro: son lo que hay que arreglar.
             if (!console.running && console.problems.isNotEmpty)
               _Problems(console: console),
+            // Lo que falta es un paquete: se instala desde aquí y se vuelve
+            // a compilar sin cerrar la ventana.
+            if (!console.running &&
+                console.missingFiles.isNotEmpty &&
+                TexPackages.supported &&
+                _sessionIn(context) != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: MissingPackageNote(
+                  files: console.missingFiles,
+                  onInstall: () => showInstallPackages(
+                    context,
+                    files: console.missingFiles,
+                    packages: _sessionIn(context)!.texPackages(),
+                    onRecompile: console.retry,
+                  ),
+                ),
+              ),
             if (plain)
               Expanded(
                 child: _Plain(
@@ -637,6 +658,28 @@ class _Footer extends StatelessWidget {
         ),
         // Solo cuando se ha dejado de seguir: mientras va detrás de la
         // última línea, un botón que dice «ir al final» no hace nada.
+        // Al acabar mal: el registro entero, con el `.log` de LaTeX, para
+        // buscar en él.
+        if (!console.running &&
+            !console.ok &&
+            !console.stopped &&
+            !console.isEmpty)
+          TextButton.icon(
+            key: const Key('console-full-log'),
+            icon: const Icon(Icons.article_outlined, size: 16),
+            label: Text(tr('Ver log completo')),
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            onPressed: () => showLogViewer(
+              context,
+              sources: logSourcesOf(console),
+              errors: [
+                for (final entry in console.outputs)
+                  if (!entry.output.ok) ...entry.output.errorDiagnostics,
+                for (final problem in console.problems)
+                  if (problem.diagnostic.isError) problem.diagnostic,
+              ],
+            ),
+          ),
         if (!following)
           TextButton.icon(
             key: const Key('console-follow'),

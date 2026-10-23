@@ -2,59 +2,87 @@
   "codigo": "F4",
   "titulo": "Cuando la compilación falla",
   "fichero": "F04-cuando-la-compilacion-falla.mp4",
-  "duracion": 48.35,
-  "megas": 3.7,
-  "fecha": "2026-09-28",
-  "version": "0.3.0",
+  "duracion": 97.78,
+  "megas": 6.2,
+  "fecha": "2026-10-23",
+  "version": "1.0.6",
   "capitulos": [
     {
       "t": 0.0,
       "titulo": "Cuando la compilación falla"
     },
     {
-      "t": 7.12,
+      "t": 8.96,
       "titulo": "La tarjeta"
     },
     {
-      "t": 16.43,
+      "t": 18.27,
       "titulo": "La consola"
     },
     {
-      "t": 23.69,
+      "t": 25.54,
+      "titulo": "El log completo"
+    },
+    {
+      "t": 41.44,
       "titulo": "Arreglarlo"
+    },
+    {
+      "t": 53.19,
+      "titulo": "Si falta un paquete"
     }
   ],
   "transcripcion": [
     {
       "t": 1.2,
-      "texto": "Al terminar sabrás ir directo a un error de compilación, sin leer la consola entera."
+      "texto": "Al terminar sabrás ir directo a un error de compilación, leer el log entero cuando haga falta, e instalar un paquete que falte."
     },
     {
-      "t": 7.62,
+      "t": 9.46,
       "texto": "Si algo falla, cada error dice en qué lección está, en qué idioma, en qué línea, y qué ha pasado."
     },
     {
-      "t": 14.77,
+      "t": 16.61,
       "texto": "Abrir te lleva allí."
     },
     {
-      "t": 16.93,
+      "t": 18.77,
       "texto": "Y si hace falta, Ver detalles enseña la consola entera, con cada línea marcada con su versión."
     },
     {
-      "t": 24.19,
+      "t": 26.04,
+      "texto": "Y si con eso no basta, Ver log completo abre todo lo que ha dicho LaTeX. Arriba, el primer error de verdad, con su fichero y su línea."
+    },
+    {
+      "t": 35.34,
+      "texto": "Las flechas saltan de error en error, y el log se puede buscar, copiar o descargar."
+    },
+    {
+      "t": 41.94,
       "texto": "Abrir lleva a la lección, en su idioma, con el cursor en la línea: aquí sobraba una c."
     },
     {
-      "t": 30.66,
+      "t": 48.41,
       "texto": "El error se dice en la lección que hay que arreglar, no en el tema que la incluye."
     },
     {
-      "t": 35.94,
+      "t": 53.69,
+      "texto": "Otras veces no es una errata: a tu LaTeX le falta un paquete. Pasa mucho con las instalaciones pequeñas, como TinyTeX o BasicTeX. Didacta lo reconoce, y lo ofrece instalar."
+    },
+    {
+      "t": 67.44,
+      "texto": "Antes de nada te dice qué paquete es, y lo instala con el gestor oficial de tu distribución: tlmgr, o el de MiKTeX. Si hace falta tu contraseña, te la pide el sistema, no Didacta."
+    },
+    {
+      "t": 80.83,
+      "texto": "Al acabar, Volver a compilar. Y ya sale."
+    },
+    {
+      "t": 85.38,
       "texto": "El error se dice en la lección que hay que arreglar, no en el documento que la incluye."
     },
     {
-      "t": 41.34,
+      "t": 90.78,
       "texto": "En el siguiente vídeo, compilar un curso entero, o solo lo desactualizado."
     }
   ]

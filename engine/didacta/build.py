@@ -95,7 +95,7 @@ class Diagnostic:
 
     __slots__ = (
         "severity", "file", "line", "message", "context",
-        "path", "unit", "language", "code", "points", "times",
+        "path", "unit", "language", "code", "points", "times", "needs",
     )
 
     def __init__(self, severity, message, file=None, line=None, context=None,
@@ -113,6 +113,10 @@ class Diagnostic:
         #: diapositiva con cinco capas se sale en sus cinco páginas.
         self.points = points
         self.times = times
+        #: El fichero que falta, cuando el error es ese (`code` =
+        #: `missing-file`): `tcolorbox.sty`, `ec-lmr10.tfm`. Es lo que la
+        #: aplicación le pregunta al gestor de paquetes de la distribución.
+        self.needs = None
         # Dónde está, dicho como lo dice el repositorio y no el log: la ruta
         # desde la raíz y, si es el `.tex` de una lección, cuál y en qué
         # idioma. Lo pone `locate`, que es quien sabe dónde está la raíz.
@@ -149,6 +153,8 @@ class Diagnostic:
             data["code"] = self.code
             data["points"] = self.points
             data["times"] = self.times
+        if self.needs:
+            data["needs"] = self.needs
         return data
 
 
@@ -260,6 +266,47 @@ _FILE_LINE_ERROR = re.compile(
     r"^(?:\./)?(?P<file>[^:\s][^:]*\.(?:tex|sty|def|cls|ldf)):(?P<line>\d+): "
     r"(?P<message>.*)$"
 )
+
+# Lo que LaTeX dice cuando le falta un fichero de un paquete. Las tres formas
+# en que sale: `\usepackage` y `\documentclass` («LaTeX Error: File
+# `tcolorbox.sty' not found.»), `\input` de TeX a secas («I can't find file
+# `x.def'.») y una fuente sin sus métricas («Font \T1/lmr/m/n/10=ec-lmr10 at
+# 10pt not loadable: Metric (TFM) file not found.»).
+_MISSING_FILE = re.compile(r"File [`'\"]([^`'\"\s]+)['\"] not found")
+_CANT_FIND = re.compile(r"I can't find file [`'\"]([^`'\"\s]+)['\"]")
+_MISSING_FONT = re.compile(r"=([^\s=]+) (?:at [^:]*)?not loadable: Metric \(TFM\) file not found")
+
+# Solo estos: son los que trae un paquete de la distribución. Un `.tex` que
+# falta casi siempre es del autor --un `\input` mal escrito--, y ofrecer
+# instalarlo sería mandar a buscar a CTAN una errata.
+_PACKAGE_FILES = (".sty", ".cls", ".def", ".ldf", ".fd", ".cfg", ".clo",
+                  ".bst", ".bbx", ".cbx", ".lbx", ".tfm")
+
+
+def missing_file(message):
+    """El fichero de un paquete que [message] dice que falta, o None.
+
+    Los de Didacta (`didacta*.sty`) no cuentan: si faltan, lo que está mal es
+    el TEXINPUTS y no la distribución, y ningún gestor de paquetes los tiene.
+    """
+    for pattern in (_MISSING_FILE, _CANT_FIND):
+        match = pattern.search(message)
+        if match:
+            name = match.group(1)
+            if "." not in os.path.basename(name):
+                # `\input{tikz}` busca `tikz.tex`, pero sin extensión TeX
+                # prueba también la palabra sola; lo razonable es el `.tex`,
+                # y ese no se instala.
+                return None
+            if not name.lower().endswith(_PACKAGE_FILES):
+                return None
+            if os.path.basename(name).lower().startswith("didacta"):
+                return None
+            return os.path.basename(name)
+    match = _MISSING_FONT.search(message)
+    if match:
+        return match.group(1) + ".tfm"
+    return None
 _UNDEFINED = re.compile(r"(Reference|Citation) [`']([^']*)' on page")
 
 #: Warnings worth showing. LaTeX emits many that nobody can act on -- an
@@ -354,15 +401,18 @@ def parse_log(text, overfull=()):
             blamed = located.group("file") if located else None
             if blamed is None or blamed.lower().endswith(_MACHINERY):
                 blamed = _blame(stack, number) or blamed
-            diagnostics.append(
-                Diagnostic(
-                    "error",
-                    message,
-                    file=blamed,
-                    line=number,
-                    context=" ".join(context[:2]) or None,
-                )
+            diagnostic = Diagnostic(
+                "error",
+                message,
+                file=blamed,
+                line=number,
+                context=" ".join(context[:2]) or None,
             )
+            needs = missing_file(message)
+            if needs:
+                diagnostic.code = "missing-file"
+                diagnostic.needs = needs
+            diagnostics.append(diagnostic)
         elif "LaTeX Warning:" in line or ("Package" in line and "Warning:" in line):
             after = line.split("Warning:", 1)[1].strip()
             ours = _OURS in line
@@ -574,6 +624,10 @@ class BuildResult:
             "seconds": round(self.seconds, 1),
             "diagnostics": [d.as_dict() for d in self.diagnostics],
         }
+        if self.log:
+            # El registro entero de LaTeX: la aplicación lo enseña con
+            # «Ver log completo» cuando los diagnósticos no bastan.
+            data["log"] = self.log
         if self.quick:
             data["quick"] = True
         if self.tagged:

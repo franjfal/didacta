@@ -298,7 +298,10 @@ class _DocumentPageState extends State<DocumentPage> {
           fast: session.quickBuild,
           onOutput: console.add,
         );
-        console.finish(ok: made.every((result) => result.ok));
+        console.finishBuild(
+          made,
+          retry: () => _recompilePane(session, groupId, language),
+        );
         return made;
       });
       if (!mounted) return;

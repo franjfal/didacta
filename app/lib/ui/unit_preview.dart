@@ -36,6 +36,9 @@ import 'build_console.dart';
 import 'pdf_tab.dart';
 import 'missing_translations.dart';
 import 'theme.dart';
+import 'log_viewer.dart';
+import 'missing_package.dart';
+import '../data/tex_packages.dart';
 import 'diagnostic_list.dart';
 import '../l10n/tr.dart';
 
@@ -308,6 +311,13 @@ class PreviewState {
   Object? problem;
   List<CompileOutput> results = const [];
 
+  /// Lo último que se compiló, para repetirlo tal cual: es lo que hace falta
+  /// después de instalar el paquete que le faltaba.
+  Future<void> Function()? _again;
+
+  /// Vuelve a compilar lo último que se pidió.
+  Future<void> retry() => (_again ?? compile)();
+
   Future<void> load() async {
     final compiler = session.compiler(repo: target.repo);
     if (compiler == null) {
@@ -457,6 +467,7 @@ class PreviewState {
   Future<void> compileOne(ExistingOutput output) async {
     final compiler = session.compiler(repo: target.repo);
     if (compiler == null) return;
+    _again = () => compileOne(output);
     building = true;
     problem = null;
     onChanged();
@@ -472,7 +483,7 @@ class PreviewState {
             languages: [output.language],
             onOutput: console.add,
           );
-          console.finish(ok: made.every((result) => result.ok));
+          console.finishBuild(made, retry: () => compileOne(output));
           return made;
         },
       );
@@ -498,6 +509,7 @@ class PreviewState {
     // ninguna. Compilar «las que se puedan» dejaría a alguien con la mitad
     // de lo que pidió y sin saber qué mitad.
     if (blocked.isNotEmpty) return;
+    _again = () => compile(full: full);
     building = true;
     problem = null;
     results = const [];
@@ -525,7 +537,7 @@ class PreviewState {
             fast: quick && !full,
             onOutput: console.add,
           );
-          console.finish(ok: made.every((result) => result.ok));
+          console.finishBuild(made, retry: () => compile(full: full));
           return made;
         },
       );
@@ -629,6 +641,7 @@ class UnitPreview extends StatelessWidget {
                       _watch(context, () => state.compileOne(output)),
                   onDelete: (output) => state.delete([output]),
                   onDeleteAll: () => state.delete(state.existing),
+                  onRetry: () async => _watch(context, state.retry),
                 ),
         ),
       ],
@@ -863,7 +876,12 @@ class _Results extends StatelessWidget {
     required this.onRecompile,
     required this.onDelete,
     required this.onDeleteAll,
+    required this.onRetry,
   });
+
+  /// Vuelve a compilar lo de esta compilación: después de instalar un
+  /// paquete que faltaba.
+  final Future<void> Function() onRetry;
 
   final List<CompileOutput> results;
   final List<ExistingOutput> existing;
@@ -956,7 +974,12 @@ class _Results extends StatelessWidget {
         if (results.isNotEmpty) ...[
           _Label(tr('Esta compilación')),
           for (final result in results)
-            _ResultCard(result: result, onOpen: onOpen, onReveal: onReveal),
+            _ResultCard(
+              result: result,
+              onOpen: onOpen,
+              onReveal: onReveal,
+              onRetry: onRetry,
+            ),
           const SizedBox(height: 8),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 2),
@@ -1156,8 +1179,10 @@ class _ResultCard extends StatelessWidget {
     required this.result,
     required this.onOpen,
     required this.onReveal,
+    required this.onRetry,
   });
 
+  final Future<void> Function() onRetry;
   final CompileOutput result;
   final ValueChanged<String> onOpen;
   final ValueChanged<String> onReveal;
@@ -1230,12 +1255,57 @@ class _ResultCard extends StatelessWidget {
                 ],
               ),
             ],
+            // Si lo que falta es un paquete, lo primero: se arregla con un
+            // botón, y todo lo demás que diga el log es consecuencia.
+            if (!result.ok &&
+                result.missingFiles.isNotEmpty &&
+                TexPackages.supported) ...[
+              const SizedBox(height: 9),
+              MissingPackageNote(
+                files: result.missingFiles,
+                onInstall: () => showInstallPackages(
+                  context,
+                  files: result.missingFiles,
+                  packages: context.read<Session>().texPackages(),
+                  onRecompile: onRetry,
+                ),
+              ),
+            ],
             // Cada error con su lección, su línea y un botón para ir allí.
             if (result.errorDiagnostics.isNotEmpty) ...[
               const SizedBox(height: 9),
               DiagnosticList(
                 diagnostics: result.errorDiagnostics,
                 session: context.read<Session>(),
+              ),
+            ],
+            // Cuando lo de arriba no basta: el registro entero.
+            if (!result.ok) ...[
+              const SizedBox(height: 4),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const Key('result-full-log'),
+                  icon: const Icon(Icons.article_outlined, size: 16),
+                  label: Text(tr('Ver log completo')),
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  onPressed: () => showLogViewer(
+                    context,
+                    sources: logSourcesFor(
+                      outputs: [(what: null, output: result)],
+                      // La salida de la consola, solo si es la de esta
+                      // compilación: después puede haber venido otra.
+                      transcript: _transcriptOf(context.read<Session>()),
+                    ),
+                    errors: result.errorDiagnostics,
+                    title: tr('Log completo · {0} · {1}', [
+                      result.profile,
+                      result.language,
+                    ]),
+                  ),
+                ),
               ),
             ],
             if (result.ok && result.quick) ...[
@@ -1277,6 +1347,14 @@ class _ResultCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<String> _transcriptOf(Session session) {
+    final console = session.buildConsole;
+    final ours = console.outputs.any(
+      (entry) => identical(entry.output, result),
+    );
+    return ours ? console.lines : const [];
   }
 }
 

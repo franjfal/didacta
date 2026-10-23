@@ -3,9 +3,15 @@
 # Montado desde este guion. La errata es de verdad: el arnés cambia un
 # `\dfrac` por `\fracc` en «Funciones continuas» antes de compilar el Tema 1,
 # y lo que dice la aplicación es lo que ha dicho LaTeX.
+#
+# El paquete que falta, en cambio, se simula (`falta_paquete` en
+# capturas.json): quien graba tiene una TeX Live completa, así que se compila
+# de verdad y el arnés cambia el resultado por el error que daría un TinyTeX
+# sin `tcolorbox.sty`; la instalación es un gestor de mentira que no toca el
+# sistema. Lo mismo que hace el A5 con las herramientas que «faltan».
 codigo: F4
 titulo: Cuando la compilación falla
-subtitulo: Ir directo al error, en la lección que hay que arreglar
+subtitulo: Ir directo al error, leer el log entero e instalar el paquete que falta
 ruta: Compilar y revisar
 siguiente: "F5 · Compilar un curso entero, o solo lo desactualizado"
 voz: narrador
@@ -19,8 +25,8 @@ escenas:
     frases:
       - id: presentacion
         texto: >-
-          Al terminar sabrás ir directo a un error de compilación, sin leer la
-          consola entera.
+          Al terminar sabrás ir directo a un error de compilación, leer el log
+          entero cuando haga falta, e instalar un paquete que falte.
 
   - id: tarjeta
     capitulo: La tarjeta
@@ -54,6 +60,27 @@ escenas:
           - {al: inicio, enfoca: [consola], max: 1.5}
           - {en: consola, resalta: consola}
 
+  - id: log
+    capitulo: El log completo
+    antes: 0.5
+    pantalla: log
+    frases:
+      - id: completo
+        texto: >-
+          Y si con eso no basta, Ver log completo abre todo lo que ha dicho
+          LaTeX. Arriba, el primer error de verdad, con su fichero y su línea.
+        pasos:
+          - {al: inicio, enfoca: [primero, lineas], max: 1.4}
+          - {en: primer, resalta: primero, etiqueta: "Fichero y línea", color: rojo, lado: abajo}
+      - id: saltar
+        texto: >-
+          Las flechas saltan de error en error, y el log se puede buscar,
+          copiar o descargar.
+        pasos:
+          - {en: flechas, resalta: flechas, lado: abajo}
+          - {en: buscar, resalta: buscar, lado: abajo}
+          - {en: descargar, resalta: descargar, lado: arriba}
+
   - id: arreglar
     capitulo: Arreglarlo
     antes: 0.5
@@ -70,6 +97,41 @@ escenas:
         texto: >-
           El error se dice en la lección que hay que arreglar, no en el tema
           que la incluye.
+
+  - id: paquete
+    capitulo: Si falta un paquete
+    antes: 0.5
+    pantalla: paquete-falta
+    frases:
+      - id: falta
+        texto: >-
+          Otras veces no es una errata: a tu LaTeX le falta un paquete. Pasa
+          mucho con las instalaciones pequeñas, como TinyTeX o BasicTeX.
+          Didacta lo reconoce, y lo ofrece instalar.
+        pasos:
+          - {al: inicio, enfoca: [aviso], max: 1.4}
+          - {en: paquete, resalta: aviso, etiqueta: "tcolorbox.sty", color: ambar, lado: abajo}
+          - {en: instalar, resalta: instalar, lado: izquierda}
+      - id: gestor
+        texto: >-
+          Antes de nada te dice qué paquete es, y lo instala con el gestor
+          oficial de tu distribución: tlmgr, o el de MiKTeX. Si hace falta tu
+          contraseña, te la pide el sistema, no Didacta.
+        pasos:
+          - {al: inicio, cambia: paquete-dialogo}
+          - {al: inicio, enfoca: [dialogo], max: 1.4, mas: 0.1}
+          - {en: paquete, resalta: fichero, lado: abajo}
+          - {en: gestor, resalta: confirmar, lado: abajo}
+      - id: vuelve
+        texto: >-
+          Al acabar, Volver a compilar. Y ya sale.
+        pasos:
+          - {al: inicio, cambia: paquete-instalado}
+          - {al: inicio, enfoca: [dialogo], max: 1.4, mas: 0.1}
+          - {en: Volver, resalta: recompilar, lado: abajo, hasta: 1.2}
+          - {en: sale, cambia: paquete}
+          - {en: sale, enfoca: [cabecera], max: 1.4}
+          - {en: sale, resalta: cabecera, color: verde, lado: abajo, mas: 0.3}
 
   - id: cierre
     antes: 0.5

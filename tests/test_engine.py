@@ -265,6 +265,45 @@ Output written on out.pdf (7 pages, 221091 bytes).
         noisy = "Underfull \\hbox (badness 10000) in paragraph at lines 3--4\n"
         self.assertEqual(build_mod.parse_log(noisy), [])
 
+    def test_un_paquete_que_falta_dice_que_fichero(self):
+        log = (
+            "(./tema-1.tex\n"
+            "./tema-1.tex:3: LaTeX Error: File `tcolorbox.sty' not found.\n"
+            "l.3 \\usepackage\n"
+        )
+        [error] = [d for d in build_mod.parse_log(log) if d.severity == "error"]
+        self.assertEqual(error.code, "missing-file")
+        self.assertEqual(error.needs, "tcolorbox.sty")
+        self.assertEqual(error.as_dict()["needs"], "tcolorbox.sty")
+
+    def test_lo_que_falta_en_sus_otras_formas(self):
+        self.assertEqual(
+            build_mod.missing_file("! LaTeX Error: File `beamer.cls' not found."),
+            "beamer.cls")
+        self.assertEqual(
+            build_mod.missing_file("I can't find file `t1lmr.fd'."), "t1lmr.fd")
+        self.assertEqual(
+            build_mod.missing_file(
+                "Font \\T1/lmr/m/n/10=ec-lmr10 at 10pt not loadable: "
+                "Metric (TFM) file not found."),
+            "ec-lmr10.tfm")
+
+    def test_lo_que_no_es_de_un_paquete_no_se_ofrece_instalar(self):
+        # Un `\input` mal escrito y los ficheros de Didacta: ningún gestor de
+        # paquetes los tiene.
+        self.assertIsNone(build_mod.missing_file(
+            "LaTeX Error: File `capitulo-1.tex' not found."))
+        self.assertIsNone(build_mod.missing_file(
+            "LaTeX Error: File `didacta-slides.sty' not found."))
+        self.assertIsNone(build_mod.missing_file("Undefined control sequence."))
+
+    def test_el_resultado_dice_donde_esta_el_log(self):
+        result = build_mod.BuildResult("d", "slides", "es", False,
+                                       log="/tmp/x/d.log")
+        self.assertEqual(result.as_dict()["log"], "/tmp/x/d.log")
+        self.assertNotIn("log", build_mod.BuildResult("d", "slides", "es",
+                                                      False).as_dict())
+
     def test_page_count(self):
         self.assertEqual(build_mod.page_count(self.LOG), 7)
         self.assertIsNone(build_mod.page_count("no output line"))

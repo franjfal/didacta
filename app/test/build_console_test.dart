@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/compiler.dart';
+import 'package:didacta_app/data/tex_packages.dart';
 import 'package:didacta_app/model/catalogue.dart';
 import 'package:didacta_app/state/build_console.dart';
 import 'package:didacta_app/data/preferences.dart';
@@ -33,9 +34,14 @@ final Finder consoleLines = find.byKey(const Key('build-console-lines'));
 /// motor que contesta al instante, «durante» y «después» son el mismo
 /// fotograma, y lo que esta pantalla promete es justo lo de durante.
 class _SlowCompiler extends FakeCompiler {
-  _SlowCompiler({this.fails = false});
+  _SlowCompiler({this.fails = false, this.missing});
 
   final bool fails;
+
+  /// El fichero de paquete que le falta a LaTeX, si falla por eso.
+  final String? missing;
+
+  int runs = 0;
   final Completer<void> gate = Completer<void>();
 
   @override
@@ -46,6 +52,7 @@ class _SlowCompiler extends FakeCompiler {
     bool fast = false,
     void Function(String line)? onOutput,
   }) async {
+    runs += 1;
     onOutput?.call('=== preview/unidad · slides · es');
     onOutput?.call(r'$ latexmk -pdf -g');
     onOutput?.call('This is pdfTeX, Version 3.141592653');
@@ -63,6 +70,17 @@ class _SlowCompiler extends FakeCompiler {
             errors: fails
                 ? const ['es.tex:4: Undefined control sequence']
                 : const [],
+            diagnostics: [
+              if (fails && missing != null)
+                CompileDiagnostic(
+                  severity: 'error',
+                  message: "LaTeX Error: File `$missing' not found.",
+                  file: 'unidad.tex',
+                  line: 3,
+                  code: 'missing-file',
+                  needs: missing,
+                ),
+            ],
           ),
     ];
   }
@@ -108,6 +126,7 @@ Future<Session> pumpPreview(
   WidgetTester tester,
   FakeCompiler compiler, {
   bool complete = true,
+  TexPackages? texPackages,
 }) async {
   tester.view.physicalSize = const Size(1000, 1200);
   tester.view.devicePixelRatio = 1.0;
@@ -118,6 +137,7 @@ Future<Session> pumpPreview(
     gatewayOverride: FakeGateway(),
     catalogue: catalogue,
     compilerOverride: compiler,
+    texPackagesOverride: texPackages,
     preferencesOverride: MemoryPreferences()..complete = complete,
   );
   await session.primeForTest(catalogue);
@@ -370,5 +390,68 @@ void main() {
   ) async {
     await pumpPreview(tester, FakeCompiler());
     expect(find.byKey(const Key('show-console')), findsNothing);
+  });
+
+  group('cuando falta un paquete', () {
+    testWidgets('la consola lo dice, enseña el log y lo instala', (
+      tester,
+    ) async {
+      final compiler = _SlowCompiler(fails: true, missing: 'tcolorbox.sty');
+      final packages = FakeTexPackages(
+        provides: {'tcolorbox.sty': 'tcolorbox'},
+      );
+      await pumpPreview(tester, compiler, texPackages: packages);
+
+      await tester.tap(compile);
+      await settle(tester);
+      compiler.gate.complete();
+      await settle(tester);
+
+      // En la consola, que se queda abierta porque ha fallado.
+      Finder inConsole(Finder finder) => find.descendant(
+        of: find.byType(BuildConsoleDialog),
+        matching: finder,
+      );
+      expect(
+        inConsole(find.byKey(const Key('missing-package'))),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('console-full-log')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('console-full-log')));
+      await settle(tester);
+      expect(find.byKey(const Key('log-lines')), findsOneWidget);
+      expect(find.text('Primer error: unidad.tex · línea 3'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('log-close')));
+      await settle(tester);
+
+      // Instalar, y volver a compilar desde el mismo sitio.
+      await tester.tap(
+        inConsole(find.byKey(const Key('missing-package-install'))),
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('install-confirm')));
+      await settle(tester);
+      expect(packages.installed, ['tcolorbox']);
+      await tester.tap(find.byKey(const Key('install-recompile')));
+      await settle(tester);
+      expect(compiler.runs, 2);
+    });
+
+    testWidgets('la tarjeta del resultado también', (tester) async {
+      final compiler = _SlowCompiler(fails: true, missing: 'tcolorbox.sty');
+      await pumpPreview(tester, compiler);
+
+      await tester.tap(compile);
+      await settle(tester);
+      compiler.gate.complete();
+      await settle(tester);
+      await tester.tap(find.byKey(const Key('console-close')));
+      await settle(tester);
+
+      // Una por versión que falló: cada tarjeta es de una salida.
+      expect(find.byKey(const Key('missing-package')), findsWidgets);
+      expect(find.byKey(const Key('result-full-log')), findsWidgets);
+    });
   });
 }

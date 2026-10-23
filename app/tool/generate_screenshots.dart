@@ -48,6 +48,9 @@ import 'package:didacta_app/state/mcp_service.dart';
 import 'package:didacta_app/state/appearance.dart';
 import 'package:didacta_app/state/session.dart';
 import 'package:didacta_app/state/update_service.dart';
+import 'package:didacta_app/data/compiler.dart';
+import 'package:didacta_app/ui/log_viewer.dart';
+import 'package:didacta_app/ui/missing_package.dart';
 import 'package:didacta_app/ui/theme.dart';
 import 'package:didacta_app/ui/tour.dart';
 import 'package:didacta_app/ui/welcome.dart';
@@ -521,6 +524,41 @@ Future<void> mount(
   await settle(tester);
 }
 
+/// Un `.log` de LaTeX al que le falta un paquete, para la captura del visor.
+/// Escrito a mano y no compilado: la captura no puede depender de qué TeX
+/// haya en la máquina que la saca.
+const List<String> _failedLog = [
+  'This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026)',
+  ' restricted \\write18 enabled.',
+  ' file:line:error style messages enabled.',
+  '(./espacios-normados.tex',
+  'LaTeX2e <2025-11-01>',
+  'L3 programming layer <2026-01-19>',
+  '(/usr/local/texlive/2026/texmf-dist/tex/latex/beamer/beamer.cls',
+  'Document Class: beamer 2025/06/22 v3.74 A class for typesetting presentations',
+  ')',
+  '(/usr/local/texlive/2026/texmf-dist/tex/latex/amsmath/amsmath.sty',
+  'Package: amsmath 2025/07/09 v2.17z AMS math features',
+  ')',
+  "./espacios-normados.tex:3: LaTeX Error: File `tcolorbox.sty' not found.",
+  '',
+  'Type X to quit or <RETURN> to proceed,',
+  'or enter new name. (Default extension: sty)',
+  '',
+  'Enter file name: ',
+  './espacios-normados.tex:3: Emergency stop.',
+  '<read *> ',
+  '         ',
+  'l.3 \\usepackage',
+  '             {tcolorbox}^^M',
+  '*** (cannot \\read from terminal in nonstop modes)',
+  '',
+  'Here is how much of TeX\'s memory you used:',
+  ' 3412 strings out of 467525',
+  ' 52961 string characters out of 5418982',
+  './espacios-normados.tex:3:  ==> Fatal error occurred, no output PDF file produced!',
+];
+
 // ------------------------------------------------------------------ lista ---
 
 /// Qué pantallas se capturan, en el orden en que la documentación las cuenta.
@@ -560,6 +598,58 @@ final List<Shot> shots = [
     '/unit/$shownUnit',
     note: 'elegir qué versiones se compilan',
     prepare: (tester) async => _tap(tester, find.text('compilar')),
+  ),
+  Shot(
+    'log-completo',
+    '/unit/$shownUnit',
+    note: '«Ver log completo» de una compilación que ha fallado',
+    prepare: (tester) async {
+      final context = tester.element(find.byType(Scaffold).first);
+      unawaited(
+        showLogViewer(
+          context,
+          title: tr('Log completo · {0} · {1}', ['slides', 'es']),
+          sources: [
+            LogSource(label: 'slides · es · .log', lines: _failedLog),
+            LogSource(
+              label: tr('Salida de la compilación'),
+              lines: const ['=== espacios-normados · slides · es'],
+            ),
+          ],
+          errors: const [
+            CompileDiagnostic(
+              severity: 'error',
+              message: "LaTeX Error: File `tcolorbox.sty' not found.",
+              path: '$shownUnit/es.tex',
+              line: 3,
+              code: 'missing-file',
+              needs: 'tcolorbox.sty',
+            ),
+          ],
+        ),
+      );
+      await settle(tester);
+    },
+  ),
+  Shot(
+    'instalar-paquete',
+    '/unit/$shownUnit',
+    note: 'instalar el paquete de LaTeX que falta',
+    prepare: (tester) async {
+      final context = tester.element(find.byType(Scaffold).first);
+      unawaited(
+        showInstallPackages(
+          context,
+          files: const ['tcolorbox.sty'],
+          packages: FakeTexPackages(
+            needsAdmin: true,
+            provides: {'tcolorbox.sty': 'tcolorbox'},
+          ),
+          onRecompile: () async {},
+        ),
+      );
+      await settle(tester);
+    },
   ),
   Shot(
     'unidad-yaml',

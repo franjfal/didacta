@@ -7,6 +7,8 @@
 /// nothing.
 library;
 
+import 'package:didacta_app/data/tex_packages.dart';
+import 'package:didacta_app/model/tex_packages.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart' show Scaffold;
@@ -1163,6 +1165,7 @@ class FakeSession extends Session {
     this.adminOverride,
     this.cloneOverride,
     this.toolchainOverride,
+    this.texPackagesOverride,
     this.onReload,
     this.reloadsForReal = false,
     Preferences? preferencesOverride,
@@ -1224,6 +1227,12 @@ class FakeSession extends Session {
   @override
   Toolchain toolchain() =>
       toolchainOverride ?? FakeToolchain(present: ToolId.values.toSet());
+
+  /// El gestor de paquetes de TeX, sin lanzar `tlmgr`.
+  final TexPackages? texPackagesOverride;
+
+  @override
+  TexPackages texPackages() => texPackagesOverride ?? FakeTexPackages();
 
   @override
   LocalClone cloneAt(String directory) =>
@@ -1580,4 +1589,59 @@ Future<void> useCompleteInterface(WidgetTester tester) async {
   final context = tester.element(find.byType(Scaffold).first);
   await Provider.of<Session>(context, listen: false).setCompleteInterface(true);
   await tester.pump();
+}
+
+/// Un gestor de paquetes de TeX de mentira: sabe qué paquete trae cada
+/// fichero ([provides]), cuáles ya están ([present]) y apunta lo que se le
+/// pide instalar. Con [fails], la instalación falla con ese error.
+class FakeTexPackages implements TexPackages {
+  FakeTexPackages({
+    this.kind = TexManagerKind.tlmgr,
+    this.needsAdmin = false,
+    Map<String, String>? provides,
+    Set<String>? present,
+    this.fails,
+  }) : provides = provides ?? {},
+       present = present ?? {};
+
+  final TexManagerKind kind;
+  final bool needsAdmin;
+  final Map<String, String> provides;
+  final Set<String> present;
+  final TexPackageException? fails;
+  final List<String> installed = [];
+
+  @override
+  Future<TexPackageManager> manager() async => TexPackageManager(
+    kind: kind,
+    program: kind == TexManagerKind.none ? null : '/tex/bin/tlmgr',
+    root: '/tex',
+    needsAdmin: needsAdmin,
+    distribution: 'TeX Live 2026',
+  );
+
+  @override
+  Future<String?> locate(String file) async =>
+      present.contains(file) ? '/tex/texmf-dist/$file' : null;
+
+  @override
+  Future<String?> packageFor(
+    String file,
+    TexPackageManager manager, {
+    void Function(String line)? onOutput,
+  }) async => provides[file];
+
+  @override
+  Future<void> install(
+    String package,
+    TexPackageManager manager, {
+    void Function(String line)? onOutput,
+  }) async {
+    onOutput?.call('[1/1] install: $package');
+    if (fails != null) throw fails!;
+    installed.add(package);
+    for (final entry in provides.entries) {
+      if (entry.value == package) present.add(entry.key);
+    }
+  }
 }

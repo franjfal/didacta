@@ -171,6 +171,12 @@ def motor_neutro() -> dict:
     """
     enlace = Path("/Users/Shared/Didacta/motor")
     try:
+        # Si ya está pero apunta a otro sitio --el clon se movió de carpeta,
+        # como cuando la aplicación pasó de ~/didacta a ~/didactaApp--, se
+        # rehace: un enlace viejo deja los vídeos sin motor y cada
+        # compilación sale con «No se pudo lanzar el motor».
+        if enlace.is_symlink() and enlace.resolve() != RAIZ.resolve():
+            enlace.unlink()
         if not enlace.exists():
             enlace.parent.mkdir(parents=True, exist_ok=True)
             enlace.symlink_to(RAIZ)

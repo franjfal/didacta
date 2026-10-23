@@ -213,6 +213,12 @@ class BuildService extends ChangeNotifier {
     final ok = await run(title, total: documents.length, (console) async {
       var ok = 0;
       var failed = 0;
+      // Los que no salieron, para volver a compilar solo esos después de
+      // instalar lo que les faltaba.
+      final redo =
+          <
+            ({String repo, String course, String year, String id, String title})
+          >[];
       for (final document in documents) {
         if (_stopping) break;
         final compiler = session.compiler(repo: document.repo);
@@ -261,10 +267,12 @@ class BuildService extends ChangeNotifier {
             );
           }
           if (_stopping) break;
+          console.addOutputs(results, what: document.title);
           if (results.isNotEmpty && results.every((result) => result.ok)) {
             ok += 1;
           } else {
             failed += 1;
+            redo.add(document);
             // Los errores, guardados con el documento: en el registro de un
             // curso entero quedan enterrados, y en la consola salen aparte
             // con a dónde llevan.
@@ -292,10 +300,20 @@ class BuildService extends ChangeNotifier {
             CompileDiagnostic(severity: 'error', message: '$error'),
           ]);
           failed += 1;
+          redo.add(document);
         }
         console.finishStep();
       }
       final done = ok + failed;
+      if (redo.isNotEmpty && !_stopping) {
+        console.retry = () => buildDocuments(
+          redo,
+          title: title,
+          languages: languages,
+          everyVersion: everyVersion,
+          only: only,
+        );
+      }
       console.finish(
         ok: failed == 0 && !_stopping,
         stopped: _stopping,

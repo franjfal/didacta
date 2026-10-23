@@ -63,8 +63,10 @@ camino que acabe en un callejón sin salida.
     runner de integración continua.
 
     Con una instalación mínima como BasicTeX o TinyTeX puede faltar algún
-    paquete la primera vez. El log lo dice con nombre y apellido, y se añade
-    con `tlmgr install <paquete>`: [qué orden, en cada
+    paquete la primera vez. No hace falta saber cuál: la compilación que
+    falla lo dice y ofrece **Instalar paquete**, que lo añade con el gestor
+    de tu distribución y vuelve a compilar ([cómo](../app/compilar.md#paquete-que-falta)).
+    A mano, es `tlmgr install <paquete>`: [qué orden, en cada
     distribución](../ayuda/problemas.md#file-xsty-not-found).
 
 !!! note "Las citas necesitan `biber`"

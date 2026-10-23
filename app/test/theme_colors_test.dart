@@ -26,6 +26,9 @@ const Map<String, Map<String, String>> allowed = {
   'lib/ui/build_console.dart': {
     'Color(0x': 'el terminal, oscuro en los dos modos',
   },
+  'lib/ui/log_viewer.dart': {
+    'Color(0x': 'el log, sobre el fondo del terminal: oscuro en los dos modos',
+  },
   'lib/ui/brand.dart': {'Colors.white': 'el logo, que no cambia con el modo'},
 };
 

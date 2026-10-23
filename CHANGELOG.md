@@ -40,6 +40,21 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
+## Próxima
+
+- **«Ver log completo» cuando una compilación falla.** Todo lo que dijo
+  LaTeX --la salida de la compilación y el `.log` de cada versión que falló--
+  en un visor con números de línea, los errores marcados, un buscador, saltos
+  de error en error y el primer error de verdad arriba, con su fichero y su
+  línea. Se puede copiar o descargar como texto.
+- **Si falta un paquete de LaTeX, se instala desde Didacta.** La compilación
+  dice qué paquete falta y ofrece «Instalar paquete»: lo busca e instala con
+  el gestor de tu distribución (tlmgr en TeX Live, MacTeX y TinyTeX; el de
+  MiKTeX en Windows) y, al acabar, vuelve a compilar. Si hace falta la
+  contraseña de administrador, la pide el sistema. Si ya estaba instalado, o
+  no se puede instalar desde aquí, lo dice y da las órdenes para hacerlo a
+  mano.
+
 ## 1.0.6 — 2026-10-21
 
 - **En Windows, las plantillas, los snippets y los datos del curso entran en

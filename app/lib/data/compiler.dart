@@ -147,6 +147,7 @@ class CompileDiagnostic {
     this.code,
     this.points,
     this.times = 1,
+    this.needs,
   });
 
   factory CompileDiagnostic.fromJson(Map<String, dynamic> json) =>
@@ -162,6 +163,7 @@ class CompileDiagnostic {
         code: json['code'] as String?,
         points: (json['points'] as num?)?.toDouble(),
         times: (json['times'] as num?)?.toInt() ?? 1,
+        needs: json['needs'] as String?,
       );
 
   final String severity;
@@ -192,7 +194,15 @@ class CompileDiagnostic {
   final double? points;
   final int times;
 
+  /// El fichero de un paquete que le falta a LaTeX: `tcolorbox.sty`,
+  /// `ec-lmr10.tfm`. Lo dice el motor (`code` = `missing-file`) y es lo que
+  /// se le pregunta al gestor de paquetes de la distribución.
+  final String? needs;
+
   bool get isError => severity == 'error';
+
+  /// Si lo que falla es que falta un paquete, que se puede instalar.
+  bool get isMissingFile => code == 'missing-file' && needs != null;
 
   /// Algo que se sale de la página: se compila, pero no se ve entero.
   bool get isOverflow => code == 'overfull-slide' || code == 'overfull-line';
@@ -219,7 +229,21 @@ class CompileOutput {
     this.warnings = const [],
     this.diagnostics = const [],
     this.quick = false,
+    this.log,
   });
+
+  /// El `.log` de LaTeX, si llegó a escribirlo. Es lo que se enseña con
+  /// «Ver log completo» cuando los diagnósticos no bastan.
+  final String? log;
+
+  /// Los ficheros de paquete que le faltaban, sin repetir: lo que se ofrece
+  /// instalar.
+  List<String> get missingFiles => [
+    ...{
+      for (final diagnostic in diagnostics)
+        if (diagnostic.isMissingFile) diagnostic.needs!,
+    },
+  ];
 
   /// De una sola pasada: el índice, las referencias y el total de
   /// diapositivas pueden no estar al día.

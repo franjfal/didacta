@@ -48,6 +48,11 @@ import 'package:provider/provider.dart';
 
 import 'package:didacta_app/data/app_info.dart';
 import 'package:didacta_app/data/catalogue_source.dart';
+import 'package:didacta_app/data/compiler.dart';
+import 'package:didacta_app/data/tex_packages.dart';
+import 'package:didacta_app/model/review.dart';
+import 'package:didacta_app/model/catalogue.dart' show OutputTemplate;
+import 'package:didacta_app/model/tex_packages.dart';
 import 'package:didacta_app/data/draft_store.dart';
 import 'package:didacta_app/data/github.dart';
 import 'package:didacta_app/data/mcp_process.dart';
@@ -415,6 +420,7 @@ void main() {
               CatalogueSource.inClone(extra.directory, repo: extra.id)!,
           ]);
     final session = VideoSession(
+      missingPackage: (shot['falta_paquete'] as Map?)?.cast<String, String>(),
       missing: {
         for (final name in (shot['falta'] as List?) ?? const [])
           ToolId.values.byName(name as String),
@@ -1522,9 +1528,40 @@ class VideoSession extends LocalSession {
     super.translationSecrets,
     super.drafts,
     this.missing = const {},
+    this.missingPackage,
   });
 
   final Set<ToolId> missing;
+
+  /// `"falta_paquete": {"fichero": "tcolorbox.sty", "paquete": "tcolorbox"}`:
+  /// esta máquina hace como si fuera un BasicTeX o un TinyTeX al que le falta
+  /// ese paquete. La compilación es de verdad; lo que sale se cambia por el
+  /// error que daría LaTeX sin el fichero, hasta que se «instala» con un
+  /// gestor de mentira que no toca el sistema. Lo mismo que hace `falta` con
+  /// las herramientas.
+  final Map<String, String>? missingPackage;
+
+  bool _packageInstalled = false;
+
+  @override
+  Compiler? compiler({String? repo}) {
+    final real = super.compiler(repo: repo);
+    final package = missingPackage;
+    if (real == null || package == null) return real;
+    return _WithoutPackage(real, package['fichero']!, () => _packageInstalled);
+  }
+
+  @override
+  TexPackages texPackages() {
+    final package = missingPackage;
+    if (package == null) return super.texPackages();
+    return _VideoPackages(
+      file: package['fichero']!,
+      package: package['paquete']!,
+      onInstalled: () => _packageInstalled = true,
+      installed: () => _packageInstalled,
+    );
+  }
 
   /// Lo que contestaría GitHub a una sesión con permiso para los workflows:
   /// sin red no contesta nadie, y el botón de compilar en GitHub se quedaba
@@ -1604,4 +1641,257 @@ class VideoFolderPicker extends FileSelectorPlatform {
     Directory(folder).createSync(recursive: true);
     return FileSaveLocation('$folder/${options.suggestedName ?? 'copia.pdf'}');
   }
+}
+
+/// El gestor de paquetes de un TinyTeX al que le falta [file]: dice que lo
+/// trae [package] y lo «instala» sin tocar nada, contando lo que contaría
+/// `tlmgr`.
+class _VideoPackages implements TexPackages {
+  _VideoPackages({
+    required this.file,
+    required this.package,
+    required this.onInstalled,
+    required this.installed,
+  });
+
+  final String file;
+  final String package;
+  final void Function() onInstalled;
+  final bool Function() installed;
+
+  @override
+  Future<TexPackageManager> manager() async => const TexPackageManager(
+    kind: TexManagerKind.tlmgr,
+    program: 'tlmgr',
+    root: '/Users/profe/Library/TinyTeX',
+    distribution: 'TinyTeX',
+  );
+
+  @override
+  Future<String?> locate(String wanted) async => wanted == file && installed()
+      ? '/Users/profe/Library/TinyTeX/texmf-dist/tex/latex/$package/$file'
+      : null;
+
+  @override
+  Future<String?> packageFor(
+    String wanted,
+    TexPackageManager manager, {
+    void Function(String line)? onOutput,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return wanted == file ? package : null;
+  }
+
+  @override
+  Future<void> install(
+    String wanted,
+    TexPackageManager manager, {
+    void Function(String line)? onOutput,
+  }) async {
+    for (final line in [
+      'tlmgr: package repository https://mirror.ctan.org/systems/texlive/tlnet (verified)',
+      '[1/1, ??:??/??:??] install: $wanted [2116k]',
+      'running mktexlsr ...',
+      'done running mktexlsr.',
+      'tlmgr: package log updated: /Users/profe/Library/TinyTeX/texmf-var/web2c/tlmgr.log',
+    ]) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      onOutput?.call(line);
+    }
+    onInstalled();
+  }
+}
+
+/// El compilador de verdad, con un fichero de paquete que «no está»: mientras
+/// no se instale, cada salida termina con el error que da LaTeX sin él.
+class _WithoutPackage implements Compiler {
+  _WithoutPackage(this.real, this.file, this.installed);
+
+  final Compiler real;
+  final String file;
+  final bool Function() installed;
+
+  List<CompileOutput> _withoutIt(
+    List<CompileOutput> made,
+    void Function(String line)? onOutput,
+    String source,
+  ) {
+    if (installed()) return made;
+    final message = "LaTeX Error: File `$file' not found.";
+    onOutput?.call('./$source:3: $message');
+    onOutput?.call('./$source:3: Emergency stop.');
+    onOutput?.call('--- FAIL');
+    return [
+      for (final output in made)
+        CompileOutput(
+          profile: output.profile,
+          language: output.language,
+          ok: false,
+          log: _log(output.log, source),
+          errors: ['$source:3: $message'],
+          diagnostics: [
+            CompileDiagnostic(
+              severity: 'error',
+              message: message,
+              file: source,
+              line: 3,
+              code: 'missing-file',
+              needs: file,
+            ),
+            CompileDiagnostic(
+              severity: 'error',
+              message: 'Emergency stop.',
+              file: source,
+              line: 3,
+            ),
+          ],
+        ),
+    ];
+  }
+
+  /// El `.log` que habría dejado LaTeX: el principio del de verdad y, donde
+  /// iba el paquete, el error.
+  String? _log(String? path, String source) {
+    if (path == null || !File(path).existsSync()) return null;
+    final head = File(path).readAsStringSync().split('\n').take(60).toList();
+    final fake = File('$path.sin-paquete.log');
+    fake.writeAsStringSync(
+      [
+        ...head,
+        "./$source:3: LaTeX Error: File `$file' not found.",
+        '',
+        'Type X to quit or <RETURN> to proceed,',
+        'or enter new name. (Default extension: sty)',
+        '',
+        'Enter file name: ',
+        './$source:3: Emergency stop.',
+        '<read *> ',
+        '',
+        r'l.3 \usepackage',
+        '',
+        '*** (cannot \\read from terminal in nonstop modes)',
+        '',
+        './$source:3:  ==> Fatal error occurred, no output PDF file produced!',
+      ].join('\n'),
+    );
+    return fake.path;
+  }
+
+  @override
+  Future<List<CompileOutput>> compile({
+    required String unitPath,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+    void Function(String line)? onOutput,
+  }) async => _withoutIt(
+    await real.compile(
+      unitPath: unitPath,
+      profiles: profiles,
+      languages: languages,
+      fast: fast,
+      onOutput: onOutput,
+    ),
+    onOutput,
+    'es.tex',
+  );
+
+  @override
+  Future<List<CompileOutput>> compileDocument({
+    required String document,
+    required List<String> profiles,
+    required List<String> languages,
+    bool fast = false,
+    void Function(String line)? onOutput,
+  }) async => _withoutIt(
+    await real.compileDocument(
+      document: document,
+      profiles: profiles,
+      languages: languages,
+      fast: fast,
+      onOutput: onOutput,
+    ),
+    onOutput,
+    '${document.split('/').last}.tex',
+  );
+
+  @override
+  Future<CompilerStatus> status() => real.status();
+  @override
+  Future<List<BuildableProfile>> profilesFor(String unitPath) =>
+      real.profilesFor(unitPath);
+  @override
+  Future<List<ExistingOutput>> outputsFor(String unitPath) =>
+      real.outputsFor(unitPath);
+  @override
+  Future<bool> isStale({required String pdf, required String unitPath}) =>
+      real.isStale(pdf: pdf, unitPath: unitPath);
+  @override
+  Future<List<OutputTemplate>> templatesIn(String directory) =>
+      real.templatesIn(directory);
+  @override
+  Future<({bool stale, String? reason})> indexStale() => real.indexStale();
+  @override
+  Future<String> reindex() => real.reindex();
+  @override
+  Future<Map<String, List<ExistingOutput>>> builtOutputs() =>
+      real.builtOutputs();
+  @override
+  Future<List<BuildableProfile>> documentProfiles(String document) =>
+      real.documentProfiles(document);
+  @override
+  Future<ExportResult> exportCourse({
+    required String where,
+    required String to,
+    List<String> languages = const [],
+    List<String> documents = const [],
+    ExportReach reach = ExportReach.students,
+    String? zip,
+    bool appendZip = false,
+    bool html = false,
+  }) => real.exportCourse(
+    where: where,
+    to: to,
+    languages: languages,
+    documents: documents,
+    reach: reach,
+    zip: zip,
+    appendZip: appendZip,
+    html: html,
+  );
+  @override
+  Future<Map<String, List<ExistingOutput>>> documentOutputs(String where) =>
+      real.documentOutputs(where);
+  @override
+  Future<String> run(
+    List<String> arguments, {
+    bool allowFailure = false,
+    void Function(String line)? onOutput,
+  }) => real.run(arguments, allowFailure: allowFailure, onOutput: onOutput);
+  @override
+  Future<void> open(String pdf) => real.open(pdf);
+  @override
+  Future<void> reveal(String pdf) => real.reveal(pdf);
+  @override
+  Future<int> deleteOutputs(List<String> pdfs) => real.deleteOutputs(pdfs);
+  @override
+  Future<void> stopCompiling() => real.stopCompiling();
+  @override
+  Future<SourceSpot?> sourceAt({
+    required String pdf,
+    required int page,
+    required double x,
+    required double y,
+    String? word,
+    String? text,
+  }) => real.sourceAt(pdf: pdf, page: page, x: x, y: y, word: word, text: text);
+  @override
+  Future<ReviewReport> review({
+    List<String> within = const [],
+    List<String> extra = const [],
+  }) => real.review(within: within, extra: extra);
+  @override
+  Future<BuildFolder> buildFolder() => real.buildFolder();
+  @override
+  Future<BuildFolder> cleanBuild() => real.cleanBuild();
 }

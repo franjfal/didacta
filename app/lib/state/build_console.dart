@@ -135,6 +135,49 @@ class BuildConsole extends ChangeNotifier {
     _schedule();
   }
 
+  /// Lo que salió de cada compilación del trabajo, con qué documento era
+  /// cuando es un lote.
+  ///
+  /// Es lo que permite, al acabar mal, abrir el `.log` de LaTeX entero
+  /// --«Ver log completo»-- y saber qué paquete faltaba sin leerlo.
+  List<({String? what, CompileOutput output})> get outputs =>
+      UnmodifiableListView(_outputs);
+  final List<({String? what, CompileOutput output})> _outputs = [];
+
+  void addOutputs(Iterable<CompileOutput> outputs, {String? what}) {
+    for (final output in outputs) {
+      _outputs.add((what: what, output: output));
+    }
+    _schedule();
+  }
+
+  /// Los ficheros de paquete que le faltaban a alguna, sin repetir.
+  List<String> get missingFiles => [
+    ...{
+      for (final entry in _outputs)
+        if (!entry.output.ok) ...entry.output.missingFiles,
+    },
+  ];
+
+  /// Volver a lanzar lo que falló, si quien lo lanzó sabe cómo.
+  ///
+  /// Lo pone quien compila, porque es el único que sabe qué se pidió; la
+  /// ventana lo ofrece después de instalar un paquete que faltaba, que es
+  /// justo cuando volver a compilar es lo siguiente que se quiere.
+  Future<void> Function()? retry;
+
+  /// Termina una compilación con lo que ha salido: guarda las salidas y
+  /// dice si todas salieron bien.
+  void finishBuild(
+    List<CompileOutput> made, {
+    String? what,
+    Future<void> Function()? retry,
+  }) {
+    addOutputs(made, what: what);
+    this.retry = retry;
+    finish(ok: made.every((result) => result.ok));
+  }
+
   /// Cómo acabó un lote, en pocas palabras: «36 bien, 2 con errores». Null
   /// en lo que es una sola cosa, que ya lo dice con que salga o no.
   String? get summary => _summary;
@@ -158,6 +201,8 @@ class BuildConsole extends ChangeNotifier {
     _stopped = false;
     _summary = null;
     _problems.clear();
+    _outputs.clear();
+    retry = null;
     _total = total;
     _done = 0;
     _step = '';

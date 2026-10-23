@@ -871,17 +871,23 @@ fichero.
 
 **Más:** [Del PDF a la lección](web/docs/app/compilar.md#del-pdf-a-la-leccion).
 
-#### F4 · Cuando la compilación falla · 2 min
+#### F4 · Cuando la compilación falla · 2,5 min
 
-**Sabrás** ir directo al error, y ver las diapositivas que se salen.
+**Sabrás** ir directo al error, leer el log entero cuando haga falta e
+instalar un paquete de LaTeX que falte.
 
 **Parte de** una lección con una errata puesta a propósito (`\fracc`).
 
 1. La tarjeta: la lección, el idioma, la línea y el error; **Abrir** lleva
    allí.
 2. **Ver los N** y la consola entera.
-3. «La diapositiva se sale por abajo»: **Abrir** lleva a donde empieza.
-4. Un idioma que falta es un aviso, no un error.
+3. **Ver log completo**: el primer error de verdad arriba, con su fichero y
+   su línea; saltar de error en error, buscar, descargar.
+4. «File `tcolorbox.sty' not found»: **Instalar paquete** con el gestor de la
+   distribución, y **Volver a compilar**. (Simulado: quien graba tiene una
+   TeX Live completa.)
+5. «La diapositiva se sale por abajo»: **Abrir** lleva a donde empieza.
+6. Un idioma que falta es un aviso, no un error.
 
 **La idea:** el error se dice en la lección que hay que arreglar, no en el
 documento que la incluye.
@@ -1598,6 +1604,7 @@ quien la hace.
 | instalarla | A2 |
 | probar sin arriesgar mi material | A4 |
 | que compile: no encuentra LaTeX | A5 |
+| que compile: le falta un paquete (File … not found) | F4 |
 | saber dónde está cada cosa | A6 · K2 |
 | entender por qué una lección no pertenece a una asignatura | B1 |
 | saber qué PDF salen de una lección | B2 |

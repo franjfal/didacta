@@ -851,6 +851,7 @@ class _ProcessCompiler implements Compiler {
       language: json['language'] as String? ?? '',
       ok: json['ok'] == true,
       pdf: json['pdf'] as String?,
+      log: json['log'] as String?,
       pages: (json['pages'] as num?)?.toInt() ?? 0,
       seconds: (json['seconds'] as num?)?.toDouble() ?? 0,
       quick: json['quick'] == true,
