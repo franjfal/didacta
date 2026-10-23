@@ -40,7 +40,7 @@ Sin esa sección no se publica: el workflow se para antes de compilar nada.
 
 ---
 
-## Próxima
+## 1.0.7 — 2026-10-23
 
 - **«Ver log completo» cuando una compilación falla.** Todo lo que dijo
   LaTeX --la salida de la compilación y el `.log` de cada versión que falló--
